@@ -1,0 +1,21 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="TexTool" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="ProjectId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">1054788</Value>
+    </Setting>
+    <Setting Name="BranchId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">55d4b774-8ecf-4a72-9798-9ca0e83304f0</Value>
+    </Setting>
+    <Setting Name="PlaycanvasApiKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">o5lPWdvxh6lCMtw6jlvlF8jqnhq1RjGd</Value>
+    </Setting>
+    <Setting Name="BaseUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://playcanvas.com</Value>
+    </Setting>
+    <Setting Name="SemaphoreLimit" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">32</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

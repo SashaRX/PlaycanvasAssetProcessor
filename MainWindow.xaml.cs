@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -13,14 +15,9 @@ using System.ComponentModel;
 
 namespace TexTool {
     public partial class MainWindow : Window {
-        private const string ProjectId = "1054788";
-        private const string BranchId = "55d4b774-8ecf-4a72-9798-9ca0e83304f0";
-        private const string PlaycanvasApiKey = "o5lPWdvxh6lCMtw6jlvlF8jqnhq1RjGd";
-        private const string baseUrl = "https://playcanvas.com";
-
         private ObservableCollection<Texture> textures = new ObservableCollection<Texture>();
         private static readonly HttpClient client = new HttpClient();
-        private static readonly SemaphoreSlim semaphore = new SemaphoreSlim(64); // Ограничиваем до 10 одновременных задач
+        private static SemaphoreSlim semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
 
         public MainWindow() {
             InitializeComponent();
@@ -73,7 +70,7 @@ namespace TexTool {
             try {
                 var file = asset["file"];
                 if (file != null) {
-                    string fileUrl = file["url"] != null ? $"{baseUrl}{file["url"]}" : string.Empty;
+                    string fileUrl = file["url"] != null ? $"{Settings.Default.BaseUrl}{file["url"]}" : string.Empty;
 
                     var texture = new Texture {
                         Name = asset["name"]?.ToString() ?? "Unknown",
@@ -121,16 +118,16 @@ namespace TexTool {
             await TryConnect();
         }
 
-        private async void Setting(object sender, RoutedEventArgs e) {
-            await Task.Run(() => {
-                // Логика настройки
-            });
+        private void Setting(object sender, RoutedEventArgs e) {
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.ShowDialog();
         }
+
 
         private async Task<JArray?> GetAssetsAsync() {
             try {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PlaycanvasApiKey);
-                var response = await client.GetAsync($"https://playcanvas.com/api/projects/{ProjectId}/assets?branchId={BranchId}&skip=0&limit=10000");
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+                var response = await client.GetAsync($"{Settings.Default.BaseUrl}/api/projects/{Settings.Default.ProjectId}/assets?branchId={Settings.Default.BranchId}&skip=0&limit=10000");
 
                 response.EnsureSuccessStatusCode();
 
@@ -151,7 +148,7 @@ namespace TexTool {
             }
 
             try {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", PlaycanvasApiKey);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
                 client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
                 var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
                 response.EnsureSuccessStatusCode();
@@ -263,6 +260,7 @@ namespace TexTool {
             throw new NotImplementedException();
         }
     }
+
 
     public class ResolutionConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {

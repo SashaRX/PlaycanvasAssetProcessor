@@ -1,0 +1,68 @@
+﻿<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:TexTool" x:Class="TexTool.MainWindow"
+    Title="Texture Manager" Height="504" Width="800" Cursor="">
+    <Window.Resources>
+        <local:SizeConverter x:Key="SizeConverter" />
+        <local:ResolutionConverter x:Key="ResolutionConverter" />
+    </Window.Resources>
+    <DockPanel>
+        <!-- Статусная строка -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" Margin="3,0,3,0" VerticalAlignment="Center"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Прогресс -->
+        <Grid DockPanel.Dock="Bottom" HorizontalAlignment="Stretch">
+            <ProgressBar x:Name="ProgressBar" Height="16" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ProgressTextBlock" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" FontWeight="Bold"/>
+        </Grid>
+
+        <!-- Панель управления внизу -->
+        <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="780" Height="60">
+            <GroupBox Header="Playcanvas Project Connect" Width="430" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,2,2,2">
+                <StackPanel Orientation="Horizontal" Margin="8,0,8,0" Height="38">
+                    <Button Content="Connect" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="Connect"/>
+                    <Button Content="Get List" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="GetList"/>
+                </StackPanel>
+            </GroupBox>
+            <StackPanel Width="227" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
+                <Button Content="Settings" Margin="10,0,10,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Основной контент -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <DataGrid x:Name="TexturesDataGrid" 
+                      BorderBrush="#FF343C44" 
+                      FontSize="9" FontFamily="Segoe UI Symbol"
+                      AutoGenerateColumns="False"
+                      SelectionChanged="TexturesDataGrid_SelectionChanged"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      CanUserSortColumns="True"
+                      Background="#FFD6D6D6" Grid.ColumnSpan="2">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" Width="*" MinWidth="100"/>
+                    <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="*" MinWidth="100"/>
+                    <DataGridTextColumn Header="Url" Binding="{Binding Url}" Width="*" MinWidth="100"/>
+                    <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="100" SortMemberPath="ResolutionArea"/>
+                    <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" MinWidth="100"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</Window>

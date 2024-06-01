@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -20,11 +17,10 @@ namespace TexTool {
         private const string BranchId = "55d4b774-8ecf-4a72-9798-9ca0e83304f0";
         private const string PlaycanvasApiKey = "o5lPWdvxh6lCMtw6jlvlF8jqnhq1RjGd";
         private const string baseUrl = "https://playcanvas.com";
-        private const int MaxConcurrentRequests = 32; // Максимальное количество одновременных запросов
 
         private ObservableCollection<Texture> textures = new ObservableCollection<Texture>();
         private static readonly HttpClient client = new HttpClient();
-        private readonly SemaphoreSlim semaphore = new SemaphoreSlim(MaxConcurrentRequests);
+        private static readonly SemaphoreSlim semaphore = new SemaphoreSlim(64); // Ограничиваем до 10 одновременных задач
 
         public MainWindow() {
             InitializeComponent();
@@ -34,10 +30,8 @@ namespace TexTool {
         }
 
         private void UpdateConnectionStatus(bool isConnected) {
-            Dispatcher.Invoke(() => {
-                ConnectionStatusTextBlock.Text = isConnected ? "Connected" : "Disconnected";
-                ConnectionStatusTextBlock.Foreground = isConnected ? new SolidColorBrush(Colors.Green) : new SolidColorBrush(Colors.Red);
-            });
+            ConnectionStatusTextBlock.Text = isConnected ? "Connected" : "Disconnected";
+            ConnectionStatusTextBlock.Foreground = isConnected ? new SolidColorBrush(Colors.Green) : new SolidColorBrush(Colors.Red);
         }
 
         private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -56,15 +50,13 @@ namespace TexTool {
             var assets = await GetAssetsAsync();
             if (assets != null) {
                 UpdateConnectionStatus(true);
-                Dispatcher.Invoke(() => textures.Clear());
+                textures.Clear();
 
                 int textureCount = assets.Count(asset => asset["file"] != null && asset["type"]?.ToString() == "texture");
 
-                Dispatcher.Invoke(() => {
-                    ProgressBar.Value = 0;
-                    ProgressBar.Maximum = textureCount;
-                    ProgressTextBlock.Text = $"0/{textureCount}";
-                });
+                ProgressBar.Value = 0;
+                ProgressBar.Maximum = textureCount;
+                ProgressTextBlock.Text = $"0/{textureCount}";
 
                 var tasks = assets
                     .Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture")
@@ -106,7 +98,6 @@ namespace TexTool {
             }
         }
 
-
         private async Task UpdateTextureResolutionAsync(Texture texture) {
             try {
                 Debug.WriteLine($"Fetching resolution for: {texture.Name} ({texture.Url})");
@@ -123,11 +114,11 @@ namespace TexTool {
         }
 
         private async void Connect(object sender, RoutedEventArgs e) {
-            await Task.Run(TryConnect);
+            await TryConnect();
         }
 
         private async void GetList(object sender, RoutedEventArgs e) {
-            await Task.Run(TryConnect);
+            await TryConnect();
         }
 
         private async void Setting(object sender, RoutedEventArgs e) {
@@ -216,7 +207,7 @@ namespace TexTool {
             set {
                 resolution = value;
                 OnPropertyChanged(nameof(Resolution));
-                OnPropertyChanged(nameof(ResolutionArea));
+                OnPropertyChanged(nameof(ResolutionArea)); // Trigger PropertyChanged for ResolutionArea
             }
         }
 
@@ -225,7 +216,7 @@ namespace TexTool {
             set {
                 resizeResolution = value;
                 OnPropertyChanged(nameof(ResizeResolution));
-                OnPropertyChanged(nameof(ResizeResolutionArea));
+                OnPropertyChanged(nameof(ResizeResolutionArea)); // Trigger PropertyChanged for ResizeResolutionArea
             }
         }
 
@@ -265,14 +256,13 @@ namespace TexTool {
 
     public class SizeConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            return value?.ToString() ?? "0";  // Ensures that a non-null string is always returned
+            return value?.ToString() ?? "0";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
             throw new NotImplementedException();
         }
     }
-
 
     public class ResolutionConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {

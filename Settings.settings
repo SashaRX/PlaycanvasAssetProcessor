@@ -3,13 +3,13 @@
   <Profiles />
   <Settings>
     <Setting Name="ProjectId" Type="System.String" Scope="User">
-      <Value Profile="(Default)">1054788</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="BranchId" Type="System.String" Scope="User">
-      <Value Profile="(Default)">55d4b774-8ecf-4a72-9798-9ca0e83304f0</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="PlaycanvasApiKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">o5lPWdvxh6lCMtw6jlvlF8jqnhq1RjGd</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="BaseUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://playcanvas.com</Value>

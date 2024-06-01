@@ -25,7 +25,7 @@ namespace TexTool {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1054788")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string ProjectId {
             get {
                 return ((string)(this["ProjectId"]));
@@ -37,7 +37,7 @@ namespace TexTool {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("55d4b774-8ecf-4a72-9798-9ca0e83304f0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string BranchId {
             get {
                 return ((string)(this["BranchId"]));
@@ -49,7 +49,7 @@ namespace TexTool {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("o5lPWdvxh6lCMtw6jlvlF8jqnhq1RjGd")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string PlaycanvasApiKey {
             get {
                 return ((string)(this["PlaycanvasApiKey"]));

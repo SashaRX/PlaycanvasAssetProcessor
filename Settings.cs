@@ -1,74 +1,46 @@
-﻿namespace TexTool.Properties {
-    [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.5.0.0")]
+﻿// Settings.cs
+namespace TexTool.Properties {
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
-
-        private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
-
-        public static Settings Default {
-            get {
-                return defaultInstance;
-            }
-        }
+        public static Settings Default { get; } = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1054788")]
+        [global::System.Configuration.DefaultSettingValueAttribute("default_project_id")]
         public string ProjectId {
-            get {
-                return ((string)(this["ProjectId"]));
-            }
-            set {
-                this["ProjectId"] = value;
-            }
+            get => ((string)(this["ProjectId"]));
+            set => this["ProjectId"] = value;
         }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("55d4b774-8ecf-4a72-9798-9ca0e83304f0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("default_branch_id")]
         public string BranchId {
-            get {
-                return ((string)(this["BranchId"]));
-            }
-            set {
-                this["BranchId"] = value;
-            }
+            get => ((string)(this["BranchId"]));
+            set => this["BranchId"] = value;
         }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("o5lPWdvxh6lCMtw6jlvlF8jqnhq1RjGd")]
+        [global::System.Configuration.DefaultSettingValueAttribute("default_api_key")]
         public string PlaycanvasApiKey {
-            get {
-                return ((string)(this["PlaycanvasApiKey"]));
-            }
-            set {
-                this["PlaycanvasApiKey"] = value;
-            }
+            get => ((string)(this["PlaycanvasApiKey"]));
+            set => this["PlaycanvasApiKey"] = value;
         }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://playcanvas.com")]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://default.url")]
         public string BaseUrl {
-            get {
-                return ((string)(this["BaseUrl"]));
-            }
-            set {
-                this["BaseUrl"] = value;
-            }
+            get => ((string)(this["BaseUrl"]));
+            set => this["BaseUrl"] = value;
         }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
         public int SemaphoreLimit {
-            get {
-                return ((int)(this["SemaphoreLimit"]));
-            }
-            set {
-                this["SemaphoreLimit"] = value;
-            }
+            get => ((int)(this["SemaphoreLimit"]));
+            set => this["SemaphoreLimit"] = value;
         }
     }
 }

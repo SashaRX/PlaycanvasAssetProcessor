@@ -12,12 +12,13 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Ookii.Dialogs.Wpf;
+using System.Net;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
         private ObservableCollection<Texture> textures = new ObservableCollection<Texture>();
         private static readonly HttpClient client = new HttpClient();
-        private static SemaphoreSlim semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
+        private SemaphoreSlim? semaphore;
         private string? folderName = string.Empty;
 
         public MainWindow() {
@@ -26,6 +27,12 @@ namespace TexTool {
             TexturesDataGrid.ItemsSource = textures;
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
             DataContext = this;
+
+            InitializeSemaphore();
+        }
+
+        private void InitializeSemaphore() {
+            semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
         }
 
         private string? selectedFolderPath = "Textures Download Folder";
@@ -46,9 +53,29 @@ namespace TexTool {
             }
         }
 
-        private void UpdateConnectionStatus(bool isConnected) {
-            ConnectionStatusTextBlock.Text = isConnected ? "Connected" : "Disconnected";
-            ConnectionStatusTextBlock.Foreground = isConnected ? new SolidColorBrush(Colors.Green) : new SolidColorBrush(Colors.Red);
+        private void UpdateConnectionStatus(bool isConnected, string message = "") {
+            if (isConnected) {
+                ConnectionStatusTextBlock.Text = "Connected";
+                ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+            } else {
+                ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
+                ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+            }
+        }
+
+        private async Task HandleHttpError(HttpResponseMessage response) {
+            string message = response.StatusCode switch {
+                HttpStatusCode.Unauthorized => "401: Unauthorized. Please check your API key.",
+                HttpStatusCode.Forbidden => "403: Forbidden. You don't have permission to access this resource.",
+                HttpStatusCode.NotFound => "404: Project or Asset not found.",
+                HttpStatusCode.TooManyRequests => "429: Too many requests. Please try again later.",
+                _ => $"{(int)response.StatusCode}: {response.ReasonPhrase}"
+            };
+
+            // Updating the connection status with the error message
+            await Dispatcher.InvokeAsync(() => {
+                UpdateConnectionStatus(false, message);
+            });
         }
 
         private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -81,11 +108,16 @@ namespace TexTool {
 
                 await Task.WhenAll(tasks);
             } else {
-                UpdateConnectionStatus(false);
+                // Если assets равно null, то произошла ошибка подключения, сообщение об ошибке уже установлено в HandleHttpError
+                if (ConnectionStatusTextBlock.Text == "Disconnected") {
+                    UpdateConnectionStatus(false, "Failed to connect");
+                }
             }
         }
 
+
         private async Task ProcessAsset(JToken asset, int textureCount) {
+            if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
             await semaphore.WaitAsync();
             try {
                 var file = asset["file"];
@@ -153,7 +185,12 @@ namespace TexTool {
 
         private void Setting(object sender, RoutedEventArgs e) {
             var settingsWindow = new SettingsWindow();
+            settingsWindow.SettingsSaved += OnSettingsSaved;
             settingsWindow.ShowDialog();
+        }
+
+        private void OnSettingsSaved(object? sender, EventArgs e) {
+            InitializeSemaphore();
         }
 
         private async Task<JArray?> GetAssetsAsync() {
@@ -161,18 +198,23 @@ namespace TexTool {
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
                 var response = await client.GetAsync($"{Settings.Default.BaseUrl}/api/projects/{Settings.Default.ProjectId}/assets?branchId={Settings.Default.BranchId}&skip=0&limit=10000");
 
-                response.EnsureSuccessStatusCode();
-
-                var responseData = await response.Content.ReadAsStringAsync();
-                var assetsResponse = JObject.Parse(responseData);
-
-                Console.WriteLine("Response Status:", response.StatusCode);
-                return (JArray?)assetsResponse["result"];
+                if (response.IsSuccessStatusCode) {
+                    var responseData = await response.Content.ReadAsStringAsync();
+                    var assetsResponse = JObject.Parse(responseData);
+                    return (JArray?)assetsResponse["result"];
+                } else {
+                    await HandleHttpError(response);
+                    return null;
+                }
             } catch (HttpRequestException e) {
+                await Dispatcher.InvokeAsync(() => {
+                    UpdateConnectionStatus(false, "Network error: " + e.Message);
+                });
                 Console.Error.WriteLine("Request error:", e);
                 return null;
             }
         }
+
 
         private async Task<(int Width, int Height)> GetImageResolutionAsync(string url) {
             if (string.IsNullOrEmpty(url)) {
@@ -293,19 +335,19 @@ namespace TexTool {
         }
     }
 
-    public class SizeConverter : IValueConverter {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            if (value is int size) {
-                double sizeInMB = Math.Round(size / 1_000_000.0, 2);
-                return $"{sizeInMB} MB";
-            }
-            return "0 MB";
+public class SizeConverter : IValueConverter {
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+        if (value is int size) {
+            double sizeInMB = Math.Round(size / 1_000_000.0, 2);
+            return $"{sizeInMB} MB";
         }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
-            throw new NotImplementedException();
-        }
+        return "0 MB";
     }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+        throw new NotImplementedException();
+    }
+}
 
     public class ResolutionConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {

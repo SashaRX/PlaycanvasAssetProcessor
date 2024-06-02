@@ -49,7 +49,7 @@
                 <TextBlock x:Name="SemaphoreLimitTextBlock" Text="{Binding ElementName=SemaphoreLimitSlider, Path=Value}" VerticalAlignment="Center"/>
             </StackPanel>
             
-            <Slider x:Name="SemaphoreLimitSlider" Minimum="5" Maximum="64" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SemaphoreLimitSlider_ValueChanged" SmallChange="1" LargeChange="19" />
+            <Slider x:Name="SemaphoreLimitSlider" Minimum="5" Maximum="256" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SemaphoreLimitSlider_ValueChanged" SmallChange="1" LargeChange="19" />
             
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Save" Click="Save_Click" Margin="5" />

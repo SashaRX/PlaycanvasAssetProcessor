@@ -11,7 +11,7 @@
         <!-- Статусная строка -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" Margin="3,0,3,0" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" VerticalAlignment="Center" Width="320"/>
             </StatusBarItem>
         </StatusBar>
 

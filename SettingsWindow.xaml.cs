@@ -10,6 +10,7 @@ namespace TexTool {
             LoadSettings();
             CheckAndRemoveWatermarks();
         }
+        public event EventHandler? SettingsSaved; // Объявляем событие как nullable
 
         private void LoadSettings() {
             ProjectIdTextBox.Text = Settings.Default.ProjectId;
@@ -40,6 +41,7 @@ namespace TexTool {
             Settings.Default.SemaphoreLimit = (int)SemaphoreLimitSlider.Value;
 
             Settings.Default.Save();
+            SettingsSaved?.Invoke(this, EventArgs.Empty);
             this.Close();
         }
 

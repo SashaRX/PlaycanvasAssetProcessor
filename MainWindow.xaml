@@ -26,10 +26,11 @@
             <GroupBox Header="Playcanvas Project Connect" Width="430" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,2,2,2">
                 <StackPanel Orientation="Horizontal" Margin="8,0,8,0" Height="38">
                     <Button Content="Connect" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="Connect"/>
-                    <Button Content="Get List" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="GetList"/>
+                    <Button Content="Select folder" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="SelectFolder"/>
+                    <Button Content="Download" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="Download"/>
                 </StackPanel>
             </GroupBox>
-            <StackPanel Width="227" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
+            <StackPanel Width="328" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
                 <Button Content="Settings" Margin="10,0,10,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting"/>
             </StackPanel>
         </StackPanel>
@@ -56,7 +57,7 @@
                       Background="#FFD6D6D6" Grid.ColumnSpan="2">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" Width="*" MinWidth="100"/>
-                    <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="*" MinWidth="100"/>
+                    <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="*" MinWidth="100"/>
                     <DataGridTextColumn Header="Url" Binding="{Binding Url}" Width="*" MinWidth="100"/>
                     <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="100" SortMemberPath="ResolutionArea"/>
                     <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>

@@ -1,17 +1,17 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using MessageBox = System.Windows.MessageBox;  // Разрешите конфликт имен
 using System.Windows.Data;
 using System.Windows.Media;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
+using Microsoft.Win32;
+using System.IO;  // Добавлено для работы с директорией
 
 namespace TexTool {
     public partial class MainWindow : Window {
@@ -114,8 +114,23 @@ namespace TexTool {
             await TryConnect();
         }
 
-        private async void GetList(object sender, RoutedEventArgs e) {
-            await TryConnect();
+        private async void Download(object sender, RoutedEventArgs e) {
+
+        }
+
+        private void SelectFolder(object sender, RoutedEventArgs e) {
+            var dialog = new OpenFileDialog {
+                CheckFileExists = false, // Разрешить выбрать несуществующий файл
+                ValidateNames = false, // Разрешить выбрать папку
+                Title = "Select a folder to save downloaded textures"
+            };
+
+            if (dialog.ShowDialog() == true) {
+                string selectedPath = Path.GetDirectoryName(dialog.FileName);
+                if (!string.IsNullOrWhiteSpace(selectedPath)) {
+                    MessageBox.Show($"Selected folder: {selectedPath}", "Folder Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
         }
 
         private void Setting(object sender, RoutedEventArgs e) {

@@ -1,12 +1,13 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
 
 namespace TexTool {
     public partial class SettingsWindow : Window {
         public SettingsWindow() {
             InitializeComponent();
             LoadSettings();
-            // Проверяем и убираем ватермарки для заполненных полей
             CheckAndRemoveWatermarks();
         }
 
@@ -15,16 +16,14 @@ namespace TexTool {
             BranchIdTextBox.Text = Settings.Default.BranchId;
             PlaycanvasApiKeyTextBox.Text = Settings.Default.PlaycanvasApiKey;
             BaseUrlTextBox.Text = Settings.Default.BaseUrl;
-            SemaphoreLimitTextBox.Text = Settings.Default.SemaphoreLimit.ToString();
+            SemaphoreLimitSlider.Value = Settings.Default.SemaphoreLimit;
         }
 
         private void CheckAndRemoveWatermarks() {
-            // Убираем ватермарки для заполненных полей
             RemoveWatermarkIfFilled(ProjectIdTextBox);
             RemoveWatermarkIfFilled(BranchIdTextBox);
             RemoveWatermarkIfFilled(PlaycanvasApiKeyTextBox);
             RemoveWatermarkIfFilled(BaseUrlTextBox);
-            RemoveWatermarkIfFilled(SemaphoreLimitTextBox);
         }
 
         private void RemoveWatermarkIfFilled(TextBox textBox) {
@@ -38,10 +37,7 @@ namespace TexTool {
             Settings.Default.BranchId = BranchIdTextBox.Text;
             Settings.Default.PlaycanvasApiKey = PlaycanvasApiKeyTextBox.Text;
             Settings.Default.BaseUrl = BaseUrlTextBox.Text;
-
-            if (int.TryParse(SemaphoreLimitTextBox.Text, out int semaphoreLimit)) {
-                Settings.Default.SemaphoreLimit = semaphoreLimit;
-            }
+            Settings.Default.SemaphoreLimit = (int)SemaphoreLimitSlider.Value;
 
             Settings.Default.Save();
             this.Close();
@@ -49,6 +45,17 @@ namespace TexTool {
 
         private void Cancel_Click(object sender, RoutedEventArgs e) {
             this.Close();
+        }
+
+        private void SemaphoreLimitSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (SemaphoreLimitTextBlock != null) {
+                SemaphoreLimitTextBlock.Text = SemaphoreLimitSlider.Value.ToString();
+            }
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e) {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
     }
 }

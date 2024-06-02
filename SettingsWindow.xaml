@@ -3,43 +3,54 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:local="clr-namespace:TexTool"
-        Title="Settings" Height="345" Width="539">
+        Title="Settings" Height="361" Width="686">
     <Grid>
         <StackPanel>
+            <TextBlock Margin="1,2,1,1" TextAlignment="Center">
+                <Hyperlink NavigateUri="https://developer.playcanvas.com/user-manual/api/" RequestNavigate="Hyperlink_RequestNavigate">
+                    Help
+                </Hyperlink>
+            </TextBlock>
+
             <GroupBox Header="Playcanvas:" Background="#7FFF8A3C" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" BorderBrush="#FFFF8A3C">
                 <StackPanel>
                     <Label Content="Playcanvas API Key:" />
-                    <TextBox x:Name="PlaycanvasApiKeyTextBox" Background="#FFD6A27B">
+                    <TextBox x:Name="PlaycanvasApiKeyTextBox" Background="#FFD6A27B" ToolTip="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd">
                         <behaviors:Interaction.Behaviors>
                             <local:TextBoxWatermarkBehavior Watermark="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd"/>
                         </behaviors:Interaction.Behaviors>
                     </TextBox>
+
                     <Label Content="Project ID:" />
-                    <TextBox x:Name="ProjectIdTextBox" Background="#FFD6A27B">
+                    <TextBox x:Name="ProjectIdTextBox" Background="#FFD6A27B" ToolTip="Project ID: 1234567">
                         <behaviors:Interaction.Behaviors>
                             <local:TextBoxWatermarkBehavior Watermark="Project ID: 1234567"/>
                         </behaviors:Interaction.Behaviors>
                     </TextBox>
+
                     <Label Content="Branch ID:" />
-                    <TextBox x:Name="BranchIdTextBox" Background="#FFD6A27B">
+                    <TextBox x:Name="BranchIdTextBox" Background="#FFD6A27B" ToolTip="Branch ID: 12a3b456-7dcf-8a72-9798-9ca0e83304f0">
                         <behaviors:Interaction.Behaviors>
                             <local:TextBoxWatermarkBehavior Watermark="Branch ID: 12a3b456-7dcf-8a72-9798-9ca0e83304f0"/>
                         </behaviors:Interaction.Behaviors>
                     </TextBox>
+
                     <Label Content="Base URL:" />
-                    <TextBox x:Name="BaseUrlTextBox" Background="#FFD6A27B">
+                    <TextBox x:Name="BaseUrlTextBox" Background="#FFD6A27B" ToolTip="Base URL: https://playcanvas.com">
                         <behaviors:Interaction.Behaviors>
                             <local:TextBoxWatermarkBehavior Watermark="Base URL: https://playcanvas.com"/>
                         </behaviors:Interaction.Behaviors>
                     </TextBox>
                 </StackPanel>
             </GroupBox>
-            <Label Content="Semaphore Limit:" />
-            <TextBox x:Name="SemaphoreLimitTextBox">
-                <behaviors:Interaction.Behaviors>
-                    <local:TextBoxWatermarkBehavior Watermark="Semaphore Limit: 5 or 32"/>
-                </behaviors:Interaction.Behaviors>
-            </TextBox>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Label Content="Semaphore Limit:" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <TextBlock x:Name="SemaphoreLimitTextBlock" Text="{Binding ElementName=SemaphoreLimitSlider, Path=Value}" VerticalAlignment="Center"/>
+            </StackPanel>
+            
+            <Slider x:Name="SemaphoreLimitSlider" Minimum="5" Maximum="64" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SemaphoreLimitSlider_ValueChanged" SmallChange="1" LargeChange="19" />
+            
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Save" Click="Save_Click" Margin="5" />
                 <Button Content="Cancel" Click="Cancel_Click" Margin="5" />

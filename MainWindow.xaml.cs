@@ -295,7 +295,11 @@ namespace TexTool {
 
     public class SizeConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            return value?.ToString() ?? "0";
+            if (value is int size) {
+                double sizeInMB = Math.Round(size / 1_000_000.0, 2);
+                return $"{sizeInMB} MB";
+            }
+            return "0 MB";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {

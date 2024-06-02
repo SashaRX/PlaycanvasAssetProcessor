@@ -9,13 +9,14 @@ using System.Windows.Media;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
-using Ookii.Dialogs.Wpf;
+using Microsoft.Win32;
 
 namespace TexTool {
     public partial class MainWindow : Window {
         private ObservableCollection<Texture> textures = new ObservableCollection<Texture>();
         private static readonly HttpClient client = new HttpClient();
         private static SemaphoreSlim semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
+        private string? folderName = string.Empty; 
 
 
         public MainWindow() {
@@ -119,14 +120,14 @@ namespace TexTool {
 
 
         private void SelectFolder(object sender, RoutedEventArgs e) {
-            var folderDialog = new VistaFolderBrowserDialog {
-                Description = "Select a folder to save downloaded textures",
-                UseDescriptionForTitle = true // Использовать описание в качестве заголовка окна
+            var folderDialog = new OpenFolderDialog {
+                Title = "Select Folder",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
             };
 
-            if ((bool)folderDialog.ShowDialog(this)) {
-                string selectedPath = folderDialog.SelectedPath;
-                MessageBox.Show($"Selected folder: {selectedPath}", "Folder Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (folderDialog.ShowDialog() == true) {
+                folderName = folderDialog.FolderName;
+                MessageBox.Show($"You picked ${folderName}!");
             }
         }
 

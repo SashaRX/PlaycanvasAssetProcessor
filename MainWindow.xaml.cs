@@ -9,21 +9,41 @@ using System.Windows.Media;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
-using Microsoft.Win32;
+using System.Threading;
+using System.Threading.Tasks;
+using Ookii.Dialogs.Wpf;
 
 namespace TexTool {
-    public partial class MainWindow : Window {
+    public partial class MainWindow : Window, INotifyPropertyChanged {
         private ObservableCollection<Texture> textures = new ObservableCollection<Texture>();
         private static readonly HttpClient client = new HttpClient();
         private static SemaphoreSlim semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
-        private string? folderName = string.Empty; 
-
+        private string? folderName = string.Empty;
 
         public MainWindow() {
             InitializeComponent();
             UpdateConnectionStatus(false);
             TexturesDataGrid.ItemsSource = textures;
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
+            DataContext = this;
+        }
+
+        private string? selectedFolderPath = "Textures Download Folder";
+        public string? SelectedFolderPath {
+            get => selectedFolderPath;
+            set {
+                selectedFolderPath = value;
+                OnPropertyChanged(nameof(SelectedFolderPath));
+            }
+        }
+
+        private bool isDownloadButtonEnabled = false;
+        public bool IsDownloadButtonEnabled {
+            get => isDownloadButtonEnabled;
+            set {
+                isDownloadButtonEnabled = value;
+                OnPropertyChanged(nameof(IsDownloadButtonEnabled));
+            }
         }
 
         private void UpdateConnectionStatus(bool isConnected) {
@@ -115,19 +135,19 @@ namespace TexTool {
         }
 
         private void Download(object sender, RoutedEventArgs e) {
-
+            // Implement your download logic here
         }
 
-
         private void SelectFolder(object sender, RoutedEventArgs e) {
-            var folderDialog = new OpenFolderDialog {
-                Title = "Select Folder",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            var folderDialog = new VistaFolderBrowserDialog {
+                Description = "Select a folder to save downloaded textures",
+                UseDescriptionForTitle = true
             };
 
-            if (folderDialog.ShowDialog() == true) {
-                folderName = folderDialog.FolderName;
-                MessageBox.Show($"You picked ${folderName}!");
+            // Используем ?? false, чтобы гарантировать, что значение не будет null
+            if ((folderDialog.ShowDialog(this) ?? false)) {
+                SelectedFolderPath = folderDialog.SelectedPath;
+                IsDownloadButtonEnabled = !string.IsNullOrEmpty(SelectedFolderPath);
             }
         }
 
@@ -135,7 +155,6 @@ namespace TexTool {
             var settingsWindow = new SettingsWindow();
             settingsWindow.ShowDialog();
         }
-
 
         private async Task<JArray?> GetAssetsAsync() {
             try {
@@ -184,6 +203,16 @@ namespace TexTool {
                 Debug.WriteLine($"Error in GetImageResolutionAsync: {ex.Message}");
                 throw;
             }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName) {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e) {
+
         }
     }
 
@@ -273,7 +302,6 @@ namespace TexTool {
             throw new NotImplementedException();
         }
     }
-
 
     public class ResolutionConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {

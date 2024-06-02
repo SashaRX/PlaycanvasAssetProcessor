@@ -17,11 +17,10 @@ namespace TexTool {
             AssociatedObject.GotFocus += RemoveWatermark;
             AssociatedObject.LostFocus += ShowWatermark;
 
-            // Добавим проверку, чтобы сразу убрать ватермарк, если поле уже заполнено
             if (!string.IsNullOrEmpty(AssociatedObject.Text)) {
-                RemoveWatermark(null, null);
+                RemoveWatermark(this, EventArgs.Empty);
             } else {
-                ShowWatermark(null, null);
+                ShowWatermark(this, EventArgs.Empty);
             }
         }
 
@@ -31,14 +30,14 @@ namespace TexTool {
             AssociatedObject.LostFocus -= ShowWatermark;
         }
 
-        private void RemoveWatermark(object sender, RoutedEventArgs e) {
+        private void RemoveWatermark(object sender, EventArgs e) {
             if (AssociatedObject.Text == Watermark) {
                 AssociatedObject.Text = string.Empty;
                 AssociatedObject.Foreground = SystemColors.ControlTextBrush;
             }
         }
 
-        private void ShowWatermark(object sender, RoutedEventArgs e) {
+        private void ShowWatermark(object sender, EventArgs e) {
             if (string.IsNullOrEmpty(AssociatedObject.Text)) {
                 AssociatedObject.Text = Watermark;
                 AssociatedObject.Foreground = SystemColors.GrayTextBrush;

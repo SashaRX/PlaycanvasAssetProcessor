@@ -23,14 +23,16 @@
 
         <!-- Панель управления внизу -->
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="780" Height="60">
-            <GroupBox Header="Playcanvas Project Connect" Width="430" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,2,2,2">
-                <StackPanel Orientation="Horizontal" Margin="8,0,8,0" Height="38">
-                    <Button Content="Connect" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="Connect"/>
-                    <Button Content="Select folder" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="SelectFolder"/>
-                    <Button Content="Download" Margin="10,2,10,2" VerticalAlignment="Center" Width="74" Click="Download"/>
+            <GroupBox Header="Playcanvas Project Connect" Width="565" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Center" Margin="2,2,2,2">
+                <StackPanel Orientation="Horizontal" Margin="2,0,2,0" Height="38">
+                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Connect" AutomationProperties.Name="Connect"/>
+                    <Button Content="Select folder" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="SelectFolder" AutomationProperties.Name="SelectFolder"/>
+                    <Button Content="Download" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Download" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                            IsEnabled="{Binding IsDownloadButtonEnabled}" AutomationProperties.Name="Download"/>
+                    <TextBox Text="{Binding SelectedFolderPath, FallbackValue='Textures Download Folder', UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" IsReadOnly="True" Height="24" Width="138" FontSize="10"/>
                 </StackPanel>
             </GroupBox>
-            <StackPanel Width="328" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
+            <StackPanel Width="180" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
                 <Button Content="Settings" Margin="10,0,10,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting"/>
             </StackPanel>
         </StackPanel>

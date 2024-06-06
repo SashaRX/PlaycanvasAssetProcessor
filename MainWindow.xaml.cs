@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Ookii.Dialogs.Wpf;
 using System.Net;
 using System.Linq;
-using System.Windows.Documents;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -26,6 +25,8 @@ namespace TexTool {
         private string? userName = string.Empty;
         private string? userID = string.Empty;
 
+        private CancellationTokenSource cancellationTokenSource; // Объявление поля
+
         public MainWindow() {
             InitializeComponent();
             UpdateConnectionStatus(false);
@@ -34,14 +35,10 @@ namespace TexTool {
             DataContext = this;
 
             InitializeSemaphore();
-
+            cancellationTokenSource = new CancellationTokenSource();
             this.Closing += MainWindow_Closing;
             LoadLastSettings(); // Загружаем последние настройки
         }
-
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-
-
 
         private void InitializeSemaphore() {
             semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
@@ -65,18 +62,19 @@ namespace TexTool {
             }
         }
 
-        private async Task<string> GetUserIdAsync(string username) {
+        private async Task<string> GetUserIdAsync(string username, CancellationToken cancellationToken) {
             string url = $"https://playcanvas.com/api/users/{username}";
 
-            SetDefaultRequestHeaders();
+            client.DefaultRequestHeaders.Clear();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
 
-            HttpResponseMessage response = await client.GetAsync(url);
+            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode) {
                 await HandleHttpError(response);
                 throw new Exception($"Failed to get user ID: {response.StatusCode}");
             }
 
-            string responseBody = await response.Content.ReadAsStringAsync();
+            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             if (string.IsNullOrEmpty(responseBody)) {
                 throw new Exception("Empty response body");
             }
@@ -87,25 +85,25 @@ namespace TexTool {
             if (string.IsNullOrEmpty(userId)) {
                 throw new Exception("User ID not found in response");
             } else {
-                UpdateConnectionStatus(true, $"by userID: {userId}");
+                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userId}"));
                 userID = userId;
             }
 
             return userId;
         }
 
-        private async Task<Dictionary<string, string>> GetProjectsAsync(string userId) {
+        private async Task<Dictionary<string, string>> GetProjectsAsync(string userId, CancellationToken cancellationToken) {
             string url = $"https://playcanvas.com/api/users/{userId}/projects";
+            client.DefaultRequestHeaders.Clear();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
 
-            SetDefaultRequestHeaders();
-
-            HttpResponseMessage response = await client.GetAsync(url);
+            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode) {
                 await HandleHttpError(response);
                 throw new Exception($"Failed to get projects: {response.StatusCode}");
             }
 
-            string responseBody = await response.Content.ReadAsStringAsync();
+            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             if (string.IsNullOrEmpty(responseBody)) {
                 throw new Exception("Empty response body");
             }
@@ -135,10 +133,8 @@ namespace TexTool {
                     if (string.IsNullOrEmpty(projectId)) {
                         throw new Exception("Project ID is null or empty");
                     }
-                    var branches = await GetBranchesAsync(projectId);
-                    BranchesComboBox.ItemsSource = branches;
-                    BranchesComboBox.DisplayMemberPath = "Value";
-                    BranchesComboBox.SelectedValuePath = "Key";
+                    var branches = await GetBranchesAsync(projectId, cancellationTokenSource.Token);
+                    BranchesComboBox.ItemsSource = branches.Select(b => b.Value).ToList();
                     if (branches.Count > 0) {
                         BranchesComboBox.SelectedIndex = 0; // Select the first branch by default
                     }
@@ -153,18 +149,18 @@ namespace TexTool {
             SaveCurrentSettings(); // Сохраняем текущие настройки при изменении ветки
         }
 
-        private async Task<Dictionary<string, string>> GetBranchesAsync(string projectId) {
+        private async Task<Dictionary<string, string>> GetBranchesAsync(string projectId, CancellationToken cancellationToken) {
             string url = $"https://playcanvas.com/api/projects/{projectId}/branches";
+            client.DefaultRequestHeaders.Clear();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
 
-            SetDefaultRequestHeaders();
-
-            HttpResponseMessage response = await client.GetAsync(url);
+            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode) {
                 await HandleHttpError(response);
                 throw new Exception($"Failed to get branches: {response.StatusCode}");
             }
 
-            string responseBody = await response.Content.ReadAsStringAsync();
+            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             if (string.IsNullOrEmpty(responseBody)) {
                 throw new Exception("Empty response body");
             }
@@ -187,6 +183,7 @@ namespace TexTool {
             return branches;
         }
 
+
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
             if (isConnected) {
                 ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
@@ -206,16 +203,12 @@ namespace TexTool {
                 _ => $"{(int)response.StatusCode}: {response.ReasonPhrase}"
             };
 
-            // Logging the error
-            logger.Error($"HTTP error: {message}");
-
             // Updating the connection status with the error message
             await Dispatcher.InvokeAsync(() => {
                 UpdateConnectionStatus(false, message);
                 MessageBox.Show(message); // Displaying the error message to the user
             });
         }
-
 
         private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
         }
@@ -234,31 +227,52 @@ namespace TexTool {
         }
 
         private async void GetListTextures(object sender, RoutedEventArgs e) {
-            await TryConnect();
+            cancellationTokenSource = new CancellationTokenSource();
+            CancelButton.IsEnabled = true;
+
+            var selectedProject = (KeyValuePair<string, string>)ProjectsComboBox.SelectedItem;
+            var selectedBranch = BranchesComboBox.SelectedItem?.ToString();
+
+            if (selectedProject.Equals(default(KeyValuePair<string, string>)) || selectedBranch == null) {
+                MessageBox.Show("Please select a project and branch.");
+                return;
+            }
+
+            await Task.Run(() => TryConnect(selectedProject, selectedBranch, cancellationTokenSource.Token));
+
+            CancelButton.IsEnabled = false;
         }
 
-        private void SetDefaultRequestHeaders() {
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+        // Обработчик события для кнопки "Cancel"
+        private void CancelOperation(object sender, RoutedEventArgs e) {
+            cancellationTokenSource.Cancel(); // Отмена всех операций, использующих этот токен
         }
 
-        private async Task TryConnect() {
-            var assets = await GetAssetsAsync();
+        private void CancelButton_Click(object sender, RoutedEventArgs e) {
+            CancelOperation(sender, e);
+        }
+
+        private async Task TryConnect(KeyValuePair<string, string> selectedProject, string selectedBranch, CancellationToken cancellationToken) {
+            var assets = await GetAssetsAsync(selectedProject, selectedBranch, cancellationToken);
             if (assets != null) {
-                UpdateConnectionStatus(true);
-                textures.Clear();
+                await Dispatcher.InvokeAsync(() => {
+                    UpdateConnectionStatus(true);
+                    textures.Clear();
+                });
 
                 int textureCount = assets.Count(asset => asset["file"] != null && asset["type"]?.ToString() == "texture");
 
-                ProgressBar.Value = 0;
-                ProgressBar.Maximum = textureCount;
-                ProgressTextBlock.Text = $"0/{textureCount}";
+                await Dispatcher.InvokeAsync(() => {
+                    ProgressBar.Value = 0;
+                    ProgressBar.Maximum = textureCount;
+                    ProgressTextBlock.Text = $"0/{textureCount}";
+                });
 
                 var tasks = assets
                     .Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture")
                     .Select(async asset => {
-                        await ProcessAsset(asset, textureCount);
-                        Dispatcher.Invoke(() => {
+                        await ProcessAsset(asset, textureCount, cancellationToken);
+                        await Dispatcher.InvokeAsync(() => {
                             ProgressBar.Value++;
                             ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
                         });
@@ -268,14 +282,14 @@ namespace TexTool {
             } else {
                 // Если assets равно null, то произошла ошибка подключения, сообщение об ошибке уже установлено в HandleHttpError
                 if (ConnectionStatusTextBlock.Text == "Disconnected") {
-                    UpdateConnectionStatus(false, "Failed to connect");
+                    await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(false, "Failed to connect"));
                 }
             }
         }
 
-        private async Task ProcessAsset(JToken asset, int textureCount) {
+        private async Task ProcessAsset(JToken asset, int textureCount, CancellationToken cancellationToken) {
             if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
-            await semaphore.WaitAsync();
+            await semaphore.WaitAsync(cancellationToken);
             try {
                 var file = asset["file"];
                 if (file != null) {
@@ -292,9 +306,9 @@ namespace TexTool {
                     };
 
                     await Dispatcher.InvokeAsync(() => textures.Add(texture));
-                    await UpdateTextureResolutionAsync(texture);
+                    await UpdateTextureResolutionAsync(texture, cancellationToken);
 
-                    Dispatcher.Invoke(() => {
+                    await Dispatcher.InvokeAsync(() => {
                         ProgressBar.Value++;
                         ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
                     });
@@ -304,7 +318,7 @@ namespace TexTool {
             }
         }
 
-        private async Task UpdateTextureResolutionAsync(Texture texture) {
+        private async Task UpdateTextureResolutionAsync(Texture texture, CancellationToken cancellationToken) {
             if (texture == null) throw new ArgumentNullException(nameof(texture));
             if (string.IsNullOrEmpty(texture.Url)) {
                 Debug.WriteLine($"Texture URL is null or empty for texture: {texture.Name}");
@@ -316,7 +330,7 @@ namespace TexTool {
             try {
                 Debug.WriteLine($"Fetching resolution for: {texture.Name} ({texture.Url})");
 
-                var resolution = await GetImageResolutionAsync(texture.Url);
+                var resolution = await GetImageResolutionAsync(texture.Url, cancellationToken);
                 texture.Resolution = new int[] { resolution.Width, resolution.Height };
 
                 Debug.WriteLine($"Fetched resolution for: {texture.Name} - {string.Join("x", texture.Resolution)}");
@@ -332,24 +346,27 @@ namespace TexTool {
         }
 
         private async void Connect(object sender, RoutedEventArgs e) {
+            var cancellationToken = cancellationTokenSource.Token; // Использование токена отмены
             if (Settings.Default.PlaycanvasApiKey == "" || Settings.Default.Username == "") {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
             } else {
                 try {
                     userName = Settings.Default.Username.ToLower();
-                    userID = await GetUserIdAsync(userName);
+                    userID = await GetUserIdAsync(userName, cancellationToken);
                     if (string.IsNullOrEmpty(userID)) {
                         throw new Exception("User ID is null or empty");
                     }
 
-                    var projects = await GetProjectsAsync(userID);
+                    var projects = await GetProjectsAsync(userID, cancellationToken);
                     if (projects != null && projects.Count > 0) {
                         string? lastSelectedProjectId = Settings.Default.LastSelectedProjectId;
-                        string? lastSelectedBranchId = Settings.Default.LastSelectedBranchId;
+                        string? lastSelectedBranchName = Settings.Default.LastSelectedBranchName;
 
-                        ProjectsComboBox.ItemsSource = projects;
-                        ProjectsComboBox.DisplayMemberPath = "Value";
-                        ProjectsComboBox.SelectedValuePath = "Key";
+                        await Dispatcher.InvokeAsync(() => {
+                            ProjectsComboBox.ItemsSource = projects;
+                            ProjectsComboBox.DisplayMemberPath = "Value";
+                            ProjectsComboBox.SelectedValuePath = "Key";
+                        });
 
                         if (!string.IsNullOrEmpty(lastSelectedProjectId) && projects.ContainsKey(lastSelectedProjectId)) {
                             ProjectsComboBox.SelectedValue = lastSelectedProjectId;
@@ -359,13 +376,15 @@ namespace TexTool {
 
                         if (ProjectsComboBox.SelectedItem != null) {
                             string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                            var branches = await GetBranchesAsync(projectId);
+                            var branches = await GetBranchesAsync(projectId, cancellationToken);
 
                             if (branches != null && branches.Count > 0) {
-                                BranchesComboBox.ItemsSource = branches;
+                                await Dispatcher.InvokeAsync(() => {
+                                    BranchesComboBox.ItemsSource = branches.Values.ToList();
+                                });
 
-                                if (!string.IsNullOrEmpty(lastSelectedBranchId) && branches.ContainsKey(lastSelectedBranchId)) {
-                                    BranchesComboBox.SelectedValue = lastSelectedBranchId;
+                                if (!string.IsNullOrEmpty(lastSelectedBranchName) && branches.Any(b => b.Value == lastSelectedBranchName)) {
+                                    BranchesComboBox.SelectedItem = lastSelectedBranchName;
                                 } else {
                                     BranchesComboBox.SelectedIndex = 0;
                                 }
@@ -407,20 +426,20 @@ namespace TexTool {
             InitializeSemaphore();
         }
 
-        private async Task<JArray?> GetAssetsAsync() {
+        private async Task<JArray?> GetAssetsAsync(KeyValuePair<string, string> selectedProject, string selectedBranch, CancellationToken cancellationToken) {
             try {
                 // Получаем выбранный проект и ветку
-                string? selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string? selectedBranchID = BranchesComboBox.SelectedValue?.ToString();
+                string selectedProjectId = selectedProject.Key;
+                string selectedBranchName = selectedBranch;
 
                 // Обновляем URL запроса, используя данные о проекте и ветке
-                string url = $"https://playcanvas.com/api/projects/{selectedProjectId}/assets?branch={selectedBranchID}&skip=0&limit=10000";
+                string url = $"https://playcanvas.com/api/projects/{selectedProjectId}/assets?branch={selectedBranchName}&skip=0&limit=10000";
 
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
-                var response = await client.GetAsync(url);
+                var response = await client.GetAsync(url, cancellationToken);
 
                 if (response.IsSuccessStatusCode) {
-                    var responseData = await response.Content.ReadAsStringAsync();
+                    var responseData = await response.Content.ReadAsStringAsync(cancellationToken);
                     var assetsResponse = JObject.Parse(responseData);
                     return (JArray?)assetsResponse["result"];
                 } else {
@@ -437,19 +456,20 @@ namespace TexTool {
             }
         }
 
-        private async Task<(int Width, int Height)> GetImageResolutionAsync(string url) {
+        private async Task<(int Width, int Height)> GetImageResolutionAsync(string url, CancellationToken cancellationToken) {
             if (string.IsNullOrEmpty(url)) {
                 throw new ArgumentException("URL cannot be null or empty", nameof(url));
             }
 
             try {
-                SetDefaultRequestHeaders();
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
                 client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
 
-                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
-                var buffer = await response.Content.ReadAsByteArrayAsync();
+                var buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
                 if (buffer.Length < 24) {
                     throw new Exception("Unable to read image header");
@@ -485,22 +505,30 @@ namespace TexTool {
                 Settings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
             }
             if (BranchesComboBox.SelectedItem != null) {
-                Settings.Default.LastSelectedBranchId = BranchesComboBox.SelectedValue.ToString();
-                Settings.Default.LastSelectedBranchName = BranchesComboBox.Text;
+                Settings.Default.LastSelectedBranchName = BranchesComboBox.SelectedItem.ToString();
             }
             Settings.Default.Save();
         }
 
         private async void LoadLastSettings() {
             try {
-                userName = Settings.Default.Username.ToLower();
-                userID = await GetUserIdAsync(userName);
-                var projects = await GetProjectsAsync(userID);
+                userName = Settings.Default.Username?.ToLower();
+                if (string.IsNullOrEmpty(userName)) {
+                    throw new Exception("Username is null or empty");
+                }
+
+                // Используем токен отмены
+                var cancellationToken = new CancellationToken();
+
+                userID = await GetUserIdAsync(userName, cancellationToken);
+                var projects = await GetProjectsAsync(userID, cancellationToken);
 
                 if (projects != null && projects.Count > 0) {
-                    ProjectsComboBox.ItemsSource = projects;
-                    ProjectsComboBox.DisplayMemberPath = "Value";
-                    ProjectsComboBox.SelectedValuePath = "Key";
+                    await Dispatcher.InvokeAsync(() => {
+                        ProjectsComboBox.ItemsSource = projects;
+                        ProjectsComboBox.DisplayMemberPath = "Value";
+                        ProjectsComboBox.SelectedValuePath = "Key";
+                    });
 
                     // Восстанавливаем последний выбранный проект
                     if (!string.IsNullOrEmpty(Settings.Default.LastSelectedProjectId) && projects.ContainsKey(Settings.Default.LastSelectedProjectId)) {
@@ -512,21 +540,26 @@ namespace TexTool {
 
                 if (ProjectsComboBox.SelectedItem != null) {
                     string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                    var branches = await GetBranchesAsync(projectId);
+                    var branches = await GetBranchesAsync(projectId, cancellationToken);
 
-                    if (branches != null && branches.Count > 0) {
-                        BranchesComboBox.ItemsSource = branches;
+                    if (branches != null && branches.Count() > 0) {
+                        await Dispatcher.InvokeAsync(() => {
+                            BranchesComboBox.ItemsSource = branches.Select(b => b.Value).ToList();
+                        });
 
                         // Восстанавливаем последнюю выбранную ветку
-                        if (!string.IsNullOrEmpty(Settings.Default.LastSelectedBranchId) && branches.ContainsKey(Settings.Default.LastSelectedBranchId)) {
-                            BranchesComboBox.SelectedValue = Settings.Default.LastSelectedBranchId;
+                        if (!string.IsNullOrEmpty(Settings.Default.LastSelectedBranchName) && branches.Any(b => b.Value == Settings.Default.LastSelectedBranchName)) {
+                            BranchesComboBox.SelectedItem = Settings.Default.LastSelectedBranchName;
                         } else {
                             BranchesComboBox.SelectedIndex = 0; // Выбираем первую ветку, если сохраненная ветка не найдена
                         }
                     }
                 }
             } catch (Exception ex) {
-                MessageBox.Show($"Error loading last settings: {ex.Message}");
+                await Dispatcher.InvokeAsync(() => {
+                    MessageBox.Show($"Error loading last settings: {ex.Message}");
+                });
+                Debug.WriteLine($"Error loading last settings: {ex}");
             }
         }
     }

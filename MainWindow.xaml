@@ -28,8 +28,29 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,-128,0" Height="58">
                     <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Connect" />
                     <!-- <Button Content="Get Projects" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Connect" />-->
-                    <ComboBox x:Name="ProjectsComboBox" Height="20" SelectionChanged="ProjectsComboBox_SelectionChanged" AutomationProperties.Name="Projects" Margin="4,0,4,0" MinWidth="120" Width="115" />
-                    <ComboBox x:Name="BranchesComboBox" Height="20" AutomationProperties.Name="Branches" Margin="4,0,4,0" SelectionChanged="BranchesComboBox_SelectionChanged" MinWidth="85"/>
+                    <ComboBox x:Name="ProjectsComboBox" 
+                              ItemsSource="{Binding Projects}" 
+                              DisplayMemberPath="Value"
+                              SelectedValuePath="Key"
+                              SelectionChanged="ProjectsComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+
+                    <ComboBox x:Name="BranchesComboBox"
+                        SelectionChanged="BranchesComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+
 
                     <Button Content="Get Textures" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="GetListTextures"/>
                     <Button Content="Select folder" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="SelectFolder" AutomationProperties.Name="SelectFolder" Height="NaN" RenderTransformOrigin="1.514,0.574"/>
@@ -40,6 +61,7 @@
                 </StackPanel>
             </GroupBox>
             <StackPanel Width="121" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
+                <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False"/>
                 <Button Content="Settings" Margin="10,0,10,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting"/>
             </StackPanel>
         </StackPanel>

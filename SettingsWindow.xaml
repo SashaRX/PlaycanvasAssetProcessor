@@ -1,4 +1,4 @@
-<Window x:Class="TexTool.SettingsWindow"
+﻿<Window x:Class="TexTool.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
@@ -21,24 +21,10 @@
                         </behaviors:Interaction.Behaviors>
                     </TextBox>
 
-                    <Label Content="Project ID:" />
-                    <TextBox x:Name="ProjectIdTextBox" Background="#FFD6A27B" ToolTip="Project ID: 1234567">
+                    <Label Content="User Name:" />
+                    <TextBox x:Name="UsernameTextBox" Background="#FFD6A27B" ToolTip="Usr name in Playcanvas">
                         <behaviors:Interaction.Behaviors>
-                            <local:TextBoxWatermarkBehavior Watermark="Project ID: 1234567"/>
-                        </behaviors:Interaction.Behaviors>
-                    </TextBox>
-
-                    <Label Content="Branch ID:" />
-                    <TextBox x:Name="BranchIdTextBox" Background="#FFD6A27B" ToolTip="Branch ID: 12a3b456-7dcf-8a72-9798-9ca0e83304f0">
-                        <behaviors:Interaction.Behaviors>
-                            <local:TextBoxWatermarkBehavior Watermark="Branch ID: 12a3b456-7dcf-8a72-9798-9ca0e83304f0"/>
-                        </behaviors:Interaction.Behaviors>
-                    </TextBox>
-
-                    <Label Content="Base URL:" />
-                    <TextBox x:Name="BaseUrlTextBox" Background="#FFD6A27B" ToolTip="Base URL: https://playcanvas.com">
-                        <behaviors:Interaction.Behaviors>
-                            <local:TextBoxWatermarkBehavior Watermark="Base URL: https://playcanvas.com"/>
+                            <local:TextBoxWatermarkBehavior Watermark="You'r username on playcanvas"/>
                         </behaviors:Interaction.Behaviors>
                     </TextBox>
                 </StackPanel>

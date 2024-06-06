@@ -5,6 +5,14 @@ namespace TexTool.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("default_user")]
+        public string UserName {
+            get => ((string)(this["UserName"]));
+            set => this["UserName"] = value;
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("default_project_id")]
         public string ProjectId {
             get => ((string)(this["ProjectId"]));

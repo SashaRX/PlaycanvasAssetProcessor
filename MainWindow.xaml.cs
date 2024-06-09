@@ -183,15 +183,16 @@ namespace TexTool {
             return branches;
         }
 
-
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
-            if (isConnected) {
-                ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
-                ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
-            } else {
-                ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
-                ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
-            }
+            Dispatcher.Invoke(() => {
+                if (isConnected) {
+                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
+                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                } else {
+                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
+                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+                }
+            });
         }
 
         private async Task HandleHttpError(HttpResponseMessage response) {
@@ -231,17 +232,17 @@ namespace TexTool {
             CancelButton.IsEnabled = true;
 
             var selectedProject = (KeyValuePair<string, string>)ProjectsComboBox.SelectedItem;
-            var selectedBranch = BranchesComboBox.SelectedItem?.ToString();
+            var selectedBranch = BranchesComboBox.SelectedItem?.ToString() ?? string.Empty;
 
-            if (selectedProject.Equals(default(KeyValuePair<string, string>)) || selectedBranch == null) {
-                MessageBox.Show("Please select a project and branch.");
-                return;
+            try {
+                await Task.Run(() => TryConnect(selectedProject, selectedBranch, cancellationTokenSource.Token));
+            } catch (OperationCanceledException) {
+                UpdateConnectionStatus(false, "Operation was cancelled");
+            } finally {
+                CancelButton.IsEnabled = false;
             }
-
-            await Task.Run(() => TryConnect(selectedProject, selectedBranch, cancellationTokenSource.Token));
-
-            CancelButton.IsEnabled = false;
         }
+
 
         // Обработчик события для кнопки "Cancel"
         private void CancelOperation(object sender, RoutedEventArgs e) {
@@ -249,48 +250,56 @@ namespace TexTool {
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e) {
-            CancelOperation(sender, e);
+            cancellationTokenSource.Cancel();
         }
 
+
         private async Task TryConnect(KeyValuePair<string, string> selectedProject, string selectedBranch, CancellationToken cancellationToken) {
-            var assets = await GetAssetsAsync(selectedProject, selectedBranch, cancellationToken);
-            if (assets != null) {
-                await Dispatcher.InvokeAsync(() => {
-                    UpdateConnectionStatus(true);
-                    textures.Clear();
-                });
+            try {
+                var assets = await GetAssetsAsync(selectedProject, selectedBranch, cancellationToken);
+                if (assets != null) {
+                    Dispatcher.Invoke(() => UpdateConnectionStatus(true));
+                    Dispatcher.Invoke(() => textures.Clear());
 
-                int textureCount = assets.Count(asset => asset["file"] != null && asset["type"]?.ToString() == "texture");
+                    int textureCount = assets.Count(asset => asset["file"] != null && asset["type"]?.ToString() == "texture");
 
-                await Dispatcher.InvokeAsync(() => {
-                    ProgressBar.Value = 0;
-                    ProgressBar.Maximum = textureCount;
-                    ProgressTextBlock.Text = $"0/{textureCount}";
-                });
-
-                var tasks = assets
-                    .Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture")
-                    .Select(async asset => {
-                        await ProcessAsset(asset, textureCount, cancellationToken);
-                        await Dispatcher.InvokeAsync(() => {
-                            ProgressBar.Value++;
-                            ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
-                        });
+                    Dispatcher.Invoke(() => {
+                        ProgressBar.Value = 0;
+                        ProgressBar.Maximum = textureCount;
+                        ProgressTextBlock.Text = $"0/{textureCount}";
                     });
 
-                await Task.WhenAll(tasks);
-            } else {
-                // Если assets равно null, то произошла ошибка подключения, сообщение об ошибке уже установлено в HandleHttpError
-                if (ConnectionStatusTextBlock.Text == "Disconnected") {
-                    await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(false, "Failed to connect"));
+                    var tasks = assets
+                        .Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture")
+                        .Select(async asset => {
+                            await ProcessAsset(asset, textureCount, cancellationToken);
+                            Dispatcher.Invoke(() => {
+                                ProgressBar.Value++;
+                                ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
+                            });
+                        });
+
+                    await Task.WhenAll(tasks);
+                } else {
+                    // Если assets равно null, то произошла ошибка подключения, сообщение об ошибке уже установлено в HandleHttpError
+                    if (Dispatcher.Invoke(() => ConnectionStatusTextBlock.Text) == "Disconnected") {
+                        Dispatcher.Invoke(() => UpdateConnectionStatus(false, "Failed to connect"));
+                    }
                 }
+            } catch (OperationCanceledException) {
+                Dispatcher.Invoke(() => UpdateConnectionStatus(false, "Operation was canceled"));
+            } catch (Exception ex) {
+                Dispatcher.Invoke(() => UpdateConnectionStatus(false, $"Error: {ex.Message}"));
             }
         }
 
+
+
         private async Task ProcessAsset(JToken asset, int textureCount, CancellationToken cancellationToken) {
             if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
-            await semaphore.WaitAsync(cancellationToken);
             try {
+                await semaphore.WaitAsync(cancellationToken);
+
                 var file = asset["file"];
                 if (file != null) {
                     string fileUrl = file["url"] != null ? $"{Settings.Default.BaseUrl}{file["url"]}" : string.Empty;
@@ -308,15 +317,18 @@ namespace TexTool {
                     await Dispatcher.InvokeAsync(() => textures.Add(texture));
                     await UpdateTextureResolutionAsync(texture, cancellationToken);
 
-                    await Dispatcher.InvokeAsync(() => {
+                    Dispatcher.Invoke(() => {
                         ProgressBar.Value++;
                         ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
                     });
                 }
+            } catch (OperationCanceledException) {
+                // Логика обработки отмены
             } finally {
                 semaphore.Release();
             }
         }
+
 
         private async Task UpdateTextureResolutionAsync(Texture texture, CancellationToken cancellationToken) {
             if (texture == null) throw new ArgumentNullException(nameof(texture));

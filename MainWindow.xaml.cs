@@ -1,31 +1,41 @@
-﻿using System.Collections.ObjectModel;
-using System.Globalization;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using Newtonsoft.Json.Linq;
+using Ookii.Dialogs.Wpf;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
-using Newtonsoft.Json.Linq;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.Threading;
-using System.Threading.Tasks;
-using Ookii.Dialogs.Wpf;
-using System.Net;
-using System.Linq;
+using SixLabors.ImageSharp;
+using TexTool.Resources;
+using TexTool.Helpers;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
-        private ObservableCollection<Texture> textures = new ObservableCollection<Texture>();
-        private static readonly HttpClient client = new HttpClient();
-        private SemaphoreSlim? semaphore;
-        private string? folderName = string.Empty;
+        private readonly ObservableCollection<TextureResource> textures = [];
+        private readonly SemaphoreSlim semaphore = new(Settings.Default.SemaphoreLimit);
+        private string userName = string.Empty;
+        private string userID = string.Empty;
 
-        private string? userName = string.Empty;
-        private string? userID = string.Empty;
+        private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
+        private readonly List<string> excludedFormats = [".hdr", ".avif"];
 
-        private CancellationTokenSource cancellationTokenSource; // Объявление поля
+        private CancellationTokenSource cancellationTokenSource = new();
+        private readonly PlayCanvasService playCanvasService = new();
+
+        private ObservableCollection<KeyValuePair<string, string>> projects = [];
+        public ObservableCollection<KeyValuePair<string, string>> Projects {
+            get { return projects; }
+            set {
+                projects = value;
+                OnPropertyChanged(nameof(Projects));
+            }
+        }
+
+        private readonly ObservableCollection<Branch> branches = [];
+        public ObservableCollection<Branch> Branches {
+            get { return branches; }
+        }
 
         public MainWindow() {
             InitializeComponent();
@@ -33,19 +43,18 @@ namespace TexTool {
             TexturesDataGrid.ItemsSource = textures;
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
             DataContext = this;
-
-            InitializeSemaphore();
-            cancellationTokenSource = new CancellationTokenSource();
             this.Closing += MainWindow_Closing;
-            LoadLastSettings(); // Загружаем последние настройки
+            LoadLastSettings();
         }
 
-        private void InitializeSemaphore() {
-            semaphore = new SemaphoreSlim(Settings.Default.SemaphoreLimit);
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName) {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private string? selectedFolderPath = "Textures Download Folder";
-        public string? SelectedFolderPath {
+        private string selectedFolderPath = "Textures Download Folder";
+        public string SelectedFolderPath {
             get => selectedFolderPath;
             set {
                 selectedFolderPath = value;
@@ -62,325 +71,98 @@ namespace TexTool {
             }
         }
 
-        private async Task<string> GetUserIdAsync(string username, CancellationToken cancellationToken) {
-            string url = $"https://playcanvas.com/api/users/{username}";
+        #region UI Event Handlers
 
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
-
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            if (!response.IsSuccessStatusCode) {
-                await HandleHttpError(response);
-                throw new Exception($"Failed to get user ID: {response.StatusCode}");
-            }
-
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (string.IsNullOrEmpty(responseBody)) {
-                throw new Exception("Empty response body");
-            }
-
-            var json = JObject.Parse(responseBody);
-            string? userId = json["id"]?.ToString();
-
-            if (string.IsNullOrEmpty(userId)) {
-                throw new Exception("User ID not found in response");
-            } else {
-                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userId}"));
-                userID = userId;
-            }
-
-            return userId;
-        }
-
-        private async Task<Dictionary<string, string>> GetProjectsAsync(string userId, CancellationToken cancellationToken) {
-            string url = $"https://playcanvas.com/api/users/{userId}/projects";
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
-
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            if (!response.IsSuccessStatusCode) {
-                await HandleHttpError(response);
-                throw new Exception($"Failed to get projects: {response.StatusCode}");
-            }
-
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (string.IsNullOrEmpty(responseBody)) {
-                throw new Exception("Empty response body");
-            }
-
-            var json = JObject.Parse(responseBody);
-            var projectsArray = json["result"] as JArray;
-            if (projectsArray == null) {
-                throw new Exception("Expected an array in 'result'");
-            }
-
-            var projects = new Dictionary<string, string>();
-            foreach (var project in projectsArray) {
-                string? projectId = project["id"]?.ToString();
-                string? projectName = project["name"]?.ToString();
-                if (!string.IsNullOrEmpty(projectId) && !string.IsNullOrEmpty(projectName)) {
-                    projects.Add(projectId, projectName);
-                }
-            }
-
-            return projects;
-        }
-
-        private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (ProjectsComboBox.SelectedItem != null) {
-                string? projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                try {
-                    if (string.IsNullOrEmpty(projectId)) {
-                        throw new Exception("Project ID is null or empty");
-                    }
-                    var branches = await GetBranchesAsync(projectId, cancellationTokenSource.Token);
-                    BranchesComboBox.ItemsSource = branches.Select(b => b.Value).ToList();
-                    if (branches.Count > 0) {
-                        BranchesComboBox.SelectedIndex = 0; // Select the first branch by default
-                    }
-                    SaveCurrentSettings(); // Сохраняем текущие настройки при изменении проекта
-                } catch (Exception ex) {
-                    MessageBox.Show($"Error: {ex.Message}");
-                }
-            }
+        private void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            _ = LoadBranchesAsync();
         }
 
         private void BranchesComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            SaveCurrentSettings(); // Сохраняем текущие настройки при изменении ветки
+            SaveCurrentSettings();
         }
 
-        private async Task<Dictionary<string, string>> GetBranchesAsync(string projectId, CancellationToken cancellationToken) {
-            string url = $"https://playcanvas.com/api/projects/{projectId}/branches";
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+        private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
 
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            if (!response.IsSuccessStatusCode) {
-                await HandleHttpError(response);
-                throw new Exception($"Failed to get branches: {response.StatusCode}");
-            }
-
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (string.IsNullOrEmpty(responseBody)) {
-                throw new Exception("Empty response body");
-            }
-
-            var json = JObject.Parse(responseBody);
-            var branchesArray = json["result"] as JArray;
-            if (branchesArray == null) {
-                throw new Exception("Expected an array in 'result'");
-            }
-
-            var branches = new Dictionary<string, string>();
-            foreach (var branch in branchesArray) {
-                string? branchID = branch["id"]?.ToString();
-                string? branchName = branch["name"]?.ToString();
-                if (!string.IsNullOrEmpty(branchID) && !string.IsNullOrEmpty(branchName)) {
-                    branches.Add(branchID, branchName);
-                }
-            }
-
-            return branches;
-        }
-
-        private void UpdateConnectionStatus(bool isConnected, string message = "") {
-            Dispatcher.Invoke(() => {
-                if (isConnected) {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+        private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
+            if (e != null && e.Row != null && e.Row.Item != null) {
+                if (e.Row.Item is TextureResource texture && texture.Status != null && texture.Status == "Error") {
+                    e.Row.Background = new SolidColorBrush(Colors.LightCoral);
                 } else {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+                    e.Row.Background = new SolidColorBrush(Colors.Transparent);
                 }
-            });
+            }
         }
 
-        private async Task HandleHttpError(HttpResponseMessage response) {
-            string message = response.StatusCode switch {
-                HttpStatusCode.Unauthorized => "401: Unauthorized. Please check your API key.",
-                HttpStatusCode.Forbidden => "403: Forbidden. You don't have permission to access this resource.",
-                HttpStatusCode.NotFound => "404: Project or Asset not found.",
-                HttpStatusCode.TooManyRequests => "429: Too many requests. Please try again later.",
-                _ => $"{(int)response.StatusCode}: {response.ReasonPhrase}"
+        private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
+            SaveCurrentSettings();
+        }
+
+        private void CancelButton_Click(object? sender, RoutedEventArgs e) {
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource = new CancellationTokenSource();
+        }
+
+        private void SelectFolder(object sender, RoutedEventArgs e) {
+            var folderDialog = new VistaFolderBrowserDialog {
+                Description = "Select a folder to save downloaded textures",
+                UseDescriptionForTitle = true
             };
 
-            // Updating the connection status with the error message
-            await Dispatcher.InvokeAsync(() => {
-                UpdateConnectionStatus(false, message);
-                MessageBox.Show(message); // Displaying the error message to the user
-            });
-        }
-
-        private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-        }
-
-        private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs e) {
-            var texture = e.Row.Item as Texture;
-            if (texture != null && texture.Status == "Error") {
-                e.Row.Background = new SolidColorBrush(Colors.LightCoral);
-            } else {
-                e.Row.Background = new SolidColorBrush(Colors.Transparent);
+            if ((folderDialog.ShowDialog(this) ?? false)) {
+                SelectedFolderPath = folderDialog.SelectedPath;
+                IsDownloadButtonEnabled = !string.IsNullOrEmpty(SelectedFolderPath);
             }
         }
 
-        private void MainWindow_Closing(object? sender, CancelEventArgs e) {
-            SaveCurrentSettings(); // Сохраняем текущие настройки при закрытии
+        private void Setting(object sender, RoutedEventArgs e) {
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.ShowDialog();
         }
 
-        private async void GetListTextures(object sender, RoutedEventArgs e) {
-            cancellationTokenSource = new CancellationTokenSource();
-            CancelButton.IsEnabled = true;
+        private void ClearTextures(object sender, RoutedEventArgs e) {
+            textures?.Clear();
+        }
 
-            var selectedProject = (KeyValuePair<string, string>)ProjectsComboBox.SelectedItem;
-            var selectedBranch = BranchesComboBox.SelectedItem?.ToString() ?? string.Empty;
-
+        private async void GetListTextures(object? sender, RoutedEventArgs? e) {
             try {
-                await Task.Run(() => TryConnect(selectedProject, selectedBranch, cancellationTokenSource.Token));
-            } catch (OperationCanceledException) {
-                UpdateConnectionStatus(false, "Operation was cancelled");
+                CancelButton.IsEnabled = true;
+                if (cancellationTokenSource != null) {
+                    await TryConnect(cancellationTokenSource.Token);
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error in GetListTextures: {ex.Message}");
+                LogError($"Error in GetListTextures: {ex}");
             } finally {
                 CancelButton.IsEnabled = false;
             }
         }
 
-
-        // Обработчик события для кнопки "Cancel"
-        private void CancelOperation(object sender, RoutedEventArgs e) {
-            cancellationTokenSource.Cancel(); // Отмена всех операций, использующих этот токен
-        }
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e) {
-            cancellationTokenSource.Cancel();
-        }
-
-
-        private async Task TryConnect(KeyValuePair<string, string> selectedProject, string selectedBranch, CancellationToken cancellationToken) {
-            try {
-                var assets = await GetAssetsAsync(selectedProject, selectedBranch, cancellationToken);
-                if (assets != null) {
-                    Dispatcher.Invoke(() => UpdateConnectionStatus(true));
-                    Dispatcher.Invoke(() => textures.Clear());
-
-                    int textureCount = assets.Count(asset => asset["file"] != null && asset["type"]?.ToString() == "texture");
-
-                    Dispatcher.Invoke(() => {
-                        ProgressBar.Value = 0;
-                        ProgressBar.Maximum = textureCount;
-                        ProgressTextBlock.Text = $"0/{textureCount}";
-                    });
-
-                    var tasks = assets
-                        .Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture")
-                        .Select(async asset => {
-                            await ProcessAsset(asset, textureCount, cancellationToken);
-                            Dispatcher.Invoke(() => {
-                                ProgressBar.Value++;
-                                ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
-                            });
-                        });
-
-                    await Task.WhenAll(tasks);
-                } else {
-                    // Если assets равно null, то произошла ошибка подключения, сообщение об ошибке уже установлено в HandleHttpError
-                    if (Dispatcher.Invoke(() => ConnectionStatusTextBlock.Text) == "Disconnected") {
-                        Dispatcher.Invoke(() => UpdateConnectionStatus(false, "Failed to connect"));
-                    }
-                }
-            } catch (OperationCanceledException) {
-                Dispatcher.Invoke(() => UpdateConnectionStatus(false, "Operation was canceled"));
-            } catch (Exception ex) {
-                Dispatcher.Invoke(() => UpdateConnectionStatus(false, $"Error: {ex.Message}"));
-            }
-        }
-
-
-
-        private async Task ProcessAsset(JToken asset, int textureCount, CancellationToken cancellationToken) {
-            if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
-            try {
-                await semaphore.WaitAsync(cancellationToken);
-
-                var file = asset["file"];
-                if (file != null) {
-                    string fileUrl = file["url"] != null ? $"{Settings.Default.BaseUrl}{file["url"]}" : string.Empty;
-
-                    var texture = new Texture {
-                        Name = asset["name"]?.ToString() ?? "Unknown",
-                        Size = int.TryParse(file["size"]?.ToString(), out var size) ? size : 0,
-                        Url = fileUrl.Split('?')[0],
-                        Resolution = new int[] { 0, 0 },
-                        ResizeResolution = new int[] { 0, 0 },
-                        Status = "On Server",
-                        Hash = file["hash"]?.ToString() ?? string.Empty
-                    };
-
-                    await Dispatcher.InvokeAsync(() => textures.Add(texture));
-                    await UpdateTextureResolutionAsync(texture, cancellationToken);
-
-                    Dispatcher.Invoke(() => {
-                        ProgressBar.Value++;
-                        ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
-                    });
-                }
-            } catch (OperationCanceledException) {
-                // Логика обработки отмены
-            } finally {
-                semaphore.Release();
-            }
-        }
-
-
-        private async Task UpdateTextureResolutionAsync(Texture texture, CancellationToken cancellationToken) {
-            if (texture == null) throw new ArgumentNullException(nameof(texture));
-            if (string.IsNullOrEmpty(texture.Url)) {
-                Debug.WriteLine($"Texture URL is null or empty for texture: {texture.Name}");
-                texture.Resolution = new int[] { 0, 0 };
-                texture.Status = "Error";
-                return;
-            }
-
-            try {
-                Debug.WriteLine($"Fetching resolution for: {texture.Name} ({texture.Url})");
-
-                var resolution = await GetImageResolutionAsync(texture.Url, cancellationToken);
-                texture.Resolution = new int[] { resolution.Width, resolution.Height };
-
-                Debug.WriteLine($"Fetched resolution for: {texture.Name} - {string.Join("x", texture.Resolution)}");
-            } catch (HttpRequestException ex) {
-                Debug.WriteLine($"HTTP request error fetching resolution for: {texture.Name} - {ex.Message}");
-                texture.Resolution = new int[] { 0, 0 };
-                texture.Status = "Error";
-            } catch (Exception ex) {
-                Debug.WriteLine($"General error fetching resolution for: {texture.Name} - {ex.Message}");
-                texture.Resolution = new int[] { 0, 0 };
-                texture.Status = "Error";
-            }
-        }
-
         private async void Connect(object sender, RoutedEventArgs e) {
-            var cancellationToken = cancellationTokenSource.Token; // Использование токена отмены
-            if (Settings.Default.PlaycanvasApiKey == "" || Settings.Default.Username == "") {
+            var cancellationToken = cancellationTokenSource.Token;
+
+            if (string.IsNullOrEmpty(Settings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(Settings.Default.Username)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
             } else {
                 try {
                     userName = Settings.Default.Username.ToLower();
-                    userID = await GetUserIdAsync(userName, cancellationToken);
+                    userID = await playCanvasService.GetUserIdAsync(userName, Settings.Default.PlaycanvasApiKey, cancellationToken);
                     if (string.IsNullOrEmpty(userID)) {
                         throw new Exception("User ID is null or empty");
+                    } else {
+                        await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userID}"));
                     }
 
-                    var projects = await GetProjectsAsync(userID, cancellationToken);
-                    if (projects != null && projects.Count > 0) {
-                        string? lastSelectedProjectId = Settings.Default.LastSelectedProjectId;
-                        string? lastSelectedBranchName = Settings.Default.LastSelectedBranchName;
+                    var projectsDict = await playCanvasService.GetProjectsAsync(userID, Settings.Default.PlaycanvasApiKey, cancellationToken);
+                    if (projectsDict != null && projectsDict.Count > 0) {
+                        string lastSelectedProjectId = Settings.Default.LastSelectedProjectId;
+                        string lastSelectedBranchName = Settings.Default.LastSelectedBranchName;
 
-                        await Dispatcher.InvokeAsync(() => {
-                            ProjectsComboBox.ItemsSource = projects;
-                            ProjectsComboBox.DisplayMemberPath = "Value";
-                            ProjectsComboBox.SelectedValuePath = "Key";
-                        });
+                        Projects.Clear();
+                        foreach (var project in projectsDict) {
+                            Projects.Add(project);
+                        }
 
-                        if (!string.IsNullOrEmpty(lastSelectedProjectId) && projects.ContainsKey(lastSelectedProjectId)) {
+                        if (!string.IsNullOrEmpty(lastSelectedProjectId) && projectsDict.ContainsKey(lastSelectedProjectId)) {
                             ProjectsComboBox.SelectedValue = lastSelectedProjectId;
                         } else {
                             ProjectsComboBox.SelectedIndex = 0;
@@ -388,15 +170,21 @@ namespace TexTool {
 
                         if (ProjectsComboBox.SelectedItem != null) {
                             string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                            var branches = await GetBranchesAsync(projectId, cancellationToken);
+                            var branchesList = await playCanvasService.GetBranchesAsync(projectId, Settings.Default.PlaycanvasApiKey, cancellationToken);
 
-                            if (branches != null && branches.Count > 0) {
-                                await Dispatcher.InvokeAsync(() => {
-                                    BranchesComboBox.ItemsSource = branches.Values.ToList();
-                                });
+                            if (branchesList != null && branchesList.Count > 0) {
+                                Branches.Clear();
+                                foreach (var branch in branchesList) {
+                                    Branches.Add(branch);
+                                }
 
-                                if (!string.IsNullOrEmpty(lastSelectedBranchName) && branches.Any(b => b.Value == lastSelectedBranchName)) {
-                                    BranchesComboBox.SelectedItem = lastSelectedBranchName;
+                                if (!string.IsNullOrEmpty(lastSelectedBranchName)) {
+                                    var selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
+                                    if (selectedBranch != null) {
+                                        BranchesComboBox.SelectedValue = selectedBranch.Id;
+                                    } else {
+                                        BranchesComboBox.SelectedIndex = 0;
+                                    }
                                 } else {
                                     BranchesComboBox.SelectedIndex = 0;
                                 }
@@ -415,101 +203,173 @@ namespace TexTool {
             // Implement your download logic here
         }
 
-        private void SelectFolder(object sender, RoutedEventArgs e) {
-            var folderDialog = new VistaFolderBrowserDialog {
-                Description = "Select a folder to save downloaded textures",
-                UseDescriptionForTitle = true
-            };
+        #endregion
 
-            // Используем ?? false, чтобы гарантировать, что значение не будет null
-            if ((folderDialog.ShowDialog(this) ?? false)) {
-                SelectedFolderPath = folderDialog.SelectedPath;
-                IsDownloadButtonEnabled = !string.IsNullOrEmpty(SelectedFolderPath);
-            }
-        }
+        #region API Methods
 
-        private void Setting(object sender, RoutedEventArgs e) {
-            var settingsWindow = new SettingsWindow();
-            settingsWindow.SettingsSaved += OnSettingsSaved;
-            settingsWindow.ShowDialog();
-        }
-
-        private void OnSettingsSaved(object? sender, EventArgs e) {
-            InitializeSemaphore();
-        }
-
-        private async Task<JArray?> GetAssetsAsync(KeyValuePair<string, string> selectedProject, string selectedBranch, CancellationToken cancellationToken) {
+        private async Task TryConnect(CancellationToken cancellationToken) {
             try {
-                // Получаем выбранный проект и ветку
-                string selectedProjectId = selectedProject.Key;
-                string selectedBranchName = selectedBranch;
+                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                    MessageBox.Show("Please select a project and a branch");
+                    return;
+                }
+                if (playCanvasService == null) {
+                    MessageBox.Show("PlayCanvasService is null");
+                    return;
+                }
 
-                // Обновляем URL запроса, используя данные о проекте и ветке
-                string url = $"https://playcanvas.com/api/projects/{selectedProjectId}/assets?branch={selectedBranchName}&skip=0&limit=10000";
+                var selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                var selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
-                var response = await client.GetAsync(url, cancellationToken);
+                var assets = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, Settings.Default.PlaycanvasApiKey, cancellationToken);
+                if (assets != null) {
+                    UpdateConnectionStatus(true);
 
-                if (response.IsSuccessStatusCode) {
-                    var responseData = await response.Content.ReadAsStringAsync(cancellationToken);
-                    var assetsResponse = JObject.Parse(responseData);
-                    return (JArray?)assetsResponse["result"];
+                    if (textures != null && textures.Count > 0)
+                        textures.Clear();
+
+                    int textureCount = assets.Count(asset => asset["file"] != null && asset["type"]?.ToString() == "texture");
+
+                    ProgressBar.Value = 0;
+                    ProgressBar.Maximum = textureCount;
+                    ProgressTextBlock.Text = $"0/{textureCount}";
+
+                    var tasks = assets
+                        .Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture")
+                        .Select(async asset => {
+                            await ProcessAsset(asset, textureCount, cancellationToken);
+                            Dispatcher.Invoke(() => {
+                                ProgressBar.Value++;
+                                ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
+                            });
+                        });
+
+                    await Task.WhenAll(tasks);
                 } else {
-                    await HandleHttpError(response);
-                    return null;
+                    if (ConnectionStatusTextBlock.Text == "Disconnected") {
+                        UpdateConnectionStatus(false, "Failed to connect");
+                    }
                 }
-            } catch (HttpRequestException e) {
-                await Dispatcher.InvokeAsync(() => {
-                    UpdateConnectionStatus(false, "Network error: " + e.Message);
-                });
-
-                Console.Error.WriteLine("Request error:", e);
-                return null;
+            } catch (Exception ex) {
+                MessageBox.Show($"Error in TryConnect: {ex.Message}");
+                LogError($"Error in TryConnect: {ex}");
             }
         }
 
-        private async Task<(int Width, int Height)> GetImageResolutionAsync(string url, CancellationToken cancellationToken) {
-            if (string.IsNullOrEmpty(url)) {
-                throw new ArgumentException("URL cannot be null or empty", nameof(url));
+        private async Task ProcessAsset(JToken asset, int textureCount, CancellationToken cancellationToken) {
+            if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
+            await semaphore.WaitAsync(cancellationToken);
+            try {
+                var file = asset["file"];
+                if (file != null) {
+                    string fileUrl = file["url"] != null ? $"{Settings.Default.BaseUrl}{file["url"]}" : string.Empty;
+
+                    if (string.IsNullOrEmpty(fileUrl)) {
+                        throw new Exception("File URL is null or empty");
+                    }
+
+                    string? extension = Path.GetExtension(fileUrl.Split('?')[0])?.ToLowerInvariant();
+                    if (string.IsNullOrEmpty(extension)) {
+                        throw new Exception("Unable to determine file extension");
+                    }
+
+                    if (!IsSupportedFormat(fileUrl)) {
+                        throw new Exception($"Unsupported image format: {extension}");
+                    }
+
+                    var texture = new TextureResource {
+                        Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                        Size = int.TryParse(file["size"]?.ToString(), out var size) ? size : 0,
+                        Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
+                        Path = string.Empty,
+                        Extension = extension,
+                        Resolution = [0, 0],
+                        ResizeResolution = [0, 0],
+                        Status = "On Server",
+                        Hash = file["hash"]?.ToString() ?? string.Empty
+                    };
+
+                    if (textures != null) {
+                        await Dispatcher.InvokeAsync(() => textures.Add(texture));
+                        await UpdateTextureResolutionAsync(texture, cancellationToken);
+                    }
+
+                    Dispatcher.Invoke(() => {
+                        ProgressBar.Value++;
+                        ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
+                    });
+                }
+            } catch (Exception ex) {
+                LogError($"Error in ProcessAsset: {ex}");
+            } finally {
+                semaphore.Release();
+            }
+        }
+
+        private static async Task UpdateTextureResolutionAsync(TextureResource texture, CancellationToken cancellationToken) {
+            ArgumentNullException.ThrowIfNull(texture);
+
+            if (string.IsNullOrEmpty(texture.Url)) {
+                texture.Resolution = [0, 0];
+                texture.Status = "Error";
+                return;
             }
 
             try {
-                client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
-                client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
-
-                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                response.EnsureSuccessStatusCode();
-
-                var buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-
-                if (buffer.Length < 24) {
-                    throw new Exception("Unable to read image header");
-                }
-
-                // Проверка, является ли файл PNG
-                if (buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47 &&
-                    buffer[4] == 0x0D && buffer[5] == 0x0A && buffer[6] == 0x1A && buffer[7] == 0x0A) {
-                    int width = BitConverter.ToInt32(new byte[] { buffer[19], buffer[18], buffer[17], buffer[16] }, 0);
-                    int height = BitConverter.ToInt32(new byte[] { buffer[23], buffer[22], buffer[21], buffer[20] }, 0);
-                    return (width, height);
-                }
-
-                // Можно добавить поддержку других форматов изображений (JPEG, BMP и т.д.)
-                throw new Exception("Image format not supported or not a PNG");
-            } catch (HttpRequestException e) {
-                Debug.WriteLine($"HTTP request error in GetImageResolutionAsync: {e.Message}");
-                throw;
+                var resolution = await ImageHelper.GetImageResolutionAsync(texture.Url, cancellationToken);
+                texture.Resolution = [resolution.Width, resolution.Height];
+                LogError($"Successfully retrieved resolution for {texture.Url}: {resolution.Width}x{resolution.Height}");
             } catch (Exception ex) {
-                Debug.WriteLine($"General error in GetImageResolutionAsync: {ex.Message}");
-                throw;
+                texture.Resolution = [0, 0];
+                texture.Status = "Error";
+                LogError($"Exception in UpdateTextureResolutionAsync for {texture.Url}: {ex.Message}");
             }
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+        private async Task LoadBranchesAsync() {
+            if (ProjectsComboBox.SelectedItem != null) {
+                string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                try {
+                    if (string.IsNullOrEmpty(projectId)) {
+                        throw new Exception("Project ID is null or empty");
+                    }
 
-        protected void OnPropertyChanged(string propertyName) {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                    var branchesList = await playCanvasService.GetBranchesAsync(projectId, Settings.Default.PlaycanvasApiKey, cancellationTokenSource.Token);
+
+                    Branches.Clear();
+                    foreach (var branch in branchesList) {
+                        Branches.Add(branch);
+                    }
+
+                    BranchesComboBox.ItemsSource = Branches;
+                    BranchesComboBox.DisplayMemberPath = "Name";
+                    BranchesComboBox.SelectedValuePath = "Id";
+
+                    if (branchesList.Count > 0) {
+                        BranchesComboBox.SelectedIndex = 0;
+                    }
+                    SaveCurrentSettings();
+                } catch (Exception ex) {
+                    MessageBox.Show($"Error: {ex.Message}");
+                    UpdateConnectionStatus(false, ex.Message);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private void UpdateConnectionStatus(bool isConnected, string message = "") {
+            Dispatcher.Invoke(() => {
+                if (isConnected) {
+                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
+                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                } else {
+                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
+                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+                }
+            });
         }
 
         private void SaveCurrentSettings() {
@@ -517,166 +377,86 @@ namespace TexTool {
                 Settings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
             }
             if (BranchesComboBox.SelectedItem != null) {
-                Settings.Default.LastSelectedBranchName = BranchesComboBox.SelectedItem.ToString();
+                Settings.Default.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
             }
             Settings.Default.Save();
         }
 
         private async void LoadLastSettings() {
             try {
-                userName = Settings.Default.Username?.ToLower();
+                userName = Settings.Default.Username.ToLower();
                 if (string.IsNullOrEmpty(userName)) {
                     throw new Exception("Username is null or empty");
                 }
 
-                // Используем токен отмены
                 var cancellationToken = new CancellationToken();
 
-                userID = await GetUserIdAsync(userName, cancellationToken);
-                var projects = await GetProjectsAsync(userID, cancellationToken);
+                userID = await playCanvasService.GetUserIdAsync(userName, Settings.Default.PlaycanvasApiKey, cancellationToken);
+                if (string.IsNullOrEmpty(userID)) {
+                    throw new Exception("User ID is null or empty");
+                } else {
+                    UpdateConnectionStatus(true, $"by userID: {userID}");
+                }
+                var projectsDict = await playCanvasService.GetProjectsAsync(userID, Settings.Default.PlaycanvasApiKey, cancellationToken);
 
-                if (projects != null && projects.Count > 0) {
-                    await Dispatcher.InvokeAsync(() => {
-                        ProjectsComboBox.ItemsSource = projects;
-                        ProjectsComboBox.DisplayMemberPath = "Value";
-                        ProjectsComboBox.SelectedValuePath = "Key";
-                    });
+                if (projectsDict != null && projectsDict.Count > 0) {
+                    Projects.Clear();
+                    foreach (var project in projectsDict) {
+                        Projects.Add(project);
+                    }
 
-                    // Восстанавливаем последний выбранный проект
-                    if (!string.IsNullOrEmpty(Settings.Default.LastSelectedProjectId) && projects.ContainsKey(Settings.Default.LastSelectedProjectId)) {
+                    if (!string.IsNullOrEmpty(Settings.Default.LastSelectedProjectId) && projectsDict.ContainsKey(Settings.Default.LastSelectedProjectId)) {
                         ProjectsComboBox.SelectedValue = Settings.Default.LastSelectedProjectId;
                     } else {
-                        ProjectsComboBox.SelectedIndex = 0; // Выбираем первый проект, если сохраненный проект не найден
+                        ProjectsComboBox.SelectedIndex = 0;
                     }
                 }
 
                 if (ProjectsComboBox.SelectedItem != null) {
                     string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                    var branches = await GetBranchesAsync(projectId, cancellationToken);
+                    var branchesList = await playCanvasService.GetBranchesAsync(projectId, Settings.Default.PlaycanvasApiKey, cancellationToken);
 
-                    if (branches != null && branches.Count() > 0) {
-                        await Dispatcher.InvokeAsync(() => {
-                            BranchesComboBox.ItemsSource = branches.Select(b => b.Value).ToList();
-                        });
+                    if (branchesList != null && branchesList.Count > 0) {
+                        Branches.Clear();
+                        foreach (var branch in branchesList) {
+                            Branches.Add(branch);
+                        }
 
-                        // Восстанавливаем последнюю выбранную ветку
-                        if (!string.IsNullOrEmpty(Settings.Default.LastSelectedBranchName) && branches.Any(b => b.Value == Settings.Default.LastSelectedBranchName)) {
-                            BranchesComboBox.SelectedItem = Settings.Default.LastSelectedBranchName;
+                        BranchesComboBox.ItemsSource = Branches;
+                        BranchesComboBox.DisplayMemberPath = "Name";
+                        BranchesComboBox.SelectedValuePath = "Id";
+
+                        if (!string.IsNullOrEmpty(Settings.Default.LastSelectedBranchName)) {
+                            var selectedBranch = branchesList.FirstOrDefault(b => b.Name == Settings.Default.LastSelectedBranchName);
+                            if (selectedBranch != null) {
+                                BranchesComboBox.SelectedValue = selectedBranch.Id;
+                            } else {
+                                BranchesComboBox.SelectedIndex = 0;
+                            }
                         } else {
-                            BranchesComboBox.SelectedIndex = 0; // Выбираем первую ветку, если сохраненная ветка не найдена
+                            BranchesComboBox.SelectedIndex = 0;
                         }
                     }
                 }
             } catch (Exception ex) {
-                await Dispatcher.InvokeAsync(() => {
-                    MessageBox.Show($"Error loading last settings: {ex.Message}");
-                });
-                Debug.WriteLine($"Error loading last settings: {ex}");
-            }
-        }
-    }
-
-    public class Texture : INotifyPropertyChanged {
-        private string? name;
-        private int size;
-        private int[] resolution = new int[2];
-        private int[] resizeResolution = new int[2];
-        private string? status;
-        private string? hash;
-        private string? url;
-
-        public string? Name {
-            get => name;
-            set {
-                name = value;
-                OnPropertyChanged(nameof(Name));
+                MessageBox.Show($"Error loading last settings: {ex.Message}");
             }
         }
 
-        public int Size {
-            get => size;
-            set {
-                size = value;
-                OnPropertyChanged(nameof(Size));
+        private bool IsSupportedFormat(string fileUrl) {
+            string? cleanUrl = fileUrl.Split('?')[0];
+            string? extension = Path.GetExtension(cleanUrl)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension)) {
+                return false;
             }
+            return supportedFormats.Contains(extension) && !excludedFormats.Contains(extension);
         }
 
-        public int[] Resolution {
-            get => resolution;
-            set {
-                resolution = value;
-                OnPropertyChanged(nameof(Resolution));
-                OnPropertyChanged(nameof(ResolutionArea)); // Trigger PropertyChanged for ResolutionArea
-            }
+        private static void LogError(string message) {
+            string logFilePath = "error_log.txt";
+            File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
         }
 
-        public int[] ResizeResolution {
-            get => resizeResolution;
-            set {
-                resizeResolution = value;
-                OnPropertyChanged(nameof(ResizeResolution));
-                OnPropertyChanged(nameof(ResizeResolutionArea)); // Trigger PropertyChanged for ResizeResolutionArea
-            }
-        }
-
-        public string? Status {
-            get => status;
-            set {
-                status = value;
-                OnPropertyChanged(nameof(Status));
-            }
-        }
-
-        public string? Hash {
-            get => hash;
-            set {
-                hash = value;
-                OnPropertyChanged(nameof(Hash));
-            }
-        }
-
-        public string? Url {
-            get => url;
-            set {
-                url = value;
-                OnPropertyChanged(nameof(Url));
-            }
-        }
-
-        public int ResolutionArea => Resolution[0] * Resolution[1];
-        public int ResizeResolutionArea => ResizeResolution[0] * ResizeResolution[1];
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected void OnPropertyChanged(string propertyName) {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
-    public class SizeConverter : IValueConverter {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            if (value is int size) {
-                double sizeInMB = Math.Round(size / 1_000_000.0, 2);
-                return $"{sizeInMB} MB";
-            }
-            return "0 MB";
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class ResolutionConverter : IValueConverter {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            if (value is int[] resolution && resolution.Length == 2) {
-                return $"{resolution[0]}x{resolution[1]}";
-            }
-            return "0x0";
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
-            throw new NotImplementedException();
-        }
+        #endregion
     }
 }

@@ -130,5 +130,17 @@ namespace TexTool {
                 this["LastSelectedBranchId"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SelectedFolderPath {
+            get {
+                return ((string)(this["SelectedFolderPath"]));
+            }
+            set {
+                this["SelectedFolderPath"] = value;
+            }
+        }
     }
 }

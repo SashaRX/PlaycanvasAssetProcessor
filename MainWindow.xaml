@@ -24,13 +24,13 @@
 
         <!-- Панель управления внизу -->
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
-            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="789">
-                <StackPanel Orientation="Horizontal" Margin="0,0,-128,0" Height="58">
-                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Connect" />
+            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="718">
+                <StackPanel Orientation="Horizontal" Margin="0,0,-2,0" Height="58">
+                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="51" Click="Connect" />
                     <!-- <Button Content="Get Projects" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Connect" />-->
                     <ComboBox x:Name="ProjectsComboBox" 
                               ItemsSource="{Binding Projects}" 
-                              DisplayMemberPath="Value"
+                              DisplayMemberPath="Value" 
                               SelectedValuePath="Key"
                               SelectionChanged="ProjectsComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
                         <ComboBox.ItemContainerStyle>
@@ -41,8 +41,11 @@
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
 
-                    <ComboBox x:Name="BranchesComboBox"
-                        SelectionChanged="BranchesComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
+                    <ComboBox x:Name="BranchesComboBox" 
+                              DisplayMemberPath="Name" 
+                              SelectedValuePath="Id"
+                              SelectionChanged="BranchesComboBox_SelectionChanged" 
+                              Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
                         <ComboBox.ItemContainerStyle>
                             <Style TargetType="ComboBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -50,7 +53,6 @@
                             </Style>
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
-
 
                     <Button Content="Get Textures" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="GetListTextures"/>
                     <Button Content="Select folder" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="SelectFolder" AutomationProperties.Name="SelectFolder" Height="NaN" RenderTransformOrigin="1.514,0.574"/>
@@ -68,15 +70,9 @@
 
         <!-- Основной контент -->
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*" />
-                <ColumnDefinition Width="1*" />
-            </Grid.ColumnDefinitions>
-
-            <DataGrid x:Name="TexturesDataGrid" 
+            <TabControl x:Name="tabControl">
+                <TabItem Header="Textures" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
+                    <DataGrid x:Name="TexturesDataGrid" 
                       BorderBrush="#FF343C44" 
                       FontSize="9" FontFamily="Segoe UI Symbol"
                       AutoGenerateColumns="False"
@@ -86,15 +82,24 @@
                       CanUserDeleteRows="False"
                       CanUserSortColumns="True"
                       Background="#FFD6D6D6" Grid.ColumnSpan="2">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" Width="*" MinWidth="80"/>
-                    <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="*" MinWidth="35"/>
-                    <DataGridTextColumn Header="Url" Binding="{Binding Url}" Width="*" MinWidth="100"/>
-                    <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="75" SortMemberPath="ResolutionArea"/>
-                    <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" MinWidth="60"/>
-                </DataGrid.Columns>
-            </DataGrid>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" Width="*" MinWidth="80"/>
+                            <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="*" MinWidth="20"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="*" MinWidth="35"/>
+                            <DataGridTextColumn Header="Url" Binding="{Binding Url}" Width="*" MinWidth="100"/>
+                            <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="75" SortMemberPath="ResolutionArea"/>
+                            <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" Width="*" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" MinWidth="60"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+                <TabItem Header="Materials">
+                    <Grid Background="#FFE5E5E5"/>
+                </TabItem>
+                <TabItem Header="Models">
+                    <Grid Background="#FFE5E5E5"/>
+                </TabItem>
+            </TabControl>
         </Grid>
     </DockPanel>
 </Window>

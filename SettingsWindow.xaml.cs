@@ -18,7 +18,7 @@ namespace TexTool {
 
         public SettingsWindow() {
             InitializeComponent();
-            DataContext = this; // Устанавливаем DataContext
+            DataContext = this;
             LoadSettings();
             CheckAndRemoveWatermarks();
         }
@@ -32,8 +32,11 @@ namespace TexTool {
         private void LoadSettings() {
             UsernameTextBox.Text = Settings.Default.Username;
             PlaycanvasApiKeyTextBox.Text = Settings.Default.PlaycanvasApiKey;
-            ProjectsFolderBox.Text = Settings.Default.ProjectsFolderPath; // Обновляем TextBox напрямую
-            SemaphoreLimitSlider.Value = Settings.Default.SemaphoreLimit;
+            ProjectsFolderBox.Text = Settings.Default.ProjectsFolderPath;
+            GetTexturesSemaphoreSlider.Value = Settings.Default.GetTexturesSemaphoreLimit;
+            DownloadSemaphoreSlider.Value = Settings.Default.DownloadSemaphoreLimit;
+            GetTexturesSemaphoreTextBlock.Text = Settings.Default.GetTexturesSemaphoreLimit.ToString();
+            DownloadSemaphoreTextBlock.Text = Settings.Default.DownloadSemaphoreLimit.ToString();
         }
 
         private void CheckAndRemoveWatermarks() {
@@ -48,8 +51,11 @@ namespace TexTool {
         }
 
         private void SemaphoreLimitSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (SemaphoreLimitTextBlock != null) {
-                SemaphoreLimitTextBlock.Text = SemaphoreLimitSlider.Value.ToString();
+            if (sender == GetTexturesSemaphoreSlider && GetTexturesSemaphoreTextBlock != null) {
+                GetTexturesSemaphoreTextBlock.Text = ((int)GetTexturesSemaphoreSlider.Value).ToString();
+            }
+            if (sender == DownloadSemaphoreSlider && DownloadSemaphoreTextBlock != null) {
+                DownloadSemaphoreTextBlock.Text = ((int)DownloadSemaphoreSlider.Value).ToString();
             }
         }
 
@@ -79,7 +85,8 @@ namespace TexTool {
         private void Save_Click(object sender, RoutedEventArgs e) {
             Settings.Default.Username = UsernameTextBox.Text;
             Settings.Default.PlaycanvasApiKey = PlaycanvasApiKeyTextBox.Text;
-            Settings.Default.SemaphoreLimit = (int)SemaphoreLimitSlider.Value;
+            Settings.Default.GetTexturesSemaphoreLimit = (int)GetTexturesSemaphoreSlider.Value;
+            Settings.Default.DownloadSemaphoreLimit = (int)DownloadSemaphoreSlider.Value;
             Settings.Default.ProjectsFolderPath = ProjectsFolderBox.Text;
 
             Settings.Default.Save();

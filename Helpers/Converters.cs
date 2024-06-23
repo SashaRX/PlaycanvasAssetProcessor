@@ -46,14 +46,14 @@ namespace TexTool {
     }
 
     public class StatusToVisibilityConverter : IValueConverter {
-        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-            //if (value is string status) {
-            //    return status == "On Server" ? Visibility.Collapsed : Visibility.Visible;
-            //}
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            if (value is string status) {
+                return status == "Downloading" ? Visibility.Visible : Visibility.Collapsed;
+            }
             return Visibility.Collapsed;
         }
 
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
             throw new NotImplementedException();
         }
     }
@@ -84,6 +84,7 @@ namespace TexTool {
                 "Empty File" => Brushes.Yellow,
                 "Corrupted" => Brushes.Orange,
                 "Size Mismatch" => Brushes.Pink,
+                "Downloading" => Brushes.Transparent,
                 _ => Brushes.Transparent,
             };
         }

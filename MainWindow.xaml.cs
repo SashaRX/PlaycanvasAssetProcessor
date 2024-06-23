@@ -17,6 +17,9 @@ namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
         private readonly ObservableCollection<TextureResource> textures = [];
         private readonly SemaphoreSlim? semaphore = new(Settings.Default.SemaphoreLimit);
+        private readonly SemaphoreSlim getTexturesSemaphore;
+        private readonly SemaphoreSlim downloadSemaphore;
+
         private string? projectFolderPath = string.Empty;
         private string? userName = string.Empty;
         private string? userID = string.Empty;
@@ -44,6 +47,10 @@ namespace TexTool {
 
         public MainWindow() {
             InitializeComponent();
+
+            getTexturesSemaphore = new SemaphoreSlim(Settings.Default.GetTexturesSemaphoreLimit);
+            downloadSemaphore = new SemaphoreSlim(Settings.Default.DownloadSemaphoreLimit);
+
             projectFolderPath = Settings.Default.ProjectsFolderPath;
             UpdateConnectionStatus(false);
             TexturesDataGrid.ItemsSource = textures;
@@ -96,13 +103,12 @@ namespace TexTool {
             if (e.Column.SortMemberPath == "Status") {
                 e.Handled = true;
                 var dataView = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                var direction = e.Column.SortDirection == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
+                var direction = (e.Column.SortDirection != ListSortDirection.Ascending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
                 dataView.SortDescriptions.Clear();
                 dataView.SortDescriptions.Add(new SortDescription("Status", direction));
                 e.Column.SortDirection = direction;
             }
         }
-
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             SaveCurrentSettings();
@@ -200,8 +206,12 @@ namespace TexTool {
 
         private async void Download(object sender, RoutedEventArgs e) {
             try {
-                // Получаем выбранные текстуры и фильтруем по прогрессу
-                var selectedTextures = textures.Where(t => t.Status == "On Server" && t.DownloadProgress < 100).OrderBy(t => t.Name).ToList();
+                var selectedTextures = textures.Where(t => t.Status == "On Server" || 
+                                                           t.Status == "Size Mismatch" ||
+                                                           t.Status == "Corrupted" ||
+                                                           t.Status == "Empty File" ||
+                                                           t.Status == "Hash ERROR" ||
+                                                           t.Status == "Error").OrderBy(t => t.Name).ToList();
                 var downloadTasks = selectedTextures.Select(texture => DownloadTextureAsync(texture));
                 await Task.WhenAll(downloadTasks);
 
@@ -278,7 +288,7 @@ namespace TexTool {
 
         private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
             if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
-            await semaphore.WaitAsync(cancellationToken);
+            await getTexturesSemaphore.WaitAsync(cancellationToken);
             try {
                 var file = asset["file"];
                 if (file != null) {
@@ -324,8 +334,8 @@ namespace TexTool {
                         Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
                         Path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown"),
                         Extension = extension,
-                        Resolution = new int[] { 0, 0 },
-                        ResizeResolution = new int[] { 0, 0 },
+                        Resolution = [0, 0],
+                        ResizeResolution = [0, 0],
                         Status = "On Server",
                         Hash = file["hash"]?.ToString() ?? string.Empty
                     };
@@ -345,14 +355,14 @@ namespace TexTool {
 
                             if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
                                 if (!string.IsNullOrEmpty(texture.Hash) && !FileHelper.IsFileIntact(texture.Path, texture.Hash, texture.Size)) {
-                                    texture.Status = "Has ERROR";
-                                    LogError($"Hash mismatch for file: {texture.Path}, expected hash: {texture.Hash}");
+                                    texture.Status = "Hash ERROR";
+                                    LogError($"{texture.Name} hash mismatch for file: {texture.Path}, expected hash: {texture.Hash}");
                                 } else {
                                     texture.Status = "Downloaded";
                                 }
                             } else {
                                 texture.Status = "Size Mismatch";
-                                LogError($"Size Mismatch: fileSizeInBytes: {fileSizeInBytes} and textureSizeInBytes: {textureSizeInBytes}");
+                                LogError($"{texture.Name} size Mismatch: fileSizeInBytes: {fileSizeInBytes} and textureSizeInBytes: {textureSizeInBytes}");
                             }
                         }
                     }
@@ -369,7 +379,7 @@ namespace TexTool {
             } catch (Exception ex) {
                 LogError($"Error in ProcessAsset: {ex}");
             } finally {
-                semaphore.Release();
+                getTexturesSemaphore.Release();
             }
         }
 
@@ -403,77 +413,81 @@ namespace TexTool {
             }
         }
 
-        private static async Task DownloadTextureAsync(TextureResource texture) {
+        private async Task DownloadTextureAsync(TextureResource texture) {
+            const int maxRetries = 5;
+            const int delayMilliseconds = 2000;
+
+            await downloadSemaphore.WaitAsync(); // Ожидаем освобождения слота в семафоре
             try {
-                if (string.IsNullOrEmpty(texture.Url) || string.IsNullOrEmpty(texture.Path)) {
-                    throw new Exception("Invalid texture URL or path.");
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        texture.Status = "Downloading";
+                        texture.DownloadProgress = 0;
+
+                        if (string.IsNullOrEmpty(texture.Url) || string.IsNullOrEmpty(texture.Path)) {
+                            throw new Exception("Invalid texture URL or path.");
+                        }
+
+                        using var client = new HttpClient();
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+
+                        var response = await client.GetAsync(texture.Url, HttpCompletionOption.ResponseHeadersRead);
+
+                        if (!response.IsSuccessStatusCode) {
+                            throw new Exception($"Failed to download texture: {response.StatusCode}");
+                        }
+
+                        var totalBytes = response.Content.Headers.ContentLength ?? 0L;
+                        var buffer = new byte[8192];
+                        var bytesRead = 0;
+
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        using (var fileStream = await FileHelper.OpenFileStreamWithRetryAsync(texture.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                            while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
+                                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                                texture.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
+                            }
+                        }
+
+                        var fileInfo = new FileInfo(texture.Path);
+                        long fileSizeInBytes = fileInfo.Length;
+                        long textureSizeInBytes = texture.Size;
+
+                        double tolerance = 0.05;
+                        double lowerBound = textureSizeInBytes * (1 - tolerance);
+                        double upperBound = textureSizeInBytes * (1 + tolerance);
+
+                        if (fileInfo.Length == 0) {
+                            texture.Status = "Empty File";
+                        } else if (!string.IsNullOrEmpty(texture.Hash) && FileHelper.VerifyFileHash(texture.Path, texture.Hash)) {
+                            texture.Status = "Downloaded";
+                        } else if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                            texture.Status = "Size Mismatch";
+                        } else {
+                            texture.Status = "Corrupted";
+                        }
+                        break;
+                    } catch (IOException ex) {
+                        if (attempt == maxRetries) {
+                            texture.Status = "Error";
+                            LogError($"Error downloading texture after {maxRetries} attempts: {ex.Message}");
+                        } else {
+                            LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                            await Task.Delay(delayMilliseconds);
+                        }
+                    } catch (Exception ex) {
+                        texture.Status = "Error";
+                        LogError($"Error downloading texture: {ex.Message}");
+                        break;
+                    }
                 }
-
-                using var client = new HttpClient();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
-
-                var response = await client.GetAsync(texture.Url, HttpCompletionOption.ResponseHeadersRead);
-
-                if (!response.IsSuccessStatusCode) {
-                    throw new Exception($"Failed to download texture: {response.StatusCode}");
-                }
-
-                var totalBytes = response.Content.Headers.ContentLength ?? 0L;
-                var buffer = new byte[8192];
-                var bytesRead = 0;
-
-                await using var stream = await response.Content.ReadAsStreamAsync();
-                await using var fileStream = await OpenFileWithRetryAsync(texture.Path, FileMode.Create, FileAccess.Write, FileShare.None, 5, 2000);
-
-                while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                    texture.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
-                }
-
-                await fileStream.FlushAsync();  // Ensure data is written
-                fileStream.Close();  // Ensure the file is closed properly
-
-                var fileInfo = new FileInfo(texture.Path);
-                long fileSizeInBytes = fileInfo.Length;
-                long textureSizeInBytes = texture.Size;
-
-                double tolerance = 0.05;
-                double lowerBound = textureSizeInBytes * (1 - tolerance);
-                double upperBound = textureSizeInBytes * (1 + tolerance);
-
-                if (fileInfo.Length == 0) {
-                    texture.Status = "Empty File";
-                } else if (!string.IsNullOrEmpty(texture.Hash) && !FileHelper.VerifyFileHash(texture.Path, texture.Hash)) {
-                    texture.Status = "Has ERROR";
-                    LogError($"Hash mismatch for file: {texture.Path}, expected hash: {texture.Hash}");
-                } else if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                    texture.Status = "Downloaded";
-                } else {
-                    texture.Status = "Size Mismatch";
-                    LogError($"Size Mismatch: fileSizeInBytes: {fileSizeInBytes} and textureSizeInBytes: {textureSizeInBytes}");
-                }
-            } catch (IOException ex) when (ex.Message.Contains("being used by another process")) {
-                LogError($"File in use: {texture.Path}, {ex.Message}");
-                texture.Status = "In Use";
-            } catch (Exception ex) {
-                texture.Status = "Error";
-                LogError($"Error downloading texture: {ex.Message}");
+            } finally {
+                downloadSemaphore.Release(); // Освобождаем слот в семафоре
             }
-        }
-
-        private static async Task<FileStream> OpenFileWithRetryAsync(string path, FileMode mode, FileAccess access, FileShare share, int maxRetries, int delayMilliseconds) {
-            for (int attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    return new FileStream(path, mode, access, share);
-                } catch (IOException ex) when (attempt < maxRetries - 1) {
-                    LogError($"Attempt {attempt + 1} to open file {path} failed with IOException: {ex.Message}. Retrying...");
-                    await Task.Delay(delayMilliseconds);
-                }
-            }
-            throw new IOException($"Failed to open file {path} after {maxRetries} attempts.");
         }
 
         #endregion
+
         #region Helper Methods
 
         private static async Task UpdateTextureResolutionAsync(TextureResource texture, CancellationToken cancellationToken) {

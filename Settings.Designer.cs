@@ -154,5 +154,29 @@ namespace TexTool {
                 this["ProjectsFolderPath"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("64")]
+        public int GetTexturesSemaphoreLimit {
+            get {
+                return ((int)(this["GetTexturesSemaphoreLimit"]));
+            }
+            set {
+                this["GetTexturesSemaphoreLimit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("8")]
+        public int DownloadSemaphoreLimit {
+            get {
+                return ((int)(this["DownloadSemaphoreLimit"]));
+            }
+            set {
+                this["DownloadSemaphoreLimit"] = value;
+            }
+        }
     }
 }

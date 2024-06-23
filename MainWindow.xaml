@@ -115,11 +115,7 @@
                             <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
                             <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
                             <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
-
-                            <!-- Скрытый столбец для сортировки по статусу -->
-                            <DataGridTextColumn Header="StatusHidden" Binding="{Binding Status}" SortMemberPath="Status" Visibility="Collapsed"/>
-
-                            <DataGridTemplateColumn Header="Status/Progress" Width="*">
+                            <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>

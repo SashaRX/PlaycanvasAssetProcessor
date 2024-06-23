@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
 
 namespace TexTool {
     public class SizeConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             if (value is int size) {
-                double sizeInMB = Math.Round(size / 1_000_000.0, 2);
+                double sizeInMB = Math.Round(size / (1024.0*1000.0), 3);
                 return $"{sizeInMB} MB";
             }
             return "0 MB";
@@ -36,6 +38,54 @@ namespace TexTool {
                 return string.Concat("#", hash.AsSpan(0, 6));
             }
             return "#000000";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class StatusToVisibilityConverter : IValueConverter {
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+            //if (value is string status) {
+            //    return status == "On Server" ? Visibility.Collapsed : Visibility.Visible;
+            //}
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class StatusToVisibilityInverseConverter : IValueConverter {
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+            if (value is string status) {
+                return status == "On Server" ? Visibility.Visible : Visibility.Collapsed;
+            }
+            return Visibility.Visible;
+        }
+
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class StatusToBackgroundConverter : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            if (value == null)
+                return Brushes.Transparent;
+
+            string? status = value.ToString();
+
+            return status switch {
+                "Error" => Brushes.Red,
+                "Downloaded" => Brushes.LightGreen,
+                "Empty File" => Brushes.Yellow,
+                "Corrupted" => Brushes.Orange,
+                "Size Mismatch" => Brushes.Pink,
+                _ => Brushes.Transparent,
+            };
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {

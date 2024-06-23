@@ -4,11 +4,22 @@ namespace TexTool.Resources {
     public abstract class BaseResource : INotifyPropertyChanged {
         private string? name;
         private string? extension;
+        private int index;
         private int size;
         private string? status;
         private string? hash;
         private string? url;
         private string? path;
+        //private string? type;
+        private double downloadProgress;
+
+        public int Index {
+            get { return index; }
+            set {
+                index = value;
+                OnPropertyChanged(nameof(Index));
+            }
+        }
 
         public string? Name {
             get => name;
@@ -39,6 +50,24 @@ namespace TexTool.Resources {
             set {
                 status = value;
                 OnPropertyChanged(nameof(Status));
+                OnPropertyChanged(nameof(StatusOrProgress));
+            }
+        }
+
+        public string? StatusOrProgress {
+            get {
+                if (Status == "Downloading") {
+                    return $"{DownloadProgress}%";
+                }
+                return Status;
+            }
+        }
+
+        public double DownloadProgress {
+            get => downloadProgress;
+            set {
+                downloadProgress = value;
+                OnPropertyChanged(nameof(DownloadProgress));
             }
         }
 
@@ -68,7 +97,7 @@ namespace TexTool.Resources {
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected void OnPropertyChanged(string propertyName) {
+        protected void OnPropertyChanged(string? propertyName) {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }

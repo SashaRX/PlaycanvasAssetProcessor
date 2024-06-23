@@ -2,45 +2,85 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
-        xmlns:local="clr-namespace:TexTool"
-        Title="Settings" Height="361" Width="686">
+        xmlns:local="clr-namespace:TexTool" 
+        xmlns:resources="clr-namespace:TexTool.Resources" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        Title="Settings" Height="287" Width="721" ResizeMode="NoResize">
     <Grid>
-        <StackPanel>
-            <TextBlock Margin="1,2,1,1" TextAlignment="Center">
-                <Hyperlink NavigateUri="https://developer.playcanvas.com/user-manual/api/" RequestNavigate="Hyperlink_RequestNavigate">
-                    Help
-                </Hyperlink>
-            </TextBlock>
+        <TabControl x:Name="tabControl" Background="#FFF7F7F7">
+            <TabItem Header="General">
+                <GroupBox x:Name="projectsFolderGroup" Header="Projects Folder" Margin="2,0,2,0" VerticalAlignment="Top">
+                    <Grid Margin="2">
+                        <TextBox x:Name="ProjectsFolderBox" Text="{Binding ProjectsFolder, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" IsReadOnly="True" MinWidth="200" Grid.Column="0" Margin="2"/>
+                        <Button Content="Select folder" Click="SelectFolder" AutomationProperties.Name="SelectFolder" Height="NaN" RenderTransformOrigin="1.514,0.574" HorizontalAlignment="Right" VerticalAlignment="Center" Width="86" Grid.Column="1" Margin="2"/>
+                    </Grid>
+                </GroupBox>
+            </TabItem>
 
-            <GroupBox Header="Playcanvas:" Background="#7FFF8A3C" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" BorderBrush="#FFFF8A3C">
+            <TabItem Header="Playcanvas" Background="#FFFF6600">
                 <StackPanel>
-                    <Label Content="Playcanvas API Key:" />
-                    <TextBox x:Name="PlaycanvasApiKeyTextBox" Background="#FFD6A27B" ToolTip="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd">
-                        <behaviors:Interaction.Behaviors>
-                            <local:TextBoxWatermarkBehavior Watermark="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd"/>
-                        </behaviors:Interaction.Behaviors>
-                    </TextBox>
+                    <TextBlock Margin="1,2,1,1" TextAlignment="Center">
+                            <Hyperlink NavigateUri="https://developer.playcanvas.com/user-manual/api/" RequestNavigate="Hyperlink_RequestNavigate">
+                                Help
+                            </Hyperlink>
+                    </TextBlock>
 
-                    <Label Content="User Name:" />
-                    <TextBox x:Name="UsernameTextBox" Background="#FFD6A27B" ToolTip="Usr name in Playcanvas">
-                        <behaviors:Interaction.Behaviors>
-                            <local:TextBoxWatermarkBehavior Watermark="You'r username on playcanvas"/>
-                        </behaviors:Interaction.Behaviors>
-                    </TextBox>
+                    <GroupBox Header="Playcanvas:" Background="#7FFF8A3C" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" BorderBrush="#FFFF8A3C">
+                        <StackPanel>
+                            <Label Content="Playcanvas API Key:" />
+                            <TextBox x:Name="PlaycanvasApiKeyTextBox" Background="#FFD6A27B" ToolTip="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd">
+                                <behaviors:Interaction.Behaviors>
+                                    <local:TextBoxWatermarkBehavior Watermark="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd"/>
+                                </behaviors:Interaction.Behaviors>
+                            </TextBox>
+
+                            <Label Content="User Name:" />
+                            <TextBox x:Name="UsernameTextBox" Background="#FFD6A27B" ToolTip="Usr name in Playcanvas">
+                                <behaviors:Interaction.Behaviors>
+                                    <local:TextBoxWatermarkBehavior Watermark="Your username on playcanvas"/>
+                                </behaviors:Interaction.Behaviors>
+                            </TextBox>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <Label Content="Semaphore Limit:" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        <TextBlock x:Name="SemaphoreLimitTextBlock" Text="{Binding ElementName=SemaphoreLimitSlider, Path=Value}" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Slider x:Name="SemaphoreLimitSlider" Minimum="5" Maximum="256" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SemaphoreLimitSlider_ValueChanged" SmallChange="1" LargeChange="19" Margin="8,2,10,2" />
+
                 </StackPanel>
-            </GroupBox>
-            
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <Label Content="Semaphore Limit:" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" />
-                <TextBlock x:Name="SemaphoreLimitTextBlock" Text="{Binding ElementName=SemaphoreLimitSlider, Path=Value}" VerticalAlignment="Center"/>
-            </StackPanel>
-            
-            <Slider x:Name="SemaphoreLimitSlider" Minimum="5" Maximum="256" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SemaphoreLimitSlider_ValueChanged" SmallChange="1" LargeChange="19" />
-            
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            </TabItem>
+
+            <TabItem Header="Basis">
+                <GroupBox x:Name="BasisFolderGroup" Header=" Folder" Margin="2,0,2,0" VerticalAlignment="Top" Height="150">
+                    <StackPanel>
+                        <Grid Margin="2">
+                            <TextBox x:Name="BasisFolderBox" Text="" VerticalContentAlignment="Center" IsReadOnly="True" MinWidth="200" Grid.Column="0" Margin="2" Height="22" VerticalAlignment="Top"/>
+                            <Button Content="Select folder" Click="SelectFolder" AutomationProperties.Name="SelectFolder" Height="22" RenderTransformOrigin="1.514,0.574" HorizontalAlignment="Right" VerticalAlignment="Top" Width="86" Grid.Column="1" Margin="2"/>
+                        </Grid>
+                        <GroupBox x:Name="BasisSetting" Header="Basis Setting" Margin="2,0,2,0" VerticalAlignment="Top" Height="150">
+                            <StackPanel Orientation="Horizontal" Margin="2,2,2,2">
+                                <CheckBox Content="Quality" Margin="2,2,2,2" />
+                                <CheckBox Content="Quality" Margin="2,2,2,2" />
+                                <CheckBox Content="Quality" Margin="2,2,2,2" />
+                                <CheckBox Content="Quality" Margin="2,2,2,2" />
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </GroupBox>
+            </TabItem>
+
+            <TabItem Header="TinyPng">
+            </TabItem>
+        </TabControl>
+        <DockPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Height="32" VerticalAlignment="Bottom" Margin="4,4,4,4">
                 <Button Content="Save" Click="Save_Click" Margin="5" />
                 <Button Content="Cancel" Click="Cancel_Click" Margin="5" />
             </StackPanel>
-        </StackPanel>
+        </DockPanel>
+
     </Grid>
 </Window>

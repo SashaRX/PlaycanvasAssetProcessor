@@ -1,17 +1,32 @@
 ﻿using Newtonsoft.Json.Linq;
+using OxyPlot;
+using OxyPlot.Axes;
+using OxyPlot.Series;
+using OxyPlot.Wpf;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors;
+using SixLabors.ImageSharp.Advanced;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Numerics;  // Добавляем это пространство имен
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Controls.Primitives; // Для использования Bitmap и Rectangle
+using System.Drawing;
+using System.Drawing.Imaging; // Для использования ImageAttributes и ColorMatrix
 using TexTool.Helpers;
 using TexTool.Resources;
+using Image = SixLabors.ImageSharp.Image;
+using SixLabors.ImageSharp.Memory;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -25,8 +40,11 @@ namespace TexTool {
         private string? userID = string.Empty;
         private string? projectName = string.Empty;
 
-        private readonly List<string> supportedFormats = [ ".png", ".jpg", ".jpeg" ];
-        private readonly List<string> excludedFormats = [ ".hdr", ".avif" ];
+        private bool? isViewerVisible = true;
+        private BitmapSource? originalBitmapSource;
+
+        private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
+        private readonly List<string> excludedFormats = [".hdr", ".avif"];
 
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly PlayCanvasService playCanvasService = new();
@@ -59,6 +77,8 @@ namespace TexTool {
             DataContext = this;
             this.Closing += MainWindow_Closing;
             LoadLastSettings();
+
+            RenderOptions.SetBitmapScalingMode(TexturePreviewImage, BitmapScalingMode.HighQuality);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -86,17 +106,247 @@ namespace TexTool {
             SaveCurrentSettings();
         }
 
-        private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
+        private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                if (!string.IsNullOrEmpty(selectedTexture.Path)) {
+                    var bitmapImage = new BitmapImage(new Uri(selectedTexture.Path));
+                    TexturePreviewImage.Source = bitmapImage;
+
+                    TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
+                    TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
+                    var sizeConverter = new SizeConverter();
+                    TextureSizeTextBlock.Text = "Size: " + sizeConverter.Convert(selectedTexture.Size, targetType: null, parameter: null, culture: null);
+
+                    // Сохраняем оригинальную текстуру и обновляем гистограмму
+                    originalBitmapSource = bitmapImage.Clone();
+                    UpdateHistogram(originalBitmapSource);
+
+                    // Сбрасываем все фильтры
+                    ShowOriginalImage();
+                }
+            }
+        }
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
                 if (texture.Status != null) {
-                    var backgroundBrush = (Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(Brush), null, CultureInfo.InvariantCulture);
-                    e.Row.Background = backgroundBrush ?? Brushes.Transparent;
+                    var backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), null, CultureInfo.InvariantCulture);
+                    e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
                 } else {
-                    e.Row.Background = Brushes.Transparent;
+                    e.Row.Background = System.Windows.Media.Brushes.Transparent;
                 }
             }
+        }
+
+
+        private static BitmapSource ApplyChannelFilter(BitmapSource source, string channel) {
+            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(source));
+
+            switch (channel) {
+                case "R":
+                    ProcessChannel(image, (pixel) => new Rgba32(pixel.R, pixel.R, pixel.R, pixel.A));
+                    break;
+                case "G":
+                    ProcessChannel(image, (pixel) => new Rgba32(pixel.G, pixel.G, pixel.G, pixel.A));
+                    break;
+                case "B":
+                    ProcessChannel(image, (pixel) => new Rgba32(pixel.B, pixel.B, pixel.B, pixel.A));
+                    break;
+                case "A":
+                    ProcessChannel(image, (pixel) => new Rgba32(pixel.A, pixel.A, pixel.A, pixel.A));
+                    break;
+            }
+
+            return BitmapToBitmapSource(image);
+        }
+
+        private static void ProcessChannel(Image<Rgba32> image, Func<Rgba32, Rgba32> transform) {
+            int width = image.Width;
+            int height = image.Height;
+            int numberOfChunks = Environment.ProcessorCount; // Количество потоков для параллельной обработки
+            int chunkHeight = height / numberOfChunks;
+
+            Parallel.For(0, numberOfChunks, chunk =>
+            {
+                int startY = chunk * chunkHeight;
+                int endY = (chunk == numberOfChunks - 1) ? height : startY + chunkHeight;
+
+                for (int y = startY; y < endY; y++) {
+                    Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
+                    for (int x = 0; x < width; x++) {
+                        pixelRow[x] = transform(pixelRow[x]);
+                    }
+                }
+            });
+        }
+
+        private static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
+            BmpBitmapEncoder encoder = new();
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+            using MemoryStream stream = new();
+            encoder.Save(stream);
+            return stream.ToArray();
+        }
+
+        private static BitmapSource BitmapToBitmapSource(SixLabors.ImageSharp.Image<Rgba32> image) {
+            using MemoryStream memoryStream = new();
+            image.SaveAsBmp(memoryStream);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            BitmapImage bitmapImage = new();
+            bitmapImage.BeginInit();
+            bitmapImage.StreamSource = memoryStream;
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.EndInit();
+            return bitmapImage;
+        }
+
+        private void FilterButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is ToggleButton button) {
+                string? channel = button.Tag.ToString();
+                if (button.IsChecked == true) {
+                    // Сброс всех остальных кнопок
+                    RChannelButton.IsChecked = button == RChannelButton;
+                    GChannelButton.IsChecked = button == GChannelButton;
+                    BChannelButton.IsChecked = button == BChannelButton;
+                    AChannelButton.IsChecked = button == AChannelButton;
+
+                    // Применяем фильтр
+                    if (!string.IsNullOrEmpty(channel)) {
+                        FilterChannel(channel);
+                    }
+                } else {
+                    // Сбрасываем фильтр, если кнопка была отжата
+                    ShowOriginalImage();
+                }
+            }
+        }
+
+        private void FilterChannel(string channel) {
+            if (TexturePreviewImage.Source is BitmapSource bitmapSource) {
+                originalBitmapSource ??= bitmapSource.Clone();
+                var filteredBitmap = ApplyChannelFilter(originalBitmapSource, channel);
+                TexturePreviewImage.Source = filteredBitmap;
+
+                UpdateHistogram(filteredBitmap);  // Обновление гистограммы
+            }
+        }
+
+        private void ShowOriginalImage() {
+            if (originalBitmapSource != null) {
+                TexturePreviewImage.Source = originalBitmapSource;
+                RChannelButton.IsChecked = false;
+                GChannelButton.IsChecked = false;
+                BChannelButton.IsChecked = false;
+                AChannelButton.IsChecked = false;
+                UpdateHistogram(originalBitmapSource);
+            }
+        }
+
+        private void UpdateHistogram(BitmapSource bitmapSource) {
+            if (bitmapSource == null) return;
+
+            if (bitmapSource == null) return;
+
+            var histogramModel = new PlotModel {
+                //Title = "Histogram",
+                //TitleFontSize = 10,
+                //TitleFontWeight = OxyPlot.FontWeights.Bold
+            };
+
+            var redColor = OxyColor.FromAColor(100, OxyColors.Red);
+            var greenColor = OxyColor.FromAColor(100, OxyColors.Green);
+            var blueColor = OxyColor.FromAColor(100, OxyColors.Blue);
+
+            var redSeries = new AreaSeries { Color = OxyColors.Red, Fill = redColor, StrokeThickness = 1 };
+            var greenSeries = new AreaSeries { Color = OxyColors.Green, Fill = greenColor, StrokeThickness = 1 };
+            var blueSeries = new AreaSeries { Color = OxyColors.Blue, Fill = blueColor, StrokeThickness = 1 };
+
+            int[] redHistogram = new int[256];
+            int[] greenHistogram = new int[256];
+            int[] blueHistogram = new int[256];
+
+            using (var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource))) {
+                for (int y = 0; y < image.Height; y++) {
+                    Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
+                    for (int x = 0; x < pixelRow.Length; x++) {
+                        var pixel = pixelRow[x];
+                        redHistogram[pixel.R]++;
+                        greenHistogram[pixel.G]++;
+                        blueHistogram[pixel.B]++;
+                    }
+                }
+            }
+
+            // Применение сглаживания к данным гистограммы
+            double[] smoothedRedHistogram = MovingAverage(redHistogram, 32);
+            double[] smoothedGreenHistogram = MovingAverage(greenHistogram, 32);
+            double[] smoothedBlueHistogram = MovingAverage(blueHistogram, 32);
+
+            for (int i = 0; i < 256; i++) {
+                redSeries.Points.Add(new DataPoint(i, smoothedRedHistogram[i]));
+                greenSeries.Points.Add(new DataPoint(i, smoothedGreenHistogram[i]));
+                blueSeries.Points.Add(new DataPoint(i, smoothedBlueHistogram[i]));
+                redSeries.Points2.Add(new DataPoint(i, 0)); // добавляем точку с нулевым значением для закрашивания области
+                greenSeries.Points2.Add(new DataPoint(i, 0)); // добавляем точку с нулевым значением для закрашивания области
+                blueSeries.Points2.Add(new DataPoint(i, 0)); // добавляем точку с нулевым значением для закрашивания области
+            }
+
+            histogramModel.Series.Add(redSeries);
+            histogramModel.Series.Add(greenSeries);
+            histogramModel.Series.Add(blueSeries);
+
+            histogramModel.Axes.Add(new LinearAxis {
+                Position = AxisPosition.Bottom,
+                IsAxisVisible = false,
+                //Title = "Intensity",
+                //FontSize = 9,
+                //TitleFontSize = 9,
+                AxislineThickness = 0.5,
+                MajorGridlineThickness = 0.5,
+                MinorGridlineThickness = 0.5
+            });
+            histogramModel.Axes.Add(new LinearAxis {
+                Position = AxisPosition.Left,
+                IsAxisVisible = false,
+                //Title = "Count",
+                //FontSize = 9,
+                //TitleFontSize = 9,
+                AxislineThickness = 0.5,
+                MajorGridlineThickness = 0.5,
+                MinorGridlineThickness = 0.5
+            });
+
+            HistogramPlotView.Model = histogramModel;
+        }
+
+        // Метод для вычисления скользящего среднего
+        private static double[] MovingAverage(int[] data, int period) {
+            double[] result = new double[data.Length];
+            double sum = 0;
+
+            for (int i = 0; i < data.Length; i++) {
+                sum += data[i];
+                if (i >= period) {
+                    sum -= data[i - period];
+                    result[i] = sum / period;
+                } else {
+                    result[i] = sum / (i + 1);
+                }
+            }
+
+            return result;
+        }
+
+
+        private void ToggleViewerButton_Click(object sender, RoutedEventArgs e) {
+            if (isViewerVisible == true) {
+                ToggleViewButton.Content = "►";
+                TexturePreviewColumn.Width = new GridLength(0);
+            } else {
+                ToggleViewButton.Content = "◄";
+                TexturePreviewColumn.Width = new GridLength(300); // Вернуть исходную ширину
+            }
+            isViewerVisible = !isViewerVisible;
         }
 
         private void TexturesDataGrid_Sorting(object sender, DataGridSortingEventArgs e) {

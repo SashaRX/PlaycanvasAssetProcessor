@@ -157,12 +157,12 @@
                     </Grid.RowDefinitions>
                     <!-- Гистограмма -->
                     <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0">
-                        <oxy:PlotView x:Name="HistogramPlotView" Height="150" />
+                        <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                     </Border>
 
                     <!-- Изображение с ограниченной высотой -->
-                    <Border Grid.Row="0" BorderBrush="Black" BorderThickness="1" Margin="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" Stretch="Uniform" />
+                    <Border Grid.Row="0" BorderBrush="Black" BorderThickness="1" Margin="0">
+                        <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" />
                     </Border>
 
                     <!-- Canvas для текстовых блоков -->
@@ -173,8 +173,8 @@
                     </Canvas>
 
                     <!-- Кнопки фильтрации каналов -->
-                    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Right" Height="20">
-                        <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="16" MinHeight="17" RenderTransformOrigin="0.5,0.5">
+                    <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
+                        <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                             <StackPanel.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform ScaleX="1"/>

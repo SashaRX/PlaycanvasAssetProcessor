@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using TexTool.Resources;
 
 namespace TexTool {
     public class PlayCanvasService {

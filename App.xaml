@@ -4,6 +4,21 @@
              xmlns:local="clr-namespace:TexTool"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserSortColumns" Value="True"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Background" Value="#FFD6D6D6"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#FFD3D3D3"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#FFD3D3D3"/>
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#FFF0F0F0"/>
+            <Setter Property="BorderBrush" Value="#FF343C44"/>
+        </Style>
     </Application.Resources>
 </Application>

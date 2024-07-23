@@ -1,38 +1,86 @@
 ﻿using Newtonsoft.Json.Linq;
+
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
 using OxyPlot.Wpf;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.Processing.Processors;
 using SixLabors.ImageSharp.Advanced;
+
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Numerics;  // Добавляем это пространство имен
+
 using System.Net.Http;
 using System.Net.Http.Headers;
+
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
+
 using System.Windows.Controls.Primitives; // Для использования Bitmap и Rectangle
-using System.Drawing;
-using System.Drawing.Imaging; // Для использования ImageAttributes и ColorMatrix
+using System.Windows.Media.TextFormatting;
+
+using Assimp;
+using HelixToolkit.Wpf;
+
 using TexTool.Helpers;
 using TexTool.Resources;
-using Image = SixLabors.ImageSharp.Image;
-using SixLabors.ImageSharp.Memory;
+using System.Windows.Input;
+
+
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
-        private readonly ObservableCollection<TextureResource> textures = [];
+
+        private ObservableCollection<TextureResource> textures = [];
+        public ObservableCollection<TextureResource> Textures {
+            get { return textures; }
+            set {
+                textures = value;
+                OnPropertyChanged(nameof(Textures));
+            }
+        }
+
+        private ObservableCollection<ModelResource> models = [];
+        public ObservableCollection<ModelResource> Models {
+            get { return models; }
+            set {
+                models = value;
+                OnPropertyChanged(nameof(Models));
+            }
+        }
+
+        private ObservableCollection<BaseResource> assets = [];
+        public ObservableCollection<BaseResource> Assets {
+            get { return assets; }
+            set {
+                assets = value;
+                OnPropertyChanged(nameof(Assets));
+            }
+        }
+
+        private bool isDownloadButtonEnabled = false;
+        public bool IsDownloadButtonEnabled {
+            get => isDownloadButtonEnabled;
+            set {
+                isDownloadButtonEnabled = value;
+                OnPropertyChanged(nameof(IsDownloadButtonEnabled));
+            }
+        }
+
         private readonly SemaphoreSlim? semaphore = new(Settings.Default.SemaphoreLimit);
-        private readonly SemaphoreSlim getTexturesSemaphore;
+        private readonly SemaphoreSlim getAssetsSemaphore;
         private readonly SemaphoreSlim downloadSemaphore;
 
         private string? projectFolderPath = string.Empty;
@@ -40,13 +88,16 @@ namespace TexTool {
         private string? userID = string.Empty;
         private string? projectName = string.Empty;
 
+        private static readonly object logLock = new();
+
         private bool? isViewerVisible = true;
         private BitmapSource? originalBitmapSource;
-        private Dictionary<string, Image<Rgba32>> imageCache = [];
 
+        private const string MODEL_PATH = "C:\\models\\carbitLamp\\ao.fbx";
 
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
+        private readonly List<string> supportedModelFormats = [".fbx", ".obj", ".glb" ];
 
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly PlayCanvasService playCanvasService = new();
@@ -65,15 +116,21 @@ namespace TexTool {
             get { return branches; }
         }
 
+
         public MainWindow() {
             InitializeComponent();
 
-            getTexturesSemaphore = new SemaphoreSlim(Settings.Default.GetTexturesSemaphoreLimit);
+            LoadModel(MODEL_PATH);
+ 
+            getAssetsSemaphore = new SemaphoreSlim(Settings.Default.GetTexturesSemaphoreLimit);
             downloadSemaphore = new SemaphoreSlim(Settings.Default.DownloadSemaphoreLimit);
 
             projectFolderPath = Settings.Default.ProjectsFolderPath;
             UpdateConnectionStatus(false);
+              
             TexturesDataGrid.ItemsSource = textures;
+            ModelsDataGrid.ItemsSource = models;
+
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
             TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
             DataContext = this;
@@ -89,75 +146,7 @@ namespace TexTool {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private bool isDownloadButtonEnabled = false;
-        public bool IsDownloadButtonEnabled {
-            get => isDownloadButtonEnabled;
-            set {
-                isDownloadButtonEnabled = value;
-                OnPropertyChanged(nameof(IsDownloadButtonEnabled));
-            }
-        }
-
-        #region UI Event Handlers
-
-        private void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            _ = LoadBranchesAsync();
-        }
-
-        private void BranchesComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            SaveCurrentSettings();
-        }
-
-        private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
-                if (!string.IsNullOrEmpty(selectedTexture.Path)) {
-                    // Загружаем уменьшенное изображение
-                    var thumbnailImage = CreateThumbnailImage(selectedTexture.Path);
-                    TexturePreviewImage.Source = thumbnailImage;
-
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
-                        TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
-
-                        SizeConverter sizeConverter = new();
-                        object size = sizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
-                        TextureSizeTextBlock.Text = "Size: " + size;
-                    });
-
-                    // Асинхронная загрузка полной текстуры
-                    await Task.Run(() =>
-                    {
-                        var bitmapImage = new BitmapImage(new Uri(selectedTexture.Path));
-                        bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
-
-                        Dispatcher.Invoke(() =>
-                        {
-                            TexturePreviewImage.Source = bitmapImage;
-
-                            // Сохраняем оригинальную текстуру и обновляем гистограмму
-                            originalBitmapSource = bitmapImage.Clone();
-                            UpdateHistogram(originalBitmapSource);
-
-                            // Сбрасываем все фильтры
-                            ShowOriginalImage();
-                        });
-                    });
-                }
-            }
-        }
-
-        private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            if (e?.Row?.DataContext is TextureResource texture) {
-                if (texture.Status != null) {
-                    var backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), parameter: 0, CultureInfo.InvariantCulture);
-                    e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
-                } else {
-                    e.Row.Background = System.Windows.Media.Brushes.Transparent;
-                }
-            }
-        }
-
+        #region UI Viewer
 
         private static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
             BmpBitmapEncoder encoder = new();
@@ -359,7 +348,298 @@ namespace TexTool {
             return result;
         }
 
+        #endregion
 
+        #region Models
+
+
+
+        private void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
+                if (!string.IsNullOrEmpty(selectedModel.Path)) {
+                    LogError($"Selected model path: {selectedModel.Path}");
+                    LoadModel(selectedModel.Path);
+                } else {
+                    LogError("Selected model path is null or empty.");
+                }
+            } else {
+                LogError("Selected item is not a ModelResource.");
+            }
+        }
+
+        private void LoadModel(string? path) {
+            try {
+                // Добавляем жест вращения
+                viewPort3d.RotateGesture = new MouseGesture(MouseAction.LeftClick);
+
+                // Очищаем только модели, оставляя освещение
+                var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
+                foreach (var model in modelsToRemove) {
+                    viewPort3d.Children.Remove(model);
+                }
+
+                // Добавляем освещение к сцене, если оно еще не добавлено
+                if (!viewPort3d.Children.OfType<DefaultLights>().Any()) {
+                    viewPort3d.Children.Add(new DefaultLights());
+                }
+
+                // Импортируем файл 3D модели
+                AssimpContext importer = new();
+                Scene scene = importer.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+
+                if (scene == null || !scene.HasMeshes) {
+                    MessageBox.Show("Error loading model: Scene is null or has no meshes.");
+                    return;
+                }
+
+                Model3DGroup modelGroup = new();
+
+                foreach (var mesh in scene.Meshes) {
+                    if (mesh == null) continue;
+
+                    MeshBuilder builder = new();
+
+                    if (mesh.Vertices == null || mesh.Normals == null) {
+                        MessageBox.Show("Error loading model: Mesh vertices or normals are null.");
+                        continue;
+                    }
+
+                    for (int i = 0; i < mesh.VertexCount; i++) {
+                        var vertex = mesh.Vertices[i];
+                        var normal = mesh.Normals[i];
+                        builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
+                        builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+
+                        // Добавляем текстурные координаты, если они есть
+                        if (mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
+                            var texCoord = mesh.TextureCoordinateChannels[0][i];
+                            builder.TextureCoordinates.Add(new System.Windows.Point(texCoord.X, texCoord.Y));
+                        }
+                    }
+
+                    if (mesh.Faces == null) {
+                        MessageBox.Show("Error loading model: Mesh faces are null.");
+                        continue;
+                    }
+
+                    for (int i = 0; i < mesh.FaceCount; i++) {
+                        var face = mesh.Faces[i];
+                        if (face.IndexCount == 3) {
+                            builder.TriangleIndices.Add(face.Indices[0]);
+                            builder.TriangleIndices.Add(face.Indices[1]);
+                            builder.TriangleIndices.Add(face.Indices[2]);
+                        }
+                    }
+
+                    MeshGeometry3D geometry = builder.ToMesh(true);
+                    DiffuseMaterial material = new(new SolidColorBrush(Colors.Gray));
+                    GeometryModel3D model = new(geometry, material);
+                    modelGroup.Children.Add(model);
+                }
+
+                // Вычисляем центр и размеры модели
+                Rect3D bounds = modelGroup.Bounds;
+                System.Windows.Media.Media3D.Vector3D centerOffset = new(-bounds.X - bounds.SizeX / 2, -bounds.Y - bounds.SizeY / 2, -bounds.Z - bounds.SizeZ / 2);
+
+                // Создаем трансформации для центрирования и масштабирования модели
+                Transform3DGroup transformGroup = new();
+                transformGroup.Children.Add(new TranslateTransform3D(centerOffset));
+                transformGroup.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new System.Windows.Media.Media3D.Vector3D(0, 0, 0), -90)));
+
+                // Применяем трансформацию
+                modelGroup.Transform = transformGroup;
+
+                ModelVisual3D visual3d = new() { Content = modelGroup };
+                viewPort3d.Children.Add(visual3d);
+
+                // Создаем гизмо для пивота и применяем те же трансформации
+                ModelVisual3D pivotGizmo = CreatePivotGizmo(transformGroup);
+                viewPort3d.Children.Add(pivotGizmo);  // Добавляем гизмо отдельно
+
+                // Центрируем и масштабируем вид камеры на модель
+                viewPort3d.ZoomExtents();
+            } catch (Exception ex) {
+                MessageBox.Show("Error loading model: " + ex.Message);
+            }
+        }
+
+
+
+
+        private void InitializeViewport() {
+            // Создаем основной Viewport3D
+            viewPort3d = new HelixViewport3D {
+                Name = "viewPort3d",
+                ZoomExtentsWhenLoaded = true
+            };
+
+            // Создаем Viewport3D для гизмо
+            var gizmoViewport = new HelixViewport3D {
+                Name = "gizmoViewport",
+                ZoomExtentsWhenLoaded = false,
+                IsHitTestVisible = false, // Отключаем взаимодействие мыши для гизмо
+                Camera = viewPort3d.Camera // Используем ту же камеру, что и в основном Viewport3D
+            };
+
+            // Добавляем модель и гизмо к соответствующим Viewport3D
+            viewPort3d.Children.Add(new DefaultLights());
+            gizmoViewport.Children.Add(CreatePivotGizmo(new Transform3DGroup()));
+
+            // Добавляем оба Viewport3D в Grid
+            var grid = new Grid();
+            grid.Children.Add(viewPort3d);
+            grid.Children.Add(gizmoViewport);
+
+            this.Content = grid;
+        }
+
+        private ModelVisual3D CreatePivotGizmo(Transform3DGroup transformGroup) {
+            double axisLength = 10.0;
+            double thickness = 0.1;
+            double coneHeight = 1.0;
+            double coneRadius = 0.3;
+
+            // Создаем оси с конусами на концах
+            GeometryModel3D xAxisModel = CreateArrowModel(new Point3D(0, 0, 0), new Point3D(axisLength, 0, 0), thickness, coneHeight, coneRadius, Colors.Red);
+            GeometryModel3D yAxisModel = CreateArrowModel(new Point3D(0, 0, 0), new Point3D(0, axisLength, 0), thickness, coneHeight, coneRadius, Colors.Green);
+            GeometryModel3D zAxisModel = CreateArrowModel(new Point3D(0, 0, 0), new Point3D(0, 0, axisLength), thickness, coneHeight, coneRadius, Colors.Blue);
+
+            // Создаем группу для гизмо
+            Model3DGroup group = new Model3DGroup();
+            group.Children.Add(xAxisModel);
+            group.Children.Add(yAxisModel);
+            group.Children.Add(zAxisModel);
+
+            // Создаем ModelVisual3D для осей
+            ModelVisual3D modelVisual = new ModelVisual3D { Content = group, Transform = transformGroup };
+
+            // Создаем подписи для осей
+            BillboardTextVisual3D xLabel = CreateTextLabel("X", Colors.Red, new Point3D(axisLength + 0.5, 0, 0));
+            BillboardTextVisual3D yLabel = CreateTextLabel("Y", Colors.Green, new Point3D(0, axisLength + 0.5, 0));
+            BillboardTextVisual3D zLabel = CreateTextLabel("Z", Colors.Blue, new Point3D(0, 0, axisLength + 0.5));
+
+            // Применяем те же трансформации к подписям
+            xLabel.Transform = transformGroup;
+            yLabel.Transform = transformGroup;
+            zLabel.Transform = transformGroup;
+
+            // Добавляем подписи к модели
+            var gizmoGroup = new ModelVisual3D();
+            gizmoGroup.Children.Add(modelVisual);
+            gizmoGroup.Children.Add(xLabel);
+            gizmoGroup.Children.Add(yLabel);
+            gizmoGroup.Children.Add(zLabel);
+
+            return gizmoGroup;
+        }
+
+        private static GeometryModel3D CreateArrowModel(Point3D start, Point3D end, double thickness, double coneHeight, double coneRadius, System.Windows.Media.Color color) {
+            MeshBuilder meshBuilder = new MeshBuilder();
+            var direction = new System.Windows.Media.Media3D.Vector3D(end.X - start.X, end.Y - start.Y, end.Z - start.Z);
+            direction.Normalize();
+            var cylinderEnd = end - direction * coneHeight;
+            meshBuilder.AddCylinder(start, cylinderEnd, thickness, 36, false, true);
+            meshBuilder.AddCone(cylinderEnd,
+                                direction,
+                                coneRadius,
+                                0,
+                                coneHeight,
+                                true,
+                                false,
+                                36);
+            var geometry = meshBuilder.ToMesh(true);
+            var material = new EmissiveMaterial(new SolidColorBrush(color));
+            return new GeometryModel3D(geometry, material);
+        }
+
+        private static BillboardTextVisual3D CreateTextLabel(string text, System.Windows.Media.Color color, Point3D position) {
+            var textBlock = new TextBlock {
+                Text = text,
+                Foreground = new SolidColorBrush(color),
+                Background = Brushes.Transparent
+            };
+
+            var visualBrush = new VisualBrush(textBlock);
+            var material = new EmissiveMaterial(visualBrush);
+
+            return new BillboardTextVisual3D {
+                Text = text,
+                Position = position,
+                Foreground = new SolidColorBrush(color),
+                Background = Brushes.Transparent,
+                Material = material
+            };
+        }
+
+
+
+
+
+
+
+
+
+        #endregion
+
+        #region UI Event Handlers
+
+        private void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            _ = LoadBranchesAsync();
+        }
+
+        private void BranchesComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            SaveCurrentSettings();
+        }
+
+        private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                if (!string.IsNullOrEmpty(selectedTexture.Path)) {
+                    // Загружаем уменьшенное изображение
+                    var thumbnailImage = CreateThumbnailImage(selectedTexture.Path);
+                    TexturePreviewImage.Source = thumbnailImage;
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
+                        TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
+
+                        SizeConverter sizeConverter = new();
+                        object size = sizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
+                        TextureSizeTextBlock.Text = "Size: " + size;
+                    });
+
+                    // Асинхронная загрузка полной текстуры
+                    await Task.Run(() =>
+                    {
+                        var bitmapImage = new BitmapImage(new Uri(selectedTexture.Path));
+                        bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
+
+                        Dispatcher.Invoke(() =>
+                        {
+                            TexturePreviewImage.Source = bitmapImage;
+
+                            // Сохраняем оригинальную текстуру и обновляем гистограмму
+                            originalBitmapSource = bitmapImage.Clone();
+                            UpdateHistogram(originalBitmapSource);
+
+                            // Сбрасываем все фильтры
+                            ShowOriginalImage();
+                        });
+                    });
+                }
+            }
+        }
+
+        private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
+            if (e?.Row?.DataContext is TextureResource texture) {
+                if (texture.Status != null) {
+                    var backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), parameter: 0, CultureInfo.InvariantCulture);
+                    e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
+                } else {
+                    e.Row.Background = System.Windows.Media.Brushes.Transparent;
+                }
+            }
+        }
 
         private void ToggleViewerButton_Click(object sender, RoutedEventArgs e) {
             if (isViewerVisible == true) {
@@ -477,19 +757,30 @@ namespace TexTool {
             }
         }
 
-        private async void Download(object sender, RoutedEventArgs e) {
+        private async void Download(object? sender, RoutedEventArgs? e) {
             try {
-                var selectedTextures = textures.Where(t => t.Status == "On Server" || 
-                                                           t.Status == "Size Mismatch" ||
-                                                           t.Status == "Corrupted" ||
-                                                           t.Status == "Empty File" ||
-                                                           t.Status == "Hash ERROR" ||
-                                                           t.Status == "Error").OrderBy(t => t.Name).ToList();
-                var downloadTasks = selectedTextures.Select(texture => DownloadTextureAsync(texture));
+                var selectedResources = textures.Where(t => t.Status == "On Server" ||
+                                                            t.Status == "Size Mismatch" ||
+                                                            t.Status == "Corrupted" ||
+                                                            t.Status == "Empty File" ||
+                                                            t.Status == "Hash ERROR" ||
+                                                            t.Status == "Error")
+                                                .Cast<BaseResource>()
+                                                .Concat(models.Where(m => m.Status == "On Server" ||
+                                                                          m.Status == "Size Mismatch" ||
+                                                                          m.Status == "Corrupted" ||
+                                                                          m.Status == "Empty File" ||
+                                                                          m.Status == "Hash ERROR" ||
+                                                                          m.Status == "Error").Cast<BaseResource>())
+                                                .OrderBy(r => r.Name)
+                                                .ToList();
+
+                var downloadTasks = selectedResources.Select(resource => DownloadResourceAsync(resource));
                 await Task.WhenAll(downloadTasks);
 
                 // Пересчитываем индексы после завершения загрузки
                 RecalculateTextureIndices();
+                RecalculateModelIndices();
             } catch (Exception ex) {
                 MessageBox.Show($"Error: {ex.Message}");
                 LogError($"Error: {ex}");
@@ -527,29 +818,34 @@ namespace TexTool {
                 if (assets != null) {
                     UpdateConnectionStatus(true);
 
-                    textures.Clear(); // Очищаем текущий список текстур
+                if (textures != null && models != null) {
+                    if (textures.Count > 0 && models.Count > 0) {
+                        textures.Clear(); // Очищаем текущий список текстур
+                        models.Clear(); // Очищаем текущий список моделей
+                    }
+                }
 
-                    var supportedAssets = assets.Where(asset => asset["file"] != null && asset["type"]?.ToString() == "texture" && IsSupportedFormat(asset["file"]?["url"]?.ToString() ?? string.Empty)).ToList();
-                    int textureCount = supportedAssets.Count;
+                    var supportedAssets = assets.Where(asset => asset["file"] != null).ToList();
+                    int assetCount = supportedAssets.Count;
                     int currentIndex = 1; // Счетчик для индексов
 
                     await Dispatcher.InvokeAsync(() => {
                         ProgressBar.Value = 0;
-                        ProgressBar.Maximum = textureCount;
-                        ProgressTextBlock.Text = $"0/{textureCount}";
+                        ProgressBar.Maximum = assetCount;
+                        ProgressTextBlock.Text = $"0/{assetCount}";
                     });
 
                     var tasks = supportedAssets.Select(asset => Task.Run(async () => {
                         await ProcessAsset(asset, currentIndex++, cancellationToken);
                         await Dispatcher.InvokeAsync(() => {
                             ProgressBar.Value++;
-                            ProgressTextBlock.Text = $"{ProgressBar.Value}/{textureCount}";
+                            ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
                         });
                     }));
 
                     await Task.WhenAll(tasks);
 
-                    RecalculateTextureIndices(); // Пересчитываем индексы после обработки всех ассетов
+                    RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
                 } else {
                     UpdateConnectionStatus(false, "Failed to connect");
                 }
@@ -559,9 +855,25 @@ namespace TexTool {
             }
         }
 
+        private void RecalculateIndices() {
+            Dispatcher.Invoke(() => {
+                int index = 1;
+                foreach (var texture in textures) {
+                    texture.Index = index++;
+                }
+                TexturesDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
+
+                index = 1;
+                foreach (var model in models) {
+                    model.Index = index++;
+                }
+                ModelsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
+            });
+        }
+
         private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
             if (semaphore == null) throw new InvalidOperationException("Semaphore is not initialized.");
-            await getTexturesSemaphore.WaitAsync(cancellationToken);
+            await getAssetsSemaphore.WaitAsync(cancellationToken);
             try {
                 var file = asset["file"];
                 if (file != null) {
@@ -576,83 +888,175 @@ namespace TexTool {
                         throw new Exception("Unable to determine file extension");
                     }
 
-                    if (!IsSupportedFormat(fileUrl)) {
-                        throw new Exception($"Unsupported image format: {extension}");
-                    }
+                    string type = asset["type"]?.ToString() ?? string.Empty;
 
-                    if (string.IsNullOrEmpty(projectFolderPath)) {
-                        throw new Exception("Project folder path is null or empty");
-                    }
 
-                    if (string.IsNullOrEmpty(projectName)) {
-                        throw new Exception("Project name is null or empty");
-                    }
 
-                    string? pathProjectFolder = Path.Combine(projectFolderPath, projectName);
-                    string? pathTextureFolder = Path.Combine(pathProjectFolder, "textures");
-                    string? pathSourceFolder = Path.Combine(pathTextureFolder, "source");
-
-                    if (string.IsNullOrEmpty(pathSourceFolder)) {
-                        throw new Exception("Source folder path is null or empty");
-                    }
-
-                    if (!Directory.Exists(pathSourceFolder)) {
-                        Directory.CreateDirectory(pathSourceFolder);
-                    }
-
-                    var texture = new TextureResource {
-                        Index = index,
-                        Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
-                        Size = int.TryParse(file["size"]?.ToString(), out var size) ? size : 0,
-                        Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                        Path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown"),
-                        Extension = extension,
-                        Resolution = [0, 0],
-                        ResizeResolution = [0, 0],
-                        Status = "On Server",
-                        Hash = file["hash"]?.ToString() ?? string.Empty
-                    };
-
-                    if (!FileExistsWithLogging(texture.Path)) {
-                        texture.Status = "On Server";
+                    if (type == "texture" && IsSupportedTextureFormat(extension)) {
+                        await ProcessTextureAsset(asset, index, fileUrl, extension, cancellationToken);
+                    } else if (type == "scene" && IsSupportedModelFormat(extension)) {
+                        //MessageBox.Show(extension);
+                        await ProcessModelAsset(asset, index, fileUrl, extension, cancellationToken);
                     } else {
-                        var fileInfo = new FileInfo(texture.Path);
-                        if (fileInfo.Length == 0) {
-                            texture.Status = "Empty File";
-                        } else {
-                            long fileSizeInBytes = fileInfo.Length;
-                            long textureSizeInBytes = texture.Size;
-                            double tolerance = 0.05;
-                            double lowerBound = textureSizeInBytes * (1 - tolerance);
-                            double upperBound = textureSizeInBytes * (1 + tolerance);
-
-                            if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                                if (!string.IsNullOrEmpty(texture.Hash) && !FileHelper.IsFileIntact(texture.Path, texture.Hash, texture.Size)) {
-                                    texture.Status = "Hash ERROR";
-                                    LogError($"{texture.Name} hash mismatch for file: {texture.Path}, expected hash: {texture.Hash}");
-                                } else {
-                                    texture.Status = "Downloaded";
-                                }
-                            } else {
-                                texture.Status = "Size Mismatch";
-                                LogError($"{texture.Name} size Mismatch: fileSizeInBytes: {fileSizeInBytes} and textureSizeInBytes: {textureSizeInBytes}");
-                            }
-                        }
+                        LogError($"Unsupported asset type or format: {type} - {extension}");
                     }
-
-                    await Dispatcher.InvokeAsync(() => textures.Add(texture));
-                    await UpdateTextureResolutionAsync(texture, cancellationToken);
-
-                    Dispatcher.Invoke(() =>
-                    {
-                        ProgressBar.Value++;
-                        ProgressTextBlock.Text = $"{ProgressBar.Value}/{textures.Count}";
-                    });
                 }
             } catch (Exception ex) {
                 LogError($"Error in ProcessAsset: {ex}");
             } finally {
-                getTexturesSemaphore.Release();
+                getAssetsSemaphore.Release();
+            }
+        }
+
+        private bool IsSupportedTextureFormat(string extension) {
+            return supportedFormats.Contains(extension) && !excludedFormats.Contains(extension);
+        }
+
+        private bool IsSupportedModelFormat(string extension) {
+            return supportedModelFormats.Contains(extension) && !excludedFormats.Contains(extension); // исправлено
+        }
+
+        private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
+            #region path
+            if (string.IsNullOrEmpty(projectFolderPath)) {
+                throw new Exception("Project folder path is null or empty");
+            }
+
+            if (string.IsNullOrEmpty(projectName)) {
+                throw new Exception("Project name is null or empty");
+            }
+
+            string? pathProjectFolder = Path.Combine(projectFolderPath, projectName);
+            string? pathTextureFolder = Path.Combine(pathProjectFolder, "textures");
+            string? pathSourceFolder = Path.Combine(pathTextureFolder, "source");
+
+            if (string.IsNullOrEmpty(pathSourceFolder)) {
+                throw new Exception("Source folder path is null or empty");
+            }
+
+            if (!Directory.Exists(pathSourceFolder)) {
+                Directory.CreateDirectory(pathSourceFolder);
+            }
+            #endregion
+
+            var texture = new TextureResource {
+                Index = index,
+                Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
+                Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
+                Path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown"),
+                Extension = extension,
+                Resolution = new int[2],
+                ResizeResolution = new int[2],
+                Status = "On Server",
+                Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
+                Type = asset["type"]?.ToString() // Устанавливаем свойство Type
+            };
+
+            if (!FileExistsWithLogging(texture.Path)) {
+                texture.Status = "On Server";
+            } else {
+                var fileInfo = new FileInfo(texture.Path);
+                if (fileInfo.Length == 0) {
+                    texture.Status = "Empty File";
+                } else {
+                    long fileSizeInBytes = fileInfo.Length;
+                    long textureSizeInBytes = texture.Size;
+                    double tolerance = 0.05;
+                    double lowerBound = textureSizeInBytes * (1 - tolerance);
+                    double upperBound = textureSizeInBytes * (1 + tolerance);
+
+                    if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                        if (!string.IsNullOrEmpty(texture.Hash) && !FileHelper.IsFileIntact(texture.Path, texture.Hash, texture.Size)) {
+                            texture.Status = "Hash ERROR";
+                            LogError($"{texture.Name} hash mismatch for file: {texture.Path}, expected hash: {texture.Hash}");
+                        } else {
+                            texture.Status = "Downloaded";
+                        }
+                    } else {
+                        texture.Status = "Size Mismatch";
+                        LogError($"{texture.Name} size Mismatch: fileSizeInBytes: {fileSizeInBytes} and textureSizeInBytes: {textureSizeInBytes}");
+                    }
+                }
+            }
+
+            await Dispatcher.InvokeAsync(() => textures.Add(texture));
+            await UpdateTextureResolutionAsync(texture, cancellationToken);
+
+            Dispatcher.Invoke(() => {
+                ProgressBar.Value++;
+                ProgressTextBlock.Text = $"{ProgressBar.Value}/{textures.Count}";
+            });
+        }
+
+        private async Task ProcessModelAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
+            #region path
+            if (string.IsNullOrEmpty(projectFolderPath)) {
+                throw new Exception("Project folder path is null or empty");
+            }
+
+            if (string.IsNullOrEmpty(projectName)) {
+                throw new Exception("Project name is null or empty");
+            }
+
+            string pathProjectFolder = Path.Combine(projectFolderPath, projectName);
+            string pathModelFolder = Path.Combine(pathProjectFolder, "models");
+            string pathSourceFolder = Path.Combine(pathModelFolder, "source");
+
+            if (string.IsNullOrEmpty(pathSourceFolder)) {
+                throw new Exception("Source folder path is null or empty");
+            }
+
+            if (!Directory.Exists(pathSourceFolder)) {
+                Directory.CreateDirectory(pathSourceFolder);
+            }
+            #endregion
+
+            var model = new ModelResource {
+                Index = index,
+                Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
+                Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
+                Path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown"),
+                Extension = extension,
+                Status = "On Server",
+                Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty
+            };
+
+            if (!FileExistsWithLogging(model.Path)) {
+                model.Status = "On Server";
+            } else {
+                var fileInfo = new FileInfo(model.Path);
+                if (fileInfo.Length == 0) {
+                    model.Status = "Empty File";
+                } else {
+                    long fileSizeInBytes = fileInfo.Length;
+                    long textureSizeInBytes = model.Size;
+                    double tolerance = 0.05;
+                    double lowerBound = textureSizeInBytes * (1 - tolerance);
+                    double upperBound = textureSizeInBytes * (1 + tolerance);
+
+                    if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                        if (!string.IsNullOrEmpty(model.Hash) && !FileHelper.IsFileIntact(model.Path, model.Hash, model.Size)) {
+                            model.Status = "Hash ERROR";
+                            LogError($"{model.Name} hash mismatch for file: {model.Path}, expected hash: {model.Hash}");
+                        } else {
+                            model.Status = "Downloaded";
+                        }
+                    } else {
+                        model.Status = "Size Mismatch";
+                        LogError($"{model.Name} size Mismatch: fileSizeInBytes: {fileSizeInBytes} and textureSizeInBytes: {textureSizeInBytes}");
+                    }
+                }
+            }
+
+            await Dispatcher.InvokeAsync(() => models.Add(model));
+        }
+
+        private static void LogInfo(string message) {
+            string logFilePath = "info_log.txt";
+            lock (logLock) {
+                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
             }
         }
 
@@ -683,6 +1087,14 @@ namespace TexTool {
                     MessageBox.Show($"Error: {ex.Message}");
                     UpdateConnectionStatus(false, ex.Message);
                 }
+            }
+        }
+
+        private async Task DownloadAsync(BaseResource resource) {
+            if (resource is TextureResource texture) {
+                await DownloadTextureAsync(texture);
+            } else if (resource is ModelResource model) {
+                await DownloadModelAsync(model);
             }
         }
 
@@ -759,6 +1171,153 @@ namespace TexTool {
             }
         }
 
+        private async Task DownloadModelAsync(ModelResource model) {
+            const int maxRetries = 5;
+            const int delayMilliseconds = 2000;
+
+            await downloadSemaphore.WaitAsync(); // Ожидаем освобождения слота в семафоре
+            try {
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        model.Status = "Downloading";
+                        model.DownloadProgress = 0;
+
+                        if (string.IsNullOrEmpty(model.Url) || string.IsNullOrEmpty(model.Path)) {
+                            throw new Exception("Invalid model URL or path.");
+                        }
+
+                        using var client = new HttpClient();
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+
+                        var response = await client.GetAsync(model.Url, HttpCompletionOption.ResponseHeadersRead);
+
+                        if (!response.IsSuccessStatusCode) {
+                            throw new Exception($"Failed to download model: {response.StatusCode}");
+                        }
+
+                        var totalBytes = response.Content.Headers.ContentLength ?? 0L;
+                        var buffer = new byte[8192];
+                        var bytesRead = 0;
+
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        using (var fileStream = await FileHelper.OpenFileStreamWithRetryAsync(model.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                            while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
+                                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                                model.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
+                            }
+                        }
+
+                        var fileInfo = new FileInfo(model.Path);
+                        long fileSizeInBytes = fileInfo.Length;
+                        long modelSizeInBytes = model.Size;
+
+                        double tolerance = 0.05;
+                        double lowerBound = modelSizeInBytes * (1 - tolerance);
+                        double upperBound = modelSizeInBytes * (1 + tolerance);
+
+                        if (fileInfo.Length == 0) {
+                            model.Status = "Empty File";
+                        } else if (!string.IsNullOrEmpty(model.Hash) && FileHelper.VerifyFileHash(model.Path, model.Hash)) {
+                            model.Status = "Downloaded";
+                        } else if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                            model.Status = "Size Mismatch";
+                        } else {
+                            model.Status = "Corrupted";
+                        }
+                        break;
+                    } catch (IOException ex) {
+                        if (attempt == maxRetries) {
+                            model.Status = "Error";
+                            LogError($"Error downloading model after {maxRetries} attempts: {ex.Message}");
+                        } else {
+                            LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                            await Task.Delay(delayMilliseconds);
+                        }
+                    } catch (Exception ex) {
+                        model.Status = "Error";
+                        LogError($"Error downloading model: {ex.Message}");
+                        break;
+                    }
+                }
+            } finally {
+                downloadSemaphore.Release(); // Освобождаем слот в семафоре
+            }
+        }
+
+        private async Task DownloadResourceAsync(BaseResource resource) {
+            const int maxRetries = 5;
+            const int delayMilliseconds = 2000;
+
+            await downloadSemaphore.WaitAsync(); // Ожидаем освобождения слота в семафоре
+            try {
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        resource.Status = "Downloading";
+                        resource.DownloadProgress = 0;
+
+                        if (string.IsNullOrEmpty(resource.Url) || string.IsNullOrEmpty(resource.Path)) {
+                            throw new Exception("Invalid resource URL or path.");
+                        }
+
+                        using var client = new HttpClient();
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+
+                        var response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
+
+                        if (!response.IsSuccessStatusCode) {
+                            throw new Exception($"Failed to download resource: {response.StatusCode}");
+                        }
+
+                        var totalBytes = response.Content.Headers.ContentLength ?? 0L;
+                        var buffer = new byte[8192];
+                        var bytesRead = 0;
+
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        using (var fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                            while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
+                                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                                resource.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
+                            }
+                        }
+
+                        var fileInfo = new FileInfo(resource.Path);
+                        long fileSizeInBytes = fileInfo.Length;
+                        long resourceSizeInBytes = resource.Size;
+
+                        double tolerance = 0.05;
+                        double lowerBound = resourceSizeInBytes * (1 - tolerance);
+                        double upperBound = resourceSizeInBytes * (1 + tolerance);
+
+                        if (fileInfo.Length == 0) {
+                            resource.Status = "Empty File";
+                        } else if (!string.IsNullOrEmpty(resource.Hash) && FileHelper.VerifyFileHash(resource.Path, resource.Hash)) {
+                            resource.Status = "Downloaded";
+                        } else if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                            resource.Status = "Size Mismatch";
+                        } else {
+                            resource.Status = "Corrupted";
+                        }
+                        break;
+                    } catch (IOException ex) {
+                        if (attempt == maxRetries) {
+                            resource.Status = "Error";
+                            LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
+                        } else {
+                            LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                            await Task.Delay(delayMilliseconds);
+                        }
+                    } catch (Exception ex) {
+                        resource.Status = "Error";
+                        LogError($"Error downloading resource: {ex.Message}");
+                        break;
+                    }
+                }
+            } finally {
+                downloadSemaphore.Release(); // Освобождаем слот в семафоре
+            }
+        }
+
+
         #endregion
 
         #region Helper Methods
@@ -790,6 +1349,16 @@ namespace TexTool {
                     texture.Index = index++;
                 }
                 TexturesDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
+            });
+        }
+
+        private void RecalculateModelIndices() {
+            Dispatcher.Invoke(() => {
+                int index = 1;
+                foreach (var model in models) {
+                    model.Index = index++;
+                }
+                ModelsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
             });
         }
 
@@ -884,17 +1453,6 @@ namespace TexTool {
             }
         }
 
-        private bool IsSupportedFormat(string fileUrl) {
-            string? cleanUrl = fileUrl.Split('?')[0];
-            string? extension = Path.GetExtension(cleanUrl)?.ToLowerInvariant();
-            if (string.IsNullOrEmpty(extension)) {
-                return false;
-            }
-            return supportedFormats.Contains(extension) && !excludedFormats.Contains(extension);
-        }
-
-        private static readonly object logLock = new();
-
         private static bool FileExistsWithLogging(string filePath) {
             try {
                 LogError($"Checking if file exists: {filePath}");
@@ -909,6 +1467,8 @@ namespace TexTool {
             string logFilePath = "error_log.txt";
             lock (logLock) {
                 File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
+                // Вывод сообщения в консоль IDE
+                System.Diagnostics.Debug.WriteLine($"{DateTime.Now}: {message}");
             }
         }
 

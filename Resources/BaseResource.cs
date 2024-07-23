@@ -10,7 +10,7 @@ namespace TexTool.Resources {
         private string? hash;
         private string? url;
         private string? path;
-        //private string? type;
+        private string? type;
         private double downloadProgress;
 
         public int Index {
@@ -92,6 +92,14 @@ namespace TexTool.Resources {
             set {
                 path = value;
                 OnPropertyChanged(nameof(Path));
+            }
+        }
+
+        public string? Type {
+            get => type;
+            set {
+                type = value;
+                OnPropertyChanged(nameof(Type));
             }
         }
 

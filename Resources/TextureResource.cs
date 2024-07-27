@@ -21,7 +21,7 @@
             }
         }
 
-        public int ResolutionArea => Resolution[0] * Resolution[1];
-        public int ResizeResolutionArea => ResizeResolution[0] * ResizeResolution[1];
+        public int? ResolutionArea => Resolution[0] * Resolution[1];
+        public int? ResizeResolutionArea => ResizeResolution[0] * ResizeResolution[1];
     }
 }

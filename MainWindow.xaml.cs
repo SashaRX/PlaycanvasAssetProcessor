@@ -34,11 +34,16 @@ using System.Windows.Media.TextFormatting;
 using Assimp;
 using HelixToolkit.Wpf;
 
+using System.Windows.Input;
+using System.Drawing;
+using System.Linq;
+using PointF = System.Drawing.PointF;
+
+using System.Security.Policy;
+
 using TexTool.Helpers;
 using TexTool.Resources;
-using System.Windows.Input;
-
-
+using TexTool.Services;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -58,6 +63,15 @@ namespace TexTool {
             set {
                 models = value;
                 OnPropertyChanged(nameof(Models));
+            }
+        }
+
+        private ObservableCollection<MaterialResource> materials = new();
+        public ObservableCollection<MaterialResource> Materials {
+            get { return materials; }
+            set {
+                materials = value;
+                OnPropertyChanged(nameof(Materials));
             }
         }
 
@@ -97,7 +111,7 @@ namespace TexTool {
 
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
-        private readonly List<string> supportedModelFormats = [".fbx", ".obj", ".glb" ];
+        private readonly List<string> supportedModelFormats = [".fbx", ".obj", ".glb"];
 
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly PlayCanvasService playCanvasService = new();
@@ -121,23 +135,27 @@ namespace TexTool {
             InitializeComponent();
 
             LoadModel(MODEL_PATH);
- 
+
             getAssetsSemaphore = new SemaphoreSlim(Settings.Default.GetTexturesSemaphoreLimit);
             downloadSemaphore = new SemaphoreSlim(Settings.Default.DownloadSemaphoreLimit);
 
             projectFolderPath = Settings.Default.ProjectsFolderPath;
             UpdateConnectionStatus(false);
-              
+
             TexturesDataGrid.ItemsSource = textures;
             ModelsDataGrid.ItemsSource = models;
+            MaterialsDataGrid.ItemsSource = materials;
 
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
             TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
+
             DataContext = this;
             this.Closing += MainWindow_Closing;
             LoadLastSettings();
 
             RenderOptions.SetBitmapScalingMode(TexturePreviewImage, BitmapScalingMode.HighQuality);
+            RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
+            RenderOptions.SetBitmapScalingMode(UVImage2, BitmapScalingMode.HighQuality);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -148,10 +166,22 @@ namespace TexTool {
 
         #region UI Viewer
 
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (tabControl.SelectedItem is TabItem selectedTab) {
+                if (selectedTab.Header.ToString() == "Textures") {
+                    TextureViewer.Visibility = Visibility.Visible;
+                    ModelViewer.Visibility = Visibility.Collapsed;
+                } else if (selectedTab.Header.ToString() == "Models") {
+                    TextureViewer.Visibility = Visibility.Collapsed;
+                    ModelViewer.Visibility = Visibility.Visible;
+                }
+            }
+        }
+
         private static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
-            BmpBitmapEncoder encoder = new();
-            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
-            using MemoryStream stream = new();
+            var encoder = new PngBitmapEncoder(); // Или любой другой доступный энкодер
+            encoder.Frames.Add(BitmapFrame.Create((BitmapSource)bitmapSource.Clone()));
+            using var stream = new MemoryStream();
             encoder.Save(stream);
             return stream.ToArray();
         }
@@ -237,8 +267,7 @@ namespace TexTool {
 
         private async void ShowOriginalImage() {
             if (originalBitmapSource != null) {
-                await Dispatcher.InvokeAsync(() =>
-                {
+                await Dispatcher.InvokeAsync(() => {
                     TexturePreviewImage.Source = originalBitmapSource;
                     RChannelButton.IsChecked = false;
                     GChannelButton.IsChecked = false;
@@ -293,8 +322,7 @@ namespace TexTool {
             int numberOfChunks = Environment.ProcessorCount; // Количество потоков для параллельной обработки
             int chunkHeight = height / numberOfChunks;
 
-            Parallel.For(0, numberOfChunks, chunk =>
-            {
+            Parallel.For(0, numberOfChunks, chunk => {
                 int startY = chunk * chunkHeight;
                 int endY = (chunk == numberOfChunks - 1) ? height : startY + chunkHeight;
 
@@ -309,8 +337,7 @@ namespace TexTool {
 
         private static void ProcessImage(BitmapSource bitmapSource, int[] redHistogram, int[] greenHistogram, int[] blueHistogram) {
             using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
-            Parallel.For(0, image.Height, y =>
-            {
+            Parallel.For(0, image.Height, y => {
                 Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
@@ -348,28 +375,127 @@ namespace TexTool {
             return result;
         }
 
+
+
+
         #endregion
 
         #region Models
 
-
-
         private void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
-                    LogError($"Selected model path: {selectedModel.Path}");
                     LoadModel(selectedModel.Path);
-                } else {
-                    LogError("Selected model path is null or empty.");
+                    // Обновляем информацию о модели
+                    var context = new AssimpContext();
+                    var scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                    var mesh = scene.Meshes.FirstOrDefault();
+
+                    if (mesh != null) {
+                        string? modelName = selectedModel.Name;
+                        int triangles = mesh.FaceCount;
+                        int vertices = mesh.VertexCount;
+                        int uvChannels = mesh.TextureCoordinateChannelCount;
+
+                        if (!String.IsNullOrEmpty(modelName)) {
+                            UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                        }
+
+                        UpdateUVImage(mesh);
+                    }
                 }
-            } else {
-                LogError("Selected item is not a ModelResource.");
             }
         }
 
-        private void LoadModel(string? path) {
+        private void UpdateModelInfo(string modelName, int triangles, int vertices, int uvChannels) {
+            Dispatcher.Invoke(() => {
+                ModelNameTextBlock.Text = $"Model Name: {modelName}";
+                ModelTrianglesTextBlock.Text = $"Triangles: {triangles}";
+                ModelVerticesTextBlock.Text = $"Vertices: {vertices}";
+                ModelUVChannelsTextBlock.Text = $"UV Channels: {uvChannels}";
+            });
+        }
+
+        private void UpdateUVImage(Mesh mesh) {
+            int width = 512;
+            int height = 512;
+
+            // Создаем bitmap для основной UV карты
+            Bitmap bitmap1 = new(width, height);
+            using (Graphics g = Graphics.FromImage(bitmap1)) {
+                g.Clear(System.Drawing.Color.DarkGray);
+                if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null) {
+                    var uvs = mesh.TextureCoordinateChannels[0];
+                    foreach (var face in mesh.Faces) {
+                        if (face.IndexCount == 3) {
+                            PointF[] points = new PointF[3];
+                            for (int i = 0; i < 3; i++) {
+                                int vertexIndex = face.Indices[i];
+                                if (vertexIndex < uvs.Count) {
+                                    var uv = uvs[vertexIndex];
+                                    points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
+                                }
+                            }
+                            // Заливка треугольника полупрозрачным цветом
+                            g.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(186, System.Drawing.Color.OrangeRed)), points);
+                            // Обводка треугольника черным цветом
+                            g.DrawPolygon(Pens.DarkBlue, points);
+                        }
+                    }
+                }
+            }
+
+            // Создаем bitmap для дополнительной UV карты
+            Bitmap bitmap2 = new(width, height);
+            bool hasSecondUV = mesh.TextureCoordinateChannels.Length > 1 && mesh.TextureCoordinateChannels[1] != null;
+            using (Graphics g = Graphics.FromImage(bitmap2)) {
+                g.Clear(System.Drawing.Color.DarkGray);
+                if (hasSecondUV) {
+                    var uvs = mesh.TextureCoordinateChannels[1];
+                    foreach (var face in mesh.Faces) {
+                        if (face.IndexCount == 3) {
+                            PointF[] points = new PointF[3];
+                            for (int i = 0; i < 3; i++) {
+                                int vertexIndex = face.Indices[i];
+                                if (vertexIndex < uvs.Count) {
+                                    var uv = uvs[vertexIndex];
+                                    points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
+                                }
+                            }
+                            // Заливка треугольника полупрозрачным цветом
+                            g.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(186, System.Drawing.Color.OrangeRed)), points);
+                            // Обводка треугольника черным цветом
+                            g.DrawPolygon(Pens.DarkBlue, points);
+                        }
+                    }
+                }
+            }
+
+            // Преобразуем bitmap в BitmapSource для отображения в WPF
+            var bitmapSource1 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                bitmap1.GetHbitmap(),
+                IntPtr.Zero,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromWidthAndHeight(width, height));
+            bitmap1.Dispose();
+
+            var bitmapSource2 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                bitmap2.GetHbitmap(),
+                IntPtr.Zero,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromWidthAndHeight(width, height));
+            bitmap2.Dispose();
+
+            Dispatcher.Invoke(() => {
+                UVImage.Source = bitmapSource1;
+                UVImage2.Source = bitmapSource2;
+                //UVImage2Border.Visibility = hasSecondUV ? Visibility.Visible : Visibility.Collapsed;
+                //Console.WriteLine($"UV Map 2 visibility: {UVImage2Border.Visibility}");
+            });
+        }
+
+        private void LoadModel(string path) {
             try {
-                // Добавляем жест вращения
                 viewPort3d.RotateGesture = new MouseGesture(MouseAction.LeftClick);
 
                 // Очищаем только модели, оставляя освещение
@@ -378,12 +504,10 @@ namespace TexTool {
                     viewPort3d.Children.Remove(model);
                 }
 
-                // Добавляем освещение к сцене, если оно еще не добавлено
                 if (!viewPort3d.Children.OfType<DefaultLights>().Any()) {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                // Импортируем файл 3D модели
                 AssimpContext importer = new();
                 Scene scene = importer.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
 
@@ -393,6 +517,10 @@ namespace TexTool {
                 }
 
                 Model3DGroup modelGroup = new();
+
+                int totalTriangles = 0;
+                int totalVertices = 0;
+                int validUVChannels = 0;
 
                 foreach (var mesh in scene.Meshes) {
                     if (mesh == null) continue;
@@ -411,7 +539,7 @@ namespace TexTool {
                         builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 
                         // Добавляем текстурные координаты, если они есть
-                        if (mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
+                        if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
                             var texCoord = mesh.TextureCoordinateChannels[0][i];
                             builder.TextureCoordinates.Add(new System.Windows.Point(texCoord.X, texCoord.Y));
                         }
@@ -421,6 +549,9 @@ namespace TexTool {
                         MessageBox.Show("Error loading model: Mesh faces are null.");
                         continue;
                     }
+
+                    totalTriangles += mesh.FaceCount;
+                    totalVertices += mesh.VertexCount;
 
                     for (int i = 0; i < mesh.FaceCount; i++) {
                         var face = mesh.Faces[i];
@@ -435,65 +566,50 @@ namespace TexTool {
                     DiffuseMaterial material = new(new SolidColorBrush(Colors.Gray));
                     GeometryModel3D model = new(geometry, material);
                     modelGroup.Children.Add(model);
+
+                    validUVChannels = Math.Min(3, mesh.TextureCoordinateChannelCount);
                 }
 
-                // Вычисляем центр и размеры модели
                 Rect3D bounds = modelGroup.Bounds;
                 System.Windows.Media.Media3D.Vector3D centerOffset = new(-bounds.X - bounds.SizeX / 2, -bounds.Y - bounds.SizeY / 2, -bounds.Z - bounds.SizeZ / 2);
 
-                // Создаем трансформации для центрирования и масштабирования модели
                 Transform3DGroup transformGroup = new();
                 transformGroup.Children.Add(new TranslateTransform3D(centerOffset));
-                transformGroup.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new System.Windows.Media.Media3D.Vector3D(0, 0, 0), -90)));
 
-                // Применяем трансформацию
                 modelGroup.Transform = transformGroup;
 
                 ModelVisual3D visual3d = new() { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
-                // Создаем гизмо для пивота и применяем те же трансформации
                 ModelVisual3D pivotGizmo = CreatePivotGizmo(transformGroup);
-                viewPort3d.Children.Add(pivotGizmo);  // Добавляем гизмо отдельно
+                viewPort3d.Children.Add(pivotGizmo);
 
-                // Центрируем и масштабируем вид камеры на модель
                 viewPort3d.ZoomExtents();
+
+                UpdateModelInfo(modelName: Path.GetFileName(path), triangles: totalTriangles, vertices: totalVertices, uvChannels: validUVChannels);
+            } catch (InvalidOperationException ex) {
+                MessageBox.Show($"Error loading model: {ex.Message}");
+                ResetViewport();
             } catch (Exception ex) {
-                MessageBox.Show("Error loading model: " + ex.Message);
+                MessageBox.Show($"Error loading model: {ex.Message}");
+                ResetViewport();
             }
         }
 
+        private void ResetViewport() {
+            // Очищаем только модели, оставляя освещение
+            var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
+            foreach (var model in modelsToRemove) {
+                viewPort3d.Children.Remove(model);
+            }
 
-
-
-        private void InitializeViewport() {
-            // Создаем основной Viewport3D
-            viewPort3d = new HelixViewport3D {
-                Name = "viewPort3d",
-                ZoomExtentsWhenLoaded = true
-            };
-
-            // Создаем Viewport3D для гизмо
-            var gizmoViewport = new HelixViewport3D {
-                Name = "gizmoViewport",
-                ZoomExtentsWhenLoaded = false,
-                IsHitTestVisible = false, // Отключаем взаимодействие мыши для гизмо
-                Camera = viewPort3d.Camera // Используем ту же камеру, что и в основном Viewport3D
-            };
-
-            // Добавляем модель и гизмо к соответствующим Viewport3D
-            viewPort3d.Children.Add(new DefaultLights());
-            gizmoViewport.Children.Add(CreatePivotGizmo(new Transform3DGroup()));
-
-            // Добавляем оба Viewport3D в Grid
-            var grid = new Grid();
-            grid.Children.Add(viewPort3d);
-            grid.Children.Add(gizmoViewport);
-
-            this.Content = grid;
+            if (!viewPort3d.Children.OfType<DefaultLights>().Any()) {
+                viewPort3d.Children.Add(new DefaultLights());
+            }
+            viewPort3d.ZoomExtents();
         }
 
-        private ModelVisual3D CreatePivotGizmo(Transform3DGroup transformGroup) {
+        private static ModelVisual3D CreatePivotGizmo(Transform3DGroup transformGroup) {
             double axisLength = 10.0;
             double thickness = 0.1;
             double coneHeight = 1.0;
@@ -556,7 +672,7 @@ namespace TexTool {
             var textBlock = new TextBlock {
                 Text = text,
                 Foreground = new SolidColorBrush(color),
-                Background = Brushes.Transparent
+                Background = System.Windows.Media.Brushes.Transparent
             };
 
             var visualBrush = new VisualBrush(textBlock);
@@ -566,15 +682,10 @@ namespace TexTool {
                 Text = text,
                 Position = position,
                 Foreground = new SolidColorBrush(color),
-                Background = Brushes.Transparent,
+                Background = System.Windows.Media.Brushes.Transparent,
                 Material = material
             };
         }
-
-
-
-
-
 
 
 
@@ -598,8 +709,7 @@ namespace TexTool {
                     var thumbnailImage = CreateThumbnailImage(selectedTexture.Path);
                     TexturePreviewImage.Source = thumbnailImage;
 
-                    await Dispatcher.InvokeAsync(() =>
-                    {
+                    await Dispatcher.InvokeAsync(() => {
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
                         TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
 
@@ -609,13 +719,11 @@ namespace TexTool {
                     });
 
                     // Асинхронная загрузка полной текстуры
-                    await Task.Run(() =>
-                    {
+                    await Task.Run(() => {
                         var bitmapImage = new BitmapImage(new Uri(selectedTexture.Path));
                         bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
 
-                        Dispatcher.Invoke(() =>
-                        {
+                        Dispatcher.Invoke(() => {
                             TexturePreviewImage.Source = bitmapImage;
 
                             // Сохраняем оригинальную текстуру и обновляем гистограмму
@@ -626,6 +734,15 @@ namespace TexTool {
                             ShowOriginalImage();
                         });
                     });
+                }
+            }
+        }
+
+        private void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                if (!string.IsNullOrEmpty(selectedMaterial.Path)) {
+                    // Обработка выбранного материала
+                    // Например, можно отобразить информацию о материале или его текстуры
                 }
             }
         }
@@ -800,6 +917,24 @@ namespace TexTool {
             Close();
         }
 
+        private void GridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
+            GridSplitter gridSplitter = (GridSplitter)sender;
+
+            if (gridSplitter.Parent is not Grid grid) {
+                return;
+            }
+
+            var row1Height = ((RowDefinition)grid.RowDefinitions[0]).ActualHeight;
+            var row2Height = ((RowDefinition)grid.RowDefinitions[1]).ActualHeight;
+
+            // Ограничение на минимальные размеры строк
+            double minHeight = 137;
+
+            if (row1Height < minHeight || row2Height < minHeight) {
+                e.Handled = true;
+            }
+        }
+
         #endregion
 
         #region API Methods
@@ -818,12 +953,12 @@ namespace TexTool {
                 if (assets != null) {
                     UpdateConnectionStatus(true);
 
-                if (textures != null && models != null) {
-                    if (textures.Count > 0 && models.Count > 0) {
-                        textures.Clear(); // Очищаем текущий список текстур
-                        models.Clear(); // Очищаем текущий список моделей
+                    if (textures != null && models != null) {
+                        if (textures.Count > 0 && models.Count > 0) {
+                            textures.Clear(); // Очищаем текущий список текстур
+                            models.Clear(); // Очищаем текущий список моделей
+                        }
                     }
-                }
 
                     var supportedAssets = assets.Where(asset => asset["file"] != null).ToList();
                     int assetCount = supportedAssets.Count;
@@ -876,8 +1011,10 @@ namespace TexTool {
             await getAssetsSemaphore.WaitAsync(cancellationToken);
             try {
                 var file = asset["file"];
-                if (file != null) {
-                    string? fileUrl = file["url"] != null ? $"{Settings.Default.BaseUrl}{file["url"]}" : string.Empty;
+                if (file != null && file.Type == JTokenType.Object) {
+                    string baseUrl = "https://playcanvas.com";
+                    string? relativeUrl = file["url"]?.ToString();
+                    string? fileUrl = !string.IsNullOrEmpty(relativeUrl) ? new Uri(new Uri(baseUrl), relativeUrl).ToString() : string.Empty;
 
                     if (string.IsNullOrEmpty(fileUrl)) {
                         throw new Exception("File URL is null or empty");
@@ -890,12 +1027,9 @@ namespace TexTool {
 
                     string type = asset["type"]?.ToString() ?? string.Empty;
 
-
-
                     if (type == "texture" && IsSupportedTextureFormat(extension)) {
                         await ProcessTextureAsset(asset, index, fileUrl, extension, cancellationToken);
                     } else if (type == "scene" && IsSupportedModelFormat(extension)) {
-                        //MessageBox.Show(extension);
                         await ProcessModelAsset(asset, index, fileUrl, extension, cancellationToken);
                     } else {
                         LogError($"Unsupported asset type or format: {type} - {extension}");
@@ -923,7 +1057,7 @@ namespace TexTool {
             }
 
             if (string.IsNullOrEmpty(projectName)) {
-                throw new Exception("Project name is null or empty");
+                throw new Exception("Project name is null или empty");
             }
 
             string? pathProjectFolder = Path.Combine(projectFolderPath, projectName);
@@ -937,6 +1071,8 @@ namespace TexTool {
             if (!Directory.Exists(pathSourceFolder)) {
                 Directory.CreateDirectory(pathSourceFolder);
             }
+
+            string? path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown");
             #endregion
 
             var texture = new TextureResource {
@@ -944,7 +1080,7 @@ namespace TexTool {
                 Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
                 Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
                 Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                Path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown"),
+                Path = path,
                 Extension = extension,
                 Resolution = new int[2],
                 ResizeResolution = new int[2],
@@ -989,7 +1125,8 @@ namespace TexTool {
             });
         }
 
-        private async Task ProcessModelAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
+
+        private async Task ProcessMaterialAsset(JToken asset, int id, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
             #region path
             if (string.IsNullOrEmpty(projectFolderPath)) {
                 throw new Exception("Project folder path is null or empty");
@@ -1000,8 +1137,53 @@ namespace TexTool {
             }
 
             string pathProjectFolder = Path.Combine(projectFolderPath, projectName);
-            string pathModelFolder = Path.Combine(pathProjectFolder, "models");
-            string pathSourceFolder = Path.Combine(pathModelFolder, "source");
+            string pathMaterialFolder = Path.Combine(pathProjectFolder, "materials");
+
+            if (string.IsNullOrEmpty(pathMaterialFolder)) {
+                throw new Exception("Material folder path is null or empty");
+            }
+
+            if (!Directory.Exists(pathMaterialFolder)) {
+                Directory.CreateDirectory(pathMaterialFolder);
+            }
+            #endregion
+
+            var material = new MaterialResource {
+                ID = id,
+                Index = index,
+                Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
+                Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
+                Path = Path.Combine(pathMaterialFolder, asset["name"]?.ToString() ?? "Unknown"),
+                Extension = extension,
+                Status = "On Server",
+                Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
+                TextureIds = []
+            };
+
+            // Предполагается, что JSON материал содержит информацию о связанных текстурах
+            var json = await DownloadJsonAsync(material.Url);
+            foreach (var textureId in json["textures"]) {
+                material.TextureIds.Add(textureId.ToObject<int>());
+            }
+
+            await Dispatcher.InvokeAsync(() => materials.Add(material));
+            await DownloadMaterialAsync(material);
+        }
+
+        private async Task ProcessModelAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
+            #region path
+            if (string.IsNullOrEmpty(projectFolderPath)) {
+                throw new Exception("Project folder path is null or empty");
+            }
+
+            if (string.IsNullOrEmpty(projectName)) {
+                throw new Exception("Project name is null или empty");
+            }
+
+            string? pathProjectFolder = Path.Combine(projectFolderPath, projectName);
+            string? pathTextureFolder = Path.Combine(pathProjectFolder, "models");
+            string? pathSourceFolder = Path.Combine(pathTextureFolder, "source");
 
             if (string.IsNullOrEmpty(pathSourceFolder)) {
                 throw new Exception("Source folder path is null or empty");
@@ -1010,6 +1192,8 @@ namespace TexTool {
             if (!Directory.Exists(pathSourceFolder)) {
                 Directory.CreateDirectory(pathSourceFolder);
             }
+
+            string? path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown");
             #endregion
 
             var model = new ModelResource {
@@ -1017,10 +1201,11 @@ namespace TexTool {
                 Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
                 Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
                 Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                Path = Path.Combine(pathSourceFolder, asset["name"]?.ToString() ?? "Unknown"),
+                Path = path,
                 Extension = extension,
                 Status = "On Server",
-                Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty
+                Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
+                UVChannels = 0 // Инициализация значения UV каналов
             };
 
             if (!FileExistsWithLogging(model.Path)) {
@@ -1050,15 +1235,18 @@ namespace TexTool {
                 }
             }
 
+            // Определяем количество UV каналов
+            var context = new AssimpContext();
+            var scene = context.ImportFile(model.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+            var mesh = scene.Meshes.FirstOrDefault();
+            if (mesh != null) {
+                model.UVChannels = mesh.TextureCoordinateChannelCount;
+            }
+
             await Dispatcher.InvokeAsync(() => models.Add(model));
         }
 
-        private static void LogInfo(string message) {
-            string logFilePath = "info_log.txt";
-            lock (logLock) {
-                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
-            }
-        }
+
 
         private async Task LoadBranchesAsync() {
             if (ProjectsComboBox.SelectedItem != null) {
@@ -1244,6 +1432,147 @@ namespace TexTool {
             }
         }
 
+        private async Task DownloadMaterialAsync(MaterialResource material) {
+            const int maxRetries = 5;
+            const int delayMilliseconds = 2000;
+
+            await downloadSemaphore.WaitAsync(); // Ожидаем освобождения слота в семафоре
+            try {
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        material.Status = "Downloading";
+                        material.DownloadProgress = 0;
+
+                        if (string.IsNullOrEmpty(material.Url) || string.IsNullOrEmpty(material.Path)) {
+                            throw new Exception("Invalid material URL or path.");
+                        }
+
+                        using var client = new HttpClient();
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+
+                        var response = await client.GetAsync(material.Url, HttpCompletionOption.ResponseHeadersRead);
+
+                        if (!response.IsSuccessStatusCode) {
+                            throw new Exception($"Failed to download material: {response.StatusCode}");
+                        }
+
+                        var totalBytes = response.Content.Headers.ContentLength ?? 0L;
+                        var buffer = new byte[8192];
+                        var bytesRead = 0;
+
+                        using var stream = await response.Content.ReadAsStreamAsync();
+                        using var fileStream = await FileHelper.OpenFileStreamWithRetryAsync(material.Path, FileMode.Create, FileAccess.Write, FileShare.None);
+                        while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
+                            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                            material.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
+                        }
+
+                        material.Status = "Downloaded";
+                        break;
+                    } catch (IOException ex) {
+                        if (attempt == maxRetries) {
+                            material.Status = "Error";
+                            LogError($"Error downloading material after {maxRetries} attempts: {ex.Message}");
+                        } else {
+                            LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                            await Task.Delay(delayMilliseconds);
+                        }
+                    } catch (Exception ex) {
+                        material.Status = "Error";
+                        LogError($"Error downloading material: {ex.Message}");
+                        break;
+                    }
+                }
+            } finally {
+                downloadSemaphore.Release(); // Освобождаем слот в семафоре
+            }
+        }
+
+        private static async Task<JObject> DownloadJsonAsync(string url) {
+            using HttpClient client = new();
+            var response = await client.GetStringAsync(url);
+            return JObject.Parse(response);
+        }
+
+
+
+
+
+        private static async Task ParseMaterialJsonAsync(MaterialResource material) {
+            try {
+                if (material != null && !String.IsNullOrEmpty(material.MaterialJsonPath)) {
+                    var jsonContent = await File.ReadAllTextAsync(path: material.MaterialJsonPath);
+                    var jsonObject = JObject.Parse(jsonContent);
+
+
+                    var textureIds = jsonObject["textures"]?.Values<int>().ToList();
+                    if (textureIds != null) {
+                        material.TextureIds.AddRange(textureIds);
+                    }
+                }
+            } catch (Exception ex) {
+                LogError($"Error parsing material JSON: {ex.Message}");
+                material.Status = "Error";
+            }
+        }
+
+        private async Task DownloadMaterialJsonAsync(MaterialResource material) {
+            const int maxRetries = 5;
+            const int delayMilliseconds = 2000;
+
+            await downloadSemaphore.WaitAsync();
+            try {
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        material.Status = "Downloading";
+                        material.DownloadProgress = 0;
+
+                        if (string.IsNullOrEmpty(material.MaterialJsonUrl) || string.IsNullOrEmpty(material.MaterialJsonPath)) {
+                            throw new Exception("Invalid material URL or path.");
+                        }
+
+                        using var client = new HttpClient();
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+
+                        var response = await client.GetAsync(material.MaterialJsonUrl, HttpCompletionOption.ResponseHeadersRead);
+
+                        if (!response.IsSuccessStatusCode) {
+                            throw new Exception($"Failed to download material: {response.StatusCode}");
+                        }
+
+                        var totalBytes = response.Content.Headers.ContentLength ?? 0L;
+                        var buffer = new byte[8192];
+                        var bytesRead = 0;
+
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        using (var fileStream = await FileHelper.OpenFileStreamWithRetryAsync(material.MaterialJsonPath, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                            while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
+                                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                                material.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
+                            }
+                        }
+
+                        material.Status = "Downloaded";
+                        break;
+                    } catch (IOException ex) {
+                        if (attempt == maxRetries) {
+                            material.Status = "Error";
+                            LogError($"Error downloading material after {maxRetries} attempts: {ex.Message}");
+                        } else {
+                            LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                            await Task.Delay(delayMilliseconds);
+                        }
+                    } catch (Exception ex) {
+                        material.Status = "Error";
+                        LogError($"Error downloading material: {ex.Message}");
+                        break;
+                    }
+                }
+            } finally {
+                downloadSemaphore.Release();
+            }
+        }
+
         private async Task DownloadResourceAsync(BaseResource resource) {
             const int maxRetries = 5;
             const int delayMilliseconds = 2000;
@@ -1316,7 +1645,6 @@ namespace TexTool {
                 downloadSemaphore.Release(); // Освобождаем слот в семафоре
             }
         }
-
 
         #endregion
 
@@ -1463,7 +1791,14 @@ namespace TexTool {
             }
         }
 
-        private static void LogError(string message) {
+        private static void LogInfo(string message) {
+            string logFilePath = "info_log.txt";
+            lock (logLock) {
+                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
+            }
+        }
+
+        private static void LogError(string? message) {
             string logFilePath = "error_log.txt";
             lock (logLock) {
                 File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");

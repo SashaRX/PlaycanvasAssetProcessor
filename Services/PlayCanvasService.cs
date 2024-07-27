@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TexTool.Resources;
 
-namespace TexTool {
+namespace TexTool.Services {
     public class PlayCanvasService {
         private readonly HttpClient client;
 
@@ -17,7 +17,7 @@ namespace TexTool {
 
         private void AddAuthorizationHeader(string? apiKey) {
             if (string.IsNullOrEmpty(apiKey)) {
-                throw new System.Exception("API key is null or empty");
+                throw new Exception("API key is null or empty");
             }
             if (client.DefaultRequestHeaders.Contains("Authorization")) {
                 client.DefaultRequestHeaders.Remove("Authorization");
@@ -35,7 +35,7 @@ namespace TexTool {
 
             string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             var json = JObject.Parse(responseBody);
-            return json["id"]?.ToString() ?? throw new System.Exception("User ID is null");
+            return json["id"]?.ToString() ?? throw new Exception("User ID is null");
         }
 
         public async Task<Dictionary<string, string>> GetProjectsAsync(string? userId, string? apiKey, CancellationToken cancellationToken) {
@@ -48,7 +48,7 @@ namespace TexTool {
 
             string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             var json = JObject.Parse(responseBody);
-            var projectsArray = json["result"] as JArray ?? throw new System.Exception("Projects array is null");
+            var projectsArray = json["result"] as JArray ?? throw new Exception("Projects array is null");
 
             var projects = new Dictionary<string, string>();
             foreach (var project in projectsArray) {
@@ -72,7 +72,7 @@ namespace TexTool {
 
             string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             var json = JObject.Parse(responseBody);
-            var branchesArray = json["result"] as JArray ?? throw new System.Exception("Branches array is null");
+            var branchesArray = json["result"] as JArray ?? throw new Exception("Branches array is null");
 
             var branches = new List<Branch>();
             foreach (var branch in branchesArray) {
@@ -97,7 +97,7 @@ namespace TexTool {
             string responseData = await response.Content.ReadAsStringAsync(cancellationToken);
             var assetsResponse = JObject.Parse(responseData);
 
-            return assetsResponse["result"] as JArray ?? throw new System.Exception("Assets array is null");
+            return assetsResponse["result"] as JArray ?? throw new Exception("Assets array is null");
         }
     }
 

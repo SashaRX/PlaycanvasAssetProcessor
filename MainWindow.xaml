@@ -5,7 +5,6 @@
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
-
     xmlns:oxy="http://oxyplot.org/wpf"
     mc:Ignorable="av"
     x:Class="TexTool.MainWindow"
@@ -75,8 +74,6 @@
                             IsSnapToTickEnabled="True" 
                             Ticks="16,32,64,128,256"
                             Value="0"/>
-
-                    
                 </StackPanel>
             </GroupBox>
             <StackPanel Width="121" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
@@ -105,7 +102,7 @@
                 <ColumnDefinition x:Name="TexturePreviewColumn" Width="300" />
             </Grid.ColumnDefinitions>
 
-            <TabControl x:Name="tabControl" Grid.Column="0" Padding="1,1,1,1" BorderThickness="0,0,0,0">
+            <TabControl x:Name="tabControl" Grid.Column="0" Padding="1,1,1,1" BorderThickness="0,0,0,0" SelectionChanged="TabControl_SelectionChanged">
                 <TabItem Header="Textures" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
                     <DataGrid x:Name="TexturesDataGrid"
                                 ItemsSource="{Binding Textures}"
@@ -146,6 +143,7 @@
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
+                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="auto" MinWidth="50"/>
                                 <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -162,42 +160,39 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="Materials">
-                    <Grid Background="#FFE5E5E5"/>
+                    <DataGrid x:Name="MaterialsDataGrid" AutoGenerateColumns="False" ItemsSource="{Binding Materials}" SelectionChanged="MaterialsDataGrid_SelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Index" Binding="{Binding Index}" Width="Auto"/>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="Auto"/>
+                            <DataGridTextColumn Header="DownloadProgress" Binding="{Binding DownloadProgress}" Width="Auto"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </TabItem>
             </TabControl>
 
             <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="Gray" FontSize="6"/>
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
-        Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
+                Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <Border Grid.Column="2" Background="#FFFFFF" Margin="0,0,0,0" BorderThickness="2,2,2,2" Padding="0,0,0,0" VerticalAlignment="Top" MinWidth="128" MinHeight="128">
+            <Border x:Name="TextureViewer" Grid.Column="2" Background="#FFFFFF" Margin="0,0,0,0" BorderThickness="2,2,2,2" Padding="0,0,0,0" VerticalAlignment="Top" MinWidth="128" MinHeight="128">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
-                        <!-- Для изображения -->
                         <RowDefinition Height="Auto" />
-                        <!-- Для изображения -->
                         <RowDefinition Height="Auto" />
-                        <!-- Для гистограммы -->
                     </Grid.RowDefinitions>
-                    <!-- Гистограмма -->
                     <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" VerticalAlignment="Top" Height="128">
                         <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                     </Border>
-
-                    <!-- Изображение с ограниченной высотой -->
                     <Border Grid.Row="0" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
                         <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" />
                     </Border>
-
-                    <!-- Canvas для текстовых блоков -->
                     <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
                         <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
                         <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
                         <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
                     </Canvas>
-
-                    <!-- Кнопки фильтрации каналов -->
                     <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
                         <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                             <StackPanel.RenderTransform>
@@ -214,15 +209,64 @@
                             <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
                         </StackPanel>
                     </StackPanel>
+                </Grid>
+            </Border>
 
-                    <Border x:Name="ModelViewport" Background="#FF414D58" Grid.RowSpan="1" Grid.ColumnSpan="1" Grid.Row="2" MinWidth="256" MinHeight="256">
-                        <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true" >
-                            <!-- Remember to add light to the scene -->
-                            <helix:DefaultLights/>
-                        </helix:HelixViewport3D>
+            <Border x:Name="ModelViewer" Visibility="Collapsed" Background="#FF414D58" Grid.RowSpan="1" Grid.ColumnSpan="1" Grid.Column="2" MinWidth="256" MinHeight="256">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" MinHeight="128"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true" Grid.Row="0" Grid.ColumnSpan="3">
+                        <helix:DefaultLights/>
+                    </helix:HelixViewport3D>
+
+                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1" Grid.Row="0">
+                        <TextBlock x:Name="ModelNameTextBlock" Text="Model Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                        <TextBlock x:Name="ModelTrianglesTextBlock" Text="Triangles:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                        <TextBlock x:Name="ModelVerticesTextBlock" Text="Vertices:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                        <TextBlock x:Name="ModelUVChannelsTextBlock" Text="UV Channels:" Canvas.Left="10" Canvas.Top="70" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                    </Canvas>
+
+                    <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="Gray" VerticalContentAlignment="Bottom" HorizontalContentAlignment="Stretch" Panel.ZIndex="1" />
+
+                    <Border Grid.Row="2" Grid.ColumnSpan="3" BorderBrush="Black" BorderThickness="1" Margin="0" Height="auto" MinWidth="128" MinHeight="137">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7FFFFFFF"/>
+                                <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
+                                    <Image x:Name="UVImage" Stretch="Uniform" MinWidth="128" MinHeight="128" />
+                                </Viewbox>
+                            </Grid>
+                            <Grid Grid.Column="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7FFFFFFF"/>
+                                <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
+                                    <Image x:Name="UVImage2" Stretch="Uniform" MinWidth="128" MinHeight="128" />
+                                </Viewbox>
+                            </Grid>
+                        </Grid>
                     </Border>
                 </Grid>
             </Border>
-        </Grid> 
+        </Grid>
     </DockPanel>
 </Window>

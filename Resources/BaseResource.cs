@@ -2,6 +2,7 @@
 
 namespace TexTool.Resources {
     public abstract class BaseResource : INotifyPropertyChanged {
+        private int id;
         private string? name;
         private string? extension;
         private int index;
@@ -12,6 +13,15 @@ namespace TexTool.Resources {
         private string? path;
         private string? type;
         private double downloadProgress;
+
+        public int ID {
+            get { return id; }
+            set {
+                id = value;
+                OnPropertyChanged(nameof(ID));
+            }
+        }
+
 
         public int Index {
             get { return index; }

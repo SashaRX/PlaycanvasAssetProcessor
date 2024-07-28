@@ -4,11 +4,11 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace TexTool {
+namespace TexTool.Helpers {
     public class SizeConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             if (value is int size) {
-                double sizeInMB = Math.Round(size / (1024.0*1000.0), 3);
+                double sizeInMB = Math.Round(size / (1024.0 * 1000.0), 3);
                 return $"{sizeInMB} MB";
             }
             return "0 MB";

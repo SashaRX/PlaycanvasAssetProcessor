@@ -4,15 +4,17 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
-using TexTool.Properties;
+using TexTool.Settings;
 
 namespace TexTool {
     public partial class SettingsWindow : Window, INotifyPropertyChanged {
         public string? ProjectsFolder {
-            get => Settings.Default.ProjectsFolderPath;
+            get => AppSettings.Default.ProjectsFolderPath;
             set {
-                Settings.Default.ProjectsFolderPath = value;
-                OnPropertyChanged(nameof(ProjectsFolder));
+                if (value != null) {
+                    AppSettings.Default.ProjectsFolderPath = value;
+                    OnPropertyChanged(nameof(ProjectsFolder));
+                }
             }
         }
 
@@ -30,13 +32,13 @@ namespace TexTool {
         }
 
         private void LoadSettings() {
-            UsernameTextBox.Text = Settings.Default.Username;
-            PlaycanvasApiKeyTextBox.Text = Settings.Default.PlaycanvasApiKey;
-            ProjectsFolderBox.Text = Settings.Default.ProjectsFolderPath;
-            GetTexturesSemaphoreSlider.Value = Settings.Default.GetTexturesSemaphoreLimit;
-            DownloadSemaphoreSlider.Value = Settings.Default.DownloadSemaphoreLimit;
-            GetTexturesSemaphoreTextBlock.Text = Settings.Default.GetTexturesSemaphoreLimit.ToString();
-            DownloadSemaphoreTextBlock.Text = Settings.Default.DownloadSemaphoreLimit.ToString();
+            UsernameTextBox.Text = AppSettings.Default.UserName;
+            PlaycanvasApiKeyTextBox.Text = AppSettings.Default.PlaycanvasApiKey;
+            ProjectsFolderBox.Text = AppSettings.Default.ProjectsFolderPath;
+            GetTexturesSemaphoreSlider.Value = AppSettings.Default.GetTexturesSemaphoreLimit;
+            DownloadSemaphoreSlider.Value = AppSettings.Default.DownloadSemaphoreLimit;
+            GetTexturesSemaphoreTextBlock.Text = AppSettings.Default.GetTexturesSemaphoreLimit.ToString();
+            DownloadSemaphoreTextBlock.Text = AppSettings.Default.DownloadSemaphoreLimit.ToString();
         }
 
         private void CheckAndRemoveWatermarks() {
@@ -83,13 +85,13 @@ namespace TexTool {
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) {
-            Settings.Default.Username = UsernameTextBox.Text;
-            Settings.Default.PlaycanvasApiKey = PlaycanvasApiKeyTextBox.Text;
-            Settings.Default.GetTexturesSemaphoreLimit = (int)GetTexturesSemaphoreSlider.Value;
-            Settings.Default.DownloadSemaphoreLimit = (int)DownloadSemaphoreSlider.Value;
-            Settings.Default.ProjectsFolderPath = ProjectsFolderBox.Text;
+            AppSettings.Default.UserName = UsernameTextBox.Text;
+            AppSettings.Default.PlaycanvasApiKey = PlaycanvasApiKeyTextBox.Text;
+            AppSettings.Default.GetTexturesSemaphoreLimit = (int)GetTexturesSemaphoreSlider.Value;
+            AppSettings.Default.DownloadSemaphoreLimit = (int)DownloadSemaphoreSlider.Value;
+            AppSettings.Default.ProjectsFolderPath = ProjectsFolderBox.Text;
 
-            Settings.Default.Save();
+            AppSettings.Default.Save();
             this.Close();
         }
 

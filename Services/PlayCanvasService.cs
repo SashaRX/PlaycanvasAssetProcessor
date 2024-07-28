@@ -99,6 +99,18 @@ namespace TexTool.Services {
 
             return assetsResponse["result"] as JArray ?? throw new Exception("Assets array is null");
         }
+
+        public async Task<JObject> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken) {
+            string url = $"https://playcanvas.com/api/assets/{assetId}";
+
+            AddAuthorizationHeader(apiKey);
+
+            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            return JObject.Parse(responseBody);
+        }
     }
 
     public class Branch {

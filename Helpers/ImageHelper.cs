@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using TexTool.Settings;
 
 namespace TexTool.Helpers {
     public static class ImageHelper {
@@ -17,7 +18,7 @@ namespace TexTool.Helpers {
 
             try {
                 using var client = new HttpClient();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
                 client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
 
                 var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -70,7 +71,7 @@ namespace TexTool.Helpers {
 
         private static async Task<(int Width, int Height)> GetJpegResolutionFromStream(string url, CancellationToken cancellationToken) {
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.Default.PlaycanvasApiKey);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
             client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 500);
 
             var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);

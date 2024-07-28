@@ -2,6 +2,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:TexTool"
+    xmlns:help ="clr-namespace:TexTool.Helpers"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
@@ -11,11 +12,11 @@
     Title="MainWindow" Height="528" Width="942">
 
     <Window.Resources>
-        <local:SizeConverter x:Key="SizeConverter" />
-        <local:ResolutionConverter x:Key="ResolutionConverter" />
-        <local:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
-        <local:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
-        <local:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
+        <help:SizeConverter x:Key="SizeConverter" />
+        <help:ResolutionConverter x:Key="ResolutionConverter" />
+        <help:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
+        <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
+        <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -62,7 +63,7 @@
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
 
-                    <Button Content="Get Textures" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="GetListTextures"/>
+                    <Button Content="Get Assets" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="GetListAssets"/>
                     <Button Content="Download" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Download" ScrollViewer.VerticalScrollBarVisibility="Disabled"></Button>
                     <Slider x:Name="slider" 
                             VerticalAlignment="Center" 
@@ -111,6 +112,7 @@
                                 Sorting="TexturesDataGrid_Sorting">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
                             <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
                             <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="auto" MinWidth="20"/>
                             <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
@@ -141,6 +143,7 @@
                               Background="#FFD6D6D6">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
                                 <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
                                 <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100"/>
@@ -162,10 +165,20 @@
                 <TabItem Header="Materials">
                     <DataGrid x:Name="MaterialsDataGrid" AutoGenerateColumns="False" ItemsSource="{Binding Materials}" SelectionChanged="MaterialsDataGrid_SelectionChanged">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Index" Binding="{Binding Index}" Width="Auto"/>
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="№" Binding="{Binding Index}" Width="Auto"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="Auto"/>
-                            <DataGridTextColumn Header="DownloadProgress" Binding="{Binding DownloadProgress}" Width="Auto"/>
+                            <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Background="{Binding Status, Converter={StaticResource StatusToBackgroundConverter}}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>

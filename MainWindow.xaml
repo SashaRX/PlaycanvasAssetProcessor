@@ -168,7 +168,6 @@
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" Width="Auto"/>
                             <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
-                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="Auto"/>
                             <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

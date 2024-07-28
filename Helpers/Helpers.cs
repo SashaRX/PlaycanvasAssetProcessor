@@ -1,8 +1,5 @@
-﻿using Microsoft.VisualBasic.Logging;
-using System.Globalization;
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
-using System.Windows.Data;
 
 namespace TexTool.Helpers {
     public static class FileHelper {

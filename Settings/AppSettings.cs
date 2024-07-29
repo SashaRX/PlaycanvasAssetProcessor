@@ -36,7 +36,7 @@
 
         [System.Configuration.UserScopedSetting()]
         [System.Diagnostics.DebuggerNonUserCode()]
-        [System.Configuration.DefaultSettingValue("default_api_key")]
+        [System.Configuration.DefaultSettingValue("")]
         public string PlaycanvasApiKey {
             get => (string)this[nameof(PlaycanvasApiKey)];
             set => this[nameof(PlaycanvasApiKey)] = value;

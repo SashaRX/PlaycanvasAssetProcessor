@@ -1,12 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using OxyPlot;
 using OxyPlot.Axes;
-using OxyPlot.Series;
 
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Advanced;
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -24,7 +22,6 @@ using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 
 using System.Windows.Controls.Primitives; // Для использования Bitmap и Rectangle
-using System.Windows.Media.TextFormatting;
 
 using Assimp;
 using HelixToolkit.Wpf;
@@ -32,18 +29,11 @@ using HelixToolkit.Wpf;
 using System.Windows.Input;
 using System.Drawing;
 using PointF = System.Drawing.PointF;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
+
 using TexTool.Helpers;
 using TexTool.Resources;
 using TexTool.Services;
 using TexTool.Settings;
-using System.Reflection;
-using Assimp.Unmanaged;
-using OxyPlot.Utilities;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -511,11 +501,26 @@ namespace TexTool {
             }
         }
 
-        private void ProjectsComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async void ProjectsComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
             if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
-                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);  // Пример установки пути
+                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
                 MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
+
+                // Обновляем ветки для выбранного проекта
+                var branchesList = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                if (branchesList != null && branchesList.Count > 0) {
+                    Branches.Clear();
+                    foreach (var branch in branchesList) {
+                        Branches.Add(branch);
+                    }
+                    BranchesComboBox.SelectedIndex = 0;
+                } else {
+                    Branches.Clear();
+                    BranchesComboBox.SelectedIndex = -1;
+                }
+
+                SaveCurrentSettings();
             }
         }
 
@@ -652,7 +657,6 @@ namespace TexTool {
                     var projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
                     if (projectsDict != null && projectsDict.Count > 0) {
                         string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
-                        string lastSelectedBranchName = AppSettings.Default.LastSelectedBranchName;
 
                         Projects.Clear();
                         foreach (var project in projectsDict) {
@@ -667,25 +671,8 @@ namespace TexTool {
 
                         if (ProjectsComboBox.SelectedItem != null) {
                             string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                            var branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
-
-                            if (branchesList != null && branchesList.Count > 0) {
-                                Branches.Clear();
-                                foreach (var branch in branchesList) {
-                                    Branches.Add(branch);
-                                }
-
-                                if (!string.IsNullOrEmpty(lastSelectedBranchName)) {
-                                    var selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
-                                    if (selectedBranch != null) {
-                                        BranchesComboBox.SelectedValue = selectedBranch.Id;
-                                    } else {
-                                        BranchesComboBox.SelectedIndex = 0;
-                                    }
-                                } else {
-                                    BranchesComboBox.SelectedIndex = 0;
-                                }
-                            }
+                            await LoadBranchesAsync(projectId, cancellationToken);
+                            UpdateProjectPath(projectId);
                         }
                     } else {
                         throw new Exception("Project list is empty");
@@ -696,8 +683,48 @@ namespace TexTool {
             }
         }
 
+        private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken) {
+            try {
+                var branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                if (branchesList != null && branchesList.Count > 0) {
+                    Branches.Clear();
+                    foreach (var branch in branchesList) {
+                        Branches.Add(branch);
+                    }
+
+                    string lastSelectedBranchName = AppSettings.Default.LastSelectedBranchName;
+                    if (!string.IsNullOrEmpty(lastSelectedBranchName)) {
+                        var selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
+                        if (selectedBranch != null) {
+                            BranchesComboBox.SelectedValue = selectedBranch.Id;
+                        } else {
+                            BranchesComboBox.SelectedIndex = 0;
+                        }
+                    } else {
+                        BranchesComboBox.SelectedIndex = 0;
+                    }
+                } else {
+                    Branches.Clear();
+                    BranchesComboBox.SelectedIndex = -1;
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error loading branches: {ex.Message}");
+            }
+        }
+
+        private void UpdateProjectPath(string projectId) {
+            ArgumentNullException.ThrowIfNull(projectId);
+
+            if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
+                projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
+                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+
+                MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
+            }
+        }
+
         private void AboutMenu(object? sender, RoutedEventArgs e) {
-            MessageBox.Show("TexTool v1.0\n\nDeveloped by: Your Name\n\n2021");
+            MessageBox.Show("TexTool v1.0\n\nDeveloped by: SashaRX\n\n2021");
         }
 
         private void SettingsMenu(object? sender, RoutedEventArgs e) {
@@ -730,6 +757,7 @@ namespace TexTool {
         #endregion
 
         #region Download
+
         private async void Download(object? sender, RoutedEventArgs? e) {
             try {
                 var selectedResources = textures.Where(t => t.Status == "On Server" ||
@@ -808,8 +836,11 @@ namespace TexTool {
                     var materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
 
-                    string materialPath = Path.Combine(materialResource.Path, $"{materialResource.Name}.json");
-                    Directory.CreateDirectory(Path.GetDirectoryName(materialPath) ?? throw new InvalidOperationException());
+                    // Изменение: заменяем последнюю папку на файл с расширением .json
+                    string directoryPath = Path.GetDirectoryName(materialResource.Path) ?? throw new InvalidOperationException();
+                    string materialPath = Path.Combine(directoryPath, $"{materialResource.Name}.json");
+
+                    Directory.CreateDirectory(directoryPath);
 
                     await File.WriteAllTextAsync(materialPath, materialJson.ToString(), default);
                     materialResource.Status = "Downloaded";
@@ -830,7 +861,11 @@ namespace TexTool {
             }
         }
 
-        private async Task DownloadFileAsync(BaseResource resource) {
+        private static async Task DownloadFileAsync(BaseResource resource) {
+            if (resource == null || string.IsNullOrEmpty(resource.Path)){ // Если путь к файлу не указан, создаем его в папке проекта
+                return;
+            }
+
             const int maxRetries = 5;
             const int delayMilliseconds = 2000;
 
@@ -900,8 +935,6 @@ namespace TexTool {
             }
         }
 
-
-
         #endregion
 
         #region API Methods
@@ -916,26 +949,35 @@ namespace TexTool {
                 var selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 var selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
-                var assets = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
-                if (assets != null) {
+                var assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                if (assetsResponse != null) {
+                    // Сохраняем JSON-ответ в файл
+                    if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)){
+                        return;
+                    }
+                    await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
+
                     UpdateConnectionStatus(true);
 
                     textures.Clear(); // Очищаем текущий список текстур
                     models.Clear(); // Очищаем текущий список моделей
                     materials.Clear(); // Очищаем текущий список материалов
 
-                    var supportedAssets = assets.Where(asset => asset["file"] != null).ToList();
+                    var supportedAssets = assetsResponse.Where(asset => asset["file"] != null).ToList();
                     int assetCount = supportedAssets.Count;
 
-                    await Dispatcher.InvokeAsync(() => {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
                         ProgressBar.Value = 0;
                         ProgressBar.Maximum = assetCount;
                         ProgressTextBlock.Text = $"0/{assetCount}";
                     });
 
-                    var tasks = supportedAssets.Select(asset => Task.Run(async () => {
+                    var tasks = supportedAssets.Select(asset => Task.Run(async () =>
+                    {
                         await ProcessAsset(asset, assetCount, cancellationToken);  // Передаем аргумент cancellationToken
-                        await Dispatcher.InvokeAsync(() => {
+                        await Dispatcher.InvokeAsync(() =>
+                        {
                             ProgressBar.Value++;
                             ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
                         });
@@ -952,6 +994,27 @@ namespace TexTool {
                 MainWindowHelpers.LogError($"Error in TryConnect: {ex}");
             }
         }
+
+
+        private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
+            try {
+                // Convert JToken to JSON string
+                string jsonString = jsonResponse.ToString(Formatting.Indented);
+
+                // Determine the file path
+                string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+
+                System.Diagnostics.Debug.WriteLine($"Saving JSON to file: {jsonFilePath}");
+
+                // Save JSON to file
+                await File.WriteAllTextAsync(jsonFilePath, jsonString);
+
+                MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
+            }
+        }
+
 
         private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
             try {
@@ -1122,12 +1185,14 @@ namespace TexTool {
 
         private async Task ProcessMaterialAsset(JToken asset, int index, CancellationToken cancellationToken) {
             try {
+                string name = asset["name"]?.ToString() ?? "Unknown";
+
                 var material = new MaterialResource {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
-                    Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                    Name = name,
                     Size = 0, // У материалов нет файла, поэтому размер 0
-                    Path = GetResourcePath("materials", ""),//asset["name"]?.ToString()),
+                    Path = GetResourcePath("materials", $"{name}.json"),
                     Status = "On Server",
                     Hash = string.Empty, // У материалов нет хеша
                     TextureIds = []
@@ -1171,6 +1236,7 @@ namespace TexTool {
             }
         }
 
+
         #endregion
 
         #region Helper Methods
@@ -1181,10 +1247,10 @@ namespace TexTool {
             }
 
             if (string.IsNullOrEmpty(projectName)) {
-                throw new Exception("Project name is null или empty");
+                throw new Exception("Project name is null or empty");
             }
 
-            string pathProjectFolder = Path.Combine(projectFolderPath, projectName);
+            string pathProjectFolder = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
             string pathResourceFolder = Path.Combine(pathProjectFolder, folder);
             string pathSourceFolder = Path.Combine(pathResourceFolder, "source");
 
@@ -1280,40 +1346,33 @@ namespace TexTool {
                     }
 
                     if (ProjectsComboBox.SelectedItem != null) {
-                        string? selectedItemString = ProjectsComboBox.SelectedItem.ToString();
-                        if (selectedItemString != null)
-                            projectName = MainWindowHelpers.BracketsRegex().Replace(input: selectedItemString.Split(',')[1], "").Trim();
-                    }
-                }
+                        string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                        var branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
 
-                if (ProjectsComboBox.SelectedItem != null) {
-                    string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                    var branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                        if (branchesList != null && branchesList.Count > 0) {
+                            Branches.Clear();
+                            foreach (var branch in branchesList) {
+                                Branches.Add(branch);
+                            }
 
-                    if (branchesList != null && branchesList.Count > 0) {
-                        Branches.Clear();
-                        foreach (var branch in branchesList) {
-                            Branches.Add(branch);
-                        }
+                            BranchesComboBox.ItemsSource = Branches;
+                            BranchesComboBox.DisplayMemberPath = "Name";
+                            BranchesComboBox.SelectedValuePath = "Id";
 
-                        BranchesComboBox.ItemsSource = Branches; // Привязываем данные к ComboBox
-                        BranchesComboBox.DisplayMemberPath = "Name"; // Отображаем только имена веток
-                        BranchesComboBox.SelectedValuePath = "Id"; // Сохраняем идентификаторы веток
-
-                        if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
-                            var selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
-                            if (selectedBranch != null) {
-                                BranchesComboBox.SelectedValue = selectedBranch.Id;
+                            if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
+                                var selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
+                                if (selectedBranch != null) {
+                                    BranchesComboBox.SelectedValue = selectedBranch.Id;
+                                } else {
+                                    BranchesComboBox.SelectedIndex = 0;
+                                }
                             } else {
                                 BranchesComboBox.SelectedIndex = 0;
                             }
-                        } else {
-                            BranchesComboBox.SelectedIndex = 0;
                         }
                     }
                 }
-
-                projectFolderPath = AppSettings.Default.ProjectsFolderPath; // Загрузка пути к проектной папке
+                projectFolderPath = AppSettings.Default.ProjectsFolderPath;
             } catch (Exception ex) {
                 MessageBox.Show($"Error loading last settings: {ex.Message}");
             }

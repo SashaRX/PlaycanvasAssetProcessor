@@ -22,14 +22,14 @@ using TexTool.Resources;
 
 namespace TexTool.Helpers {
     internal static partial class MainWindowHelpers {
+        [GeneratedRegex(@"[\[\]]")]
+        public static partial Regex BracketsRegex();
 
         public const string MODEL_PATH = @"C:\models\carbitLamp\ao.fbx";
 
         public static readonly string baseUrl = "https://playcanvas.com";
 
         public static readonly object logLock = new();
-
-
 
         public static string CleanProjectName(string input) {
             var bracketsRegex = BracketsRegex();
@@ -53,7 +53,6 @@ namespace TexTool.Helpers {
 
             model.Series.Add(series);
         }
-
 
         public static async Task<BitmapSource> ApplyChannelFilterAsync(BitmapSource source, string channel) {
             using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(source));
@@ -97,9 +96,6 @@ namespace TexTool.Helpers {
             bitmapImage.EndInit();
             return bitmapImage;
         }
-
-        [GeneratedRegex(@"[\[\]]")]
-        public static partial Regex BracketsRegex();
 
         public static GeometryModel3D CreateArrowModel(Point3D start, Point3D end, double thickness, double coneHeight, double coneRadius, System.Windows.Media.Color color) {
             MeshBuilder meshBuilder = new();
@@ -323,7 +319,7 @@ namespace TexTool.Helpers {
 
         public static async Task VerifyAndProcessResourceAsync<TResource>(
             TResource resource,
-            Func<Task> processResourceAsync) 
+            Func<Task> processResourceAsync)
             where TResource : BaseResource {
             ArgumentNullException.ThrowIfNull(resource);
             ArgumentNullException.ThrowIfNull(processResourceAsync);
@@ -338,28 +334,36 @@ namespace TexTool.Helpers {
                 }
 
                 if (!FileExistsWithLogging(resource.Path)) {
+                    LogInfo($"{resource.Name} not found on disk: {resource.Path}");
                     resource.Status = "On Server";
                 } else {
                     var fileInfo = new FileInfo(resource.Path);
+                    LogInfo($"{resource.Name} found on disk: {resource.Path}");
+
                     if (fileInfo.Length == 0) {
                         resource.Status = "Empty File";
                     } else {
-                        long fileSizeInBytes = fileInfo.Length;
-                        long resourceSizeInBytes = resource.Size;
-                        double tolerance = 0.05;
-                        double lowerBound = resourceSizeInBytes * (1 - tolerance);
-                        double upperBound = resourceSizeInBytes * (1 + tolerance);
-
-                        if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                            if (!string.IsNullOrEmpty(resource.Hash) && !FileHelper.IsFileIntact(resource.Path, resource.Hash, resource.Size)) {
-                                resource.Status = "Hash ERROR";
-                                LogError($"{resource.Name} hash mismatch for file: {resource.Path}, expected hash: {resource.Hash}");
-                            } else {
-                                resource.Status = "Downloaded";
-                            }
+                        // Проверка на тип MaterialResource для пропуска проверок хэша и размера
+                        if (resource is MaterialResource) {
+                            resource.Status = "Downloaded";
                         } else {
-                            resource.Status = "Size Mismatch";
-                            LogError($"{resource.Name} size mismatch: fileSizeInBytes: {fileSizeInBytes} and resourceSizeInBytes: {resourceSizeInBytes}");
+                            long fileSizeInBytes = fileInfo.Length;
+                            long resourceSizeInBytes = resource.Size;
+                            double tolerance = 0.05;
+                            double lowerBound = resourceSizeInBytes * (1 - tolerance);
+                            double upperBound = resourceSizeInBytes * (1 + tolerance);
+
+                            if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                                if (!string.IsNullOrEmpty(resource.Hash) && !FileHelper.IsFileIntact(resource.Path, resource.Hash, resource.Size)) {
+                                    resource.Status = "Hash ERROR";
+                                    LogError($"{resource.Name} hash mismatch for file: {resource.Path}, expected hash: {resource.Hash}");
+                                } else {
+                                    resource.Status = "Downloaded";
+                                }
+                            } else {
+                                resource.Status = "Size Mismatch";
+                                LogError($"{resource.Name} size mismatch: fileSizeInBytes: {fileSizeInBytes} and resourceSizeInBytes: {resourceSizeInBytes}");
+                            }
                         }
                     }
                 }
@@ -368,5 +372,6 @@ namespace TexTool.Helpers {
                 LogError($"Error processing resource: {ex.Message}");
             }
         }
+
     }
 }

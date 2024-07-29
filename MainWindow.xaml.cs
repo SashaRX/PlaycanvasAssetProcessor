@@ -856,7 +856,7 @@ namespace TexTool {
                 MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
                 MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
 
-                // Показать цвет Tint
+                // Показать цвет Diffuse
                 if (parameters.DiffuseTint && parameters.Diffuse != null) {
                     var color = System.Windows.Media.Color.FromRgb(
                         (byte)(parameters.Diffuse[0] * 255),
@@ -876,15 +876,44 @@ namespace TexTool {
                             MaterialDiffuseMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
                             MaterialDiffuseMapHyperlink.Inlines.Clear();
                             MaterialDiffuseMapHyperlink.Inlines.Add(texture.Name);
-                        } else {
-                            MaterialDiffuseMapHyperlink.NavigateUri = null;
-                            MaterialDiffuseMapHyperlink.Inlines.Clear();
-                            MaterialDiffuseMapHyperlink.Inlines.Add("No Diffuse Map");
                         }
+                    }
                 } else {
                     MaterialDiffuseMapHyperlink.NavigateUri = null;
                     MaterialDiffuseMapHyperlink.Inlines.Clear();
                     MaterialDiffuseMapHyperlink.Inlines.Add("No Diffuse Map");
+                }
+
+                // Обновление гиперссылки для MetalnessMap
+                if (parameters.MetalnessMapId.HasValue) {
+                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.MetalnessMapId.Value);
+                    if (texture != null) {
+                        if (!string.IsNullOrEmpty(texture.Name)) {
+                            MaterialMetalnessMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
+                            MaterialMetalnessMapHyperlink.Inlines.Clear();
+                            MaterialMetalnessMapHyperlink.Inlines.Add(texture.Name);
+                        }
+                    }
+                } else {
+                    MaterialMetalnessMapHyperlink.NavigateUri = null;
+                    MaterialMetalnessMapHyperlink.Inlines.Clear();
+                    MaterialMetalnessMapHyperlink.Inlines.Add("No Metalness Map");
+                }
+
+                // Обновление гиперссылки для NormalMap
+                if (parameters.NormalMapId.HasValue) {
+                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.NormalMapId.Value);
+                    if (texture != null) {
+                        if (!string.IsNullOrEmpty(texture.Name)) {
+                            MaterialNormalMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
+                            MaterialNormalMapHyperlink.Inlines.Clear();
+                            MaterialNormalMapHyperlink.Inlines.Add(texture.Name);
+                        }
+                    }
+                } else {
+                    MaterialNormalMapHyperlink.NavigateUri = null;
+                    MaterialNormalMapHyperlink.Inlines.Clear();
+                    MaterialNormalMapHyperlink.Inlines.Add("No Normal Map");
                 }
             });
         }
@@ -914,6 +943,60 @@ namespace TexTool {
                     }, System.Windows.Threading.DispatcherPriority.Background);
                 } else {
                     System.Diagnostics.Debug.WriteLine("DiffuseMapId is not set or is null.");
+                }
+            }
+        }
+
+        private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            if (sender is Hyperlink hyperlink) {
+                var material = MaterialsDataGrid.SelectedItem as MaterialResource;
+                if (material != null && material.MetalnessMapId.HasValue) {
+                    // Переключение на вкладку "Textures"
+                    var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
+                    if (texturesTab != null) {
+                        tabControl.SelectedItem = texturesTab;
+                    }
+
+                    // Поставим небольшую задержку перед выбором текстуры, чтобы убедиться, что переключение вкладки завершилось
+                    Dispatcher.InvokeAsync(() => {
+                        // Выбор текстуры в списке текстур
+                        var texture = Textures.FirstOrDefault(t => t.ID == material.MetalnessMapId.Value);
+                        if (texture != null) {
+                            TexturesDataGrid.SelectedItem = texture;
+                            TexturesDataGrid.ScrollIntoView(texture);
+                        } else {
+                            System.Diagnostics.Debug.WriteLine($"Texture with ID {material.MetalnessMapId.Value} not found.");
+                        }
+                    }, System.Windows.Threading.DispatcherPriority.Background);
+                } else {
+                    System.Diagnostics.Debug.WriteLine("MetalnessMapId is not set or is null.");
+                }
+            }
+        }
+
+        private void MaterialNormalMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            if (sender is Hyperlink hyperlink) {
+                var material = MaterialsDataGrid.SelectedItem as MaterialResource;
+                if (material != null && material.NormalMapId.HasValue) {
+                    // Переключение на вкладку "Textures"
+                    var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
+                    if (texturesTab != null) {
+                        tabControl.SelectedItem = texturesTab;
+                    }
+
+                    // Поставим небольшую задержку перед выбором текстуры, чтобы убедиться, что переключение вкладки завершилось
+                    Dispatcher.InvokeAsync(() => {
+                        // Выбор текстуры в списке текстур
+                        var texture = Textures.FirstOrDefault(t => t.ID == material.NormalMapId.Value);
+                        if (texture != null) {
+                            TexturesDataGrid.SelectedItem = texture;
+                            TexturesDataGrid.ScrollIntoView(texture);
+                        } else {
+                            System.Diagnostics.Debug.WriteLine($"Texture with ID {material.NormalMapId.Value} not found.");
+                        }
+                    }, System.Windows.Threading.DispatcherPriority.Background);
+                } else {
+                    System.Diagnostics.Debug.WriteLine("NormalMapId is not set or is null.");
                 }
             }
         }

@@ -18,7 +18,10 @@
         private bool diffuseTint;
         private List<double>? diffuse;
         private int? diffuseMapId;
-        private List<int> textureIds = [];
+        private int? metalnessMapId;
+        private int? normalMapId;
+
+        private List<int> textureIds = new List<int>();
 
         public string? Shader {
             get => shader;
@@ -161,6 +164,22 @@
             set {
                 diffuseMapId = value;
                 OnPropertyChanged(nameof(DiffuseMapId));
+            }
+        }
+
+        public int? MetalnessMapId {
+            get => metalnessMapId;
+            set {
+                metalnessMapId = value;
+                OnPropertyChanged(nameof(MetalnessMapId));
+            }
+        }
+
+        public int? NormalMapId {
+            get => normalMapId;
+            set {
+                normalMapId = value;
+                OnPropertyChanged(nameof(NormalMapId));
             }
         }
 

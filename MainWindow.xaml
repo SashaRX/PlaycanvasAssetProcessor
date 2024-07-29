@@ -186,7 +186,7 @@
             </TabControl>
 
             <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="Gray" FontSize="6"/>
-            
+
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
@@ -287,35 +287,66 @@
                 <StackPanel Margin="4,1,4,1">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="MaterialIDTextBlock" Text="ID" Margin="4,0,4,0" FontWeight="Bold" />
-                    <TextBlock x:Name="MaterialNameTextBlock" Text="Name" Margin="4,0,4,0" FontWeight="Bold" />
+                        <TextBlock x:Name="MaterialNameTextBlock" Text="Name" Margin="4,0,4,0" FontWeight="Bold" />
                     </StackPanel>
-                    <GroupBox Header="Diffuse" VerticalAlignment="Top" FontSize="10">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
-                                <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click">
-                                    Diffuse Map
-                                </Hyperlink>
-                            </TextBlock>
-                            <Rectangle x:Name="MaterialTintColorRect" Stroke="Black" Width="32" />
+
+                    <Expander x:Name="DiffuseExpander" Header="Diffuse" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFBABABA">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
+                        <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" FontSize="12" FontWeight="Normal">
+                            Diffuse Map
+                        </Hyperlink>
+                                </TextBlock>
+                                <Rectangle x:Name="MaterialTintColorRect" Stroke="Black" Width="32" Height="16" />
+                            </StackPanel>
                         </StackPanel>
-                    </GroupBox>
-                    
-                    <TextBlock x:Name="MaterialCreatedAtTextBlock" Text="Data" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialShaderTextBlock" Text="Shader" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialBlendTypeTextBlock" Text="BlendType" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialCullTextBlock" Text="Cull" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialUseLightingTextBlock" Text="UseLighting" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialTwoSidedLightingTextBlock" Text="TwoSidedLighting" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialUseMetalnessTextBlock" Text="UseMetalness" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialMetalnessTextBlock" Text="Metalness" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialShininessTextBlock" Text="Shininess" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialOpacityTextBlock" Text="Opacity" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialBumpMapFactorTextBlock" Text="BumpMap" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialReflectivityTextBlock" Text="Reflectivity" Margin="4,0,4,0" />
-                    <TextBlock x:Name="MaterialAlphaTestTextBlock" Text="AlphaTest" Margin="4,0,4,0" />
+                    </Expander>
+
+                    <Expander x:Name="MetalnessExpander" Header="Metalness" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
+                        <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" FontSize="12" FontWeight="Normal">
+                            Metalness Map
+                        </Hyperlink>
+                                </TextBlock>
+                                <Rectangle x:Name="MaterialMetalnessColorRect" Stroke="Black" Width="32" Height="16" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <Expander x:Name="NormalExpander" Header="Normal Map" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FF8080FF">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
+                        <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" FontSize="12" FontWeight="Normal">
+                            Normal Map
+                        </Hyperlink>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <Expander x:Name="OtherExpander" Header="Other" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFBABABA" FontWeight="Bold">
+                        <StackPanel>
+                            <TextBlock x:Name="MaterialCreatedAtTextBlock" Text="Data" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialShaderTextBlock" Text="Shader" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialBlendTypeTextBlock" Text="BlendType" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialCullTextBlock" Text="Cull" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialUseLightingTextBlock" Text="UseLighting" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialTwoSidedLightingTextBlock" Text="TwoSidedLighting" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialUseMetalnessTextBlock" Text="UseMetalness" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialMetalnessTextBlock" Text="Metalness" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialShininessTextBlock" Text="Shininess" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialOpacityTextBlock" Text="Opacity" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialBumpMapFactorTextBlock" Text="BumpMap" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialReflectivityTextBlock" Text="Reflectivity" Margin="4,0,4,0" FontWeight="Normal" />
+                            <TextBlock x:Name="MaterialAlphaTestTextBlock" Text="AlphaTest" Margin="4,0,4,0" FontWeight="Normal" />
+                        </StackPanel>
+                    </Expander>
                 </StackPanel>
             </Border>
-
 
         </Grid>
     </DockPanel>

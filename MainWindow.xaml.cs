@@ -34,6 +34,8 @@ using TexTool.Helpers;
 using TexTool.Resources;
 using TexTool.Services;
 using TexTool.Settings;
+using System.Windows.Documents;
+using System.Diagnostics;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -145,22 +147,6 @@ namespace TexTool {
         }
 
         #region UI Viewer
-
-        private void ShowTextureViewer() {
-            TextureViewer.Visibility = Visibility.Visible;
-            ModelViewer.Visibility = Visibility.Collapsed;
-        }
-
-        private void ShowModelViewer() {
-            TextureViewer.Visibility = Visibility.Collapsed;
-            ModelViewer.Visibility = Visibility.Visible;
-        }
-
-        private void HideViewers() {
-            TextureViewer.Visibility = Visibility.Collapsed;
-            ModelViewer.Visibility = Visibility.Collapsed;
-        }
-
         private async void FilterButton_Click(object sender, RoutedEventArgs e) {
             if (sender is ToggleButton button) {
                 string? channel = button.Tag.ToString();
@@ -485,7 +471,31 @@ namespace TexTool {
 
         #region UI Event Handlers
 
-        private void TabControl_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private void ShowTextureViewer() {
+            TextureViewer.Visibility = Visibility.Visible;
+            ModelViewer.Visibility = Visibility.Collapsed;
+            MaterialViewer.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowModelViewer() {
+            TextureViewer.Visibility = Visibility.Collapsed;
+            ModelViewer.Visibility = Visibility.Visible;
+            MaterialViewer.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowMaterialViewer() {
+            TextureViewer.Visibility = Visibility.Collapsed;
+            ModelViewer.Visibility = Visibility.Collapsed;
+            MaterialViewer.Visibility = Visibility.Visible;
+        }
+
+        private void HideViewers() {
+            TextureViewer.Visibility = Visibility.Collapsed;
+            ModelViewer.Visibility = Visibility.Collapsed;
+            MaterialViewer.Visibility = Visibility.Collapsed;
+        }
+
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
@@ -495,7 +505,7 @@ namespace TexTool {
                         ShowModelViewer();
                         break;
                     case "Materials":
-                        HideViewers();
+                        ShowMaterialViewer();
                         break;
                 }
             }
@@ -528,7 +538,7 @@ namespace TexTool {
             SaveCurrentSettings();
         }
 
-        private async void TexturesDataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
                     // Загружаем уменьшенное изображение
@@ -569,11 +579,21 @@ namespace TexTool {
             }
         }
 
-        private void MaterialsDataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                if (!string.IsNullOrEmpty(selectedMaterial.Path)) {
-                    // Обработка выбранного материала
-                    // Например, можно отобразить информацию о материале или его текстуры
+                if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
+                    var materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
+                    if (materialParameters != null) {
+                        selectedMaterial.DiffuseMapId = materialParameters.DiffuseMapId; // Устанавливаем DiffuseMapId
+                        DisplayMaterialParameters(materialParameters); // Передаем весь объект MaterialResource
+                        ShowMaterialViewer();
+                    } else {
+                        MainWindowHelpers.LogError($"Error: Could not parse material JSON for {selectedMaterial.Name}");
+                        HideViewers(); // Hide viewers if there is an error
+                    }
+                } else {
+                    MainWindowHelpers.LogError($"Error: Material file not found for {selectedMaterial.Name}");
+                    HideViewers(); // Hide viewers if the file is not found
                 }
             }
         }
@@ -753,6 +773,179 @@ namespace TexTool {
                 e.Handled = true;
             }
         }
+
+        #endregion
+
+        #region Materials
+
+        public class MaterialParameters {
+            public string? ID { get; set; }
+            public string? Name { get; set; }
+            public string? Type { get; set; }
+            public string? CreatedAt { get; set; }
+            public string? Shader { get; set; }
+            public string? BlendType { get; set; }
+            public string? Cull { get; set; }
+            public string? UseLighting { get; set; }
+            public string? TwoSidedLighting { get; set; }
+            public string? UseMetalness { get; set; }
+            public string? Metalness { get; set; }
+            public string? Shininess { get; set; }
+            public string? Opacity { get; set; }
+            public string? BumpMapFactor { get; set; }
+            public string? Reflectivity { get; set; }
+            public string? AlphaTest { get; set; }
+            public bool DiffuseTint { get; set; }
+            public List<double>? Diffuse { get; set; }
+            public int? DiffuseMapId { get; set; }
+        }
+
+        private static async Task<MaterialResource> ParseMaterialJsonAsync(string filePath) {
+            try {
+                string jsonContent = await File.ReadAllTextAsync(filePath);
+                var json = JObject.Parse(jsonContent);
+
+                var data = json["data"];
+                if (data != null) {
+                    var material = new MaterialResource {
+                        ID = json["id"]?.ToObject<int>() ?? 0,
+                        Name = json["name"]?.ToString() ?? string.Empty,
+                        CreatedAt = json["createdAt"]?.ToString() ?? string.Empty,
+                        Shader = data["shader"]?.ToString() ?? string.Empty,
+                        BlendType = data["blendType"]?.ToString() ?? string.Empty,
+                        Cull = data["cull"]?.ToString() ?? string.Empty,
+                        UseLighting = data["useLighting"]?.ToString() ?? string.Empty,
+                        TwoSidedLighting = data["twoSidedLighting"]?.ToString() ?? string.Empty,
+                        UseMetalness = data["useMetalness"]?.ToString() ?? string.Empty,
+                        Metalness = data["metalness"]?.ToString() ?? string.Empty,
+                        Shininess = data["shininess"]?.ToString() ?? string.Empty,
+                        Opacity = data["opacity"]?.ToString() ?? string.Empty,
+                        BumpMapFactor = data["bumpMapFactor"]?.ToString() ?? string.Empty,
+                        Reflectivity = data["reflectivity"]?.ToString() ?? string.Empty,
+                        AlphaTest = data["alphaTest"]?.ToString() ?? string.Empty,
+                        DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
+                        Diffuse = data["diffuse"]?.Select(d => d.ToObject<double>()).ToList(),
+                        DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null
+                    };
+
+                    System.Diagnostics.Debug.WriteLine($"Parsed material parameters: ID={material.ID}, DiffuseMapId={material.DiffuseMapId}");
+
+                    return material;
+                }
+            } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine($"Error parsing material JSON: {ex.Message}");
+            }
+            return null;
+        }
+
+        private void DisplayMaterialParameters(MaterialResource parameters) {
+            Dispatcher.Invoke(() => {
+                MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
+                MaterialNameTextBlock.Text = $"Name: {parameters.Name}";
+                MaterialCreatedAtTextBlock.Text = $"Created At: {parameters.CreatedAt}";
+                MaterialShaderTextBlock.Text = $"Shader: {parameters.Shader}";
+                MaterialBlendTypeTextBlock.Text = $"Blend Type: {parameters.BlendType}";
+                MaterialCullTextBlock.Text = $"Cull: {parameters.Cull}";
+                MaterialUseLightingTextBlock.Text = $"Use Lighting: {parameters.UseLighting}";
+                MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
+                MaterialUseMetalnessTextBlock.Text = $"Use Metalness: {parameters.UseMetalness}";
+                MaterialMetalnessTextBlock.Text = $"Metalness: {parameters.Metalness}";
+                MaterialShininessTextBlock.Text = $"Shininess: {parameters.Shininess}";
+                MaterialOpacityTextBlock.Text = $"Opacity: {parameters.Opacity}";
+                MaterialBumpMapFactorTextBlock.Text = $"Bump Map Factor: {parameters.BumpMapFactor}";
+                MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
+                MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
+
+                // Показать цвет Tint
+                if (parameters.DiffuseTint && parameters.Diffuse != null) {
+                    var color = System.Windows.Media.Color.FromRgb(
+                        (byte)(parameters.Diffuse[0] * 255),
+                        (byte)(parameters.Diffuse[1] * 255),
+                        (byte)(parameters.Diffuse[2] * 255)
+                    );
+                    MaterialTintColorRect.Fill = new SolidColorBrush(color);
+                } else {
+                    MaterialTintColorRect.Fill = System.Windows.Media.Brushes.Transparent;
+                }
+
+                // Обновление гиперссылки для DiffuseMap
+                if (parameters.DiffuseMapId.HasValue) {
+                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.DiffuseMapId.Value);
+                    if (texture != null) {
+                        if (!string.IsNullOrEmpty(texture.Name)) {
+                            MaterialDiffuseMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
+                            MaterialDiffuseMapHyperlink.Inlines.Clear();
+                            MaterialDiffuseMapHyperlink.Inlines.Add(texture.Name);
+                        } else {
+                            MaterialDiffuseMapHyperlink.NavigateUri = null;
+                            MaterialDiffuseMapHyperlink.Inlines.Clear();
+                            MaterialDiffuseMapHyperlink.Inlines.Add("No Diffuse Map");
+                        }
+                } else {
+                    MaterialDiffuseMapHyperlink.NavigateUri = null;
+                    MaterialDiffuseMapHyperlink.Inlines.Clear();
+                    MaterialDiffuseMapHyperlink.Inlines.Add("No Diffuse Map");
+                }
+            });
+        }
+
+        private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            if (sender is Hyperlink hyperlink) {
+                if (MaterialsDataGrid.SelectedItem is MaterialResource material && material.DiffuseMapId.HasValue) {
+                    System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting texture with ID: {material.DiffuseMapId.Value}");
+
+                    // Переключение на вкладку "Textures"
+                    var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
+                    if (texturesTab != null) {
+                        tabControl.SelectedItem = texturesTab;
+                    }
+
+                    // Поставим небольшую задержку перед выбором текстуры, чтобы убедиться, что переключение вкладки завершилось
+                    Dispatcher.InvokeAsync(() => {
+                        // Выбор текстуры в списке текстур
+                        var texture = Textures.FirstOrDefault(t => t.ID == material.DiffuseMapId.Value);
+                        if (texture != null) {
+                            TexturesDataGrid.SelectedItem = texture;
+                            TexturesDataGrid.ScrollIntoView(texture);
+                            System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected.");
+                        } else {
+                            System.Diagnostics.Debug.WriteLine($"Texture with ID {material.DiffuseMapId.Value} not found.");
+                        }
+                    }, System.Windows.Threading.DispatcherPriority.Background);
+                } else {
+                    System.Diagnostics.Debug.WriteLine("DiffuseMapId is not set or is null.");
+                }
+            }
+        }
+
+        public class BooleanToBrushConverter : IValueConverter {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+                if (value is bool boolValue) {
+                    return boolValue ? System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.Red;
+                }
+                return System.Windows.Media.Brushes.Transparent;
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class DiffuseMapIdToTextConverter : IValueConverter {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+                if (value is int diffuseMapId) {
+                    return $"Diffuse Map ID: {diffuseMapId}";
+                }
+                return "No Diffuse Map";
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+                throw new NotImplementedException();
+            }
+        }
+
+
+
 
         #endregion
 
@@ -995,7 +1188,6 @@ namespace TexTool {
             }
         }
 
-
         private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
             try {
                 // Convert JToken to JSON string
@@ -1014,7 +1206,6 @@ namespace TexTool {
                 MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
             }
         }
-
 
         private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
             try {
@@ -1235,7 +1426,6 @@ namespace TexTool {
                 MainWindowHelpers.LogError($"Error processing material: {ex.Message}");
             }
         }
-
 
         #endregion
 

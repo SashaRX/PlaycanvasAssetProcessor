@@ -843,21 +843,15 @@ namespace TexTool {
                 MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
                 MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
                 MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
-                MaterialOpacityTextBlock.Text = $"Opacity: {parameters.Opacity}";
-                MaterialShininessTextBlock.Text = $"Shininess: {parameters.Shininess}";
-                MaterialBumpMapFactorTextBlock.Text = $"BumpMap: {parameters.BumpMapFactor}";
-                MaterialSpecularityFactorTextBlock.Text = $"SpecularityFactor: {parameters.SpecularityFactor}";
-                MaterialRefractionIndexTextBlock.Text = $"RefractionIndex: {parameters.RefractionIndex}";
-                MaterialEmissiveIntensityTextBlock.Text = $"EmissiveIntensity: {parameters.EmissiveIntensity}";
+                MaterialOpacitySlider.Value = parameters.Opacity != null ? double.Parse(parameters.Opacity) : 1;
+                MaterialShininessSlider.Value = parameters.Shininess != null ? double.Parse(parameters.Shininess) : 0;
 
                 // Обновление гиперссылок и видимости для карт
-                UpdateHyperlinkAndVisibility(MaterialAmbientMapHyperlink, AmbientExpander, parameters.AOMapId, "Ambient Map");
                 UpdateHyperlinkAndVisibility(MaterialDiffuseMapHyperlink, DiffuseExpander, parameters.DiffuseMapId, "Diffuse Map");
                 UpdateHyperlinkAndVisibility(MaterialMetalnessMapHyperlink, MetalnessExpander, parameters.MetalnessMapId, "Metalness Map");
                 UpdateHyperlinkAndVisibility(MaterialNormalMapHyperlink, NormalExpander, parameters.NormalMapId, "Normal Map");
                 UpdateHyperlinkAndVisibility(MaterialSpecularMapHyperlink, SpecularExpander, parameters.SpecularMapId, "Specular Map");
                 UpdateHyperlinkAndVisibility(MaterialEmissiveMapHyperlink, EmissiveExpander, parameters.EmissiveMapId, "Emissive Map");
-                UpdateHyperlinkAndVisibility(MaterialOpacityMapHyperlink, OpacityExpander, parameters.OpacityMapId, "Opacity Map");
 
                 // Установка цветов для карт, где есть tint
                 SetTintColor(MaterialDiffuseMapHyperlink, parameters.Diffuse);
@@ -865,6 +859,8 @@ namespace TexTool {
                 SetTintColor(MaterialEmissiveMapHyperlink, parameters.Emissive);
             });
         }
+
+
 
         private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName) {
             if (hyperlink != null && expander != null) {
@@ -893,8 +889,7 @@ namespace TexTool {
                     (byte)(colorValues[2] * 255)
                 );
 
-                var parentStackPanel = hyperlink.Parent as StackPanel;
-                if (parentStackPanel != null) {
+                if (hyperlink.Parent is StackPanel parentStackPanel) {
                     var rectangle = parentStackPanel.Children.OfType<System.Windows.Shapes.Rectangle>().FirstOrDefault();
                     if (rectangle != null) {
                         rectangle.Fill = new SolidColorBrush(color);

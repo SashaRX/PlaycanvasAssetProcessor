@@ -17,11 +17,19 @@
         private string? alphaTest;
         private bool diffuseTint;
         private List<double>? diffuse;
+        private List<double>? emissive;
+        private List<double>? specular;
         private int? diffuseMapId;
         private int? metalnessMapId;
         private int? normalMapId;
-
-        private List<int> textureIds = new List<int>();
+        private int? glossMapId;
+        private int? aoMapId;
+        private int? specularMapId;
+        private int? emissiveMapId;
+        private float? specularityFactor;
+        private float? refractionIndex;
+        private float? emissiveIntensity;
+        private int? opacityMapId;
 
         public string? Shader {
             get => shader;
@@ -183,11 +191,93 @@
             }
         }
 
+        public int? GlossMapId {
+            get => glossMapId;
+            set {
+                glossMapId = value;
+                OnPropertyChanged(nameof(GlossMapId));
+            }
+        }
+
+        public int? AOMapId {
+            get => aoMapId;
+            set {
+                aoMapId = value;
+                OnPropertyChanged(nameof(AOMapId));
+            }
+        }
+
+        public int? SpecularMapId {
+            get => specularMapId;
+            set {
+                specularMapId = value;
+                OnPropertyChanged(nameof(SpecularMapId));
+            }
+        }
+
+        public int? EmissiveMapId {
+            get => emissiveMapId;
+            set {
+                emissiveMapId = value;
+                OnPropertyChanged(nameof(EmissiveMapId));
+            }
+        }
+
+        public int? OpacityMapId {
+            get => opacityMapId;
+            set {
+                opacityMapId = value;
+                OnPropertyChanged(nameof(OpacityMapId));
+            }
+        }
+
+        public float? SpecularityFactor {
+            get => specularityFactor;
+            set {
+                specularityFactor = value;
+                OnPropertyChanged(nameof(SpecularityFactor));
+            }
+        }
+
+        public float? RefractionIndex {
+            get => refractionIndex;
+            set {
+                refractionIndex = value;
+                OnPropertyChanged(nameof(RefractionIndex));
+            }
+        }
+
+        public float? EmissiveIntensity {
+            get => emissiveIntensity;
+            set {
+                emissiveIntensity = value;
+                OnPropertyChanged(nameof(EmissiveIntensity));
+            }
+        }
+
+        private List<int> textureIds = [];
+
         public List<int> TextureIds {
             get => textureIds;
             set {
                 textureIds = value;
                 OnPropertyChanged(nameof(TextureIds));
+            }
+        }
+
+        public List<double>? Emissive {
+            get => emissive;
+            set {
+                emissive = value;
+                OnPropertyChanged(nameof(Emissive));
+            }
+        }
+
+        public List<double>? Specular {
+            get => specular;
+            set {
+                specular = value;
+                OnPropertyChanged(nameof(Specular));
             }
         }
     }

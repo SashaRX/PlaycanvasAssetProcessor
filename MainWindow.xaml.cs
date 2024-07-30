@@ -36,6 +36,8 @@ using TexTool.Services;
 using TexTool.Settings;
 using System.Windows.Documents;
 using System.Diagnostics;
+using Assimp.Unmanaged;
+using System.Linq;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -579,25 +581,6 @@ namespace TexTool {
             }
         }
 
-        private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
-                    var materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
-                    if (materialParameters != null) {
-                        selectedMaterial.DiffuseMapId = materialParameters.DiffuseMapId; // Устанавливаем DiffuseMapId
-                        DisplayMaterialParameters(materialParameters); // Передаем весь объект MaterialResource
-                        ShowMaterialViewer();
-                    } else {
-                        MainWindowHelpers.LogError($"Error: Could not parse material JSON for {selectedMaterial.Name}");
-                        HideViewers(); // Hide viewers if there is an error
-                    }
-                } else {
-                    MainWindowHelpers.LogError($"Error: Material file not found for {selectedMaterial.Name}");
-                    HideViewers(); // Hide viewers if the file is not found
-                }
-            }
-        }
-
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
                 if (texture.Status != null) {
@@ -798,6 +781,8 @@ namespace TexTool {
             public bool DiffuseTint { get; set; }
             public List<double>? Diffuse { get; set; }
             public int? DiffuseMapId { get; set; }
+            public int? MetalnessMapId { get; set; }
+            public int? NormalMapId { get; set; }
         }
 
         private static async Task<MaterialResource> ParseMaterialJsonAsync(string filePath) {
@@ -825,10 +810,18 @@ namespace TexTool {
                         AlphaTest = data["alphaTest"]?.ToString() ?? string.Empty,
                         DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
                         Diffuse = data["diffuse"]?.Select(d => d.ToObject<double>()).ToList(),
-                        DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null
+                        DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null,
+                        MetalnessMapId = data["metalnessMap"]?.Type == JTokenType.Integer ? data["metalnessMap"]?.ToObject<int?>() : null,
+                        NormalMapId = data["normalMap"]?.Type == JTokenType.Integer ? data["normalMap"]?.ToObject<int?>() : null,
+                        GlossMapId = data["glossMap"]?.Type == JTokenType.Integer ? data["glossMap"]?.ToObject<int?>() : null,
+                        AOMapId = data["aoMap"]?.Type == JTokenType.Integer ? data["aoMap"]?.ToObject<int?>() : null,
+                        SpecularMapId = data["specularMap"]?.Type == JTokenType.Integer ? data["specularMap"]?.ToObject<int?>() : null,
+                        EmissiveMapId = data["emissiveMap"]?.Type == JTokenType.Integer ? data["emissiveMap"]?.ToObject<int?>() : null,
+                        Specular = data["specular"]?.Select(d => d.ToObject<double>()).ToList(),
+                        Emissive = data["emissive"]?.Select(d => d.ToObject<double>()).ToList(),
                     };
 
-                    System.Diagnostics.Debug.WriteLine($"Parsed material parameters: ID={material.ID}, DiffuseMapId={material.DiffuseMapId}");
+                    System.Diagnostics.Debug.WriteLine($"Parsed material parameters: ID={material.ID}, DiffuseMapId={material.DiffuseMapId}, MetalnessMapId={material.MetalnessMapId}, NormalMapId={material.NormalMapId}, GlossMapId={material.GlossMapId}, AOMapId={material.AOMapId}, SpecularMapId={material.SpecularMapId}, EmissiveMapId={material.EmissiveMapId}");
 
                     return material;
                 }
@@ -848,184 +841,154 @@ namespace TexTool {
                 MaterialCullTextBlock.Text = $"Cull: {parameters.Cull}";
                 MaterialUseLightingTextBlock.Text = $"Use Lighting: {parameters.UseLighting}";
                 MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
-                MaterialUseMetalnessTextBlock.Text = $"Use Metalness: {parameters.UseMetalness}";
-                MaterialMetalnessTextBlock.Text = $"Metalness: {parameters.Metalness}";
-                MaterialShininessTextBlock.Text = $"Shininess: {parameters.Shininess}";
-                MaterialOpacityTextBlock.Text = $"Opacity: {parameters.Opacity}";
-                MaterialBumpMapFactorTextBlock.Text = $"Bump Map Factor: {parameters.BumpMapFactor}";
                 MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
                 MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
+                MaterialOpacityTextBlock.Text = $"Opacity: {parameters.Opacity}";
+                MaterialShininessTextBlock.Text = $"Shininess: {parameters.Shininess}";
+                MaterialBumpMapFactorTextBlock.Text = $"BumpMap: {parameters.BumpMapFactor}";
+                MaterialSpecularityFactorTextBlock.Text = $"SpecularityFactor: {parameters.SpecularityFactor}";
+                MaterialRefractionIndexTextBlock.Text = $"RefractionIndex: {parameters.RefractionIndex}";
+                MaterialEmissiveIntensityTextBlock.Text = $"EmissiveIntensity: {parameters.EmissiveIntensity}";
 
-                // Показать цвет Diffuse
-                if (parameters.DiffuseTint && parameters.Diffuse != null) {
-                    var color = System.Windows.Media.Color.FromRgb(
-                        (byte)(parameters.Diffuse[0] * 255),
-                        (byte)(parameters.Diffuse[1] * 255),
-                        (byte)(parameters.Diffuse[2] * 255)
-                    );
-                    MaterialTintColorRect.Fill = new SolidColorBrush(color);
-                } else {
-                    MaterialTintColorRect.Fill = System.Windows.Media.Brushes.Transparent;
-                }
+                // Обновление гиперссылок и видимости для карт
+                UpdateHyperlinkAndVisibility(MaterialAmbientMapHyperlink, AmbientExpander, parameters.AOMapId, "Ambient Map");
+                UpdateHyperlinkAndVisibility(MaterialDiffuseMapHyperlink, DiffuseExpander, parameters.DiffuseMapId, "Diffuse Map");
+                UpdateHyperlinkAndVisibility(MaterialMetalnessMapHyperlink, MetalnessExpander, parameters.MetalnessMapId, "Metalness Map");
+                UpdateHyperlinkAndVisibility(MaterialNormalMapHyperlink, NormalExpander, parameters.NormalMapId, "Normal Map");
+                UpdateHyperlinkAndVisibility(MaterialSpecularMapHyperlink, SpecularExpander, parameters.SpecularMapId, "Specular Map");
+                UpdateHyperlinkAndVisibility(MaterialEmissiveMapHyperlink, EmissiveExpander, parameters.EmissiveMapId, "Emissive Map");
+                UpdateHyperlinkAndVisibility(MaterialOpacityMapHyperlink, OpacityExpander, parameters.OpacityMapId, "Opacity Map");
 
-                // Обновление гиперссылки для DiffuseMap
-                if (parameters.DiffuseMapId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.DiffuseMapId.Value);
-                    if (texture != null) {
-                        if (!string.IsNullOrEmpty(texture.Name)) {
-                            MaterialDiffuseMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
-                            MaterialDiffuseMapHyperlink.Inlines.Clear();
-                            MaterialDiffuseMapHyperlink.Inlines.Add(texture.Name);
-                        }
-                    }
-                } else {
-                    MaterialDiffuseMapHyperlink.NavigateUri = null;
-                    MaterialDiffuseMapHyperlink.Inlines.Clear();
-                    MaterialDiffuseMapHyperlink.Inlines.Add("No Diffuse Map");
-                }
-
-                // Обновление гиперссылки для MetalnessMap
-                if (parameters.MetalnessMapId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.MetalnessMapId.Value);
-                    if (texture != null) {
-                        if (!string.IsNullOrEmpty(texture.Name)) {
-                            MaterialMetalnessMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
-                            MaterialMetalnessMapHyperlink.Inlines.Clear();
-                            MaterialMetalnessMapHyperlink.Inlines.Add(texture.Name);
-                        }
-                    }
-                } else {
-                    MaterialMetalnessMapHyperlink.NavigateUri = null;
-                    MaterialMetalnessMapHyperlink.Inlines.Clear();
-                    MaterialMetalnessMapHyperlink.Inlines.Add("No Metalness Map");
-                }
-
-                // Обновление гиперссылки для NormalMap
-                if (parameters.NormalMapId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.NormalMapId.Value);
-                    if (texture != null) {
-                        if (!string.IsNullOrEmpty(texture.Name)) {
-                            MaterialNormalMapHyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
-                            MaterialNormalMapHyperlink.Inlines.Clear();
-                            MaterialNormalMapHyperlink.Inlines.Add(texture.Name);
-                        }
-                    }
-                } else {
-                    MaterialNormalMapHyperlink.NavigateUri = null;
-                    MaterialNormalMapHyperlink.Inlines.Clear();
-                    MaterialNormalMapHyperlink.Inlines.Add("No Normal Map");
-                }
+                // Установка цветов для карт, где есть tint
+                SetTintColor(MaterialDiffuseMapHyperlink, parameters.Diffuse);
+                SetTintColor(MaterialSpecularMapHyperlink, parameters.Specular);
+                SetTintColor(MaterialEmissiveMapHyperlink, parameters.Emissive);
             });
         }
 
-        private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            if (sender is Hyperlink hyperlink) {
-                if (MaterialsDataGrid.SelectedItem is MaterialResource material && material.DiffuseMapId.HasValue) {
-                    System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting texture with ID: {material.DiffuseMapId.Value}");
-
-                    // Переключение на вкладку "Textures"
-                    var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
-                    if (texturesTab != null) {
-                        tabControl.SelectedItem = texturesTab;
+        private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName) {
+            if (hyperlink != null && expander != null) {
+                if (mapId.HasValue) {
+                    var texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                    if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
+                        hyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
+                        hyperlink.Inlines.Clear();
+                        hyperlink.Inlines.Add(texture.Name);
                     }
-
-                    // Поставим небольшую задержку перед выбором текстуры, чтобы убедиться, что переключение вкладки завершилось
-                    Dispatcher.InvokeAsync(() => {
-                        // Выбор текстуры в списке текстур
-                        var texture = Textures.FirstOrDefault(t => t.ID == material.DiffuseMapId.Value);
-                        if (texture != null) {
-                            TexturesDataGrid.SelectedItem = texture;
-                            TexturesDataGrid.ScrollIntoView(texture);
-                            System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected.");
-                        } else {
-                            System.Diagnostics.Debug.WriteLine($"Texture with ID {material.DiffuseMapId.Value} not found.");
-                        }
-                    }, System.Windows.Threading.DispatcherPriority.Background);
+                    expander.Visibility = Visibility.Visible;
                 } else {
-                    System.Diagnostics.Debug.WriteLine("DiffuseMapId is not set or is null.");
+                    hyperlink.NavigateUri = null;
+                    hyperlink.Inlines.Clear();
+                    hyperlink.Inlines.Add($"No {mapName}");
+                    expander.Visibility = Visibility.Collapsed;
                 }
             }
+        }
+
+        private static void SetTintColor(Hyperlink hyperlink, List<double>? colorValues) {
+            if (hyperlink != null && colorValues != null && colorValues.Count >= 3) {
+                var color = System.Windows.Media.Color.FromRgb(
+                    (byte)(colorValues[0] * 255),
+                    (byte)(colorValues[1] * 255),
+                    (byte)(colorValues[2] * 255)
+                );
+
+                var parentStackPanel = hyperlink.Parent as StackPanel;
+                if (parentStackPanel != null) {
+                    var rectangle = parentStackPanel.Children.OfType<System.Windows.Shapes.Rectangle>().FirstOrDefault();
+                    if (rectangle != null) {
+                        rectangle.Fill = new SolidColorBrush(color);
+                    }
+                }
+            }
+        }
+
+        private void MapHyperlink_Click(object sender, RoutedEventArgs _, int? mapId, string mapType) {
+            ArgumentNullException.ThrowIfNull(sender);
+
+            if (mapId.HasValue) {
+                System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
+
+                var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
+                if (texturesTab != null) {
+                    tabControl.SelectedItem = texturesTab;
+                }
+
+                Dispatcher.InvokeAsync(() => {
+                    var texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                    if (texture != null) {
+                        TexturesDataGrid.SelectedItem = texture;
+                        TexturesDataGrid.ScrollIntoView(texture);
+                        System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected.");
+                    } else {
+                        System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Background);
+            } else {
+                System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
+            }
+        }
+
+        private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.DiffuseMapId, "Diffuse Map");
         }
 
         private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            if (sender is Hyperlink hyperlink) {
-                var material = MaterialsDataGrid.SelectedItem as MaterialResource;
-                if (material != null && material.MetalnessMapId.HasValue) {
-                    // Переключение на вкладку "Textures"
-                    var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
-                    if (texturesTab != null) {
-                        tabControl.SelectedItem = texturesTab;
-                    }
-
-                    // Поставим небольшую задержку перед выбором текстуры, чтобы убедиться, что переключение вкладки завершилось
-                    Dispatcher.InvokeAsync(() => {
-                        // Выбор текстуры в списке текстур
-                        var texture = Textures.FirstOrDefault(t => t.ID == material.MetalnessMapId.Value);
-                        if (texture != null) {
-                            TexturesDataGrid.SelectedItem = texture;
-                            TexturesDataGrid.ScrollIntoView(texture);
-                        } else {
-                            System.Diagnostics.Debug.WriteLine($"Texture with ID {material.MetalnessMapId.Value} not found.");
-                        }
-                    }, System.Windows.Threading.DispatcherPriority.Background);
-                } else {
-                    System.Diagnostics.Debug.WriteLine("MetalnessMapId is not set or is null.");
-                }
-            }
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.MetalnessMapId, "Metalness Map");
         }
 
         private void MaterialNormalMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            if (sender is Hyperlink hyperlink) {
-                var material = MaterialsDataGrid.SelectedItem as MaterialResource;
-                if (material != null && material.NormalMapId.HasValue) {
-                    // Переключение на вкладку "Textures"
-                    var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
-                    if (texturesTab != null) {
-                        tabControl.SelectedItem = texturesTab;
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.NormalMapId, "Normal Map");
+        }
+
+        private void MaterialGlossMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.GlossMapId, "Gloss Map");
+        }
+
+        private void MaterialAOMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.AOMapId, "AO Map");
+        }
+
+        private void MaterialSpecularMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.SpecularMapId, "Specular Map");
+        }
+
+        private void MaterialEmissiveMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.EmissiveMapId, "Emissive Map");
+        }
+
+        private void MaterialOpacityMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.OpacityMapId, "Opacity Map");
+        }
+
+        private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
+                    var materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
+                    if (materialParameters != null) {
+                        selectedMaterial.DiffuseMapId = materialParameters.DiffuseMapId;
+                        selectedMaterial.MetalnessMapId = materialParameters.MetalnessMapId;
+                        selectedMaterial.NormalMapId = materialParameters.NormalMapId;
+                        selectedMaterial.GlossMapId = materialParameters.GlossMapId;
+                        selectedMaterial.AOMapId = materialParameters.AOMapId;
+                        selectedMaterial.SpecularMapId = materialParameters.SpecularMapId;
+                        selectedMaterial.EmissiveMapId = materialParameters.EmissiveMapId;
+                        selectedMaterial.OpacityMapId = materialParameters.OpacityMapId;
+
+                        DisplayMaterialParameters(materialParameters); // Передаем весь объект MaterialResource
+                        ShowMaterialViewer();
+                    } else {
+                        MainWindowHelpers.LogError($"Error: Could not parse material JSON for {selectedMaterial.Name}");
+                        HideViewers(); // Hide viewers if there is an error
                     }
-
-                    // Поставим небольшую задержку перед выбором текстуры, чтобы убедиться, что переключение вкладки завершилось
-                    Dispatcher.InvokeAsync(() => {
-                        // Выбор текстуры в списке текстур
-                        var texture = Textures.FirstOrDefault(t => t.ID == material.NormalMapId.Value);
-                        if (texture != null) {
-                            TexturesDataGrid.SelectedItem = texture;
-                            TexturesDataGrid.ScrollIntoView(texture);
-                        } else {
-                            System.Diagnostics.Debug.WriteLine($"Texture with ID {material.NormalMapId.Value} not found.");
-                        }
-                    }, System.Windows.Threading.DispatcherPriority.Background);
                 } else {
-                    System.Diagnostics.Debug.WriteLine("NormalMapId is not set or is null.");
+                    MainWindowHelpers.LogError($"Error: Material file not found for {selectedMaterial.Name}");
+                    HideViewers(); // Hide viewers if the file is not found
                 }
             }
         }
 
-        public class BooleanToBrushConverter : IValueConverter {
-            public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-                if (value is bool boolValue) {
-                    return boolValue ? System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.Red;
-                }
-                return System.Windows.Media.Brushes.Transparent;
-            }
 
-            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
-                throw new NotImplementedException();
-            }
-        }
-
-        public class DiffuseMapIdToTextConverter : IValueConverter {
-            public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-                if (value is int diffuseMapId) {
-                    return $"Diffuse Map ID: {diffuseMapId}";
-                }
-                return "No Diffuse Map";
-            }
-
-            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
-                throw new NotImplementedException();
-            }
-        }
 
 
 
@@ -1342,64 +1305,74 @@ namespace TexTool {
             }
         }
 
-        private async Task ProcessModelAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
-            try {
-                var model = new ModelResource {
-                    ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
-                    Index = index,
-                    Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
-                    Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
-                    Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath("models", asset["name"]?.ToString()),
-                    Extension = extension,
-                    Status = "On Server",
-                    Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
-                    UVChannels = 0 // Инициализация значения UV каналов
-                };
+        private async Task ProcessModelAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken _) {
+            ArgumentNullException.ThrowIfNull(asset);
 
-                await MainWindowHelpers.VerifyAndProcessResourceAsync(model, async () => {
-                    MainWindowHelpers.LogInfo($"Adding model to list: {model.Name}");
+            if (!string.IsNullOrEmpty(fileUrl)) {
+                if (string.IsNullOrEmpty(extension)) {
+                    throw new ArgumentException($"'{nameof(extension)}' cannot be null or empty.", nameof(extension));
+                }
 
-                    switch (model.Status) {
-                        case "Downloaded":
-                            if (File.Exists(model.Path)) {
-                                AssimpContext context = new();
-                                MainWindowHelpers.LogInfo($"Attempting to import file: {model.Path}");
-                                Scene scene = context.ImportFile(model.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                                MainWindowHelpers.LogInfo($"Import result: {scene != null}");
+                try {
+                    var model = new ModelResource {
+                        ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
+                        Index = index,
+                        Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                        Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
+                        Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
+                        Path = GetResourcePath("models", asset["name"]?.ToString()),
+                        Extension = extension,
+                        Status = "On Server",
+                        Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
+                        UVChannels = 0 // Инициализация значения UV каналов
+                    };
 
-                                if (scene == null || scene.Meshes == null || scene.MeshCount <= 0) {
-                                    MainWindowHelpers.LogError("Scene is null or has no meshes.");
-                                    return;
+                    await MainWindowHelpers.VerifyAndProcessResourceAsync(model, async () => {
+                        MainWindowHelpers.LogInfo($"Adding model to list: {model.Name}");
+
+                        switch (model.Status) {
+                            case "Downloaded":
+                                if (File.Exists(model.Path)) {
+                                    AssimpContext context = new();
+                                    MainWindowHelpers.LogInfo($"Attempting to import file: {model.Path}");
+                                    Scene scene = context.ImportFile(model.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                                    MainWindowHelpers.LogInfo($"Import result: {scene != null}");
+
+                                    if (scene == null || scene.Meshes == null || scene.MeshCount <= 0) {
+                                        MainWindowHelpers.LogError("Scene is null or has no meshes.");
+                                        return;
+                                    }
+
+                                    Mesh? mesh = scene.Meshes.FirstOrDefault();
+                                    if (mesh != null) {
+                                        model.UVChannels = mesh.TextureCoordinateChannelCount;
+                                    }
                                 }
-
-                                Mesh? mesh = scene.Meshes.FirstOrDefault();
-                                if (mesh != null) {
-                                    model.UVChannels = mesh.TextureCoordinateChannelCount;
-                                }
-                            }
-                            break;
-                        case "On Server":
-                            break;
-                        case "Size Mismatch":
-                            break;
-                        case "Corrupted":
-                            break;
-                        case "Empty File":
-                            break;
-                        case "Hash ERROR":
-                            break;
-                        case "Error":
-                            break;
-                    }
+                                break;
+                            case "On Server":
+                                break;
+                            case "Size Mismatch":
+                                break;
+                            case "Corrupted":
+                                break;
+                            case "Empty File":
+                                break;
+                            case "Hash ERROR":
+                                break;
+                            case "Error":
+                                break;
+                        }
 
 
-                    await Dispatcher.InvokeAsync(() => models.Add(model));
-                });
-            } catch (FileNotFoundException ex) {
-                MainWindowHelpers.LogError($"File not found: {ex.FileName}");
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error processing model: {ex.Message}");
+                        await Dispatcher.InvokeAsync(() => models.Add(model));
+                    });
+                } catch (FileNotFoundException ex) {
+                    MainWindowHelpers.LogError($"File not found: {ex.FileName}");
+                } catch (Exception ex) {
+                    MainWindowHelpers.LogError($"Error processing model: {ex.Message}");
+                }
+            } else {
+                throw new ArgumentException($"'{nameof(fileUrl)}' cannot be null or empty.", nameof(fileUrl));
             }
         }
 
@@ -1469,7 +1442,7 @@ namespace TexTool {
                     Path = GetResourcePath("materials", $"{name}.json"),
                     Status = "On Server",
                     Hash = string.Empty, // У материалов нет хеша
-                    TextureIds = []
+                    //TextureIds = []
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {
@@ -1496,10 +1469,10 @@ namespace TexTool {
                     var apiKey = AppSettings.Default.PlaycanvasApiKey;
                     var materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 
-                    if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
-                        material.TextureIds.AddRange(from textureId in materialJson["textures"]!
-                                                     select (int)textureId);
-                    }
+                    //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
+                    //    material.TextureIds.AddRange(from textureId in materialJson["textures"]!
+                    //                                 select (int)textureId);
+                    //}
 
                     MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
 

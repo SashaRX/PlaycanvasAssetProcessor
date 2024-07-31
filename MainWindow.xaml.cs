@@ -843,7 +843,6 @@ namespace TexTool {
                 MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
                 MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
                 MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
-                MaterialOpacitySlider.Value = parameters.Opacity != null ? double.Parse(parameters.Opacity) : 1;
                 MaterialShininessSlider.Value = parameters.Shininess != null ? double.Parse(parameters.Shininess) : 0;
 
                 // Обновление гиперссылок и видимости для карт
@@ -857,10 +856,21 @@ namespace TexTool {
                 SetTintColor(MaterialDiffuseMapHyperlink, parameters.Diffuse);
                 SetTintColor(MaterialSpecularMapHyperlink, parameters.Specular);
                 SetTintColor(MaterialEmissiveMapHyperlink, parameters.Emissive);
+
+                // Установка изображения для диффузной текстуры
+                if (parameters.DiffuseMapId.HasValue) {
+                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.DiffuseMapId.Value);
+                    if (texture != null && File.Exists(texture.Path)) {
+                        var bitmapImage = new BitmapImage(new Uri(texture.Path));
+                        TextureDiffusePreviewImage.Source = bitmapImage;
+                    } else {
+                        TextureDiffusePreviewImage.Source = null;
+                    }
+                } else {
+                    TextureDiffusePreviewImage.Source = null;
+                }
             });
         }
-
-
 
         private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName) {
             if (hyperlink != null && expander != null) {

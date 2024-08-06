@@ -42,6 +42,19 @@ using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 
 namespace TexTool {
+    public enum ColorChannel {
+        R,
+        G,
+        B,
+        A,
+        RGB
+    }
+
+    public enum UVChannel {
+        UV0,
+        UV1
+    }
+
     public partial class MainWindow : Window, INotifyPropertyChanged {
 
         private ObservableCollection<TextureResource> textures = [];
@@ -121,15 +134,17 @@ namespace TexTool {
             InitializeComponent();
 
             // Заполнение ComboBox для Color Channel
-            MaterialDiffuseColorChannelComboBox.Items.Add("R");
-            MaterialDiffuseColorChannelComboBox.Items.Add("G");
-            MaterialDiffuseColorChannelComboBox.Items.Add("B");
-            MaterialDiffuseColorChannelComboBox.Items.Add("A");
-            MaterialDiffuseColorChannelComboBox.Items.Add("RGB");
+            PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
+            PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
+            PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
+            PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
+            PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
 
             // Заполнение ComboBox для UV Channel
-            MaterialDiffuseUVChannelComboBox.Items.Add("0");
-            MaterialDiffuseUVChannelComboBox.Items.Add("1");
+            PopulateComboBox<UVChannel>(MaterialDiffuseUVChannelComboBox);
+            PopulateComboBox<UVChannel>(MaterialSpecularUVChannelComboBox);
+            PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
+            PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
 
             LoadModel(path: MainWindowHelpers.MODEL_PATH);
 
@@ -246,6 +261,13 @@ namespace TexTool {
             });
 
             Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+        }
+
+        private void PopulateComboBox<T>(ComboBox comboBox) {
+            comboBox.Items.Clear();
+            foreach (var value in Enum.GetValues(typeof(T))) {
+                comboBox.Items.Add(value.ToString());
+            }
         }
 
         #endregion
@@ -774,30 +796,6 @@ namespace TexTool {
 
         #region Materials
 
-        public class MaterialParameters {
-            public string? ID { get; set; }
-            public string? Name { get; set; }
-            public string? Type { get; set; }
-            public string? CreatedAt { get; set; }
-            public string? Shader { get; set; }
-            public string? BlendType { get; set; }
-            public string? Cull { get; set; }
-            public string? UseLighting { get; set; }
-            public string? TwoSidedLighting { get; set; }
-            public string? UseMetalness { get; set; }
-            public string? Metalness { get; set; }
-            public string? Shininess { get; set; }
-            public string? Opacity { get; set; }
-            public string? BumpMapFactor { get; set; }
-            public string? Reflectivity { get; set; }
-            public string? AlphaTest { get; set; }
-            public bool DiffuseTint { get; set; }
-            public List<double>? Diffuse { get; set; }
-            public int? DiffuseMapId { get; set; }
-            public int? MetalnessMapId { get; set; }
-            public int? NormalMapId { get; set; }
-        }
-
         private static async Task<MaterialResource> ParseMaterialJsonAsync(string filePath) {
             try {
                 string jsonContent = await File.ReadAllTextAsync(filePath);
@@ -849,6 +847,11 @@ namespace TexTool {
 
                         AOMapId = data["aoMap"]?.Type == JTokenType.Integer ? data["aoMap"]?.ToObject<int?>() : null,
 
+                        DiffuseColorChannel = ParseColorChannel(data["diffuseMapChannel"]?.ToString() ?? string.Empty),
+                        SpecularColorChannel = ParseColorChannel(data["specularMapChannel"]?.ToString() ?? string.Empty),
+                        MetalnessColorChannel = ParseColorChannel(data["metalnessMapChannel"]?.ToString() ?? string.Empty),
+                        GlossinessColorChannel = ParseColorChannel(data["glossMapChannel"]?.ToString() ?? string.Empty),
+                        AOChannel = ParseColorChannel(data["aoMapChannel"]?.ToString() ?? string.Empty)
                     };
 
                     return material;
@@ -857,6 +860,17 @@ namespace TexTool {
                 System.Diagnostics.Debug.WriteLine($"Error parsing material JSON: {ex.Message}");
             }
             return null;
+        }
+
+        private static ColorChannel ParseColorChannel(string channel) {
+            return channel switch {
+                "r" => ColorChannel.R,
+                "g" => ColorChannel.G,
+                "b" => ColorChannel.B,
+                "a" => ColorChannel.A,
+                "rgb" => ColorChannel.RGB,
+                _ => ColorChannel.R // или выберите другой дефолтный канал
+            };
         }
 
         private void DisplayMaterialParameters(MaterialResource parameters) {
@@ -911,6 +925,13 @@ namespace TexTool {
 
                 MaterialBumpinessTextBox.Text = parameters.BumpMapFactor?.ToString() ?? "0";
                 MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 0;
+
+                // Установка выбранных элементов в ComboBox для Color Channel и UV Channel
+                MaterialDiffuseColorChannelComboBox.SelectedItem = parameters.DiffuseColorChannel?.ToString();
+                MaterialSpecularColorChannelComboBox.SelectedItem = parameters.SpecularColorChannel?.ToString();
+                MaterialMetalnessColorChannelComboBox.SelectedItem = parameters.MetalnessColorChannel?.ToString();
+                MaterialGlossinessColorChannelComboBox.SelectedItem = parameters.GlossinessColorChannel?.ToString();
+                MaterialAOColorChannelComboBox.SelectedItem = parameters.AOChannel?.ToString();
             });
         }
 
@@ -959,7 +980,7 @@ namespace TexTool {
             }
         }
 
-        private void MapHyperlink_Click(object sender, RoutedEventArgs e, int? mapId, string mapType) {
+        private void MapHyperlink_Click(object sender, RoutedEventArgs _, int? mapId, string mapType) {
             ArgumentNullException.ThrowIfNull(sender);
 
             if (mapId.HasValue) {
@@ -1048,7 +1069,7 @@ namespace TexTool {
 
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                     selectedMaterial.DiffuseTint = true;
-                    selectedMaterial.Diffuse = new List<int> { mediaColor.R, mediaColor.G, mediaColor.B };
+                    selectedMaterial.Diffuse = [mediaColor.R, mediaColor.G, mediaColor.B];
                 }
             }
         }
@@ -1061,7 +1082,7 @@ namespace TexTool {
 
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                     selectedMaterial.AOTint = true;
-                    selectedMaterial.AOColor = new List<int> { newColor.R, newColor.G, newColor.B };
+                    selectedMaterial.AOColor = [newColor.R, newColor.G, newColor.B];
                 }
             }
         }
@@ -1075,7 +1096,7 @@ namespace TexTool {
                 // Обновление данных материала
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                     selectedMaterial.SpecularTint = true;
-                    selectedMaterial.Specular = new List<int> { newColor.R, newColor.G, newColor.B };
+                    selectedMaterial.Specular = [newColor.R, newColor.G, newColor.B];
                 }
             }
         }

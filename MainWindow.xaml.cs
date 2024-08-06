@@ -38,6 +38,8 @@ using System.Windows.Documents;
 using System.Diagnostics;
 using Assimp.Unmanaged;
 using System.Linq;
+using Xceed.Wpf.Toolkit;
+using MessageBox = System.Windows.MessageBox;
 
 namespace TexTool {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -117,6 +119,17 @@ namespace TexTool {
 
         public MainWindow() {
             InitializeComponent();
+
+            // Заполнение ComboBox для Color Channel
+            MaterialDiffuseColorChannelComboBox.Items.Add("R");
+            MaterialDiffuseColorChannelComboBox.Items.Add("G");
+            MaterialDiffuseColorChannelComboBox.Items.Add("B");
+            MaterialDiffuseColorChannelComboBox.Items.Add("A");
+            MaterialDiffuseColorChannelComboBox.Items.Add("RGB");
+
+            // Заполнение ComboBox для UV Channel
+            MaterialDiffuseUVChannelComboBox.Items.Add("0");
+            MaterialDiffuseUVChannelComboBox.Items.Add("1");
 
             LoadModel(path: MainWindowHelpers.MODEL_PATH);
 
@@ -595,10 +608,10 @@ namespace TexTool {
         private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
             if (isViewerVisible == true) {
                 ToggleViewButton.Content = "►";
-                TexturePreviewColumn.Width = new GridLength(0);
+                PreviewColumn.Width = new GridLength(0);
             } else {
                 ToggleViewButton.Content = "◄";
-                TexturePreviewColumn.Width = new GridLength(300); // Вернуть исходную ширину
+                PreviewColumn.Width = new GridLength(300); // Вернуть исходную ширину
             }
             isViewerVisible = !isViewerVisible;
         }
@@ -799,29 +812,44 @@ namespace TexTool {
                         Shader = data["shader"]?.ToString() ?? string.Empty,
                         BlendType = data["blendType"]?.ToString() ?? string.Empty,
                         Cull = data["cull"]?.ToString() ?? string.Empty,
-                        UseLighting = data["useLighting"]?.ToString() ?? string.Empty,
-                        TwoSidedLighting = data["twoSidedLighting"]?.ToString() ?? string.Empty,
-                        UseMetalness = data["useMetalness"]?.ToString() ?? string.Empty,
-                        Metalness = data["metalness"]?.ToString() ?? string.Empty,
-                        Shininess = data["shininess"]?.ToString() ?? string.Empty,
-                        Opacity = data["opacity"]?.ToString() ?? string.Empty,
-                        BumpMapFactor = data["bumpMapFactor"]?.ToString() ?? string.Empty,
-                        Reflectivity = data["reflectivity"]?.ToString() ?? string.Empty,
-                        AlphaTest = data["alphaTest"]?.ToString() ?? string.Empty,
-                        DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
-                        Diffuse = data["diffuse"]?.Select(d => d.ToObject<double>()).ToList(),
-                        DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null,
-                        MetalnessMapId = data["metalnessMap"]?.Type == JTokenType.Integer ? data["metalnessMap"]?.ToObject<int?>() : null,
-                        NormalMapId = data["normalMap"]?.Type == JTokenType.Integer ? data["normalMap"]?.ToObject<int?>() : null,
-                        GlossMapId = data["glossMap"]?.Type == JTokenType.Integer ? data["glossMap"]?.ToObject<int?>() : null,
-                        AOMapId = data["aoMap"]?.Type == JTokenType.Integer ? data["aoMap"]?.ToObject<int?>() : null,
-                        SpecularMapId = data["specularMap"]?.Type == JTokenType.Integer ? data["specularMap"]?.ToObject<int?>() : null,
-                        EmissiveMapId = data["emissiveMap"]?.Type == JTokenType.Integer ? data["emissiveMap"]?.ToObject<int?>() : null,
-                        Specular = data["specular"]?.Select(d => d.ToObject<double>()).ToList(),
-                        Emissive = data["emissive"]?.Select(d => d.ToObject<double>()).ToList(),
-                    };
+                        UseLighting = data["useLighting"]?.ToObject<bool>() ?? false,
+                        TwoSidedLighting = data["twoSidedLighting"]?.ToObject<bool>() ?? false,
 
-                    System.Diagnostics.Debug.WriteLine($"Parsed material parameters: ID={material.ID}, DiffuseMapId={material.DiffuseMapId}, MetalnessMapId={material.MetalnessMapId}, NormalMapId={material.NormalMapId}, GlossMapId={material.GlossMapId}, AOMapId={material.AOMapId}, SpecularMapId={material.SpecularMapId}, EmissiveMapId={material.EmissiveMapId}");
+                        UseMetalness = data["useMetalness"]?.ToObject<bool>() ?? false,
+                        MetalnessMapId = data["metalnessMap"]?.Type == JTokenType.Integer ? data["metalnessMap"]?.ToObject<int?>() : null,
+                        Metalness = data["metalness"]?.ToObject<float?>(),
+
+                        GlossMapId = data["glossMap"]?.Type == JTokenType.Integer ? data["glossMap"]?.ToObject<int?>() : null,
+                        Shininess = data["shininess"]?.ToObject<float?>(),
+
+                        Opacity = data["opacity"]?.ToObject<float?>(),
+                        AlphaTest = data["alphaTest"]?.ToObject<float?>(),
+                        OpacityMapId = data["opacityMap"]?.Type == JTokenType.Integer ? data["opacityMap"]?.ToObject<int?>() : null,
+
+
+                        NormalMapId = data["normalMap"]?.Type == JTokenType.Integer ? data["normalMap"]?.ToObject<int?>() : null,
+                        BumpMapFactor = data["bumpMapFactor"]?.ToObject<float?>(),
+
+                        Reflectivity = data["reflectivity"]?.ToObject<float?>(),
+                        RefractionIndex = data["refractionIndex"]?.ToObject<float?>(),
+
+
+                        DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null,
+                        Diffuse = data["diffuse"]?.Select(d => d.ToObject<int>()).ToList(),
+                        DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
+
+                        SpecularMapId = data["specularMap"]?.Type == JTokenType.Integer ? data["specularMap"]?.ToObject<int?>() : null,
+                        Specular = data["specular"]?.Select(d => d.ToObject<int>()).ToList(),
+                        SpecularTint = data["specularTint"]?.ToObject<bool>() ?? false,
+                        SpecularityFactor = data["specularityFactor"]?.ToObject<float?>(),
+
+                        Emissive = data["emissive"]?.Select(d => d.ToObject<int>()).ToList(),
+                        EmissiveIntensity = data["emissiveIntensity"]?.ToObject<float?>(),
+                        EmissiveMapId = data["emissiveMap"]?.Type == JTokenType.Integer ? data["emissiveMap"]?.ToObject<int?>() : null,
+
+                        AOMapId = data["aoMap"]?.Type == JTokenType.Integer ? data["aoMap"]?.ToObject<int?>() : null,
+
+                    };
 
                     return material;
                 }
@@ -832,7 +860,8 @@ namespace TexTool {
         }
 
         private void DisplayMaterialParameters(MaterialResource parameters) {
-            Dispatcher.Invoke(() => {
+            Dispatcher.Invoke(() =>
+            {
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
                 MaterialNameTextBlock.Text = $"Name: {parameters.Name}";
                 MaterialCreatedAtTextBlock.Text = $"Created At: {parameters.CreatedAt}";
@@ -843,34 +872,65 @@ namespace TexTool {
                 MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
                 MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
                 MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
-                MaterialShininessSlider.Value = parameters.Shininess != null ? double.Parse(parameters.Shininess) : 0;
 
-                // Обновление гиперссылок и видимости для карт
+                UpdateHyperlinkAndVisibility(MaterialAOMapHyperlink, AOExpander, parameters.AOMapId, "AO Map");
                 UpdateHyperlinkAndVisibility(MaterialDiffuseMapHyperlink, DiffuseExpander, parameters.DiffuseMapId, "Diffuse Map");
-                UpdateHyperlinkAndVisibility(MaterialMetalnessMapHyperlink, MetalnessExpander, parameters.MetalnessMapId, "Metalness Map");
                 UpdateHyperlinkAndVisibility(MaterialNormalMapHyperlink, NormalExpander, parameters.NormalMapId, "Normal Map");
                 UpdateHyperlinkAndVisibility(MaterialSpecularMapHyperlink, SpecularExpander, parameters.SpecularMapId, "Specular Map");
-                UpdateHyperlinkAndVisibility(MaterialEmissiveMapHyperlink, EmissiveExpander, parameters.EmissiveMapId, "Emissive Map");
+                UpdateHyperlinkAndVisibility(MaterialMetalnessMapHyperlink, SpecularExpander, parameters.MetalnessMapId, "Metalness Map");
+                UpdateHyperlinkAndVisibility(MaterialGlossMapHyperlink, SpecularExpander, parameters.GlossMapId, "Gloss Map");
 
-                // Установка цветов для карт, где есть tint
-                SetTintColor(MaterialDiffuseMapHyperlink, parameters.Diffuse);
-                SetTintColor(MaterialSpecularMapHyperlink, parameters.Specular);
-                SetTintColor(MaterialEmissiveMapHyperlink, parameters.Emissive);
+                SetTintColor(MaterialDiffuseTintCheckBox, MaterialTintColorRect, TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
+                SetTintColor(MaterialSpecularTintCheckBox, MaterialSpecularTintColorRect, TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
+                SetTintColor(MaterialAOTintCheckBox, MaterialAOTintColorRect, AOTintColorPicker, parameters.AOTint, parameters.AOColor);
 
-                // Установка изображения для диффузной текстуры
-                if (parameters.DiffuseMapId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == parameters.DiffuseMapId.Value);
-                    if (texture != null && File.Exists(texture.Path)) {
-                        var bitmapImage = new BitmapImage(new Uri(texture.Path));
-                        TextureDiffusePreviewImage.Source = bitmapImage;
-                    } else {
-                        TextureDiffusePreviewImage.Source = null;
-                    }
-                } else {
-                    TextureDiffusePreviewImage.Source = null;
-                }
+                SetTextureImage(TextureAOPreviewImage, parameters.AOMapId);
+                SetTextureImage(TextureDiffusePreviewImage, parameters.DiffuseMapId);
+                SetTextureImage(TextureNormalPreviewImage, parameters.NormalMapId);
+                SetTextureImage(TextureSpecularPreviewImage, parameters.SpecularMapId);
+                SetTextureImage(TextureMetalnessPreviewImage, parameters.MetalnessMapId);
+                SetTextureImage(TextureGlossPreviewImage, parameters.GlossMapId);
+
+
+                MaterialAOVertexColorCheckBox.IsChecked = parameters.AOVertexColor;
+
+                // Отображаем значения Glossiness, Metalness и Bumpiness
+                MaterialGlossinessTextBox.Text = parameters.Glossiness?.ToString() ?? "0";
+                MaterialGlossinessIntensitySlider.Value = parameters.Shininess ?? 0;
+
+                MaterialMetalnessTextBox.Text = parameters.Metalness?.ToString() ?? "0";
+                MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0;
+
+                MaterialBumpinessTextBox.Text = parameters.BumpMapFactor?.ToString() ?? "0";
+                MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 0;
             });
         }
+
+
+        private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<int>? colorValues) {
+            ArgumentNullException.ThrowIfNull(checkBox);
+            ArgumentNullException.ThrowIfNull(colorRect);
+            ArgumentNullException.ThrowIfNull(colorPicker);
+
+            checkBox.IsChecked = isTint;
+            if (isTint && colorValues != null && colorValues.Count >= 3) {
+                var color = System.Windows.Media.Color.FromRgb(
+                    (byte)(colorValues[0] * 255),
+                    (byte)(colorValues[1] * 255),
+                    (byte)(colorValues[2] * 255)
+                );
+                colorRect.Background = new SolidColorBrush(color);
+                colorRect.Text = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
+                // Установка выбранного цвета в ColorPicker
+                colorPicker.SelectedColor = color;
+            } else {
+                colorRect.Background = new SolidColorBrush(Colors.Transparent);
+                colorRect.Text = "No Tint";
+                colorPicker.SelectedColor = null;
+            }
+        }
+
 
         private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName) {
             if (hyperlink != null && expander != null) {
@@ -891,24 +951,7 @@ namespace TexTool {
             }
         }
 
-        private static void SetTintColor(Hyperlink hyperlink, List<double>? colorValues) {
-            if (hyperlink != null && colorValues != null && colorValues.Count >= 3) {
-                var color = System.Windows.Media.Color.FromRgb(
-                    (byte)(colorValues[0] * 255),
-                    (byte)(colorValues[1] * 255),
-                    (byte)(colorValues[2] * 255)
-                );
-
-                if (hyperlink.Parent is StackPanel parentStackPanel) {
-                    var rectangle = parentStackPanel.Children.OfType<System.Windows.Shapes.Rectangle>().FirstOrDefault();
-                    if (rectangle != null) {
-                        rectangle.Fill = new SolidColorBrush(color);
-                    }
-                }
-            }
-        }
-
-        private void MapHyperlink_Click(object sender, RoutedEventArgs _, int? mapId, string mapType) {
+        private void MapHyperlink_Click(object sender, RoutedEventArgs e, int? mapId, string mapType) {
             ArgumentNullException.ThrowIfNull(sender);
 
             if (mapId.HasValue) {
@@ -938,12 +981,16 @@ namespace TexTool {
             MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.DiffuseMapId, "Diffuse Map");
         }
 
-        private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.MetalnessMapId, "Metalness Map");
-        }
-
         private void MaterialNormalMapHyperlink_Click(object sender, RoutedEventArgs e) {
             MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.NormalMapId, "Normal Map");
+        }
+
+        private void MaterialSpecularMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.SpecularMapId, "Specular Map");
+        }
+
+        private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.MetalnessMapId, "Metalness Map");
         }
 
         private void MaterialGlossMapHyperlink_Click(object sender, RoutedEventArgs e) {
@@ -952,18 +999,6 @@ namespace TexTool {
 
         private void MaterialAOMapHyperlink_Click(object sender, RoutedEventArgs e) {
             MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.AOMapId, "AO Map");
-        }
-
-        private void MaterialSpecularMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.SpecularMapId, "Specular Map");
-        }
-
-        private void MaterialEmissiveMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.EmissiveMapId, "Emissive Map");
-        }
-
-        private void MaterialOpacityMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.OpacityMapId, "Opacity Map");
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -980,23 +1015,82 @@ namespace TexTool {
                         selectedMaterial.EmissiveMapId = materialParameters.EmissiveMapId;
                         selectedMaterial.OpacityMapId = materialParameters.OpacityMapId;
 
-                        DisplayMaterialParameters(materialParameters); // Передаем весь объект MaterialResource
-                        ShowMaterialViewer();
-                    } else {
-                        MainWindowHelpers.LogError($"Error: Could not parse material JSON for {selectedMaterial.Name}");
-                        HideViewers(); // Hide viewers if there is an error
+                        // Параметры AO Tint и Vertex Color
+                        selectedMaterial.AOTint = materialParameters.AOTint;
+                        selectedMaterial.AOColor = materialParameters.AOColor;
+                        selectedMaterial.AOVertexColor = materialParameters.AOVertexColor;
+
+                        // Параметры Glossiness, Metalness и Bumpiness
+                        selectedMaterial.Glossiness = materialParameters.Shininess;
+                        selectedMaterial.Metalness = materialParameters.Metalness;
+                        selectedMaterial.BumpMapFactor = materialParameters.BumpMapFactor;
+
+                        DisplayMaterialParameters(selectedMaterial); // Передаем весь объект MaterialResource
                     }
-                } else {
-                    MainWindowHelpers.LogError($"Error: Material file not found for {selectedMaterial.Name}");
-                    HideViewers(); // Hide viewers if the file is not found
                 }
             }
         }
 
 
+        private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
+            if (textureId.HasValue) {
+                var texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                if (texture != null && File.Exists(texture.Path)) {
+                    var bitmapImage = new BitmapImage(new Uri(texture.Path));
+                    imageControl.Source = bitmapImage;
+                } else {
+                    imageControl.Source = null;
+                }
+            } else {
+                imageControl.Source = null;
+            }
+        }
 
+        private void TintColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e) {
+            if (e.NewValue.HasValue) {
+                var color = e.NewValue.Value;
+                var mediaColor = System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
 
+                MaterialTintColorRect.Background = new SolidColorBrush(mediaColor);
+                MaterialTintColorRect.Text = $"#{mediaColor.A:X2}{mediaColor.R:X2}{mediaColor.G:X2}{mediaColor.B:X2}";
 
+                double brightness = (mediaColor.R * 0.299 + mediaColor.G * 0.587 + mediaColor.B * 0.114) / 255;
+                MaterialTintColorRect.Foreground = new SolidColorBrush(brightness > 0.5 ? Colors.Black : Colors.White);
+
+                if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                    selectedMaterial.DiffuseTint = true;
+                    selectedMaterial.Diffuse = new List<int> { mediaColor.R, mediaColor.G, mediaColor.B };
+                }
+            }
+        }
+
+        private void AOTintColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e) {
+            if (e.NewValue.HasValue) {
+                var newColor = e.NewValue.Value;
+                MaterialAOTintColorRect.Background = new SolidColorBrush(newColor);
+                MaterialAOTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
+
+                if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                    selectedMaterial.AOTint = true;
+                    selectedMaterial.AOColor = new List<int> { newColor.R, newColor.G, newColor.B };
+                }
+            }
+        }
+
+        private void TintSpecularColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e) {
+            if (e.NewValue.HasValue) {
+                var newColor = e.NewValue.Value;
+                MaterialSpecularTintColorRect.Background = new SolidColorBrush(newColor);
+                MaterialSpecularTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
+
+                // Обновление данных материала
+                if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                    selectedMaterial.SpecularTint = true;
+                    selectedMaterial.Specular = new List<int> { newColor.R, newColor.G, newColor.B };
+                }
+            }
+        }
+    
 
         #endregion
 

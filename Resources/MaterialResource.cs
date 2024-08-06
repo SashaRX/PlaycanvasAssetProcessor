@@ -1,284 +1,48 @@
-﻿namespace TexTool.Resources {
-    public class MaterialResource : BaseResource {
-        private string? shader;
-        private string? materialJsonUrl;
-        private string? materialJsonPath;
-        private string? createdAt;
-        private string? blendType;
-        private string? cull;
-        private string? useLighting;
-        private string? twoSidedLighting;
-        private string? useMetalness;
-        private string? metalness;
-        private string? shininess;
-        private string? opacity;
-        private string? bumpMapFactor;
-        private string? reflectivity;
-        private string? alphaTest;
-        private bool diffuseTint;
-        private List<double>? diffuse;
-        private List<double>? emissive;
-        private List<double>? specular;
-        private int? diffuseMapId;
-        private int? metalnessMapId;
-        private int? normalMapId;
-        private int? glossMapId;
-        private int? aoMapId;
-        private int? specularMapId;
-        private int? emissiveMapId;
-        private float? specularityFactor;
-        private float? refractionIndex;
-        private float? emissiveIntensity;
-        private int? opacityMapId;
+﻿using TexTool.Resources;
 
-        public string? Shader {
-            get => shader;
-            set {
-                shader = value;
-                OnPropertyChanged(nameof(Shader));
-            }
-        }
-
-        public string? MaterialJsonUrl {
-            get => materialJsonUrl;
-            set {
-                materialJsonUrl = value;
-                OnPropertyChanged(nameof(MaterialJsonUrl));
-            }
-        }
-
-        public string? MaterialJsonPath {
-            get => materialJsonPath;
-            set {
-                materialJsonPath = value;
-                OnPropertyChanged(nameof(MaterialJsonPath));
-            }
-        }
-
-        public string? CreatedAt {
-            get => createdAt;
-            set {
-                createdAt = value;
-                OnPropertyChanged(nameof(CreatedAt));
-            }
-        }
-
-        public string? BlendType {
-            get => blendType;
-            set {
-                blendType = value;
-                OnPropertyChanged(nameof(BlendType));
-            }
-        }
-
-        public string? Cull {
-            get => cull;
-            set {
-                cull = value;
-                OnPropertyChanged(nameof(Cull));
-            }
-        }
-
-        public string? UseLighting {
-            get => useLighting;
-            set {
-                useLighting = value;
-                OnPropertyChanged(nameof(UseLighting));
-            }
-        }
-
-        public string? TwoSidedLighting {
-            get => twoSidedLighting;
-            set {
-                twoSidedLighting = value;
-                OnPropertyChanged(nameof(TwoSidedLighting));
-            }
-        }
-
-        public string? UseMetalness {
-            get => useMetalness;
-            set {
-                useMetalness = value;
-                OnPropertyChanged(nameof(UseMetalness));
-            }
-        }
-
-        public string? Metalness {
-            get => metalness;
-            set {
-                metalness = value;
-                OnPropertyChanged(nameof(Metalness));
-            }
-        }
-
-        public string? Shininess {
-            get => shininess;
-            set {
-                shininess = value;
-                OnPropertyChanged(nameof(Shininess));
-            }
-        }
-
-        public string? Opacity {
-            get => opacity;
-            set {
-                opacity = value;
-                OnPropertyChanged(nameof(Opacity));
-            }
-        }
-
-        public string? BumpMapFactor {
-            get => bumpMapFactor;
-            set {
-                bumpMapFactor = value;
-                OnPropertyChanged(nameof(BumpMapFactor));
-            }
-        }
-
-        public string? Reflectivity {
-            get => reflectivity;
-            set {
-                reflectivity = value;
-                OnPropertyChanged(nameof(Reflectivity));
-            }
-        }
-
-        public string? AlphaTest {
-            get => alphaTest;
-            set {
-                alphaTest = value;
-                OnPropertyChanged(nameof(AlphaTest));
-            }
-        }
-
-        public bool DiffuseTint {
-            get => diffuseTint;
-            set {
-                diffuseTint = value;
-                OnPropertyChanged(nameof(DiffuseTint));
-            }
-        }
-
-        public List<double>? Diffuse {
-            get => diffuse;
-            set {
-                diffuse = value;
-                OnPropertyChanged(nameof(Diffuse));
-            }
-        }
-
-        public int? DiffuseMapId {
-            get => diffuseMapId;
-            set {
-                diffuseMapId = value;
-                OnPropertyChanged(nameof(DiffuseMapId));
-            }
-        }
-
-        public int? MetalnessMapId {
-            get => metalnessMapId;
-            set {
-                metalnessMapId = value;
-                OnPropertyChanged(nameof(MetalnessMapId));
-            }
-        }
-
-        public int? NormalMapId {
-            get => normalMapId;
-            set {
-                normalMapId = value;
-                OnPropertyChanged(nameof(NormalMapId));
-            }
-        }
-
-        public int? GlossMapId {
-            get => glossMapId;
-            set {
-                glossMapId = value;
-                OnPropertyChanged(nameof(GlossMapId));
-            }
-        }
-
-        public int? AOMapId {
-            get => aoMapId;
-            set {
-                aoMapId = value;
-                OnPropertyChanged(nameof(AOMapId));
-            }
-        }
-
-        public int? SpecularMapId {
-            get => specularMapId;
-            set {
-                specularMapId = value;
-                OnPropertyChanged(nameof(SpecularMapId));
-            }
-        }
-
-        public int? EmissiveMapId {
-            get => emissiveMapId;
-            set {
-                emissiveMapId = value;
-                OnPropertyChanged(nameof(EmissiveMapId));
-            }
-        }
-
-        public int? OpacityMapId {
-            get => opacityMapId;
-            set {
-                opacityMapId = value;
-                OnPropertyChanged(nameof(OpacityMapId));
-            }
-        }
-
-        public float? SpecularityFactor {
-            get => specularityFactor;
-            set {
-                specularityFactor = value;
-                OnPropertyChanged(nameof(SpecularityFactor));
-            }
-        }
-
-        public float? RefractionIndex {
-            get => refractionIndex;
-            set {
-                refractionIndex = value;
-                OnPropertyChanged(nameof(RefractionIndex));
-            }
-        }
-
-        public float? EmissiveIntensity {
-            get => emissiveIntensity;
-            set {
-                emissiveIntensity = value;
-                OnPropertyChanged(nameof(EmissiveIntensity));
-            }
-        }
-
-        private List<int> textureIds = [];
-
-        public List<int> TextureIds {
-            get => textureIds;
-            set {
-                textureIds = value;
-                OnPropertyChanged(nameof(TextureIds));
-            }
-        }
-
-        public List<double>? Emissive {
-            get => emissive;
-            set {
-                emissive = value;
-                OnPropertyChanged(nameof(Emissive));
-            }
-        }
-
-        public List<double>? Specular {
-            get => specular;
-            set {
-                specular = value;
-                OnPropertyChanged(nameof(Specular));
-            }
-        }
-    }
+public class MaterialResource : BaseResource {
+    public string? Shader { get; set; }
+    public string? MaterialJsonUrl { get; set; }
+    public string? MaterialJsonPath { get; set; }
+    public string? CreatedAt { get; set; }
+    public string? BlendType { get; set; }
+    public string? Cull { get; set; }
+    public bool UseLighting { get; set; }
+    public bool TwoSidedLighting { get; set; }
+    public bool UseMetalness { get; set; }
+    public float? Metalness { get; set; }
+    public float? Shininess { get; set; }
+    public float? Opacity { get; set; }
+    public float? BumpMapFactor { get; set; }
+    public float? Reflectivity { get; set; }
+    public float? AlphaTest { get; set; }
+    public bool DiffuseTint { get; set; }
+    public bool SpecularTint { get; set; }
+    public bool AOTint { get; set; }
+    public List<int>? Diffuse { get; set; }
+    public List<int>? Specular { get; set; }
+    public List<int>? Emissive { get; set; }
+    public List<int>? AOColor { get; set; }
+    public bool AOVertexColor { get; set; }
+    public int? DiffuseMapId { get; set; }
+    public int? MetalnessMapId { get; set; }
+    public int? NormalMapId { get; set; }
+    public int? GlossMapId { get; set; }
+    public int? AOMapId { get; set; }
+    public int? SpecularMapId { get; set; }
+    public int? EmissiveMapId { get; set; }
+    public int? OpacityMapId { get; set; }
+    public float? SpecularityFactor { get; set; }
+    public float? RefractionIndex { get; set; }
+    public float? EmissiveIntensity { get; set; }
+    public float? Glossiness { get; set; }
+    public float? Bumpiness { get; set; }
+    public int? DiffuseColorChannel { get; set; }
+    public int? DiffuseUVChannel { get; set; }
+    public int? SpecularColorChannel { get; set; }
+    public int? SpecularUVChannel { get; set; }
+    public int? NormalColorChannel { get; set; }
+    public int? NormalUVChannel { get; set; }
+    public int? BumpMapColorChannel { get; set; }
+    public int? BumpMapUVChannel { get; set; }
 }

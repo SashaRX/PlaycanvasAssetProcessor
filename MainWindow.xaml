@@ -1,6 +1,7 @@
 ﻿<Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:TexTool"
     xmlns:help ="clr-namespace:TexTool.Helpers"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,7 +12,7 @@
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="TexTool.MainWindow"
-    Title="MainWindow" Height="528" Width="942">
+    Title="MainWindow" Height="1474" Width="942">
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -29,7 +30,7 @@
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
-        
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -113,7 +114,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition x:Name="TexturePreviewColumn" Width="300" />
+                <ColumnDefinition x:Name="PreviewColumn" Width="300" MinWidth="256" MaxWidth="512" />
             </Grid.ColumnDefinitions>
 
             <TabControl x:Name="tabControl" Grid.Column="0" Padding="1,1,1,1" BorderThickness="0,0,0,0" SelectionChanged="TabControl_SelectionChanged">
@@ -294,140 +295,312 @@
                 </Grid>
             </Border>
 
-
             <!-- Просмотр параметров материала -->
-            <Border x:Name="MaterialViewer" Grid.Column="2" Background="#FFFFFF" Margin="10" BorderThickness="2" Padding="10" VerticalAlignment="Top" MinWidth="128" MinHeight="128">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " Margin="4,0,4,0" FontWeight="Bold" />
-                        <TextBlock x:Name="MaterialNameTextBlock" Text="Name: " Margin="4,0,4,0" FontWeight="Bold" />
-                    </StackPanel>
+            <Border x:Name="MaterialViewer" Grid.Column="2" Background="#FFE1E1E1" Margin="2,2,2,2" Padding="2,2,2,2" VerticalAlignment="Top" ScrollViewer.CanContentScroll="True" CornerRadius="4,4,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" MinWidth="256">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalAlignment="Right">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " Margin="4,0,4,0" FontWeight="Bold" />
+                            <TextBlock x:Name="MaterialNameTextBlock" Text="Name: " Margin="4,0,4,0" FontWeight="Bold" />
+                        </StackPanel>
 
-                    <Expander x:Name="DiffuseExpander" Header="Diffuse" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFB1B1B1">
-                        <StackPanel>
-                            <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                        <Expander x:Name="AOExpander" Header="Ambient Occlusion" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White" IsExpanded="True">
+                            <StackPanel>
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
+                                    <Hyperlink x:Name="MaterialAOMapHyperlink" Click="MaterialAOMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                        No AO Map
+                                    </Hyperlink>
+                                        </TextBlock>
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                            <Image x:Name="TextureAOPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="AO UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <ComboBox x:Name="MaterialAOUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
+                                </Grid>
+
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Occlude Specular" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <ComboBox x:Name="MaterialAOOccludeSpecularComboBox" SelectedIndex="0" Width="100" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
+                                </Grid>
+
+                                <!-- AO Tint -->
+                                <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2">
+                                    <StackPanel Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <CheckBox x:Name="MaterialAOTintCheckBox" Content="AO Tint" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="AO Tint Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                            <TextBox x:Name="MaterialAOTintColorRect" BorderBrush="Black" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <xctk:ColorPicker x:Name="AOTintColorPicker" SelectedColorChanged="AOTintColorPicker_SelectedColorChanged" Width="20" Height="20" AvailableColorsSortingMode="HueSaturationBrightness" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" RenderTransformOrigin="0.5,0.5" FontSize="10" HorizontalAlignment="Left" VerticalAlignment="Top" ColorMode="ColorCanvas" BorderThickness="0,0,0,0" ShowRecentColors="True" Panel.ZIndex="1" Grid.Column="2"/>
+                                        </Grid>
+                                        <CheckBox x:Name="MaterialAOVertexColorCheckBox" Content="AO Vertex Color" Margin="4,0,4,0" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Expander>
+
+                        <Expander x:Name="DiffuseExpander" Header="Diffuse" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFB1B1B1" IsExpanded="True" MinWidth="220">
+                            <StackPanel>
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
+                                    <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                        No Diffuse Map
+                                    </Hyperlink>
+                                        </TextBlock>
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                            <Image x:Name="TextureDiffusePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Diffuse Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <ComboBox x:Name="MaterialDiffuseColorChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
+                                </Grid>
+
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Diffuse UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <ComboBox x:Name="MaterialDiffuseUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
+                                </Grid>
+
+                                <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2">
+                                    <StackPanel Margin="4,2,4,2">
+                                        <CheckBox x:Name="MaterialDiffuseTintCheckBox" Content="Diffuse Tint" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Diffuse Tint Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                            <TextBox x:Name="MaterialTintColorRect" BorderBrush="Black" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <xctk:ColorPicker x:Name="TintColorPicker" SelectedColorChanged="TintColorPicker_SelectedColorChanged" Width="20" Height="20" AvailableColorsSortingMode="HueSaturationBrightness" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" RenderTransformOrigin="0.5,0.5" FontSize="10" VerticalAlignment="Top" ColorMode="ColorCanvas" BorderThickness="0,0,0,0" ShowRecentColors="True" Panel.ZIndex="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                        </Grid>
+                                        <CheckBox x:Name="MaterialDiffuseVertexColorCheckBox" Content="Diffuse Vertex Color" Margin="4,0,4,0" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Expander>
+
+                        <Expander x:Name="NormalExpander" Header="Normal Map" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FF8E9AFF" IsExpanded="True" MinWidth="220">
+                            <StackPanel>
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
+                                    <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                        No Normal Map
+                                    </Hyperlink>
+                                        </TextBlock>
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                            <Image x:Name="TextureNormalPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                        <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
-                                            No Diffuse Map
-                                        </Hyperlink>
-                                    </TextBlock>
-                                    <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                        <Image x:Name="TextureDiffusePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
+                                    <TextBlock Text="Normal UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <ComboBox x:Name="MaterialNormalUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
                                 </Grid>
-                            </Border>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Color" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                <ComboBox x:Name="MaterialDiffuseColorChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"/>
-                            </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Bumpiness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <TextBox x:Name="MaterialBumpinessTextBox" Width="50" Height="19" Margin="4,2,4,2" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1" HorizontalAlignment="Right"/>
+                                    <Slider x:Name="MaterialBumpinessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="143" SmallChange="0.01" VerticalAlignment="Center" Grid.Column="2" HorizontalAlignment="Left"/>
+                                </Grid>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                <ComboBox x:Name="MaterialDiffuseUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"/>
-                            </Grid>
+                            </StackPanel>
+                        </Expander>
 
-                            <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2" Padding="2,2,2,2" Margin="1,1,1,1">
-                                <StackPanel Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Orientation="Horizontal">
-                                    <CheckBox x:Name="MaterialDiffuseTintCheckBox" Content="Tint" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft" ScrollViewer.CanContentScroll="True"/>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="Tint Color" Margin="4,2,4,2" VerticalAlignment="Center"/>
-                                        <Rectangle x:Name="MaterialTintColorRect" Stroke="Black" Width="32" Height="16" Margin="4,0,4,0" VerticalAlignment="Center"/>
+                        <Expander x:Name="SpecularExpander" Header="Specular" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFFFC68C" IsExpanded="True" MinWidth="220">
+                            <StackPanel>
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
+                                        <Hyperlink x:Name="MaterialSpecularMapHyperlink" Click="MaterialSpecularMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                            No Specular Map
+                                        </Hyperlink>
+                                        </TextBlock>
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                            <Image x:Name="TextureSpecularPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <CheckBox x:Name="MaterialUseMetalness" Content="Use Metalness" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Metalness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                    <TextBox x:Name="MaterialMetalnessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                    <Slider x:Name="MaterialMetalnessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="146" Margin="59,0,0,0" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Left" Grid.ColumnSpan="2"/>
+                                </Grid>
+
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
+                                    <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                        No Metalness Map
+                                    </Hyperlink>
+                                        </TextBlock>
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                            <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2" Margin="2,2,2,2" Padding="2,2,2,2">
+                                    <StackPanel Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <CheckBox x:Name="MaterialSpecularTintCheckBox" Content="Specular Tint" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Specular Tint Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                            <TextBox x:Name="MaterialSpecularTintColorRect" BorderBrush="Black" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <xctk:ColorPicker x:Name="TintSpecularColorPicker" SelectedColorChanged="TintSpecularColorPicker_SelectedColorChanged" Width="20" Height="20" AvailableColorsSortingMode="HueSaturationBrightness" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" RenderTransformOrigin="0.5,0.5" FontSize="10" HorizontalAlignment="Left" VerticalAlignment="Top" ColorMode="ColorCanvas" BorderThickness="0,0,0,0" ShowRecentColors="True" Panel.ZIndex="1" Grid.Column="2"/>
+                                        </Grid>
+
+                                        <GroupBox BorderBrush="Black" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Header="Metalness" Width="256">
+                                            <StackPanel AutomationProperties.Name="Metalness">
+                                                <CheckBox x:Name="MaterialSpecularVertexColorCheckBox" Content="Metalness Vertex Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+
+                                                <Grid Margin="0,2,0,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Metalness Vertex Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                                    <ComboBox x:Name="MaterialSpecularColorChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
+                                                </Grid>
+
+                                                <Grid Margin="0,2,0,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Metalness UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                                    <ComboBox x:Name="MaterialSpecularUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </GroupBox>
+
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
+                                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Click="MaterialGlossMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                                No Gloss Map
+                                            </Hyperlink>
+                                                </TextBlock>
+                                                <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                                    <Image x:Name="TextureGlossPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Glossiness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
+                                            <TextBox x:Name="MaterialGlossinessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <Slider x:Name="MaterialGlossinessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="135" Margin="59,0,0,0" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="1" Grid.ColumnSpan="2"/>
+                                        </Grid>
+
+
+
+
                                     </StackPanel>
-                                    <CheckBox x:Name="MaterialDiffuseVertexColorCheckBox" Content="VertexColor" Margin="4,0,4,0" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Expander>
-
-                    <!-- Metalness -->
-                    <Expander x:Name="MetalnessExpander" Header="Metalness" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White">
-                        <StackPanel>
-                            <TextBlock Text="Metalness Map" FontWeight="Bold" Margin="4,0,4,0"/>
-                            <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
-                            <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" FontSize="12" FontWeight="Normal">
-                                No Metalness Map
-                            </Hyperlink>
-                            </TextBlock>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Metalness" VerticalAlignment="Center"/>
-                                <Slider x:Name="MaterialMetalnessSlider" Minimum="0" Maximum="1" Value="0" Width="100" Margin="4,0,4,0"/>
+                                </Border>
                             </StackPanel>
-                        </StackPanel>
-                    </Expander>
+                        </Expander>
 
-                    <!-- Normal Map -->
-                    <Expander x:Name="NormalExpander" Header="Normal Map" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FF8E9AFF">
-                        <StackPanel>
-                            <TextBlock Text="Normal Map" FontWeight="Bold" Margin="4,0,4,0"/>
-                            <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
-                            <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" FontSize="12" FontWeight="Normal">
-                                No Normal Map
-                            </Hyperlink>
-                            </TextBlock>
-                        </StackPanel>
-                    </Expander>
-
-                    <!-- Specular -->
-                    <Expander x:Name="SpecularExpander" Header="Specular" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White">
-                        <StackPanel>
-                            <TextBlock Text="Specular Map" FontWeight="Bold" Margin="4,0,4,0"/>
-                            <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
-                            <Hyperlink x:Name="MaterialSpecularMapHyperlink" Click="MaterialSpecularMapHyperlink_Click" FontSize="12" FontWeight="Normal">
-                                No Specular Map
-                            </Hyperlink>
-                            </TextBlock>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Shininess" VerticalAlignment="Center"/>
-                                <Slider x:Name="MaterialShininessSlider" Minimum="0" Maximum="100" Value="36" Width="100" Margin="4,0,4,0"/>
+                        <!-- Другие параметры -->
+                        <Expander x:Name="OtherExpander" Header="Other" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FF9DC4E8" MinWidth="220">
+                            <StackPanel>
+                                <TextBlock x:Name="MaterialCreatedAtTextBlock" Text="Data: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialShaderTextBlock" Text="Shader: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialBlendTypeTextBlock" Text="BlendType: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialCullTextBlock" Text="Cull: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialUseLightingTextBlock" Text="UseLighting: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialTwoSidedLightingTextBlock" Text="TwoSidedLighting: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialReflectivityTextBlock" Text="Reflectivity: " Margin="4,0,4,0" FontWeight="Normal" />
+                                <TextBlock x:Name="MaterialAlphaTestTextBlock" Text="AlphaTest: " Margin="4,0,4,0" FontWeight="Normal" />
                             </StackPanel>
-                        </StackPanel>
-                    </Expander>
-
-                    <!-- Emissive -->
-                    <Expander x:Name="EmissiveExpander" Header="Emissive" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White">
-                        <StackPanel>
-                            <TextBlock Text="Emissive Map" FontWeight="Bold" Margin="4,0,4,0"/>
-                            <TextBlock Margin="4,0,4,0" VerticalAlignment="Center">
-                            <Hyperlink x:Name="MaterialEmissiveMapHyperlink" Click="MaterialEmissiveMapHyperlink_Click" FontSize="12" FontWeight="Normal">
-                                No Emissive Map
-                            </Hyperlink>
-                            </TextBlock>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Emissive Intensity" VerticalAlignment="Center"/>
-                                <Slider x:Name="MaterialEmissiveIntensitySlider" Minimum="0" Maximum="10" Value="1" Width="100" Margin="4,0,4,0"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Expander>
-
-                    <!-- Другие параметры -->
-                    <Expander x:Name="OtherExpander" Header="Other" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFBABABA">
-                        <StackPanel>
-                            <TextBlock x:Name="MaterialCreatedAtTextBlock" Text="Data: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialShaderTextBlock" Text="Shader: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialBlendTypeTextBlock" Text="BlendType: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialCullTextBlock" Text="Cull: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialUseLightingTextBlock" Text="UseLighting: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialTwoSidedLightingTextBlock" Text="TwoSidedLighting: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialReflectivityTextBlock" Text="Reflectivity: " Margin="4,0,4,0" FontWeight="Normal" />
-                            <TextBlock x:Name="MaterialAlphaTestTextBlock" Text="AlphaTest: " Margin="4,0,4,0" FontWeight="Normal" />
-                        </StackPanel>
-                    </Expander>
-                </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
+
         </Grid>
+        <TextBox x:Name="textBox" TextWrapping="Wrap" Text="TextBox" Width="100"/>
     </DockPanel>
 </Window>

@@ -893,9 +893,17 @@ namespace TexTool {
 
 
                 MaterialAOVertexColorCheckBox.IsChecked = parameters.AOVertexColor;
+                MaterialAOTintCheckBox.IsChecked = parameters.AOTint;
 
-                // Отображаем значения Glossiness, Metalness и Bumpiness
-                MaterialGlossinessTextBox.Text = parameters.Glossiness?.ToString() ?? "0";
+                MaterialDiffuseVertexColorCheckBox.IsChecked = parameters.DiffuseVertexColor;
+                MaterialDiffuseTintCheckBox.IsChecked = parameters.DiffuseTint;
+
+                MaterialUseMetalnessCheckBox.IsChecked = parameters.UseMetalness;
+
+                MaterialSpecularTintCheckBox.IsChecked = parameters.SpecularTint;
+                MaterialSpecularVertexColorCheckBox.IsChecked = parameters.SpecularVertexColor;
+
+                MaterialGlossinessTextBox.Text = parameters.Shininess?.ToString() ?? "0";
                 MaterialGlossinessIntensitySlider.Value = parameters.Shininess ?? 0;
 
                 MaterialMetalnessTextBox.Text = parameters.Metalness?.ToString() ?? "0";

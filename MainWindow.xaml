@@ -12,7 +12,7 @@
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="TexTool.MainWindow"
-    Title="MainWindow" Height="528" Width="942">
+    Title="MainWindow" Height="1500" Width="942">
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -453,7 +453,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Bumpiness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
                                     <TextBox x:Name="MaterialBumpinessTextBox" Width="50" Height="19" Margin="4,2,4,2" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1" HorizontalAlignment="Right"/>
-                                    <Slider x:Name="MaterialBumpinessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="143" SmallChange="0.01" VerticalAlignment="Center" Grid.Column="2" HorizontalAlignment="Left"/>
+                                    <Slider x:Name="MaterialBumpinessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="143" SmallChange="0.01" VerticalAlignment="Center" Grid.Column="2" HorizontalAlignment="Right"/>
                                 </Grid>
 
                             </StackPanel>
@@ -478,7 +478,7 @@
                                     </Grid>
                                 </Border>
 
-                                <CheckBox x:Name="MaterialUseMetalness" Content="Use Metalness" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
+                                <CheckBox x:Name="MaterialUseMetalnessCheckBox" Content="Use Metalness" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -488,7 +488,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Metalness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
                                     <TextBox x:Name="MaterialMetalnessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
-                                    <Slider x:Name="MaterialMetalnessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="146" Margin="59,0,0,0" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Left" Grid.ColumnSpan="2"/>
+                                    <Slider x:Name="MaterialMetalnessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="146" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Right" Grid.ColumnSpan="2"/>
                                 </Grid>
 
                                 <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Margin="2,2,2,2" Padding="2,2,2,2">
@@ -572,7 +572,7 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="Glossiness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
                                             <TextBox x:Name="MaterialGlossinessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
-                                            <Slider x:Name="MaterialGlossinessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="135" Margin="59,0,0,0" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="1" Grid.ColumnSpan="2"/>
+                                            <Slider x:Name="MaterialGlossinessIntensitySlider" Minimum="0" Maximum="100" Value="1" Width="135" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" Grid.ColumnSpan="2"/>
                                         </Grid>
 
 

@@ -12,7 +12,7 @@
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="TexTool.MainWindow"
-    Title="MainWindow" Height="1474" Width="942">
+    Title="MainWindow" Height="528" Width="942">
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />

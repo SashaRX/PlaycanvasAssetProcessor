@@ -1006,31 +1006,12 @@ namespace TexTool {
                 if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
                     var materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
                     if (materialParameters != null) {
-                        selectedMaterial.DiffuseMapId = materialParameters.DiffuseMapId;
-                        selectedMaterial.MetalnessMapId = materialParameters.MetalnessMapId;
-                        selectedMaterial.NormalMapId = materialParameters.NormalMapId;
-                        selectedMaterial.GlossMapId = materialParameters.GlossMapId;
-                        selectedMaterial.AOMapId = materialParameters.AOMapId;
-                        selectedMaterial.SpecularMapId = materialParameters.SpecularMapId;
-                        selectedMaterial.EmissiveMapId = materialParameters.EmissiveMapId;
-                        selectedMaterial.OpacityMapId = materialParameters.OpacityMapId;
-
-                        // Параметры AO Tint и Vertex Color
-                        selectedMaterial.AOTint = materialParameters.AOTint;
-                        selectedMaterial.AOColor = materialParameters.AOColor;
-                        selectedMaterial.AOVertexColor = materialParameters.AOVertexColor;
-
-                        // Параметры Glossiness, Metalness и Bumpiness
-                        selectedMaterial.Glossiness = materialParameters.Shininess;
-                        selectedMaterial.Metalness = materialParameters.Metalness;
-                        selectedMaterial.BumpMapFactor = materialParameters.BumpMapFactor;
-
+                        selectedMaterial = materialParameters;
                         DisplayMaterialParameters(selectedMaterial); // Передаем весь объект MaterialResource
                     }
                 }
             }
         }
-
 
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
             if (textureId.HasValue) {

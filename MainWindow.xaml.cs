@@ -43,11 +43,11 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace TexTool {
     public enum ColorChannel {
+        RGB,
         R,
         G,
         B,
         A,
-        RGB
     }
 
     public enum UVChannel {
@@ -263,7 +263,7 @@ namespace TexTool {
             Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
         }
 
-        private void PopulateComboBox<T>(ComboBox comboBox) {
+        private static void PopulateComboBox<T>(ComboBox comboBox) {
             comboBox.Items.Clear();
             foreach (var value in Enum.GetValues(typeof(T))) {
                 comboBox.Items.Add(value.ToString());
@@ -526,12 +526,6 @@ namespace TexTool {
             MaterialViewer.Visibility = Visibility.Visible;
         }
 
-        private void HideViewers() {
-            TextureViewer.Visibility = Visibility.Collapsed;
-            ModelViewer.Visibility = Visibility.Collapsed;
-            MaterialViewer.Visibility = Visibility.Collapsed;
-        }
-
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
@@ -592,7 +586,7 @@ namespace TexTool {
                         TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
 
                         Helpers.SizeConverter sizeConverter = new();
-                        object size = sizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
+                        object size = Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
                     });
 
@@ -813,6 +807,15 @@ namespace TexTool {
                         UseLighting = data["useLighting"]?.ToObject<bool>() ?? false,
                         TwoSidedLighting = data["twoSidedLighting"]?.ToObject<bool>() ?? false,
 
+                        DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
+                        Diffuse = data["diffuse"]?.Select(d => d.ToObject<float>()).ToList(),
+
+                        SpecularTint = data["specularTint"]?.ToObject<bool>() ?? false,
+                        Specular = data["specular"]?.Select(d => d.ToObject<float>()).ToList(),
+
+                        AOTint = data["aoTint"]?.ToObject<bool>() ?? false,
+                        AOColor = data["ao"]?.Select(d => d.ToObject<float>()).ToList(),
+
                         UseMetalness = data["useMetalness"]?.ToObject<bool>() ?? false,
                         MetalnessMapId = data["metalnessMap"]?.Type == JTokenType.Integer ? data["metalnessMap"]?.ToObject<int?>() : null,
                         Metalness = data["metalness"]?.ToObject<float?>(),
@@ -833,15 +836,11 @@ namespace TexTool {
 
 
                         DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null,
-                        Diffuse = data["diffuse"]?.Select(d => d.ToObject<int>()).ToList(),
-                        DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
 
                         SpecularMapId = data["specularMap"]?.Type == JTokenType.Integer ? data["specularMap"]?.ToObject<int?>() : null,
-                        Specular = data["specular"]?.Select(d => d.ToObject<int>()).ToList(),
-                        SpecularTint = data["specularTint"]?.ToObject<bool>() ?? false,
                         SpecularityFactor = data["specularityFactor"]?.ToObject<float?>(),
 
-                        Emissive = data["emissive"]?.Select(d => d.ToObject<int>()).ToList(),
+                        Emissive = data["emissive"]?.Select(d => d.ToObject<float>()).ToList(),
                         EmissiveIntensity = data["emissiveIntensity"]?.ToObject<float?>(),
                         EmissiveMapId = data["emissiveMap"]?.Type == JTokenType.Integer ? data["emissiveMap"]?.ToObject<int?>() : null,
 
@@ -926,6 +925,8 @@ namespace TexTool {
                 MaterialBumpinessTextBox.Text = parameters.BumpMapFactor?.ToString() ?? "0";
                 MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 0;
 
+
+
                 // Установка выбранных элементов в ComboBox для Color Channel и UV Channel
                 MaterialDiffuseColorChannelComboBox.SelectedItem = parameters.DiffuseColorChannel?.ToString();
                 MaterialSpecularColorChannelComboBox.SelectedItem = parameters.SpecularColorChannel?.ToString();
@@ -935,12 +936,7 @@ namespace TexTool {
             });
         }
 
-
-        private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<int>? colorValues) {
-            ArgumentNullException.ThrowIfNull(checkBox);
-            ArgumentNullException.ThrowIfNull(colorRect);
-            ArgumentNullException.ThrowIfNull(colorPicker);
-
+        private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {
             checkBox.IsChecked = isTint;
             if (isTint && colorValues != null && colorValues.Count >= 3) {
                 var color = System.Windows.Media.Color.FromRgb(
@@ -959,7 +955,6 @@ namespace TexTool {
                 colorPicker.SelectedColor = null;
             }
         }
-
 
         private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName) {
             if (hyperlink != null && expander != null) {

@@ -20,17 +20,17 @@ namespace TexTool.Resources {
         public float? Opacity { get; set; }
 
         public bool AOTint { get; set; }
-        public List<int>? AOColor { get; set; }
+        public List<float>? AOColor { get; set; }
         public int? AOMapId { get; set; }
         public bool AOVertexColor { get; set; }
 
         public bool DiffuseTint { get; set; }
-        public List<int>? Diffuse { get; set; }
+        public List<float>? Diffuse { get; set; }
         public int? DiffuseMapId { get; set; }
         public bool DiffuseVertexColor { get; set; }
 
         public bool SpecularTint { get; set; }
-        public List<int>? Specular { get; set; }
+        public List<float>? Specular { get; set; }
         public int? SpecularMapId { get; set; }
         public bool SpecularVertexColor { get; set; }
         public float? SpecularityFactor { get; set; }
@@ -44,7 +44,7 @@ namespace TexTool.Resources {
         public int? MetalnessMapId { get; set; }
 
 
-        public List<int>? Emissive { get; set; }
+        public List<float>? Emissive { get; set; }
         public int? EmissiveMapId { get; set; }
         public float? EmissiveIntensity { get; set; }
 

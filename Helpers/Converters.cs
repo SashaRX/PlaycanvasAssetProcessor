@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -14,7 +15,7 @@ namespace TexTool.Helpers {
             return "0 MB";
         }
 
-        public object Convert(object value) {
+        public static object Convert(object value) {
             if (value is int size) {
                 double sizeInMB = Math.Round(size / (1024.0 * 1000.0), 3);
                 return $"{sizeInMB} MB";
@@ -105,4 +106,55 @@ namespace TexTool.Helpers {
             throw new NotImplementedException();
         }
     }
+
+    public class ChannelColorConverter : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            string? channel = value as string;
+
+            if (parameter.ToString() == "Foreground") {
+                return channel switch {
+                    "R" => Brushes.Red,
+                    "G" => Brushes.Green,
+                    "B" => Brushes.Blue,
+                    "RGB" => Brushes.Black,
+                    "A" => Brushes.White,
+                    _ => Brushes.Purple,
+                };
+            } else if (parameter.ToString() == "Background") {
+                return channel switch {
+                    "R" => Brushes.Transparent,
+                    "G" => Brushes.Transparent,
+                    "B" => Brushes.Transparent,
+                    "RGB" => Brushes.Transparent,
+                    "A" => Brushes.Black,
+                    _ => Brushes.Black,
+                };
+            }
+            return Brushes.Transparent;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class ChannelColorDataTemplateSelector : DataTemplateSelector {
+        public override DataTemplate SelectTemplate(object item, DependencyObject container) {
+            if (container is ComboBoxItem comboBoxItem && item is string channel) {
+                var brush = channel switch {
+                    "R" => Brushes.Red,
+                    "G" => Brushes.Green,
+                    "B" => Brushes.Blue,
+                    "A" => Brushes.Black,
+                    "RGB" => Brushes.White,
+                    _ => Brushes.Purple,
+                };
+                comboBoxItem.Background = brush;
+                comboBoxItem.Foreground = channel == "RGB" ? Brushes.Black : Brushes.White;
+            }
+
+            return base.SelectTemplate(item, container);
+        }
+    }
+
 }

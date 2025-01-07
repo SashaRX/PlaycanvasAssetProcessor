@@ -3,6 +3,7 @@
 using OxyPlot;
 using OxyPlot.Series;
 
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Advanced;
@@ -15,7 +16,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Text.RegularExpressions;
+using System.Buffers;
+
 using HelixToolkit.Wpf;
+
 using TexTool.Helpers;
 using TexTool.Resources;
 
@@ -77,12 +81,13 @@ namespace TexTool.Helpers {
             return BitmapToBitmapSource(image);
         }
 
-        public static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
-            var encoder = new PngBitmapEncoder(); // Или любой другой доступный энкодер
-            encoder.Frames.Add(BitmapFrame.Create((BitmapSource)bitmapSource.Clone()));
-            using var stream = new MemoryStream();
-            encoder.Save(stream);
-            return stream.ToArray();
+        // Преобразование BitmapSource в массив байтов
+        private static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
+            using var memoryStream = new MemoryStream();
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+            encoder.Save(memoryStream);
+            return memoryStream.ToArray();
         }
 
         public static BitmapImage BitmapToBitmapSource(Image<Rgba32> image) {
@@ -274,16 +279,40 @@ namespace TexTool.Helpers {
         }
 
         public static void ProcessImage(BitmapSource bitmapSource, int[] redHistogram, int[] greenHistogram, int[] blueHistogram) {
-            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
-            Parallel.For(0, image.Height, y => {
-                Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
-                for (int x = 0; x < pixelRow.Length; x++) {
-                    var pixel = pixelRow[x];
-                    redHistogram[pixel.R]++;
-                    greenHistogram[pixel.G]++;
-                    blueHistogram[pixel.B]++;
-                }
-            });
+            // Арендуем массивы для гистограмм из пула объектов
+            var pool = ArrayPool<int>.Shared;
+            int[] rentedRedHistogram = pool.Rent(256);
+            int[] rentedGreenHistogram = pool.Rent(256);
+            int[] rentedBlueHistogram = pool.Rent(256);
+
+            try {
+                // Инициализируем арендованные массивы нулями
+                Array.Clear(rentedRedHistogram, 0, 256);
+                Array.Clear(rentedGreenHistogram, 0, 256);
+                Array.Clear(rentedBlueHistogram, 0, 256);
+
+                // Обрабатываем изображение
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
+                Parallel.For(0, image.Height, y => {
+                    Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
+                    for (int x = 0; x < pixelRow.Length; x++) {
+                        var pixel = pixelRow[x];
+                        rentedRedHistogram[pixel.R]++;
+                        rentedGreenHistogram[pixel.G]++;
+                        rentedBlueHistogram[pixel.B]++;
+                    }
+                });
+
+                // Копируем значения из арендованных массивов в предоставленные массивы
+                Array.Copy(rentedRedHistogram, redHistogram, 256);
+                Array.Copy(rentedGreenHistogram, greenHistogram, 256);
+                Array.Copy(rentedBlueHistogram, blueHistogram, 256);
+            } finally {
+                // Возвращаем массивы в пул объектов
+                pool.Return(rentedRedHistogram);
+                pool.Return(rentedGreenHistogram);
+                pool.Return(rentedBlueHistogram);
+            }
         }
 
         public static (int width, int height)? GetLocalImageResolution(string imagePath) {

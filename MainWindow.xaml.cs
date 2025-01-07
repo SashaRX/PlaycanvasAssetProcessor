@@ -1340,18 +1340,34 @@ namespace TexTool {
 
         private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
             try {
-                // Convert JToken to JSON string
+                // Проверка входных параметров на null или пустое значение
+                if (jsonResponse == null) {
+                    throw new ArgumentNullException(nameof(jsonResponse), "JSON response cannot be null");
+                }
+                if (string.IsNullOrEmpty(projectFolderPath)) {
+                    throw new ArgumentException("Project folder path cannot be null or empty", nameof(projectFolderPath));
+                }
+                if (string.IsNullOrEmpty(projectName)) {
+                    throw new ArgumentException("Project name cannot be null or empty", nameof(projectName));
+                }
+
+                // Преобразование JToken в строку JSON
                 string jsonString = jsonResponse.ToString(Formatting.Indented);
 
-                // Determine the file path
+                // Определение пути к файлу
                 string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
 
+                // Логирование пути к файлу
                 System.Diagnostics.Debug.WriteLine($"Saving JSON to file: {jsonFilePath}");
 
-                // Save JSON to file
+                // Сохранение JSON в файл
                 await File.WriteAllTextAsync(jsonFilePath, jsonString);
 
                 MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
+            } catch (ArgumentNullException ex) {
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
+            } catch (ArgumentException ex) {
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
             }

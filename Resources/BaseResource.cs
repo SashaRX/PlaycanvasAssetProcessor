@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace TexTool.Resources {
+namespace AssetProcessor.Resources {
     public abstract class BaseResource : INotifyPropertyChanged {
         private int id;
         private string? name;

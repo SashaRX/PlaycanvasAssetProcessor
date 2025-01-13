@@ -1,7 +1,7 @@
-﻿<Application x:Class="TexTool.App"
+﻿<Application x:Class="AssetProcessor.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:TexTool"
+             xmlns:local="clr-namespace:AssetProcessor"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <Style TargetType="DataGrid">

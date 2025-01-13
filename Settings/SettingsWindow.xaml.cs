@@ -1,12 +1,12 @@
-﻿using Ookii.Dialogs.Wpf;
+﻿using AssetProcessor.Settings;
+using Ookii.Dialogs.Wpf;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
-using TexTool.Settings;
 
-namespace TexTool {
+namespace AssetProcessor {
     public partial class SettingsWindow : Window, INotifyPropertyChanged {
         public string? ProjectsFolder {
             get => AppSettings.Default.ProjectsFolderPath;
@@ -71,7 +71,7 @@ namespace TexTool {
         }
 
         private void SelectFolder(object sender, RoutedEventArgs e) {
-            var folderDialog = new VistaFolderBrowserDialog {
+            VistaFolderBrowserDialog folderDialog = new() {
                 Description = "Select a folder to save projects",
                 UseDescriptionForTitle = true
             };

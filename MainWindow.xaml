@@ -2,17 +2,17 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
-    xmlns:local="clr-namespace:TexTool"
-    xmlns:help ="clr-namespace:TexTool.Helpers"
+    xmlns:local="clr-namespace:AssetProcessor"
+    xmlns:help ="clr-namespace:AssetProcessor.Helpers"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
     xmlns:oxy="http://oxyplot.org/wpf" 
-    xmlns:resources="clr-namespace:TexTool.Resources" 
+    xmlns:resources="clr-namespace:AssetProcessor.Resources" 
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
-    x:Class="TexTool.MainWindow"
-    Title="MainWindow" Height="1500" Width="942">
+    x:Class="AssetProcessor.MainWindow"
+    Title="MainWindow" Height="684" Width="942">
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -58,7 +58,7 @@
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
             <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="718">
                 <StackPanel Orientation="Horizontal" Height="58">
-                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="51" Click="Connect" />
+                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="Connect" />
                     <ComboBox x:Name="ProjectsComboBox" 
                               ItemsSource="{Binding Projects}" 
                               DisplayMemberPath="Value" 
@@ -337,7 +337,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="AO UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                    <ComboBox x:Name="MaterialAOUVChannelComboBox" SelectedIndex="0" Width="50" Margin="144,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Bottom" Grid.Column="1" Height="20"/>
+                                    <ComboBox x:Name="MaterialAOUVChannelComboBox" SelectedIndex="0" Width="50" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="1" Height="20" Margin="4,0,4,0"/>
                                 </Grid>
 
                                 <Grid Margin="0,2,0,2">

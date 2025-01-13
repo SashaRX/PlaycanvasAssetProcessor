@@ -1,11 +1,10 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace TexTool.Helpers {
+namespace AssetProcessor.Helpers {
     public class SizeConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             if (value is int size) {
@@ -141,7 +140,7 @@ namespace TexTool.Helpers {
     public class ChannelColorDataTemplateSelector : DataTemplateSelector {
         public override DataTemplate SelectTemplate(object item, DependencyObject container) {
             if (container is ComboBoxItem comboBoxItem && item is string channel) {
-                var brush = channel switch {
+                SolidColorBrush brush = channel switch {
                     "R" => Brushes.Red,
                     "G" => Brushes.Green,
                     "B" => Brushes.Blue,

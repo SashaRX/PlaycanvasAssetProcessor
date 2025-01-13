@@ -1,4 +1,4 @@
-﻿namespace TexTool.Resources {
+﻿namespace AssetProcessor.Resources {
     public class TextureResource : BaseResource {
         private int[] resolution = new int[2];
         private int[] resizeResolution = new int[2];

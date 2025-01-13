@@ -1,13 +1,8 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
+﻿using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
-using TexTool.Resources;
 
-namespace TexTool.Services {
+namespace AssetProcessor.Services {
     public class PlayCanvasService {
         private readonly HttpClient client;
 
@@ -34,11 +29,11 @@ namespace TexTool.Services {
             response.EnsureSuccessStatusCode();
 
             string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            var json = JObject.Parse(responseBody);
+            JObject json = JObject.Parse(responseBody);
             return json["id"]?.ToString() ?? throw new Exception("User ID is null");
         }
 
-        public async Task<Dictionary<string, string>> GetProjectsAsync(string? userId, string? apiKey, CancellationToken cancellationToken) {
+        public async Task<Dictionary<string, string>> GetProjectsAsync(string? userId, string? apiKey, Dictionary<string, string> projects, CancellationToken cancellationToken) {
             string url = $"https://playcanvas.com/api/users/{userId}/projects";
 
             AddAuthorizationHeader(apiKey);
@@ -47,11 +42,9 @@ namespace TexTool.Services {
             response.EnsureSuccessStatusCode();
 
             string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            var json = JObject.Parse(responseBody);
-            var projectsArray = json["result"] as JArray ?? throw new Exception("Projects array is null");
-
-            var projects = new Dictionary<string, string>();
-            foreach (var project in projectsArray) {
+            JObject json = JObject.Parse(responseBody);
+            JArray projectsArray = json["result"] as JArray ?? throw new Exception("Projects array is null");
+            foreach (JToken project in projectsArray) {
                 string? projectId = project["id"]?.ToString();
                 string? projectName = project["name"]?.ToString();
                 if (projectId != null && projectName != null) {
@@ -62,7 +55,7 @@ namespace TexTool.Services {
             return projects;
         }
 
-        public async Task<List<Branch>> GetBranchesAsync(string projectId, string apiKey, CancellationToken cancellationToken) {
+        public async Task<List<Branch>> GetBranchesAsync(string projectId, string apiKey, List<Branch> branches, CancellationToken cancellationToken) {
             string url = $"https://playcanvas.com/api/projects/{projectId}/branches";
 
             AddAuthorizationHeader(apiKey);
@@ -71,11 +64,9 @@ namespace TexTool.Services {
             response.EnsureSuccessStatusCode();
 
             string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            var json = JObject.Parse(responseBody);
-            var branchesArray = json["result"] as JArray ?? throw new Exception("Branches array is null");
-
-            var branches = new List<Branch>();
-            foreach (var branch in branchesArray) {
+            JObject json = JObject.Parse(responseBody);
+            JArray branchesArray = json["result"] as JArray ?? throw new Exception("Branches array is null");
+            foreach (JToken branch in branchesArray) {
                 string? branchID = branch["id"]?.ToString();
                 string? branchName = branch["name"]?.ToString();
                 if (branchID != null && branchName != null) {
@@ -95,7 +86,7 @@ namespace TexTool.Services {
             response.EnsureSuccessStatusCode();
 
             string responseData = await response.Content.ReadAsStringAsync(cancellationToken);
-            var assetsResponse = JObject.Parse(responseData);
+            JObject assetsResponse = JObject.Parse(responseData);
 
             return assetsResponse["result"] as JArray ?? throw new Exception("Assets array is null");
         }

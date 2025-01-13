@@ -1,13 +1,13 @@
 ﻿using System.IO;
 using System.Security.Cryptography;
 
-namespace TexTool.Helpers {
+namespace AssetProcessor.Helpers {
     public static class FileHelper {
         public static bool VerifyFileHash(string filePath, string expectedHash) {
-            using var md5 = MD5.Create();
-            using var stream = File.OpenRead(filePath);
-            var hash = md5.ComputeHash(stream);
-            string fileHash = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            using MD5 md5 = MD5.Create();
+            using FileStream stream = File.OpenRead(filePath);
+            byte[] hash = md5.ComputeHash(stream);
+            string fileHash = Convert.ToHexStringLower(hash);
             return fileHash.Equals(expectedHash.ToLowerInvariant());
         }
 
@@ -20,19 +20,19 @@ namespace TexTool.Helpers {
         }
 
         public static string GetFileHash(string filePath) {
-            using var md5 = MD5.Create();
-            using var stream = File.OpenRead(filePath);
-            var hash = md5.ComputeHash(stream);
-            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            using MD5 md5 = MD5.Create();
+            using FileStream stream = File.OpenRead(filePath);
+            byte[] hash = md5.ComputeHash(stream);
+            return Convert.ToHexStringLower(hash);
         }
 
         public static bool IsFileIntact(string filePath, string expectedHash, long expectedSize) {
-            using var md5 = MD5.Create();
-            using var stream = File.OpenRead(filePath);
-            var hash = md5.ComputeHash(stream);
-            string fileHash = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            using MD5 md5 = MD5.Create();
+            using FileStream stream = File.OpenRead(filePath);
+            byte[] hash = md5.ComputeHash(stream);
+            string fileHash = Convert.ToHexStringLower(hash);
 
-            var fileInfo = new FileInfo(filePath);
+            FileInfo fileInfo = new(filePath);
             bool sizeMatches = fileInfo.Length == expectedSize;
 
             return fileHash.Equals(expectedHash.ToLowerInvariant()) && sizeMatches;

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System.Net.Http;
 
-namespace TexTool.Services {
+namespace AssetProcessor.Services {
     public class PlayCanvasServiceBase {
         private static readonly HttpClient? client = new();
 
@@ -13,7 +13,7 @@ namespace TexTool.Services {
             HttpResponseMessage? response = await client.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
             string? responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            var json = JObject.Parse(responseBody);
+            JObject json = JObject.Parse(responseBody);
             return json["id"]?.ToString() ?? throw new System.Exception("User ID not found in response");
         }
     }

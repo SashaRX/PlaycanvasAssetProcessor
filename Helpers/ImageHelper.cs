@@ -1,16 +1,9 @@
-﻿using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Metadata;
-using SixLabors.ImageSharp.PixelFormats;
-using System;
+﻿using AssetProcessor.Settings;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
-using TexTool.Settings;
 
-namespace TexTool.Helpers {
+namespace AssetProcessor.Helpers {
     public static class ImageHelper {
         public static async Task<(int Width, int Height)> GetImageResolutionAsync(string url, CancellationToken cancellationToken) {
             if (string.IsNullOrEmpty(url)) {
@@ -18,14 +11,14 @@ namespace TexTool.Helpers {
             }
 
             try {
-                using var client = new HttpClient();
+                using HttpClient client = new();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
                 client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
 
-                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
-                var buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                byte[] buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
                 if (buffer.Length < 24) {
                     throw new Exception("Unable to read image header");
@@ -57,8 +50,8 @@ namespace TexTool.Helpers {
                 // TIFF format
                 else if ((buffer[0] == 0x49 && buffer[1] == 0x49 && buffer[2] == 0x2A && buffer[3] == 0x00) ||
                          (buffer[0] == 0x4D && buffer[1] == 0x4D && buffer[2] == 0x00 && buffer[3] == 0x2A)) {
-                    using var stream = new MemoryStream(buffer);
-                    using var image = System.Drawing.Image.FromStream(stream);
+                    using MemoryStream stream = new(buffer);
+                    using System.Drawing.Image image = System.Drawing.Image.FromStream(stream);
                     return (image.Width, image.Height);
                 }
 
@@ -71,21 +64,21 @@ namespace TexTool.Helpers {
         }
 
         private static async Task<(int Width, int Height)> GetJpegResolutionFromStream(string url, CancellationToken cancellationToken) {
-            using var client = new HttpClient();
+            using HttpClient client = new();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
             client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 500);
 
-            var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            byte[] buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
             if (buffer.Length < 24) {
                 throw new Exception("Unable to read image header");
             }
 
-            using var stream = new MemoryStream(buffer);
-            using var image = SixLabors.ImageSharp.Image.Load(stream);
+            using MemoryStream stream = new(buffer);
+            using SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(stream);
             return (image.Width, image.Height);
         }
     }

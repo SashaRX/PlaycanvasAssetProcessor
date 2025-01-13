@@ -1,47 +1,36 @@
-﻿using Newtonsoft.Json;
+﻿using AssetProcessor.Helpers;
+using AssetProcessor.Resources;
+using AssetProcessor.Services;
+using AssetProcessor.Settings;
+using Assimp;
+using HelixToolkit.Wpf;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
 using OxyPlot;
 using OxyPlot.Axes;
-
 using SixLabors.ImageSharp;
-
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
-
 using System.Net.Http;
 using System.Net.Http.Headers;
-
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives; // Для использования Bitmap и Rectangle
 using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
-
-using System.Windows.Controls.Primitives; // Для использования Bitmap и Rectangle
-
-using Assimp;
-using HelixToolkit.Wpf;
-
-using System.Windows.Input;
-using System.Drawing;
-using PointF = System.Drawing.PointF;
-
-using TexTool.Helpers;
-using TexTool.Resources;
-using TexTool.Services;
-using TexTool.Settings;
-using System.Windows.Documents;
-using System.Diagnostics;
-using Assimp.Unmanaged;
-using System.Linq;
 using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
+using PointF = System.Drawing.PointF;
+using System.Linq;
 
-namespace TexTool {
+namespace AssetProcessor {
     public enum ColorChannel {
         RGB,
         R,
@@ -132,6 +121,7 @@ namespace TexTool {
 
         public MainWindow() {
             InitializeComponent();
+            _ = LoadLastSettings();
 
             // Заполнение ComboBox для Color Channel
             PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
@@ -163,11 +153,14 @@ namespace TexTool {
 
             DataContext = this;
             this.Closing += MainWindow_Closing;
-            LoadLastSettings();
+            //LoadLastSettings();
 
             RenderOptions.SetBitmapScalingMode(TexturePreviewImage, BitmapScalingMode.HighQuality);
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
             RenderOptions.SetBitmapScalingMode(UVImage2, BitmapScalingMode.HighQuality);
+
+            // Вызов асинхронного метода
+            _ = InitializeAsync(); // Асинхронный метод вызывается без ожидания завершения
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -201,7 +194,7 @@ namespace TexTool {
         private async Task FilterChannelAsync(string channel) {
             if (TexturePreviewImage.Source is BitmapSource bitmapSource) {
                 originalBitmapSource ??= bitmapSource.Clone();
-                var filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
+                BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
 
                 // Обновляем UI в основном потоке
                 Dispatcher.Invoke(() => {
@@ -227,7 +220,7 @@ namespace TexTool {
         private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false) {
             if (bitmapSource == null) return;
 
-            var histogramModel = new PlotModel();
+            PlotModel histogramModel = new();
 
             int[] redHistogram = new int[256];
             int[] greenHistogram = new int[256];
@@ -265,7 +258,7 @@ namespace TexTool {
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {
             comboBox.Items.Clear();
-            foreach (var value in Enum.GetValues(typeof(T))) {
+            foreach (object? value in Enum.GetValues(typeof(T))) {
                 comboBox.Items.Add(value.ToString());
             }
         }
@@ -278,12 +271,12 @@ namespace TexTool {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
                     if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
-                                                                             // Загружаем модель во вьюпорт (3D просмотрщик}
+                                                                // Загружаем модель во вьюпорт (3D просмотрщик}
                         LoadModel(selectedModel.Path);
                         // Обновляем информацию о модели
-                        var context = new AssimpContext();
-                        var scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                        var mesh = scene.Meshes.FirstOrDefault();
+                        AssimpContext context = new();
+                        Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                        Mesh? mesh = scene.Meshes.FirstOrDefault();
 
                         if (mesh != null) {
                             string? modelName = selectedModel.Name;
@@ -320,14 +313,14 @@ namespace TexTool {
             using (Graphics g = Graphics.FromImage(bitmap1)) {
                 g.Clear(System.Drawing.Color.DarkGray);
                 if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null) {
-                    var uvs = mesh.TextureCoordinateChannels[0];
-                    foreach (var face in mesh.Faces) {
+                    List<Assimp.Vector3D> uvs = mesh.TextureCoordinateChannels[0];
+                    foreach (Face? face in mesh.Faces) {
                         if (face.IndexCount == 3) {
                             PointF[] points = new PointF[3];
                             for (int i = 0; i < 3; i++) {
                                 int vertexIndex = face.Indices[i];
                                 if (vertexIndex < uvs.Count) {
-                                    var uv = uvs[vertexIndex];
+                                    Assimp.Vector3D uv = uvs[vertexIndex];
                                     points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
                                 }
                             }
@@ -346,35 +339,33 @@ namespace TexTool {
             using (Graphics g = Graphics.FromImage(bitmap2)) {
                 g.Clear(System.Drawing.Color.DarkGray);
                 if (hasSecondUV) {
-                    var uvs = mesh.TextureCoordinateChannels[1];
-                    foreach (var face in mesh.Faces) {
-                        if (face.IndexCount == 3) {
-                            PointF[] points = new PointF[3];
-                            for (int i = 0; i < 3; i++) {
-                                int vertexIndex = face.Indices[i];
-                                if (vertexIndex < uvs.Count) {
-                                    var uv = uvs[vertexIndex];
-                                    points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
-                                }
+                    List<Assimp.Vector3D> uvs = mesh.TextureCoordinateChannels[1];
+                    foreach (Face? face in mesh.Faces.Where(face => face.IndexCount == 3)) {
+                        PointF[] points = new PointF[3];
+                        for (int i = 0; i < 3; i++) {
+                            int vertexIndex = face.Indices[i];
+                            if (vertexIndex < uvs.Count) {
+                                Assimp.Vector3D uv = uvs[vertexIndex];
+                                points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
                             }
-                            // Заливка треугольника полупрозрачным цветом
-                            g.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(186, System.Drawing.Color.OrangeRed)), points);
-                            // Обводка треугольника черным цветом
-                            g.DrawPolygon(Pens.DarkBlue, points);
                         }
+                        // Заливка треугольника полупрозрачным цветом
+                        g.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(186, System.Drawing.Color.OrangeRed)), points);
+                        // Обводка треугольника черным цветом
+                        g.DrawPolygon(Pens.DarkBlue, points);
                     }
                 }
             }
 
             // Преобразуем bitmap в BitmapSource для отображения в WPF
-            var bitmapSource1 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+            BitmapSource bitmapSource1 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
                 bitmap1.GetHbitmap(),
                 IntPtr.Zero,
                 Int32Rect.Empty,
                 BitmapSizeOptions.FromWidthAndHeight(width, height));
             bitmap1.Dispose();
 
-            var bitmapSource2 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+            BitmapSource bitmapSource2 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
                 bitmap2.GetHbitmap(),
                 IntPtr.Zero,
                 Int32Rect.Empty,
@@ -394,8 +385,8 @@ namespace TexTool {
                 viewPort3d.RotateGesture = new MouseGesture(MouseAction.LeftClick);
 
                 // Очищаем только модели, оставляя освещение
-                var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
-                foreach (var model in modelsToRemove) {
+                List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
+                foreach (ModelVisual3D? model in modelsToRemove) {
                     viewPort3d.Children.Remove(model);
                 }
 
@@ -417,7 +408,7 @@ namespace TexTool {
                 int totalVertices = 0;
                 int validUVChannels = 0;
 
-                foreach (var mesh in scene.Meshes) {
+                foreach (Mesh? mesh in scene.Meshes) {
                     if (mesh == null) continue;
 
                     MeshBuilder builder = new();
@@ -428,15 +419,14 @@ namespace TexTool {
                     }
 
                     for (int i = 0; i < mesh.VertexCount; i++) {
-                        var vertex = mesh.Vertices[i];
-                        var normal = mesh.Normals[i];
+                        Assimp.Vector3D vertex = mesh.Vertices[i];
+                        Assimp.Vector3D normal = mesh.Normals[i];
                         builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                         builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 
                         // Добавляем текстурные координаты, если они есть
                         if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
-                            var texCoord = mesh.TextureCoordinateChannels[0][i];
-                            builder.TextureCoordinates.Add(new System.Windows.Point(texCoord.X, texCoord.Y));
+                            builder.TextureCoordinates.Add(new System.Windows.Point(mesh.TextureCoordinateChannels[0][i].X, mesh.TextureCoordinateChannels[0][i].Y));
                         }
                     }
 
@@ -449,7 +439,7 @@ namespace TexTool {
                     totalVertices += mesh.VertexCount;
 
                     for (int i = 0; i < mesh.FaceCount; i++) {
-                        var face = mesh.Faces[i];
+                        Face face = mesh.Faces[i];
                         if (face.IndexCount == 3) {
                             builder.TriangleIndices.Add(face.Indices[0]);
                             builder.TriangleIndices.Add(face.Indices[1]);
@@ -493,8 +483,8 @@ namespace TexTool {
 
         private void ResetViewport() {
             // Очищаем только модели, оставляя освещение
-            var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
-            foreach (var model in modelsToRemove) {
+            List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
+            foreach (ModelVisual3D model in modelsToRemove) {
                 viewPort3d.Children.Remove(model);
             }
 
@@ -542,17 +532,24 @@ namespace TexTool {
             }
         }
 
-        private async void ProjectsComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
                 projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
                 MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
 
+                // Проверяем наличие JSON-файла
+                bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
+                if (!jsonLoaded) {
+                    // Если JSON-файл не найден, можно либо предложить подключение к серверу, либо отобразить сообщение.
+                    MessageBox.Show("No saved data found. Please connect to the server.");
+                }
+
                 // Обновляем ветки для выбранного проекта
-                var branchesList = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
-                if (branchesList != null && branchesList.Count > 0) {
+                List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, [], CancellationToken.None);
+                if (branches != null && branches.Count > 0) {
                     Branches.Clear();
-                    foreach (var branch in branchesList) {
+                    foreach (Branch branch in branches) {
                         Branches.Add(branch);
                     }
                     BranchesComboBox.SelectedIndex = 0;
@@ -585,14 +582,14 @@ namespace TexTool {
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
                         TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
 
-                        Helpers.SizeConverter sizeConverter = new();
-                        object size = Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
+                        AssetProcessor.Helpers.SizeConverter sizeConverter = new();
+                        object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
                     });
 
                     // Асинхронная загрузка полной текстуры
                     await Task.Run(() => {
-                        var bitmapImage = new BitmapImage(new Uri(selectedTexture.Path));
+                        BitmapImage bitmapImage = new(new Uri(selectedTexture.Path));
                         bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
 
                         Dispatcher.Invoke(() => {
@@ -613,7 +610,7 @@ namespace TexTool {
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
                 if (texture.Status != null) {
-                    var backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), parameter: 0, CultureInfo.InvariantCulture);
+                    System.Windows.Media.Brush? backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), parameter: 0, CultureInfo.InvariantCulture);
                     e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
                 } else {
                     e.Row.Background = System.Windows.Media.Brushes.Transparent;
@@ -635,8 +632,8 @@ namespace TexTool {
         private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
             if (e.Column.SortMemberPath == "Status") {
                 e.Handled = true;
-                var dataView = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                var direction = (e.Column.SortDirection != ListSortDirection.Ascending) ? ListSortDirection.Ascending : ListSortDirection.Descending;
+                ICollectionView dataView = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
                 dataView.SortDescriptions.Clear();
                 dataView.SortDescriptions.Add(new SortDescription("Status", direction));
                 e.Column.SortDirection = direction;
@@ -653,11 +650,11 @@ namespace TexTool {
         }
 
         private void Setting(object? sender, RoutedEventArgs e) {
-            var settingsWindow = new SettingsWindow();
+            SettingsWindow settingsWindow = new();
             settingsWindow.ShowDialog();
         }
 
-        private async void GetListAssets(object? sender, RoutedEventArgs? e) {
+        private async void GetListAssets(object sender, RoutedEventArgs e) {
             try {
                 CancelButton.IsEnabled = true;
                 if (cancellationTokenSource != null) {
@@ -672,10 +669,13 @@ namespace TexTool {
         }
 
         private async void Connect(object? sender, RoutedEventArgs e) {
-            var cancellationToken = cancellationTokenSource.Token;
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
+                SettingsWindow settingsWindow = new();
+                settingsWindow.ShowDialog();
+                return; // Прерываем выполнение Connect, если данные не заполнены
             } else {
                 try {
                     userName = AppSettings.Default.UserName.ToLower();
@@ -686,12 +686,12 @@ namespace TexTool {
                         await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userID}"));
                     }
 
-                    var projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
                     if (projectsDict != null && projectsDict.Count > 0) {
                         string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
 
                         Projects.Clear();
-                        foreach (var project in projectsDict) {
+                        foreach (KeyValuePair<string, string> project in projectsDict) {
                             Projects.Add(project);
                         }
 
@@ -717,16 +717,16 @@ namespace TexTool {
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken) {
             try {
-                var branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
                 if (branchesList != null && branchesList.Count > 0) {
                     Branches.Clear();
-                    foreach (var branch in branchesList) {
+                    foreach (Branch branch in branchesList) {
                         Branches.Add(branch);
                     }
 
                     string lastSelectedBranchName = AppSettings.Default.LastSelectedBranchName;
                     if (!string.IsNullOrEmpty(lastSelectedBranchName)) {
-                        var selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
+                        Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
                         if (selectedBranch != null) {
                             BranchesComboBox.SelectedValue = selectedBranch.Id;
                         } else {
@@ -756,11 +756,11 @@ namespace TexTool {
         }
 
         private void AboutMenu(object? sender, RoutedEventArgs e) {
-            MessageBox.Show("TexTool v1.0\n\nDeveloped by: SashaRX\n\n2021");
+            MessageBox.Show("AssetProcessor v1.0\n\nDeveloped by: SashaRX\n\n2021");
         }
 
         private void SettingsMenu(object? sender, RoutedEventArgs e) {
-            var settingsWindow = new SettingsWindow();
+            SettingsWindow settingsWindow = new();
             settingsWindow.ShowDialog();
         }
 
@@ -775,8 +775,8 @@ namespace TexTool {
                 return;
             }
 
-            var row1Height = ((RowDefinition)grid.RowDefinitions[0]).ActualHeight;
-            var row2Height = ((RowDefinition)grid.RowDefinitions[1]).ActualHeight;
+            double row1Height = ((RowDefinition)grid.RowDefinitions[0]).ActualHeight;
+            double row2Height = ((RowDefinition)grid.RowDefinitions[1]).ActualHeight;
 
             // Ограничение на минимальные размеры строк
             double minHeight = 137;
@@ -793,11 +793,12 @@ namespace TexTool {
         private static async Task<MaterialResource> ParseMaterialJsonAsync(string filePath) {
             try {
                 string jsonContent = await File.ReadAllTextAsync(filePath);
-                var json = JObject.Parse(jsonContent);
+                JObject json = JObject.Parse(jsonContent);
 
-                var data = json["data"];
+                JToken? data = json["data"];
                 if (data != null) {
-                    var material = new MaterialResource {
+
+                    return new MaterialResource {
                         ID = json["id"]?.ToObject<int>() ?? 0,
                         Name = json["name"]?.ToString() ?? string.Empty,
                         CreatedAt = json["createdAt"]?.ToString() ?? string.Empty,
@@ -852,8 +853,6 @@ namespace TexTool {
                         GlossinessColorChannel = ParseColorChannel(data["glossMapChannel"]?.ToString() ?? string.Empty),
                         AOChannel = ParseColorChannel(data["aoMapChannel"]?.ToString() ?? string.Empty)
                     };
-
-                    return material;
                 }
             } catch (Exception ex) {
                 System.Diagnostics.Debug.WriteLine($"Error parsing material JSON: {ex.Message}");
@@ -873,8 +872,7 @@ namespace TexTool {
         }
 
         private void DisplayMaterialParameters(MaterialResource parameters) {
-            Dispatcher.Invoke(() =>
-            {
+            Dispatcher.Invoke(() => {
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
                 MaterialNameTextBlock.Text = $"Name: {parameters.Name}";
                 MaterialCreatedAtTextBlock.Text = $"Created At: {parameters.CreatedAt}";
@@ -939,7 +937,7 @@ namespace TexTool {
         private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {
             checkBox.IsChecked = isTint;
             if (isTint && colorValues != null && colorValues.Count >= 3) {
-                var color = System.Windows.Media.Color.FromRgb(
+                System.Windows.Media.Color color = System.Windows.Media.Color.FromRgb(
                     (byte)(colorValues[0] * 255),
                     (byte)(colorValues[1] * 255),
                     (byte)(colorValues[2] * 255)
@@ -959,7 +957,7 @@ namespace TexTool {
         private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName) {
             if (hyperlink != null && expander != null) {
                 if (mapId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                    TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
                         hyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
                         hyperlink.Inlines.Clear();
@@ -981,13 +979,13 @@ namespace TexTool {
             if (mapId.HasValue) {
                 System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
 
-                var texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
+                TabItem? texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
                 if (texturesTab != null) {
                     tabControl.SelectedItem = texturesTab;
                 }
 
                 Dispatcher.InvokeAsync(() => {
-                    var texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                    TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null) {
                         TexturesDataGrid.SelectedItem = texture;
                         TexturesDataGrid.ScrollIntoView(texture);
@@ -1028,7 +1026,7 @@ namespace TexTool {
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                 if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
-                    var materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
+                    MaterialResource materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
                     if (materialParameters != null) {
                         selectedMaterial = materialParameters;
                         DisplayMaterialParameters(selectedMaterial); // Передаем весь объект MaterialResource
@@ -1039,9 +1037,9 @@ namespace TexTool {
 
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
             if (textureId.HasValue) {
-                var texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
                 if (texture != null && File.Exists(texture.Path)) {
-                    var bitmapImage = new BitmapImage(new Uri(texture.Path));
+                    BitmapImage bitmapImage = new(new Uri(texture.Path));
                     imageControl.Source = bitmapImage;
                 } else {
                     imageControl.Source = null;
@@ -1053,8 +1051,8 @@ namespace TexTool {
 
         private void TintColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e) {
             if (e.NewValue.HasValue) {
-                var color = e.NewValue.Value;
-                var mediaColor = System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
+                System.Windows.Media.Color color = e.NewValue.Value;
+                System.Windows.Media.Color mediaColor = System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
 
                 MaterialTintColorRect.Background = new SolidColorBrush(mediaColor);
                 MaterialTintColorRect.Text = $"#{mediaColor.A:X2}{mediaColor.R:X2}{mediaColor.G:X2}{mediaColor.B:X2}";
@@ -1071,7 +1069,7 @@ namespace TexTool {
 
         private void AOTintColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e) {
             if (e.NewValue.HasValue) {
-                var newColor = e.NewValue.Value;
+                System.Windows.Media.Color newColor = e.NewValue.Value;
                 MaterialAOTintColorRect.Background = new SolidColorBrush(newColor);
                 MaterialAOTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
 
@@ -1084,7 +1082,7 @@ namespace TexTool {
 
         private void TintSpecularColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<System.Windows.Media.Color?> e) {
             if (e.NewValue.HasValue) {
-                var newColor = e.NewValue.Value;
+                System.Windows.Media.Color newColor = e.NewValue.Value;
                 MaterialSpecularTintColorRect.Background = new SolidColorBrush(newColor);
                 MaterialSpecularTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
 
@@ -1095,7 +1093,7 @@ namespace TexTool {
                 }
             }
         }
-    
+
 
         #endregion
 
@@ -1103,7 +1101,7 @@ namespace TexTool {
 
         private async void Download(object? sender, RoutedEventArgs? e) {
             try {
-                var selectedResources = textures.Where(t => t.Status == "On Server" ||
+                List<BaseResource> selectedResources = [.. textures.Where(t => t.Status == "On Server" ||
                                                             t.Status == "Size Mismatch" ||
                                                             t.Status == "Corrupted" ||
                                                             t.Status == "Empty File" ||
@@ -1122,10 +1120,9 @@ namespace TexTool {
                                                                              m.Status == "Empty File" ||
                                                                              m.Status == "Hash ERROR" ||
                                                                              m.Status == "Error").Cast<BaseResource>())
-                                                .OrderBy(r => r.Name)
-                                                .ToList();
+                                                .OrderBy(r => r.Name)];
 
-                var downloadTasks = selectedResources.Select(resource => DownloadResourceAsync(resource));
+                IEnumerable<Task> downloadTasks = selectedResources.Select(resource => DownloadResourceAsync(resource));
                 await Task.WhenAll(downloadTasks);
 
                 // Пересчитываем индексы после завершения загрузки
@@ -1174,9 +1171,9 @@ namespace TexTool {
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    var playCanvasService = new PlayCanvasService();
-                    var apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    var materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
+                    PlayCanvasService playCanvasService = new();
+                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
+                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
 
                     // Изменение: заменяем последнюю папку на файл с расширением .json
@@ -1205,7 +1202,7 @@ namespace TexTool {
         }
 
         private static async Task DownloadFileAsync(BaseResource resource) {
-            if (resource == null || string.IsNullOrEmpty(resource.Path)){ // Если путь к файлу не указан, создаем его в папке проекта
+            if (resource == null || string.IsNullOrEmpty(resource.Path)) { // Если путь к файлу не указан, создаем его в папке проекта
                 return;
             }
 
@@ -1214,21 +1211,21 @@ namespace TexTool {
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    using var client = new HttpClient();
+                    using HttpClient client = new();
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
 
-                    var response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
+                    HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
 
                     if (!response.IsSuccessStatusCode) {
                         throw new Exception($"Failed to download resource: {response.StatusCode}");
                     }
 
-                    var totalBytes = response.Content.Headers.ContentLength ?? 0L;
-                    var buffer = new byte[8192];
-                    var bytesRead = 0;
+                    long totalBytes = response.Content.Headers.ContentLength ?? 0L;
+                    byte[] buffer = new byte[8192];
+                    int bytesRead = 0;
 
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    using (var fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                    using (Stream stream = await response.Content.ReadAsStreamAsync())
+                    using (FileStream fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
                         while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
                             await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
                             resource.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
@@ -1243,7 +1240,7 @@ namespace TexTool {
                     }
 
                     // Дополнительное логирование размера файла
-                    var fileInfo = new FileInfo(resource.Path);
+                    FileInfo fileInfo = new(resource.Path);
                     long fileSizeInBytes = fileInfo.Length;
                     long resourceSizeInBytes = resource.Size;
                     MainWindowHelpers.LogInfo($"File size after download: {fileSizeInBytes}");
@@ -1289,16 +1286,21 @@ namespace TexTool {
                     return;
                 }
 
-                var selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                var selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
-                var assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
                 if (assetsResponse != null) {
                     // Сохраняем JSON-ответ в файл
-                    if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)){
-                        return;
+
+                    if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
+                        string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+                        await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
+                        if (!File.Exists(jsonFilePath)) {
+                            MessageBox.Show($"Failed to save the JSON file to {jsonFilePath}. Please check your permissions.");
+                        }
                     }
-                    await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
+
 
                     UpdateConnectionStatus(true);
 
@@ -1306,7 +1308,7 @@ namespace TexTool {
                     models.Clear(); // Очищаем текущий список моделей
                     materials.Clear(); // Очищаем текущий список материалов
 
-                    var supportedAssets = assetsResponse.Where(asset => asset["file"] != null).ToList();
+                    List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
                     int assetCount = supportedAssets.Count;
 
                     await Dispatcher.InvokeAsync(() =>
@@ -1316,9 +1318,9 @@ namespace TexTool {
                         ProgressTextBlock.Text = $"0/{assetCount}";
                     });
 
-                    var tasks = supportedAssets.Select(asset => Task.Run(async () =>
+                    IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
                     {
-                        await ProcessAsset(asset, assetCount, cancellationToken);  // Передаем аргумент cancellationToken
+                        await ProcessAsset(asset, 0, cancellationToken);  // Передаем аргумент cancellationToken
                         await Dispatcher.InvokeAsync(() =>
                         {
                             ProgressBar.Value++;
@@ -1340,15 +1342,13 @@ namespace TexTool {
 
         private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
             try {
-                // Convert JToken to JSON string
-                string jsonString = jsonResponse.ToString(Formatting.Indented);
-
-                // Determine the file path
                 string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
 
-                System.Diagnostics.Debug.WriteLine($"Saving JSON to file: {jsonFilePath}");
+                if (!Directory.Exists(Path.Combine(projectFolderPath, projectName))) {
+                    Directory.CreateDirectory(Path.Combine(projectFolderPath, projectName));
+                }
 
-                // Save JSON to file
+                string jsonString = jsonResponse.ToString(Formatting.Indented);
                 await File.WriteAllTextAsync(jsonFilePath, jsonString);
 
                 MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
@@ -1375,7 +1375,7 @@ namespace TexTool {
                     return;
                 }
 
-                var file = asset["file"];
+                JToken? file = asset["file"];
                 if (file == null || file.Type != JTokenType.Object) {
                     MainWindowHelpers.LogError("Invalid asset file format");
                     return;
@@ -1418,11 +1418,11 @@ namespace TexTool {
                 }
 
                 try {
-                    var model = new ModelResource {
+                    ModelResource model = new() {
                         ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                         Index = index,
                         Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
-                        Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
+                        Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                         Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
                         Path = GetResourcePath("models", asset["name"]?.ToString()),
                         Extension = extension,
@@ -1482,11 +1482,11 @@ namespace TexTool {
 
         private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
             try {
-                var texture = new TextureResource {
+                TextureResource texture = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
                     Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
-                    Size = int.TryParse(asset["file"]?["size"]?.ToString(), out var size) ? size : 0,
+                    Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
                     Path = GetResourcePath("textures", asset["name"]?.ToString()),
                     Extension = extension,
@@ -1502,7 +1502,7 @@ namespace TexTool {
 
                     switch (texture.Status) {
                         case "Downloaded":
-                            var resolution = MainWindowHelpers.GetLocalImageResolution(texture.Path);
+                            (int width, int height)? resolution = MainWindowHelpers.GetLocalImageResolution(texture.Path);
                             if (resolution.HasValue) {
                                 texture.Resolution[0] = resolution.Value.width;
                                 texture.Resolution[1] = resolution.Value.height;
@@ -1538,7 +1538,7 @@ namespace TexTool {
             try {
                 string name = asset["name"]?.ToString() ?? "Unknown";
 
-                var material = new MaterialResource {
+                MaterialResource material = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
                     Name = name,
@@ -1546,7 +1546,7 @@ namespace TexTool {
                     Path = GetResourcePath("materials", $"{name}.json"),
                     Status = "On Server",
                     Hash = string.Empty, // У материалов нет хеша
-                    //TextureIds = []
+                                         //TextureIds = []
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {
@@ -1569,9 +1569,9 @@ namespace TexTool {
                             break;
                     }
 
-                    var playCanvasService = new PlayCanvasService();
-                    var apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    var materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
+                    PlayCanvasService playCanvasService = new();
+                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
+                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 
                     //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
                     //    material.TextureIds.AddRange(from textureId in materialJson["textures"]!
@@ -1585,6 +1585,64 @@ namespace TexTool {
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error processing material: {ex.Message}");
             }
+        }
+
+        private async Task InitializeAsync() {
+            // Попробуйте загрузить данные из сохраненного JSON
+            bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
+            if (!jsonLoaded) {
+                MessageBox.Show("No saved data found. Please ensure the JSON file is available.");
+            }
+        }
+
+        private async Task<bool> LoadAssetsFromJsonFileAsync() {
+            try {
+                if (String.IsNullOrEmpty(projectFolderPath) || String.IsNullOrEmpty(projectName)) {
+                    throw new Exception("Project folder path or name is null or empty");
+                }
+
+                string jsonFilePath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
+                if (File.Exists(jsonFilePath)) {
+                    string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
+                    JToken assetsResponse = JToken.Parse(jsonContent);
+                    await ProcessAssetsFromJson(assetsResponse);
+                    return true;
+                }
+            } catch (JsonReaderException ex) {
+                MessageBox.Show($"Invalid JSON format: {ex.Message}");
+            } catch (Exception ex) {
+                MessageBox.Show($"Error loading JSON file: {ex.Message}");
+            }
+            return false;
+        }
+
+        private async Task ProcessAssetsFromJson(JToken assetsResponse) {
+            textures.Clear();
+            models.Clear();
+            materials.Clear();
+
+            List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
+            int assetCount = supportedAssets.Count;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                ProgressBar.Value = 0;
+                ProgressBar.Maximum = assetCount;
+                ProgressTextBlock.Text = $"0/{assetCount}";
+            });
+
+            IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
+            {
+                await ProcessAsset(asset, 0, CancellationToken.None); // Используем токен отмены по умолчанию
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ProgressBar.Value++;
+                    ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
+                });
+            }));
+
+            await Task.WhenAll(tasks);
+            RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
         }
 
         #endregion
@@ -1616,20 +1674,20 @@ namespace TexTool {
         private void RecalculateIndices() {
             Dispatcher.Invoke(() => {
                 int index = 1;
-                foreach (var texture in textures) {
+                foreach (TextureResource texture in textures) {
                     texture.Index = index++;
                 }
                 TexturesDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
 
                 index = 1;
-                foreach (var model in models) {
+                foreach (ModelResource model in models) {
                     model.Index = index++;
                 }
                 ModelsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
 
                 index = 1;
 
-                foreach (var material in materials) {
+                foreach (MaterialResource material in materials) {
                     material.Index = index++;
                 }
                 MaterialsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
@@ -1666,14 +1724,14 @@ namespace TexTool {
             AppSettings.Default.Save();
         }
 
-        private async void LoadLastSettings() {
+        private async Task LoadLastSettings() {
             try {
                 userName = AppSettings.Default.UserName.ToLower();
                 if (string.IsNullOrEmpty(userName)) {
                     throw new Exception("Username is null or empty");
                 }
 
-                var cancellationToken = new CancellationToken();
+                CancellationToken cancellationToken = new();
 
                 userID = await playCanvasService.GetUserIdAsync(userName, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
                 if (string.IsNullOrEmpty(userID)) {
@@ -1681,11 +1739,11 @@ namespace TexTool {
                 } else {
                     UpdateConnectionStatus(true, $"by userID: {userID}");
                 }
-                var projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
 
                 if (projectsDict != null && projectsDict.Count > 0) {
                     Projects.Clear();
-                    foreach (var project in projectsDict) {
+                    foreach (KeyValuePair<string, string> project in projectsDict) {
                         Projects.Add(project);
                     }
 
@@ -1697,11 +1755,11 @@ namespace TexTool {
 
                     if (ProjectsComboBox.SelectedItem != null) {
                         string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                        var branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                        List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
 
                         if (branchesList != null && branchesList.Count > 0) {
                             Branches.Clear();
-                            foreach (var branch in branchesList) {
+                            foreach (Branch branch in branchesList) {
                                 Branches.Add(branch);
                             }
 
@@ -1710,7 +1768,7 @@ namespace TexTool {
                             BranchesComboBox.SelectedValuePath = "Id";
 
                             if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
-                                var selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
+                                Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
                                 if (selectedBranch != null) {
                                     BranchesComboBox.SelectedValue = selectedBranch.Id;
                                 } else {
@@ -1727,7 +1785,6 @@ namespace TexTool {
                 MessageBox.Show($"Error loading last settings: {ex.Message}");
             }
         }
-
         #endregion
     }
 }

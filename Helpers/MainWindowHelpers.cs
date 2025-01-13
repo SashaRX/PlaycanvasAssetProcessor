@@ -1,26 +1,22 @@
-﻿using Newtonsoft.Json.Linq;
-
+﻿using AssetProcessor.Helpers;
+using AssetProcessor.Resources;
+using HelixToolkit.Wpf;
+using Newtonsoft.Json.Linq;
 using OxyPlot;
 using OxyPlot.Series;
-
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Advanced;
-
-
+using SixLabors.ImageSharp.PixelFormats;
 using System.IO;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
-using System.Text.RegularExpressions;
-using HelixToolkit.Wpf;
-using TexTool.Helpers;
-using TexTool.Resources;
 
 
-namespace TexTool.Helpers {
+namespace AssetProcessor.Helpers {
     internal static partial class MainWindowHelpers {
         [GeneratedRegex(@"[\[\]]")]
         public static partial Regex BracketsRegex();
@@ -32,8 +28,8 @@ namespace TexTool.Helpers {
         public static readonly object logLock = new();
 
         public static string CleanProjectName(string input) {
-            var bracketsRegex = BracketsRegex();
-            var parts = input.Split(',');
+            Regex bracketsRegex = BracketsRegex();
+            string[] parts = input.Split(',');
             if (parts.Length > 1) {
                 return bracketsRegex.Replace(parts[1], "").Trim();
             }
@@ -41,8 +37,8 @@ namespace TexTool.Helpers {
         }
 
         public static void AddSeriesToModel(PlotModel model, int[] histogram, OxyColor color) {
-            var colorWithAlpha = OxyColor.FromAColor(100, color);
-            var series = new AreaSeries { Color = color, Fill = colorWithAlpha, StrokeThickness = 1 };
+            OxyColor colorWithAlpha = OxyColor.FromAColor(100, color);
+            AreaSeries series = new(){Color = color, Fill = colorWithAlpha, StrokeThickness = 1 };
 
             double[] smoothedHistogram = MovingAverage(histogram, 32);
 
@@ -55,7 +51,7 @@ namespace TexTool.Helpers {
         }
 
         public static async Task<BitmapSource> ApplyChannelFilterAsync(BitmapSource source, string channel) {
-            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(source));
+            using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(source));
 
             await Task.Run(() => {
                 switch (channel) {
@@ -78,9 +74,9 @@ namespace TexTool.Helpers {
         }
 
         public static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
-            var encoder = new PngBitmapEncoder(); // Или любой другой доступный энкодер
+            PngBitmapEncoder encoder = new(); // Или любой другой доступный энкодер
             encoder.Frames.Add(BitmapFrame.Create((BitmapSource)bitmapSource.Clone()));
-            using var stream = new MemoryStream();
+            using MemoryStream stream = new();
             encoder.Save(stream);
             return stream.ToArray();
         }
@@ -99,9 +95,9 @@ namespace TexTool.Helpers {
 
         public static GeometryModel3D CreateArrowModel(Point3D start, Point3D end, double thickness, double coneHeight, double coneRadius, System.Windows.Media.Color color) {
             MeshBuilder meshBuilder = new();
-            var direction = new System.Windows.Media.Media3D.Vector3D(end.X - start.X, end.Y - start.Y, end.Z - start.Z);
+            Vector3D direction = new(end.X - start.X, end.Y - start.Y, end.Z - start.Z);
             direction.Normalize();
-            var cylinderEnd = end - direction * coneHeight;
+            Point3D cylinderEnd = end - direction * coneHeight;
             meshBuilder.AddCylinder(start, cylinderEnd, thickness, 36, false, true);
             meshBuilder.AddCone(cylinderEnd,
                                 direction,
@@ -111,8 +107,8 @@ namespace TexTool.Helpers {
                                 true,
                                 false,
                                 36);
-            var geometry = meshBuilder.ToMesh(true);
-            var material = new EmissiveMaterial(new SolidColorBrush(color));
+            MeshGeometry3D geometry = meshBuilder.ToMesh(true);
+            EmissiveMaterial material = new(new SolidColorBrush(color));
             return new GeometryModel3D(geometry, material);
         }
 
@@ -147,7 +143,7 @@ namespace TexTool.Helpers {
             zLabel.Transform = transformGroup;
 
             // Добавляем подписи к модели
-            var gizmoGroup = new ModelVisual3D();
+            ModelVisual3D gizmoGroup = new();
             gizmoGroup.Children.Add(modelVisual);
             gizmoGroup.Children.Add(xLabel);
             gizmoGroup.Children.Add(yLabel);
@@ -157,14 +153,14 @@ namespace TexTool.Helpers {
         }
 
         public static BillboardTextVisual3D CreateTextLabel(string text, System.Windows.Media.Color color, Point3D position) {
-            var textBlock = new TextBlock {
+            TextBlock textBlock = new() {
                 Text = text,
                 Foreground = new SolidColorBrush(color),
                 Background = System.Windows.Media.Brushes.Transparent
             };
 
-            var visualBrush = new VisualBrush(textBlock);
-            var material = new EmissiveMaterial(visualBrush);
+            VisualBrush visualBrush = new(textBlock);
+            EmissiveMaterial material = new(visualBrush);
 
             return new BillboardTextVisual3D {
                 Text = text,
@@ -178,7 +174,7 @@ namespace TexTool.Helpers {
         public static BitmapImage? CreateThumbnailImage(string? imagePath) {
             if (!string.IsNullOrEmpty(imagePath)) {
                 if (File.Exists(imagePath)) {
-                    var bitmapImage = new BitmapImage();
+                    BitmapImage bitmapImage = new();
                     bitmapImage.BeginInit();
                     bitmapImage.UriSource = new Uri(imagePath);
                     bitmapImage.DecodePixelWidth = 64; // Задаем ширину уменьшенного изображения
@@ -274,11 +270,11 @@ namespace TexTool.Helpers {
         }
 
         public static void ProcessImage(BitmapSource bitmapSource, int[] redHistogram, int[] greenHistogram, int[] blueHistogram) {
-            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
+            using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
             Parallel.For(0, image.Height, y => {
                 Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
-                    var pixel = pixelRow[x];
+                    Rgba32 pixel = pixelRow[x];
                     redHistogram[pixel.R]++;
                     greenHistogram[pixel.G]++;
                     blueHistogram[pixel.B]++;
@@ -288,7 +284,7 @@ namespace TexTool.Helpers {
 
         public static (int width, int height)? GetLocalImageResolution(string imagePath) {
             try {
-                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imagePath);
+                using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(imagePath);
                 return (image.Width, image.Height);
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error loading image for resolution: {ex.Message}");
@@ -307,7 +303,7 @@ namespace TexTool.Helpers {
 
             try {
                 string absoluteUrl = new Uri(new Uri(baseUrl), texture.Url).ToString(); // Ensure the URL is absolute
-                var (Width, Height) = await ImageHelper.GetImageResolutionAsync(absoluteUrl, cancellationToken);
+                (int Width, int Height) = await ImageHelper.GetImageResolutionAsync(absoluteUrl, cancellationToken);
                 texture.Resolution = [Width, Height];
                 LogError($"Successfully retrieved resolution for {absoluteUrl}: {Width}x{Height}");
             } catch (Exception ex) {
@@ -337,7 +333,7 @@ namespace TexTool.Helpers {
                     LogInfo($"{resource.Name} not found on disk: {resource.Path}");
                     resource.Status = "On Server";
                 } else {
-                    var fileInfo = new FileInfo(resource.Path);
+                    FileInfo fileInfo = new(resource.Path);
                     LogInfo($"{resource.Name} found on disk: {resource.Path}");
 
                     if (fileInfo.Length == 0) {

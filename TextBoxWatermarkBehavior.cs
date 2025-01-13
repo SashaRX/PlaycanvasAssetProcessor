@@ -1,8 +1,8 @@
-﻿using System.Windows;
+﻿using Microsoft.Xaml.Behaviors;
+using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Xaml.Behaviors;
 
-namespace TexTool {
+namespace AssetProcessor {
     public class TextBoxWatermarkBehavior : Behavior<TextBox> {
         public static readonly DependencyProperty WatermarkProperty =
             DependencyProperty.Register(nameof(Watermark), typeof(string), typeof(TextBoxWatermarkBehavior), new PropertyMetadata(default(string)));

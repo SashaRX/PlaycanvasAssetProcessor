@@ -1,5 +1,4 @@
-﻿using TexTool;
-namespace TexTool.Resources {
+﻿namespace AssetProcessor.Resources {
 
     public class MaterialResource : BaseResource {
         public string? Shader { get; set; }

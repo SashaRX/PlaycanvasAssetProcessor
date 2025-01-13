@@ -89,5 +89,6 @@
             get => (string)this[nameof(LastSelectedBranchName)];
             set => this[nameof(LastSelectedBranchName)] = value;
         }
+        public string? LastSelectedBranchId { get; internal set; }
     }
 }

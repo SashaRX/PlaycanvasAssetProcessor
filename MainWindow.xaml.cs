@@ -29,6 +29,8 @@ using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 using PointF = System.Drawing.PointF;
 using System.Linq;
+using System.Configuration;
+using System.Threading;
 
 namespace AssetProcessor {
     public enum ColorChannel {
@@ -686,7 +688,7 @@ namespace AssetProcessor {
                         await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userID}"));
                     }
 
-                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, new(), AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
                     if (projectsDict != null && projectsDict.Count > 0) {
                         string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
 
@@ -1171,9 +1173,9 @@ namespace AssetProcessor {
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    PlayCanvasService playCanvasService = new();
+                    PlayCanvasService playCanvasService = kupkukuujkukuikuktjykyuyjyujhkuukukkukuukkukukukukfjghjghjghjrtrtyhrtytrynew();
                     string apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
+                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), cancellationToken)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
 
                     // Изменение: заменяем последнюю папку на файл с расширением .json
@@ -1289,10 +1291,16 @@ namespace AssetProcessor {
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
-                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
-                if (assetsResponse != null) {
-                    // Сохраняем JSON-ответ в файл
+                SaveProjectConfig(selectedProjectId, selectedBranchId);
 
+                // Проверяем, что API-ключ не пустой
+                if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey)) {
+                    throw new ArgumentNullException(nameof(AppSettings.Default.PlaycanvasApiKey), "API Key cannot be null or empty");
+                }
+
+                // Убираем передачу лишнего параметра в метод GetAssetsAsync
+                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, cancellationToken);
+                if (assetsResponse != null) {
                     if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
                         string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
                         await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
@@ -1301,28 +1309,24 @@ namespace AssetProcessor {
                         }
                     }
 
-
                     UpdateConnectionStatus(true);
 
-                    textures.Clear(); // Очищаем текущий список текстур
-                    models.Clear(); // Очищаем текущий список моделей
-                    materials.Clear(); // Очищаем текущий список материалов
+                    textures.Clear();
+                    models.Clear();
+                    materials.Clear();
 
                     List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
                     int assetCount = supportedAssets.Count;
 
-                    await Dispatcher.InvokeAsync(() =>
-                    {
+                    await Dispatcher.InvokeAsync(() => {
                         ProgressBar.Value = 0;
                         ProgressBar.Maximum = assetCount;
                         ProgressTextBlock.Text = $"0/{assetCount}";
                     });
 
-                    IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
-                    {
-                        await ProcessAsset(asset, 0, cancellationToken);  // Передаем аргумент cancellationToken
-                        await Dispatcher.InvokeAsync(() =>
-                        {
+                    IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () => {
+                        await ProcessAsset(asset, 0, cancellationToken);
+                        await Dispatcher.InvokeAsync(() => {
                             ProgressBar.Value++;
                             ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
                         });
@@ -1330,34 +1334,13 @@ namespace AssetProcessor {
 
                     await Task.WhenAll(tasks);
 
-                    RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
+                    RecalculateIndices();
                 } else {
                     UpdateConnectionStatus(false, "Failed to connect");
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error in TryConnect: {ex.Message}");
                 MainWindowHelpers.LogError($"Error in TryConnect: {ex}");
-            }
-        }
-
-        private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
-            try {
-                string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
-
-                if (!Directory.Exists(Path.Combine(projectFolderPath, projectName))) {
-                    Directory.CreateDirectory(Path.Combine(projectFolderPath, projectName));
-                }
-
-                string jsonString = jsonResponse.ToString(Formatting.Indented);
-                await File.WriteAllTextAsync(jsonFilePath, jsonString);
-
-                MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
-            } catch (ArgumentNullException ex) {
-                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
-            } catch (ArgumentException ex) {
-                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
             }
         }
 
@@ -1573,7 +1556,7 @@ namespace AssetProcessor {
                             break;
                     }
 
-                    PlayCanvasService playCanvasService = new();
+                    PlayCanvasService playCanvasService =  new();
                     string apiKey = AppSettings.Default.PlaycanvasApiKey;
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 
@@ -1592,10 +1575,35 @@ namespace AssetProcessor {
         }
 
         private async Task InitializeAsync() {
-            // Попробуйте загрузить данные из сохраненного JSON
+            if (!LoadProjectConfig()) {
+                MessageBox.Show("No project configuration found. Please select a project and branch.");
+                return;
+            }
+
             bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
             if (!jsonLoaded) {
-                MessageBox.Show("No saved data found. Please ensure the JSON file is available.");
+                MessageBox.Show("No saved assets data found. Please connect to the server to download assets.");
+            }
+        }
+
+        private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
+            try {
+                string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+
+                if (!Directory.Exists(Path.Combine(projectFolderPath, projectName))) {
+                    Directory.CreateDirectory(Path.Combine(projectFolderPath, projectName));
+                }
+
+                string jsonString = jsonResponse.ToString(Formatting.Indented);
+                await File.WriteAllTextAsync(jsonFilePath, jsonString);
+
+                MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
+            } catch (ArgumentNullException ex) {
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
+            } catch (ArgumentException ex) {
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
             }
         }
 
@@ -1647,6 +1655,91 @@ namespace AssetProcessor {
 
             await Task.WhenAll(tasks);
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
+        }
+
+        private void SaveProjectConfig(string projectId, string branchId) {
+            try {
+
+                if (string.IsNullOrEmpty(projectFolderPath)) {
+                    throw new Exception("Project folder path cannot be null or empty.");
+                }
+
+                string configFilePath = Path.Combine(projectFolderPath, "project_config.json");
+
+                var configData = new {
+                    ProjectId = projectId,
+                    BranchId = branchId,
+                    ProjectName = projectName,
+                    FolderPath = projectFolderPath
+                };
+
+                string jsonString = JsonConvert.SerializeObject(configData, Formatting.Indented);
+                File.WriteAllText(configFilePath, jsonString);
+
+                MainWindowHelpers.LogInfo("Project configuration saved successfully.");
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error saving project configuration: {ex.Message}");
+            }
+        }
+
+        private bool LoadProjectConfig() {
+            try {
+                if (string.IsNullOrEmpty(projectFolderPath)) {
+                    throw new Exception("Project folder path is null or empty");
+                }
+
+                string configFilePath = Path.Combine(projectFolderPath, "project_config.json");
+
+                if (File.Exists(configFilePath)) {
+                    string jsonContent = File.ReadAllText(configFilePath);
+                    dynamic? configData = JsonConvert.DeserializeObject<dynamic>(jsonContent);
+
+                    projectFolderPath = configData?.FolderPath ?? string.Empty;
+                    projectName = configData?.ProjectName ?? string.Empty;
+                    string projectId = configData?.ProjectId ?? string.Empty;
+                    string branchId = configData?.BranchId ?? string.Empty;
+
+                    // Устанавливаем сохраненные данные в UI, если нужно
+                    AppSettings.Default.LastSelectedProjectId = projectId;
+                    AppSettings.Default.LastSelectedBranchId = branchId;
+
+                    return true;
+                } else {
+                    MainWindowHelpers.LogError("Project configuration file not found.");
+                }
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error loading project configuration: {ex.Message}");
+            }
+            return false;
+        }
+
+        public static ProjectConfig InitializeConfig() {
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project_config.json");
+
+            try {
+                // Загружаем и валидируем настройки проекта
+                ProjectConfig config = ProjectConfig.Load(configPath);
+                Console.WriteLine("Project configuration loaded successfully.");
+                return config;
+            } catch (FileNotFoundException) {
+                Console.WriteLine("Configuration file not found. Creating a default configuration...");
+                ProjectConfig defaultConfig = new() {
+                    ProjectId = "your_project_id",
+                    BranchId = "main",
+                    PlaycanvasApiKey = "your_api_key",
+                    ProjectsFolderPath = "C:\\PlayCanvasProjects\\"
+                };
+                defaultConfig.Save(configPath);
+                return defaultConfig;
+            } catch (ConfigurationErrorsException ex) {
+                Console.WriteLine($"Invalid configuration: {ex.Message}");
+                Environment.Exit(1);
+                throw; // Никогда не достигнет сюда, добавлено для соответствия синтаксису.
+            } catch (Exception ex) {
+                Console.WriteLine($"Unexpected error: {ex.Message}");
+                Environment.Exit(1);
+                throw;
+            }
         }
 
         #endregion
@@ -1743,7 +1836,7 @@ namespace AssetProcessor {
                 } else {
                     UpdateConnectionStatus(true, $"by userID: {userID}");
                 }
-                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, new(), AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
 
                 if (projectsDict != null && projectsDict.Count > 0) {
                     Projects.Clear();

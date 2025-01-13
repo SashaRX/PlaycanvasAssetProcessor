@@ -1352,6 +1352,10 @@ namespace AssetProcessor {
                 await File.WriteAllTextAsync(jsonFilePath, jsonString);
 
                 MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
+            } catch (ArgumentNullException ex) {
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
+            } catch (ArgumentException ex) {
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
             }

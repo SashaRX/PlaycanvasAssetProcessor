@@ -124,10 +124,10 @@ PlaycanvasAssetProcessor/
 - C# 12 с nullable reference types
 
 #### NuGet пакеты
-- **3D и графика**: AssimpNet 5.4.0, HelixToolkit.Wpf 2.25.0
-- **Обработка изображений**: SixLabors.ImageSharp 3.1.6, System.Drawing.Common 9.0.0
+- **3D и графика**: AssimpNet 5.0.0-beta1, HelixToolkit.Wpf 2.25.0
+- **Обработка изображений**: SixLabors.ImageSharp 3.1.7, System.Drawing.Common 9.0.0
 - **UI компоненты**: Extended.Wpf.Toolkit 4.6.1, OxyPlot.Wpf 2.2.0, Ookii.Dialogs.Wpf 5.0.1
-- **MVVM и DI**: CommunityToolkit.Mvvm 8.3.2, Microsoft.Extensions.DependencyInjection 9.0.0
+- **MVVM и DI**: CommunityToolkit.Mvvm 8.2.2, Microsoft.Extensions.DependencyInjection 8.0.1, Microsoft.Extensions.Hosting 8.0.1
 - **Сериализация и логирование**: Newtonsoft.Json 13.0.3, NLog 5.3.4
 
 ---
@@ -218,6 +218,44 @@ PlaycanvasAssetProcessor/
 1. Удалите поврежденный файл из папки проекта
 2. Повторите загрузку
 3. Если проблема повторяется, уменьшите `DownloadSemaphoreLimit`
+
+### Проблема: Ошибки восстановления NuGet пакетов (NU1100, NU1102)
+
+**Симптомы**:
+```
+error NU1100: Не удалось разрешить "Microsoft.Extensions.DependencyInjection..."
+error NU1102: Не удалось найти пакет AssimpNet с версией...
+PackageSourceMapping включен, следующие источники не рассматривались
+```
+
+**Причина**: Глобальный PackageSourceMapping блокирует доступ к пакетам.
+
+**Решение**:
+1. Проект уже содержит локальный `nuget.config` с правильными настройками
+2. Если проблема сохраняется, очистите кэш NuGet:
+   ```bash
+   dotnet nuget locals all --clear
+   ```
+3. Восстановите пакеты заново:
+   ```bash
+   dotnet restore
+   ```
+4. Если используете Visual Studio - перезапустите IDE
+
+**Альтернативное решение** (если проблема не решена):
+Отредактируйте глобальный NuGet.config в `%APPDATA%\NuGet\NuGet.Config` и удалите или закомментируйте секцию `<packageSourceMapping>`.
+
+### Проблема: Уязвимости безопасности в пакетах (NU1903, NU1902)
+
+**Симптомы**:
+```
+warning NU1903: У пакета "SixLabors.ImageSharp" ... есть известная уязвимость
+```
+
+**Решение**:
+Проект уже обновлен до безопасной версии SixLabors.ImageSharp 3.1.7, которая устраняет уязвимости. Если предупреждение остается:
+1. Очистите кэш: `dotnet nuget locals all --clear`
+2. Восстановите: `dotnet restore --force`
 
 ### Проблема: Приложение не запускается
 

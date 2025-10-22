@@ -72,10 +72,11 @@
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
 
-                    <ComboBox x:Name="BranchesComboBox" 
-                              DisplayMemberPath="Name" 
+                    <ComboBox x:Name="BranchesComboBox"
+                              ItemsSource="{Binding Branches}"
+                              DisplayMemberPath="Name"
                               SelectedValuePath="Id"
-                              SelectionChanged="BranchesComboBox_SelectionChanged" 
+                              SelectionChanged="BranchesComboBox_SelectionChanged"
                               Margin="4,2,4,2" MinWidth="50" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
                         <ComboBox.ItemContainerStyle>
                             <Style TargetType="ComboBoxItem">

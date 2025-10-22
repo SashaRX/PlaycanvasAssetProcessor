@@ -12,6 +12,9 @@
 
   <ItemGroup>
     <None Remove="colorPicker.png" />
+    <!-- Exclude Unity Editor script from WPF project compilation -->
+    <Compile Remove="PlayCanvasImporterWindow.cs" />
+    <None Include="PlayCanvasImporterWindow.cs" />
   </ItemGroup>
 
   <ItemGroup>

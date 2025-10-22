@@ -1767,10 +1767,6 @@ namespace AssetProcessor {
                                 Branches.Add(branch);
                             }
 
-                            BranchesComboBox.ItemsSource = Branches;
-                            BranchesComboBox.DisplayMemberPath = "Name";
-                            BranchesComboBox.SelectedValuePath = "Id";
-
                             if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
                                 Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
                                 if (selectedBranch != null) {

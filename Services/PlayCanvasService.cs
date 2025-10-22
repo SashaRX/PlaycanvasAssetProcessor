@@ -1,9 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using AssetProcessor.Exceptions;
+using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 
 namespace AssetProcessor.Services {
-    public class PlayCanvasService {
+    public class PlayCanvasService : IPlayCanvasService {
         private readonly HttpClient client;
 
         public PlayCanvasService() {
@@ -12,7 +13,10 @@ namespace AssetProcessor.Services {
 
         private void AddAuthorizationHeader(string? apiKey) {
             if (string.IsNullOrEmpty(apiKey)) {
-                throw new Exception("API key is null or empty");
+                throw new InvalidConfigurationException(
+                    "API key is required but was not provided",
+                    "PlaycanvasApiKey",
+                    apiKey);
             }
             if (client.DefaultRequestHeaders.Contains("Authorization")) {
                 client.DefaultRequestHeaders.Remove("Authorization");
@@ -25,12 +29,28 @@ namespace AssetProcessor.Services {
 
             AddAuthorizationHeader(apiKey: apiKey);
 
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try {
+                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
 
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            JObject json = JObject.Parse(responseBody);
-            return json["id"]?.ToString() ?? throw new Exception("User ID is null");
+                if (!response.IsSuccessStatusCode) {
+                    throw new PlayCanvasApiException(
+                        $"Failed to get user ID for username '{username}'",
+                        url,
+                        (int)response.StatusCode);
+                }
+
+                string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                JObject json = JObject.Parse(responseBody);
+                return json["id"]?.ToString() ?? throw new PlayCanvasApiException(
+                    "User ID is null in API response",
+                    url);
+            } catch (HttpRequestException ex) {
+                throw new NetworkException(
+                    $"Network error while fetching user ID for '{username}'",
+                    url,
+                    0,
+                    ex);
+            }
         }
 
         public async Task<Dictionary<string, string>> GetProjectsAsync(string? userId, string? apiKey, Dictionary<string, string> projects, CancellationToken cancellationToken) {
@@ -38,21 +58,38 @@ namespace AssetProcessor.Services {
 
             AddAuthorizationHeader(apiKey);
 
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try {
+                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
 
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            JObject json = JObject.Parse(responseBody);
-            JArray projectsArray = json["result"] as JArray ?? throw new Exception("Projects array is null");
-            foreach (JToken project in projectsArray) {
-                string? projectId = project["id"]?.ToString();
-                string? projectName = project["name"]?.ToString();
-                if (projectId != null && projectName != null) {
-                    projects.Add(projectId, projectName);
+                if (!response.IsSuccessStatusCode) {
+                    throw new PlayCanvasApiException(
+                        $"Failed to get projects for user ID '{userId}'",
+                        url,
+                        (int)response.StatusCode);
                 }
-            }
 
-            return projects;
+                string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                JObject json = JObject.Parse(responseBody);
+                JArray projectsArray = json["result"] as JArray ?? throw new PlayCanvasApiException(
+                    "Projects array is null in API response",
+                    url);
+
+                foreach (JToken project in projectsArray) {
+                    string? projectId = project["id"]?.ToString();
+                    string? projectName = project["name"]?.ToString();
+                    if (projectId != null && projectName != null) {
+                        projects.Add(projectId, projectName);
+                    }
+                }
+
+                return projects;
+            } catch (HttpRequestException ex) {
+                throw new NetworkException(
+                    $"Network error while fetching projects for user ID '{userId}'",
+                    url,
+                    0,
+                    ex);
+            }
         }
 
         public async Task<List<Branch>> GetBranchesAsync(string projectId, string apiKey, List<Branch> branches, CancellationToken cancellationToken) {
@@ -60,21 +97,38 @@ namespace AssetProcessor.Services {
 
             AddAuthorizationHeader(apiKey);
 
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try {
+                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
 
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            JObject json = JObject.Parse(responseBody);
-            JArray branchesArray = json["result"] as JArray ?? throw new Exception("Branches array is null");
-            foreach (JToken branch in branchesArray) {
-                string? branchID = branch["id"]?.ToString();
-                string? branchName = branch["name"]?.ToString();
-                if (branchID != null && branchName != null) {
-                    branches.Add(new Branch { Id = branchID, Name = branchName });
+                if (!response.IsSuccessStatusCode) {
+                    throw new PlayCanvasApiException(
+                        $"Failed to get branches for project ID '{projectId}'",
+                        url,
+                        (int)response.StatusCode);
                 }
-            }
 
-            return branches;
+                string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                JObject json = JObject.Parse(responseBody);
+                JArray branchesArray = json["result"] as JArray ?? throw new PlayCanvasApiException(
+                    "Branches array is null in API response",
+                    url);
+
+                foreach (JToken branch in branchesArray) {
+                    string? branchID = branch["id"]?.ToString();
+                    string? branchName = branch["name"]?.ToString();
+                    if (branchID != null && branchName != null) {
+                        branches.Add(new Branch { Id = branchID, Name = branchName });
+                    }
+                }
+
+                return branches;
+            } catch (HttpRequestException ex) {
+                throw new NetworkException(
+                    $"Network error while fetching branches for project ID '{projectId}'",
+                    url,
+                    0,
+                    ex);
+            }
         }
 
         public async Task<JArray> GetAssetsAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken) {
@@ -82,13 +136,29 @@ namespace AssetProcessor.Services {
 
             AddAuthorizationHeader(apiKey);
 
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try {
+                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
 
-            string responseData = await response.Content.ReadAsStringAsync(cancellationToken);
-            JObject assetsResponse = JObject.Parse(responseData);
+                if (!response.IsSuccessStatusCode) {
+                    throw new PlayCanvasApiException(
+                        $"Failed to get assets for project ID '{projectId}' and branch ID '{branchId}'",
+                        url,
+                        (int)response.StatusCode);
+                }
 
-            return assetsResponse["result"] as JArray ?? throw new Exception("Assets array is null");
+                string responseData = await response.Content.ReadAsStringAsync(cancellationToken);
+                JObject assetsResponse = JObject.Parse(responseData);
+
+                return assetsResponse["result"] as JArray ?? throw new PlayCanvasApiException(
+                    "Assets array is null in API response",
+                    url);
+            } catch (HttpRequestException ex) {
+                throw new NetworkException(
+                    $"Network error while fetching assets for project ID '{projectId}'",
+                    url,
+                    0,
+                    ex);
+            }
         }
 
         public async Task<JObject> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken) {
@@ -96,11 +166,30 @@ namespace AssetProcessor.Services {
 
             AddAuthorizationHeader(apiKey);
 
-            HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try {
+                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
 
-            string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            return JObject.Parse(responseBody);
+                if (!response.IsSuccessStatusCode) {
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound) {
+                        throw new AssetNotFoundException(
+                            $"Asset with ID '{assetId}' was not found",
+                            assetId);
+                    }
+                    throw new PlayCanvasApiException(
+                        $"Failed to get asset with ID '{assetId}'",
+                        url,
+                        (int)response.StatusCode);
+                }
+
+                string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                return JObject.Parse(responseBody);
+            } catch (HttpRequestException ex) {
+                throw new NetworkException(
+                    $"Network error while fetching asset with ID '{assetId}'",
+                    url,
+                    0,
+                    ex);
+            }
         }
     }
 

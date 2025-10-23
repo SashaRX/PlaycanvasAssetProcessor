@@ -48,28 +48,37 @@
 
             string lowerName = textureName.ToLower();
 
-            if (lowerName.Contains("albedo") || lowerName.Contains("diffuse") || lowerName.Contains("color") || lowerName.Contains("basecolor") || lowerName.Contains("base"))
+            // Проверяем суффиксы в конце имени (более специфичные сначала)
+            if (EndsWith(lowerName, "_albedo", "_diffuse", "_color", "_basecolor"))
                 return "Albedo";
-            if (lowerName.Contains("normal") || lowerName.Contains("normalmap") || lowerName.Contains("norm") || lowerName.Contains("bump") || lowerName.Contains("bumpmap"))
+            if (EndsWith(lowerName, "_normal", "_normalmap", "_norm", "_bump", "_bumpmap"))
                 return "Normal";
-            if (lowerName.Contains("gloss") || lowerName.Contains("glossiness"))
+            if (EndsWith(lowerName, "_gloss", "_glossiness"))
                 return "Gloss";
-            if (lowerName.Contains("ao") || lowerName.Contains("ambientocclusion") || lowerName.Contains("ambient") || lowerName.Contains("occlusion"))
+            if (EndsWith(lowerName, "_ao", "_ambientocclusion", "_ambient", "_occlusion"))
                 return "AO";
-            if (lowerName.Contains("metallic") || lowerName.Contains("metalness") || lowerName.Contains("metal") || lowerName.Contains("met"))
+            if (EndsWith(lowerName, "_metallic", "_metalness", "_metal", "_met"))
                 return "Metallic";
-            if (lowerName.Contains("roughness") || lowerName.Contains("rough"))
+            if (EndsWith(lowerName, "_roughness", "_rough"))
                 return "Roughness";
-            if (lowerName.Contains("emissive") || lowerName.Contains("emission") || lowerName.Contains("emit"))
+            if (EndsWith(lowerName, "_emissive", "_emission", "_emit"))
                 return "Emissive";
-            if (lowerName.Contains("opacity") || lowerName.Contains("alpha") || lowerName.Contains("transparency"))
+            if (EndsWith(lowerName, "_opacity", "_alpha", "_transparency"))
                 return "Opacity";
-            if (lowerName.Contains("height") || lowerName.Contains("displacement") || lowerName.Contains("disp"))
+            if (EndsWith(lowerName, "_height", "_displacement", "_disp"))
                 return "Height";
-            if (lowerName.Contains("specular") || lowerName.Contains("spec"))
+            if (EndsWith(lowerName, "_specular", "_spec"))
                 return "Specular";
 
             return "Other";
+        }
+
+        private static bool EndsWith(string text, params string[] suffixes) {
+            foreach (string suffix in suffixes) {
+                if (text.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         public static string ExtractBaseTextureName(string textureName) {

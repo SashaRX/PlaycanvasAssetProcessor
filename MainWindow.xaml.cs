@@ -1,4 +1,4 @@
-﻿using AssetProcessor.Helpers;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Settings;
@@ -27,6 +27,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using System.Windows.Threading;
 using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 using PointF = System.Drawing.PointF;
@@ -1273,6 +1274,58 @@ namespace AssetProcessor {
                         DisplayMaterialParameters(selectedMaterial); // Передаем весь объект MaterialResource
                     }
                 }
+
+                // Автоматически переключаемся на вкладку текстур и выбираем связанную текстуру
+                SwitchToTexturesTabAndSelectTexture(selectedMaterial);
+            }
+        }
+
+        private void SwitchToTexturesTabAndSelectTexture(MaterialResource material) {
+            if (material == null) return;
+
+            // Переключаемся на вкладку текстур
+            if (TexturesTabItem != null) {
+                tabControl.SelectedItem = TexturesTabItem;
+            }
+
+            // Ищем первую доступную текстуру, связанную с материалом
+            TextureResource? textureToSelect = null;
+
+            // Проверяем различные типы текстур в порядке приоритета
+            var textureIds = new int?[] {
+                material.DiffuseMapId,
+                material.NormalMapId,
+                material.SpecularMapId,
+                material.MetalnessMapId,
+                material.GlossMapId,
+                material.AOMapId
+            };
+
+            foreach (var textureId in textureIds) {
+                if (textureId.HasValue) {
+                    var texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                    if (texture != null) {
+                        textureToSelect = texture;
+                        break;
+                    }
+                }
+            }
+
+            // Если найдена связанная текстура, выбираем её
+            if (textureToSelect != null) {
+                Dispatcher.BeginInvoke(new Action(() => {
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(textureToSelect);
+
+                    TexturesDataGrid.SelectedItem = textureToSelect;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(textureToSelect);
+                    TexturesDataGrid.Focus();
+
+                    logger.Info($"Автоматически выбрана текстура {textureToSelect.Name} (ID {textureToSelect.ID}) для материала {material.Name} (ID {material.ID})");
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            } else {
+                logger.Info($"Для материала {material.Name} (ID {material.ID}) не найдено связанных текстур");
             }
         }
 

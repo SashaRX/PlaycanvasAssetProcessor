@@ -1544,7 +1544,7 @@ namespace AssetProcessor {
                         Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
                         Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                         Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                        Path = GetResourcePath("models", asset["name"]?.ToString(), parentId),
+                        Path = GetResourcePath(asset["name"]?.ToString(), parentId),
                         Extension = extension,
                         Status = "On Server",
                         Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
@@ -1611,7 +1611,7 @@ namespace AssetProcessor {
                     Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath("textures", asset["name"]?.ToString(), parentId),
+                    Path = GetResourcePath(asset["name"]?.ToString(), parentId),
                     Extension = extension,
                     Resolution = new int[2],
                     ResizeResolution = new int[2],
@@ -1671,7 +1671,7 @@ namespace AssetProcessor {
                     Index = index,
                     Name = name,
                     Size = 0, // У материалов нет файла, поэтому размер 0
-                    Path = GetResourcePath("materials", $"{name}.json", parentId),
+                    Path = GetResourcePath($"{name}.json", parentId),
                     Status = "On Server",
                     Hash = string.Empty, // У материалов нет хеша
                     Parent = parentId
@@ -1782,7 +1782,7 @@ namespace AssetProcessor {
 
         #region Helper Methods
 
-        private string GetResourcePath(string folder, string? fileName, int? parentId = null) {
+        private string GetResourcePath(string? fileName, int? parentId = null) {
             if (string.IsNullOrEmpty(projectFolderPath)) {
                 throw new Exception("Project folder path is null or empty");
             }
@@ -1792,14 +1792,13 @@ namespace AssetProcessor {
             }
 
             string pathProjectFolder = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-            string pathResourceFolder = Path.Combine(pathProjectFolder, folder);
-            string pathSourceFolder = Path.Combine(pathResourceFolder, "source");
+            string pathSourceFolder = pathProjectFolder;
 
             // Если указан parent ID (ID папки), используем построенную иерархию
             if (parentId.HasValue && folderPaths.ContainsKey(parentId.Value)) {
                 string folderPath = folderPaths[parentId.Value];
                 if (!string.IsNullOrEmpty(folderPath)) {
-                    // Создаем полный путь с иерархией: source/{иерархия_папок}
+                    // Создаем полный путь с иерархией папок из PlayCanvas
                     pathSourceFolder = Path.Combine(pathSourceFolder, folderPath);
                     MainWindowHelpers.LogInfo($"Using folder hierarchy: {folderPath}");
                 }

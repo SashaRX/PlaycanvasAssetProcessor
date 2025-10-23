@@ -29,10 +29,5 @@ namespace AssetProcessor.Services {
         /// Gets a specific asset by ID
         /// </summary>
         Task<JObject> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Gets all folders for a project and branch
-        /// </summary>
-        Task<JArray> GetFoldersAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken);
     }
 }

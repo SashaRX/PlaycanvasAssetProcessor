@@ -191,36 +191,6 @@ namespace AssetProcessor.Services {
                     ex);
             }
         }
-
-        public async Task<JArray> GetFoldersAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken) {
-            string url = $"https://playcanvas.com/api/projects/{projectId}/folders?branch={branchId}";
-
-            AddAuthorizationHeader(apiKey);
-
-            try {
-                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-
-                if (!response.IsSuccessStatusCode) {
-                    throw new PlayCanvasApiException(
-                        $"Failed to get folders for project ID '{projectId}' and branch ID '{branchId}'",
-                        url,
-                        (int)response.StatusCode);
-                }
-
-                string responseData = await response.Content.ReadAsStringAsync(cancellationToken);
-                JObject foldersResponse = JObject.Parse(responseData);
-
-                return foldersResponse["result"] as JArray ?? throw new PlayCanvasApiException(
-                    "Folders array is null in API response",
-                    url);
-            } catch (HttpRequestException ex) {
-                throw new NetworkException(
-                    $"Network error while fetching folders for project ID '{projectId}'",
-                    url,
-                    0,
-                    ex);
-            }
-        }
     }
 
     public class Branch {

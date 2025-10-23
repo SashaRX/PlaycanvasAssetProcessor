@@ -20,6 +20,7 @@
         <help:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
         <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
         <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
+        <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
 
 
         <Style TargetType="Expander">
@@ -143,7 +144,8 @@
                                 IsReadOnly="True"
                                 CanUserAddRows="False"
                                 CanUserDeleteRows="False"
-                                CanUserSortColumns="True">
+                                CanUserSortColumns="True"
+                                Background="#FFD6D6D6">
                         <DataGrid.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Columns Visibility">

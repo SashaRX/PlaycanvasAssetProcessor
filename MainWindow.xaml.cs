@@ -609,8 +609,9 @@ namespace AssetProcessor {
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
-                if (texture.Status != null) {
-                    System.Windows.Media.Brush? backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), parameter: 0, CultureInfo.InvariantCulture);
+                // Устанавливаем цвет фона в зависимости от типа текстуры
+                if (!string.IsNullOrEmpty(texture.TextureType)) {
+                    System.Windows.Media.Brush? backgroundBrush = (System.Windows.Media.Brush?)new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), parameter: null, CultureInfo.InvariantCulture);
                     e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
                 } else {
                     e.Row.Background = System.Windows.Media.Brushes.Transparent;
@@ -1553,7 +1554,8 @@ namespace AssetProcessor {
                     Status = "On Server",
                     Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
                     Type = asset["type"]?.ToString(), // Устанавливаем свойство Type
-                    GroupName = TextureResource.ExtractBaseTextureName(textureName)
+                    GroupName = TextureResource.ExtractBaseTextureName(textureName),
+                    TextureType = TextureResource.DetermineTextureType(textureName)
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {

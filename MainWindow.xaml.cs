@@ -1165,7 +1165,8 @@ namespace AssetProcessor {
                 if (mapId.HasValue) {
                     TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
-                        hyperlink.NavigateUri = null;
+                        // Сохраняем ID в NavigateUri с пользовательской схемой для последующего извлечения
+                        hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
                         hyperlink.Inlines.Clear();
                         hyperlink.Inlines.Add(texture.Name);
                     }
@@ -1201,12 +1202,28 @@ namespace AssetProcessor {
                          (sender as FrameworkContentElement)?.DataContext?.GetType().FullName ?? "<null>",
                          MaterialsDataGrid.SelectedItem?.GetType().FullName ?? "<null>");
 
-            if (material == null) {
-                logger.Warn("Не удалось определить материал для гиперссылки {MapType}.", mapType);
-                return;
+            // 1) Пытаемся взять ID текстуры из Hyperlink.NavigateUri (мы сохраняем его при отрисовке)
+            int? mapId = null;
+            if (sender is Hyperlink link && link.NavigateUri != null &&
+                string.Equals(link.NavigateUri.Scheme, "texture", StringComparison.OrdinalIgnoreCase))
+            {
+                string idText = link.NavigateUri.AbsoluteUri.Replace("texture://", string.Empty);
+                if (int.TryParse(idText, out int parsed))
+                {
+                    mapId = parsed;
+                }
             }
 
-            int? mapId = mapIdSelector(material);
+            // 2) Если в NavigateUri нет значения, пробуем взять из материала
+            if (!mapId.HasValue)
+            {
+                if (material == null) {
+                    logger.Warn("Не удалось определить материал для гиперссылки {MapType}.", mapType);
+                    return;
+                }
+
+                mapId = mapIdSelector(material);
+            }
             if (!mapId.HasValue) {
                 logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры {MapType}.", material.Name, material.ID, mapType);
                 return;

@@ -2,6 +2,7 @@ using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Settings;
+using AssetProcessor.ViewModels;
 using Assimp;
 using HelixToolkit.Wpf;
 using Newtonsoft.Json;
@@ -1224,6 +1225,7 @@ namespace AssetProcessor {
 
                 mapId = mapIdSelector(material);
             }
+            material ??= new MaterialResource { Name = "<unknown>", ID = -1 };
             if (!mapId.HasValue) {
                 logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры {MapType}.", material.Name, material.ID, mapType);
                 return;

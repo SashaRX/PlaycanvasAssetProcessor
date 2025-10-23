@@ -48,7 +48,7 @@
                 <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" VerticalAlignment="Center" Width="320"/>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock x:Name="VersionTextBlock" Text="Version: 1.0.0" VerticalAlignment="Center" Foreground="Gray" FontSize="10"/>
+                <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="Gray" FontSize="10" MinWidth="200" TextAlignment="Right"/>
             </StatusBarItem>
         </StatusBar>
 

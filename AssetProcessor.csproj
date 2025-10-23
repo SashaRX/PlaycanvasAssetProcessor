@@ -13,6 +13,29 @@
     <FileVersion>1.0.0.0</FileVersion>
   </PropertyGroup>
 
+  <!-- Автоматическое получение Git информации при сборке -->
+  <Target Name="GetGitInfo" BeforeTargets="CoreCompile">
+    <Exec Command="git rev-parse --abbrev-ref HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitBranch" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommit" />
+    </Exec>
+    <PropertyGroup>
+      <GitBranch Condition="'$(GitBranch)' == ''">unknown</GitBranch>
+      <GitCommit Condition="'$(GitCommit)' == ''">unknown</GitCommit>
+    </PropertyGroup>
+    <ItemGroup>
+      <CompilerVisibleProperty Include="GitBranch" />
+      <CompilerVisibleProperty Include="GitCommit" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="GitBranch" />
+    <CompilerVisibleProperty Include="GitCommit" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Remove="colorPicker.png" />
     <!-- Exclude Unity Editor script from WPF project compilation -->

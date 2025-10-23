@@ -1147,33 +1147,30 @@ namespace AssetProcessor {
         private void MapHyperlink_Click(object sender, RoutedEventArgs _, int? mapId, string mapType) {
             ArgumentNullException.ThrowIfNull(sender);
 
-            if (mapId.HasValue) {
-                System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
+            if (!mapId.HasValue) {
+                System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
+                return;
+            }
 
-                // Переключаемся на вкладку Textures синхронно для мгновенного отклика
-                TabItem? texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
-                if (texturesTab != null) {
-                    tabControl.SelectedItem = texturesTab;
+            System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturesTabItem != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
                 }
 
-                // Находим и выбираем текстуру с более высоким приоритетом
                 TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                 if (texture != null) {
-                    // Используем Invoke вместо InvokeAsync для синхронного выполнения
-                    Dispatcher.Invoke(() => {
-                        TexturesDataGrid.SelectedItem = texture;
-                        TexturesDataGrid.ScrollIntoView(texture);
-                        // Принудительно обновляем фокус на выбранной строке
-                        TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.SelectedItem = texture;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.Focus();
 
-                        System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected and scrolled into view.");
-                    }, System.Windows.Threading.DispatcherPriority.Normal);
+                    System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected and scrolled into view.");
                 } else {
                     System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
                 }
-            } else {
-                System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
-            }
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {

@@ -13,6 +13,8 @@ namespace AssetProcessor.Resources {
         private string? path;
         private string? type;
         private double downloadProgress;
+        private int? folder;
+        private int? parent;
 
         public int ID {
             get { return id; }
@@ -110,6 +112,22 @@ namespace AssetProcessor.Resources {
             set {
                 type = value;
                 OnPropertyChanged(nameof(Type));
+            }
+        }
+
+        public int? Folder {
+            get => folder;
+            set {
+                folder = value;
+                OnPropertyChanged(nameof(Folder));
+            }
+        }
+
+        public int? Parent {
+            get => parent;
+            set {
+                parent = value;
+                OnPropertyChanged(nameof(Parent));
             }
         }
 

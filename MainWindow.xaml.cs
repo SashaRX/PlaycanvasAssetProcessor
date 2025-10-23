@@ -104,6 +104,7 @@ namespace AssetProcessor {
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly PlayCanvasService playCanvasService = new();
+        private Dictionary<int, string> folderPaths = new();
 
         private ObservableCollection<KeyValuePair<string, string>> projects = [];
         public ObservableCollection<KeyValuePair<string, string>> Projects {
@@ -1343,6 +1344,9 @@ namespace AssetProcessor {
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
+                // Загружаем папки и строим иерархию
+                await BuildFolderHierarchy(selectedProjectId, selectedBranchId, cancellationToken);
+
                 JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
                 if (assetsResponse != null) {
                     // Сохраняем JSON-ответ в файл
@@ -1391,6 +1395,140 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 MessageBox.Show($"Error in TryConnect: {ex.Message}");
                 MainWindowHelpers.LogError($"Error in TryConnect: {ex}");
+            }
+        }
+
+        private async Task BuildFolderHierarchy(string projectId, string branchId, CancellationToken cancellationToken) {
+            try {
+                folderPaths.Clear();
+
+                // Получаем список папок из API
+                JArray foldersResponse = await playCanvasService.GetFoldersAsync(projectId, branchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+
+                // Создаем словарь для быстрого доступа к папкам по ID
+                Dictionary<int, JToken> foldersById = new();
+                foreach (JToken folder in foldersResponse) {
+                    int? folderId = folder["id"]?.Type == JTokenType.Integer ? (int?)folder["id"] : null;
+                    if (folderId.HasValue) {
+                        foldersById[folderId.Value] = folder;
+                    }
+                }
+
+                // Рекурсивная функция для построения полного пути папки
+                string BuildFolderPath(int folderId) {
+                    if (folderPaths.ContainsKey(folderId)) {
+                        return folderPaths[folderId];
+                    }
+
+                    if (!foldersById.ContainsKey(folderId)) {
+                        return string.Empty;
+                    }
+
+                    JToken folder = foldersById[folderId];
+                    string folderName = folder["name"]?.ToString() ?? string.Empty;
+                    int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
+
+                    string fullPath;
+                    if (parentId.HasValue && parentId.Value != 0) {
+                        // Есть родительская папка - рекурсивно строим путь
+                        string parentPath = BuildFolderPath(parentId.Value);
+                        fullPath = string.IsNullOrEmpty(parentPath) ? folderName : Path.Combine(parentPath, folderName);
+                    } else {
+                        // Папка верхнего уровня (parent == 0 или null)
+                        fullPath = folderName;
+                    }
+
+                    folderPaths[folderId] = fullPath;
+                    return fullPath;
+                }
+
+                // Строим пути для всех папок
+                foreach (var folderId in foldersById.Keys) {
+                    BuildFolderPath(folderId);
+                }
+
+                MainWindowHelpers.LogInfo($"Built folder hierarchy with {folderPaths.Count} folders");
+
+                // Сохраняем информацию о папках в файл
+                await SaveFoldersToFile(foldersResponse);
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error building folder hierarchy: {ex.Message}");
+                // Продолжаем работу даже если не удалось загрузить папки
+            }
+        }
+
+        private async Task SaveFoldersToFile(JArray foldersResponse) {
+            try {
+                if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
+                    string foldersFilePath = Path.Combine(projectFolderPath, projectName, "folders_list.json");
+                    string jsonString = foldersResponse.ToString(Formatting.Indented);
+                    await File.WriteAllTextAsync(foldersFilePath, jsonString);
+                    MainWindowHelpers.LogInfo($"Folders list saved to {foldersFilePath}");
+                }
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error saving folders list to JSON: {ex.Message}");
+            }
+        }
+
+        private async Task LoadFoldersFromFile() {
+            try {
+                if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
+                    return;
+                }
+
+                string foldersFilePath = Path.Combine(projectFolderPath, projectName, "folders_list.json");
+                if (File.Exists(foldersFilePath)) {
+                    string jsonContent = await File.ReadAllTextAsync(foldersFilePath);
+                    JArray foldersResponse = JArray.Parse(jsonContent);
+
+                    folderPaths.Clear();
+
+                    // Создаем словарь для быстрого доступа к папкам по ID
+                    Dictionary<int, JToken> foldersById = new();
+                    foreach (JToken folder in foldersResponse) {
+                        int? folderId = folder["id"]?.Type == JTokenType.Integer ? (int?)folder["id"] : null;
+                        if (folderId.HasValue) {
+                            foldersById[folderId.Value] = folder;
+                        }
+                    }
+
+                    // Рекурсивная функция для построения полного пути папки
+                    string BuildFolderPath(int folderId) {
+                        if (folderPaths.ContainsKey(folderId)) {
+                            return folderPaths[folderId];
+                        }
+
+                        if (!foldersById.ContainsKey(folderId)) {
+                            return string.Empty;
+                        }
+
+                        JToken folder = foldersById[folderId];
+                        string folderName = folder["name"]?.ToString() ?? string.Empty;
+                        int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
+
+                        string fullPath;
+                        if (parentId.HasValue && parentId.Value != 0) {
+                            // Есть родительская папка - рекурсивно строим путь
+                            string parentPath = BuildFolderPath(parentId.Value);
+                            fullPath = string.IsNullOrEmpty(parentPath) ? folderName : Path.Combine(parentPath, folderName);
+                        } else {
+                            // Папка верхнего уровня (parent == 0 или null)
+                            fullPath = folderName;
+                        }
+
+                        folderPaths[folderId] = fullPath;
+                        return fullPath;
+                    }
+
+                    // Строим пути для всех папок
+                    foreach (var folderId in foldersById.Keys) {
+                        BuildFolderPath(folderId);
+                    }
+
+                    MainWindowHelpers.LogInfo($"Loaded folder hierarchy from file with {folderPaths.Count} folders");
+                }
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error loading folders from file: {ex.Message}");
             }
         }
 
@@ -1478,16 +1616,18 @@ namespace AssetProcessor {
 
                 try {
                     string? assetPath = asset["path"]?.ToString();
+                    int? folderId = asset["folder"]?.Type == JTokenType.Integer ? (int?)asset["folder"] : null;
                     ModelResource model = new() {
                         ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                         Index = index,
                         Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
                         Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                         Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                        Path = GetResourcePath("models", asset["name"]?.ToString(), assetPath),
+                        Path = GetResourcePath("models", asset["name"]?.ToString(), folderId),
                         Extension = extension,
                         Status = "On Server",
                         Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
+                        Folder = folderId,
                         UVChannels = 0 // Инициализация значения UV каналов
                     };
 
@@ -1543,18 +1683,20 @@ namespace AssetProcessor {
         private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
             try {
                 string textureName = asset["name"]?.ToString().Split('.')[0] ?? "Unknown";
+                int? folderId = asset["folder"]?.Type == JTokenType.Integer ? (int?)asset["folder"] : null;
                 TextureResource texture = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
                     Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath("textures", asset["name"]?.ToString(), null),
+                    Path = GetResourcePath("textures", asset["name"]?.ToString(), folderId),
                     Extension = extension,
                     Resolution = new int[2],
                     ResizeResolution = new int[2],
                     Status = "On Server",
                     Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
+                    Folder = folderId,
                     Type = asset["type"]?.ToString(), // Устанавливаем свойство Type
                     GroupName = TextureResource.ExtractBaseTextureName(textureName),
                     TextureType = TextureResource.DetermineTextureType(textureName)
@@ -1601,15 +1743,17 @@ namespace AssetProcessor {
             try {
                 string name = asset["name"]?.ToString() ?? "Unknown";
                 string? assetPath = asset["path"]?.ToString();
+                int? folderId = asset["folder"]?.Type == JTokenType.Integer ? (int?)asset["folder"] : null;
 
                 MaterialResource material = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
                     Name = name,
                     Size = 0, // У материалов нет файла, поэтому размер 0
-                    Path = GetResourcePath("materials", $"{name}.json", assetPath),
+                    Path = GetResourcePath("materials", $"{name}.json", folderId),
                     Status = "On Server",
                     Hash = string.Empty, // У материалов нет хеша
+                    Folder = folderId
                                          //TextureIds = []
                 };
 
@@ -1667,6 +1811,9 @@ namespace AssetProcessor {
 
                 string jsonFilePath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
                 if (File.Exists(jsonFilePath)) {
+                    // Загружаем иерархию папок из файла
+                    await LoadFoldersFromFile();
+
                     string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
                     JToken assetsResponse = JToken.Parse(jsonContent);
                     await ProcessAssetsFromJson(assetsResponse);
@@ -1713,7 +1860,7 @@ namespace AssetProcessor {
 
         #region Helper Methods
 
-        private string GetResourcePath(string folder, string? fileName, string? assetPath = null) {
+        private string GetResourcePath(string folder, string? fileName, int? folderId = null) {
             if (string.IsNullOrEmpty(projectFolderPath)) {
                 throw new Exception("Project folder path is null or empty");
             }
@@ -1726,17 +1873,13 @@ namespace AssetProcessor {
             string pathResourceFolder = Path.Combine(pathProjectFolder, folder);
             string pathSourceFolder = Path.Combine(pathResourceFolder, "source");
 
-            // Если указан путь из API, сохраняем иерархию проекта
-            if (!string.IsNullOrEmpty(assetPath)) {
-                // Убираем начальный слеш если есть
-                assetPath = assetPath.TrimStart('/');
-
-                // Получаем директорию из пути (без имени файла)
-                string? assetDirectory = Path.GetDirectoryName(assetPath);
-
-                if (!string.IsNullOrEmpty(assetDirectory)) {
-                    // Создаем полный путь с иерархией: source/{путь_из_API}
-                    pathSourceFolder = Path.Combine(pathSourceFolder, assetDirectory);
+            // Если указан ID папки, используем построенную иерархию
+            if (folderId.HasValue && folderPaths.ContainsKey(folderId.Value)) {
+                string folderPath = folderPaths[folderId.Value];
+                if (!string.IsNullOrEmpty(folderPath)) {
+                    // Создаем полный путь с иерархией: source/{иерархия_папок}
+                    pathSourceFolder = Path.Combine(pathSourceFolder, folderPath);
+                    MainWindowHelpers.LogInfo($"Using folder hierarchy: {folderPath}");
                 }
             }
 

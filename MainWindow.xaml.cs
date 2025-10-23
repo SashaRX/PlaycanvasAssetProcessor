@@ -6,6 +6,7 @@ using Assimp;
 using HelixToolkit.Wpf;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
 using SixLabors.ImageSharp;
@@ -119,6 +120,8 @@ namespace AssetProcessor {
                 OnPropertyChanged(nameof(Projects));
             }
         }
+
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         private readonly ObservableCollection<Branch> branches = [];
         public ObservableCollection<Branch> Branches {
@@ -990,34 +993,34 @@ namespace AssetProcessor {
                         AOColor = data["ao"]?.Select(d => d.ToObject<float>()).ToList(),
 
                         UseMetalness = data["useMetalness"]?.ToObject<bool>() ?? false,
-                        MetalnessMapId = data["metalnessMap"]?.Type == JTokenType.Integer ? data["metalnessMap"]?.ToObject<int?>() : null,
+                        MetalnessMapId = ParseTextureAssetId(data["metalnessMap"], "metalnessMap"),
                         Metalness = data["metalness"]?.ToObject<float?>(),
 
-                        GlossMapId = data["glossMap"]?.Type == JTokenType.Integer ? data["glossMap"]?.ToObject<int?>() : null,
+                        GlossMapId = ParseTextureAssetId(data["glossMap"], "glossMap"),
                         Shininess = data["shininess"]?.ToObject<float?>(),
 
                         Opacity = data["opacity"]?.ToObject<float?>(),
                         AlphaTest = data["alphaTest"]?.ToObject<float?>(),
-                        OpacityMapId = data["opacityMap"]?.Type == JTokenType.Integer ? data["opacityMap"]?.ToObject<int?>() : null,
+                        OpacityMapId = ParseTextureAssetId(data["opacityMap"], "opacityMap"),
 
 
-                        NormalMapId = data["normalMap"]?.Type == JTokenType.Integer ? data["normalMap"]?.ToObject<int?>() : null,
+                        NormalMapId = ParseTextureAssetId(data["normalMap"], "normalMap"),
                         BumpMapFactor = data["bumpMapFactor"]?.ToObject<float?>(),
 
                         Reflectivity = data["reflectivity"]?.ToObject<float?>(),
                         RefractionIndex = data["refractionIndex"]?.ToObject<float?>(),
 
 
-                        DiffuseMapId = data["diffuseMap"]?.Type == JTokenType.Integer ? data["diffuseMap"]?.ToObject<int?>() : null,
+                        DiffuseMapId = ParseTextureAssetId(data["diffuseMap"], "diffuseMap"),
 
-                        SpecularMapId = data["specularMap"]?.Type == JTokenType.Integer ? data["specularMap"]?.ToObject<int?>() : null,
+                        SpecularMapId = ParseTextureAssetId(data["specularMap"], "specularMap"),
                         SpecularityFactor = data["specularityFactor"]?.ToObject<float?>(),
 
                         Emissive = data["emissive"]?.Select(d => d.ToObject<float>()).ToList(),
                         EmissiveIntensity = data["emissiveIntensity"]?.ToObject<float?>(),
-                        EmissiveMapId = data["emissiveMap"]?.Type == JTokenType.Integer ? data["emissiveMap"]?.ToObject<int?>() : null,
+                        EmissiveMapId = ParseTextureAssetId(data["emissiveMap"], "emissiveMap"),
 
-                        AOMapId = data["aoMap"]?.Type == JTokenType.Integer ? data["aoMap"]?.ToObject<int?>() : null,
+                        AOMapId = ParseTextureAssetId(data["aoMap"], "aoMap"),
 
                         DiffuseColorChannel = ParseColorChannel(data["diffuseMapChannel"]?.ToString() ?? string.Empty),
                         SpecularColorChannel = ParseColorChannel(data["specularMapChannel"]?.ToString() ?? string.Empty),
@@ -1041,6 +1044,36 @@ namespace AssetProcessor {
                 "rgb" => ColorChannel.RGB,
                 _ => ColorChannel.R // или выберите другой дефолтный канал
             };
+        }
+
+        private static int? ParseTextureAssetId(JToken? token, string propertyName) {
+            if (token == null || token.Type == JTokenType.Null) {
+                logger.Debug("Свойство {PropertyName} отсутствует или имеет значение null при чтении материала.", propertyName);
+                return null;
+            }
+
+            static int? ExtractAssetId(JToken? candidate) {
+                if (candidate == null || candidate.Type == JTokenType.Null) {
+                    return null;
+                }
+
+                return candidate.Type switch {
+                    JTokenType.Integer => candidate.ToObject<int?>(),
+                    JTokenType.Float => candidate.ToObject<double?>() is double value ? (int?)Convert.ToInt32(Math.Round(value, MidpointRounding.AwayFromZero)) : null,
+                    JTokenType.String => int.TryParse(candidate.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : null,
+                    JTokenType.Object => ExtractAssetId(candidate["asset"] ?? candidate["id"] ?? candidate["value"] ?? candidate["data"] ?? candidate["guid"] ?? candidate.FirstOrDefault()),
+                    _ => null,
+                };
+            }
+
+            int? parsedId = ExtractAssetId(token);
+            if (parsedId.HasValue) {
+                logger.Debug("Из свойства {PropertyName} получен ID текстуры {TextureId}.", propertyName, parsedId.Value);
+                return parsedId;
+            }
+
+            logger.Warn("Не удалось извлечь ID текстуры из свойства {PropertyName}. Тип токена: {TokenType}. Значение: {TokenValue}", propertyName, token.Type, token.Type == JTokenType.Object ? token.ToString(Formatting.None) : token.ToString());
+            return null;
         }
 
         private void DisplayMaterialParameters(MaterialResource parameters) {
@@ -1151,22 +1184,43 @@ namespace AssetProcessor {
             MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource
                                           ?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
+            if (sender is Hyperlink hyperlink)
+            {
+                logger.Debug("Гиперссылка нажата. NavigateUri: {NavigateUri}; Текущий текст: {HyperlinkText}",
+                             hyperlink.NavigateUri,
+                             string.Concat(hyperlink.Inlines.OfType<Run>().Select(r => r.Text)));
+            }
+            else
+            {
+                logger.Warn("NavigateToTextureFromHyperlink вызван отправителем типа {SenderType}, ожидалась Hyperlink.", sender.GetType().FullName);
+            }
+
+            logger.Debug("Детали клика по гиперссылке. Тип отправителя: {SenderType}; Тип DataContext: {DataContextType}; Тип выделения в таблице: {SelectedType}",
+                         sender.GetType().FullName,
+                         (sender as FrameworkContentElement)?.DataContext?.GetType().FullName ?? "<null>",
+                         MaterialsDataGrid.SelectedItem?.GetType().FullName ?? "<null>");
+
             if (material == null) {
-                System.Diagnostics.Debug.WriteLine($"Unable to resolve material for {mapType} hyperlink.");
+                logger.Warn("Не удалось определить материал для гиперссылки {MapType}.", mapType);
                 return;
             }
 
             int? mapId = mapIdSelector(material);
             if (!mapId.HasValue) {
-                System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
+                logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры {MapType}.", material.Name, material.ID, mapType);
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
+            logger.Info("Запрос на переход к текстуре {MapType} с ID {TextureId} из материала {MaterialName} ({MaterialId}).",
+                        mapType,
+                        mapId.Value,
+                        material.Name,
+                        material.ID);
 
             Dispatcher.BeginInvoke(new Action(() => {
                 if (TexturesTabItem != null) {
                     tabControl.SelectedItem = TexturesTabItem;
+                    logger.Debug("Вкладка текстур активирована через TabControl.");
                 }
 
                 TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
@@ -1179,9 +1233,9 @@ namespace AssetProcessor {
                     TexturesDataGrid.ScrollIntoView(texture);
                     TexturesDataGrid.Focus();
 
-                    System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected and scrolled into view.");
+                    logger.Info("Текстура {TextureName} (ID {TextureId}) выделена и прокручена в таблице текстур.", texture.Name, texture.ID);
                 } else {
-                    System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
+                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", mapId.Value, Textures.Count);
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }

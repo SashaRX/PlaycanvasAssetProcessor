@@ -609,8 +609,9 @@ namespace AssetProcessor {
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
-                if (texture.Status != null) {
-                    System.Windows.Media.Brush? backgroundBrush = (System.Windows.Media.Brush?)new StatusToBackgroundConverter().Convert(texture.Status, typeof(System.Windows.Media.Brush), parameter: 0, CultureInfo.InvariantCulture);
+                // Устанавливаем цвет фона в зависимости от типа текстуры
+                if (!string.IsNullOrEmpty(texture.TextureType)) {
+                    var backgroundBrush = new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), null!, CultureInfo.InvariantCulture) as System.Windows.Media.Brush;
                     e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
                 } else {
                     e.Row.Background = System.Windows.Media.Brushes.Transparent;
@@ -783,6 +784,59 @@ namespace AssetProcessor {
 
             if (row1Height < minHeight || row2Height < minHeight) {
                 e.Handled = true;
+            }
+        }
+
+        #endregion
+
+        #region Column Visibility Management
+
+        private void GroupTexturesCheckBox_Changed(object sender, RoutedEventArgs e) {
+            if (GroupTexturesCheckBox.IsChecked == true) {
+                ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                if (view != null && view.CanGroup) {
+                    view.GroupDescriptions.Clear();
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
+                }
+            } else {
+                ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                if (view != null) {
+                    view.GroupDescriptions.Clear();
+                }
+            }
+        }
+
+        private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                int columnIndex = columnTag switch {
+                    "ID" => 1,
+                    "TextureName" => 2,
+                    "Extension" => 3,
+                    "Size" => 4,
+                    "Resolution" => 5,
+                    "ResizeResolution" => 6,
+                    "Status" => 7,
+                    _ => -1
+                };
+
+                if (columnIndex >= 0 && columnIndex < TexturesDataGrid.Columns.Count) {
+                    TexturesDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void MaterialColumnVisibility_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                int columnIndex = columnTag switch {
+                    "ID" => 1,
+                    "Name" => 2,
+                    "Status" => 3,
+                    _ => -1
+                };
+
+                if (columnIndex >= 0 && columnIndex < MaterialsDataGrid.Columns.Count) {
+                    MaterialsDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                }
             }
         }
 
@@ -1486,10 +1540,11 @@ namespace AssetProcessor {
 
         private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
             try {
+                string textureName = asset["name"]?.ToString().Split('.')[0] ?? "Unknown";
                 TextureResource texture = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
-                    Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
+                    Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
                     Path = GetResourcePath("textures", asset["name"]?.ToString()),
@@ -1498,7 +1553,9 @@ namespace AssetProcessor {
                     ResizeResolution = new int[2],
                     Status = "On Server",
                     Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
-                    Type = asset["type"]?.ToString() // Устанавливаем свойство Type
+                    Type = asset["type"]?.ToString(), // Устанавливаем свойство Type
+                    GroupName = TextureResource.ExtractBaseTextureName(textureName),
+                    TextureType = TextureResource.DetermineTextureType(textureName)
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {

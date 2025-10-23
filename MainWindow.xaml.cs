@@ -1549,7 +1549,7 @@ namespace AssetProcessor {
                     Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath("textures", asset["name"]?.ToString(), assetPath),
+                    Path = GetResourcePath("textures", asset["name"]?.ToString(), null),
                     Extension = extension,
                     Resolution = new int[2],
                     ResizeResolution = new int[2],

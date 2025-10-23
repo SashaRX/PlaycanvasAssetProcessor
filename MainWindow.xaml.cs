@@ -1420,7 +1420,8 @@ namespace AssetProcessor {
                 await getAssetsSemaphore.WaitAsync(cancellationToken);
 
                 string? type = asset["type"]?.ToString() ?? string.Empty;
-                MainWindowHelpers.LogInfo($"Processing {type}");
+                string? assetPath = asset["path"]?.ToString() ?? string.Empty;
+                MainWindowHelpers.LogInfo($"Processing {type}, API path: {assetPath}");
 
                 if (type == "script" || type == "wasm" || type == "cubemap") {
                     MainWindowHelpers.LogInfo($"Unsupported asset type: {type}");
@@ -1476,13 +1477,14 @@ namespace AssetProcessor {
                 }
 
                 try {
+                    string? assetPath = asset["path"]?.ToString();
                     ModelResource model = new() {
                         ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                         Index = index,
                         Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
                         Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                         Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                        Path = GetResourcePath("models", asset["name"]?.ToString()),
+                        Path = GetResourcePath("models", asset["name"]?.ToString(), assetPath),
                         Extension = extension,
                         Status = "On Server",
                         Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
@@ -1547,7 +1549,7 @@ namespace AssetProcessor {
                     Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath("textures", asset["name"]?.ToString()),
+                    Path = GetResourcePath("textures", asset["name"]?.ToString(), assetPath),
                     Extension = extension,
                     Resolution = new int[2],
                     ResizeResolution = new int[2],
@@ -1598,13 +1600,14 @@ namespace AssetProcessor {
         private async Task ProcessMaterialAsset(JToken asset, int index, CancellationToken cancellationToken) {
             try {
                 string name = asset["name"]?.ToString() ?? "Unknown";
+                string? assetPath = asset["path"]?.ToString();
 
                 MaterialResource material = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
                     Name = name,
                     Size = 0, // У материалов нет файла, поэтому размер 0
-                    Path = GetResourcePath("materials", $"{name}.json"),
+                    Path = GetResourcePath("materials", $"{name}.json", assetPath),
                     Status = "On Server",
                     Hash = string.Empty, // У материалов нет хеша
                                          //TextureIds = []
@@ -1710,7 +1713,7 @@ namespace AssetProcessor {
 
         #region Helper Methods
 
-        private string GetResourcePath(string folder, string? fileName) {
+        private string GetResourcePath(string folder, string? fileName, string? assetPath = null) {
             if (string.IsNullOrEmpty(projectFolderPath)) {
                 throw new Exception("Project folder path is null or empty");
             }
@@ -1722,6 +1725,20 @@ namespace AssetProcessor {
             string pathProjectFolder = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
             string pathResourceFolder = Path.Combine(pathProjectFolder, folder);
             string pathSourceFolder = Path.Combine(pathResourceFolder, "source");
+
+            // Если указан путь из API, сохраняем иерархию проекта
+            if (!string.IsNullOrEmpty(assetPath)) {
+                // Убираем начальный слеш если есть
+                assetPath = assetPath.TrimStart('/');
+
+                // Получаем директорию из пути (без имени файла)
+                string? assetDirectory = Path.GetDirectoryName(assetPath);
+
+                if (!string.IsNullOrEmpty(assetDirectory)) {
+                    // Создаем полный путь с иерархией: source/{путь_из_API}
+                    pathSourceFolder = Path.Combine(pathSourceFolder, assetDirectory);
+                }
+            }
 
             if (!Directory.Exists(pathSourceFolder)) {
                 Directory.CreateDirectory(pathSourceFolder);

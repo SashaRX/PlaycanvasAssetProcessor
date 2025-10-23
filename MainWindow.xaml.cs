@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using OxyPlot;
 using OxyPlot.Axes;
 using SixLabors.ImageSharp;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
@@ -1144,9 +1145,18 @@ namespace AssetProcessor {
             }
         }
 
-        private void MapHyperlink_Click(object sender, RoutedEventArgs _, int? mapId, string mapType) {
+        private void NavigateToTextureFromHyperlink(object sender, string mapType, Func<MaterialResource, int?> mapIdSelector) {
             ArgumentNullException.ThrowIfNull(sender);
 
+            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource
+                                          ?? MaterialsDataGrid.SelectedItem as MaterialResource;
+
+            if (material == null) {
+                System.Diagnostics.Debug.WriteLine($"Unable to resolve material for {mapType} hyperlink.");
+                return;
+            }
+
+            int? mapId = mapIdSelector(material);
             if (!mapId.HasValue) {
                 System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
                 return;
@@ -1161,6 +1171,9 @@ namespace AssetProcessor {
 
                 TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                 if (texture != null) {
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(texture);
+
                     TexturesDataGrid.SelectedItem = texture;
                     TexturesDataGrid.UpdateLayout();
                     TexturesDataGrid.ScrollIntoView(texture);
@@ -1170,31 +1183,31 @@ namespace AssetProcessor {
                 } else {
                     System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
                 }
-            }), System.Windows.Threading.DispatcherPriority.Background);
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.DiffuseMapId, "Diffuse Map");
+            NavigateToTextureFromHyperlink(sender, "Diffuse Map", material => material.DiffuseMapId);
         }
 
         private void MaterialNormalMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.NormalMapId, "Normal Map");
+            NavigateToTextureFromHyperlink(sender, "Normal Map", material => material.NormalMapId);
         }
 
         private void MaterialSpecularMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.SpecularMapId, "Specular Map");
+            NavigateToTextureFromHyperlink(sender, "Specular Map", material => material.SpecularMapId);
         }
 
         private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.MetalnessMapId, "Metalness Map");
+            NavigateToTextureFromHyperlink(sender, "Metalness Map", material => material.MetalnessMapId);
         }
 
         private void MaterialGlossMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.GlossMapId, "Gloss Map");
+            NavigateToTextureFromHyperlink(sender, "Gloss Map", material => material.GlossMapId);
         }
 
         private void MaterialAOMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.AOMapId, "AO Map");
+            NavigateToTextureFromHyperlink(sender, "AO Map", material => material.AOMapId);
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {

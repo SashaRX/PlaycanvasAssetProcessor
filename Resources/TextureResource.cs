@@ -33,27 +33,36 @@
         public int? ResolutionArea => Resolution[0] * Resolution[1];
         public int? ResizeResolutionArea => ResizeResolution[0] * ResizeResolution[1];
 
-        public static string DetermineTextureType(string textureName) {
+        public static string ExtractBaseTextureName(string textureName) {
+            if (string.IsNullOrEmpty(textureName))
+                return textureName;
+
             string lowerName = textureName.ToLower();
 
-            if (lowerName.Contains("albedo") || lowerName.Contains("diffuse") || lowerName.Contains("color") || lowerName.Contains("base"))
-                return "Albedo";
-            if (lowerName.Contains("normal") || lowerName.Contains("bump"))
-                return "Normal";
-            if (lowerName.Contains("metallic") || lowerName.Contains("metalness"))
-                return "Metallic";
-            if (lowerName.Contains("roughness") || lowerName.Contains("gloss"))
-                return "Roughness/Gloss";
-            if (lowerName.Contains("ao") || lowerName.Contains("ambient") || lowerName.Contains("occlusion"))
-                return "AO";
-            if (lowerName.Contains("emissive") || lowerName.Contains("emission"))
-                return "Emissive";
-            if (lowerName.Contains("opacity") || lowerName.Contains("alpha"))
-                return "Opacity";
-            if (lowerName.Contains("height") || lowerName.Contains("displacement"))
-                return "Height";
+            // Список суффиксов типов текстур для удаления
+            string[] suffixes = new[] {
+                "_albedo", "_diffuse", "_color", "_basecolor", "_base",
+                "_normal", "_normalmap", "_norm", "_bump", "_bumpmap",
+                "_metallic", "_metalness", "_metal", "_met",
+                "_roughness", "_rough", "_gloss", "_glossiness",
+                "_ao", "_ambientocclusion", "_ambient", "_occlusion",
+                "_emissive", "_emission", "_emit",
+                "_opacity", "_alpha", "_transparency",
+                "_height", "_displacement", "_disp",
+                "_specular", "_spec"
+            };
 
-            return "Other";
+            // Находим и удаляем суффикс
+            foreach (string suffix in suffixes) {
+                int index = lowerName.LastIndexOf(suffix);
+                if (index > 0 && index == lowerName.Length - suffix.Length) {
+                    // Возвращаем оригинальное имя без суффикса (сохраняя регистр)
+                    return textureName.Substring(0, index);
+                }
+            }
+
+            // Если суффикс не найден, возвращаем исходное имя
+            return textureName;
         }
     }
 }

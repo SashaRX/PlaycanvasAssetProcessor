@@ -1553,7 +1553,7 @@ namespace AssetProcessor {
                     Status = "On Server",
                     Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
                     Type = asset["type"]?.ToString(), // Устанавливаем свойство Type
-                    GroupName = TextureResource.DetermineTextureType(textureName)
+                    GroupName = TextureResource.ExtractBaseTextureName(textureName)
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {

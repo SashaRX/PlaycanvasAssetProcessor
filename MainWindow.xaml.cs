@@ -1,4 +1,4 @@
-﻿using AssetProcessor.Helpers;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Settings;
@@ -1266,6 +1266,11 @@ namespace AssetProcessor {
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                // Обновляем выбранный материал в ViewModel для фильтрации текстур
+                if (DataContext is MainViewModel viewModel) {
+                    viewModel.SelectedMaterial = selectedMaterial;
+                }
+
                 if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
                     MaterialResource materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
                     if (materialParameters != null) {

@@ -1130,7 +1130,7 @@ namespace AssetProcessor {
                 if (mapId.HasValue) {
                     TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
-                        hyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
+                        hyperlink.NavigateUri = null;
                         hyperlink.Inlines.Clear();
                         hyperlink.Inlines.Add(texture.Name);
                     }

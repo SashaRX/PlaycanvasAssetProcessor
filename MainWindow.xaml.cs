@@ -107,7 +107,8 @@ namespace AssetProcessor {
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
-        private const int MaxPreviewSize = 2048; // Максимальный размер изображения для превью
+        private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
+        private const int ThumbnailSize = 256; // Размер для быстрого превью
 
         private ObservableCollection<KeyValuePair<string, string>> projects = [];
         public ObservableCollection<KeyValuePair<string, string>> Projects {
@@ -631,7 +632,7 @@ namespace AssetProcessor {
 
                         // Проверяем кеш
                         if (imageCache.TryGetValue(selectedTexture.Path, out BitmapImage? cachedImage)) {
-                            // Используем кешированное изображение
+                            // Используем кешированное изображение - мгновенно!
                             TexturePreviewImage.Source = cachedImage;
                             originalBitmapSource = cachedImage.Clone();
                             // Асинхронное обновление гистограммы
@@ -640,8 +641,8 @@ namespace AssetProcessor {
                             return;
                         }
 
-                        // Загружаем уменьшенное изображение для быстрого отображения (очень маленькое превью)
-                        BitmapImage? thumbnailImage = MainWindowHelpers.CreateThumbnailImage(selectedTexture.Path);
+                        // Сначала загружаем очень маленькое превью для мгновенного отклика
+                        BitmapImage? thumbnailImage = LoadOptimizedImage(selectedTexture.Path, ThumbnailSize);
                         if (thumbnailImage == null) {
                             MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
                             return;
@@ -653,10 +654,10 @@ namespace AssetProcessor {
                         await Task.Run(() => {
                             if (cancellationToken.IsCancellationRequested) return;
 
-                            // Загружаем изображение с ограничением размера
-                            BitmapImage bitmapImage = LoadOptimizedImage(selectedTexture.Path, MaxPreviewSize);
+                            // Загружаем изображение с ограничением размера (512px для баланса качества и скорости)
+                            BitmapImage? bitmapImage = LoadOptimizedImage(selectedTexture.Path, MaxPreviewSize);
 
-                            if (cancellationToken.IsCancellationRequested) return;
+                            if (bitmapImage == null || cancellationToken.IsCancellationRequested) return;
 
                             Dispatcher.Invoke(() => {
                                 if (cancellationToken.IsCancellationRequested) return;
@@ -693,29 +694,34 @@ namespace AssetProcessor {
             }
         }
 
-        private BitmapImage LoadOptimizedImage(string path, int maxSize) {
-            BitmapImage bitmapImage = new();
-            bitmapImage.BeginInit();
-            bitmapImage.UriSource = new Uri(path);
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+        private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
+            try {
+                BitmapImage bitmapImage = new();
+                bitmapImage.BeginInit();
+                bitmapImage.UriSource = new Uri(path);
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
 
-            // Определяем размер изображения
-            using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
-                var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
-                int width = decoder.Frames[0].PixelWidth;
-                int height = decoder.Frames[0].PixelHeight;
+                // Определяем размер изображения
+                using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
+                    var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+                    int width = decoder.Frames[0].PixelWidth;
+                    int height = decoder.Frames[0].PixelHeight;
 
-                // Если изображение больше maxSize, масштабируем
-                if (width > maxSize || height > maxSize) {
-                    double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
-                    bitmapImage.DecodePixelWidth = (int)(width * scale);
-                    bitmapImage.DecodePixelHeight = (int)(height * scale);
+                    // Всегда масштабируем до maxSize или меньше для максимальной производительности
+                    if (width > maxSize || height > maxSize) {
+                        double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
+                        bitmapImage.DecodePixelWidth = (int)(width * scale);
+                        bitmapImage.DecodePixelHeight = (int)(height * scale);
+                    }
                 }
-            }
 
-            bitmapImage.EndInit();
-            bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
-            return bitmapImage;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
+                return bitmapImage;
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error loading optimized image from {path}: {ex.Message}");
+                return null;
+            }
         }
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {

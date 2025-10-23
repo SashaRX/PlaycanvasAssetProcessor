@@ -126,6 +126,10 @@ namespace AssetProcessor {
             InitializeComponent();
             _ = LoadLastSettings();
 
+            // Отображение версии приложения
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            VersionTextBlock.Text = $"Version: {version?.Major}.{version?.Minor}.{version?.Build}";
+
             // Заполнение ComboBox для Color Channel
             PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
             PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);

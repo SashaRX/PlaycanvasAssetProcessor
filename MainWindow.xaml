@@ -40,6 +40,20 @@
             <Setter Property="Foreground" Value="{Binding ., Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}" />
         </Style>
 
+        <!-- Стиль для кликабельных гиперссылок текстур в материалах -->
+        <Style x:Key="TextureHyperlinkStyle" TargetType="Hyperlink">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FF0066CC"/>
+            <Setter Property="TextDecorations" Value="Underline"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#FF0099FF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -408,7 +422,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialAOMapHyperlink" Click="MaterialAOMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialAOMapHyperlink" Click="MaterialAOMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No AO Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -505,7 +519,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No Diffuse Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -585,7 +599,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No Normal Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -627,7 +641,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                        <Hyperlink x:Name="MaterialSpecularMapHyperlink" Click="MaterialSpecularMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                        <Hyperlink x:Name="MaterialSpecularMapHyperlink" Click="MaterialSpecularMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                             No Specular Map
                                         </Hyperlink>
                                         </TextBlock>
@@ -690,7 +704,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No Metalness Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -772,7 +786,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Click="MaterialGlossMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Click="MaterialGlossMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                                 No Gloss Map
                                             </Hyperlink>
                                                 </TextBlock>

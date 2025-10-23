@@ -611,7 +611,7 @@ namespace AssetProcessor {
             if (e?.Row?.DataContext is TextureResource texture) {
                 // Устанавливаем цвет фона в зависимости от типа текстуры
                 if (!string.IsNullOrEmpty(texture.TextureType)) {
-                    System.Windows.Media.Brush? backgroundBrush = (System.Windows.Media.Brush?)new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), parameter: null, CultureInfo.InvariantCulture);
+                    var backgroundBrush = new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), null!, CultureInfo.InvariantCulture) as System.Windows.Media.Brush;
                     e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
                 } else {
                     e.Row.Background = System.Windows.Media.Brushes.Transparent;

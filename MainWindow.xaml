@@ -427,7 +427,7 @@
                                     </Hyperlink>
                                         </TextBlock>
                                         <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                            <Image x:Name="TextureAOPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image x:Name="TextureAOPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="AO" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -524,7 +524,7 @@
                                     </Hyperlink>
                                         </TextBlock>
                                         <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                            <Image x:Name="TextureDiffusePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image x:Name="TextureDiffusePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Diffuse" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -604,7 +604,7 @@
                                     </Hyperlink>
                                         </TextBlock>
                                         <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                            <Image x:Name="TextureNormalPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image x:Name="TextureNormalPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Normal" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -646,7 +646,7 @@
                                         </Hyperlink>
                                         </TextBlock>
                                         <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                            <Image x:Name="TextureSpecularPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image x:Name="TextureSpecularPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Specular" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -709,7 +709,7 @@
                                     </Hyperlink>
                                         </TextBlock>
                                         <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                            <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Metalness" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -791,7 +791,7 @@
                                             </Hyperlink>
                                                 </TextBlock>
                                                 <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                                    <Image x:Name="TextureGlossPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image x:Name="TextureGlossPreviewImage" RenderOptions.EdgeMode="Aliised" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Gloss" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                                 </Border>
                                             </Grid>
                                         </Border>

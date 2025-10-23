@@ -107,6 +107,7 @@ namespace AssetProcessor {
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
+        private const int MaxPreviewSize = 2048; // Максимальный размер изображения для превью
 
         private ObservableCollection<KeyValuePair<string, string>> projects = [];
         public ObservableCollection<KeyValuePair<string, string>> Projects {
@@ -260,6 +261,46 @@ namespace AssetProcessor {
             });
 
             Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+        }
+
+        private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
+            if (bitmapSource == null) return;
+
+            await Task.Run(() => {
+                PlotModel histogramModel = new();
+
+                int[] redHistogram = new int[256];
+                int[] greenHistogram = new int[256];
+                int[] blueHistogram = new int[256];
+
+                // Обработка изображения и заполнение гистограммы
+                MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
+
+                if (!isGray) {
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
+                } else {
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
+                }
+
+                histogramModel.Axes.Add(new LinearAxis {
+                    Position = AxisPosition.Bottom,
+                    IsAxisVisible = false,
+                    AxislineThickness = 0.5,
+                    MajorGridlineThickness = 0.5,
+                    MinorGridlineThickness = 0.5
+                });
+                histogramModel.Axes.Add(new LinearAxis {
+                    Position = AxisPosition.Left,
+                    IsAxisVisible = false,
+                    AxislineThickness = 0.5,
+                    MajorGridlineThickness = 0.5,
+                    MinorGridlineThickness = 0.5
+                });
+
+                Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+            });
         }
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {
@@ -593,12 +634,13 @@ namespace AssetProcessor {
                             // Используем кешированное изображение
                             TexturePreviewImage.Source = cachedImage;
                             originalBitmapSource = cachedImage.Clone();
-                            UpdateHistogram(originalBitmapSource);
+                            // Асинхронное обновление гистограммы
+                            _ = UpdateHistogramAsync(originalBitmapSource);
                             ShowOriginalImage();
                             return;
                         }
 
-                        // Загружаем уменьшенное изображение для быстрого отображения
+                        // Загружаем уменьшенное изображение для быстрого отображения (очень маленькое превью)
                         BitmapImage? thumbnailImage = MainWindowHelpers.CreateThumbnailImage(selectedTexture.Path);
                         if (thumbnailImage == null) {
                             MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
@@ -607,16 +649,12 @@ namespace AssetProcessor {
 
                         TexturePreviewImage.Source = thumbnailImage;
 
-                        // Асинхронная загрузка полной текстуры с возможностью отмены
+                        // Асинхронная загрузка оптимизированной текстуры с возможностью отмены
                         await Task.Run(() => {
                             if (cancellationToken.IsCancellationRequested) return;
 
-                            BitmapImage bitmapImage = new();
-                            bitmapImage.BeginInit();
-                            bitmapImage.UriSource = new Uri(selectedTexture.Path);
-                            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                            bitmapImage.EndInit();
-                            bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
+                            // Загружаем изображение с ограничением размера
+                            BitmapImage bitmapImage = LoadOptimizedImage(selectedTexture.Path, MaxPreviewSize);
 
                             if (cancellationToken.IsCancellationRequested) return;
 
@@ -626,13 +664,21 @@ namespace AssetProcessor {
                                 // Добавляем в кеш
                                 if (!imageCache.ContainsKey(selectedTexture.Path)) {
                                     imageCache[selectedTexture.Path] = bitmapImage;
+
+                                    // Ограничиваем размер кеша (максимум 50 изображений)
+                                    if (imageCache.Count > 50) {
+                                        var firstKey = imageCache.Keys.First();
+                                        imageCache.Remove(firstKey);
+                                    }
                                 }
 
                                 TexturePreviewImage.Source = bitmapImage;
 
-                                // Сохраняем оригинальную текстуру и обновляем гистограмму
+                                // Сохраняем оригинальную текстуру
                                 originalBitmapSource = bitmapImage.Clone();
-                                UpdateHistogram(originalBitmapSource);
+
+                                // Асинхронное обновление гистограммы
+                                _ = UpdateHistogramAsync(originalBitmapSource);
 
                                 // Сбрасываем все фильтры
                                 ShowOriginalImage();
@@ -645,6 +691,31 @@ namespace AssetProcessor {
                     }
                 }
             }
+        }
+
+        private BitmapImage LoadOptimizedImage(string path, int maxSize) {
+            BitmapImage bitmapImage = new();
+            bitmapImage.BeginInit();
+            bitmapImage.UriSource = new Uri(path);
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+
+            // Определяем размер изображения
+            using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
+                var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+                int width = decoder.Frames[0].PixelWidth;
+                int height = decoder.Frames[0].PixelHeight;
+
+                // Если изображение больше maxSize, масштабируем
+                if (width > maxSize || height > maxSize) {
+                    double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
+                    bitmapImage.DecodePixelWidth = (int)(width * scale);
+                    bitmapImage.DecodePixelHeight = (int)(height * scale);
+                }
+            }
+
+            bitmapImage.EndInit();
+            bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
+            return bitmapImage;
         }
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {

@@ -40,12 +40,29 @@
             <Setter Property="Foreground" Value="{Binding ., Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}" />
         </Style>
 
+        <!-- Стиль для кликабельных гиперссылок текстур в материалах -->
+        <Style x:Key="TextureHyperlinkStyle" TargetType="Hyperlink">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FF0066CC"/>
+            <Setter Property="TextDecorations" Value="Underline"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#FF0099FF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
                 <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" VerticalAlignment="Center" Width="320"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="Gray" FontSize="10" MinWidth="200" TextAlignment="Right"/>
             </StatusBarItem>
         </StatusBar>
 
@@ -291,42 +308,44 @@
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <Border x:Name="TextureViewer" Grid.Column="2" Background="#FFFFFF" Margin="0,0,0,0" BorderThickness="2,2,2,2" Padding="0,0,0,0" VerticalAlignment="Top" MinWidth="128" MinHeight="128" Visibility="Collapsed">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" VerticalAlignment="Top" Height="128">
-                        <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
-                    </Border>
-                    <Border Grid.Row="0" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
-                        <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" />
-                    </Border>
-                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
-                        <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                        <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                        <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                    </Canvas>
-                    <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
-                        <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                            <StackPanel.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="1"/>
-                                    <SkewTransform/>
-                                    <RotateTransform/>
-                                    <TranslateTransform/>
-                                </TransformGroup>
-                            </StackPanel.RenderTransform>
-                            <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="Black"/>
-                            <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="Black"/>
-                            <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
-                            <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
+            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" MinHeight="128" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
+                            <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
+                        </Border>
+                        <Border Grid.Row="0" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
+                            <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" Stretch="Uniform" />
+                        </Border>
+                        <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
+                            <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                            <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                            <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                        </Canvas>
+                        <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
+                            <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <StackPanel.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="1"/>
+                                        <SkewTransform/>
+                                        <RotateTransform/>
+                                        <TranslateTransform/>
+                                    </TransformGroup>
+                                </StackPanel.RenderTransform>
+                                <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="Black"/>
+                                <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="Black"/>
+                                <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
+                                <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
-                </Grid>
-            </Border>
+                    </Grid>
+                </Border>
+            </ScrollViewer>
 
             <Border x:Name="ModelViewer" Visibility="Collapsed" Background="#FF414D58" Grid.RowSpan="1" Grid.ColumnSpan="1" Grid.Column="2" MinWidth="256" MinHeight="256">
                 <Grid>
@@ -385,8 +404,9 @@
             </Border>
 
             <!-- Просмотр параметров материала -->
-            <Border x:Name="MaterialViewer" Grid.Column="2" Background="#FFE1E1E1" Margin="2,2,2,2" Padding="2,2,2,2" VerticalAlignment="Top" ScrollViewer.CanContentScroll="True" CornerRadius="4,4,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" MinWidth="256">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="MaterialViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                <Border x:Name="MaterialViewer" Background="#FFE1E1E1" Margin="2,2,2,2" Padding="2,2,2,2" CornerRadius="4,4,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" MinWidth="256">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " Margin="4,0,4,0" FontWeight="Bold" />
@@ -402,7 +422,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialAOMapHyperlink" Click="MaterialAOMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialAOMapHyperlink" Click="MaterialAOMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No AO Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -499,7 +519,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialDiffuseMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No Diffuse Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -579,7 +599,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialNormalMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No Normal Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -621,7 +641,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                        <Hyperlink x:Name="MaterialSpecularMapHyperlink" Click="MaterialSpecularMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                        <Hyperlink x:Name="MaterialSpecularMapHyperlink" Click="MaterialSpecularMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                             No Specular Map
                                         </Hyperlink>
                                         </TextBlock>
@@ -684,7 +704,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                    <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                    <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMetalnessMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                         No Metalness Map
                                     </Hyperlink>
                                         </TextBlock>
@@ -766,7 +786,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Margin="4,0,4,0" VerticalAlignment="Center" Grid.Column="0">
-                                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Click="MaterialGlossMapHyperlink_Click" FontSize="12" FontWeight="Bold" Foreground="#FFB31900">
+                                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Click="MaterialGlossMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">
                                                 No Gloss Map
                                             </Hyperlink>
                                                 </TextBlock>
@@ -841,8 +861,9 @@
                             </StackPanel>
                         </Expander>
                     </StackPanel>
-                </ScrollViewer>
-            </Border>
+                    </ScrollViewer>
+                </Border>
+            </ScrollViewer>
 
         </Grid>
     </DockPanel>

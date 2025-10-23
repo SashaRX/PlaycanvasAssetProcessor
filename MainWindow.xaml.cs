@@ -105,6 +105,10 @@ namespace AssetProcessor {
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly PlayCanvasService playCanvasService = new();
         private Dictionary<int, string> folderPaths = new();
+        private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
+        private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
+        private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
+        private const int ThumbnailSize = 256; // Размер для быстрого превью
 
         private ObservableCollection<KeyValuePair<string, string>> projects = [];
         public ObservableCollection<KeyValuePair<string, string>> Projects {
@@ -123,6 +127,9 @@ namespace AssetProcessor {
         public MainWindow() {
             InitializeComponent();
             _ = LoadLastSettings();
+
+            // Отображение версии приложения с информацией о бранче и коммите
+            VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
             // Заполнение ComboBox для Color Channel
             PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
@@ -255,6 +262,46 @@ namespace AssetProcessor {
             });
 
             Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+        }
+
+        private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
+            if (bitmapSource == null) return;
+
+            await Task.Run(() => {
+                PlotModel histogramModel = new();
+
+                int[] redHistogram = new int[256];
+                int[] greenHistogram = new int[256];
+                int[] blueHistogram = new int[256];
+
+                // Обработка изображения и заполнение гистограммы
+                MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
+
+                if (!isGray) {
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
+                } else {
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
+                }
+
+                histogramModel.Axes.Add(new LinearAxis {
+                    Position = AxisPosition.Bottom,
+                    IsAxisVisible = false,
+                    AxislineThickness = 0.5,
+                    MajorGridlineThickness = 0.5,
+                    MinorGridlineThickness = 0.5
+                });
+                histogramModel.Axes.Add(new LinearAxis {
+                    Position = AxisPosition.Left,
+                    IsAxisVisible = false,
+                    AxislineThickness = 0.5,
+                    MajorGridlineThickness = 0.5,
+                    MinorGridlineThickness = 0.5
+                });
+
+                Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+            });
         }
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {
@@ -500,21 +547,21 @@ namespace AssetProcessor {
         #region UI Event Handlers
 
         private void ShowTextureViewer() {
-            TextureViewer.Visibility = Visibility.Visible;
+            TextureViewerScroll.Visibility = Visibility.Visible;
             ModelViewer.Visibility = Visibility.Collapsed;
-            MaterialViewer.Visibility = Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowModelViewer() {
-            TextureViewer.Visibility = Visibility.Collapsed;
+            TextureViewerScroll.Visibility = Visibility.Collapsed;
             ModelViewer.Visibility = Visibility.Visible;
-            MaterialViewer.Visibility = Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowMaterialViewer() {
-            TextureViewer.Visibility = Visibility.Collapsed;
+            TextureViewerScroll.Visibility = Visibility.Collapsed;
             ModelViewer.Visibility = Visibility.Collapsed;
-            MaterialViewer.Visibility = Visibility.Visible;
+            MaterialViewerScroll.Visibility = Visibility.Visible;
         }
 
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -568,43 +615,112 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Отменяем предыдущую загрузку, если она еще выполняется
+            textureLoadCancellation?.Cancel();
+            textureLoadCancellation = new CancellationTokenSource();
+            CancellationToken cancellationToken = textureLoadCancellation.Token;
+
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
-                    // Загружаем уменьшенное изображение
-                    BitmapImage? thumbnailImage = MainWindowHelpers.CreateThumbnailImage(selectedTexture.Path);
-                    if (thumbnailImage == null) {
-                        MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
-                        return;
-                    }
-
-                    TexturePreviewImage.Source = thumbnailImage;
-
-                    await Dispatcher.InvokeAsync(() => {
+                    try {
+                        // Обновляем информацию о текстуре сразу
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
                         TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
-
                         AssetProcessor.Helpers.SizeConverter sizeConverter = new();
                         object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
-                    });
 
-                    // Асинхронная загрузка полной текстуры
-                    await Task.Run(() => {
-                        BitmapImage bitmapImage = new(new Uri(selectedTexture.Path));
-                        bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
-
-                        Dispatcher.Invoke(() => {
-                            TexturePreviewImage.Source = bitmapImage;
-
-                            // Сохраняем оригинальную текстуру и обновляем гистограмму
-                            originalBitmapSource = bitmapImage.Clone();
-                            UpdateHistogram(originalBitmapSource);
-
-                            // Сбрасываем все фильтры
+                        // Проверяем кеш
+                        if (imageCache.TryGetValue(selectedTexture.Path, out BitmapImage? cachedImage)) {
+                            // Используем кешированное изображение - мгновенно!
+                            TexturePreviewImage.Source = cachedImage;
+                            originalBitmapSource = cachedImage.Clone();
+                            // Асинхронное обновление гистограммы
+                            _ = UpdateHistogramAsync(originalBitmapSource);
                             ShowOriginalImage();
-                        });
-                    });
+                            return;
+                        }
+
+                        // Сначала загружаем очень маленькое превью для мгновенного отклика
+                        BitmapImage? thumbnailImage = LoadOptimizedImage(selectedTexture.Path, ThumbnailSize);
+                        if (thumbnailImage == null) {
+                            MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
+                            return;
+                        }
+
+                        TexturePreviewImage.Source = thumbnailImage;
+
+                        // Асинхронная загрузка оптимизированной текстуры с возможностью отмены
+                        await Task.Run(() => {
+                            if (cancellationToken.IsCancellationRequested) return;
+
+                            // Загружаем изображение с ограничением размера (512px для баланса качества и скорости)
+                            BitmapImage? bitmapImage = LoadOptimizedImage(selectedTexture.Path, MaxPreviewSize);
+
+                            if (bitmapImage == null || cancellationToken.IsCancellationRequested) return;
+
+                            Dispatcher.Invoke(() => {
+                                if (cancellationToken.IsCancellationRequested) return;
+
+                                // Добавляем в кеш
+                                if (!imageCache.ContainsKey(selectedTexture.Path)) {
+                                    imageCache[selectedTexture.Path] = bitmapImage;
+
+                                    // Ограничиваем размер кеша (максимум 50 изображений)
+                                    if (imageCache.Count > 50) {
+                                        var firstKey = imageCache.Keys.First();
+                                        imageCache.Remove(firstKey);
+                                    }
+                                }
+
+                                TexturePreviewImage.Source = bitmapImage;
+
+                                // Сохраняем оригинальную текстуру
+                                originalBitmapSource = bitmapImage.Clone();
+
+                                // Асинхронное обновление гистограммы
+                                _ = UpdateHistogramAsync(originalBitmapSource);
+
+                                // Сбрасываем все фильтры
+                                ShowOriginalImage();
+                            });
+                        }, cancellationToken);
+                    } catch (OperationCanceledException) {
+                        // Загрузка была отменена - это нормально
+                    } catch (Exception ex) {
+                        MainWindowHelpers.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
+                    }
                 }
+            }
+        }
+
+        private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
+            try {
+                BitmapImage bitmapImage = new();
+                bitmapImage.BeginInit();
+                bitmapImage.UriSource = new Uri(path);
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+
+                // Определяем размер изображения
+                using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
+                    var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+                    int width = decoder.Frames[0].PixelWidth;
+                    int height = decoder.Frames[0].PixelHeight;
+
+                    // Всегда масштабируем до maxSize или меньше для максимальной производительности
+                    if (width > maxSize || height > maxSize) {
+                        double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
+                        bitmapImage.DecodePixelWidth = (int)(width * scale);
+                        bitmapImage.DecodePixelHeight = (int)(height * scale);
+                    }
+                }
+
+                bitmapImage.EndInit();
+                bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
+                return bitmapImage;
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error loading optimized image from {path}: {ex.Message}");
+                return null;
             }
         }
 
@@ -1014,7 +1130,7 @@ namespace AssetProcessor {
                 if (mapId.HasValue) {
                     TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
-                        hyperlink.NavigateUri = new Uri(texture.Name, UriKind.Relative);
+                        hyperlink.NavigateUri = null;
                         hyperlink.Inlines.Clear();
                         hyperlink.Inlines.Add(texture.Name);
                     }
@@ -1034,21 +1150,27 @@ namespace AssetProcessor {
             if (mapId.HasValue) {
                 System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
 
+                // Переключаемся на вкладку Textures синхронно для мгновенного отклика
                 TabItem? texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
                 if (texturesTab != null) {
                     tabControl.SelectedItem = texturesTab;
                 }
 
-                Dispatcher.InvokeAsync(() => {
-                    TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
-                    if (texture != null) {
+                // Находим и выбираем текстуру с более высоким приоритетом
+                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                if (texture != null) {
+                    // Используем Invoke вместо InvokeAsync для синхронного выполнения
+                    Dispatcher.Invoke(() => {
                         TexturesDataGrid.SelectedItem = texture;
                         TexturesDataGrid.ScrollIntoView(texture);
-                        System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected.");
-                    } else {
-                        System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
-                    }
-                }, System.Windows.Threading.DispatcherPriority.Background);
+                        // Принудительно обновляем фокус на выбранной строке
+                        TexturesDataGrid.UpdateLayout();
+
+                        System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected and scrolled into view.");
+                    }, System.Windows.Threading.DispatcherPriority.Normal);
+                } else {
+                    System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
+                }
             } else {
                 System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
             }

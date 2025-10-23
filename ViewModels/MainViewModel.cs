@@ -54,6 +54,12 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private string? apiKey;
 
+        [ObservableProperty]
+        private MaterialResource? selectedMaterial;
+
+        [ObservableProperty]
+        private ObservableCollection<TextureResource> filteredTextures = [];
+
         public MainViewModel(IPlayCanvasService playCanvasService) {
             this.playCanvasService = playCanvasService;
             logger.Info("MainViewModel initialized");
@@ -213,6 +219,45 @@ namespace AssetProcessor.ViewModels {
             // This will be implemented in the MainWindow code-behind or a separate service
 
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Фильтрует текстуры на основе выбранного материала
+        /// </summary>
+        private void FilterTexturesForMaterial(MaterialResource? material) {
+            if (material == null) {
+                FilteredTextures.Clear();
+                return;
+            }
+
+            var materialTextureIds = new List<int>();
+
+            // Собираем все ID текстур, используемых в материале
+            if (material.DiffuseMapId.HasValue) materialTextureIds.Add(material.DiffuseMapId.Value);
+            if (material.SpecularMapId.HasValue) materialTextureIds.Add(material.SpecularMapId.Value);
+            if (material.NormalMapId.HasValue) materialTextureIds.Add(material.NormalMapId.Value);
+            if (material.GlossMapId.HasValue) materialTextureIds.Add(material.GlossMapId.Value);
+            if (material.MetalnessMapId.HasValue) materialTextureIds.Add(material.MetalnessMapId.Value);
+            if (material.EmissiveMapId.HasValue) materialTextureIds.Add(material.EmissiveMapId.Value);
+            if (material.AOMapId.HasValue) materialTextureIds.Add(material.AOMapId.Value);
+            if (material.OpacityMapId.HasValue) materialTextureIds.Add(material.OpacityMapId.Value);
+
+            // Фильтруем текстуры
+            var filtered = Textures.Where(t => materialTextureIds.Contains(t.ID)).ToList();
+            
+            FilteredTextures.Clear();
+            foreach (var texture in filtered) {
+                FilteredTextures.Add(texture);
+            }
+
+            logger.Info($"Filtered {FilteredTextures.Count} textures for material {material.Name}");
+        }
+
+        /// <summary>
+        /// Обновляет фильтрацию текстур при изменении выбранного материала
+        /// </summary>
+        partial void OnSelectedMaterialChanged(MaterialResource? value) {
+            FilterTexturesForMaterial(value);
         }
     }
 }

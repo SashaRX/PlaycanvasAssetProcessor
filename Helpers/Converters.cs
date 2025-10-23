@@ -156,4 +156,25 @@ namespace AssetProcessor.Helpers {
         }
     }
 
+    public class TextureTypeToBackgroundConverter : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            if (value == null)
+                return Brushes.Transparent;
+
+            string? textureType = value.ToString();
+
+            return textureType switch {
+                "Gloss" => new SolidColorBrush(Color.FromRgb(128, 128, 128)), // Серый
+                "AO" => new SolidColorBrush(Color.FromRgb(255, 255, 255)), // Белый
+                "Normal" => new SolidColorBrush(Color.FromRgb(128, 128, 255)), // #8080ff
+                "Albedo" => new SolidColorBrush(Color.FromRgb(156, 127, 37)), // #9c7f25
+                _ => Brushes.Transparent,
+            };
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
 }

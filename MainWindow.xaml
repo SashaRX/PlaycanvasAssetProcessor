@@ -20,6 +20,7 @@
         <help:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
         <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
         <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
+        <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
 
 
         <Style TargetType="Expander">
@@ -128,19 +129,44 @@
 
             <TabControl x:Name="tabControl" Grid.Column="0" Padding="1,1,1,1" BorderThickness="0,0,0,0" SelectionChanged="TabControl_SelectionChanged">
                 <TabItem Header="Textures" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
-                    <DataGrid x:Name="TexturesDataGrid"
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="4,2,4,2" Grid.Row="0" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
+                        <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
                                 ItemsSource="{Binding Textures}"
+                                AutoGenerateColumns="False"
                                 SelectionChanged="TexturesDataGrid_SelectionChanged"
                                 LoadingRow="TexturesDataGrid_LoadingRow"
-                                Sorting="TexturesDataGrid_Sorting">
+                                Sorting="TexturesDataGrid_Sorting"
+                                IsReadOnly="True"
+                                CanUserAddRows="False"
+                                CanUserDeleteRows="False"
+                                CanUserSortColumns="True"
+                                Background="#FFD6D6D6">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Columns Visibility">
+                                    <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ID"/>
+                                    <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
+                                    <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
+                                    <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
+                                    <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
+                                    <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
+                                    <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
+                                </MenuItem>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
-                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
-                            <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
-                            <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="auto" MinWidth="20"/>
-                            <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
-                            <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
-                            <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
+                            <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="auto" MinWidth="20"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="35"/>
+                            <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
+                            <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
                             <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -152,7 +178,44 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
+                        <DataGrid.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11" Margin="0,0,4,0"/>
+                                            <TextBlock Text="(" FontSize="10" Foreground="#FF666666"/>
+                                            <TextBlock Text="{Binding ItemCount}" FontSize="10" Foreground="#FF666666"/>
+                                            <TextBlock Text=")" FontSize="10" Foreground="#FF666666"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                                <GroupStyle.ContainerStyle>
+                                    <Style TargetType="{x:Type GroupItem}">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type GroupItem}">
+                                                    <Expander IsExpanded="True" Background="#FFE8E8E8" BorderBrush="#FFCCCCCC" BorderThickness="1" Margin="0,1,0,1" Padding="0">
+                                                        <Expander.Header>
+                                                            <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
+                                                        </Expander.Header>
+                                                        <Expander.Style>
+                                                            <Style TargetType="Expander">
+                                                                <Setter Property="Margin" Value="0"/>
+                                                                <Setter Property="Padding" Value="0"/>
+                                                            </Style>
+                                                        </Expander.Style>
+                                                        <ItemsPresenter Margin="0"/>
+                                                    </Expander>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.ContainerStyle>
+                            </GroupStyle>
+                        </DataGrid.GroupStyle>
                     </DataGrid>
+                    </Grid>
                 </TabItem>
                 <TabItem Header="Models">
                     <Grid Background="#FFE5E5E5">
@@ -186,11 +249,28 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="Materials">
-                    <DataGrid x:Name="MaterialsDataGrid" AutoGenerateColumns="False" ItemsSource="{Binding Materials}" SelectionChanged="MaterialsDataGrid_SelectionChanged">
+                    <DataGrid x:Name="MaterialsDataGrid"
+                              AutoGenerateColumns="False"
+                              ItemsSource="{Binding Materials}"
+                              SelectionChanged="MaterialsDataGrid_SelectionChanged"
+                              IsReadOnly="True"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              CanUserSortColumns="True"
+                              Background="#FFD6D6D6">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Columns Visibility">
+                                    <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
+                                    <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
+                                    <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
+                                </MenuItem>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="№" Binding="{Binding Index}" Width="Auto"/>
-                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
+                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
                             <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using OxyPlot;
 using OxyPlot.Axes;
 using SixLabors.ImageSharp;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
@@ -1144,60 +1145,69 @@ namespace AssetProcessor {
             }
         }
 
-        private void MapHyperlink_Click(object sender, RoutedEventArgs _, int? mapId, string mapType) {
+        private void NavigateToTextureFromHyperlink(object sender, string mapType, Func<MaterialResource, int?> mapIdSelector) {
             ArgumentNullException.ThrowIfNull(sender);
 
-            if (mapId.HasValue) {
-                System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
+            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource
+                                          ?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
-                // Переключаемся на вкладку Textures синхронно для мгновенного отклика
-                TabItem? texturesTab = tabControl.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Header.ToString() == "Textures");
-                if (texturesTab != null) {
-                    tabControl.SelectedItem = texturesTab;
+            if (material == null) {
+                System.Diagnostics.Debug.WriteLine($"Unable to resolve material for {mapType} hyperlink.");
+                return;
+            }
+
+            int? mapId = mapIdSelector(material);
+            if (!mapId.HasValue) {
+                System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"Switching to Textures tab and selecting {mapType} with ID: {mapId.Value}");
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturesTabItem != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
                 }
 
-                // Находим и выбираем текстуру с более высоким приоритетом
                 TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
                 if (texture != null) {
-                    // Используем Invoke вместо InvokeAsync для синхронного выполнения
-                    Dispatcher.Invoke(() => {
-                        TexturesDataGrid.SelectedItem = texture;
-                        TexturesDataGrid.ScrollIntoView(texture);
-                        // Принудительно обновляем фокус на выбранной строке
-                        TexturesDataGrid.UpdateLayout();
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(texture);
 
-                        System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected and scrolled into view.");
-                    }, System.Windows.Threading.DispatcherPriority.Normal);
+                    TexturesDataGrid.SelectedItem = texture;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.Focus();
+
+                    System.Diagnostics.Debug.WriteLine($"Texture with ID: {texture.ID} selected and scrolled into view.");
                 } else {
                     System.Diagnostics.Debug.WriteLine($"Texture with ID {mapId.Value} not found.");
                 }
-            } else {
-                System.Diagnostics.Debug.WriteLine($"{mapType} ID is not set or is null.");
-            }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.DiffuseMapId, "Diffuse Map");
+            NavigateToTextureFromHyperlink(sender, "Diffuse Map", material => material.DiffuseMapId);
         }
 
         private void MaterialNormalMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.NormalMapId, "Normal Map");
+            NavigateToTextureFromHyperlink(sender, "Normal Map", material => material.NormalMapId);
         }
 
         private void MaterialSpecularMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.SpecularMapId, "Specular Map");
+            NavigateToTextureFromHyperlink(sender, "Specular Map", material => material.SpecularMapId);
         }
 
         private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.MetalnessMapId, "Metalness Map");
+            NavigateToTextureFromHyperlink(sender, "Metalness Map", material => material.MetalnessMapId);
         }
 
         private void MaterialGlossMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.GlossMapId, "Gloss Map");
+            NavigateToTextureFromHyperlink(sender, "Gloss Map", material => material.GlossMapId);
         }
 
         private void MaterialAOMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            MapHyperlink_Click(sender, e, (MaterialsDataGrid.SelectedItem as MaterialResource)?.AOMapId, "AO Map");
+            NavigateToTextureFromHyperlink(sender, "AO Map", material => material.AOMapId);
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {

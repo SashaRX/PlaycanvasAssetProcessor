@@ -82,6 +82,11 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool UseOpenCL { get; set; } = false;
 
         /// <summary>
+        /// Тип KTX2 supercompression (только для KTX2)
+        /// </summary>
+        public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
+
+        /// <summary>
         /// Создает настройки по умолчанию для ETC1S
         /// </summary>
         public static CompressionSettings CreateETC1SDefault() {

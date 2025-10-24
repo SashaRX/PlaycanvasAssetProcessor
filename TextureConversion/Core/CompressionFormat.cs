@@ -28,4 +28,24 @@ namespace AssetProcessor.TextureConversion.Core {
         /// </summary>
         KTX2
     }
+
+    /// <summary>
+    /// Тип supercompression для KTX2
+    /// </summary>
+    public enum KTX2SupercompressionType {
+        /// <summary>
+        /// Без дополнительного сжатия
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Zstandard supercompression (лучшее сжатие, рекомендуется)
+        /// </summary>
+        Zstandard,
+
+        /// <summary>
+        /// ZLIB supercompression (для совместимости)
+        /// </summary>
+        ZLIB
+    }
 }

@@ -39,6 +39,12 @@
                 <x:Type TypeName="core:OutputFormat"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="KTX2SupercompressionValues" MethodName="GetValues" ObjectType="{x:Type core:KTX2SupercompressionType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:KTX2SupercompressionType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
     </Window.Resources>
 
     <Grid Margin="10">
@@ -208,31 +214,13 @@
                             <TextBlock Grid.Row="4" Grid.Column="0" Text="Use UASTC RDO:" VerticalAlignment="Center" Margin="0,5"/>
                             <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding UseUASTCRDO}" VerticalAlignment="Center" Margin="0,5"/>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Multithreading:" VerticalAlignment="Center" Margin="0,5"/>
-                            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding UseMultithreading}" VerticalAlignment="Center" Margin="0,5"/>
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Perceptual Mode:" VerticalAlignment="Center" Margin="0,5"/>
+                            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding PerceptualMode}" VerticalAlignment="Center" Margin="0,5"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Perceptual Mode:" VerticalAlignment="Center" Margin="0,5"/>
-                            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding PerceptualMode}" VerticalAlignment="Center" Margin="0,5"/>
-                        </Grid>
-                    </GroupBox>
-
-                    <!-- Hardware Acceleration -->
-                    <GroupBox Header="Hardware Acceleration" Margin="0,10,0,0" IsEnabled="{Binding SelectedTexture, Converter={StaticResource NullToBoolConverter}}">
-                        <Grid DataContext="{Binding SelectedTexture.Compression}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Use SSE4.1:" VerticalAlignment="Center" Margin="0,5"/>
-                            <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding UseSSE41}" VerticalAlignment="Center" Margin="0,5"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Use OpenCL:" VerticalAlignment="Center" Margin="0,5"/>
-                            <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding UseOpenCL}" VerticalAlignment="Center" Margin="0,5"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="KTX2 Supercompression:" VerticalAlignment="Center" Margin="0,5"/>
+                            <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
+                                      SelectedItem="{Binding KTX2Supercompression}" Margin="0,5"
+                                      ToolTip="Supercompression for KTX2 files (only affects KTX2 output)"/>
                         </Grid>
                     </GroupBox>
                 </StackPanel>

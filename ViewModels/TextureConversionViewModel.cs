@@ -129,7 +129,7 @@ namespace AssetProcessor.ViewModels {
                     ProcessingStatus = $"Processing {Path.GetFileName(texture.TexturePath)}...";
 
                     var mipProfile = texture.MipProfile.ToMipGenerationProfile(texture.TextureType);
-                    var compressionSettings = texture.Compression.ToCompressionSettings();
+                    var compressionSettings = texture.Compression.ToCompressionSettings(GlobalSettings);
 
                     var outputFileName = Path.GetFileNameWithoutExtension(texture.TexturePath);
                     var extension = compressionSettings.OutputFormat == OutputFormat.KTX2 ? ".ktx2" : ".basis";
@@ -191,7 +191,7 @@ namespace AssetProcessor.ViewModels {
                 Directory.CreateDirectory(OutputDirectory);
 
                 var mipProfile = SelectedTexture.MipProfile.ToMipGenerationProfile(SelectedTexture.TextureType);
-                var compressionSettings = SelectedTexture.Compression.ToCompressionSettings();
+                var compressionSettings = SelectedTexture.Compression.ToCompressionSettings(GlobalSettings);
 
                 var outputFileName = Path.GetFileNameWithoutExtension(SelectedTexture.TexturePath);
                 var extension = compressionSettings.OutputFormat == OutputFormat.KTX2 ? ".ktx2" : ".basis";

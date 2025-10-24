@@ -31,6 +31,16 @@ namespace AssetProcessor.TextureConversion.Core {
         /// <summary>
         /// Kaiser filter
         /// </summary>
-        Kaiser
+        Kaiser,
+
+        /// <summary>
+        /// Min filter (для preserving fine details, хорош для roughness/metallic)
+        /// </summary>
+        Min,
+
+        /// <summary>
+        /// Max filter (для anti-aliasing, хорош для normal maps)
+        /// </summary>
+        Max
     }
 }

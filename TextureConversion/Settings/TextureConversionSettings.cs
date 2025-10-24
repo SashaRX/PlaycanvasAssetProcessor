@@ -82,7 +82,7 @@ namespace AssetProcessor.TextureConversion.Settings {
     }
 
     /// <summary>
-    /// Настройки сжатия для сериализации
+    /// Настройки сжатия для сериализации (per-texture)
     /// </summary>
     public class CompressionSettingsData {
         public CompressionFormat CompressionFormat { get; set; } = CompressionFormat.ETC1S;
@@ -91,16 +91,13 @@ namespace AssetProcessor.TextureConversion.Settings {
         public int UASTCQuality { get; set; } = 2;
         public bool UseUASTCRDO { get; set; } = true;
         public float UASTCRDOQuality { get; set; } = 1.0f;
-        public bool UseMultithreading { get; set; } = true;
-        public int ThreadCount { get; set; } = 0;
         public bool PerceptualMode { get; set; } = true;
-        public bool UseSSE41 { get; set; } = true;
-        public bool UseOpenCL { get; set; } = false;
+        public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
-        /// Создает CompressionSettings из настроек
+        /// Создает CompressionSettings из настроек с применением глобальных настроек
         /// </summary>
-        public CompressionSettings ToCompressionSettings() {
+        public CompressionSettings ToCompressionSettings(GlobalTextureConversionSettings globalSettings) {
             return new CompressionSettings {
                 CompressionFormat = CompressionFormat,
                 OutputFormat = OutputFormat,
@@ -109,16 +106,17 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseUASTCRDO = UseUASTCRDO,
                 UASTCRDOQuality = UASTCRDOQuality,
                 GenerateMipmaps = false, // Мы генерируем отдельно
-                UseMultithreading = UseMultithreading,
-                ThreadCount = ThreadCount,
+                UseMultithreading = globalSettings.UseMultithreading,
+                ThreadCount = globalSettings.ThreadCount,
                 PerceptualMode = PerceptualMode,
-                UseSSE41 = UseSSE41,
-                UseOpenCL = UseOpenCL
+                UseSSE41 = globalSettings.UseSSE41,
+                UseOpenCL = globalSettings.UseOpenCL,
+                KTX2Supercompression = KTX2Supercompression
             };
         }
 
         /// <summary>
-        /// Создает настройки из CompressionSettings
+        /// Создает настройки из CompressionSettings (без глобальных настроек)
         /// </summary>
         public static CompressionSettingsData FromCompressionSettings(CompressionSettings settings) {
             return new CompressionSettingsData {
@@ -128,11 +126,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UASTCQuality = settings.UASTCQuality,
                 UseUASTCRDO = settings.UseUASTCRDO,
                 UASTCRDOQuality = settings.UASTCRDOQuality,
-                UseMultithreading = settings.UseMultithreading,
-                ThreadCount = settings.ThreadCount,
                 PerceptualMode = settings.PerceptualMode,
-                UseSSE41 = settings.UseSSE41,
-                UseOpenCL = settings.UseOpenCL
+                KTX2Supercompression = settings.KTX2Supercompression
             };
         }
     }
@@ -165,5 +160,26 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// Максимальное количество параллельных задач
         /// </summary>
         public int MaxParallelTasks { get; set; } = 4;
+
+        // Глобальные настройки производительности basisu
+        /// <summary>
+        /// Использовать SSE4.1 инструкции (глобально)
+        /// </summary>
+        public bool UseSSE41 { get; set; } = true;
+
+        /// <summary>
+        /// Использовать OpenCL для GPU ускорения (глобально)
+        /// </summary>
+        public bool UseOpenCL { get; set; } = false;
+
+        /// <summary>
+        /// Использовать многопоточность (глобально)
+        /// </summary>
+        public bool UseMultithreading { get; set; } = true;
+
+        /// <summary>
+        /// Количество потоков (0 = автоопределение)
+        /// </summary>
+        public int ThreadCount { get; set; } = 0;
     }
 }

@@ -178,6 +178,21 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("-opencl");
             }
 
+            // KTX2 Supercompression (только для KTX2 формата)
+            if (settings.OutputFormat == OutputFormat.KTX2) {
+                switch (settings.KTX2Supercompression) {
+                    case KTX2SupercompressionType.Zstandard:
+                        args.Add("-ktx2_zstd");
+                        break;
+                    case KTX2SupercompressionType.ZLIB:
+                        args.Add("-ktx2_zlib");
+                        break;
+                    case KTX2SupercompressionType.None:
+                        args.Add("-ktx2_no_zstd");
+                        break;
+                }
+            }
+
             return string.Join(" ", args);
         }
 

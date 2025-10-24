@@ -35,6 +35,46 @@ namespace AssetProcessor {
             }
         }
 
+        public bool UseSSE41 {
+            get => _textureSettings.UseSSE41;
+            set {
+                if (_textureSettings.UseSSE41 != value) {
+                    _textureSettings.UseSSE41 = value;
+                    OnPropertyChanged(nameof(UseSSE41));
+                }
+            }
+        }
+
+        public bool UseOpenCL {
+            get => _textureSettings.UseOpenCL;
+            set {
+                if (_textureSettings.UseOpenCL != value) {
+                    _textureSettings.UseOpenCL = value;
+                    OnPropertyChanged(nameof(UseOpenCL));
+                }
+            }
+        }
+
+        public bool UseMultithreading {
+            get => _textureSettings.UseMultithreading;
+            set {
+                if (_textureSettings.UseMultithreading != value) {
+                    _textureSettings.UseMultithreading = value;
+                    OnPropertyChanged(nameof(UseMultithreading));
+                }
+            }
+        }
+
+        public int ThreadCount {
+            get => _textureSettings.ThreadCount;
+            set {
+                if (_textureSettings.ThreadCount != value) {
+                    _textureSettings.ThreadCount = value;
+                    OnPropertyChanged(nameof(ThreadCount));
+                }
+            }
+        }
+
         public SettingsWindow() {
             _textureSettings = TextureConversionSettingsManager.LoadSettings();
             InitializeComponent();

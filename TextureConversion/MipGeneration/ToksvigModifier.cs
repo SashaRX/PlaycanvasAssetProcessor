@@ -36,7 +36,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         public Image<Rgba32> Apply(Image<Rgba32> mipImage, int mipLevel, Image<Rgba32>? originalImage = null) {
             if (_normalMap == null || mipLevel == 0) {
                 // На уровне 0 или без normal map просто возвращаем оригинал
-                return mipImage.Clone(ctx => { });
+                return mipImage.Clone();
             }
 
             // TODO: Реализовать алгоритм Toksvig
@@ -50,7 +50,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             // 2. Обновить значения пикселей
 
             // Пока возвращаем клон без изменений
-            return mipImage.Clone(ctx => { });
+            return mipImage.Clone();
         }
 
         public bool IsApplicable(TextureType textureType) {

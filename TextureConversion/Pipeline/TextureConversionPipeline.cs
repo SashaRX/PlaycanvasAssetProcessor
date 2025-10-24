@@ -1,3 +1,4 @@
+using System.IO;
 using AssetProcessor.TextureConversion.BasisU;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.MipGeneration;

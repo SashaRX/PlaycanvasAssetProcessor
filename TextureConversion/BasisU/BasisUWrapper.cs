@@ -1,6 +1,7 @@
-using AssetProcessor.TextureConversion.Core;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
+using AssetProcessor.TextureConversion.Core;
 
 namespace AssetProcessor.TextureConversion.BasisU {
     /// <summary>

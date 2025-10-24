@@ -1,3 +1,4 @@
+using System.IO;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Pipeline;
 

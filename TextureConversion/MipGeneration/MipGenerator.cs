@@ -1,3 +1,4 @@
+using System.IO;
 using AssetProcessor.TextureConversion.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;

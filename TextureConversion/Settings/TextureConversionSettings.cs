@@ -94,6 +94,8 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool UseMultithreading { get; set; } = true;
         public int ThreadCount { get; set; } = 0;
         public bool PerceptualMode { get; set; } = true;
+        public bool UseSSE41 { get; set; } = true;
+        public bool UseOpenCL { get; set; } = false;
 
         /// <summary>
         /// Создает CompressionSettings из настроек
@@ -109,7 +111,9 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = false, // Мы генерируем отдельно
                 UseMultithreading = UseMultithreading,
                 ThreadCount = ThreadCount,
-                PerceptualMode = PerceptualMode
+                PerceptualMode = PerceptualMode,
+                UseSSE41 = UseSSE41,
+                UseOpenCL = UseOpenCL
             };
         }
 
@@ -126,7 +130,9 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UASTCRDOQuality = settings.UASTCRDOQuality,
                 UseMultithreading = settings.UseMultithreading,
                 ThreadCount = settings.ThreadCount,
-                PerceptualMode = settings.PerceptualMode
+                PerceptualMode = settings.PerceptualMode,
+                UseSSE41 = settings.UseSSE41,
+                UseOpenCL = settings.UseOpenCL
             };
         }
     }

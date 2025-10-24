@@ -72,6 +72,16 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool SeparateAlpha { get; set; } = false;
 
         /// <summary>
+        /// Использовать SSE4.1 инструкции для ускорения
+        /// </summary>
+        public bool UseSSE41 { get; set; } = true;
+
+        /// <summary>
+        /// Использовать OpenCL для GPU ускорения
+        /// </summary>
+        public bool UseOpenCL { get; set; } = false;
+
+        /// <summary>
         /// Создает настройки по умолчанию для ETC1S
         /// </summary>
         public static CompressionSettings CreateETC1SDefault() {

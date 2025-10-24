@@ -215,6 +215,26 @@
                             <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding PerceptualMode}" VerticalAlignment="Center" Margin="0,5"/>
                         </Grid>
                     </GroupBox>
+
+                    <!-- Hardware Acceleration -->
+                    <GroupBox Header="Hardware Acceleration" Margin="0,10,0,0" IsEnabled="{Binding SelectedTexture, Converter={StaticResource NullToBoolConverter}}">
+                        <Grid DataContext="{Binding SelectedTexture.Compression}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Use SSE4.1:" VerticalAlignment="Center" Margin="0,5"/>
+                            <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding UseSSE41}" VerticalAlignment="Center" Margin="0,5"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Use OpenCL:" VerticalAlignment="Center" Margin="0,5"/>
+                            <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding UseOpenCL}" VerticalAlignment="Center" Margin="0,5"/>
+                        </Grid>
+                    </GroupBox>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

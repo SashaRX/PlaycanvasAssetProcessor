@@ -168,6 +168,16 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add($"-mip_smallest {settings.MipSmallestDimension}");
             }
 
+            // SSE4.1 (по умолчанию включен в basisu, отключаем только если не нужен)
+            if (!settings.UseSSE41) {
+                args.Add("-no_sse");
+            }
+
+            // OpenCL
+            if (settings.UseOpenCL) {
+                args.Add("-opencl");
+            }
+
             return string.Join(" ", args);
         }
 

@@ -130,15 +130,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             // Мипмапы
-            if (mipmapPaths != null && mipmapPaths.Count > 0) {
-                // Если есть предгенерированные мипмапы, используем их
-                foreach (var mipPath in mipmapPaths) {
-                    args.Add($"\"{mipPath}\"");
-                }
-            } else if (settings.GenerateMipmaps) {
-                // Иначе позволяем basisu генерировать их
+            // Примечание: basisu не поддерживает передачу предгенерированных мипмапов как отдельных файлов
+            // Вместо этого он должен генерировать их сам при кодировании
+            if (settings.GenerateMipmaps) {
                 args.Add("-mipmap");
             }
+
+            // Если были предгенерированные мипмапы, они используются только для отдельного сохранения
+            // basisu всё равно генерирует свои мипмапы при сжатии
 
             // Многопоточность
             if (settings.UseMultithreading) {

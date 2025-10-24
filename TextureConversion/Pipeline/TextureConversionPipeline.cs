@@ -56,64 +56,44 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 using var sourceImage = await Image.LoadAsync<Rgba32>(inputPath);
                 Logger.Info($"Loaded image: {sourceImage.Width}x{sourceImage.Height}");
 
-                // Генерируем мипмапы
+                // Генерируем мипмапы (для подсчета уровней и опционального сохранения)
                 Logger.Info("Generating mipmaps...");
                 var mipmaps = _mipGenerator.GenerateMipmaps(sourceImage, mipProfile);
                 Logger.Info($"Generated {mipmaps.Count} mipmap levels");
 
-                List<string>? mipmapPaths = null;
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
 
-                // Сохраняем мипмапы во временные файлы для basisu
-                var tempDir = Path.Combine(Path.GetTempPath(), $"basisu_mips_{Guid.NewGuid()}");
-                Directory.CreateDirectory(tempDir);
-
-                try {
-                    mipmapPaths = new List<string>();
-                    var fileName = Path.GetFileNameWithoutExtension(inputPath);
+                // Опционально: сохраняем мипмапы отдельно для будущего стриминга
+                if (saveSeparateMipmaps && !string.IsNullOrEmpty(mipmapOutputDir)) {
+                    Logger.Info($"Saving separate mipmaps to {mipmapOutputDir}");
+                    Directory.CreateDirectory(mipmapOutputDir);
 
                     for (int i = 0; i < mipmaps.Count; i++) {
-                        var tempPath = Path.Combine(tempDir, $"{fileName}_mip{i}.png");
-                        await mipmaps[i].SaveAsPngAsync(tempPath);
-                        mipmapPaths.Add(tempPath);
-                    }
-
-                    // Опционально: сохраняем мипмапы отдельно для будущего стриминга
-                    if (saveSeparateMipmaps && !string.IsNullOrEmpty(mipmapOutputDir)) {
-                        Logger.Info($"Saving separate mipmaps to {mipmapOutputDir}");
-                        Directory.CreateDirectory(mipmapOutputDir);
-
-                        for (int i = 0; i < mipmaps.Count; i++) {
-                            var mipPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
-                            await mipmaps[i].SaveAsPngAsync(mipPath);
-                        }
-                    }
-
-                    // Кодируем в Basis Universal
-                    Logger.Info("Encoding to Basis Universal...");
-                    var basisResult = await _basisWrapper.EncodeAsync(
-                        mipmapPaths[0], // Базовое изображение
-                        outputPath,
-                        compressionSettings,
-                        mipmapPaths.Count > 1 ? mipmapPaths.Skip(1).ToList() : null
-                    );
-
-                    if (!basisResult.Success) {
-                        throw new Exception($"Basis encoding failed: {basisResult.Error}");
-                    }
-
-                    result.Success = true;
-                    result.BasisOutput = basisResult.Output;
-                    result.MipLevels = mipmaps.Count;
-
-                    Logger.Info($"Conversion successful: {outputPath}");
-                } finally {
-                    // Очищаем временные файлы
-                    try {
-                        Directory.Delete(tempDir, true);
-                    } catch (Exception ex) {
-                        Logger.Warn($"Failed to delete temp directory: {ex.Message}");
+                        var mipPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
+                        await mipmaps[i].SaveAsPngAsync(mipPath);
                     }
                 }
+
+                // Кодируем в Basis Universal
+                // Примечание: basisu генерирует свои мипмапы при сжатии
+                // Наши предгенерированные мипмапы используются только для отдельного сохранения
+                Logger.Info("Encoding to Basis Universal...");
+                var basisResult = await _basisWrapper.EncodeAsync(
+                    inputPath, // Используем оригинальный файл
+                    outputPath,
+                    compressionSettings,
+                    null // Не передаем предгенерированные мипмапы
+                );
+
+                if (!basisResult.Success) {
+                    throw new Exception($"Basis encoding failed: {basisResult.Error}");
+                }
+
+                result.Success = true;
+                result.BasisOutput = basisResult.Output;
+                result.MipLevels = mipmaps.Count;
+
+                Logger.Info($"Conversion successful: {outputPath}");
 
                 // Освобождаем память
                 foreach (var mip in mipmaps) {

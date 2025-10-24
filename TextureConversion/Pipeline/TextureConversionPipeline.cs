@@ -61,17 +61,31 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 var mipmaps = _mipGenerator.GenerateMipmaps(sourceImage, mipProfile);
                 Logger.Info($"Generated {mipmaps.Count} mipmap levels");
 
+                // Выводим информацию о каждом мипмапе
+                for (int i = 0; i < mipmaps.Count; i++) {
+                    Logger.Info($"Mipmap level {i}: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                }
+
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
 
                 // Опционально: сохраняем мипмапы отдельно для будущего стриминга
                 if (saveSeparateMipmaps && !string.IsNullOrEmpty(mipmapOutputDir)) {
-                    Logger.Info($"Saving separate mipmaps to {mipmapOutputDir}");
+                    Logger.Info($"Saving {mipmaps.Count} separate mipmaps to {mipmapOutputDir}");
                     Directory.CreateDirectory(mipmapOutputDir);
 
                     for (int i = 0; i < mipmaps.Count; i++) {
                         var mipPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
+                        Logger.Info($"Saving mipmap level {i} ({mipmaps[i].Width}x{mipmaps[i].Height}) to: {mipPath}");
+
                         await mipmaps[i].SaveAsPngAsync(mipPath);
-                        Logger.Info($"Saved mipmap level {i}: {mipPath}");
+
+                        // Проверяем, что файл действительно создан
+                        if (File.Exists(mipPath)) {
+                            var fileInfo = new FileInfo(mipPath);
+                            Logger.Info($"✓ Mipmap {i} saved successfully ({fileInfo.Length} bytes)");
+                        } else {
+                            Logger.Error($"✗ Failed to save mipmap {i} - file not found after save!");
+                        }
                     }
 
                     result.MipmapsSavedPath = mipmapOutputDir;

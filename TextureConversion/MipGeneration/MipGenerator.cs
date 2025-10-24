@@ -20,7 +20,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             var mipmaps = new List<Image<Rgba32>>();
 
             // Уровень 0 - оригинальное изображение (клон)
-            mipmaps.Add(sourceImage.Clone(ctx => { }));
+            mipmaps.Add(sourceImage.Clone());
 
             int currentWidth = sourceImage.Width;
             int currentHeight = sourceImage.Height;

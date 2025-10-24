@@ -44,7 +44,9 @@ namespace AssetProcessor.ViewModels {
         public TextureConversionViewModel() {
             _globalSettings = TextureConversionSettingsManager.LoadSettings();
             _outputDirectory = _globalSettings.DefaultOutputDirectory;
-            _basisUPath = _globalSettings.BasisUExecutablePath;
+            _basisUPath = string.IsNullOrWhiteSpace(_globalSettings.BasisUExecutablePath)
+                ? "basisu"
+                : _globalSettings.BasisUExecutablePath;
 
             // Загружаем сохраненные текстуры
             LoadSavedTextures();

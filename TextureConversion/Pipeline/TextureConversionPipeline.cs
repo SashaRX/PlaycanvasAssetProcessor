@@ -71,7 +71,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     for (int i = 0; i < mipmaps.Count; i++) {
                         var mipPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
                         await mipmaps[i].SaveAsPngAsync(mipPath);
+                        Logger.Info($"Saved mipmap level {i}: {mipPath}");
                     }
+
+                    result.MipmapsSavedPath = mipmapOutputDir;
+                    Logger.Info($"Successfully saved {mipmaps.Count} mipmap levels to {mipmapOutputDir}");
                 }
 
                 // Кодируем в Basis Universal
@@ -171,6 +175,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// Количество уровней мипмапов
         /// </summary>
         public int MipLevels { get; set; }
+
+        /// <summary>
+        /// Путь к директории с сохраненными отдельными мипмапами (если применимо)
+        /// </summary>
+        public string? MipmapsSavedPath { get; set; }
 
         /// <summary>
         /// Длительность конвертации

@@ -151,6 +151,9 @@ namespace AssetProcessor.ViewModels {
 
                     if (result.Success) {
                         Logger.Info($"Successfully processed: {texture.TexturePath}");
+                        if (!string.IsNullOrEmpty(result.MipmapsSavedPath)) {
+                            Logger.Info($"Separate mipmaps saved to: {result.MipmapsSavedPath}");
+                        }
                     } else {
                         Logger.Error($"Failed to process {texture.TexturePath}: {result.Error}");
                     }
@@ -210,8 +213,13 @@ namespace AssetProcessor.ViewModels {
 
                 if (result.Success) {
                     ProcessingStatus = "Processing completed!";
-                    MessageBox.Show($"Successfully processed texture!\n\nOutput: {outputPath}\nMip levels: {result.MipLevels}\nDuration: {result.Duration.TotalSeconds:F2}s",
-                        "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var message = $"Successfully processed texture!\n\nOutput: {outputPath}\nMip levels: {result.MipLevels}\nDuration: {result.Duration.TotalSeconds:F2}s";
+
+                    if (!string.IsNullOrEmpty(result.MipmapsSavedPath)) {
+                        message += $"\n\nSeparate mipmaps saved to:\n{result.MipmapsSavedPath}";
+                    }
+
+                    MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
                     ProcessingStatus = "Processing failed.";
                     MessageBox.Show($"Failed to process texture:\n\n{result.Error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);

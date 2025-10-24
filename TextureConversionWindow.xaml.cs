@@ -11,10 +11,6 @@ namespace AssetProcessor {
         public TextureConversionWindow() {
             InitializeComponent();
             DataContext = new TextureConversionViewModel();
-
-            // Add converters to resources
-            Resources.Add("NullToBoolConverter", new NullToBoolConverter());
-            Resources.Add("InverseBoolConverter", new InverseBoolConverter());
         }
     }
 

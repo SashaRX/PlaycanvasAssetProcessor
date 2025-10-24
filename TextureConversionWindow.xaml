@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:AssetProcessor.ViewModels"
+        xmlns:local="clr-namespace:AssetProcessor"
         xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
         mc:Ignorable="d"
         Title="Texture Conversion Pipeline"
@@ -11,6 +11,10 @@
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
+        <!-- Converters -->
+        <local:NullToBoolConverter x:Key="NullToBoolConverter"/>
+        <local:InverseBoolConverter x:Key="InverseBoolConverter"/>
+
         <!-- Enum to ComboBox converter -->
         <ObjectDataProvider x:Key="TextureTypeValues" MethodName="GetValues" ObjectType="{x:Type core:TextureType}">
             <ObjectDataProvider.MethodParameters>

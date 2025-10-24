@@ -888,6 +888,11 @@ namespace AssetProcessor {
             settingsWindow.ShowDialog();
         }
 
+        private void TextureConversionMenu(object? sender, RoutedEventArgs e) {
+            TextureConversionWindow textureConversionWindow = new();
+            textureConversionWindow.ShowDialog();
+        }
+
         private void ExitMenu(object? sender, RoutedEventArgs e) {
             Close();
         }

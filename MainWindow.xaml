@@ -130,6 +130,9 @@
                     <MenuItem Header="Settings" Click="SettingsMenu"/>
                     <MenuItem Header="Exit" Click="ExitMenu"/>
                 </MenuItem>
+                <MenuItem Header="Tools">
+                    <MenuItem Header="Texture Conversion Pipeline" Click="TextureConversionMenu"/>
+                </MenuItem>
                 <MenuItem Header="Help">
                     <MenuItem Header="About" Click="AboutMenu"/>
                 </MenuItem>

@@ -39,12 +39,6 @@
                 <x:Type TypeName="core:OutputFormat"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
-
-        <ObjectDataProvider x:Key="KTX2SupercompressionValues" MethodName="GetValues" ObjectType="{x:Type core:KTX2SupercompressionType}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:KTX2SupercompressionType"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
     </Window.Resources>
 
     <Grid Margin="10">
@@ -188,7 +182,6 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Compression Format:" VerticalAlignment="Center" Margin="0,5"/>
@@ -216,12 +209,16 @@
 
                             <TextBlock Grid.Row="5" Grid.Column="0" Text="Perceptual Mode:" VerticalAlignment="Center" Margin="0,5"/>
                             <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding PerceptualMode}" VerticalAlignment="Center" Margin="0,5"/>
-
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="KTX2 Supercompression:" VerticalAlignment="Center" Margin="0,5"/>
-                            <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
-                                      SelectedItem="{Binding KTX2Supercompression}" Margin="0,5"
-                                      ToolTip="Supercompression for KTX2 files (only affects KTX2 output)"/>
                         </Grid>
+                    </GroupBox>
+
+                    <!-- Info about KTX2 -->
+                    <GroupBox Header="KTX2 Information" Margin="0,10,0,0" IsEnabled="{Binding SelectedTexture, Converter={StaticResource NullToBoolConverter}}">
+                        <TextBlock TextWrapping="Wrap" Margin="5">
+                            <Run Text="KTX2 files automatically use Zstandard supercompression for UASTC in modern basisu versions."/>
+                            <LineBreak/>
+                            <Run Text="No additional flags are needed - supercompression is enabled by default." FontSize="10" Foreground="Gray"/>
+                        </TextBlock>
                     </GroupBox>
                 </StackPanel>
             </ScrollViewer>

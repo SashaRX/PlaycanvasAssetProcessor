@@ -1358,7 +1358,7 @@ namespace AssetProcessor {
                 }
 
                 // Автоматически переключаемся на вкладку текстур и выбираем связанную текстуру
-                SwitchToTexturesTabAndSelectTexture(selectedMaterial);
+                // SwitchToTexturesTabAndSelectTexture(selectedMaterial); // Отключено: не переключаться автоматически при выборе материала
             }
         }
 

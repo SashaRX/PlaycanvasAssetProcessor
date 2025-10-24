@@ -1287,6 +1287,61 @@ namespace AssetProcessor {
             NavigateToTextureFromHyperlink(sender, "AO Map", material => material.AOMapId);
         }
 
+        private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            if (sender is not System.Windows.Controls.Image image) {
+                logger.Warn("TexturePreview_MouseLeftButtonUp вызван отправителем типа {SenderType}, ожидался Image.", sender.GetType().FullName);
+                return;
+            }
+
+            MaterialResource? material = MaterialsDataGrid.SelectedItem as MaterialResource;
+            if (material == null) {
+                logger.Warn("Не удалось определить материал для предпросмотра текстуры.");
+                return;
+            }
+
+            string textureType = image.Tag as string ?? "";
+            int? textureId = textureType switch {
+                "AO" => material.AOMapId,
+                "Diffuse" => material.DiffuseMapId,
+                "Normal" => material.NormalMapId,
+                "Specular" => material.SpecularMapId,
+                "Metalness" => material.MetalnessMapId,
+                "Gloss" => material.GlossMapId,
+                _ => null
+            };
+
+            if (!textureId.HasValue) {
+                logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры типа {TextureType}.",
+                    material.Name, material.ID, textureType);
+                return;
+            }
+
+            logger.Info("Клик по превью текстуры {TextureType} с ID {TextureId} из материала {MaterialName} ({MaterialId}).",
+                textureType, textureId.Value, material.Name, material.ID);
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturesTabItem != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
+                    logger.Debug("Вкладка текстур активирована через TabControl.");
+                }
+
+                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                if (texture != null) {
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(texture);
+
+                    TexturesDataGrid.SelectedItem = texture;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.Focus();
+
+                    logger.Info("Текстура {TextureName} (ID {TextureId}) выделена и прокручена в таблице текстур.", texture.Name, texture.ID);
+                } else {
+                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", textureId.Value, Textures.Count);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                 // Обновляем выбранный материал в ViewModel для фильтрации текстур

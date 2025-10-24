@@ -2,6 +2,7 @@ using AssetProcessor.TextureConversion.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace AssetProcessor.TextureConversion.MipGeneration {
     /// <summary>

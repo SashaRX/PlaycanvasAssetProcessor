@@ -791,7 +791,7 @@
                                             </Hyperlink>
                                                 </TextBlock>
                                                 <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
-                                            <Image x:Name="TextureGlossPreviewImage" RenderOptions.EdgeMode="Aliised" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Gloss" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
+                                            <Image x:Name="TextureGlossPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Gloss" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                                 </Border>
                                             </Grid>
                                         </Border>

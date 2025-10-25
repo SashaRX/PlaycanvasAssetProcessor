@@ -2407,8 +2407,6 @@ namespace AssetProcessor {
                             ? Path.Combine(sourceDir, "mipmaps", outputFileName)
                             : null;
 
-                        OutputDirectoryText.Text = sourceDir;
-
                         var result = await pipeline.ConvertTextureAsync(
                             texture.Path,
                             outputPath,

@@ -71,6 +71,17 @@
             </MenuItem>
         </ContextMenu>
 
+        <!-- ContextMenu для строк текстур -->
+        <ContextMenu x:Key="TextureRowContextMenu">
+            <MenuItem Header="Process Texture" Click="ProcessSelectedTextures_Click"/>
+            <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
+            <Separator/>
+            <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
+            <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
+            <Separator/>
+            <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
+        </ContextMenu>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -218,19 +229,7 @@
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
-                                    <Setter Property="ContextMenu">
-                                        <Setter.Value>
-                                            <ContextMenu>
-                                                <MenuItem Header="Process Texture" Click="ProcessSelectedTextures_Click"/>
-                                                <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
-                                                <Separator/>
-                                                <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
-                                                <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
-                                                <Separator/>
-                                                <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
-                                            </ContextMenu>
-                                        </Setter.Value>
-                                    </Setter>
+                                    <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>

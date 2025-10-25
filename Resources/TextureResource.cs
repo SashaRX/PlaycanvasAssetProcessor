@@ -4,6 +4,9 @@
         private int[] resizeResolution = new int[2];
         private string? groupName;
         private string? textureType;
+        private string? compressionFormat;
+        private int mipmapCount;
+        private string? presetName;
 
         public int[] Resolution {
             get => resolution;
@@ -36,6 +39,30 @@
             set {
                 textureType = value;
                 OnPropertyChanged(nameof(TextureType));
+            }
+        }
+
+        public string? CompressionFormat {
+            get => compressionFormat;
+            set {
+                compressionFormat = value;
+                OnPropertyChanged(nameof(CompressionFormat));
+            }
+        }
+
+        public int MipmapCount {
+            get => mipmapCount;
+            set {
+                mipmapCount = value;
+                OnPropertyChanged(nameof(MipmapCount));
+            }
+        }
+
+        public string? PresetName {
+            get => presetName;
+            set {
+                presetName = value;
+                OnPropertyChanged(nameof(PresetName));
             }
         }
 

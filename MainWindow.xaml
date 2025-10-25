@@ -175,6 +175,9 @@
                                         <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
                                         <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
                                         <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
+                                        <MenuItem Header="Compression" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
+                                        <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
+                                        <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
                                         <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
                                     </MenuItem>
                                 </ContextMenu>
@@ -187,6 +190,9 @@
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="35"/>
                                 <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
                                 <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
+                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="auto" MinWidth="60"/>
+                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="auto" MinWidth="50"/>
+                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="auto" MinWidth="80"/>
                                 <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>

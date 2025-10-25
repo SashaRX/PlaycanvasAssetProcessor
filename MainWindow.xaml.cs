@@ -577,12 +577,15 @@ namespace AssetProcessor {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
                         ShowTextureViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Visible;
                         break;
                     case "Models":
                         ShowModelViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         break;
                     case "Materials":
                         ShowMaterialViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         break;
                 }
             }
@@ -2367,6 +2370,7 @@ namespace AssetProcessor {
 
                 int successCount = 0;
                 int errorCount = 0;
+                var errorMessages = new List<string>();
 
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
@@ -2380,7 +2384,9 @@ namespace AssetProcessor {
                 foreach (var texture in texturesToProcess) {
                     try {
                         if (string.IsNullOrEmpty(texture.Path)) {
+                            var errorMsg = $"{texture.Name ?? "Unknown"}: Empty file path";
                             MainWindowHelpers.LogError($"Skipping texture with empty path: {texture.Name ?? "Unknown"}");
+                            errorMessages.Add(errorMsg);
                             errorCount++;
                             continue;
                         }
@@ -2425,12 +2431,16 @@ namespace AssetProcessor {
                         } else {
                             texture.Status = "Error";
                             errorCount++;
+                            var errorMsg = $"{texture.Name}: {result.Error ?? "Unknown error"}";
+                            errorMessages.Add(errorMsg);
                             MainWindowHelpers.LogError($"✗ Failed to convert {texture.Name}: {result.Error}");
                         }
                     } catch (Exception ex) {
                         texture.Status = "Error";
                         errorCount++;
-                        MainWindowHelpers.LogError($"✗ Exception processing {texture.Name}: {ex.Message}");
+                        var errorMsg = $"{texture.Name}: {ex.Message}";
+                        errorMessages.Add(errorMsg);
+                        MainWindowHelpers.LogError($"✗ Exception processing {texture.Name}: {ex.Message}\n{ex.StackTrace}");
                     }
 
                     ProgressBar.Value++;
@@ -2438,8 +2448,24 @@ namespace AssetProcessor {
 
                 ProgressTextBlock.Text = $"Completed: {successCount} success, {errorCount} errors";
 
+                // Build result message
+                var resultMessage = $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}";
+
+                if (errorCount > 0 && errorMessages.Count > 0) {
+                    resultMessage += "\n\nError details:";
+                    var errorsToShow = errorMessages.Take(10).ToList();
+                    foreach (var error in errorsToShow) {
+                        resultMessage += $"\n• {error}";
+                    }
+                    if (errorMessages.Count > 10) {
+                        resultMessage += $"\n... and {errorMessages.Count - 10} more errors (see log file for details)";
+                    }
+                } else if (successCount > 0) {
+                    resultMessage += "\n\nConverted files saved next to source images.";
+                }
+
                 MessageBox.Show(
-                    $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}\n\nConverted files saved next to source images.",
+                    resultMessage,
                     "Processing Complete",
                     MessageBoxButton.OK,
                     successCount == texturesToProcess.Count ? MessageBoxImage.Information : MessageBoxImage.Warning

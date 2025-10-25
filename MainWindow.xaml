@@ -102,8 +102,44 @@
 
         <!-- Панель управления внизу -->
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
-            <!-- Texture Operations (Left Side) -->
-            <GroupBox Header="Texture Operations" VerticalAlignment="Top" Margin="2,2,2,2" Width="280">
+            <!-- Playcanvas Project Connect (Left Side) -->
+            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="340">
+                <StackPanel Orientation="Horizontal" Height="58">
+                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="Connect" />
+                    <ComboBox x:Name="ProjectsComboBox"
+                              ItemsSource="{Binding Projects}"
+                              DisplayMemberPath="Value"
+                              SelectedValuePath="Key"
+                              SelectionChanged="ProjectsComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="70" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+
+                    <ComboBox x:Name="BranchesComboBox"
+                              ItemsSource="{Binding Branches}"
+                              DisplayMemberPath="Name"
+                              SelectedValuePath="Id"
+                              SelectionChanged="BranchesComboBox_SelectionChanged"
+                              Margin="4,2,4,2" MinWidth="50" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+
+                    <Button Content="Get Assets" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="GetListAssets"/>
+                    <Button Content="Download" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="Download" ScrollViewer.VerticalScrollBarVisibility="Disabled"></Button>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Texture Operations (Right Side) - Only visible for Textures tab -->
+            <GroupBox x:Name="TextureOperationsGroupBox" Header="Texture Operations" VerticalAlignment="Top" Margin="2,2,2,2" Width="460" Visibility="Collapsed">
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
@@ -129,51 +165,6 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Playcanvas Project Connect (Right Side) -->
-            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="620">
-                <StackPanel Orientation="Horizontal" Height="58">
-                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="Connect" />
-                    <ComboBox x:Name="ProjectsComboBox" 
-                              ItemsSource="{Binding Projects}" 
-                              DisplayMemberPath="Value" 
-                              SelectedValuePath="Key"
-                              SelectionChanged="ProjectsComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
-                        <ComboBox.ItemContainerStyle>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                            </Style>
-                        </ComboBox.ItemContainerStyle>
-                    </ComboBox>
-
-                    <ComboBox x:Name="BranchesComboBox"
-                              ItemsSource="{Binding Branches}"
-                              DisplayMemberPath="Name"
-                              SelectedValuePath="Id"
-                              SelectionChanged="BranchesComboBox_SelectionChanged"
-                              Margin="4,2,4,2" MinWidth="50" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
-                        <ComboBox.ItemContainerStyle>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                            </Style>
-                        </ComboBox.ItemContainerStyle>
-                    </ComboBox>
-
-                    <Button Content="Get Assets" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="GetListAssets"/>
-                    <Button Content="Download" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Download" ScrollViewer.VerticalScrollBarVisibility="Disabled"></Button>
-                    <Slider x:Name="slider" 
-                            VerticalAlignment="Center" 
-                            Margin="2,2,2,0"
-                            Padding="10,0,0,0"
-                            Width="256"
-                            Minimum="16"
-                            Maximum="256"
-                            IsSnapToTickEnabled="True" 
-                            Ticks="16,32,64,128,256"
-                            Value="0"/>
-                </StackPanel>
-            </GroupBox>
             <StackPanel Width="121" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
                 <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False"/>
                 <Button Content="Settings" Margin="10,0,10,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting"/>

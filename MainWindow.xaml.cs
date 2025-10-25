@@ -1200,8 +1200,7 @@ namespace AssetProcessor {
         private void NavigateToTextureFromHyperlink(object sender, string mapType, Func<MaterialResource, int?> mapIdSelector) {
             ArgumentNullException.ThrowIfNull(sender);
 
-            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource
-BUMP1?? MaterialsDataGrid.SelectedItem as MaterialResource;
+            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
             if (sender is Hyperlink hyperlink)
             {

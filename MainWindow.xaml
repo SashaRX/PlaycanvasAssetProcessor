@@ -73,6 +73,36 @@
             <TextBlock x:Name="ProgressTextBlock" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" FontWeight="Bold"/>
         </Grid>
 
+        <!-- Central Control Box for Textures -->
+        <GroupBox DockPanel.Dock="Bottom" Header="Texture Operations" Margin="2,4,2,2" Height="Auto">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="4,2,4,2">
+                <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
+                <TextBlock x:Name="SelectedTexturesCountText" Text="0 textures" VerticalAlignment="Center" Margin="0,0,15,0"/>
+
+                <Button x:Name="ProcessTexturesButton" Content="Process" Width="80" Margin="0,0,5,0"
+                        Click="ProcessTexturesButton_Click"
+                        ToolTip="Convert selected textures to KTX2 format"
+                        IsEnabled="False"/>
+
+                <Button x:Name="UploadTexturesButton" Content="Upload" Width="80" Margin="0,0,5,0"
+                        Click="UploadTexturesButton_Click"
+                        ToolTip="Upload converted textures to PlayCanvas (coming soon)"
+                        IsEnabled="False"/>
+
+                <Separator Width="10" Background="Transparent"/>
+
+                <CheckBox x:Name="ProcessAllCheckBox" Content="Process All Enabled" VerticalAlignment="Center" Margin="0,0,10,0"
+                          ToolTip="Process all textures instead of just selected ones"
+                          Checked="ProcessAllCheckBox_Changed"
+                          Unchecked="ProcessAllCheckBox_Changed"/>
+
+                <TextBlock Text="Output:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <TextBlock x:Name="OutputDirectoryText" Text="output_textures/" VerticalAlignment="Center"
+                           Foreground="#FF666666" FontSize="10"
+                           ToolTip="Output directory for converted textures"/>
+            </StackPanel>
+        </GroupBox>
+
         <!-- Панель управления внизу -->
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
             <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="718">

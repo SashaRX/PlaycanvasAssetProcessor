@@ -621,6 +621,9 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Update selection count in central control box
+            UpdateSelectedTexturesCount();
+
             // Отменяем предыдущую загрузку, если она еще выполняется
             textureLoadCancellation?.Cancel();
             textureLoadCancellation = new CancellationTokenSource();
@@ -2314,6 +2317,150 @@ namespace AssetProcessor {
                 "height" => TextureConversion.Core.TextureType.Height,
                 _ => TextureConversion.Core.TextureType.Generic
             };
+        }
+
+        #endregion
+
+        #region Central Control Box Handlers
+
+        private async void ProcessTexturesButton_Click(object sender, RoutedEventArgs e) {
+            try {
+                // Get textures to process
+                var texturesToProcess = new List<TextureResource>();
+
+                if (ProcessAllCheckBox.IsChecked == true) {
+                    // Process all enabled textures
+                    texturesToProcess = Textures.Where(t => !string.IsNullOrEmpty(t.Path)).ToList();
+                } else {
+                    // Process selected textures only
+                    texturesToProcess = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+                }
+
+                if (texturesToProcess.Count == 0) {
+                    MessageBox.Show("No textures selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Load global settings
+                if (globalTextureSettings == null) {
+                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+                }
+
+                string outputDir = Path.Combine(
+                    projectFolderPath ?? Environment.CurrentDirectory,
+                    globalTextureSettings.DefaultOutputDirectory
+                );
+                Directory.CreateDirectory(outputDir);
+
+                OutputDirectoryText.Text = outputDir;
+
+                // Disable buttons during processing
+                ProcessTexturesButton.IsEnabled = false;
+                UploadTexturesButton.IsEnabled = false;
+
+                int successCount = 0;
+                int errorCount = 0;
+
+                ProgressBar.Maximum = texturesToProcess.Count;
+                ProgressBar.Value = 0;
+
+                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
+                    ? "basisu"
+                    : globalTextureSettings.BasisUExecutablePath;
+
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+
+                foreach (var texture in texturesToProcess) {
+                    try {
+                        ProgressTextBlock.Text = $"Processing {texture.Name}...";
+                        MainWindowHelpers.LogInfo($"Processing texture: {texture.Name}");
+
+                        var textureType = TextureResource.DetermineTextureType(texture.Name);
+                        var mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                            MapTextureTypeToCore(textureType));
+
+                        var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
+                            .ToCompressionSettings(globalTextureSettings);
+
+                        var outputFileName = Path.GetFileNameWithoutExtension(texture.Name);
+                        var extension = compressionSettings.OutputFormat == TextureConversion.Core.OutputFormat.KTX2
+                            ? ".ktx2"
+                            : ".basis";
+                        var outputPath = Path.Combine(outputDir, outputFileName + extension);
+
+                        var mipmapOutputDir = ConversionSettingsPanel.SaveSeparateMipmaps
+                            ? Path.Combine(outputDir, "mipmaps", outputFileName)
+                            : null;
+
+                        var result = await pipeline.ConvertTextureAsync(
+                            texture.Path,
+                            outputPath,
+                            mipProfile,
+                            compressionSettings,
+                            ConversionSettingsPanel.SaveSeparateMipmaps,
+                            mipmapOutputDir
+                        );
+
+                        if (result.Success) {
+                            texture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
+                            texture.MipmapCount = result.MipLevels;
+                            texture.Status = "Converted";
+                            successCount++;
+                            MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps)");
+                        } else {
+                            texture.Status = "Error";
+                            errorCount++;
+                            MainWindowHelpers.LogError($"✗ Failed to convert {texture.Name}: {result.Error}");
+                        }
+                    } catch (Exception ex) {
+                        texture.Status = "Error";
+                        errorCount++;
+                        MainWindowHelpers.LogError($"✗ Exception processing {texture.Name}: {ex.Message}");
+                    }
+
+                    ProgressBar.Value++;
+                }
+
+                ProgressTextBlock.Text = $"Completed: {successCount} success, {errorCount} errors";
+
+                MessageBox.Show(
+                    $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}\n\nOutput: {outputDir}",
+                    "Processing Complete",
+                    MessageBoxButton.OK,
+                    successCount == texturesToProcess.Count ? MessageBoxImage.Information : MessageBoxImage.Warning
+                );
+
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error during batch processing: {ex.Message}");
+                MessageBox.Show($"Error during processing:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } finally {
+                ProcessTexturesButton.IsEnabled = true;
+                UploadTexturesButton.IsEnabled = false; // Keep disabled until upload is implemented
+                ProgressBar.Value = 0;
+                ProgressTextBlock.Text = "";
+            }
+        }
+
+        private void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
+            MessageBox.Show(
+                "Upload functionality coming soon!\n\nThis will upload converted textures to PlayCanvas.",
+                "Coming Soon",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information
+            );
+        }
+
+        private void UpdateSelectedTexturesCount() {
+            int selectedCount = TexturesDataGrid.SelectedItems.Count;
+            SelectedTexturesCountText.Text = selectedCount == 1
+                ? "1 texture"
+                : $"{selectedCount} textures";
+
+            ProcessTexturesButton.IsEnabled = selectedCount > 0 || ProcessAllCheckBox.IsChecked == true;
+        }
+
+        private void ProcessAllCheckBox_Changed(object sender, RoutedEventArgs e) {
+            UpdateSelectedTexturesCount();
         }
 
         #endregion

@@ -1200,7 +1200,7 @@ namespace AssetProcessor {
             ArgumentNullException.ThrowIfNull(sender);
 
             MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource
-                                          ?? MaterialsDataGrid.SelectedItem as MaterialResource;
+BUMP1?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
             if (sender is Hyperlink hyperlink)
             {

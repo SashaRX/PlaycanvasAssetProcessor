@@ -25,6 +25,33 @@
                 <x:Type TypeName="core:FilterType"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+
+        <!-- Custom ComboBox Style for better readability -->
+        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Custom ComboBoxItem Style -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E3F2FD"/>
+                    <Setter Property="Foreground" Value="#1565C0"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#2196F3"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <StackPanel Margin="5">
@@ -36,6 +63,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
+                          Style="{StaticResource ReadableComboBoxStyle}"
                           SelectionChanged="PresetComboBox_SelectionChanged"
                           ToolTip="Select compression preset"/>
                 <Button Content="..." Grid.Column="1" Width="30"
@@ -54,6 +82,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Format:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <ComboBox Grid.Column="1" x:Name="CompressionFormatComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
                               SelectionChanged="CompressionFormatComboBox_SelectionChanged"/>
                 </Grid>
@@ -65,6 +94,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Output:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <ComboBox Grid.Column="1" x:Name="OutputFormatComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"/>
                 </Grid>
 
@@ -119,6 +149,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <ComboBox Grid.Column="1" x:Name="MipFilterComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
                 </Grid>
 

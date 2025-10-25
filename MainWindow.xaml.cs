@@ -740,6 +740,11 @@ namespace AssetProcessor {
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
+                // Initialize conversion settings for the texture if not already set
+                if (string.IsNullOrEmpty(texture.CompressionFormat)) {
+                    InitializeTextureConversionSettings(texture);
+                }
+
                 // Устанавливаем цвет фона в зависимости от типа текстуры
                 if (!string.IsNullOrEmpty(texture.TextureType)) {
                     var backgroundBrush = new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), null!, CultureInfo.InvariantCulture) as System.Windows.Media.Brush;
@@ -2304,6 +2309,17 @@ namespace AssetProcessor {
             texture.PresetName = "(Auto)";
         }
 
+        // Initialize compression format and preset for texture without updating UI panel
+        private void InitializeTextureConversionSettings(TextureResource texture) {
+            var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+            var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                MapTextureTypeToCore(textureType));
+            var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+
+            texture.CompressionFormat = compression.CompressionFormat.ToString();
+            texture.PresetName = "(Auto)";
+        }
+
         private TextureConversion.Core.TextureType MapTextureTypeToCore(string textureType) {
             return textureType.ToLower() switch {
                 "albedo" => TextureConversion.Core.TextureType.Albedo,
@@ -2345,14 +2361,6 @@ namespace AssetProcessor {
                     globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
                 }
 
-                string outputDir = Path.Combine(
-                    projectFolderPath ?? Environment.CurrentDirectory,
-                    globalTextureSettings.DefaultOutputDirectory
-                );
-                Directory.CreateDirectory(outputDir);
-
-                OutputDirectoryText.Text = outputDir;
-
                 // Disable buttons during processing
                 ProcessTexturesButton.IsEnabled = false;
                 UploadTexturesButton.IsEnabled = false;
@@ -2387,15 +2395,19 @@ namespace AssetProcessor {
                         var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
                             .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
 
+                        // Save converted file in the same directory as source PNG
+                        var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
                         var outputFileName = Path.GetFileNameWithoutExtension(texture.Name ?? "texture");
                         var extension = compressionSettings.OutputFormat == TextureConversion.Core.OutputFormat.KTX2
                             ? ".ktx2"
                             : ".basis";
-                        var outputPath = Path.Combine(outputDir, outputFileName + extension);
+                        var outputPath = Path.Combine(sourceDir, outputFileName + extension);
 
                         var mipmapOutputDir = ConversionSettingsPanel.SaveSeparateMipmaps
-                            ? Path.Combine(outputDir, "mipmaps", outputFileName)
+                            ? Path.Combine(sourceDir, "mipmaps", outputFileName)
                             : null;
+
+                        OutputDirectoryText.Text = sourceDir;
 
                         var result = await pipeline.ConvertTextureAsync(
                             texture.Path,
@@ -2429,7 +2441,7 @@ namespace AssetProcessor {
                 ProgressTextBlock.Text = $"Completed: {successCount} success, {errorCount} errors";
 
                 MessageBox.Show(
-                    $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}\n\nOutput: {outputDir}",
+                    $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}\n\nConverted files saved next to source images.",
                     "Processing Complete",
                     MessageBoxButton.OK,
                     successCount == texturesToProcess.Count ? MessageBoxImage.Information : MessageBoxImage.Warning
@@ -2466,6 +2478,51 @@ namespace AssetProcessor {
 
         private void ProcessAllCheckBox_Changed(object sender, RoutedEventArgs e) {
             UpdateSelectedTexturesCount();
+        }
+
+        // Context menu handlers for texture rows
+        private void ProcessSelectedTextures_Click(object sender, RoutedEventArgs e) {
+            ProcessTexturesButton_Click(sender, e);
+        }
+
+        private void UploadTexture_Click(object sender, RoutedEventArgs e) {
+            UploadTexturesButton_Click(sender, e);
+        }
+
+        private void OpenFileLocation_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
+                try {
+                    var directory = System.IO.Path.GetDirectoryName(texture.Path);
+                    if (!string.IsNullOrEmpty(directory) && System.IO.Directory.Exists(directory)) {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                            FileName = directory,
+                            UseShellExecute = true
+                        });
+                    } else {
+                        MessageBox.Show("Directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                } catch (Exception ex) {
+                    MessageBox.Show($"Failed to open file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyTexturePath_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
+                try {
+                    System.Windows.Clipboard.SetText(texture.Path);
+                    MessageBox.Show("Path copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                } catch (Exception ex) {
+                    MessageBox.Show($"Failed to copy path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void RefreshPreview_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture) {
+                // Trigger a refresh by re-selecting the texture
+                TexturesDataGrid_SelectionChanged(TexturesDataGrid, null!);
+            }
         }
 
         #endregion

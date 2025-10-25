@@ -73,39 +73,37 @@
             <TextBlock x:Name="ProgressTextBlock" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" FontWeight="Bold"/>
         </Grid>
 
-        <!-- Central Control Box for Textures -->
-        <GroupBox DockPanel.Dock="Bottom" Header="Texture Operations" Margin="2,4,2,2" Height="Auto">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="4,2,4,2">
-                <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
-                <TextBlock x:Name="SelectedTexturesCountText" Text="0 textures" VerticalAlignment="Center" Margin="0,0,15,0"/>
-
-                <Button x:Name="ProcessTexturesButton" Content="Process" Width="80" Margin="0,0,5,0"
-                        Click="ProcessTexturesButton_Click"
-                        ToolTip="Convert selected textures to KTX2 format"
-                        IsEnabled="False"/>
-
-                <Button x:Name="UploadTexturesButton" Content="Upload" Width="80" Margin="0,0,5,0"
-                        Click="UploadTexturesButton_Click"
-                        ToolTip="Upload converted textures to PlayCanvas (coming soon)"
-                        IsEnabled="False"/>
-
-                <Separator Width="10" Background="Transparent"/>
-
-                <CheckBox x:Name="ProcessAllCheckBox" Content="Process All Enabled" VerticalAlignment="Center" Margin="0,0,10,0"
-                          ToolTip="Process all textures instead of just selected ones"
-                          Checked="ProcessAllCheckBox_Changed"
-                          Unchecked="ProcessAllCheckBox_Changed"/>
-
-                <TextBlock Text="Output:" VerticalAlignment="Center" Margin="10,0,5,0"/>
-                <TextBlock x:Name="OutputDirectoryText" Text="output_textures/" VerticalAlignment="Center"
-                           Foreground="#FF666666" FontSize="10"
-                           ToolTip="Output directory for converted textures"/>
-            </StackPanel>
-        </GroupBox>
-
         <!-- Панель управления внизу -->
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
-            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="718">
+            <!-- Texture Operations (Left Side) -->
+            <GroupBox Header="Texture Operations" VerticalAlignment="Top" Margin="2,2,2,2" Width="280">
+                <StackPanel Orientation="Vertical" Margin="4,2,4,2">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
+                        <TextBlock x:Name="SelectedTexturesCountText" Text="0 textures" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Button x:Name="ProcessTexturesButton" Content="Process" Width="80" Margin="0,0,5,0"
+                                Click="ProcessTexturesButton_Click"
+                                ToolTip="Convert selected textures to KTX2 format"
+                                IsEnabled="False"/>
+
+                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="80"
+                                Click="UploadTexturesButton_Click"
+                                ToolTip="Upload converted textures to PlayCanvas (coming soon)"
+                                IsEnabled="False"/>
+                    </StackPanel>
+
+                    <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"
+                              ToolTip="Process all textures instead of just selected ones"
+                              Checked="ProcessAllCheckBox_Changed"
+                              Unchecked="ProcessAllCheckBox_Changed"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Playcanvas Project Connect (Right Side) -->
+            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="620">
                 <StackPanel Orientation="Horizontal" Height="58">
                     <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="Connect" />
                     <ComboBox x:Name="ProjectsComboBox" 
@@ -197,22 +195,45 @@
                                 CanUserDeleteRows="False"
                                 CanUserSortColumns="True"
                                 Background="#FFD6D6D6">
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Columns Visibility">
-                                        <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ID"/>
-                                        <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
-                                        <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
-                                        <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
-                                        <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
-                                        <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
-                                        <MenuItem Header="Compression" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
-                                        <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
-                                        <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
-                                        <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
-                                    </MenuItem>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="ContextMenu">
+                                        <Setter.Value>
+                                            <ContextMenu>
+                                                <MenuItem Header="Columns Visibility">
+                                                    <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ID"/>
+                                                    <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
+                                                    <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
+                                                    <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
+                                                    <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
+                                                    <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
+                                                    <MenuItem Header="Compression" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
+                                                    <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
+                                                    <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
+                                                    <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="ContextMenu">
+                                        <Setter.Value>
+                                            <ContextMenu>
+                                                <MenuItem Header="Process Texture" Click="ProcessSelectedTextures_Click"/>
+                                                <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
+                                                <Separator/>
+                                                <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
+                                                <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
+                                                <Separator/>
+                                                <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
+                                            </ContextMenu>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </DataGrid.RowStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />

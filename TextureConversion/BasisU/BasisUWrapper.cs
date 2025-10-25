@@ -140,23 +140,27 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // basisu всё равно генерирует свои мипмапы при сжатии
 
             // Многопоточность
-            if (settings.UseMultithreading) {
-                if (settings.ThreadCount > 0) {
-                    args.Add($"-max_threads {settings.ThreadCount}");
-                }
-            } else {
-                args.Add("-max_threads 1");
+            // basisu использует многопоточность по умолчанию
+            // Опция -no_multithreading отключает её
+            if (!settings.UseMultithreading) {
+                args.Add("-no_multithreading");
             }
+            // Примечание: basisu не поддерживает явное указание количества потоков через -max_threads
+            // Он автоматически использует все доступные процессоры
 
             // Перцептивный режим
-            if (settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S) {
-                args.Add("-perceptual");
+            // basisu по умолчанию использует perceptual режим для фотографического контента
+            // Опция -linear отключает perceptual режим для не-фотографического контента
+            if (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S) {
+                args.Add("-linear");
             }
 
             // Раздельное сжатие альфа-канала
-            if (settings.SeparateAlpha) {
-                args.Add("-separate_rg_to_color_alpha");
-            }
+            // Примечание: опция -separate_rg_to_color_alpha не найдена в текущей документации basisu
+            // Возможно была удалена или переименована. Закомментировано для совместимости.
+            // if (settings.SeparateAlpha) {
+            //     args.Add("-separate_rg_to_color_alpha");
+            // }
 
             // Масштаб мипмапов
             if (settings.MipScale != 1.0f) {
@@ -164,14 +168,15 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             // Минимальный размер мипмапа
+            // Примечание: опция -mip_smallest не подтверждена в официальной документации
+            // Оставлена для возможной совместимости со старыми версиями basisu
             if (settings.MipSmallestDimension > 1) {
                 args.Add($"-mip_smallest {settings.MipSmallestDimension}");
             }
 
-            // SSE4.1 (по умолчанию включен в basisu, отключаем только если не нужен)
-            if (!settings.UseSSE41) {
-                args.Add("-no_sse");
-            }
+            // SSE4.1 - это опция компиляции, а не runtime флаг
+            // basisu автоматически использует SSE4.1 если был скомпилирован с поддержкой
+            // Нет runtime флага для отключения SSE
 
             // OpenCL
             if (settings.UseOpenCL) {

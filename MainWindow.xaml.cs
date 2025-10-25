@@ -112,6 +112,7 @@ namespace AssetProcessor {
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
+        private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
 
@@ -2260,14 +2261,12 @@ BUMP1?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
         #region Texture Conversion Settings Handlers
 
-        private bool isConversionSettingsExpanded = true;
-
         private void ConversionSettingsExpander_Expanded(object sender, RoutedEventArgs e) {
-            isConversionSettingsExpanded = true;
+            // Settings expanded - could save state if needed
         }
 
         private void ConversionSettingsExpander_Collapsed(object sender, RoutedEventArgs e) {
-            isConversionSettingsExpanded = false;
+            // Settings collapsed - could save state if needed
         }
 
         private void ConversionSettingsPanel_SettingsChanged(object? sender, EventArgs e) {
@@ -2291,7 +2290,7 @@ BUMP1?? MaterialsDataGrid.SelectedItem as MaterialResource;
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
-            var textureType = TextureResource.DetermineTextureType(texture.Name);
+            var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
             var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
                 MapTextureTypeToCore(textureType));
 
@@ -2373,17 +2372,23 @@ BUMP1?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
                 foreach (var texture in texturesToProcess) {
                     try {
+                        if (string.IsNullOrEmpty(texture.Path)) {
+                            MainWindowHelpers.LogError($"Skipping texture with empty path: {texture.Name ?? "Unknown"}");
+                            errorCount++;
+                            continue;
+                        }
+
                         ProgressTextBlock.Text = $"Processing {texture.Name}...";
                         MainWindowHelpers.LogInfo($"Processing texture: {texture.Name}");
 
-                        var textureType = TextureResource.DetermineTextureType(texture.Name);
+                        var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
                         var mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
                             MapTextureTypeToCore(textureType));
 
                         var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
-                            .ToCompressionSettings(globalTextureSettings);
+                            .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
 
-                        var outputFileName = Path.GetFileNameWithoutExtension(texture.Name);
+                        var outputFileName = Path.GetFileNameWithoutExtension(texture.Name ?? "texture");
                         var extension = compressionSettings.OutputFormat == TextureConversion.Core.OutputFormat.KTX2
                             ? ".ktx2"
                             : ".basis";

@@ -33,6 +33,7 @@ using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 using PointF = System.Drawing.PointF;
 using System.Linq;
+using AssetProcessor.TextureConversion.Settings;
 
 namespace AssetProcessor {
     public enum ColorChannel {

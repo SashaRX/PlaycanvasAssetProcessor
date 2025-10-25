@@ -3,12 +3,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:AssetProcessor"
+    xmlns:controls="clr-namespace:AssetProcessor.Controls"
     xmlns:help ="clr-namespace:AssetProcessor.Helpers"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
-    xmlns:oxy="http://oxyplot.org/wpf" 
-    xmlns:resources="clr-namespace:AssetProcessor.Resources" 
+    xmlns:oxy="http://oxyplot.org/wpf"
+    xmlns:resources="clr-namespace:AssetProcessor.Resources"
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
@@ -131,7 +132,7 @@
                     <MenuItem Header="Exit" Click="ExitMenu"/>
                 </MenuItem>
                 <MenuItem Header="Tools">
-                    <MenuItem Header="Texture Conversion Pipeline" Click="TextureConversionMenu"/>
+                    <MenuItem Header="Manage Compression Presets" Click="TextureConversionMenu"/>
                 </MenuItem>
                 <MenuItem Header="Help">
                     <MenuItem Header="About" Click="AboutMenu"/>
@@ -324,6 +325,7 @@
                             <RowDefinition Height="*" MinHeight="128" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
                             <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
@@ -352,6 +354,15 @@
                                 <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
                             </StackPanel>
                         </StackPanel>
+
+                        <!-- Conversion Settings Panel -->
+                        <Expander x:Name="ConversionSettingsExpander" Grid.Row="3" Header="Conversion Settings"
+                                  Margin="0,5,0,0" IsExpanded="True"
+                                  Expanded="ConversionSettingsExpander_Expanded"
+                                  Collapsed="ConversionSettingsExpander_Collapsed">
+                            <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
+                                                                     SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
+                        </Expander>
                     </Grid>
                 </Border>
             </ScrollViewer>

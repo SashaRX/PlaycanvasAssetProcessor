@@ -636,6 +636,9 @@ namespace AssetProcessor {
                         object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
 
+                        // Load conversion settings for this texture
+                        LoadTextureConversionSettings(selectedTexture);
+
                         // Проверяем кеш
                         if (imageCache.TryGetValue(selectedTexture.Path, out BitmapImage? cachedImage)) {
                             // Используем кешированное изображение - мгновенно!
@@ -2249,6 +2252,70 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error loading last settings: {ex.Message}");
             }
         }
+        #endregion
+
+        #region Texture Conversion Settings Handlers
+
+        private bool isConversionSettingsExpanded = true;
+
+        private void ConversionSettingsExpander_Expanded(object sender, RoutedEventArgs e) {
+            isConversionSettingsExpanded = true;
+        }
+
+        private void ConversionSettingsExpander_Collapsed(object sender, RoutedEventArgs e) {
+            isConversionSettingsExpanded = false;
+        }
+
+        private void ConversionSettingsPanel_SettingsChanged(object? sender, EventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                UpdateTextureConversionSettings(selectedTexture);
+            }
+        }
+
+        private void UpdateTextureConversionSettings(TextureResource texture) {
+            try {
+                var compression = ConversionSettingsPanel.GetCompressionSettings();
+                var mipProfile = ConversionSettingsPanel.GetMipProfileSettings();
+
+                texture.CompressionFormat = compression.CompressionFormat.ToString();
+                texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
+
+                MainWindowHelpers.LogInfo($"Updated conversion settings for {texture.Name}");
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error updating conversion settings: {ex.Message}");
+            }
+        }
+
+        private void LoadTextureConversionSettings(TextureResource texture) {
+            var textureType = TextureResource.DetermineTextureType(texture.Name);
+            var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                MapTextureTypeToCore(textureType));
+
+            var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+            var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
+            var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
+
+            ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
+            ConversionSettingsPanel.LoadPresets(new[] { "Albedo", "Normal", "Roughness", "Metallic" }, null);
+
+            texture.CompressionFormat = compression.CompressionFormat.ToString();
+            texture.PresetName = "(Auto)";
+        }
+
+        private TextureConversion.Core.TextureType MapTextureTypeToCore(string textureType) {
+            return textureType.ToLower() switch {
+                "albedo" => TextureConversion.Core.TextureType.Albedo,
+                "normal" => TextureConversion.Core.TextureType.Normal,
+                "roughness" => TextureConversion.Core.TextureType.Roughness,
+                "metallic" => TextureConversion.Core.TextureType.Metallic,
+                "ao" => TextureConversion.Core.TextureType.AmbientOcclusion,
+                "emissive" => TextureConversion.Core.TextureType.Emissive,
+                "gloss" => TextureConversion.Core.TextureType.Gloss,
+                "height" => TextureConversion.Core.TextureType.Height,
+                _ => TextureConversion.Core.TextureType.Generic
+            };
+        }
+
         #endregion
     }
 }

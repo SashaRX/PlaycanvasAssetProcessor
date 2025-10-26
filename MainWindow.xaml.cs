@@ -825,7 +825,7 @@ namespace AssetProcessor {
             }
         }
 
-        private async void Connect(object? sender, RoutedEventArgs e) {
+        private async void Connect(object? sender, RoutedEventArgs? e) {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
@@ -2253,7 +2253,7 @@ namespace AssetProcessor {
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             switch (currentConnectionState) {
                 case ConnectionState.Disconnected:
-                    await ConnectToPlayCanvas();
+                    ConnectToPlayCanvas();
                     break;
 
                 case ConnectionState.Connected:
@@ -2261,7 +2261,7 @@ namespace AssetProcessor {
                     break;
 
                 case ConnectionState.AssetsLoaded:
-                    await DownloadAssets();
+                    DownloadAssets();
                     break;
             }
         }
@@ -2269,7 +2269,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Подключение к PlayCanvas (State 1 → State 2)
         /// </summary>
-        private async Task ConnectToPlayCanvas() {
+        private void ConnectToPlayCanvas() {
             // Вызываем существующий метод Connect
             Connect(null, null);
         }
@@ -2298,7 +2298,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Скачивание ассетов (State 3 → State 3)
         /// </summary>
-        private async Task DownloadAssets() {
+        private void DownloadAssets() {
             // Вызываем существующий метод Download
             Download(null, null);
             // Состояние остается AssetsLoaded, можно скачивать повторно

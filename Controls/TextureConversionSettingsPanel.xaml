@@ -122,22 +122,6 @@
                               SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"/>
                 </StackPanel>
 
-                <StackPanel x:Name="KTX2ZstdPanel" Visibility="Collapsed" Margin="0,0,0,5">
-                    <TextBlock Text="Zstd Level:" FontSize="10" Margin="0,0,0,2"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="KTX2ZstdLevelSlider" Grid.Column="0"
-                                Minimum="-7" Maximum="22" TickFrequency="1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"
-                                ValueChanged="Slider_ValueChanged"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=KTX2ZstdLevelSlider, Path=Value}"
-                                   Width="30" TextAlignment="Right"/>
-                    </Grid>
-                </StackPanel>
-
                 <!-- ETC1S Quality -->
                 <StackPanel x:Name="ETC1SPanel" Visibility="Collapsed">
                     <TextBlock Text="ETC1S Quality:" FontSize="10" Margin="0,0,0,2"/>

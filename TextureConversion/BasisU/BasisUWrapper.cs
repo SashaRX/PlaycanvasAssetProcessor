@@ -111,6 +111,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             CompressionSettings settings,
             List<string>? mipmapPaths) {
             var args = new List<string>();
+            var cliCapabilities = _cliCapabilities.Value;
 
             // Входной файл
             args.Add($"\"{inputPath}\"");
@@ -128,14 +129,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("-uastc");
                 args.Add($"-uastc_level {settings.UASTCQuality}");
 
-                if (settings.UseUASTCRDO) {
-                    args.Add(FormattableString.Invariant($"-uastc_rdo_l {settings.UASTCRDOQuality}"));
+                if (settings.UseUASTCRDO && !string.IsNullOrWhiteSpace(cliCapabilities.UastcRdoLambdaFlag)) {
+                    args.Add(FormattableString.Invariant($"{cliCapabilities.UastcRdoLambdaFlag} {settings.UASTCRDOQuality}"));
                 }
             } else {
                 // ETC1S по умолчанию
                 args.Add($"-q {settings.QualityLevel}");
-                if (settings.UseETC1SRDO) {
-                    args.Add(FormattableString.Invariant($"-etc1s_rdo_lambda {settings.ETC1SRDOLambda}"));
+                if (settings.UseETC1SRDO && !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoLambdaFlag)) {
+                    args.Add(FormattableString.Invariant($"{cliCapabilities.Etc1sRdoLambdaFlag} {settings.ETC1SRDOLambda}"));
                 }
             }
 
@@ -201,7 +202,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
                         AppendNoSupercompressionFlag(args, cliCapabilities);
                         break;
                     case KTX2SupercompressionType.Zstandard:
-                        AppendZstdFlags(args, settings, cliCapabilities);
+                        AppendZstdFlags(args, cliCapabilities);
                         break;
                     case KTX2SupercompressionType.ZLIB:
                         AppendZlibFlag(args, cliCapabilities);
@@ -227,22 +228,17 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
         }
 
-        private void AppendZstdFlags(List<string> args, CompressionSettings settings, BasisUCliCapabilities capabilities) {
-            var zstdLevel = Math.Clamp(settings.KTX2ZstdLevel, -7, 22);
-
+        private void AppendZstdFlags(List<string> args, BasisUCliCapabilities capabilities) {
             switch (capabilities.SupercompressionMode) {
                 case Ktx2SupercompressionMode.DoubleDashFlags:
                     args.Add("--ktx2_zstd");
-                    AddZstdLevel(args, capabilities, zstdLevel);
                     break;
                 case Ktx2SupercompressionMode.SingleDashFlags:
                     args.Add("-ktx2_zstd");
-                    AddZstdLevel(args, capabilities, zstdLevel);
                     break;
                 case Ktx2SupercompressionMode.SupercompressionOption:
                     args.Add("--ktx2_supercompression");
                     args.Add("ZSTD");
-                    AddZstdLevel(args, capabilities, zstdLevel);
                     break;
             }
         }
@@ -262,14 +258,6 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
         }
 
-        private static void AddZstdLevel(List<string> args, BasisUCliCapabilities capabilities, int level) {
-            if (string.IsNullOrWhiteSpace(capabilities.ZstdLevelFlag)) {
-                return;
-            }
-
-            args.Add($"{capabilities.ZstdLevelFlag} {level}");
-        }
-
         private BasisUCliCapabilities DetectCliCapabilities() {
             var helpOutput = GetBasisuHelpOutput();
 
@@ -278,13 +266,18 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             var mode = DetermineSupercompressionMode(helpOutput);
-            var zstdLevelFlag = DetermineFirstAvailableFlag(helpOutput,
-                "--zstd_level",
-                "-zstd_level",
-                "--ktx2_zstd_level",
-                "-ktx2_zstd_level");
+            var etc1sLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--etc1s_rdo_lambda",
+                "-etc1s_rdo_lambda",
+                "--etc1s_rdo_l",
+                "-etc1s_rdo_l");
+            var uastcLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--uastc_rdo_lambda",
+                "-uastc_rdo_lambda",
+                "--uastc_rdo_l",
+                "-uastc_rdo_l");
 
-            return new BasisUCliCapabilities(mode, zstdLevelFlag);
+            return new BasisUCliCapabilities(mode, etc1sLambdaFlag, uastcLambdaFlag);
         }
 
         private static Ktx2SupercompressionMode DetermineSupercompressionMode(string helpOutput) {
@@ -367,14 +360,19 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
         private sealed class BasisUCliCapabilities {
             public Ktx2SupercompressionMode SupercompressionMode { get; }
-            public string? ZstdLevelFlag { get; }
+            public string? Etc1sRdoLambdaFlag { get; }
+            public string? UastcRdoLambdaFlag { get; }
 
-            public BasisUCliCapabilities(Ktx2SupercompressionMode supercompressionMode, string? zstdLevelFlag) {
+            public BasisUCliCapabilities(
+                Ktx2SupercompressionMode supercompressionMode,
+                string? etc1sRdoLambdaFlag,
+                string? uastcRdoLambdaFlag) {
                 SupercompressionMode = supercompressionMode;
-                ZstdLevelFlag = zstdLevelFlag;
+                Etc1sRdoLambdaFlag = etc1sRdoLambdaFlag;
+                UastcRdoLambdaFlag = uastcRdoLambdaFlag;
             }
 
-            public static BasisUCliCapabilities Unsupported() => new(Ktx2SupercompressionMode.Unsupported, null);
+            public static BasisUCliCapabilities Unsupported() => new(Ktx2SupercompressionMode.Unsupported, null, null);
         }
 
         /// <summary>

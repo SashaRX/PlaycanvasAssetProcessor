@@ -97,11 +97,6 @@ namespace AssetProcessor.TextureConversion.Core {
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
-        /// Уровень Zstandard для KTX2 (1-22, по умолчанию 18)
-        /// </summary>
-        public int KTX2ZstdLevel { get; set; } = 18;
-
-        /// <summary>
         /// Создает настройки по умолчанию для ETC1S
         /// </summary>
         public static CompressionSettings CreateETC1SDefault() {
@@ -113,7 +108,6 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18,
                 UseETC1SRDO = false,
                 ETC1SRDOLambda = 1.0f
             };
@@ -132,7 +126,6 @@ namespace AssetProcessor.TextureConversion.Core {
                 GenerateMipmaps = true,
                 UseMultithreading = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18,
                 UseETC1SRDO = false,
                 ETC1SRDOLambda = 1.0f
             };
@@ -152,7 +145,6 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18,
                 UseETC1SRDO = false,
                 ETC1SRDOLambda = 1.0f
             };
@@ -170,7 +162,6 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18,
                 UseETC1SRDO = true,
                 ETC1SRDOLambda = 50.0f
             };

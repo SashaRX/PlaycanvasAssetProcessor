@@ -23,7 +23,6 @@ namespace AssetProcessor.Controls {
             OutputFormatComboBox.SelectedItem = OutputFormat.KTX2;
             MipFilterComboBox.SelectedIndex = 5; // Kaiser
             KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
-            KTX2ZstdLevelSlider.Value = 18;
             UseUASTCRDOCheckBox.IsChecked = true;
             UASTCRDOLambdaSlider.Value = 1.0;
             UseETC1SRDOCheckBox.IsChecked = false;
@@ -71,23 +70,9 @@ namespace AssetProcessor.Controls {
 
             if (output == OutputFormat.KTX2) {
                 KTX2SupercompressionPanel.Visibility = Visibility.Visible;
-                UpdateKTX2SupercompressionPanels();
             } else {
                 KTX2SupercompressionPanel.Visibility = Visibility.Collapsed;
-                KTX2ZstdPanel.Visibility = Visibility.Collapsed;
             }
-        }
-
-        private void UpdateKTX2SupercompressionPanels() {
-            if (KTX2SupercompressionComboBox.SelectedItem == null) {
-                KTX2ZstdPanel.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            var supercompression = (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem;
-            KTX2ZstdPanel.Visibility = supercompression == KTX2SupercompressionType.Zstandard
-                ? Visibility.Visible
-                : Visibility.Collapsed;
         }
 
         public CompressionSettingsData GetCompressionSettings() {
@@ -112,7 +97,6 @@ namespace AssetProcessor.Controls {
                 UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = supercompression,
-                KTX2ZstdLevel = (int)Math.Round(KTX2ZstdLevelSlider.Value),
                 UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? false,
                 ETC1SRDOLambda = (float)Math.Round(ETC1SRDOLambdaSlider.Value, 1)
             };
@@ -155,7 +139,6 @@ namespace AssetProcessor.Controls {
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
 
             KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
-            KTX2ZstdLevelSlider.Value = compression.KTX2ZstdLevel;
             UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
             ETC1SRDOLambdaSlider.Value = compression.ETC1SRDOLambda;
 
@@ -224,7 +207,6 @@ namespace AssetProcessor.Controls {
 
         private void KTX2SupercompressionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (!_isLoading) {
-                UpdateKTX2SupercompressionPanels();
                 OnSettingsChanged();
             }
         }

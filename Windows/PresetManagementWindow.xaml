@@ -7,6 +7,9 @@
         Title="Preset Management" Height="600" Width="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

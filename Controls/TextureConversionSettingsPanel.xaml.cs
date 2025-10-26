@@ -7,12 +7,25 @@ using AssetProcessor.TextureConversion.Settings;
 namespace AssetProcessor.Controls {
     public partial class TextureConversionSettingsPanel : UserControl {
         private bool _isLoading = false;
+        private readonly PresetManager _presetManager = new();
 
         public event EventHandler? SettingsChanged;
 
         public TextureConversionSettingsPanel() {
             InitializeComponent();
+            InitializePresets();
             InitializeDefaults();
+        }
+
+        private void InitializePresets() {
+            // Загружаем все пресеты (встроенные + пользовательские)
+            var presets = _presetManager.GetAllPresets();
+            PresetComboBox.ItemsSource = presets;
+            PresetComboBox.DisplayMemberPath = "Name";
+
+            if (presets.Count > 0) {
+                PresetComboBox.SelectedIndex = 0; // Выбираем первый пресет по умолчанию
+            }
         }
 
         private void InitializeDefaults() {
@@ -181,18 +194,63 @@ namespace AssetProcessor.Controls {
         }
 
         private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading && PresetComboBox.SelectedItem != null) {
-                var presetName = PresetComboBox.SelectedItem.ToString();
-                if (presetName != "(Custom)") {
-                    // TODO: Load preset from PresetManager
-                    OnSettingsChanged();
-                }
+            if (!_isLoading && PresetComboBox.SelectedItem is TextureConversionPreset selectedPreset) {
+                LoadPresetToUI(selectedPreset);
+                OnSettingsChanged();
             }
         }
 
+        private void LoadPresetToUI(TextureConversionPreset preset) {
+            _isLoading = true;
+
+            // Compression settings
+            CompressionFormatComboBox.SelectedItem = preset.CompressionFormat;
+            OutputFormatComboBox.SelectedItem = preset.OutputFormat;
+            KTX2SupercompressionComboBox.SelectedItem = preset.KTX2Supercompression;
+
+            // Quality settings
+            ETC1SQualitySlider.Value = preset.QualityLevel;
+            UASTCQualitySlider.Value = preset.UASTCQuality;
+            UseUASTCRDOCheckBox.IsChecked = preset.UseUASTCRDO;
+            UASTCRDOLambdaSlider.Value = preset.UASTCRDOQuality;
+            UseETC1SRDOCheckBox.IsChecked = preset.UseETC1SRDO;
+
+            // Mipmap settings
+            GenerateMipmapsCheckBox.IsChecked = preset.GenerateMipmaps;
+            MipFilterComboBox.SelectedItem = preset.MipFilter;
+            LinearMipFilterCheckBox.IsChecked = preset.UseLinearMipFiltering;
+            MipClampCheckBox.IsChecked = preset.ClampMipmaps;
+
+            // Advanced settings
+            PerceptualModeCheckBox.IsChecked = preset.PerceptualMode;
+            SeparateAlphaCheckBox.IsChecked = preset.SeparateAlpha;
+            ForceAlphaCheckBox.IsChecked = preset.ForceAlphaChannel;
+            RemoveAlphaCheckBox.IsChecked = preset.RemoveAlphaChannel;
+            ForceLinearCheckBox.IsChecked = preset.ForceLinearColorSpace;
+            NormalizeNormalsCheckBox.IsChecked = preset.NormalizeNormals;
+
+            UpdateCompressionPanels();
+            UpdateOutputFormatPanels();
+
+            _isLoading = false;
+        }
+
         private void ManagePresets_Click(object sender, RoutedEventArgs e) {
-            // TODO: Open preset management window
-            MessageBox.Show("Preset management coming soon!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            var presetsWindow = new Windows.PresetManagementWindow(_presetManager);
+            presetsWindow.Owner = Window.GetWindow(this);
+            presetsWindow.ShowDialog();
+
+            // Обновляем список пресетов после закрытия окна
+            var currentPreset = PresetComboBox.SelectedItem as TextureConversionPreset;
+            InitializePresets();
+
+            // Пытаемся восстановить выбранный пресет
+            if (currentPreset != null) {
+                var updatedPreset = _presetManager.GetPreset(currentPreset.Name);
+                if (updatedPreset != null) {
+                    PresetComboBox.SelectedItem = updatedPreset;
+                }
+            }
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e) {

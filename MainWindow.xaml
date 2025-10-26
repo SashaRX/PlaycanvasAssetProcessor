@@ -164,42 +164,6 @@
                         <TextBlock x:Name="SelectedTexturesCountText" Text="0 textures" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Texture Type Selection -->
-                    <GroupBox Header="Texture Type" Margin="0,0,0,5">
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox x:Name="TextureTypeComboBox" Width="140" Margin="0,0,5,0"
-                                      ToolTip="Select texture type for selected textures"/>
-                            <Button Content="Auto-Detect" Width="90" Margin="0,0,5,0"
-                                    Click="AutoDetectTextureType_Click"
-                                    ToolTip="Auto-detect type from filename suffix"/>
-                            <Button Content="Apply to Selected" Width="115"
-                                    Click="ApplyTextureType_Click"
-                                    ToolTip="Apply selected type to selected textures"/>
-                        </StackPanel>
-                    </GroupBox>
-
-                    <!-- Preset Selection -->
-                    <GroupBox Header="Conversion Preset" Margin="0,0,0,5">
-                        <StackPanel>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
-                                          DisplayMemberPath="Name"
-                                          ToolTip="Select preset for selected textures"/>
-                                <Button Content="..." Grid.Column="1" Width="30"
-                                        Click="ManagePresets_Click"
-                                        ToolTip="Manage presets"/>
-                            </Grid>
-                            <Button Content="Apply to Selected" Width="150" Margin="0,5,0,0"
-                                    Click="ApplyPreset_Click"
-                                    HorizontalAlignment="Left"
-                                    ToolTip="Apply selected preset to selected textures"/>
-                        </StackPanel>
-                    </GroupBox>
-
                     <!-- Process Buttons -->
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,4">
                         <Button x:Name="ProcessTexturesButton" Content="Process" Width="80" Margin="0,0,5,0"
@@ -231,9 +195,6 @@
                 <MenuItem Header="File">
                     <MenuItem Header="Settings" Click="SettingsMenu"/>
                     <MenuItem Header="Exit" Click="ExitMenu"/>
-                </MenuItem>
-                <MenuItem Header="Tools">
-                    <MenuItem Header="Manage Compression Presets" Click="TextureConversionMenu"/>
                 </MenuItem>
                 <MenuItem Header="Help">
                     <MenuItem Header="About" Click="AboutMenu"/>

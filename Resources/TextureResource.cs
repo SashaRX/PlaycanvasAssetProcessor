@@ -7,6 +7,7 @@
         private string? compressionFormat;
         private int mipmapCount;
         private string? presetName;
+        private long compressedSize;
 
         public int[] Resolution {
             get => resolution;
@@ -63,6 +64,14 @@
             set {
                 presetName = value;
                 OnPropertyChanged(nameof(PresetName));
+            }
+        }
+
+        public long CompressedSize {
+            get => compressedSize;
+            set {
+                compressedSize = value;
+                OnPropertyChanged(nameof(CompressedSize));
             }
         }
 

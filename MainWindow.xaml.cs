@@ -50,9 +50,12 @@ namespace AssetProcessor {
     }
 
     public enum ConnectionState {
-        Disconnected,   // Не подключены - кнопка "Connect"
-        Connected,      // Подключены, проект выбран - кнопка "Get Assets"
-        AssetsLoaded    // Ассеты загружены - кнопка "Download"
+        Disconnected,           // Не подключены - кнопка "Connect"
+        Connected,              // Подключены, проверяем состояние проекта
+        ProjectNotDownloaded,   // Проект не скачан (нет assets_list.json) - кнопка "Get Assets"
+        ProjectUpToDate,        // Проект скачан, hash совпадает - кнопка "Refresh"
+        ProjectOutdated,        // Проект скачан, hash отличается - кнопка "Download Updates"
+        AssetsLoaded            // Список ассетов загружен - кнопка "Download"
     }
 
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -626,19 +629,19 @@ namespace AssetProcessor {
 
                 SaveCurrentSettings();
 
-                // Обновляем состояние кнопки если уже подключены
-                if (currentConnectionState == ConnectionState.Connected) {
-                    UpdateConnectionButton(ConnectionState.Connected);
+                // Проверяем состояние проекта если уже подключены
+                if (currentConnectionState != ConnectionState.Disconnected) {
+                    await CheckProjectState();
                 }
             }
         }
 
-        private void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
             SaveCurrentSettings();
 
-            // Обновляем состояние кнопки если уже подключены
-            if (currentConnectionState == ConnectionState.Connected) {
-                UpdateConnectionButton(ConnectionState.Connected);
+            // Проверяем состояние проекта если уже подключены
+            if (currentConnectionState != ConnectionState.Disconnected) {
+                await CheckProjectState();
             }
         }
 
@@ -864,8 +867,9 @@ namespace AssetProcessor {
                             UpdateProjectPath(projectId);
                         }
 
-                        // Обновляем состояние кнопки после успешного подключения
+                        // Обновляем состояние кнопки и проверяем состояние проекта
                         UpdateConnectionButton(ConnectionState.Connected);
+                        await CheckProjectState();
                     } else {
                         throw new Exception("Project list is empty");
                     }
@@ -874,6 +878,95 @@ namespace AssetProcessor {
                     UpdateConnectionButton(ConnectionState.Disconnected);
                 }
             }
+        }
+
+        /// <summary>
+        /// Проверяет состояние проекта (скачан ли, есть ли обновления)
+        /// </summary>
+        private async Task CheckProjectState() {
+            try {
+                if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
+                    UpdateConnectionButton(ConnectionState.ProjectNotDownloaded);
+                    return;
+                }
+
+                // Проверяем наличие assets_list.json
+                string assetsListPath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
+
+                if (!File.Exists(assetsListPath)) {
+                    // Проект не скачан
+                    MainWindowHelpers.LogInfo("Project not downloaded yet - assets_list.json not found");
+                    UpdateConnectionButton(ConnectionState.ProjectNotDownloaded);
+                    return;
+                }
+
+                // Проект скачан, проверяем hash
+                MainWindowHelpers.LogInfo("Project found, checking for updates...");
+                bool hasUpdates = await CheckForUpdates();
+
+                if (hasUpdates) {
+                    UpdateConnectionButton(ConnectionState.ProjectOutdated);
+                } else {
+                    UpdateConnectionButton(ConnectionState.ProjectUpToDate);
+                }
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error checking project state: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.ProjectNotDownloaded);
+            }
+        }
+
+        /// <summary>
+        /// Проверяет наличие обновлений на сервере
+        /// </summary>
+        /// <returns>true если есть обновления, false если все актуально</returns>
+        private async Task<bool> CheckForUpdates() {
+            try {
+                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                    return false;
+                }
+
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+                string assetsListPath = Path.Combine(projectFolderPath ?? "", projectName ?? "", "assets_list.json");
+
+                if (!File.Exists(assetsListPath)) {
+                    return true; // Файл не существует = нужно скачать
+                }
+
+                // Получаем локальный JSON
+                string localJson = await File.ReadAllTextAsync(assetsListPath);
+                JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
+
+                // Получаем серверный JSON
+                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+
+                // Сравниваем hash или количество ассетов
+                string localHash = ComputeHash(localJson);
+                string serverHash = ComputeHash(serverData.ToString());
+
+                bool hasChanges = localHash != serverHash;
+
+                if (hasChanges) {
+                    MainWindowHelpers.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
+                } else {
+                    MainWindowHelpers.LogInfo("Project is up to date");
+                }
+
+                return hasChanges;
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error checking for updates: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Вычисляет MD5 hash для строки (для сравнения JSON)
+        /// </summary>
+        private string ComputeHash(string input) {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
+            byte[] hashBytes = md5.ComputeHash(inputBytes);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
         }
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken) {
@@ -2225,23 +2318,48 @@ namespace AssetProcessor {
             currentConnectionState = newState;
 
             Dispatcher.Invoke(() => {
+                bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+
                 switch (currentConnectionState) {
                     case ConnectionState.Disconnected:
                         DynamicConnectionButton.Content = "Connect";
                         DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
                         DynamicConnectionButton.IsEnabled = true;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));
                         break;
 
                     case ConnectionState.Connected:
+                        // Это промежуточное состояние, сразу проверяем проект
+                        DynamicConnectionButton.IsEnabled = false;
+                        DynamicConnectionButton.Content = "Checking...";
+                        break;
+
+                    case ConnectionState.ProjectNotDownloaded:
                         DynamicConnectionButton.Content = "Get Assets";
-                        DynamicConnectionButton.ToolTip = "Load assets from selected project and branch";
-                        DynamicConnectionButton.IsEnabled = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+                        DynamicConnectionButton.ToolTip = "Download asset list for the first time";
+                        DynamicConnectionButton.IsEnabled = hasSelection;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
+                        break;
+
+                    case ConnectionState.ProjectUpToDate:
+                        DynamicConnectionButton.Content = "Refresh";
+                        DynamicConnectionButton.ToolTip = "Check for updates manually";
+                        DynamicConnectionButton.IsEnabled = hasSelection;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
+                        break;
+
+                    case ConnectionState.ProjectOutdated:
+                        DynamicConnectionButton.Content = "Download Updates";
+                        DynamicConnectionButton.ToolTip = "Project has been updated - download changes";
+                        DynamicConnectionButton.IsEnabled = hasSelection;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 153)); // Light yellow
                         break;
 
                     case ConnectionState.AssetsLoaded:
                         DynamicConnectionButton.Content = "Download";
                         DynamicConnectionButton.ToolTip = "Download assets to local folder";
                         DynamicConnectionButton.IsEnabled = true;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 182, 193)); // Light pink
                         break;
                 }
             });
@@ -2256,12 +2374,20 @@ namespace AssetProcessor {
                     ConnectToPlayCanvas();
                     break;
 
-                case ConnectionState.Connected:
-                    await LoadAssets();
+                case ConnectionState.ProjectNotDownloaded:
+                    await LoadAssets(); // Загружаем ассеты в первый раз
+                    break;
+
+                case ConnectionState.ProjectUpToDate:
+                    await CheckForUpdates(); // Проверяем обновления вручную
+                    break;
+
+                case ConnectionState.ProjectOutdated:
+                    await LoadAssets(); // Загружаем обновленный список
                     break;
 
                 case ConnectionState.AssetsLoaded:
-                    DownloadAssets();
+                    DownloadAssets(); // Скачиваем файлы
                     break;
             }
         }

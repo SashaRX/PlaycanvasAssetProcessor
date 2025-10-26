@@ -2633,7 +2633,13 @@ namespace AssetProcessor {
             // LoadPresets removed - presets are now managed globally through PresetManager
 
             texture.CompressionFormat = compression.CompressionFormat.ToString();
-            texture.PresetName = "(Auto)";
+
+            // Auto-detect preset by filename if not already set
+            if (string.IsNullOrEmpty(texture.PresetName)) {
+                var presetManager = new TextureConversion.Settings.PresetManager();
+                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                texture.PresetName = matchedPreset?.Name ?? "";
+            }
         }
 
         // Initialize compression format and preset for texture without updating UI panel
@@ -2644,7 +2650,13 @@ namespace AssetProcessor {
             var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
 
             texture.CompressionFormat = compression.CompressionFormat.ToString();
-            texture.PresetName = "(Auto)";
+
+            // Auto-detect preset by filename if not already set
+            if (string.IsNullOrEmpty(texture.PresetName)) {
+                var presetManager = new TextureConversion.Settings.PresetManager();
+                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                texture.PresetName = matchedPreset?.Name ?? "";
+            }
         }
 
         private TextureConversion.Core.TextureType MapTextureTypeToCore(string textureType) {
@@ -2756,6 +2768,20 @@ namespace AssetProcessor {
                             texture.MipmapCount = result.MipLevels;
                             texture.Status = "Converted";
 
+                            // Сохраняем имя пресета, если оно не установлено
+                            if (string.IsNullOrEmpty(texture.PresetName) || texture.PresetName == "(Auto)") {
+                                // Пытаемся определить пресет по имени файла
+                                var presetManager = new TextureConversion.Settings.PresetManager();
+                                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                                if (matchedPreset != null) {
+                                    texture.PresetName = matchedPreset.Name;
+                                } else {
+                                    // Используем имя выбранного в панели пресета
+                                    var selectedPreset = ConversionSettingsPanel.PresetName;
+                                    texture.PresetName = string.IsNullOrEmpty(selectedPreset) ? "(Custom)" : selectedPreset;
+                                }
+                            }
+
                             // Записываем размер сжатого файла
                             if (File.Exists(outputPath)) {
                                 var fileInfo = new FileInfo(outputPath);
@@ -2840,6 +2866,47 @@ namespace AssetProcessor {
 
         private void ProcessAllCheckBox_Changed(object sender, RoutedEventArgs e) {
             UpdateSelectedTexturesCount();
+        }
+
+        private void AutoDetectAllButton_Click(object sender, RoutedEventArgs e) {
+            var texturesToProcess = ProcessAllCheckBox.IsChecked == true
+                ? textures.ToList()
+                : TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+
+            if (texturesToProcess.Count == 0) {
+                MessageBox.Show("Please select textures first or enable 'Process All'.",
+                    "No Textures Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            int matchedCount = 0;
+            int notMatchedCount = 0;
+
+            foreach (var texture in texturesToProcess) {
+                if (!string.IsNullOrEmpty(texture.Name)) {
+                    bool found = ConversionSettingsPanel.AutoDetectPresetByFileName(texture.Name);
+                    if (found) {
+                        // Get the detected preset name and store it
+                        var presetManager = new TextureConversion.Settings.PresetManager();
+                        var matchedPreset = presetManager.FindPresetByFileName(texture.Name);
+                        if (matchedPreset != null) {
+                            texture.PresetName = matchedPreset.Name;
+                            matchedCount++;
+                        }
+                    } else {
+                        notMatchedCount++;
+                    }
+                }
+            }
+
+            // Refresh DataGrid to show updated PresetName values
+            TexturesDataGrid.Items.Refresh();
+
+            MainWindowHelpers.LogInfo($"Auto-detect completed: {matchedCount} matched, {notMatchedCount} not matched");
+            MessageBox.Show($"Auto-detect completed:\n\n" +
+                          $"✓ Matched: {matchedCount}\n" +
+                          $"✗ Not matched: {notMatchedCount}",
+                "Auto-detect Results", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // Context menu handlers for texture rows

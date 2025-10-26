@@ -171,10 +171,14 @@
                                 ToolTip="Convert selected textures to KTX2 format"
                                 IsEnabled="False"/>
 
-                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="80"
+                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="80" Margin="0,0,5,0"
                                 Click="UploadTexturesButton_Click"
                                 ToolTip="Upload converted textures to PlayCanvas (coming soon)"
                                 IsEnabled="False"/>
+
+                        <Button x:Name="AutoDetectAllButton" Content="Auto-detect All" Width="110"
+                                Click="AutoDetectAllButton_Click"
+                                ToolTip="Automatically detect presets for all textures based on filenames"/>
                     </StackPanel>
 
                     <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"

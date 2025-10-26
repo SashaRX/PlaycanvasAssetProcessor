@@ -144,7 +144,7 @@ namespace AssetProcessor.Controls {
 
         public bool GenerateMipmaps => GenerateMipmapsCheckBox.IsChecked ?? true;
         public bool SaveSeparateMipmaps => SaveSeparateMipmapsCheckBox.IsChecked ?? false;
-        public string? PresetName => PresetComboBox.SelectedItem as string;
+        public string? PresetName => (PresetComboBox.SelectedItem as TextureConversionPreset)?.Name;
 
         public void LoadSettings(CompressionSettingsData compression, MipProfileSettings mipProfile, bool generateMips, bool saveSeparateMips) {
             _isLoading = true;

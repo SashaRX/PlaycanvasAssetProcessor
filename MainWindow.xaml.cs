@@ -2786,9 +2786,10 @@ namespace AssetProcessor {
                             if (File.Exists(outputPath)) {
                                 var fileInfo = new FileInfo(outputPath);
                                 texture.CompressedSize = fileInfo.Length;
-                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps, {fileInfo.Length / 1024.0:F1} KB)");
+                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps, {fileInfo.Length / 1024.0:F1} KB, Path: {outputPath})");
                             } else {
-                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps)");
+                                MainWindowHelpers.LogInfo($"✗ WARNING: Output file not found at {outputPath} after conversion of {texture.Name}");
+                                texture.CompressedSize = 0;
                             }
 
                             successCount++;
@@ -2839,6 +2840,9 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogError($"Error during batch processing: {ex.Message}");
                 MessageBox.Show($"Error during processing:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
+                // Принудительно обновляем DataGrid для отображения изменений
+                TexturesDataGrid.Items.Refresh();
+
                 ProcessTexturesButton.IsEnabled = true;
                 UploadTexturesButton.IsEnabled = false; // Keep disabled until upload is implemented
                 ProgressBar.Value = 0;

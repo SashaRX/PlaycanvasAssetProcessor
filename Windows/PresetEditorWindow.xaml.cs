@@ -22,11 +22,13 @@ namespace AssetProcessor.Windows {
                 CompressionFormatComboBox.SelectedItem = _originalPreset.CompressionFormat;
                 OutputFormatComboBox.SelectedItem = _originalPreset.OutputFormat;
                 KTX2SupercompressionComboBox.SelectedItem = _originalPreset.KTX2Supercompression;
+                KTX2ZstdLevelSlider.Value = _originalPreset.KTX2ZstdLevel;
                 ETC1SQualitySlider.Value = _originalPreset.QualityLevel;
                 UASTCQualitySlider.Value = _originalPreset.UASTCQuality;
                 UseUASTCRDOCheckBox.IsChecked = _originalPreset.UseUASTCRDO;
                 UASTCRDOLambdaSlider.Value = _originalPreset.UASTCRDOQuality;
                 UseETC1SRDOCheckBox.IsChecked = _originalPreset.UseETC1SRDO;
+                ETC1SRDOLambdaSlider.Value = _originalPreset.ETC1SRDOLambda;
                 GenerateMipmapsCheckBox.IsChecked = _originalPreset.GenerateMipmaps;
                 MipFilterComboBox.SelectedItem = _originalPreset.MipFilter;
                 ApplyGammaCorrectionCheckBox.IsChecked = _originalPreset.ApplyGammaCorrection;
@@ -86,6 +88,10 @@ namespace AssetProcessor.Windows {
             // Binding handles this automatically
         }
 
+        private void UseETC1SRDOCheckBox_Changed(object sender, RoutedEventArgs e) {
+            // Binding handles this automatically
+        }
+
         private void AlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
             if (sender == ForceAlphaCheckBox && ForceAlphaCheckBox.IsChecked == true) {
                 RemoveAlphaCheckBox.IsChecked = false;
@@ -118,6 +124,7 @@ namespace AssetProcessor.Windows {
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? false,
                 UASTCRDOQuality = (float)UASTCRDOLambdaSlider.Value,
                 UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
+                ETC1SRDOLambda = (float)ETC1SRDOLambdaSlider.Value,
                 GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
                 MipFilter = (FilterType)MipFilterComboBox.SelectedItem,
                 ApplyGammaCorrection = ApplyGammaCorrectionCheckBox.IsChecked ?? true,
@@ -125,6 +132,7 @@ namespace AssetProcessor.Windows {
                 UseMultithreading = UseMultithreadingCheckBox.IsChecked ?? true,
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem,
+                KTX2ZstdLevel = (int)Math.Round(KTX2ZstdLevelSlider.Value),
                 SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,

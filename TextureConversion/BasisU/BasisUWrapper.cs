@@ -1,6 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AssetProcessor.TextureConversion.Core;
 
 namespace AssetProcessor.TextureConversion.BasisU {
@@ -10,6 +15,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
     /// </summary>
     public class BasisUWrapper {
         private readonly string _basisuExecutablePath;
+        private readonly Lazy<BasisUCliCapabilities> _cliCapabilities;
 
         /// <summary>
         /// Конструктор
@@ -17,6 +23,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// <param name="basisuExecutablePath">Путь к исполняемому файлу basisu (или просто "basisu" если в PATH)</param>
         public BasisUWrapper(string basisuExecutablePath = "basisu") {
             _basisuExecutablePath = basisuExecutablePath;
+            _cliCapabilities = new Lazy<BasisUCliCapabilities>(DetectCliCapabilities, LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         /// <summary>
@@ -104,6 +111,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             CompressionSettings settings,
             List<string>? mipmapPaths) {
             var args = new List<string>();
+            var cliCapabilities = _cliCapabilities.Value;
 
             // Входной файл
             args.Add($"\"{inputPath}\"");
@@ -121,12 +129,15 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("-uastc");
                 args.Add($"-uastc_level {settings.UASTCQuality}");
 
-                if (settings.UseUASTCRDO) {
-                    args.Add($"-uastc_rdo_l {settings.UASTCRDOQuality}");
+                if (settings.UseUASTCRDO && !string.IsNullOrWhiteSpace(cliCapabilities.UastcRdoLambdaFlag)) {
+                    args.Add(FormattableString.Invariant($"{cliCapabilities.UastcRdoLambdaFlag} {settings.UASTCRDOQuality}"));
                 }
             } else {
                 // ETC1S по умолчанию
                 args.Add($"-q {settings.QualityLevel}");
+                if (settings.UseETC1SRDO && !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoLambdaFlag)) {
+                    args.Add(FormattableString.Invariant($"{cliCapabilities.Etc1sRdoLambdaFlag} {settings.ETC1SRDOLambda}"));
+                }
             }
 
             // Мипмапы
@@ -163,8 +174,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // }
 
             // Масштаб мипмапов
-            if (settings.MipScale != 1.0f) {
-                args.Add($"-mip_scale {settings.MipScale}");
+            if (Math.Abs(settings.MipScale - 1.0f) > float.Epsilon) {
+                args.Add(FormattableString.Invariant($"-mip_scale {settings.MipScale}"));
             }
 
             // Минимальный размер мипмапа
@@ -187,20 +198,180 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (settings.OutputFormat == OutputFormat.KTX2) {
                 switch (settings.KTX2Supercompression) {
                     case KTX2SupercompressionType.None:
-                        args.Add("--ktx2_no_supercompression");
+                        AppendNoSupercompressionFlag(args, cliCapabilities);
                         break;
                     case KTX2SupercompressionType.Zstandard:
-                        var zstdLevel = Math.Clamp(settings.KTX2ZstdLevel, 1, 22);
-                        args.Add("--ktx2_zstd");
-                        args.Add($"--zstd_level {zstdLevel}");
+                        AppendZstdFlags(args, cliCapabilities);
                         break;
                     case KTX2SupercompressionType.ZLIB:
-                        args.Add("--ktx2_zlib");
+                        AppendZlibFlag(args, cliCapabilities);
                         break;
                 }
             }
 
             return string.Join(" ", args);
+        }
+
+        private void AppendNoSupercompressionFlag(List<string> args, BasisUCliCapabilities capabilities) {
+            switch (capabilities.SupercompressionMode) {
+                case Ktx2SupercompressionMode.DoubleDashFlags:
+                    args.Add("--ktx2_no_supercompression");
+                    break;
+                case Ktx2SupercompressionMode.SingleDashFlags:
+                    args.Add("-ktx2_no_supercompression");
+                    break;
+                case Ktx2SupercompressionMode.SupercompressionOption:
+                    args.Add("--ktx2_supercompression");
+                    args.Add("NONE");
+                    break;
+            }
+        }
+
+        private void AppendZstdFlags(List<string> args, BasisUCliCapabilities capabilities) {
+            switch (capabilities.SupercompressionMode) {
+                case Ktx2SupercompressionMode.DoubleDashFlags:
+                    args.Add("--ktx2_zstd");
+                    break;
+                case Ktx2SupercompressionMode.SingleDashFlags:
+                    args.Add("-ktx2_zstd");
+                    break;
+                case Ktx2SupercompressionMode.SupercompressionOption:
+                    args.Add("--ktx2_supercompression");
+                    args.Add("ZSTD");
+                    break;
+            }
+        }
+
+        private void AppendZlibFlag(List<string> args, BasisUCliCapabilities capabilities) {
+            switch (capabilities.SupercompressionMode) {
+                case Ktx2SupercompressionMode.DoubleDashFlags:
+                    args.Add("--ktx2_zlib");
+                    break;
+                case Ktx2SupercompressionMode.SingleDashFlags:
+                    args.Add("-ktx2_zlib");
+                    break;
+                case Ktx2SupercompressionMode.SupercompressionOption:
+                    args.Add("--ktx2_supercompression");
+                    args.Add("ZLIB");
+                    break;
+            }
+        }
+
+        private BasisUCliCapabilities DetectCliCapabilities() {
+            var helpOutput = GetBasisuHelpOutput();
+
+            if (string.IsNullOrWhiteSpace(helpOutput)) {
+                return BasisUCliCapabilities.Unsupported();
+            }
+
+            var mode = DetermineSupercompressionMode(helpOutput);
+            var etc1sLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--etc1s_rdo_lambda",
+                "-etc1s_rdo_lambda",
+                "--etc1s_rdo_l",
+                "-etc1s_rdo_l");
+            var uastcLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--uastc_rdo_lambda",
+                "-uastc_rdo_lambda",
+                "--uastc_rdo_l",
+                "-uastc_rdo_l");
+
+            return new BasisUCliCapabilities(mode, etc1sLambdaFlag, uastcLambdaFlag);
+        }
+
+        private static Ktx2SupercompressionMode DetermineSupercompressionMode(string helpOutput) {
+            if (helpOutput.Contains("--ktx2_supercompression", StringComparison.Ordinal)) {
+                return Ktx2SupercompressionMode.SupercompressionOption;
+            }
+
+            if (helpOutput.Contains("--ktx2_zstd", StringComparison.Ordinal)) {
+                return Ktx2SupercompressionMode.DoubleDashFlags;
+            }
+
+            if (helpOutput.Contains("-ktx2_zstd", StringComparison.Ordinal)) {
+                return Ktx2SupercompressionMode.SingleDashFlags;
+            }
+
+            return Ktx2SupercompressionMode.Unsupported;
+        }
+
+        private static string? DetermineFirstAvailableFlag(string helpOutput, params string[] candidates) {
+            foreach (var candidate in candidates) {
+                if (helpOutput.Contains(candidate, StringComparison.Ordinal)) {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private string GetBasisuHelpOutput() {
+            var attempts = new[] { "-help", "--help", "-h", "-?" };
+
+            foreach (var attempt in attempts) {
+                var result = TryCaptureBasisuOutput(attempt);
+                if (!string.IsNullOrWhiteSpace(result)) {
+                    return result;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private string TryCaptureBasisuOutput(string arguments) {
+            try {
+                using var process = new Process {
+                    StartInfo = new ProcessStartInfo {
+                        FileName = _basisuExecutablePath,
+                        Arguments = arguments,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.Start();
+
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
+                if (!process.WaitForExit(5000)) {
+                    try {
+                        process.Kill();
+                    } catch { }
+                }
+
+                Task.WaitAll(outputTask, errorTask);
+                var combined = (outputTask.Result + Environment.NewLine + errorTask.Result).Trim();
+                return combined;
+            } catch {
+                return string.Empty;
+            }
+        }
+
+        private enum Ktx2SupercompressionMode {
+            Unsupported,
+            DoubleDashFlags,
+            SingleDashFlags,
+            SupercompressionOption
+        }
+
+        private sealed class BasisUCliCapabilities {
+            public Ktx2SupercompressionMode SupercompressionMode { get; }
+            public string? Etc1sRdoLambdaFlag { get; }
+            public string? UastcRdoLambdaFlag { get; }
+
+            public BasisUCliCapabilities(
+                Ktx2SupercompressionMode supercompressionMode,
+                string? etc1sRdoLambdaFlag,
+                string? uastcRdoLambdaFlag) {
+                SupercompressionMode = supercompressionMode;
+                Etc1sRdoLambdaFlag = etc1sRdoLambdaFlag;
+                UastcRdoLambdaFlag = uastcRdoLambdaFlag;
+            }
+
+            public static BasisUCliCapabilities Unsupported() => new(Ktx2SupercompressionMode.Unsupported, null, null);
         }
 
         /// <summary>

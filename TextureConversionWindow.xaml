@@ -189,7 +189,6 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Compression Format:" VerticalAlignment="Center" Margin="0,5"/>
@@ -226,65 +225,30 @@
                                 </ComboBox.Style>
                             </ComboBox>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Zstd Level:" VerticalAlignment="Center" Margin="0,5">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding OutputFormat}" Value="{x:Static core:OutputFormat.KTX2}"/>
-                                                    <Condition Binding="{Binding KTX2Supercompression}" Value="{x:Static core:KTX2SupercompressionType.Zstandard}"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </MultiDataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="ETC1S Quality:" VerticalAlignment="Center" Margin="0,5"/>
                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
-                                <StackPanel.Style>
-                                    <Style TargetType="StackPanel">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding OutputFormat}" Value="{x:Static core:OutputFormat.KTX2}"/>
-                                                    <Condition Binding="{Binding KTX2Supercompression}" Value="{x:Static core:KTX2SupercompressionType.Zstandard}"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </MultiDataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </StackPanel.Style>
-                                <Slider Value="{Binding KTX2ZstdLevel}" Minimum="1" Maximum="22" TickFrequency="1" IsSnapToTickEnabled="True" Width="200" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding KTX2ZstdLevel}" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                            </StackPanel>
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="ETC1S Quality:" VerticalAlignment="Center" Margin="0,5"/>
-                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
                                 <Slider Value="{Binding QualityLevel}" Minimum="0" Maximum="255" Width="200" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding QualityLevel}" Margin="10,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="UASTC Quality:" VerticalAlignment="Center" Margin="0,5"/>
-                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="UASTC Quality:" VerticalAlignment="Center" Margin="0,5"/>
+                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
                                 <Slider Value="{Binding UASTCQuality}" Minimum="0" Maximum="4" Width="200" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding UASTCQuality}" Margin="10,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Use UASTC RDO:" VerticalAlignment="Center" Margin="0,5"/>
-                            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding UseUASTCRDO}" VerticalAlignment="Center" Margin="0,5"/>
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Use UASTC RDO:" VerticalAlignment="Center" Margin="0,5"/>
+                            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding UseUASTCRDO}" VerticalAlignment="Center" Margin="0,5"/>
 
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Perceptual Mode:" VerticalAlignment="Center" Margin="0,5"/>
-                            <CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding PerceptualMode}" VerticalAlignment="Center" Margin="0,5"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Perceptual Mode:" VerticalAlignment="Center" Margin="0,5"/>
+                            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding PerceptualMode}" VerticalAlignment="Center" Margin="0,5"/>
                         </Grid>
                     </GroupBox>
 
                     <!-- Info about KTX2 -->
                     <GroupBox Header="KTX2 Notes" Margin="0,10,0,0" IsEnabled="{Binding SelectedTexture, Converter={StaticResource NullToBoolConverter}}">
                         <TextBlock TextWrapping="Wrap" Margin="5">
-                            <Run Text="Zstandard supercompression для KTX2 теперь настраивается через ползунок уровня (1-22)."/>
+                            <Run Text="Zstandard supercompression для KTX2 применяется автоматически при выборе опции 'Zstandard'."/>
                             <LineBreak/>
                             <Run Text="Для отключения supercompression выберите вариант 'None', для совместимости с устройствами без Zstd используйте 'ZLIB'." FontSize="10" Foreground="Gray"/>
                         </TextBlock>

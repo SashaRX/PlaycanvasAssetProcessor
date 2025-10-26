@@ -187,15 +187,15 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (settings.OutputFormat == OutputFormat.KTX2) {
                 switch (settings.KTX2Supercompression) {
                     case KTX2SupercompressionType.None:
-                        args.Add("--ktx2_no_supercompression");
+                        args.Add("-ktx2_no_supercompression");
                         break;
                     case KTX2SupercompressionType.Zstandard:
                         var zstdLevel = Math.Clamp(settings.KTX2ZstdLevel, 1, 22);
-                        args.Add("--ktx2_zstd");
-                        args.Add($"--zstd_level {zstdLevel}");
+                        args.Add("-ktx2_zstd");
+                        args.Add($"-zstd_level {zstdLevel}");
                         break;
                     case KTX2SupercompressionType.ZLIB:
-                        args.Add("--ktx2_zlib");
+                        args.Add("-ktx2_zlib");
                         break;
                 }
             }

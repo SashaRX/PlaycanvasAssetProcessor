@@ -2741,7 +2741,7 @@ namespace AssetProcessor {
                                 compressionSettings = preset.ToCompressionSettings();
                             } else {
                                 // Пресет не найден, используем Auto-Detect
-                                MainWindowHelpers.LogWarning($"Preset '{texture.PresetName}' not found for {texture.Name}, using auto-detect");
+                                MainWindowHelpers.LogInfo($"WARNING: Preset '{texture.PresetName}' not found for {texture.Name}, using auto-detect");
                                 var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
                                 mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(MapTextureTypeToCore(textureType));
                                 compressionSettings = ConversionSettingsPanel.GetCompressionSettings().ToCompressionSettings(globalTextureSettings!);

@@ -325,7 +325,7 @@ namespace AssetProcessor {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
                     if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
-                                                                // Загружаем модель во вьюпорт (3D просмотрщик}
+                                                                // Загружаем модель во вьюпорт (3D просмотрщик)
                         LoadModel(selectedModel.Path);
                         // Обновляем информацию о модели
                         AssimpContext context = new();

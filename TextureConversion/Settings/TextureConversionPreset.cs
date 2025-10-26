@@ -22,6 +22,12 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool IsBuiltIn { get; set; } = false;
 
         /// <summary>
+        /// Список постфиксов для автоматического выбора пресета
+        /// Например: "_albedo", "_diffuse", "_color"
+        /// </summary>
+        public List<string> Suffixes { get; set; } = new List<string>();
+
+        /// <summary>
         /// Формат сжатия (ETC1S или UASTC)
         /// </summary>
         public CompressionFormat CompressionFormat { get; set; } = CompressionFormat.ETC1S;
@@ -225,6 +231,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 Name = "Normal Map",
                 Description = "Optimized for normal maps (UASTC, no gamma)",
                 IsBuiltIn = true,
+                Suffixes = new List<string> { "_normal", "_norm", "_nrm", "_n" },
                 CompressionFormat = CompressionFormat.UASTC,
                 OutputFormat = OutputFormat.KTX2,
                 UASTCQuality = 3,
@@ -241,15 +248,84 @@ namespace AssetProcessor.TextureConversion.Settings {
         }
 
         /// <summary>
+        /// Создает пресет для Albedo/Diffuse текстур
+        /// </summary>
+        public static TextureConversionPreset CreateAlbedo() {
+            return new TextureConversionPreset {
+                Name = "Albedo",
+                Description = "Optimized for albedo/diffuse maps",
+                IsBuiltIn = true,
+                Suffixes = new List<string> { "_albedo", "_diffuse", "_color", "_basecolor", "_diff" },
+                CompressionFormat = CompressionFormat.ETC1S,
+                OutputFormat = OutputFormat.KTX2,
+                QualityLevel = 128,
+                UseETC1SRDO = true,
+                GenerateMipmaps = true,
+                MipFilter = FilterType.Kaiser,
+                ApplyGammaCorrection = true,
+                UseMultithreading = true,
+                PerceptualMode = true,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+            };
+        }
+
+        /// <summary>
+        /// Создает пресет для Roughness/Metallic/AO текстур
+        /// </summary>
+        public static TextureConversionPreset CreateRoughness() {
+            return new TextureConversionPreset {
+                Name = "Roughness",
+                Description = "Optimized for roughness/metallic/AO maps",
+                IsBuiltIn = true,
+                Suffixes = new List<string> { "_roughness", "_rough", "_metallic", "_metal", "_ao", "_ambient", "_occlusion" },
+                CompressionFormat = CompressionFormat.ETC1S,
+                OutputFormat = OutputFormat.KTX2,
+                QualityLevel = 128,
+                UseETC1SRDO = true,
+                GenerateMipmaps = true,
+                MipFilter = FilterType.Kaiser,
+                ApplyGammaCorrection = false,
+                UseMultithreading = true,
+                PerceptualMode = false,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+            };
+        }
+
+        /// <summary>
+        /// Создает пресет для Emissive текстур
+        /// </summary>
+        public static TextureConversionPreset CreateEmissive() {
+            return new TextureConversionPreset {
+                Name = "Emissive",
+                Description = "Optimized for emissive/glow maps",
+                IsBuiltIn = true,
+                Suffixes = new List<string> { "_emissive", "_emission", "_glow", "_light" },
+                CompressionFormat = CompressionFormat.ETC1S,
+                OutputFormat = OutputFormat.KTX2,
+                QualityLevel = 128,
+                UseETC1SRDO = true,
+                GenerateMipmaps = true,
+                MipFilter = FilterType.Kaiser,
+                ApplyGammaCorrection = true,
+                UseMultithreading = true,
+                PerceptualMode = true,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+            };
+        }
+
+        /// <summary>
         /// Возвращает список всех встроенных пресетов
         /// </summary>
         public static List<TextureConversionPreset> GetBuiltInPresets() {
             return new List<TextureConversionPreset> {
+                CreateAlbedo(),
+                CreateNormalMap(),
+                CreateRoughness(),
+                CreateEmissive(),
                 CreateDefaultETC1S(),
                 CreateDefaultUASTC(),
                 CreateHighQuality(),
-                CreateMinimumSize(),
-                CreateNormalMap()
+                CreateMinimumSize()
             };
         }
 
@@ -293,6 +369,27 @@ namespace AssetProcessor.TextureConversion.Settings {
                 IncludeLastLevel = true,
                 MinMipSize = 1
             };
+        }
+
+        /// <summary>
+        /// Проверяет, соответствует ли имя файла постфиксам этого пресета
+        /// </summary>
+        public bool MatchesFileName(string fileName) {
+            if (Suffixes == null || Suffixes.Count == 0) {
+                return false;
+            }
+
+            var lowerFileName = fileName.ToLowerInvariant();
+            // Убираем расширение
+            var nameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(lowerFileName);
+
+            foreach (var suffix in Suffixes) {
+                if (nameWithoutExtension.EndsWith(suffix.ToLowerInvariant())) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

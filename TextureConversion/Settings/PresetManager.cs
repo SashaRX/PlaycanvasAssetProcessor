@@ -38,6 +38,14 @@ namespace AssetProcessor.TextureConversion.Settings {
         }
 
         /// <summary>
+        /// Находит подходящий пресет по имени файла (проверяет постфиксы)
+        /// </summary>
+        public TextureConversionPreset? FindPresetByFileName(string fileName) {
+            // Сначала проверяем пресеты с постфиксами (кроме Default пресетов)
+            return _presets.FirstOrDefault(p => p.MatchesFileName(fileName));
+        }
+
+        /// <summary>
         /// Добавляет новый пользовательский пресет
         /// </summary>
         public bool AddPreset(TextureConversionPreset preset) {
@@ -56,7 +64,8 @@ namespace AssetProcessor.TextureConversion.Settings {
         }
 
         /// <summary>
-        /// Обновляет существующий пользовательский пресет
+        /// Обновляет существующий пресет
+        /// Если пресет был встроенным, создается его пользовательская версия
         /// </summary>
         public bool UpdatePreset(string oldName, TextureConversionPreset updatedPreset) {
             var existingPreset = _presets.FirstOrDefault(p => p.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
@@ -65,9 +74,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 throw new InvalidOperationException($"Preset '{oldName}' not found");
             }
 
-            if (existingPreset.IsBuiltIn) {
-                throw new InvalidOperationException("Cannot modify built-in presets");
-            }
+            bool wasBuiltIn = existingPreset.IsBuiltIn;
 
             // Check if new name conflicts with another preset
             if (!oldName.Equals(updatedPreset.Name, StringComparison.OrdinalIgnoreCase)) {
@@ -77,9 +84,17 @@ namespace AssetProcessor.TextureConversion.Settings {
             }
 
             _presets.Remove(existingPreset);
+
+            // Если был встроенный, сохраняем как пользовательский (переопределяем встроенный)
             updatedPreset.IsBuiltIn = false;
             _presets.Add(updatedPreset);
             SavePresets();
+
+            // Перезагружаем, чтобы встроенные пресеты были в начале списка
+            if (wasBuiltIn) {
+                LoadPresets();
+            }
+
             return true;
         }
 

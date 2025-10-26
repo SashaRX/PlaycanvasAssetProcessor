@@ -43,9 +43,18 @@ namespace AssetProcessor.Windows {
             var selectedPreset = PresetsListBox.SelectedItem as TextureConversionPreset;
             if (selectedPreset == null) return;
 
+            // Show warning for built-in presets
             if (selectedPreset.IsBuiltIn) {
-                MessageBox.Show("Built-in presets cannot be edited. You can create a copy instead.", "Cannot Edit", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                var result = MessageBox.Show(
+                    "Editing a built-in preset will create a customized version that overrides the default.\nContinue?",
+                    "Edit Built-in Preset",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+
+                if (result != MessageBoxResult.Yes) {
+                    return;
+                }
             }
 
             var editorWindow = new PresetEditorWindow(selectedPreset);

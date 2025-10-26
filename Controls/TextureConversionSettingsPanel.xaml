@@ -76,12 +76,16 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
                           Style="{StaticResource ReadableComboBoxStyle}"
                           SelectionChanged="PresetComboBox_SelectionChanged"
                           ToolTip="Select compression preset"/>
-                <Button Content="..." Grid.Column="1" Width="30"
+                <Button Content="🔍" Grid.Column="1" Width="30" Margin="0,0,2,0"
+                        Click="AutoDetectPreset_Click"
+                        ToolTip="Auto-detect preset by filename"/>
+                <Button Content="..." Grid.Column="2" Width="30"
                         Click="ManagePresets_Click"
                         ToolTip="Manage presets"/>
             </Grid>

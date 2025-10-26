@@ -196,16 +196,16 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
             // KTX2 Supercompression
             if (settings.OutputFormat == OutputFormat.KTX2) {
-                var cliCapabilities = _cliCapabilities.Value;
+                var capabilities = _cliCapabilities.Value;
                 switch (settings.KTX2Supercompression) {
                     case KTX2SupercompressionType.None:
-                        AppendNoSupercompressionFlag(args, cliCapabilities);
+                        AppendNoSupercompressionFlag(args, capabilities);
                         break;
                     case KTX2SupercompressionType.Zstandard:
-                        AppendZstdFlags(args, cliCapabilities);
+                        AppendZstdFlags(args, capabilities);
                         break;
                     case KTX2SupercompressionType.ZLIB:
-                        AppendZlibFlag(args, cliCapabilities);
+                        AppendZlibFlag(args, capabilities);
                         break;
                 }
             }

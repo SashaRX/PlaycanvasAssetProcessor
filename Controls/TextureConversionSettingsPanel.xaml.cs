@@ -25,9 +25,15 @@ namespace AssetProcessor.Controls {
             KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
             UseUASTCRDOCheckBox.IsChecked = true;
             UASTCRDOLambdaSlider.Value = 1.0;
-            UseETC1SRDOCheckBox.IsChecked = false;
-            ETC1SRDOLambdaSlider.Value = 50.0;
+            UseETC1SRDOCheckBox.IsChecked = true;
             PerceptualModeCheckBox.IsChecked = true;
+            SeparateAlphaCheckBox.IsChecked = false;
+            ForceAlphaCheckBox.IsChecked = false;
+            RemoveAlphaCheckBox.IsChecked = false;
+            ForceLinearCheckBox.IsChecked = false;
+            MipClampCheckBox.IsChecked = false;
+            LinearMipFilterCheckBox.IsChecked = false;
+            NormalizeNormalsCheckBox.IsChecked = false;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
@@ -97,8 +103,13 @@ namespace AssetProcessor.Controls {
                 UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = supercompression,
-                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? false,
-                ETC1SRDOLambda = (float)Math.Round(ETC1SRDOLambdaSlider.Value, 1)
+                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
+                SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
+                ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
+                RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
+                ClampMipmaps = MipClampCheckBox.IsChecked ?? false,
+                ForceLinearColorSpace = ForceLinearCheckBox.IsChecked ?? false,
+                UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false
             };
         }
 
@@ -114,7 +125,7 @@ namespace AssetProcessor.Controls {
                 BlurRadius = 0.0f,
                 IncludeLastLevel = true,
                 MinMipSize = 1,
-                NormalizeNormals = false
+                NormalizeNormals = NormalizeNormalsCheckBox.IsChecked ?? false
             };
         }
 
@@ -137,10 +148,16 @@ namespace AssetProcessor.Controls {
             ApplyGammaCorrectionCheckBox.IsChecked = mipProfile.ApplyGammaCorrection;
             GenerateMipmapsCheckBox.IsChecked = generateMips;
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
+            NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
 
             KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
             UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
-            ETC1SRDOLambdaSlider.Value = compression.ETC1SRDOLambda;
+            SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
+            ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
+            RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;
+            ForceLinearCheckBox.IsChecked = compression.ForceLinearColorSpace;
+            MipClampCheckBox.IsChecked = compression.ClampMipmaps;
+            LinearMipFilterCheckBox.IsChecked = compression.UseLinearMipFiltering;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
@@ -209,6 +226,20 @@ namespace AssetProcessor.Controls {
             if (!_isLoading) {
                 OnSettingsChanged();
             }
+        }
+
+        private void ForceAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (RemoveAlphaCheckBox.IsChecked == true) {
+                RemoveAlphaCheckBox.IsChecked = false;
+            }
+            CheckboxSettingChanged(sender, e);
+        }
+
+        private void RemoveAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (ForceAlphaCheckBox.IsChecked == true) {
+                ForceAlphaCheckBox.IsChecked = false;
+            }
+            CheckboxSettingChanged(sender, e);
         }
 
         private void OnSettingsChanged() {

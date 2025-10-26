@@ -135,8 +135,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
             } else {
                 // ETC1S по умолчанию
                 args.Add($"-q {settings.QualityLevel}");
-                if (settings.UseETC1SRDO && !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoLambdaFlag)) {
-                    args.Add(FormattableString.Invariant($"{cliCapabilities.Etc1sRdoLambdaFlag} {settings.ETC1SRDOLambda}"));
+                if (!settings.UseETC1SRDO) {
+                    if (!string.IsNullOrWhiteSpace(cliCapabilities.NoSelectorRdoFlag)) {
+                        args.Add(cliCapabilities.NoSelectorRdoFlag);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(cliCapabilities.NoEndpointRdoFlag)) {
+                        args.Add(cliCapabilities.NoEndpointRdoFlag);
+                    }
                 }
             }
 
@@ -145,6 +151,9 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // Вместо этого он должен генерировать их сам при кодировании
             if (settings.GenerateMipmaps) {
                 args.Add("-mipmap");
+                if (settings.UseLinearMipFiltering) {
+                    args.Add("-mip_linear");
+                }
             }
 
             // Если были предгенерированные мипмапы, они используются только для отдельного сохранения
@@ -162,16 +171,24 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // Перцептивный режим
             // basisu по умолчанию использует perceptual режим для фотографического контента
             // Опция -linear отключает perceptual режим для не-фотографического контента
-            if (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S) {
+            if (settings.ForceLinearColorSpace || (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S)) {
                 args.Add("-linear");
             }
 
             // Раздельное сжатие альфа-канала
-            // Примечание: опция -separate_rg_to_color_alpha не найдена в текущей документации basisu
-            // Возможно была удалена или переименована. Закомментировано для совместимости.
-            // if (settings.SeparateAlpha) {
-            //     args.Add("-separate_rg_to_color_alpha");
-            // }
+            if (settings.SeparateAlpha) {
+                args.Add("-separate_rg_to_color_alpha");
+            }
+
+            if (settings.ClampMipmaps) {
+                args.Add("-mip_clamp");
+            }
+
+            if (settings.RemoveAlphaChannel) {
+                args.Add("-no_alpha");
+            } else if (settings.ForceAlphaChannel) {
+                args.Add("-force_alpha");
+            }
 
             // Масштаб мипмапов
             if (Math.Abs(settings.MipScale - 1.0f) > float.Epsilon) {
@@ -266,18 +283,19 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             var mode = DetermineSupercompressionMode(helpOutput);
-            var etc1sLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
-                "--etc1s_rdo_lambda",
-                "-etc1s_rdo_lambda",
-                "--etc1s_rdo_l",
-                "-etc1s_rdo_l");
+            var noSelectorFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--no_selector_rdo",
+                "-no_selector_rdo");
+            var noEndpointFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--no_endpoint_rdo",
+                "-no_endpoint_rdo");
             var uastcLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
                 "--uastc_rdo_lambda",
                 "-uastc_rdo_lambda",
                 "--uastc_rdo_l",
                 "-uastc_rdo_l");
 
-            return new BasisUCliCapabilities(mode, etc1sLambdaFlag, uastcLambdaFlag);
+            return new BasisUCliCapabilities(mode, uastcLambdaFlag, noSelectorFlag, noEndpointFlag);
         }
 
         private static Ktx2SupercompressionMode DetermineSupercompressionMode(string helpOutput) {
@@ -360,19 +378,22 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
         private sealed class BasisUCliCapabilities {
             public Ktx2SupercompressionMode SupercompressionMode { get; }
-            public string? Etc1sRdoLambdaFlag { get; }
             public string? UastcRdoLambdaFlag { get; }
+            public string? NoSelectorRdoFlag { get; }
+            public string? NoEndpointRdoFlag { get; }
 
             public BasisUCliCapabilities(
                 Ktx2SupercompressionMode supercompressionMode,
-                string? etc1sRdoLambdaFlag,
-                string? uastcRdoLambdaFlag) {
+                string? uastcRdoLambdaFlag,
+                string? noSelectorRdoFlag,
+                string? noEndpointRdoFlag) {
                 SupercompressionMode = supercompressionMode;
-                Etc1sRdoLambdaFlag = etc1sRdoLambdaFlag;
                 UastcRdoLambdaFlag = uastcRdoLambdaFlag;
+                NoSelectorRdoFlag = noSelectorRdoFlag;
+                NoEndpointRdoFlag = noEndpointRdoFlag;
             }
 
-            public static BasisUCliCapabilities Unsupported() => new(Ktx2SupercompressionMode.Unsupported, null, null);
+            public static BasisUCliCapabilities Unsupported() => new(Ktx2SupercompressionMode.Unsupported, null, null, null);
         }
 
         /// <summary>

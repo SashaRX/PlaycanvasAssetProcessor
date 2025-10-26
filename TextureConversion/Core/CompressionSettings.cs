@@ -39,12 +39,7 @@ namespace AssetProcessor.TextureConversion.Core {
         /// <summary>
         /// Использовать ли RDO для ETC1S
         /// </summary>
-        public bool UseETC1SRDO { get; set; } = false;
-
-        /// <summary>
-        /// Значение ETC1S RDO lambda (чем выше, тем меньше размер)
-        /// </summary>
-        public float ETC1SRDOLambda { get; set; } = 1.0f;
+        public bool UseETC1SRDO { get; set; } = true;
 
         /// <summary>
         /// Масштаб мипмапов (1.0 = без изменений)
@@ -82,6 +77,31 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool SeparateAlpha { get; set; } = false;
 
         /// <summary>
+        /// Принудительно добавлять альфа-канал (-force_alpha)
+        /// </summary>
+        public bool ForceAlphaChannel { get; set; } = false;
+
+        /// <summary>
+        /// Удалять альфа-канал (-no_alpha)
+        /// </summary>
+        public bool RemoveAlphaChannel { get; set; } = false;
+
+        /// <summary>
+        /// Клампить края мипмапов (-mip_clamp)
+        /// </summary>
+        public bool ClampMipmaps { get; set; } = false;
+
+        /// <summary>
+        /// Принудительно трактовать данные как линейные (-linear)
+        /// </summary>
+        public bool ForceLinearColorSpace { get; set; } = false;
+
+        /// <summary>
+        /// Использовать линейный фильтр для генерации мипов (-mip_linear)
+        /// </summary>
+        public bool UseLinearMipFiltering { get; set; } = false;
+
+        /// <summary>
         /// Использовать SSE4.1 инструкции для ускорения
         /// </summary>
         public bool UseSSE41 { get; set; } = true;
@@ -108,8 +128,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                UseETC1SRDO = false,
-                ETC1SRDOLambda = 1.0f
+                UseETC1SRDO = true
             };
         }
 
@@ -126,8 +145,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 GenerateMipmaps = true,
                 UseMultithreading = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                UseETC1SRDO = false,
-                ETC1SRDOLambda = 1.0f
+                UseETC1SRDO = true
             };
         }
 
@@ -145,8 +163,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                UseETC1SRDO = false,
-                ETC1SRDOLambda = 1.0f
+                UseETC1SRDO = true
             };
         }
 
@@ -162,8 +179,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                UseETC1SRDO = true,
-                ETC1SRDOLambda = 50.0f
+                UseETC1SRDO = true
             };
         }
     }

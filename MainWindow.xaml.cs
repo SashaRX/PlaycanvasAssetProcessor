@@ -144,7 +144,7 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
-            _ = LoadLastSettings();
+            _ = InitializeOnStartup();
 
             // Отображение версии приложения с информацией о бранче и коммите
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
@@ -2440,6 +2440,82 @@ namespace AssetProcessor {
             AppSettings.Default.Save();
         }
 
+        /// <summary>
+        /// Инициализация при запуске программы - проверяет локальные файлы БЕЗ подключения к серверу
+        /// </summary>
+        private async Task InitializeOnStartup() {
+            try {
+                MainWindowHelpers.LogInfo("=== Initializing on startup ===");
+
+                // Загружаем сохраненные настройки
+                string lastProjectId = AppSettings.Default.LastSelectedProjectId;
+                string lastBranchName = AppSettings.Default.LastSelectedBranchName;
+
+                if (string.IsNullOrEmpty(lastProjectId)) {
+                    // Нет сохраненного проекта - показываем кнопку Connect
+                    MainWindowHelpers.LogInfo("No saved project found - showing Connect button");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
+                    return;
+                }
+
+                // Определяем имя проекта из настроек (нужно получить из сохраненного ID)
+                // Временно используем ProjectsFolderPath для поиска
+                string projectsRoot = AppSettings.Default.ProjectsFolderPath;
+                if (string.IsNullOrEmpty(projectsRoot) || !Directory.Exists(projectsRoot)) {
+                    MainWindowHelpers.LogInfo("Projects folder not found - showing Connect button");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
+                    return;
+                }
+
+                // Ищем папки проектов
+                var projectFolders = Directory.GetDirectories(projectsRoot);
+                foreach (var folder in projectFolders) {
+                    string folderName = Path.GetFileName(folder);
+                    string assetsListPath = Path.Combine(folder, folderName, "assets_list.json");
+
+                    if (File.Exists(assetsListPath)) {
+                        // Нашли локальный проект!
+                        MainWindowHelpers.LogInfo($"Found local project: {folderName}");
+
+                        projectName = folderName;
+                        projectFolderPath = folder;
+
+                        // Загружаем данные локально
+                        bool loaded = await LoadAssetsFromJsonFileAsync();
+
+                        if (loaded) {
+                            MainWindowHelpers.LogInfo($"Local project loaded successfully: {projectName}");
+
+                            // Показываем пользователю что проект загружен локально
+                            UpdateConnectionStatus(true, $"Loaded offline: {projectName}");
+
+                            // Добавляем проект в ComboBox (как минимум локальное имя)
+                            // Реальный ID будет получен при подключении
+                            if (!Projects.Any(p => p.Value == projectName)) {
+                                Projects.Add(new KeyValuePair<string, string>(lastProjectId, projectName));
+                                ProjectsComboBox.SelectedValue = lastProjectId;
+                            }
+
+                            // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления
+                            UpdateConnectionButton(ConnectionState.ProjectUpToDate);
+                            return;
+                        }
+                    }
+                }
+
+                // Не нашли локальных файлов
+                MainWindowHelpers.LogInfo("No local project files found - showing Connect button");
+                UpdateConnectionButton(ConnectionState.Disconnected);
+
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error during startup initialization: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.Disconnected);
+            }
+        }
+
+        /// <summary>
+        /// Загружает последние настройки и подключается к серверу (старый метод)
+        /// </summary>
         private async Task LoadLastSettings() {
             try {
                 userName = AppSettings.Default.UserName.ToLower();

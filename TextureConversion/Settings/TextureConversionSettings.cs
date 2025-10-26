@@ -92,8 +92,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         public float UASTCRDOQuality { get; set; } = 1.0f;
         public bool PerceptualMode { get; set; } = true;
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
-        public bool UseETC1SRDO { get; set; } = false;
-        public float ETC1SRDOLambda { get; set; } = 1.0f;
+        public bool UseETC1SRDO { get; set; } = true;
         public bool SeparateAlpha { get; set; } = false;
         public bool ForceAlphaChannel { get; set; } = false;
         public bool RemoveAlphaChannel { get; set; } = false;
@@ -120,7 +119,6 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseOpenCL = globalSettings.UseOpenCL,
                 KTX2Supercompression = KTX2Supercompression,
                 UseETC1SRDO = UseETC1SRDO,
-                ETC1SRDOLambda = ETC1SRDOLambda,
                 SeparateAlpha = SeparateAlpha,
                 ForceAlphaChannel = ForceAlphaChannel,
                 RemoveAlphaChannel = RemoveAlphaChannel,
@@ -144,7 +142,6 @@ namespace AssetProcessor.TextureConversion.Settings {
                 PerceptualMode = settings.PerceptualMode,
                 KTX2Supercompression = settings.KTX2Supercompression,
                 UseETC1SRDO = settings.UseETC1SRDO,
-                ETC1SRDOLambda = settings.ETC1SRDOLambda,
                 SeparateAlpha = settings.SeparateAlpha,
                 ForceAlphaChannel = settings.ForceAlphaChannel,
                 RemoveAlphaChannel = settings.RemoveAlphaChannel,

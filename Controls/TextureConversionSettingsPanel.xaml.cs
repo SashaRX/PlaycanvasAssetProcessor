@@ -25,8 +25,7 @@ namespace AssetProcessor.Controls {
             KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
             UseUASTCRDOCheckBox.IsChecked = true;
             UASTCRDOLambdaSlider.Value = 1.0;
-            UseETC1SRDOCheckBox.IsChecked = false;
-            ETC1SRDOLambdaSlider.Value = 50.0;
+            UseETC1SRDOCheckBox.IsChecked = true;
             PerceptualModeCheckBox.IsChecked = true;
             SeparateAlphaCheckBox.IsChecked = false;
             ForceAlphaCheckBox.IsChecked = false;
@@ -104,8 +103,7 @@ namespace AssetProcessor.Controls {
                 UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = supercompression,
-                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? false,
-                ETC1SRDOLambda = (float)Math.Round(ETC1SRDOLambdaSlider.Value, 1),
+                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
                 SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
@@ -154,7 +152,6 @@ namespace AssetProcessor.Controls {
 
             KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
             UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
-            ETC1SRDOLambdaSlider.Value = compression.ETC1SRDOLambda;
             SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
             ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;

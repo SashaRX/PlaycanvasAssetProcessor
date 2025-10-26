@@ -136,11 +136,13 @@ namespace AssetProcessor.TextureConversion.BasisU {
             } else {
                 // ETC1S по умолчанию
                 args.Add($"-q {settings.QualityLevel}");
-                if (settings.UseETC1SRDO) {
-                    if (!string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoFlag) &&
-                        !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoLambdaFlag)) {
-                        args.Add(cliCapabilities.Etc1sRdoFlag);
-                        args.Add(FormattableString.Invariant($"{cliCapabilities.Etc1sRdoLambdaFlag} {settings.ETC1SRDOLambda.ToString(CultureInfo.InvariantCulture)}"));
+                if (!settings.UseETC1SRDO) {
+                    if (!string.IsNullOrWhiteSpace(cliCapabilities.NoSelectorRdoFlag)) {
+                        args.Add(cliCapabilities.NoSelectorRdoFlag);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(cliCapabilities.NoEndpointRdoFlag)) {
+                        args.Add(cliCapabilities.NoEndpointRdoFlag);
                     }
                 }
             }
@@ -282,21 +284,19 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             var mode = DetermineSupercompressionMode(helpOutput);
-            var etc1sFlag = DetermineFirstAvailableFlag(helpOutput,
-                "--etc1s_rdo",
-                "-etc1s_rdo");
-            var etc1sLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
-                "--etc1s_rdo_lambda",
-                "-etc1s_rdo_lambda",
-                "--etc1s_rdo_l",
-                "-etc1s_rdo_l");
+            var noSelectorFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--no_selector_rdo",
+                "-no_selector_rdo");
+            var noEndpointFlag = DetermineFirstAvailableFlag(helpOutput,
+                "--no_endpoint_rdo",
+                "-no_endpoint_rdo");
             var uastcLambdaFlag = DetermineFirstAvailableFlag(helpOutput,
                 "--uastc_rdo_lambda",
                 "-uastc_rdo_lambda",
                 "--uastc_rdo_l",
                 "-uastc_rdo_l");
 
-            return new BasisUCliCapabilities(mode, etc1sFlag, etc1sLambdaFlag, uastcLambdaFlag);
+            return new BasisUCliCapabilities(mode, uastcLambdaFlag, noSelectorFlag, noEndpointFlag);
         }
 
         private static Ktx2SupercompressionMode DetermineSupercompressionMode(string helpOutput) {
@@ -379,19 +379,19 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
         private sealed class BasisUCliCapabilities {
             public Ktx2SupercompressionMode SupercompressionMode { get; }
-            public string? Etc1sRdoFlag { get; }
-            public string? Etc1sRdoLambdaFlag { get; }
             public string? UastcRdoLambdaFlag { get; }
+            public string? NoSelectorRdoFlag { get; }
+            public string? NoEndpointRdoFlag { get; }
 
             public BasisUCliCapabilities(
                 Ktx2SupercompressionMode supercompressionMode,
-                string? etc1sRdoFlag,
-                string? etc1sRdoLambdaFlag,
-                string? uastcRdoLambdaFlag) {
+                string? uastcRdoLambdaFlag,
+                string? noSelectorRdoFlag,
+                string? noEndpointRdoFlag) {
                 SupercompressionMode = supercompressionMode;
-                Etc1sRdoFlag = etc1sRdoFlag;
-                Etc1sRdoLambdaFlag = etc1sRdoLambdaFlag;
                 UastcRdoLambdaFlag = uastcRdoLambdaFlag;
+                NoSelectorRdoFlag = noSelectorRdoFlag;
+                NoEndpointRdoFlag = noEndpointRdoFlag;
             }
 
             public static BasisUCliCapabilities Unsupported() => new(Ktx2SupercompressionMode.Unsupported, null, null, null);

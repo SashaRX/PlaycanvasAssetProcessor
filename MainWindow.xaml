@@ -383,7 +383,7 @@
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <StackPanel>
                         <!-- Preview Section -->
-                        <Expander Header="Preview" IsExpanded="True" Margin="0,0,0,5">
+                        <Expander Header="Preview" IsExpanded="True" Margin="0,0,0,2">
                             <Grid>
                                 <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
                                     <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" Stretch="Uniform" />
@@ -413,7 +413,7 @@
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <Expander Header="Histogram" IsExpanded="True" Margin="0,0,0,5">
+                        <Expander Header="Histogram" IsExpanded="True" Margin="0,0,0,2">
                             <Border BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
                                 <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                             </Border>
@@ -421,7 +421,7 @@
 
                         <!-- Conversion Settings Panel -->
                         <Expander x:Name="ConversionSettingsExpander" Header="Conversion Settings"
-                                  Margin="0,0,0,5" IsExpanded="True"
+                                  Margin="0,0,0,2" IsExpanded="True"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"

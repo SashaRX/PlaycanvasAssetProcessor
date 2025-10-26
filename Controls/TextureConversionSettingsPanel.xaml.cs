@@ -285,6 +285,10 @@ namespace AssetProcessor.Controls {
             }
         }
 
+        private void Convert_Click(object sender, RoutedEventArgs e) {
+            OnConvertRequested();
+        }
+
         private void Apply_Click(object sender, RoutedEventArgs e) {
             OnSettingsChanged();
         }
@@ -292,6 +296,13 @@ namespace AssetProcessor.Controls {
         private void Reset_Click(object sender, RoutedEventArgs e) {
             InitializeDefaults();
             OnSettingsChanged();
+        }
+
+        // Событие для запроса конвертации
+        public event EventHandler? ConvertRequested;
+
+        private void OnConvertRequested() {
+            ConvertRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void CheckboxSettingChanged(object sender, RoutedEventArgs e) {

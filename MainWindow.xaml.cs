@@ -186,8 +186,8 @@ namespace AssetProcessor {
             // Инициализация типов текстур и пресетов
             InitializeTextureTypesAndPresets();
 
-            // Вызов асинхронного метода
-            _ = InitializeAsync(); // Асинхронный метод вызывается без ожидания завершения
+            // Примечание: InitializeOnStartup() уже вызывается выше (строка 144)
+            // и корректно обрабатывает загрузку локальных файлов без показа MessageBox
         }
 
         /// <summary>
@@ -630,8 +630,8 @@ namespace AssetProcessor {
                 // Проверяем наличие JSON-файла
                 bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
                 if (!jsonLoaded) {
-                    // Если JSON-файл не найден, можно либо предложить подключение к серверу, либо отобразить сообщение.
-                    MessageBox.Show("No saved data found. Please connect to the server.");
+                    // Если JSON-файл не найден, просто логируем (без MessageBox)
+                    MainWindowHelpers.LogInfo($"No local data found for project '{projectName}'. User can connect to server to download.");
                 }
 
                 // Обновляем ветки для выбранного проекта

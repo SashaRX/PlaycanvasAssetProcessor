@@ -180,22 +180,24 @@
 
                     <!-- Preset Selection -->
                     <GroupBox Header="Conversion Preset" Margin="0,0,0,5">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
-                                      DisplayMemberPath="Name"
-                                      ToolTip="Select preset for selected textures"/>
-                            <Button Content="..." Grid.Column="1" Width="30"
-                                    Click="ManagePresets_Click"
-                                    ToolTip="Manage presets"/>
-                        </Grid>
-                        <Button Content="Apply to Selected" Width="150" Margin="0,5,0,0"
-                                Click="ApplyPreset_Click"
-                                HorizontalAlignment="Left"
-                                ToolTip="Apply selected preset to selected textures"/>
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
+                                          DisplayMemberPath="Name"
+                                          ToolTip="Select preset for selected textures"/>
+                                <Button Content="..." Grid.Column="1" Width="30"
+                                        Click="ManagePresets_Click"
+                                        ToolTip="Manage presets"/>
+                            </Grid>
+                            <Button Content="Apply to Selected" Width="150" Margin="0,5,0,0"
+                                    Click="ApplyPreset_Click"
+                                    HorizontalAlignment="Left"
+                                    ToolTip="Apply selected preset to selected textures"/>
+                        </StackPanel>
                     </GroupBox>
 
                     <!-- Process Buttons -->

@@ -30,14 +30,17 @@
                     <StackPanel Margin="5">
                         <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
                         <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" Margin="0,2,0,0"/>
-                        <TextBlock FontSize="10" Foreground="DarkGray" Margin="0,3,0,0">
-                            <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
-                            <Run Text=", "/>
-                            <Run Text="{Binding OutputFormat, Mode=OneWay}"/>
-                            <Run Text=", Q:"/>
-                            <Run Text="{Binding QualityLevel, Mode=OneWay}"/>
-                            <Run Text=" (Built-in)" FontStyle="Italic" Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                            <TextBlock FontSize="10" Foreground="DarkGray">
+                                <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
+                                <Run Text=", "/>
+                                <Run Text="{Binding OutputFormat, Mode=OneWay}"/>
+                                <Run Text=", Q:"/>
+                                <Run Text="{Binding QualityLevel, Mode=OneWay}"/>
+                            </TextBlock>
+                            <TextBlock Text=" (Built-in)" FontSize="10" FontStyle="Italic" Foreground="DarkGray"
+                                       Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        </StackPanel>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

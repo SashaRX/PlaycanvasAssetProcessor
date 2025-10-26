@@ -119,6 +119,7 @@ namespace AssetProcessor {
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
+        private readonly TextureConversion.Settings.PresetManager presetManager = new(); // Менеджер пресетов текстур
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
@@ -182,8 +183,30 @@ namespace AssetProcessor {
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
             RenderOptions.SetBitmapScalingMode(UVImage2, BitmapScalingMode.HighQuality);
 
+            // Инициализация типов текстур и пресетов
+            InitializeTextureTypesAndPresets();
+
             // Вызов асинхронного метода
             _ = InitializeAsync(); // Асинхронный метод вызывается без ожидания завершения
+        }
+
+        /// <summary>
+        /// Инициализирует ComboBox'ы для типов текстур и пресетов
+        /// </summary>
+        private void InitializeTextureTypesAndPresets() {
+            // Загружаем типы текстур
+            var textureTypes = new List<string> {
+                "Albedo", "Normal", "Roughness", "Metallic", "AO",
+                "Emissive", "Height", "Gloss", "Specular", "Opacity", "Other"
+            };
+            TextureTypeComboBox.ItemsSource = textureTypes;
+            TextureTypeComboBox.SelectedIndex = 0;
+
+            // Загружаем пресеты
+            PresetComboBox.ItemsSource = presetManager.GetAllPresets();
+            if (PresetComboBox.Items.Count > 0) {
+                PresetComboBox.SelectedIndex = 0; // Выбираем первый пресет по умолчанию
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -2699,12 +2722,38 @@ namespace AssetProcessor {
                         ProgressTextBlock.Text = $"Processing {texture.Name}...";
                         MainWindowHelpers.LogInfo($"Processing texture: {texture.Name}");
 
-                        var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
-                        var mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
-                            MapTextureTypeToCore(textureType));
+                        // Используем пресет из текстуры, если задан
+                        TextureConversion.Core.MipGenerationProfile mipProfile;
+                        TextureConversion.Core.CompressionSettings compressionSettings;
 
-                        var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
-                            .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
+                        if (!string.IsNullOrEmpty(texture.PresetName)) {
+                            // Используем пресет текстуры
+                            var preset = presetManager.GetPreset(texture.PresetName);
+                            if (preset != null) {
+                                MainWindowHelpers.LogInfo($"Using preset '{preset.Name}' for {texture.Name}");
+
+                                // Определяем тип текстуры
+                                var textureType = !string.IsNullOrEmpty(texture.TextureType)
+                                    ? texture.TextureType
+                                    : TextureResource.DetermineTextureType(texture.Name ?? "");
+
+                                mipProfile = preset.ToMipGenerationProfile(MapTextureTypeToCore(textureType));
+                                compressionSettings = preset.ToCompressionSettings();
+                            } else {
+                                // Пресет не найден, используем Auto-Detect
+                                MainWindowHelpers.LogWarning($"Preset '{texture.PresetName}' not found for {texture.Name}, using auto-detect");
+                                var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+                                mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(MapTextureTypeToCore(textureType));
+                                compressionSettings = ConversionSettingsPanel.GetCompressionSettings().ToCompressionSettings(globalTextureSettings!);
+                            }
+                        } else {
+                            // Пресет не задан, используем глобальные настройки и Auto-Detect
+                            var textureType = !string.IsNullOrEmpty(texture.TextureType)
+                                ? texture.TextureType
+                                : TextureResource.DetermineTextureType(texture.Name ?? "");
+                            mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(MapTextureTypeToCore(textureType));
+                            compressionSettings = ConversionSettingsPanel.GetCompressionSettings().ToCompressionSettings(globalTextureSettings!);
+                        }
 
                         // Save converted file in the same directory as source PNG
                         var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
@@ -2731,8 +2780,17 @@ namespace AssetProcessor {
                             texture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
                             texture.MipmapCount = result.MipLevels;
                             texture.Status = "Converted";
+
+                            // Записываем размер сжатого файла
+                            if (File.Exists(outputPath)) {
+                                var fileInfo = new FileInfo(outputPath);
+                                texture.CompressedSize = fileInfo.Length;
+                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps, {fileInfo.Length / 1024.0:F1} KB)");
+                            } else {
+                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps)");
+                            }
+
                             successCount++;
-                            MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps)");
                         } else {
                             texture.Status = "Error";
                             errorCount++;
@@ -2851,6 +2909,97 @@ namespace AssetProcessor {
             if (TexturesDataGrid.SelectedItem is TextureResource texture) {
                 // Trigger a refresh by re-selecting the texture
                 TexturesDataGrid_SelectionChanged(TexturesDataGrid, null!);
+            }
+        }
+
+        #endregion
+
+        #region Texture Preset and Type Management
+
+        /// <summary>
+        /// Автоматически определяет тип текстуры по имени файла для выбранных текстур
+        /// </summary>
+        private void AutoDetectTextureType_Click(object sender, RoutedEventArgs e) {
+            var selectedTextures = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+
+            if (selectedTextures.Count == 0) {
+                MessageBox.Show("No textures selected.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            int count = 0;
+            foreach (var texture in selectedTextures) {
+                if (!string.IsNullOrEmpty(texture.Name)) {
+                    string detectedType = TextureResource.DetermineTextureType(texture.Name);
+                    texture.TextureType = detectedType;
+                    count++;
+                }
+            }
+
+            MessageBox.Show($"Auto-detected types for {count} texture(s).", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            TexturesDataGrid.Items.Refresh();
+        }
+
+        /// <summary>
+        /// Применяет выбранный тип текстуры к выбранным текстурам
+        /// </summary>
+        private void ApplyTextureType_Click(object sender, RoutedEventArgs e) {
+            var selectedTextures = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+
+            if (selectedTextures.Count == 0) {
+                MessageBox.Show("No textures selected.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string selectedType = TextureTypeComboBox.SelectedItem as string ?? "Other";
+
+            foreach (var texture in selectedTextures) {
+                texture.TextureType = selectedType;
+            }
+
+            MessageBox.Show($"Applied '{selectedType}' type to {selectedTextures.Count} texture(s).", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            TexturesDataGrid.Items.Refresh();
+        }
+
+        /// <summary>
+        /// Применяет выбранный пресет к выбранным текстурам
+        /// </summary>
+        private void ApplyPreset_Click(object sender, RoutedEventArgs e) {
+            var selectedTextures = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+
+            if (selectedTextures.Count == 0) {
+                MessageBox.Show("No textures selected.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var selectedPreset = PresetComboBox.SelectedItem as TextureConversion.Settings.TextureConversionPreset;
+            if (selectedPreset == null) {
+                MessageBox.Show("No preset selected.", "Info", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            foreach (var texture in selectedTextures) {
+                texture.PresetName = selectedPreset.Name;
+                texture.CompressionFormat = selectedPreset.CompressionFormat.ToString();
+            }
+
+            MessageBox.Show($"Applied '{selectedPreset.Name}' preset to {selectedTextures.Count} texture(s).", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            TexturesDataGrid.Items.Refresh();
+        }
+
+        /// <summary>
+        /// Открывает окно управления пресетами
+        /// </summary>
+        private void ManagePresets_Click(object sender, RoutedEventArgs e) {
+            var presetsWindow = new Windows.PresetManagementWindow(presetManager);
+            presetsWindow.Owner = this;
+            presetsWindow.ShowDialog();
+
+            // Обновляем список пресетов после закрытия окна
+            PresetComboBox.ItemsSource = null;
+            PresetComboBox.ItemsSource = presetManager.GetAllPresets();
+            if (PresetComboBox.Items.Count > 0 && PresetComboBox.SelectedIndex < 0) {
+                PresetComboBox.SelectedIndex = 0;
             }
         }
 

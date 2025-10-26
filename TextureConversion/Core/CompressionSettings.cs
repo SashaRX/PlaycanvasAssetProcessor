@@ -87,6 +87,11 @@ namespace AssetProcessor.TextureConversion.Core {
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
+        /// Уровень Zstandard для KTX2 (1-22, по умолчанию 18)
+        /// </summary>
+        public int KTX2ZstdLevel { get; set; } = 18;
+
+        /// <summary>
         /// Создает настройки по умолчанию для ETC1S
         /// </summary>
         public static CompressionSettings CreateETC1SDefault() {
@@ -96,7 +101,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 QualityLevel = 128,
                 GenerateMipmaps = true,
                 UseMultithreading = true,
-                PerceptualMode = true
+                PerceptualMode = true,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 18
             };
         }
 
@@ -111,7 +118,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseUASTCRDO = true,
                 UASTCRDOQuality = 1.0f,
                 GenerateMipmaps = true,
-                UseMultithreading = true
+                UseMultithreading = true,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 18
             };
         }
 
@@ -127,7 +136,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 UASTCRDOQuality = 0.5f,
                 GenerateMipmaps = true,
                 UseMultithreading = true,
-                PerceptualMode = true
+                PerceptualMode = true,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 18
             };
         }
 
@@ -141,7 +152,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 QualityLevel = 64,
                 GenerateMipmaps = true,
                 UseMultithreading = true,
-                PerceptualMode = false
+                PerceptualMode = false,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 18
             };
         }
     }

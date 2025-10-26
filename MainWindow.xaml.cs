@@ -21,7 +21,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // Для использования Bitmap и Rectangle
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;

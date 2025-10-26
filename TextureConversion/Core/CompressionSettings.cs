@@ -42,6 +42,12 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool UseETC1SRDO { get; set; } = true;
 
         /// <summary>
+        /// Уровень RDO lambda для ETC1S (0.0-10.0, по умолчанию 1.0)
+        /// Выше = больше сжатие, ниже качество
+        /// </summary>
+        public float ETC1SRDOLambda { get; set; } = 1.0f;
+
+        /// <summary>
         /// Масштаб мипмапов (1.0 = без изменений)
         /// </summary>
         public float MipScale { get; set; } = 1.0f;
@@ -115,6 +121,12 @@ namespace AssetProcessor.TextureConversion.Core {
         /// Тип KTX2 supercompression (только для KTX2)
         /// </summary>
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
+
+        /// <summary>
+        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 6)
+        /// Выше = лучше сжатие, медленнее
+        /// </summary>
+        public int KTX2ZstdLevel { get; set; } = 6;
 
         /// <summary>
         /// Создает настройки по умолчанию для ETC1S

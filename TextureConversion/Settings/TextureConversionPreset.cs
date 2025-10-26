@@ -57,6 +57,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool UseETC1SRDO { get; set; } = true;
 
         /// <summary>
+        /// Уровень RDO lambda для ETC1S (0.0-10.0, по умолчанию 1.0)
+        /// </summary>
+        public float ETC1SRDOLambda { get; set; } = 1.0f;
+
+        /// <summary>
         /// Генерировать мипмапы
         /// </summary>
         public bool GenerateMipmaps { get; set; } = true;
@@ -90,6 +95,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// KTX2 Supercompression
         /// </summary>
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
+
+        /// <summary>
+        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 6)
+        /// </summary>
+        public int KTX2ZstdLevel { get; set; } = 6;
 
         /// <summary>
         /// Разделить RG на Color/Alpha
@@ -255,10 +265,12 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseUASTCRDO = this.UseUASTCRDO,
                 UASTCRDOQuality = this.UASTCRDOQuality,
                 UseETC1SRDO = this.UseETC1SRDO,
+                ETC1SRDOLambda = this.ETC1SRDOLambda,
                 GenerateMipmaps = this.GenerateMipmaps,
                 UseMultithreading = this.UseMultithreading,
                 PerceptualMode = this.PerceptualMode,
                 KTX2Supercompression = this.KTX2Supercompression,
+                KTX2ZstdLevel = this.KTX2ZstdLevel,
                 SeparateAlpha = this.SeparateAlpha,
                 ForceAlphaChannel = this.ForceAlphaChannel,
                 RemoveAlphaChannel = this.RemoveAlphaChannel,

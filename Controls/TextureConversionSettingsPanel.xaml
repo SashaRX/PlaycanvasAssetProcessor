@@ -71,7 +71,7 @@
 
     <StackPanel Margin="2">
         <!-- Preset Selector -->
-        <GroupBox Header="Preset" Margin="0,0,0,3" Padding="3">
+        <GroupBox Header="Preset" Margin="0,0,0,2" Padding="2">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -92,9 +92,9 @@
         </GroupBox>
 
         <!-- Compression Format -->
-        <GroupBox Header="Compression" Margin="0,0,0,3" Padding="3">
+        <GroupBox Header="Compression" Margin="0,0,0,2" Padding="2">
             <StackPanel>
-                <Grid Margin="0,0,0,3">
+                <Grid Margin="0,0,0,2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -203,7 +203,7 @@
         </GroupBox>
 
         <!-- Mipmap Settings -->
-        <GroupBox Header="Mipmaps" Margin="0,0,0,3" Padding="3">
+        <GroupBox Header="Mipmaps" Margin="0,0,0,2" Padding="2">
             <StackPanel>
                 <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,3"
                           Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
@@ -230,7 +230,7 @@
         </GroupBox>
 
         <!-- Actions -->
-        <GroupBox Header="Actions" Margin="0,0,0,0" Padding="3">
+        <GroupBox Header="Actions" Margin="0,0,0,0" Padding="2">
             <StackPanel>
                 <Button Content="⚙ Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
                         Click="Convert_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"

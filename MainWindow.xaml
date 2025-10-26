@@ -34,6 +34,16 @@
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
+        <!-- Compact style for right panel expanders -->
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
 
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
         <Style TargetType="ComboBoxItem">
@@ -383,7 +393,7 @@
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <StackPanel>
                         <!-- Preview Section -->
-                        <Expander Header="Preview" IsExpanded="True" Margin="0,0,0,2">
+                        <Expander Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Grid>
                                 <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
                                     <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" Stretch="Uniform" />
@@ -413,7 +423,7 @@
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <Expander Header="Histogram" IsExpanded="True" Margin="0,0,0,2">
+                        <Expander Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Border BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
                                 <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                             </Border>
@@ -421,7 +431,7 @@
 
                         <!-- Conversion Settings Panel -->
                         <Expander x:Name="ConversionSettingsExpander" Header="Conversion Settings"
-                                  Margin="0,0,0,2" IsExpanded="True"
+                                  Style="{StaticResource CompactExpanderStyle}" IsExpanded="True"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"

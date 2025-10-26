@@ -137,18 +137,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 // ETC1S по умолчанию
                 args.Add($"-q {settings.QualityLevel}");
                 if (settings.UseETC1SRDO) {
-                    var rdoFlag = !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoFlag)
-                        ? cliCapabilities.Etc1sRdoFlag
-                        : "-etc1s_rdo";
-                    if (!string.IsNullOrWhiteSpace(rdoFlag)) {
-                        args.Add(rdoFlag);
+                    if (!string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoFlag) &&
+                        !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoLambdaFlag)) {
+                        args.Add(cliCapabilities.Etc1sRdoFlag);
+                        args.Add(FormattableString.Invariant($"{cliCapabilities.Etc1sRdoLambdaFlag} {settings.ETC1SRDOLambda.ToString(CultureInfo.InvariantCulture)}"));
                     }
-
-                    var lambdaFlag = !string.IsNullOrWhiteSpace(cliCapabilities.Etc1sRdoLambdaFlag)
-                        ? cliCapabilities.Etc1sRdoLambdaFlag
-                        : "-etc1s_rdo_l";
-
-                    args.Add(FormattableString.Invariant($"{lambdaFlag} {settings.ETC1SRDOLambda.ToString(CultureInfo.InvariantCulture)}"));
                 }
             }
 

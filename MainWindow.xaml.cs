@@ -50,12 +50,9 @@ namespace AssetProcessor {
     }
 
     public enum ConnectionState {
-        Disconnected,           // Не подключены - кнопка "Connect"
-        Connected,              // Подключены, проверяем состояние проекта
-        ProjectNotDownloaded,   // Проект не скачан (нет assets_list.json) - кнопка "Get Assets"
-        ProjectUpToDate,        // Проект скачан, hash совпадает - кнопка "Refresh"
-        ProjectOutdated,        // Проект скачан, hash отличается - кнопка "Download Updates"
-        AssetsLoaded            // Список ассетов загружен - кнопка "Download"
+        Disconnected,    // Не подключены - кнопка "Connect"
+        UpToDate,        // Проект загружен, актуален - кнопка "Refresh" (проверить обновления)
+        NeedsDownload    // Нужно скачать (первый раз ИЛИ есть обновления) - кнопка "Download"
     }
 
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -867,8 +864,7 @@ namespace AssetProcessor {
                             UpdateProjectPath(projectId);
                         }
 
-                        // Обновляем состояние кнопки и проверяем состояние проекта
-                        UpdateConnectionButton(ConnectionState.Connected);
+                        // Проверяем состояние проекта (скачан ли, нужно ли обновить)
                         await CheckProjectState();
                     } else {
                         throw new Exception("Project list is empty");
@@ -886,7 +882,7 @@ namespace AssetProcessor {
         private async Task CheckProjectState() {
             try {
                 if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
-                    UpdateConnectionButton(ConnectionState.ProjectNotDownloaded);
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
@@ -894,24 +890,26 @@ namespace AssetProcessor {
                 string assetsListPath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
 
                 if (!File.Exists(assetsListPath)) {
-                    // Проект не скачан
+                    // Проект не скачан - нужна загрузка
                     MainWindowHelpers.LogInfo("Project not downloaded yet - assets_list.json not found");
-                    UpdateConnectionButton(ConnectionState.ProjectNotDownloaded);
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
-                // Проект скачан, проверяем hash
+                // Проект скачан, проверяем hash для определения обновлений
                 MainWindowHelpers.LogInfo("Project found, checking for updates...");
                 bool hasUpdates = await CheckForUpdates();
 
                 if (hasUpdates) {
-                    UpdateConnectionButton(ConnectionState.ProjectOutdated);
+                    // Есть обновления - нужна загрузка
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
-                    UpdateConnectionButton(ConnectionState.ProjectUpToDate);
+                    // Проект актуален - можно только обновить вручную
+                    UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error checking project state: {ex.Message}");
-                UpdateConnectionButton(ConnectionState.ProjectNotDownloaded);
+                UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
         }
 
@@ -2325,41 +2323,21 @@ namespace AssetProcessor {
                         DynamicConnectionButton.Content = "Connect";
                         DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
                         DynamicConnectionButton.IsEnabled = true;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240));
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)); // Grey
                         break;
 
-                    case ConnectionState.Connected:
-                        // Это промежуточное состояние, сразу проверяем проект
-                        DynamicConnectionButton.IsEnabled = false;
-                        DynamicConnectionButton.Content = "Checking...";
-                        break;
-
-                    case ConnectionState.ProjectNotDownloaded:
-                        DynamicConnectionButton.Content = "Get Assets";
-                        DynamicConnectionButton.ToolTip = "Download asset list for the first time";
-                        DynamicConnectionButton.IsEnabled = hasSelection;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
-                        break;
-
-                    case ConnectionState.ProjectUpToDate:
+                    case ConnectionState.UpToDate:
                         DynamicConnectionButton.Content = "Refresh";
-                        DynamicConnectionButton.ToolTip = "Check for updates manually";
+                        DynamicConnectionButton.ToolTip = "Check for updates from PlayCanvas server";
                         DynamicConnectionButton.IsEnabled = hasSelection;
                         DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
                         break;
 
-                    case ConnectionState.ProjectOutdated:
-                        DynamicConnectionButton.Content = "Download Updates";
-                        DynamicConnectionButton.ToolTip = "Project has been updated - download changes";
-                        DynamicConnectionButton.IsEnabled = hasSelection;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 153)); // Light yellow
-                        break;
-
-                    case ConnectionState.AssetsLoaded:
+                    case ConnectionState.NeedsDownload:
                         DynamicConnectionButton.Content = "Download";
-                        DynamicConnectionButton.ToolTip = "Download assets to local folder";
-                        DynamicConnectionButton.IsEnabled = true;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 182, 193)); // Light pink
+                        DynamicConnectionButton.ToolTip = "Download assets from PlayCanvas (list + files)";
+                        DynamicConnectionButton.IsEnabled = hasSelection;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
                         break;
                 }
             });
@@ -2371,29 +2349,24 @@ namespace AssetProcessor {
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             switch (currentConnectionState) {
                 case ConnectionState.Disconnected:
+                    // Подключаемся к PlayCanvas и загружаем список проектов
                     ConnectToPlayCanvas();
                     break;
 
-                case ConnectionState.ProjectNotDownloaded:
-                    await LoadAssets(); // Загружаем ассеты в первый раз
+                case ConnectionState.UpToDate:
+                    // Проверяем наличие обновлений на сервере
+                    await RefreshFromServer();
                     break;
 
-                case ConnectionState.ProjectUpToDate:
-                    await CheckForUpdates(); // Проверяем обновления вручную
-                    break;
-
-                case ConnectionState.ProjectOutdated:
-                    await LoadAssets(); // Загружаем обновленный список
-                    break;
-
-                case ConnectionState.AssetsLoaded:
-                    DownloadAssets(); // Скачиваем файлы
+                case ConnectionState.NeedsDownload:
+                    // Скачиваем список ассетов + файлы
+                    await DownloadFromServer();
                     break;
             }
         }
 
         /// <summary>
-        /// Подключение к PlayCanvas (State 1 → State 2)
+        /// Подключение к PlayCanvas - загружает список проектов и веток
         /// </summary>
         private void ConnectToPlayCanvas() {
             // Вызываем существующий метод Connect
@@ -2401,33 +2374,56 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Загрузка списка ассетов (State 2 → State 3)
+        /// Проверяет наличие обновлений на сервере (Refresh button)
+        /// Сравнивает hash локального assets_list.json с серверным
         /// </summary>
-        private async Task LoadAssets() {
+        private async Task RefreshFromServer() {
             try {
-                CancelButton.IsEnabled = true;
                 DynamicConnectionButton.IsEnabled = false;
 
-                if (cancellationTokenSource != null) {
-                    await TryConnect(cancellationTokenSource.Token);
-                    UpdateConnectionButton(ConnectionState.AssetsLoaded);
+                bool hasUpdates = await CheckForUpdates();
+
+                if (hasUpdates) {
+                    // Есть обновления - переключаем на кнопку Download
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    MessageBox.Show("Updates available! Click Download to get them.", "Updates Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                } else {
+                    // Обновлений нет
+                    MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             } catch (Exception ex) {
-                MessageBox.Show($"Error loading assets: {ex.Message}");
-                MainWindowHelpers.LogError($"Error loading assets: {ex}");
+                MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MainWindowHelpers.LogError($"Error in RefreshFromServer: {ex}");
             } finally {
-                CancelButton.IsEnabled = false;
                 DynamicConnectionButton.IsEnabled = true;
             }
         }
 
         /// <summary>
-        /// Скачивание ассетов (State 3 → State 3)
+        /// Скачивает список ассетов с сервера + загружает все файлы (Download button)
         /// </summary>
-        private void DownloadAssets() {
-            // Вызываем существующий метод Download
-            Download(null, null);
-            // Состояние остается AssetsLoaded, можно скачивать повторно
+        private async Task DownloadFromServer() {
+            try {
+                CancelButton.IsEnabled = true;
+                DynamicConnectionButton.IsEnabled = false;
+
+                if (cancellationTokenSource != null) {
+                    // Загружаем список ассетов (assets_list.json) с сервера
+                    await TryConnect(cancellationTokenSource.Token);
+
+                    // Теперь скачиваем файлы (текстуры, модели, материалы)
+                    Download(null, null);
+
+                    // После успешной загрузки переключаем на Refresh
+                    UpdateConnectionButton(ConnectionState.UpToDate);
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MainWindowHelpers.LogError($"Error in DownloadFromServer: {ex}");
+            } finally {
+                CancelButton.IsEnabled = false;
+                DynamicConnectionButton.IsEnabled = true;
+            }
         }
 
         private void SaveCurrentSettings() {
@@ -2497,7 +2493,7 @@ namespace AssetProcessor {
                             }
 
                             // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления
-                            UpdateConnectionButton(ConnectionState.ProjectUpToDate);
+                            UpdateConnectionButton(ConnectionState.UpToDate);
                             return;
                         }
                     }

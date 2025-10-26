@@ -41,15 +41,55 @@ namespace AssetProcessor.Windows {
                 ForceLinearCheckBox.IsChecked = _originalPreset.ForceLinearColorSpace;
                 ClampMipmapsCheckBox.IsChecked = _originalPreset.ClampMipmaps;
                 LinearMipFilterCheckBox.IsChecked = _originalPreset.UseLinearMipFiltering;
+
+                // Load suffixes
+                SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>(_originalPreset.Suffixes);
             } else {
                 // Creating new preset - use defaults
                 CompressionFormatComboBox.SelectedItem = CompressionFormat.ETC1S;
                 OutputFormatComboBox.SelectedItem = OutputFormat.KTX2;
                 MipFilterComboBox.SelectedItem = FilterType.Kaiser;
                 KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
+
+                // Empty suffixes list for new preset
+                SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>();
             }
 
             UpdatePanelVisibility();
+        }
+
+        private void AddSuffix_Click(object sender, RoutedEventArgs e) {
+            var suffix = NewSuffixTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(suffix)) {
+                MessageBox.Show("Please enter a suffix.", "Empty Suffix", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Add underscore if not present
+            if (!suffix.StartsWith("_")) {
+                suffix = "_" + suffix;
+            }
+
+            var suffixes = SuffixesListBox.ItemsSource as System.Collections.ObjectModel.ObservableCollection<string>;
+            if (suffixes != null && !suffixes.Contains(suffix)) {
+                suffixes.Add(suffix);
+                NewSuffixTextBox.Clear();
+            } else {
+                MessageBox.Show("This suffix already exists.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void RemoveSuffix_Click(object sender, RoutedEventArgs e) {
+            if (SuffixesListBox.SelectedItem is string selectedSuffix) {
+                var suffixes = SuffixesListBox.ItemsSource as System.Collections.ObjectModel.ObservableCollection<string>;
+                suffixes?.Remove(selectedSuffix);
+            }
+        }
+
+        private void NewSuffixTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) {
+            if (e.Key == System.Windows.Input.Key.Enter) {
+                AddSuffix_Click(sender, e);
+            }
         }
 
         private void CompressionFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -113,10 +153,17 @@ namespace AssetProcessor.Windows {
                 return;
             }
 
+            // Get suffixes from ListBox
+            var suffixesList = new List<string>();
+            if (SuffixesListBox.ItemsSource is System.Collections.ObjectModel.ObservableCollection<string> suffixes) {
+                suffixesList = suffixes.ToList();
+            }
+
             // Create preset from UI
             EditedPreset = new TextureConversionPreset {
                 Name = name,
                 Description = DescriptionTextBox.Text.Trim(),
+                Suffixes = suffixesList,
                 CompressionFormat = (CompressionFormat)CompressionFormatComboBox.SelectedItem,
                 OutputFormat = (OutputFormat)OutputFormatComboBox.SelectedItem,
                 QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),

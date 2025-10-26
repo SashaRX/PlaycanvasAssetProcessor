@@ -47,6 +47,38 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- Filename Suffixes -->
+            <GroupBox Header="Filename Suffixes (for auto-detection)" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="Enter filename suffixes that match this preset (e.g., _albedo, _diffuse):"
+                               TextWrapping="Wrap" Margin="0,0,0,5" FontSize="10" Foreground="Gray"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ListBox x:Name="SuffixesListBox" Grid.Column="0" Height="100" Margin="0,0,5,0"/>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <Button Content="Add" Width="60" Margin="0,0,0,5" Click="AddSuffix_Click"/>
+                            <Button Content="Remove" Width="60" Click="RemoveSuffix_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="NewSuffixTextBox" Grid.Column="0" Margin="0,0,5,0"
+                                 ToolTip="Enter new suffix (e.g., _albedo)" KeyDown="NewSuffixTextBox_KeyDown"/>
+                        <Button Content="+" Grid.Column="1" Width="30" Click="AddSuffix_Click"
+                                ToolTip="Add suffix"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
             <!-- Compression Settings -->
             <GroupBox Header="Compression" Margin="0,0,0,10">
                 <StackPanel>

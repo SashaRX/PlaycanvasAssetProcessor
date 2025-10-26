@@ -237,6 +237,36 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
+        private void AutoDetectPreset_Click(object sender, RoutedEventArgs e) {
+            // Вызываем событие, чтобы MainWindow мог передать имя файла
+            OnAutoDetectRequested();
+        }
+
+        /// <summary>
+        /// Автоматически выбирает пресет на основе имени файла
+        /// </summary>
+        public bool AutoDetectPresetByFileName(string fileName) {
+            if (string.IsNullOrEmpty(fileName)) {
+                return false;
+            }
+
+            var matchingPreset = _presetManager.FindPresetByFileName(fileName);
+            if (matchingPreset != null) {
+                PresetComboBox.SelectedItem = matchingPreset;
+                LoadPresetToUI(matchingPreset);
+                return true;
+            }
+
+            return false;
+        }
+
+        // Событие для запроса автоопределения
+        public event EventHandler? AutoDetectRequested;
+
+        private void OnAutoDetectRequested() {
+            AutoDetectRequested?.Invoke(this, EventArgs.Empty);
+        }
+
         private void ManagePresets_Click(object sender, RoutedEventArgs e) {
             var presetsWindow = new Windows.PresetManagementWindow(_presetManager);
             presetsWindow.Owner = Window.GetWindow(this);

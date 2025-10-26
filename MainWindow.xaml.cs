@@ -143,6 +143,9 @@ namespace AssetProcessor {
             InitializeComponent();
             _ = InitializeOnStartup();
 
+            // Подписка на событие автоопределения пресета
+            ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
+
             // Отображение версии приложения с информацией о бранче и коммите
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
@@ -185,6 +188,20 @@ namespace AssetProcessor {
             // Примечание: InitializeOnStartup() уже вызывается выше (строка 144)
             // и корректно обрабатывает загрузку локальных файлов без показа MessageBox
             // Пресеты инициализируются в TextureConversionSettingsPanel
+        }
+
+        private void ConversionSettingsPanel_AutoDetectRequested(object? sender, EventArgs e) {
+            var selectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
+            if (selectedTexture != null && !string.IsNullOrEmpty(selectedTexture.Name)) {
+                bool found = ConversionSettingsPanel.AutoDetectPresetByFileName(selectedTexture.Name);
+                if (found) {
+                    MainWindowHelpers.LogInfo($"Auto-detected preset for '{selectedTexture.Name}'");
+                } else {
+                    MainWindowHelpers.LogInfo($"No matching preset found for '{selectedTexture.Name}'");
+                }
+            } else {
+                MessageBox.Show("Please select a texture first.", "No Texture Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

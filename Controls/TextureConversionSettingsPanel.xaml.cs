@@ -24,6 +24,11 @@ namespace AssetProcessor.Controls {
             MipFilterComboBox.SelectedIndex = 5; // Kaiser
             KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
             KTX2ZstdLevelSlider.Value = 18;
+            UseUASTCRDOCheckBox.IsChecked = true;
+            UASTCRDOLambdaSlider.Value = 1.0;
+            UseETC1SRDOCheckBox.IsChecked = false;
+            ETC1SRDOLambdaSlider.Value = 50.0;
+            PerceptualModeCheckBox.IsChecked = true;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
@@ -101,13 +106,15 @@ namespace AssetProcessor.Controls {
             return new CompressionSettingsData {
                 CompressionFormat = format,
                 OutputFormat = outputFormat,
-                QualityLevel = (int)ETC1SQualitySlider.Value,
-                UASTCQuality = (int)UASTCQualitySlider.Value,
+                QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
+                UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? true,
-                UASTCRDOQuality = 1.0f,
+                UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = supercompression,
-                KTX2ZstdLevel = (int)KTX2ZstdLevelSlider.Value
+                KTX2ZstdLevel = (int)Math.Round(KTX2ZstdLevelSlider.Value),
+                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? false,
+                ETC1SRDOLambda = (float)Math.Round(ETC1SRDOLambdaSlider.Value, 1)
             };
         }
 
@@ -139,6 +146,7 @@ namespace AssetProcessor.Controls {
             ETC1SQualitySlider.Value = compression.QualityLevel;
             UASTCQualitySlider.Value = compression.UASTCQuality;
             UseUASTCRDOCheckBox.IsChecked = compression.UseUASTCRDO;
+            UASTCRDOLambdaSlider.Value = compression.UASTCRDOQuality;
             PerceptualModeCheckBox.IsChecked = compression.PerceptualMode;
 
             MipFilterComboBox.SelectedItem = mipProfile.Filter;
@@ -148,6 +156,8 @@ namespace AssetProcessor.Controls {
 
             KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
             KTX2ZstdLevelSlider.Value = compression.KTX2ZstdLevel;
+            UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
+            ETC1SRDOLambdaSlider.Value = compression.ETC1SRDOLambda;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();

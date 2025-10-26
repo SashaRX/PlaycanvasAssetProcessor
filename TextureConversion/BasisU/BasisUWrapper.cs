@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AssetProcessor.TextureConversion.Core;
@@ -128,11 +129,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add($"-uastc_level {settings.UASTCQuality}");
 
                 if (settings.UseUASTCRDO) {
-                    args.Add($"-uastc_rdo_l {settings.UASTCRDOQuality}");
+                    args.Add(FormattableString.Invariant($"-uastc_rdo_l {settings.UASTCRDOQuality}"));
                 }
             } else {
                 // ETC1S по умолчанию
                 args.Add($"-q {settings.QualityLevel}");
+                if (settings.UseETC1SRDO) {
+                    args.Add(FormattableString.Invariant($"-etc1s_rdo_lambda {settings.ETC1SRDOLambda}"));
+                }
             }
 
             // Мипмапы
@@ -169,8 +173,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // }
 
             // Масштаб мипмапов
-            if (settings.MipScale != 1.0f) {
-                args.Add($"-mip_scale {settings.MipScale}");
+            if (Math.Abs(settings.MipScale - 1.0f) > float.Epsilon) {
+                args.Add(FormattableString.Invariant($"-mip_scale {settings.MipScale}"));
             }
 
             // Минимальный размер мипмапа
@@ -224,7 +228,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
         }
 
         private void AppendZstdFlags(List<string> args, CompressionSettings settings, BasisUCliCapabilities capabilities) {
-            var zstdLevel = Math.Clamp(settings.KTX2ZstdLevel, 1, 22);
+            var zstdLevel = Math.Clamp(settings.KTX2ZstdLevel, -7, 22);
 
             switch (capabilities.SupercompressionMode) {
                 case Ktx2SupercompressionMode.DoubleDashFlags:

@@ -37,6 +37,16 @@ namespace AssetProcessor.TextureConversion.Core {
         public float UASTCRDOQuality { get; set; } = 1.0f;
 
         /// <summary>
+        /// Использовать ли RDO для ETC1S
+        /// </summary>
+        public bool UseETC1SRDO { get; set; } = false;
+
+        /// <summary>
+        /// Значение ETC1S RDO lambda (чем выше, тем меньше размер)
+        /// </summary>
+        public float ETC1SRDOLambda { get; set; } = 1.0f;
+
+        /// <summary>
         /// Масштаб мипмапов (1.0 = без изменений)
         /// </summary>
         public float MipScale { get; set; } = 1.0f;
@@ -103,7 +113,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18
+                KTX2ZstdLevel = 18,
+                UseETC1SRDO = false,
+                ETC1SRDOLambda = 1.0f
             };
         }
 
@@ -120,7 +132,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 GenerateMipmaps = true,
                 UseMultithreading = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18
+                KTX2ZstdLevel = 18,
+                UseETC1SRDO = false,
+                ETC1SRDOLambda = 1.0f
             };
         }
 
@@ -138,7 +152,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18
+                KTX2ZstdLevel = 18,
+                UseETC1SRDO = false,
+                ETC1SRDOLambda = 1.0f
             };
         }
 
@@ -154,7 +170,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 18
+                KTX2ZstdLevel = 18,
+                UseETC1SRDO = true,
+                ETC1SRDOLambda = 50.0f
             };
         }
     }

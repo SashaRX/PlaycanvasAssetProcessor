@@ -321,10 +321,11 @@ namespace AssetProcessor {
         }
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {
-            comboBox.Items.Clear();
+            var items = new List<string>();
             foreach (object? value in Enum.GetValues(typeof(T))) {
-                comboBox.Items.Add(value.ToString());
+                items.Add(value.ToString() ?? "");
             }
+            comboBox.ItemsSource = items;
         }
 
         #endregion

@@ -887,7 +887,7 @@ namespace AssetProcessor {
                 }
 
                 // Проверяем наличие assets_list.json
-                string assetsListPath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
+                string assetsListPath = Path.Combine(projectFolderPath, "assets_list.json");
 
                 if (!File.Exists(assetsListPath)) {
                     // Проект не скачан - нужна загрузка
@@ -925,7 +925,7 @@ namespace AssetProcessor {
 
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-                string assetsListPath = Path.Combine(projectFolderPath ?? "", projectName ?? "", "assets_list.json");
+                string assetsListPath = Path.Combine(projectFolderPath ?? "", "assets_list.json");
 
                 if (!File.Exists(assetsListPath)) {
                     return true; // Файл не существует = нужно скачать
@@ -1804,7 +1804,7 @@ namespace AssetProcessor {
                     // Сохраняем JSON-ответ в файл
 
                     if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
-                        string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+                        string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
                         await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
                         if (!File.Exists(jsonFilePath)) {
                             MessageBox.Show($"Failed to save the JSON file to {jsonFilePath}. Please check your permissions.");
@@ -1908,10 +1908,10 @@ namespace AssetProcessor {
 
         private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
             try {
-                string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
 
-                if (!Directory.Exists(Path.Combine(projectFolderPath, projectName))) {
-                    Directory.CreateDirectory(Path.Combine(projectFolderPath, projectName));
+                if (!Directory.Exists(projectFolderPath)) {
+                    Directory.CreateDirectory(projectFolderPath);
                 }
 
                 string jsonString = jsonResponse.ToString(Formatting.Indented);
@@ -2183,7 +2183,7 @@ namespace AssetProcessor {
                     throw new Exception("Project folder path or name is null or empty");
                 }
 
-                string jsonFilePath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
+                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
                 if (File.Exists(jsonFilePath)) {
                     string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
                     JArray assetsResponse = JArray.Parse(jsonContent);
@@ -2467,7 +2467,7 @@ namespace AssetProcessor {
                 var projectFolders = Directory.GetDirectories(projectsRoot);
                 foreach (var folder in projectFolders) {
                     string folderName = Path.GetFileName(folder);
-                    string assetsListPath = Path.Combine(folder, folderName, "assets_list.json");
+                    string assetsListPath = Path.Combine(folder, "assets_list.json");
 
                     if (File.Exists(assetsListPath)) {
                         // Нашли локальный проект!

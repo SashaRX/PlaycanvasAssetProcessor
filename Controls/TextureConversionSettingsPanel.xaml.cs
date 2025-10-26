@@ -19,11 +19,19 @@ namespace AssetProcessor.Controls {
             _isLoading = true;
 
             // Set default values
-            CompressionFormatComboBox.SelectedIndex = 0; // ETC1S
-            OutputFormatComboBox.SelectedIndex = 1; // KTX2
+            CompressionFormatComboBox.SelectedItem = CompressionFormat.ETC1S;
+            OutputFormatComboBox.SelectedItem = OutputFormat.KTX2;
             MipFilterComboBox.SelectedIndex = 5; // Kaiser
+            KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
+            KTX2ZstdLevelSlider.Value = 18;
+            UseUASTCRDOCheckBox.IsChecked = true;
+            UASTCRDOLambdaSlider.Value = 1.0;
+            UseETC1SRDOCheckBox.IsChecked = false;
+            ETC1SRDOLambdaSlider.Value = 50.0;
+            PerceptualModeCheckBox.IsChecked = true;
 
             UpdateCompressionPanels();
+            UpdateOutputFormatPanels();
 
             _isLoading = false;
         }
@@ -31,6 +39,13 @@ namespace AssetProcessor.Controls {
         private void CompressionFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (!_isLoading) {
                 UpdateCompressionPanels();
+                OnSettingsChanged();
+            }
+        }
+
+        private void OutputFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateOutputFormatPanels();
                 OnSettingsChanged();
             }
         }
@@ -49,6 +64,32 @@ namespace AssetProcessor.Controls {
             }
         }
 
+        private void UpdateOutputFormatPanels() {
+            if (OutputFormatComboBox.SelectedItem == null) return;
+
+            var output = (OutputFormat)OutputFormatComboBox.SelectedItem;
+
+            if (output == OutputFormat.KTX2) {
+                KTX2SupercompressionPanel.Visibility = Visibility.Visible;
+                UpdateKTX2SupercompressionPanels();
+            } else {
+                KTX2SupercompressionPanel.Visibility = Visibility.Collapsed;
+                KTX2ZstdPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void UpdateKTX2SupercompressionPanels() {
+            if (KTX2SupercompressionComboBox.SelectedItem == null) {
+                KTX2ZstdPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var supercompression = (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem;
+            KTX2ZstdPanel.Visibility = supercompression == KTX2SupercompressionType.Zstandard
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
         public CompressionSettingsData GetCompressionSettings() {
             var format = CompressionFormatComboBox.SelectedItem != null
                 ? (CompressionFormat)CompressionFormatComboBox.SelectedItem
@@ -58,14 +99,22 @@ namespace AssetProcessor.Controls {
                 ? (OutputFormat)OutputFormatComboBox.SelectedItem
                 : OutputFormat.KTX2;
 
+            var supercompression = KTX2SupercompressionComboBox.SelectedItem != null
+                ? (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem
+                : KTX2SupercompressionType.Zstandard;
+
             return new CompressionSettingsData {
                 CompressionFormat = format,
                 OutputFormat = outputFormat,
-                QualityLevel = (int)ETC1SQualitySlider.Value,
-                UASTCQuality = (int)UASTCQualitySlider.Value,
+                QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
+                UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? true,
-                UASTCRDOQuality = 1.0f,
-                PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true
+                UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
+                PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
+                KTX2Supercompression = supercompression,
+                KTX2ZstdLevel = (int)Math.Round(KTX2ZstdLevelSlider.Value),
+                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? false,
+                ETC1SRDOLambda = (float)Math.Round(ETC1SRDOLambdaSlider.Value, 1)
             };
         }
 
@@ -97,6 +146,7 @@ namespace AssetProcessor.Controls {
             ETC1SQualitySlider.Value = compression.QualityLevel;
             UASTCQualitySlider.Value = compression.UASTCQuality;
             UseUASTCRDOCheckBox.IsChecked = compression.UseUASTCRDO;
+            UASTCRDOLambdaSlider.Value = compression.UASTCRDOQuality;
             PerceptualModeCheckBox.IsChecked = compression.PerceptualMode;
 
             MipFilterComboBox.SelectedItem = mipProfile.Filter;
@@ -104,7 +154,13 @@ namespace AssetProcessor.Controls {
             GenerateMipmapsCheckBox.IsChecked = generateMips;
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
 
+            KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
+            KTX2ZstdLevelSlider.Value = compression.KTX2ZstdLevel;
+            UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
+            ETC1SRDOLambdaSlider.Value = compression.ETC1SRDOLambda;
+
             UpdateCompressionPanels();
+            UpdateOutputFormatPanels();
 
             _isLoading = false;
         }
@@ -146,6 +202,31 @@ namespace AssetProcessor.Controls {
         private void Reset_Click(object sender, RoutedEventArgs e) {
             InitializeDefaults();
             OnSettingsChanged();
+        }
+
+        private void CheckboxSettingChanged(object sender, RoutedEventArgs e) {
+            if (!_isLoading) {
+                OnSettingsChanged();
+            }
+        }
+
+        private void ComboBoxSettingChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                OnSettingsChanged();
+            }
+        }
+
+        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (!_isLoading) {
+                OnSettingsChanged();
+            }
+        }
+
+        private void KTX2SupercompressionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateKTX2SupercompressionPanels();
+                OnSettingsChanged();
+            }
         }
 
         private void OnSettingsChanged() {

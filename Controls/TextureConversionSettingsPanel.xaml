@@ -26,6 +26,12 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
+        <ObjectDataProvider x:Key="KTX2SupercompressionValues" MethodName="GetValues" ObjectType="{x:Type core:KTX2SupercompressionType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:KTX2SupercompressionType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
         <!-- Custom ComboBox Style for better readability -->
         <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Background" Value="#F5F5F5"/>
@@ -104,8 +110,33 @@
                     <TextBlock Grid.Column="0" Text="Output:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <ComboBox Grid.Column="1" x:Name="OutputFormatComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"/>
+                              ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
+                              SelectionChanged="OutputFormatComboBox_SelectionChanged"/>
                 </Grid>
+
+                <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed" Margin="0,0,0,5">
+                    <TextBlock Text="KTX2 Supercompression:" FontSize="10" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="KTX2SupercompressionComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
+                              SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"/>
+                </StackPanel>
+
+                <StackPanel x:Name="KTX2ZstdPanel" Visibility="Collapsed" Margin="0,0,0,5">
+                    <TextBlock Text="Zstd Level:" FontSize="10" Margin="0,0,0,2"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="KTX2ZstdLevelSlider" Grid.Column="0"
+                                Minimum="-7" Maximum="22" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=KTX2ZstdLevelSlider, Path=Value}"
+                                   Width="30" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
 
                 <!-- ETC1S Quality -->
                 <StackPanel x:Name="ETC1SPanel" Visibility="Collapsed">
@@ -118,9 +149,26 @@
                         <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
                                 Minimum="0" Maximum="255" Value="128"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"/>
+                                Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"/>
                         <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
                                    Width="30" TextAlignment="Right"/>
+                    </Grid>
+                    <CheckBox x:Name="UseETC1SRDOCheckBox" Content="ETC1S RDO" Margin="0,5,0,0"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                    <TextBlock Text="RDO Lambda:" FontSize="10" Margin="0,2,0,2"
+                               IsEnabled="{Binding ElementName=UseETC1SRDOCheckBox, Path=IsChecked}"/>
+                    <Grid Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="ETC1SRDOLambdaSlider" Grid.Column="0" Minimum="1" Maximum="100" TickFrequency="1"
+                                IsSnapToTickEnabled="True" Margin="0,0,5,0" Value="50"
+                                ValueChanged="Slider_ValueChanged"
+                                IsEnabled="{Binding ElementName=UseETC1SRDOCheckBox, Path=IsChecked}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SRDOLambdaSlider, Path=Value}"
+                                   Width="40" TextAlignment="Right"/>
                     </Grid>
                 </StackPanel>
 
@@ -135,21 +183,39 @@
                         <Slider x:Name="UASTCQualitySlider" Grid.Column="0"
                                 Minimum="0" Maximum="4" Value="2"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"/>
+                                Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"/>
                         <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value}"
                                    Width="30" TextAlignment="Right"/>
                     </Grid>
-                    <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,5,0,0" IsChecked="True"/>
+                    <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,5,0,0" IsChecked="True"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                    <TextBlock Text="RDO Lambda:" FontSize="10" Margin="0,2,0,2"
+                               IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                    <Grid Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.1" Maximum="10" Value="1"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"
+                                IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F1}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
                 </StackPanel>
 
-                <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,5,0,0" IsChecked="True"/>
+                <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,5,0,0" IsChecked="True"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
             </StackPanel>
         </GroupBox>
 
         <!-- Mipmap Settings -->
         <GroupBox Header="Mipmaps" Margin="0,0,0,5">
             <StackPanel>
-                <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,5"/>
+                <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,5"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
                 <Grid Margin="0,0,0,5">
                     <Grid.ColumnDefinitions>
@@ -159,11 +225,14 @@
                     <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <ComboBox Grid.Column="1" x:Name="MipFilterComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
+                              ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
+                              SelectionChanged="ComboBoxSettingChanged"/>
                 </Grid>
 
-                <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,5"/>
-                <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True"/>
+                <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,5"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
             </StackPanel>
         </GroupBox>
 

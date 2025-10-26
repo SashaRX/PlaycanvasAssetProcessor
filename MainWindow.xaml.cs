@@ -49,6 +49,12 @@ namespace AssetProcessor {
         UV1
     }
 
+    public enum ConnectionState {
+        Disconnected,   // Не подключены - кнопка "Connect"
+        Connected,      // Подключены, проект выбран - кнопка "Get Assets"
+        AssetsLoaded    // Ассеты загружены - кнопка "Download"
+    }
+
     public partial class MainWindow : Window, INotifyPropertyChanged {
 
         private ObservableCollection<TextureResource> textures = [];
@@ -113,6 +119,7 @@ namespace AssetProcessor {
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
+        private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
 
@@ -618,11 +625,21 @@ namespace AssetProcessor {
                 }
 
                 SaveCurrentSettings();
+
+                // Обновляем состояние кнопки если уже подключены
+                if (currentConnectionState == ConnectionState.Connected) {
+                    UpdateConnectionButton(ConnectionState.Connected);
+                }
             }
         }
 
         private void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
             SaveCurrentSettings();
+
+            // Обновляем состояние кнопки если уже подключены
+            if (currentConnectionState == ConnectionState.Connected) {
+                UpdateConnectionButton(ConnectionState.Connected);
+            }
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -846,11 +863,15 @@ namespace AssetProcessor {
                             await LoadBranchesAsync(projectId, cancellationToken);
                             UpdateProjectPath(projectId);
                         }
+
+                        // Обновляем состояние кнопки после успешного подключения
+                        UpdateConnectionButton(ConnectionState.Connected);
                     } else {
                         throw new Exception("Project list is empty");
                     }
                 } catch (Exception ex) {
                     MessageBox.Show($"Error: {ex.Message}");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
                 }
             }
         }
@@ -2195,6 +2216,92 @@ namespace AssetProcessor {
                     ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
                 }
             });
+        }
+
+        /// <summary>
+        /// Обновляет текст и состояние динамической кнопки подключения
+        /// </summary>
+        private void UpdateConnectionButton(ConnectionState newState) {
+            currentConnectionState = newState;
+
+            Dispatcher.Invoke(() => {
+                switch (currentConnectionState) {
+                    case ConnectionState.Disconnected:
+                        DynamicConnectionButton.Content = "Connect";
+                        DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
+                        DynamicConnectionButton.IsEnabled = true;
+                        break;
+
+                    case ConnectionState.Connected:
+                        DynamicConnectionButton.Content = "Get Assets";
+                        DynamicConnectionButton.ToolTip = "Load assets from selected project and branch";
+                        DynamicConnectionButton.IsEnabled = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+                        break;
+
+                    case ConnectionState.AssetsLoaded:
+                        DynamicConnectionButton.Content = "Download";
+                        DynamicConnectionButton.ToolTip = "Download assets to local folder";
+                        DynamicConnectionButton.IsEnabled = true;
+                        break;
+                }
+            });
+        }
+
+        /// <summary>
+        /// Обработчик клика по динамической кнопке подключения
+        /// </summary>
+        private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
+            switch (currentConnectionState) {
+                case ConnectionState.Disconnected:
+                    await ConnectToPlayCanvas();
+                    break;
+
+                case ConnectionState.Connected:
+                    await LoadAssets();
+                    break;
+
+                case ConnectionState.AssetsLoaded:
+                    await DownloadAssets();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Подключение к PlayCanvas (State 1 → State 2)
+        /// </summary>
+        private async Task ConnectToPlayCanvas() {
+            // Вызываем существующий метод Connect
+            Connect(null, null);
+        }
+
+        /// <summary>
+        /// Загрузка списка ассетов (State 2 → State 3)
+        /// </summary>
+        private async Task LoadAssets() {
+            try {
+                CancelButton.IsEnabled = true;
+                DynamicConnectionButton.IsEnabled = false;
+
+                if (cancellationTokenSource != null) {
+                    await TryConnect(cancellationTokenSource.Token);
+                    UpdateConnectionButton(ConnectionState.AssetsLoaded);
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error loading assets: {ex.Message}");
+                MainWindowHelpers.LogError($"Error loading assets: {ex}");
+            } finally {
+                CancelButton.IsEnabled = false;
+                DynamicConnectionButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Скачивание ассетов (State 3 → State 3)
+        /// </summary>
+        private async Task DownloadAssets() {
+            // Вызываем существующий метод Download
+            Download(null, null);
+            // Состояние остается AssetsLoaded, можно скачивать повторно
         }
 
         private void SaveCurrentSettings() {

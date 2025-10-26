@@ -192,6 +192,22 @@
 
                 <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,5,0,0" IsChecked="True"
                           Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
+                <TextBlock Text="Alpha Options:" FontSize="10" Margin="0,10,0,2"/>
+                <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,2"
+                          Checked="ForceAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,2"
+                          Checked="RemoveAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"/>
+
+                <TextBlock Text="Advanced:" FontSize="10" Margin="0,10,0,2"/>
+                <CheckBox x:Name="ForceLinearCheckBox" Content="Treat as Linear (-linear)" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="MipClampCheckBox" Content="Clamp Mip Edges (-mip_clamp)" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (-mip_linear)" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
             </StackPanel>
         </GroupBox>
 
@@ -216,6 +232,8 @@
                 <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,5"
                           Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
                 <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize mipmaps for normal map" Margin="0,5,0,0"
                           Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
             </StackPanel>
         </GroupBox>

@@ -82,6 +82,31 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool SeparateAlpha { get; set; } = false;
 
         /// <summary>
+        /// Принудительно добавлять альфа-канал (-force_alpha)
+        /// </summary>
+        public bool ForceAlphaChannel { get; set; } = false;
+
+        /// <summary>
+        /// Удалять альфа-канал (-no_alpha)
+        /// </summary>
+        public bool RemoveAlphaChannel { get; set; } = false;
+
+        /// <summary>
+        /// Клампить края мипмапов (-mip_clamp)
+        /// </summary>
+        public bool ClampMipmaps { get; set; } = false;
+
+        /// <summary>
+        /// Принудительно трактовать данные как линейные (-linear)
+        /// </summary>
+        public bool ForceLinearColorSpace { get; set; } = false;
+
+        /// <summary>
+        /// Использовать линейный фильтр для генерации мипов (-mip_linear)
+        /// </summary>
+        public bool UseLinearMipFiltering { get; set; } = false;
+
+        /// <summary>
         /// Использовать SSE4.1 инструкции для ускорения
         /// </summary>
         public bool UseSSE41 { get; set; } = true;

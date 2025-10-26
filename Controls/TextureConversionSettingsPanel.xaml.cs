@@ -178,15 +178,17 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
+        // OBSOLETE: This method is no longer used after preset system refactoring
+        // Presets are now loaded through InitializePresets() using PresetManager
+        [Obsolete("Use InitializePresets() instead")]
         public void LoadPresets(string[] presetNames, string? selectedPreset = null) {
-            PresetComboBox.Items.Clear();
-            PresetComboBox.Items.Add("(Custom)");
+            // Convert to list for ItemsSource compatibility
+            var presetList = new List<object> { "(Custom)" };
+            presetList.AddRange(presetNames);
 
-            foreach (var preset in presetNames) {
-                PresetComboBox.Items.Add(preset);
-            }
+            PresetComboBox.ItemsSource = presetList;
 
-            if (!string.IsNullOrEmpty(selectedPreset) && PresetComboBox.Items.Contains(selectedPreset)) {
+            if (!string.IsNullOrEmpty(selectedPreset) && presetList.Contains(selectedPreset)) {
                 PresetComboBox.SelectedItem = selectedPreset;
             } else {
                 PresetComboBox.SelectedIndex = 0; // Custom

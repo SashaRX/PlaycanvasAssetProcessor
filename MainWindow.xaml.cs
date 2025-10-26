@@ -2613,7 +2613,7 @@ namespace AssetProcessor {
             var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
 
             ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
-            ConversionSettingsPanel.LoadPresets(new[] { "Albedo", "Normal", "Roughness", "Metallic" }, null);
+            // LoadPresets removed - presets are now managed globally through PresetManager
 
             texture.CompressionFormat = compression.CompressionFormat.ToString();
             texture.PresetName = "(Auto)";

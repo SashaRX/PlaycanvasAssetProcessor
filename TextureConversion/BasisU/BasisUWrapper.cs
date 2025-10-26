@@ -196,6 +196,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
             // KTX2 Supercompression
             if (settings.OutputFormat == OutputFormat.KTX2) {
+                var cliCapabilities = _cliCapabilities.Value;
                 switch (settings.KTX2Supercompression) {
                     case KTX2SupercompressionType.None:
                         AppendNoSupercompressionFlag(args, cliCapabilities);

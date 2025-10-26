@@ -93,11 +93,14 @@ namespace AssetProcessor.TextureConversion.Settings {
         public float UASTCRDOQuality { get; set; } = 1.0f;
         public bool PerceptualMode { get; set; } = true;
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
+        public int KTX2ZstdLevel { get; set; } = 18;
 
         /// <summary>
         /// Создает CompressionSettings из настроек с применением глобальных настроек
         /// </summary>
         public CompressionSettings ToCompressionSettings(GlobalTextureConversionSettings globalSettings) {
+            var zstdLevel = KTX2ZstdLevel <= 0 ? 18 : KTX2ZstdLevel;
+
             return new CompressionSettings {
                 CompressionFormat = CompressionFormat,
                 OutputFormat = OutputFormat,
@@ -111,7 +114,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 PerceptualMode = PerceptualMode,
                 UseSSE41 = globalSettings.UseSSE41,
                 UseOpenCL = globalSettings.UseOpenCL,
-                KTX2Supercompression = KTX2Supercompression
+                KTX2Supercompression = KTX2Supercompression,
+                KTX2ZstdLevel = zstdLevel
             };
         }
 
@@ -127,7 +131,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseUASTCRDO = settings.UseUASTCRDO,
                 UASTCRDOQuality = settings.UASTCRDOQuality,
                 PerceptualMode = settings.PerceptualMode,
-                KTX2Supercompression = settings.KTX2Supercompression
+                KTX2Supercompression = settings.KTX2Supercompression,
+                KTX2ZstdLevel = settings.KTX2ZstdLevel
             };
         }
     }

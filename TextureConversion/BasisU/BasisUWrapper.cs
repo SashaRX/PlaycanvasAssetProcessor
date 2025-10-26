@@ -184,14 +184,20 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             // KTX2 Supercompression
-            // Примечание: В basisu нет явных флагов -ktx2_zstd/-ktx2_zlib
-            // Zstandard supercompression включается автоматически для KTX2 UASTC
-            // Для ETC1S можно использовать только базовое сжатие
-            // Флаг для отключения zstd: используем старый формат или явно не включаем
             if (settings.OutputFormat == OutputFormat.KTX2) {
-                // Zstandard включен по умолчанию в современных версиях basisu для UASTC KTX2
-                // Явного флага для включения нет, он активируется автоматически
-                // Для совместимости просто не добавляем никаких специальных флагов
+                switch (settings.KTX2Supercompression) {
+                    case KTX2SupercompressionType.None:
+                        args.Add("--ktx2_no_supercompression");
+                        break;
+                    case KTX2SupercompressionType.Zstandard:
+                        var zstdLevel = Math.Clamp(settings.KTX2ZstdLevel, 1, 22);
+                        args.Add("--ktx2_zstd");
+                        args.Add($"--zstd_level {zstdLevel}");
+                        break;
+                    case KTX2SupercompressionType.ZLIB:
+                        args.Add("--ktx2_zlib");
+                        break;
+                }
             }
 
             return string.Join(" ", args);

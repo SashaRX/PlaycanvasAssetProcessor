@@ -41,12 +41,18 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private string _basisUPath = "basisu";
 
+        [ObservableProperty]
+        private string _toktxPath = "toktx";
+
         public TextureConversionViewModel() {
             _globalSettings = TextureConversionSettingsManager.LoadSettings();
             _outputDirectory = _globalSettings.DefaultOutputDirectory;
             _basisUPath = string.IsNullOrWhiteSpace(_globalSettings.BasisUExecutablePath)
                 ? "basisu"
                 : _globalSettings.BasisUExecutablePath;
+            _toktxPath = string.IsNullOrWhiteSpace(_globalSettings.ToktxExecutablePath)
+                ? "toktx"
+                : _globalSettings.ToktxExecutablePath;
 
             // Загружаем сохраненные текстуры
             LoadSavedTextures();
@@ -118,7 +124,7 @@ namespace AssetProcessor.ViewModels {
             ProcessingProgress = 0;
 
             try {
-                var pipeline = new TextureConversionPipeline(BasisUPath);
+                var pipeline = new TextureConversionPipeline(BasisUPath, ToktxPath);
 
                 Directory.CreateDirectory(OutputDirectory);
 
@@ -192,7 +198,7 @@ namespace AssetProcessor.ViewModels {
             ProcessingStatus = $"Processing {Path.GetFileName(SelectedTexture.TexturePath)}...";
 
             try {
-                var pipeline = new TextureConversionPipeline(BasisUPath);
+                var pipeline = new TextureConversionPipeline(BasisUPath, ToktxPath);
                 Directory.CreateDirectory(OutputDirectory);
 
                 var mipProfile = SelectedTexture.MipProfile.ToMipGenerationProfile(SelectedTexture.TextureType);

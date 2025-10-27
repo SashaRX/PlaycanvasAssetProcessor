@@ -3442,7 +3442,11 @@ namespace AssetProcessor {
                     ? "basisu"
                     : globalTextureSettings.BasisUExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+                var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
+                    ? "toktx"
+                    : globalTextureSettings.ToktxExecutablePath;
+
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath, toktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {

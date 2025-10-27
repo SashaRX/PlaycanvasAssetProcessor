@@ -15,10 +15,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly MipGenerator _mipGenerator;
         private readonly BasisUWrapper _basisWrapper;
+        private readonly ToksvigProcessor _toksvigProcessor;
+        private readonly NormalMapMatcher _normalMapMatcher;
 
         public TextureConversionPipeline(string? basisuExecutablePath = null) {
             _mipGenerator = new MipGenerator();
             _basisWrapper = new BasisUWrapper(basisuExecutablePath ?? "basisu");
+            _toksvigProcessor = new ToksvigProcessor();
+            _normalMapMatcher = new NormalMapMatcher();
         }
 
         /// <summary>
@@ -28,6 +32,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// <param name="outputPath">Путь к выходному файлу (.basis или .ktx2)</param>
         /// <param name="mipProfile">Профиль генерации мипмапов</param>
         /// <param name="compressionSettings">Настройки сжатия</param>
+        /// <param name="toksvigSettings">Настройки Toksvig (optional, для gloss/roughness текстур)</param>
         /// <param name="saveSeparateMipmaps">Сохранить ли мипмапы отдельно</param>
         /// <param name="mipmapOutputDir">Директория для сохранения отдельных мипмапов</param>
         public async Task<ConversionResult> ConvertTextureAsync(
@@ -35,6 +40,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             string outputPath,
             MipGenerationProfile mipProfile,
             CompressionSettings compressionSettings,
+            ToksvigSettings? toksvigSettings = null,
             bool saveSeparateMipmaps = false,
             string? mipmapOutputDir = null) {
             var result = new ConversionResult {
@@ -64,6 +70,63 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 // Выводим информацию о каждом мипмапе
                 for (int i = 0; i < mipmaps.Count; i++) {
                     Logger.Info($"Mipmap level {i}: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                }
+
+                // Применяем Toksvig коррекцию если включена (для gloss/roughness текстур)
+                if (toksvigSettings != null && toksvigSettings.Enabled &&
+                    (mipProfile.TextureType == TextureType.Gloss || mipProfile.TextureType == TextureType.Roughness)) {
+
+                    Logger.Info("Применяем Toksvig коррекцию...");
+
+                    try {
+                        // Ищем normal map если путь не указан
+                        string? normalMapPath = toksvigSettings.NormalMapPath;
+                        if (string.IsNullOrEmpty(normalMapPath)) {
+                            Logger.Info("Путь к normal map не указан, выполняем автоматический поиск...");
+                            normalMapPath = _normalMapMatcher.FindNormalMapAuto(inputPath, validateDimensions: true);
+                        }
+
+                        if (string.IsNullOrEmpty(normalMapPath)) {
+                            Logger.Warn("Normal map не найдена, пропускаем Toksvig коррекцию");
+                        } else {
+                            // Загружаем normal map
+                            using var normalMapImage = await Image.LoadAsync<Rgba32>(normalMapPath);
+                            Logger.Info($"Загружена normal map: {normalMapPath} ({normalMapImage.Width}x{normalMapImage.Height})");
+
+                            // Определяем, gloss или roughness
+                            bool isGloss = mipProfile.TextureType == TextureType.Gloss;
+                            if (isGloss) {
+                                var detectedType = _normalMapMatcher.IsGlossByName(inputPath);
+                                if (detectedType.HasValue) {
+                                    isGloss = detectedType.Value;
+                                    Logger.Info($"Определён тип текстуры по имени: {(isGloss ? "Gloss" : "Roughness")}");
+                                }
+                            }
+
+                            // Применяем Toksvig
+                            var correctedMipmaps = _toksvigProcessor.ApplyToksvigCorrection(
+                                mipmaps,
+                                normalMapImage,
+                                toksvigSettings,
+                                isGloss
+                            );
+
+                            // Освобождаем старые мипмапы
+                            foreach (var mip in mipmaps) {
+                                mip.Dispose();
+                            }
+
+                            mipmaps = correctedMipmaps;
+                            result.ToksvigApplied = true;
+                            result.NormalMapUsed = normalMapPath;
+
+                            Logger.Info("Toksvig коррекция успешно применена");
+                        }
+                    } catch (Exception ex) {
+                        Logger.Error(ex, "Ошибка при применении Toksvig коррекции");
+                        result.ToksvigApplied = false;
+                        // Продолжаем с оригинальными мипмапами
+                    }
                 }
 
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
@@ -199,5 +262,15 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// Длительность конвертации
         /// </summary>
         public TimeSpan Duration { get; set; }
+
+        /// <summary>
+        /// Была ли применена Toksvig коррекция
+        /// </summary>
+        public bool ToksvigApplied { get; set; }
+
+        /// <summary>
+        /// Путь к использованной normal map (если Toksvig применён)
+        /// </summary>
+        public string? NormalMapUsed { get; set; }
     }
 }

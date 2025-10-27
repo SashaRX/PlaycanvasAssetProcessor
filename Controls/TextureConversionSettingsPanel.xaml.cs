@@ -48,6 +48,13 @@ namespace AssetProcessor.Controls {
             LinearMipFilterCheckBox.IsChecked = false;
             NormalizeNormalsCheckBox.IsChecked = false;
 
+            // Toksvig defaults
+            ToksvigEnabledCheckBox.IsChecked = false;
+            ToksvigCompositePowerSlider.Value = 1.0;
+            ToksvigMinMipLevelSlider.Value = 1;
+            ToksvigSmoothVarianceCheckBox.IsChecked = true;
+            NormalMapPathTextBox.Text = string.Empty;
+
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
 
@@ -345,6 +352,52 @@ namespace AssetProcessor.Controls {
 
         private void OnSettingsChanged() {
             SettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void TextBoxSettingChanged(object sender, TextChangedEventArgs e) {
+            if (!_isLoading) {
+                OnSettingsChanged();
+            }
+        }
+
+        private void BrowseNormalMap_Click(object sender, RoutedEventArgs e) {
+            var dialog = new Microsoft.Win32.OpenFileDialog {
+                Title = "Select Normal Map",
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.tga;*.bmp)|*.png;*.jpg;*.jpeg;*.tga;*.bmp|All Files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog() == true) {
+                NormalMapPathTextBox.Text = dialog.FileName;
+            }
+        }
+
+        /// <summary>
+        /// Получает настройки Toksvig из UI
+        /// </summary>
+        public ToksvigSettings GetToksvigSettings() {
+            return new ToksvigSettings {
+                Enabled = ToksvigEnabledCheckBox.IsChecked ?? false,
+                CompositePower = (float)ToksvigCompositePowerSlider.Value,
+                MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
+                SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
+            };
+        }
+
+        /// <summary>
+        /// Загружает настройки Toksvig в UI
+        /// </summary>
+        public void LoadToksvigSettings(ToksvigSettings settings) {
+            _isLoading = true;
+
+            ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
+            ToksvigCompositePowerSlider.Value = settings.CompositePower;
+            ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
+            ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
+            NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
+
+            _isLoading = false;
         }
     }
 }

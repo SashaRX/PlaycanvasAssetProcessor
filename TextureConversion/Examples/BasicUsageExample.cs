@@ -186,9 +186,126 @@ namespace AssetProcessor.TextureConversion.Examples {
         }
 
         /// <summary>
-        /// Пример 7: Сравнение качества ETC1S vs UASTC
+        /// Пример 7: Toksvig коррекция для gloss/roughness текстур
         /// </summary>
-        public static async Task Example7_QualityComparison() {
+        public static async Task Example7_ToksvigCorrection() {
+            Console.WriteLine("\n=== Example 7: Toksvig Correction ===");
+
+            var pipeline = new TextureConversionPipeline();
+
+            // Профиль для roughness текстуры
+            var profile = MipGenerationProfile.CreateDefault(TextureType.Roughness);
+
+            // Настройки Toksvig
+            var toksvigSettings = new ToksvigSettings {
+                Enabled = true,
+                CompositePower = 1.0f, // Стандартный вес
+                MinToksvigMipLevel = 1, // Не трогаем уровень 0
+                SmoothVariance = true, // Сглаживание дисперсии
+                NormalMapPath = null // Автоматический поиск
+            };
+
+            var compressionSettings = CompressionSettings.CreateETC1SDefault();
+
+            // Конвертируем с Toksvig коррекцией
+            var result = await pipeline.ConvertTextureAsync(
+                inputPath: "input/metal_roughness.png",
+                outputPath: "output/metal_roughness.ktx2",
+                mipProfile: profile,
+                compressionSettings: compressionSettings,
+                toksvigSettings: toksvigSettings
+            );
+
+            if (result.Success) {
+                Console.WriteLine($"✓ Toksvig correction applied!");
+                Console.WriteLine($"  Normal map used: {result.NormalMapUsed ?? "не найдена"}");
+                Console.WriteLine($"  Toksvig applied: {result.ToksvigApplied}");
+                Console.WriteLine($"  Duration: {result.Duration.TotalSeconds:F2}s");
+            } else {
+                Console.WriteLine($"✗ Failed: {result.Error}");
+            }
+        }
+
+        /// <summary>
+        /// Пример 8: Toksvig с указанием конкретной normal map
+        /// </summary>
+        public static async Task Example8_ToksvigWithSpecificNormalMap() {
+            Console.WriteLine("\n=== Example 8: Toksvig with Specific Normal Map ===");
+
+            var pipeline = new TextureConversionPipeline();
+
+            // Профиль для gloss текстуры
+            var profile = MipGenerationProfile.CreateDefault(TextureType.Gloss);
+
+            // Настройки Toksvig с указанием конкретной normal map
+            var toksvigSettings = new ToksvigSettings {
+                Enabled = true,
+                CompositePower = 1.5f, // Более сильный эффект
+                MinToksvigMipLevel = 1,
+                SmoothVariance = true,
+                NormalMapPath = "input/metal_normal.png" // Конкретный путь
+            };
+
+            var compressionSettings = CompressionSettings.CreateUASTCDefault();
+
+            var result = await pipeline.ConvertTextureAsync(
+                inputPath: "input/metal_gloss.png",
+                outputPath: "output/metal_gloss.ktx2",
+                mipProfile: profile,
+                compressionSettings: compressionSettings,
+                toksvigSettings: toksvigSettings
+            );
+
+            if (result.Success) {
+                Console.WriteLine($"✓ Gloss texture with Toksvig converted");
+                Console.WriteLine($"  Normal map: {result.NormalMapUsed}");
+            } else {
+                Console.WriteLine($"✗ Failed: {result.Error}");
+            }
+        }
+
+        /// <summary>
+        /// Пример 9: Сравнение с и без Toksvig
+        /// </summary>
+        public static async Task Example9_ToksvigComparison() {
+            Console.WriteLine("\n=== Example 9: Toksvig Comparison ===");
+
+            var pipeline = new TextureConversionPipeline();
+            var profile = MipGenerationProfile.CreateDefault(TextureType.Roughness);
+            var settings = CompressionSettings.CreateETC1SDefault();
+
+            // Без Toksvig
+            var withoutToksvig = await pipeline.ConvertTextureAsync(
+                "input/test_roughness.png",
+                "output/test_roughness_no_toksvig.ktx2",
+                profile,
+                settings,
+                toksvigSettings: null
+            );
+
+            // С Toksvig
+            var toksvigSettings = ToksvigSettings.CreateDefault();
+            toksvigSettings.Enabled = true;
+            var withToksvig = await pipeline.ConvertTextureAsync(
+                "input/test_roughness.png",
+                "output/test_roughness_with_toksvig.ktx2",
+                profile,
+                settings,
+                toksvigSettings: toksvigSettings
+            );
+
+            if (withoutToksvig.Success && withToksvig.Success) {
+                Console.WriteLine("✓ Comparison:");
+                Console.WriteLine($"  Without Toksvig: {withoutToksvig.Duration.TotalSeconds:F2}s");
+                Console.WriteLine($"  With Toksvig: {withToksvig.Duration.TotalSeconds:F2}s (normal: {withToksvig.NormalMapUsed ?? "N/A"})");
+                Console.WriteLine($"  Note: Load both textures in engine to see visual difference (reduced specular aliasing)");
+            }
+        }
+
+        /// <summary>
+        /// Пример 10: Сравнение качества ETC1S vs UASTC
+        /// </summary>
+        public static async Task Example10_QualityComparison() {
             Console.WriteLine("\n=== Example 7: Quality Comparison ===");
 
             var pipeline = new TextureConversionPipeline();
@@ -238,7 +355,10 @@ namespace AssetProcessor.TextureConversion.Examples {
                 await Example4_MipmapsOnly();
                 await Example5_CustomProfile();
                 await Example6_SeparateMipmaps();
-                await Example7_QualityComparison();
+                await Example7_ToksvigCorrection();
+                await Example8_ToksvigWithSpecificNormalMap();
+                await Example9_ToksvigComparison();
+                await Example10_QualityComparison();
 
                 Console.WriteLine("\n✓ All examples completed!");
             } catch (Exception ex) {

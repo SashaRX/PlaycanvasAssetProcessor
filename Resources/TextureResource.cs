@@ -8,6 +8,11 @@
         private int mipmapCount;
         private string? presetName;
         private long compressedSize;
+        private bool toksvigEnabled;
+        private float toksvigCompositePower = 1.0f;
+        private int toksvigMinMipLevel = 1;
+        private bool toksvigSmoothVariance = true;
+        private string? normalMapPath;
 
         public int[] Resolution {
             get => resolution;
@@ -72,6 +77,61 @@
             set {
                 compressedSize = value;
                 OnPropertyChanged(nameof(CompressedSize));
+            }
+        }
+
+        /// <summary>
+        /// Включить Toksvig mipmap generation (для gloss/roughness текстур)
+        /// </summary>
+        public bool ToksvigEnabled {
+            get => toksvigEnabled;
+            set {
+                toksvigEnabled = value;
+                OnPropertyChanged(nameof(ToksvigEnabled));
+            }
+        }
+
+        /// <summary>
+        /// Composite Power для Toksvig (вес влияния дисперсии, 0.5-2.0)
+        /// </summary>
+        public float ToksvigCompositePower {
+            get => toksvigCompositePower;
+            set {
+                toksvigCompositePower = value;
+                OnPropertyChanged(nameof(ToksvigCompositePower));
+            }
+        }
+
+        /// <summary>
+        /// Минимальный уровень мипмапа для применения Toksvig
+        /// </summary>
+        public int ToksvigMinMipLevel {
+            get => toksvigMinMipLevel;
+            set {
+                toksvigMinMipLevel = value;
+                OnPropertyChanged(nameof(ToksvigMinMipLevel));
+            }
+        }
+
+        /// <summary>
+        /// Применять ли сглаживание дисперсии
+        /// </summary>
+        public bool ToksvigSmoothVariance {
+            get => toksvigSmoothVariance;
+            set {
+                toksvigSmoothVariance = value;
+                OnPropertyChanged(nameof(ToksvigSmoothVariance));
+            }
+        }
+
+        /// <summary>
+        /// Путь к соответствующей normal map (null = автоматический поиск)
+        /// </summary>
+        public string? NormalMapPath {
+            get => normalMapPath;
+            set {
+                normalMapPath = value;
+                OnPropertyChanged(nameof(NormalMapPath));
             }
         }
 

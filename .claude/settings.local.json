@@ -12,7 +12,8 @@
       "Bash(dotnet clean)",
       "Bash(dotnet clean:*)",
       "Bash(Get-ChildItem -Path \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" -Filter \"file.txt\" -Recurse -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object -First 5 FullName)"
+      "Bash(Select-Object -First 5 FullName)",
+      "Bash(git merge:*)"
     ]
   },
   "outputStyle": "default"

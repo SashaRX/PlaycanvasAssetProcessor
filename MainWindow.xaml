@@ -389,22 +389,84 @@
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible">
+            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged">
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
-                    <StackPanel>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <!-- Preview Section -->
-                        <Expander Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="0" Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Grid>
-                                <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
-                                    <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" Stretch="Uniform" />
-                                </Border>
-                                <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
-                                    <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                                    <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                                    <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                                </Canvas>
-                                <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
-                                    <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="PreviewContentRow" Height="300" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
+                                        <ScrollViewer x:Name="TexturePreviewScrollViewer"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
+                                                      PreviewMouseDown="TexturePreviewScrollViewer_PreviewMouseDown"
+                                                      PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
+                                                      PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"
+                                                      MouseLeave="TexturePreviewScrollViewer_MouseLeave"
+                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture"
+                                                      SizeChanged="TexturePreviewScrollViewer_SizeChanged">
+                                            <Grid>
+                                                <Image x:Name="TexturePreviewImage"
+                                                       RenderOptions.EdgeMode="Aliased"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       MinWidth="128"
+                                                       MinHeight="129"
+                                                       Stretch="Uniform">
+                                                    <Image.LayoutTransform>
+                                                        <ScaleTransform x:Name="TexturePreviewScaleTransform" ScaleX="1" ScaleY="1" />
+                                                    </Image.LayoutTransform>
+                                                </Image>
+                                            </Grid>
+                                        </ScrollViewer>
+                                    </Border>
+
+                                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
+                                        <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                        <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                        <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                        <TextBlock x:Name="TextureZoomTextBlock" Text="Масштаб: 100%" Canvas.Left="10" Canvas.Top="70" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                    </Canvas>
+                                </Grid>
+
+                                <GridSplitter Grid.Row="1"
+                                              Height="6"
+                                              Margin="0,4,0,4"
+                                              Background="#FFE0E0E0"
+                                              HorizontalAlignment="Stretch"
+                                              ResizeDirection="Rows"
+                                              ResizeBehavior="PreviousAndNext"
+                                              ShowsPreview="False"
+                                              Cursor="SizeNS"
+                                              DragDelta="PreviewHeightGridSplitter_DragDelta" />
+
+                                <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
+                                        <TextBlock Text="Источник превью:" FontSize="10" VerticalAlignment="Center" />
+                                        <RadioButton x:Name="PreviewSourceOriginalRadioButton"
+                                                     Content="Source"
+                                                     GroupName="TexturePreviewSource"
+                                                     Margin="8,0,0,0"
+                                                     Checked="PreviewSourceRadioButton_Checked" />
+                                        <RadioButton x:Name="PreviewSourceKtxRadioButton"
+                                                     Content="KTX2"
+                                                     GroupName="TexturePreviewSource"
+                                                     Margin="8,0,0,0"
+                                                     Checked="PreviewSourceRadioButton_Checked" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,6" RenderTransformOrigin="0.5,0.5">
                                         <StackPanel.RenderTransform>
                                             <TransformGroup>
                                                 <ScaleTransform ScaleX="1"/>
@@ -418,26 +480,40 @@
                                         <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
                                         <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
                                     </StackPanel>
+                                    <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="#AAFFFFFF" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock x:Name="MipmapInfoTextBlock" Text="Уровень мипа" FontSize="10" Margin="0,0,0,4" />
+                                            <Slider x:Name="MipmapLevelSlider"
+                                                    Minimum="0"
+                                                    Maximum="0"
+                                                    TickFrequency="1"
+                                                    IsSnapToTickEnabled="True"
+                                                    AutoToolTipPlacement="TopLeft"
+                                                    AutoToolTipPrecision="0"
+                                                    ValueChanged="MipmapLevelSlider_ValueChanged"
+                                                    Width="220" />
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </Grid>
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <Expander Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Border BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
                                 <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                             </Border>
                         </Expander>
 
                         <!-- Conversion Settings Panel -->
-                        <Expander x:Name="ConversionSettingsExpander" Header="Conversion Settings"
+                        <Expander Grid.Row="2" x:Name="ConversionSettingsExpander" Header="Conversion Settings"
                                   Style="{StaticResource CompactExpanderStyle}" IsExpanded="True"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
                                                                      SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
                         </Expander>
-                    </StackPanel>
+                    </Grid>
                 </Border>
             </ScrollViewer>
 

@@ -12,6 +12,7 @@ using OxyPlot;
 using OxyPlot.Axes;
 using SixLabors.ImageSharp;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
@@ -122,6 +123,10 @@ namespace AssetProcessor {
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
+        private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
+        private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object ignoredAssetTypesLock = new();
+        private bool isBranchInitializationInProgress;
 
         private ObservableCollection<KeyValuePair<string, string>> projects = [];
         public ObservableCollection<KeyValuePair<string, string>> Projects {
@@ -661,6 +666,10 @@ namespace AssetProcessor {
         private async void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
             SaveCurrentSettings();
 
+            if (isBranchInitializationInProgress) {
+                return;
+            }
+
             // Проверяем состояние проекта если уже подключены
             if (currentConnectionState != ConnectionState.Disconnected) {
                 await CheckProjectState();
@@ -994,6 +1003,8 @@ namespace AssetProcessor {
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken) {
             try {
+                isBranchInitializationInProgress = true;
+
                 List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
                 if (branchesList != null && branchesList.Count > 0) {
                     Branches.Clear();
@@ -1018,6 +1029,8 @@ namespace AssetProcessor {
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error loading branches: {ex.Message}");
+            } finally {
+                isBranchInitializationInProgress = false;
             }
         }
 
@@ -1960,8 +1973,12 @@ namespace AssetProcessor {
                 string? assetPath = asset["path"]?.ToString() ?? string.Empty;
                 MainWindowHelpers.LogInfo($"Processing {type}, API path: {assetPath}");
 
-                if (type == "script" || type == "wasm" || type == "cubemap") {
-                    MainWindowHelpers.LogInfo($"Unsupported asset type: {type}");
+                if (!string.IsNullOrEmpty(type) && ignoredAssetTypes.Contains(type)) {
+                    lock (ignoredAssetTypesLock) {
+                        if (reportedIgnoredAssetTypes.Add(type)) {
+                            MainWindowHelpers.LogInfo($"Asset type '{type}' is currently ignored (stub handler).");
+                        }
+                    }
                     return;
                 }
 

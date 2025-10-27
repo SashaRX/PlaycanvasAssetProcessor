@@ -45,15 +45,14 @@ The texture conversion pipeline requires the **basisu** CLI tool:
 
 - **Framework**: .NET 9.0 with Windows SDK 10.0.26100.0
 - **UI**: WPF (Windows Presentation Foundation)
-- **Pattern**: MVVM with Dependency Injection (Microsoft.Extensions.DependencyInjection)
+- **Pattern**: MVVM с ручным составлением зависимостей
 - **Language**: C# 12 with nullable reference types enabled
 
 ### Core Architecture Patterns
 
-**Dependency Injection Setup** (App.xaml.cs:12-24):
-- Services registered as singletons (IPlayCanvasService)
-- ViewModels registered as transients
-- Host-based DI container using Microsoft.Extensions.Hosting
+**Составление зависимостей** (App.xaml.cs):
+- Главный сервис и окно создаются вручную при старте приложения
+- Нет внешнего контейнера внедрения зависимостей
 
 **Service Layer Pattern**:
 - `IPlayCanvasService` defines API operations contract

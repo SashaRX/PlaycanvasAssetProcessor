@@ -14,6 +14,15 @@
     <SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+
   <!-- Автоматическое получение Git информации при сборке -->
   <Target Name="GetGitInfo" BeforeTargets="CoreCompile">
     <Exec Command="git rev-parse --abbrev-ref HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true">
@@ -54,7 +63,6 @@
 
     <!-- Image Processing - Updated to fix security vulnerabilities -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
 
     <!-- UI and Visualization -->
     <PackageReference Include="Extended.Wpf.Toolkit" Version="4.6.1" />
@@ -74,6 +82,10 @@
 
   <ItemGroup>
     <Resource Include="colorPicker.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="Trimming/TrimmerRoots.xml" />
   </ItemGroup>
 
   <!-- Оставляем только английские и русские ресурсы после публикации -->

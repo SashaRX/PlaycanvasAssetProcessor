@@ -207,7 +207,7 @@ namespace AssetProcessor {
 
         private void ConversionSettingsPanel_ConvertRequested(object? sender, EventArgs e) {
             // Вызываем основную функцию конвертации
-            ProcessTexturesButton_Click(sender, new RoutedEventArgs());
+            ProcessTexturesButton_Click(sender ?? this, new RoutedEventArgs());
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

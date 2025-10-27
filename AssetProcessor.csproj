@@ -14,13 +14,6 @@
     <SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <!-- Обрезаем неиспользуемые типы и языковые данные рантайма в релизных сборках -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
-    <InvariantGlobalization>true</InvariantGlobalization>
-  </PropertyGroup>
-
   <!-- Автоматическое получение Git информации при сборке -->
   <Target Name="GetGitInfo" BeforeTargets="CoreCompile">
     <Exec Command="git rev-parse --abbrev-ref HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true">

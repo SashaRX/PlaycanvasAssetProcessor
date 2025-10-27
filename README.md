@@ -112,7 +112,7 @@ PlaycanvasAssetProcessor/
 ### Паттерны проектирования
 
 - **MVVM (Model-View-ViewModel)**: разделение логики и представления
-- **Dependency Injection**: Microsoft.Extensions.DependencyInjection
+- **Сервисный слой**: выделенные классы PlayCanvasService и вспомогательные ресурсы
 - **Repository Pattern**: классы ресурсов для работы с данными
 - **Service Layer**: изоляция бизнес-логики работы с API
 
@@ -127,7 +127,7 @@ PlaycanvasAssetProcessor/
 - **3D и графика**: AssimpNet 5.0.0-beta1, HelixToolkit.Wpf 2.25.0
 - **Обработка изображений**: SixLabors.ImageSharp 3.1.7, System.Drawing.Common 9.0.0
 - **UI компоненты**: Extended.Wpf.Toolkit 4.6.1, OxyPlot.Wpf 2.2.0, Ookii.Dialogs.Wpf 5.0.1
-- **MVVM и DI**: CommunityToolkit.Mvvm 8.2.2, Microsoft.Extensions.DependencyInjection 8.0.1, Microsoft.Extensions.Hosting 8.0.1
+- **MVVM**: CommunityToolkit.Mvvm 8.2.2
 - **Сериализация и логирование**: Newtonsoft.Json 13.0.3, NLog 5.3.4
 
 ---

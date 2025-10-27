@@ -83,8 +83,11 @@ namespace AssetProcessor.Helpers {
 
         private static string FindGitDirectory() {
             try {
-                // Получаем директорию приложения
-                string? currentDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                // Получаем директорию приложения (корректно работает и для однофайловых сборок)
+                string? currentDir = AppContext.BaseDirectory;
+                if (!string.IsNullOrEmpty(currentDir)) {
+                    currentDir = Path.GetFullPath(currentDir);
+                }
 
                 // Поднимаемся вверх по директориям в поисках .git
                 while (!string.IsNullOrEmpty(currentDir)) {

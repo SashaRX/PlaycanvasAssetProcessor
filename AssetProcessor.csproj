@@ -18,6 +18,8 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <StripSymbols>true</StripSymbols>
   </PropertyGroup>
 
   <!-- Автоматическое получение Git информации при сборке -->

@@ -640,16 +640,21 @@ namespace AssetProcessor {
                 }
 
                 // Обновляем ветки для выбранного проекта
-                List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, [], CancellationToken.None);
-                if (branches != null && branches.Count > 0) {
-                    Branches.Clear();
-                    foreach (Branch branch in branches) {
-                        Branches.Add(branch);
+                isBranchInitializationInProgress = true;
+                try {
+                    List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, [], CancellationToken.None);
+                    if (branches != null && branches.Count > 0) {
+                        Branches.Clear();
+                        foreach (Branch branch in branches) {
+                            Branches.Add(branch);
+                        }
+                        BranchesComboBox.SelectedIndex = 0;
+                    } else {
+                        Branches.Clear();
+                        BranchesComboBox.SelectedIndex = -1;
                     }
-                    BranchesComboBox.SelectedIndex = 0;
-                } else {
-                    Branches.Clear();
-                    BranchesComboBox.SelectedIndex = -1;
+                } finally {
+                    isBranchInitializationInProgress = false;
                 }
 
                 SaveCurrentSettings();

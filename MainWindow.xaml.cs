@@ -2794,11 +2794,15 @@ namespace AssetProcessor {
                             ? Path.Combine(sourceDir, "mipmaps", sourceFileName)
                             : null;
 
+                        // Получаем настройки Toksvig из панели настроек
+                        var toksvigSettings = ConversionSettingsPanel.GetToksvigSettings();
+
                         var result = await pipeline.ConvertTextureAsync(
                             texture.Path,
                             outputPath,
                             mipProfile,
                             compressionSettings,
+                            toksvigSettings,
                             ConversionSettingsPanel.SaveSeparateMipmaps,
                             mipmapOutputDir
                         );
@@ -2807,6 +2811,12 @@ namespace AssetProcessor {
                             texture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
                             texture.MipmapCount = result.MipLevels;
                             texture.Status = "Converted";
+
+                            // Сохраняем информацию о Toksvig коррекции
+                            if (result.ToksvigApplied) {
+                                texture.ToksvigEnabled = true;
+                                texture.NormalMapPath = result.NormalMapUsed;
+                            }
 
                             // Сохраняем имя пресета, если оно не установлено
                             if (string.IsNullOrEmpty(texture.PresetName) || texture.PresetName == "(Auto)") {

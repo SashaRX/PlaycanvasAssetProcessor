@@ -114,31 +114,34 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             // Создаём корректированный мипмап
             var correctedMip = glossRoughnessMip.Clone();
 
-            correctedMip.ProcessPixelRowsAsVector4((row, point) => {
-                for (int x = 0; x < row.Length; x++) {
-                    var pixel = row[x];
-                    float variance = varianceMap[x, point.Y];
+            correctedMip.Mutate(ctx => {
+                ctx.ProcessPixelRowsAsVector4((row, point) => {
+                    for (int x = 0; x < row.Length; x++) {
+                        var pixel = row[x];
+                        // Получаем значение дисперсии из R канала varianceMap
+                        float variance = varianceMap[x, point.Y].ToVector4().X;
 
-                    // Берём только R канал (предполагаем что gloss/roughness в R)
-                    float inputValue = pixel.X;
+                        // Берём только R канал (предполагаем что gloss/roughness в R)
+                        float inputValue = pixel.X;
 
-                    // Конвертируем в roughness если на входе gloss
-                    float roughness = isGloss ? (1.0f - inputValue) : inputValue;
+                        // Конвертируем в roughness если на входе gloss
+                        float roughness = isGloss ? (1.0f - inputValue) : inputValue;
 
-                    // Применяем Toksvig коррекцию
-                    float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
+                        // Применяем Toksvig коррекцию
+                        float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
 
-                    // Конвертируем обратно в gloss если нужно
-                    float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
+                        // Конвертируем обратно в gloss если нужно
+                        float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
 
-                    // Записываем во все каналы RGB (обычно gloss/roughness одноканальные, но храним в RGB)
-                    pixel.X = outputValue;
-                    pixel.Y = outputValue;
-                    pixel.Z = outputValue;
-                    // Alpha не трогаем
+                        // Записываем во все каналы RGB (обычно gloss/roughness одноканальные, но храним в RGB)
+                        pixel.X = outputValue;
+                        pixel.Y = outputValue;
+                        pixel.Z = outputValue;
+                        // Alpha не трогаем
 
-                    row[x] = pixel;
-                }
+                        row[x] = pixel;
+                    }
+                });
             });
 
             return correctedMip;

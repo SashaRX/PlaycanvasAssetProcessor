@@ -93,6 +93,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             outputPath,
                             profile,
                             compressionSettings,
+                            toksvigSettings: null, // TODO: Add toksvigSettings parameter to batch processor
                             saveSeparateMipmaps,
                             mipmapDir
                         );

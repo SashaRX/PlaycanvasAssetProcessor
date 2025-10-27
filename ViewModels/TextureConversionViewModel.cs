@@ -140,11 +140,16 @@ namespace AssetProcessor.ViewModels {
                         mipmapDir = Path.Combine(OutputDirectory, "mipmaps", outputFileName);
                     }
 
+                    // TODO: Add Toksvig support for batch processing
+                    // For now, Toksvig is only available through the main window UI panel
+                    ToksvigSettings? toksvigSettings = null;
+
                     var result = await pipeline.ConvertTextureAsync(
                         texture.TexturePath,
                         outputPath,
                         mipProfile,
                         compressionSettings,
+                        toksvigSettings,
                         texture.SaveSeparateMipmaps,
                         mipmapDir
                     );
@@ -202,11 +207,16 @@ namespace AssetProcessor.ViewModels {
                     mipmapDir = Path.Combine(OutputDirectory, "mipmaps", outputFileName);
                 }
 
+                // TODO: Add Toksvig support for single texture conversion
+                // For now, Toksvig is only available through the main window UI panel
+                ToksvigSettings? toksvigSettings = null;
+
                 var result = await pipeline.ConvertTextureAsync(
                     SelectedTexture.TexturePath,
                     outputPath,
                     mipProfile,
                     compressionSettings,
+                    toksvigSettings,
                     SelectedTexture.SaveSeparateMipmaps,
                     mipmapDir
                 );

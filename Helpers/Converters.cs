@@ -7,19 +7,43 @@ using System.Windows.Media;
 namespace AssetProcessor.Helpers {
     public class SizeConverter : IValueConverter {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            if (value is int size) {
-                double sizeInMB = Math.Round(size / (1024.0 * 1000.0), 3);
-                return $"{sizeInMB} MB";
+            // Handle both int and long types
+            long size = value switch {
+                int intSize => intSize,
+                long longSize => longSize,
+                _ => 0
+            };
+
+            if (size > 0) {
+                double sizeInKB = size / 1024.0;
+                if (sizeInKB < 1024) {
+                    return $"{Math.Round(sizeInKB, 1)} KB";
+                } else {
+                    double sizeInMB = sizeInKB / 1024.0;
+                    return $"{Math.Round(sizeInMB, 2)} MB";
+                }
             }
-            return "0 MB";
+            return "";
         }
 
         public static object Convert(object value) {
-            if (value is int size) {
-                double sizeInMB = Math.Round(size / (1024.0 * 1000.0), 3);
-                return $"{sizeInMB} MB";
+            // Handle both int and long types
+            long size = value switch {
+                int intSize => intSize,
+                long longSize => longSize,
+                _ => 0
+            };
+
+            if (size > 0) {
+                double sizeInKB = size / 1024.0;
+                if (sizeInKB < 1024) {
+                    return $"{Math.Round(sizeInKB, 1)} KB";
+                } else {
+                    double sizeInMB = sizeInKB / 1024.0;
+                    return $"{Math.Round(sizeInMB, 2)} MB";
+                }
             }
-            return "0 MB";
+            return "";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {

@@ -1481,13 +1481,9 @@ namespace AssetProcessor {
         }
 
         private string GetBasisuExecutablePath() {
-            if (globalTextureSettings == null) {
-                globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
-            }
-
-            return string.IsNullOrWhiteSpace(globalTextureSettings?.BasisUExecutablePath)
-                ? "basisu"
-                : globalTextureSettings!.BasisUExecutablePath;
+            // basisu используется только для preview KTX файлов (конвертация ktx2 в png для предпросмотра)
+            // Для текстовой конвертации используется toktx
+            return "basisu";
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
@@ -3486,15 +3482,11 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
-                    ? "basisu"
-                    : globalTextureSettings.BasisUExecutablePath;
-
                 var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
                     ? "toktx"
                     : globalTextureSettings.ToktxExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath, toktxPath);
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(toktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {

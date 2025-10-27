@@ -152,11 +152,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // toktx использует --bcmp для ETC1S/BasisLZ и --uastc для UASTC
             if (settings.CompressionFormat == CompressionFormat.UASTC) {
                 args.Add("--uastc");
-                args.Add($"{settings.UASTCQuality}");
+                args.Add(settings.UASTCQuality.ToString());
 
                 // UASTC RDO (Rate-Distortion Optimization)
                 if (settings.UseUASTCRDO) {
-                    args.Add(FormattableString.Invariant($"--uastc_rdo_l {settings.UASTCRDOQuality}"));
+                    args.Add("--uastc_rdo_l");
+                    args.Add(FormattableString.Invariant($"{settings.UASTCRDOQuality}"));
                 }
             } else {
                 // ETC1S (BasisLZ)
@@ -164,17 +165,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add(settings.QualityLevel.ToString());
             }
 
-            // KTX2 формат включается автоматически при использовании --bcmp или --uastc
-            // Не нужен флаг --t2
-
-            // Supercompression для KTX2
-            // По умолчанию toktx применяет zstd для Basis, отключаем только если нужно
-            if (settings.KTX2Supercompression == KTX2SupercompressionType.None) {
-                Logger.Info("Supercompression отключен (None)");
-                // В новых версиях можно попробовать --no_zcmp, но это не обязательно
-            }
-
-            // Color space
+            // Color space - ПЕРЕД выходным файлом
             if (settings.ForceLinearColorSpace) {
                 args.Add("--linear");
             } else if (settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S) {
@@ -183,7 +174,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
             // Многопоточность
             if (settings.UseMultithreading && settings.ThreadCount > 0) {
-                args.Add($"--threads {settings.ThreadCount}");
+                args.Add("--threads");
+                args.Add(settings.ThreadCount.ToString());
             }
 
             // Выходной файл (после всех флагов!)

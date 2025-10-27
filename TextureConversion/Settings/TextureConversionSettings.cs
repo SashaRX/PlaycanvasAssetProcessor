@@ -159,12 +159,7 @@ namespace AssetProcessor.TextureConversion.Settings {
     /// </summary>
     public class GlobalTextureConversionSettings {
         /// <summary>
-        /// Путь к basisu исполняемому файлу (legacy, используется если ToktxExecutablePath пустой)
-        /// </summary>
-        public string BasisUExecutablePath { get; set; } = "basisu";
-
-        /// <summary>
-        /// Путь к toktx исполняемому файлу (рекомендуется для всех конвертаций)
+        /// Путь к toktx исполняемому файлу
         /// </summary>
         public string ToktxExecutablePath { get; set; } = "toktx";
 

@@ -73,10 +73,20 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 }
 
                 // Применяем Toksvig коррекцию если включена (для gloss/roughness текстур)
+                Logger.Info($"=== TOKSVIG CHECK ===");
+                Logger.Info($"  toksvigSettings != null: {toksvigSettings != null}");
+                if (toksvigSettings != null) {
+                    Logger.Info($"  toksvigSettings.Enabled: {toksvigSettings.Enabled}");
+                    Logger.Info($"  toksvigSettings.CompositePower: {toksvigSettings.CompositePower}");
+                    Logger.Info($"  toksvigSettings.NormalMapPath: {toksvigSettings.NormalMapPath ?? "(null - auto)"}");
+                }
+                Logger.Info($"  mipProfile.TextureType: {mipProfile.TextureType}");
+                Logger.Info($"  Is Gloss or Roughness: {mipProfile.TextureType == TextureType.Gloss || mipProfile.TextureType == TextureType.Roughness}");
+
                 if (toksvigSettings != null && toksvigSettings.Enabled &&
                     (mipProfile.TextureType == TextureType.Gloss || mipProfile.TextureType == TextureType.Roughness)) {
 
-                    Logger.Info("Применяем Toksvig коррекцию...");
+                    Logger.Info("=== ПРИМЕНЯЕМ TOKSVIG КОРРЕКЦИЮ ===");
 
                     try {
                         // Ищем normal map если путь не указан
@@ -172,7 +182,13 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 }
 
                 // Кодируем в Basis Universal
-                Logger.Info("Encoding to Basis Universal...");
+                Logger.Info("=== ENCODING TO BASIS UNIVERSAL ===");
+                Logger.Info($"  Input path: {basisInputPath}");
+                Logger.Info($"  Output path: {outputPath}");
+                Logger.Info($"  GenerateMipmaps: {compressionSettings.GenerateMipmaps}");
+                Logger.Info($"  CompressionFormat: {compressionSettings.CompressionFormat}");
+                Logger.Info($"  OutputFormat: {compressionSettings.OutputFormat}");
+
                 var basisResult = await _basisWrapper.EncodeAsync(
                     basisInputPath,
                     outputPath,

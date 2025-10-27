@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AssetProcessor.TextureConversion.Core;
+using NLog;
 
 namespace AssetProcessor.TextureConversion.BasisU {
     /// <summary>
@@ -64,6 +65,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
             CompressionSettings settings,
             List<string>? mipmapPaths = null) {
             var args = BuildArguments(inputPath, outputPath, settings, mipmapPaths);
+
+            // Логируем полную команду
+            var logger = LogManager.GetCurrentClassLogger();
+            logger.Info($"=== BASISU COMMAND ===");
+            logger.Info($"  Executable: {_basisuExecutablePath}");
+            logger.Info($"  Arguments: {args}");
 
             var process = new Process {
                 StartInfo = new ProcessStartInfo {

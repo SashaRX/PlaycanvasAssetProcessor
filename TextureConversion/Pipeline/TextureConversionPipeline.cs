@@ -155,16 +155,40 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     Logger.Info($"Successfully saved {mipmaps.Count} mipmap levels to {mipmapOutputDir}");
                 }
 
+                // Определяем входной файл для basisu
+                string basisInputPath = inputPath;
+                bool useTempFile = false;
+
+                // Если применялась Toksvig коррекция, сохраняем базовый уровень (mip0) во временный файл
+                // basisu сгенерирует остальные мипмапы из него
+                if (toksvigSettings != null && toksvigSettings.Enabled && result.ToksvigApplied) {
+                    Logger.Info("Toksvig коррекция применена - сохраняем скорректированный базовый уровень");
+                    var tempDir = Path.Combine(Path.GetTempPath(), "TexTool_Toksvig");
+                    Directory.CreateDirectory(tempDir);
+                    basisInputPath = Path.Combine(tempDir, $"{fileName}_toksvig_temp.png");
+                    await mipmaps[0].SaveAsPngAsync(basisInputPath);
+                    useTempFile = true;
+                    Logger.Info($"Временный файл создан: {basisInputPath}");
+                }
+
                 // Кодируем в Basis Universal
-                // Примечание: basisu генерирует свои мипмапы при сжатии
-                // Наши предгенерированные мипмапы используются только для отдельного сохранения
                 Logger.Info("Encoding to Basis Universal...");
                 var basisResult = await _basisWrapper.EncodeAsync(
-                    inputPath, // Используем оригинальный файл
+                    basisInputPath,
                     outputPath,
                     compressionSettings,
-                    null // Не передаем предгенерированные мипмапы
+                    null
                 );
+
+                // Удаляем временный файл если использовали
+                if (useTempFile && File.Exists(basisInputPath)) {
+                    try {
+                        File.Delete(basisInputPath);
+                        Logger.Info("Временный файл удалён");
+                    } catch (Exception ex) {
+                        Logger.Warn($"Не удалось удалить временный файл: {ex.Message}");
+                    }
+                }
 
                 if (!basisResult.Success) {
                     throw new Exception($"Basis encoding failed: {basisResult.Error}");

@@ -276,6 +276,7 @@ namespace AssetProcessor {
             isKtxPreviewActive = false;
             currentMipLevel = 0;
             currentKtxMipmaps = null;
+            originalBitmapSource = null;
             HideMipmapControls();
         }
 
@@ -951,8 +952,95 @@ namespace AssetProcessor {
                 return null;
             }
 
-            string? ktxPath = Path.ChangeExtension(sourcePath, ".ktx2");
-            return File.Exists(ktxPath) ? ktxPath : null;
+            string? directory = Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrEmpty(directory)) {
+                return null;
+            }
+
+            string baseName = Path.GetFileNameWithoutExtension(sourcePath);
+            string directPath = Path.Combine(directory, baseName + ".ktx2");
+            if (File.Exists(directPath)) {
+                return directPath;
+            }
+
+            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, SearchOption.TopDirectoryOnly);
+            if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
+                return sameDirectoryMatch;
+            }
+
+            string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory);
+            if (!string.IsNullOrEmpty(defaultOutputRoot)) {
+                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, SearchOption.AllDirectories);
+                if (!string.IsNullOrEmpty(outputMatch)) {
+                    return outputMatch;
+                }
+            }
+
+            return null;
+        }
+
+        private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
+            try {
+                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+            } catch (Exception ex) {
+                logger.Debug(ex, "Не удалось загрузить настройки конвертации для определения каталога KTX2.");
+                return null;
+            }
+
+            string? configuredDirectory = globalTextureSettings?.DefaultOutputDirectory;
+            if (string.IsNullOrWhiteSpace(configuredDirectory)) {
+                return null;
+            }
+
+            List<string> candidates = new();
+
+            if (Path.IsPathRooted(configuredDirectory)) {
+                candidates.Add(configuredDirectory);
+            } else {
+                candidates.Add(Path.Combine(sourceDirectory, configuredDirectory));
+
+                if (!string.IsNullOrEmpty(projectFolderPath)) {
+                    candidates.Add(Path.Combine(projectFolderPath!, configuredDirectory));
+                }
+            }
+
+            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase)) {
+                if (Directory.Exists(candidate)) {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private string? TryFindKtx2InDirectory(string directory, string baseName, SearchOption searchOption) {
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
+                return null;
+            }
+
+            string searchPattern = baseName + "*.ktx2";
+            string? bestMatch = null;
+            DateTime bestTime = DateTime.MinValue;
+
+            try {
+                foreach (string file in Directory.EnumerateFiles(directory, searchPattern, searchOption)) {
+                    DateTime writeTime = File.GetLastWriteTimeUtc(file);
+                    if (bestMatch == null || writeTime > bestTime) {
+                        bestMatch = file;
+                        bestTime = writeTime;
+                    }
+                }
+            } catch (UnauthorizedAccessException ex) {
+                logger.Debug(ex, $"Нет доступа к каталогу {directory} для поиска KTX2.");
+                return null;
+            } catch (DirectoryNotFoundException) {
+                return null;
+            } catch (IOException ex) {
+                logger.Debug(ex, $"Ошибка при сканировании каталога {directory} для поиска KTX2.");
+                return null;
+            }
+
+            return bestMatch;
         }
 
         private async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {

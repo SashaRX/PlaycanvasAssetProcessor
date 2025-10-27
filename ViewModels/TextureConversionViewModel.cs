@@ -39,14 +39,14 @@ namespace AssetProcessor.ViewModels {
         private int _processingProgress;
 
         [ObservableProperty]
-        private string _basisUPath = "basisu";
+        private string _toktxPath = "toktx";
 
         public TextureConversionViewModel() {
             _globalSettings = TextureConversionSettingsManager.LoadSettings();
             _outputDirectory = _globalSettings.DefaultOutputDirectory;
-            _basisUPath = string.IsNullOrWhiteSpace(_globalSettings.BasisUExecutablePath)
-                ? "basisu"
-                : _globalSettings.BasisUExecutablePath;
+            _toktxPath = string.IsNullOrWhiteSpace(_globalSettings.ToktxExecutablePath)
+                ? "toktx"
+                : _globalSettings.ToktxExecutablePath;
 
             // Загружаем сохраненные текстуры
             LoadSavedTextures();
@@ -118,7 +118,7 @@ namespace AssetProcessor.ViewModels {
             ProcessingProgress = 0;
 
             try {
-                var pipeline = new TextureConversionPipeline(BasisUPath);
+                var pipeline = new TextureConversionPipeline(ToktxPath);
 
                 Directory.CreateDirectory(OutputDirectory);
 
@@ -192,7 +192,7 @@ namespace AssetProcessor.ViewModels {
             ProcessingStatus = $"Processing {Path.GetFileName(SelectedTexture.TexturePath)}...";
 
             try {
-                var pipeline = new TextureConversionPipeline(BasisUPath);
+                var pipeline = new TextureConversionPipeline(ToktxPath);
                 Directory.CreateDirectory(OutputDirectory);
 
                 var mipProfile = SelectedTexture.MipProfile.ToMipGenerationProfile(SelectedTexture.TextureType);
@@ -310,7 +310,7 @@ namespace AssetProcessor.ViewModels {
         private void SaveSettings() {
             GlobalSettings.TextureSettings = Textures.Select(t => t.ToSettings()).ToList();
             GlobalSettings.DefaultOutputDirectory = OutputDirectory;
-            GlobalSettings.BasisUExecutablePath = BasisUPath;
+            GlobalSettings.ToktxExecutablePath = ToktxPath;
             TextureConversionSettingsManager.SaveSettings(GlobalSettings);
         }
 

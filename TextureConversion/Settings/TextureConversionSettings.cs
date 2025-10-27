@@ -99,6 +99,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool ClampMipmaps { get; set; } = false;
         public bool ForceLinearColorSpace { get; set; } = false;
         public bool UseLinearMipFiltering { get; set; } = false;
+        public bool GenerateMipmaps { get; set; } = true; // Добавлено: теперь хранится в настройках
 
         /// <summary>
         /// Создает CompressionSettings из настроек с применением глобальных настроек
@@ -111,7 +112,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UASTCQuality = UASTCQuality,
                 UseUASTCRDO = UseUASTCRDO,
                 UASTCRDOQuality = UASTCRDOQuality,
-                GenerateMipmaps = false, // Мы генерируем отдельно
+                GenerateMipmaps = GenerateMipmaps, // ИСПРАВЛЕНО: используем значение из UI
                 UseMultithreading = globalSettings.UseMultithreading,
                 ThreadCount = globalSettings.ThreadCount,
                 PerceptualMode = PerceptualMode,
@@ -147,7 +148,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 RemoveAlphaChannel = settings.RemoveAlphaChannel,
                 ClampMipmaps = settings.ClampMipmaps,
                 ForceLinearColorSpace = settings.ForceLinearColorSpace,
-                UseLinearMipFiltering = settings.UseLinearMipFiltering
+                UseLinearMipFiltering = settings.UseLinearMipFiltering,
+                GenerateMipmaps = settings.GenerateMipmaps
             };
         }
     }
@@ -157,9 +159,9 @@ namespace AssetProcessor.TextureConversion.Settings {
     /// </summary>
     public class GlobalTextureConversionSettings {
         /// <summary>
-        /// Путь к basisu исполняемому файлу
+        /// Путь к toktx исполняемому файлу
         /// </summary>
-        public string BasisUExecutablePath { get; set; } = "basisu";
+        public string ToktxExecutablePath { get; set; } = "toktx";
 
         /// <summary>
         /// Выходная директория по умолчанию

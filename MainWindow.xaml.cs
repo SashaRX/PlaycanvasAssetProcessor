@@ -3550,11 +3550,11 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
-                    ? "basisu"
-                    : globalTextureSettings.BasisUExecutablePath;
+                var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
+                    ? "toktx"
+                    : globalTextureSettings.ToktxExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(toktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {

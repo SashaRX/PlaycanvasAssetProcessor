@@ -11,6 +11,14 @@
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
+    <SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Обрезаем неиспользуемые типы и языковые данные рантайма в релизных сборках -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <!-- Автоматическое получение Git информации при сборке -->
@@ -74,6 +82,16 @@
   <ItemGroup>
     <Resource Include="colorPicker.png" />
   </ItemGroup>
+
+  <!-- Оставляем только английские и русские ресурсы после публикации -->
+  <ItemGroup Condition="'$(PublishDir)' != ''">
+    <SatelliteDirectoriesToDelete Include="$(PublishDir)??\" Exclude="$(PublishDir)en\;$(PublishDir)ru\" />
+    <SatelliteDirectoriesToDelete Include="$(PublishDir)??-??\" Exclude="$(PublishDir)en\;$(PublishDir)ru\" />
+  </ItemGroup>
+
+  <Target Name="PruneSatelliteAssemblies" AfterTargets="Publish" Condition="'@(SatelliteDirectoriesToDelete)' != ''">
+    <RemoveDir Directories="@(SatelliteDirectoriesToDelete)" />
+  </Target>
 
   <ItemGroup>
     <Compile Update="Settings\Settings.Designer.cs">

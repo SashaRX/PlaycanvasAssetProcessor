@@ -185,9 +185,7 @@ namespace AssetProcessor {
 
                 if (ToktxStatusText != null) {
                     if (available) {
-                        // Получаем версию
-                        var version = await wrapper.GetVersionAsync();
-                        ToktxStatusText.Text = $"✓ toktx is available! {version}";
+                        ToktxStatusText.Text = "✓ toktx is available and working!";
                         ToktxStatusText.Foreground = new SolidColorBrush(Colors.Green);
                     } else {
                         ToktxStatusText.Text = "✗ toktx not found or not working";

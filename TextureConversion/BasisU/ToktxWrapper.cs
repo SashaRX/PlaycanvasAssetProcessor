@@ -1,28 +1,17 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using AssetProcessor.TextureConversion.Core;
 using NLog;
 
 namespace AssetProcessor.TextureConversion.BasisU {
     /// <summary>
-    /// Обертка для toktx CLI tool из KTX-Software
-    /// Используется для упаковки предгенерированных мипмапов в KTX2
+    /// Обёртка для toktx - инструмента KTX-Software для упаковки текстур в KTX2 формат
     /// </summary>
     public class ToktxWrapper {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly string _toktxExecutablePath;
 
-        /// <summary>
-        /// Конструктор
-        /// </summary>
-        /// <param name="toktxExecutablePath">Путь к исполняемому файлу toktx (или просто "toktx" если в PATH)</param>
         public ToktxWrapper(string toktxExecutablePath = "toktx") {
             _toktxExecutablePath = toktxExecutablePath;
         }
@@ -32,18 +21,18 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// </summary>
         public async Task<bool> IsAvailableAsync() {
             try {
-                var process = new Process {
-                    StartInfo = new ProcessStartInfo {
-                        FileName = _toktxExecutablePath,
-                        Arguments = "--version",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
+                var psi = new ProcessStartInfo {
+                    FileName = _toktxExecutablePath,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
                 };
 
-                process.Start();
+                using var process = Process.Start(psi);
+                if (process == null) return false;
+
                 await process.WaitForExitAsync();
                 return process.ExitCode == 0;
             } catch {
@@ -52,223 +41,199 @@ namespace AssetProcessor.TextureConversion.BasisU {
         }
 
         /// <summary>
-        /// Упаковывает предгенерированные мипмапы в KTX2 файл
+        /// Упаковывает набор мипмапов в KTX2 файл с Basis Universal сжатием
         /// </summary>
-        /// <param name="mipmapPaths">Список путей к мипмапам (от mip0 до mipN)</param>
+        /// <param name="mipmapPaths">Пути к мипмапам (от mip0 до mipN)</param>
         /// <param name="outputPath">Путь к выходному .ktx2 файлу</param>
         /// <param name="settings">Настройки сжатия</param>
-        /// <returns>Результат упаковки</returns>
         public async Task<ToktxResult> PackMipmapsAsync(
             List<string> mipmapPaths,
             string outputPath,
             CompressionSettings settings) {
 
-            if (mipmapPaths == null || mipmapPaths.Count == 0) {
-                return new ToktxResult {
-                    Success = false,
-                    Error = "No mipmap paths provided"
-                };
-            }
+            var result = new ToktxResult {
+                OutputPath = outputPath
+            };
 
-            // Проверяем существование файлов
-            foreach (var path in mipmapPaths) {
-                if (!File.Exists(path)) {
-                    return new ToktxResult {
-                        Success = false,
-                        Error = $"Mipmap file not found: {path}"
-                    };
+            try {
+                if (mipmapPaths.Count == 0) {
+                    throw new ArgumentException("No mipmaps provided", nameof(mipmapPaths));
                 }
-            }
 
-            // КРИТИЧЕСКИ ВАЖНО: Удаляем существующий выходной файл!
-            // toktx пытается открыть его как входное изображение если он существует
-            if (File.Exists(outputPath)) {
-                Logger.Info($"Удаляем существующий выходной файл: {outputPath}");
-                try {
-                    File.Delete(outputPath);
-                } catch (Exception ex) {
-                    Logger.Error($"Не удалось удалить файл {outputPath}: {ex.Message}");
-                    return new ToktxResult {
-                        Success = false,
-                        Error = $"Cannot delete existing output file: {outputPath}. {ex.Message}"
-                    };
+                // Проверяем существование всех мипмапов
+                foreach (var path in mipmapPaths) {
+                    if (!File.Exists(path)) {
+                        throw new FileNotFoundException($"Mipmap not found: {path}");
+                    }
                 }
-            }
 
-            var args = BuildArguments(mipmapPaths, outputPath, settings);
+                Logger.Info($"=== TOKTX PACKING START ===");
+                Logger.Info($"  Mipmaps count: {mipmapPaths.Count}");
+                Logger.Info($"  Output: {outputPath}");
+                Logger.Info($"  Compression format: {settings.CompressionFormat}");
 
-            // Логируем полную команду
-            Logger.Info($"=== TOKTX COMMAND ===");
-            Logger.Info($"  Executable: {_toktxExecutablePath}");
-            Logger.Info($"  Arguments: {args}");
-            Logger.Info($"  Input mipmaps: {mipmapPaths.Count} levels");
+                // КРИТИЧЕСКИ ВАЖНО: Удаляем существующий выходной файл!
+                // toktx пытается открыть его как входное изображение если он существует
+                if (File.Exists(outputPath)) {
+                    Logger.Info($"Удаляем существующий выходной файл: {outputPath}");
+                    try {
+                        File.Delete(outputPath);
+                    } catch (Exception ex) {
+                        Logger.Error($"Не удалось удалить файл {outputPath}: {ex.Message}");
+                        return new ToktxResult {
+                            Success = false,
+                            Error = $"Cannot delete existing output file: {outputPath}. {ex.Message}"
+                        };
+                    }
+                }
 
-            var process = new Process {
-                StartInfo = new ProcessStartInfo {
+                // Создаём выходную директорию
+                var outputDir = Path.GetDirectoryName(outputPath);
+                if (!string.IsNullOrEmpty(outputDir)) {
+                    Directory.CreateDirectory(outputDir);
+                }
+
+                // Собираем аргументы командной строки
+                var args = BuildArguments(mipmapPaths, outputPath, settings);
+                var argsString = string.Join(" ", args);
+
+                Logger.Info($"=== TOKTX COMMAND ===");
+                Logger.Info($"  Executable: {_toktxExecutablePath}");
+                Logger.Info($"  Arguments: {argsString}");
+
+                // Запускаем toktx
+                var psi = new ProcessStartInfo {
                     FileName = _toktxExecutablePath,
-                    Arguments = args,
+                    Arguments = argsString,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    WorkingDirectory = Directory.GetCurrentDirectory()
+                };
+
+                using var process = Process.Start(psi);
+                if (process == null) {
+                    throw new Exception("Failed to start toktx process");
                 }
-            };
 
-            var outputBuilder = new StringBuilder();
-            var errorBuilder = new StringBuilder();
+                var output = new StringBuilder();
+                var error = new StringBuilder();
 
-            process.OutputDataReceived += (sender, e) => {
-                if (e.Data != null) outputBuilder.AppendLine(e.Data);
-            };
-            process.ErrorDataReceived += (sender, e) => {
-                if (e.Data != null) errorBuilder.AppendLine(e.Data);
-            };
+                process.OutputDataReceived += (s, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)) {
+                        output.AppendLine(e.Data);
+                        Logger.Info($"[toktx] {e.Data}");
+                    }
+                };
 
-            var startTime = DateTime.Now;
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            await process.WaitForExitAsync();
-            var duration = DateTime.Now - startTime;
+                process.ErrorDataReceived += (s, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)) {
+                        error.AppendLine(e.Data);
+                        Logger.Error($"[toktx ERROR] {e.Data}");
+                    }
+                };
 
-            var result = new ToktxResult {
-                Success = process.ExitCode == 0,
-                ExitCode = process.ExitCode,
-                Output = outputBuilder.ToString(),
-                Error = errorBuilder.ToString(),
-                Duration = duration,
-                OutputPath = outputPath,
-                MipLevels = mipmapPaths.Count
-            };
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
-            if (result.Success) {
-                Logger.Info($"toktx успешно упаковал {mipmapPaths.Count} мипмапов в {outputPath}");
-            } else {
-                Logger.Error($"toktx завершился с ошибкой (код {result.ExitCode}): {result.Error}");
+                await process.WaitForExitAsync();
+
+                result.Output = output.ToString();
+                result.ErrorOutput = error.ToString();
+
+                if (process.ExitCode != 0) {
+                    result.Success = false;
+                    result.Error = $"toktx exited with code {process.ExitCode}. Error: {error}";
+                    Logger.Error($"toktx failed with exit code {process.ExitCode}");
+                    Logger.Error($"Error output: {error}");
+                    return result;
+                }
+
+                // Проверяем создание выходного файла
+                if (!File.Exists(outputPath)) {
+                    result.Success = false;
+                    result.Error = "toktx completed but output file was not created";
+                    Logger.Error("Output file not found after toktx completion");
+                    return result;
+                }
+
+                var fileInfo = new FileInfo(outputPath);
+                result.Success = true;
+                result.OutputFileSize = fileInfo.Length;
+
+                Logger.Info($"=== TOKTX PACKING SUCCESS ===");
+                Logger.Info($"  Output file: {outputPath}");
+                Logger.Info($"  File size: {fileInfo.Length} bytes");
+
+                return result;
+
+            } catch (Exception ex) {
+                Logger.Error(ex, "toktx packing failed");
+                result.Success = false;
+                result.Error = ex.Message;
+                return result;
             }
-
-            return result;
         }
 
         /// <summary>
-        /// Строит аргументы командной строки для toktx
+        /// Собирает аргументы командной строки для toktx
         /// </summary>
-        private string BuildArguments(
+        private List<string> BuildArguments(
             List<string> mipmapPaths,
             string outputPath,
             CompressionSettings settings) {
 
             var args = new List<string>();
 
-            // ВАЖНО: Все флаги должны идти ДО имени выходного файла!
-            // Синтаксис: toktx [options] <outfile> <infile1> <infile2> ...
-
-            // Формат сжатия
-            // toktx использует --bcmp для ETC1S/BasisLZ и --uastc для UASTC
-            if (settings.CompressionFormat == CompressionFormat.UASTC) {
+            // Compression format
+            if (settings.CompressionFormat == CompressionFormat.ETC1S) {
+                args.Add("--bcmp");
+                args.Add(settings.QualityLevel.ToString());
+            } else if (settings.CompressionFormat == CompressionFormat.UASTC) {
                 args.Add("--uastc");
                 args.Add(settings.UASTCQuality.ToString());
 
-                // UASTC RDO (Rate-Distortion Optimization)
                 if (settings.UseUASTCRDO) {
                     args.Add("--uastc_rdo_l");
                     args.Add(FormattableString.Invariant($"{settings.UASTCRDOQuality}"));
                 }
-            } else {
-                // ETC1S (BasisLZ)
-                args.Add("--bcmp");
-                args.Add(settings.QualityLevel.ToString());
             }
 
-            // Color space - ПЕРЕД выходным файлом
+            // Color space
             if (settings.ForceLinearColorSpace) {
                 args.Add("--linear");
             } else if (settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S) {
                 args.Add("--srgb");
             }
 
-            // Многопоточность
+            // Multithreading
             if (settings.UseMultithreading && settings.ThreadCount > 0) {
                 args.Add("--threads");
                 args.Add(settings.ThreadCount.ToString());
             }
 
-            // Выходной файл (после всех флагов!)
+            // Output file - ПОСЛЕ всех флагов!
             args.Add($"\"{outputPath}\"");
 
-            // Входные файлы (мипмапы в порядке от mip0 до mipN)
+            // Input files (mipmaps)
             foreach (var mipmapPath in mipmapPaths) {
                 args.Add($"\"{mipmapPath}\"");
             }
 
-            return string.Join(" ", args);
-        }
-
-        /// <summary>
-        /// Получает версию toktx для диагностики
-        /// </summary>
-        public async Task<string> GetVersionAsync() {
-            try {
-                var process = new Process {
-                    StartInfo = new ProcessStartInfo {
-                        FileName = _toktxExecutablePath,
-                        Arguments = "--version",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                process.Start();
-                var output = await process.StandardOutput.ReadToEndAsync();
-                var error = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                return !string.IsNullOrEmpty(output) ? output.Trim() : error.Trim();
-            } catch (Exception ex) {
-                return $"Error: {ex.Message}";
-            }
+            return args;
         }
     }
 
     /// <summary>
-    /// Результат упаковки в KTX2 с помощью toktx
+    /// Результат работы toktx
     /// </summary>
     public class ToktxResult {
-        /// <summary>
-        /// Успешно ли выполнена упаковка
-        /// </summary>
         public bool Success { get; set; }
-
-        /// <summary>
-        /// Код выхода процесса
-        /// </summary>
-        public int ExitCode { get; set; }
-
-        /// <summary>
-        /// Вывод процесса
-        /// </summary>
-        public string Output { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Ошибки процесса
-        /// </summary>
-        public string Error { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Длительность операции
-        /// </summary>
-        public TimeSpan Duration { get; set; }
-
-        /// <summary>
-        /// Путь к выходному файлу
-        /// </summary>
-        public string OutputPath { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Количество упакованных уровней мипмапов
-        /// </summary>
-        public int MipLevels { get; set; }
+        public string? OutputPath { get; set; }
+        public string? Error { get; set; }
+        public string? Output { get; set; }
+        public string? ErrorOutput { get; set; }
+        public long OutputFileSize { get; set; }
     }
 }

@@ -26,10 +26,10 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         }
 
         /// <summary>
-        /// Конвертирует текстуру в Basis Universal формат с генерацией мипмапов
+        /// Конвертирует текстуру в KTX2 формат с генерацией мипмапов используя toktx
         /// </summary>
         /// <param name="inputPath">Путь к входной текстуре</param>
-        /// <param name="outputPath">Путь к выходному файлу (.basis или .ktx2)</param>
+        /// <param name="outputPath">Путь к выходному файлу (.ktx2)</param>
         /// <param name="mipProfile">Профиль генерации мипмапов</param>
         /// <param name="compressionSettings">Настройки сжатия</param>
         /// <param name="toksvigSettings">Настройки Toksvig (optional, для gloss/roughness текстур)</param>
@@ -52,6 +52,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
             try {
                 Logger.Info($"Starting conversion: {inputPath}");
+
+                // Проверяем доступность toktx
+                if (!await _toktxWrapper.IsAvailableAsync()) {
+                    throw new Exception("toktx executable not found. Please install KTX-Software: winget install KhronosGroup.KTX-Software");
+                }
 
                 // Загружаем изображение
                 using var sourceImage = await Image.LoadAsync<Rgba32>(inputPath);
@@ -136,88 +141,84 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
 
-                // Опционально: сохраняем мипмапы отдельно для будущего стриминга
-                if (saveSeparateMipmaps && !string.IsNullOrEmpty(mipmapOutputDir)) {
-                    Logger.Info($"Saving {mipmaps.Count} separate mipmaps to {mipmapOutputDir}");
-                    Directory.CreateDirectory(mipmapOutputDir);
+                // ВСЕГДА сохраняем все мипмапы во временную директорию для toktx
+                var tempMipmapDir = Path.Combine(Path.GetTempPath(), "TexTool_Mipmaps", Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempMipmapDir);
+                Logger.Info($"Создана временная директория для мипмапов: {tempMipmapDir}");
 
+                var tempMipmapPaths = new List<string>();
+
+                try {
+                    // Сохраняем все мипмапы как временные PNG для toktx
+                    Logger.Info($"Сохраняем {mipmaps.Count} мипмапов для toktx...");
                     for (int i = 0; i < mipmaps.Count; i++) {
-                        var mipPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
-                        Logger.Info($"Saving mipmap level {i} ({mipmaps[i].Width}x{mipmaps[i].Height}) to: {mipPath}");
+                        var mipPath = Path.Combine(tempMipmapDir, $"{fileName}_mip{i}.png");
+                        Logger.Info($"Сохраняем mipmap level {i} ({mipmaps[i].Width}x{mipmaps[i].Height}) в: {mipPath}");
 
                         await mipmaps[i].SaveAsPngAsync(mipPath);
 
-                        // Проверяем, что файл действительно создан
+                        // Проверяем создание файла
                         if (File.Exists(mipPath)) {
                             var fileInfo = new FileInfo(mipPath);
-                            Logger.Info($"✓ Mipmap {i} saved successfully ({fileInfo.Length} bytes)");
+                            Logger.Info($"✓ Mipmap {i} сохранён ({fileInfo.Length} bytes)");
+                            tempMipmapPaths.Add(mipPath);
                         } else {
-                            Logger.Error($"✗ Failed to save mipmap {i} - file not found after save!");
+                            Logger.Error($"✗ Не удалось сохранить mipmap {i}!");
+                            throw new Exception($"Failed to save mipmap level {i}");
                         }
                     }
 
-                    result.MipmapsSavedPath = mipmapOutputDir;
-                    Logger.Info($"Successfully saved {mipmaps.Count} mipmap levels to {mipmapOutputDir}");
-                }
+                    // Опционально: копируем мипмапы в директорию пользователя
+                    if (saveSeparateMipmaps && !string.IsNullOrEmpty(mipmapOutputDir)) {
+                        Logger.Info($"Копируем {mipmaps.Count} мипмапов в {mipmapOutputDir}");
+                        Directory.CreateDirectory(mipmapOutputDir);
 
-                // Проверяем доступность toktx
-                if (!await _toktxWrapper.IsAvailableAsync()) {
-                    throw new Exception("toktx executable not found. Please install KTX-Software: winget install KhronosGroup.KTX-Software");
-                }
+                        for (int i = 0; i < tempMipmapPaths.Count; i++) {
+                            var destPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
+                            File.Copy(tempMipmapPaths[i], destPath, overwrite: true);
+                            Logger.Info($"✓ Mipmap {i} скопирован в {destPath}");
+                        }
 
-                // Сохраняем ВСЕ мипмапы для упаковки с toktx
-                Logger.Info("=== СОХРАНЕНИЕ MIPMAPS ДЛЯ TOKTX ===");
-                Logger.Info($"Сохраняем {mipmaps.Count} мипмапов для упаковки с toktx");
-                if (result.ToksvigApplied) {
-                    Logger.Info("  (Toksvig коррекция применена)");
-                }
+                        result.MipmapsSavedPath = mipmapOutputDir;
+                        Logger.Info($"Мипмапы сохранены в {mipmapOutputDir}");
+                    }
 
-                var tempDir = Path.Combine(Path.GetTempPath(), "TexTool_Mipmaps");
-                Directory.CreateDirectory(tempDir);
+                    // Упаковываем мипмапы в KTX2 используя toktx
+                    Logger.Info("=== PACKING TO KTX2 WITH TOKTX ===");
+                    Logger.Info($"  Mipmaps: {tempMipmapPaths.Count}");
+                    Logger.Info($"  Output: {outputPath}");
+                    Logger.Info($"  Compression: {compressionSettings.CompressionFormat}");
 
-                List<string> tempMipmapFiles = new List<string>();
+                    var toktxResult = await _toktxWrapper.PackMipmapsAsync(
+                        tempMipmapPaths,
+                        outputPath,
+                        compressionSettings
+                    );
 
-                // Сохраняем все мипмапы
-                for (int i = 0; i < mipmaps.Count; i++) {
-                    var tempMipPath = Path.Combine(tempDir, $"{fileName}_mip{i}.png");
-                    await mipmaps[i].SaveAsPngAsync(tempMipPath);
-                    tempMipmapFiles.Add(tempMipPath);
-                    Logger.Info($"  Mip {i}: {mipmaps[i].Width}x{mipmaps[i].Height} -> {tempMipPath}");
-                }
+                    if (!toktxResult.Success) {
+                        throw new Exception($"toktx packing failed: {toktxResult.Error}");
+                    }
 
-                // Упаковываем мипмапы с toktx
-                Logger.Info("=== PACKING WITH TOKTX ===");
-                Logger.Info($"  Output path: {outputPath}");
-                Logger.Info($"  Mip levels: {tempMipmapFiles.Count}");
-                Logger.Info($"  CompressionFormat: {compressionSettings.CompressionFormat}");
-                Logger.Info($"  OutputFormat: {compressionSettings.OutputFormat}");
+                    result.Success = true;
+                    result.BasisOutput = toktxResult.Output;
+                    result.MipLevels = mipmaps.Count;
 
-                var toktxResult = await _toktxWrapper.PackMipmapsAsync(
-                    tempMipmapFiles,
-                    outputPath,
-                    compressionSettings
-                );
+                    Logger.Info($"=== KTX2 PACKING SUCCESS ===");
+                    Logger.Info($"  Output: {outputPath}");
+                    Logger.Info($"  File size: {toktxResult.OutputFileSize} bytes");
+                    Logger.Info($"  Mip levels: {mipmaps.Count}");
 
-                // Удаляем временные файлы
-                foreach (var tempFile in tempMipmapFiles) {
+                } finally {
+                    // Удаляем временные мипмапы
                     try {
-                        if (File.Exists(tempFile)) {
-                            File.Delete(tempFile);
+                        if (Directory.Exists(tempMipmapDir)) {
+                            Directory.Delete(tempMipmapDir, recursive: true);
+                            Logger.Info($"Временная директория удалена: {tempMipmapDir}");
                         }
                     } catch (Exception ex) {
-                        Logger.Warn($"Не удалось удалить временный файл {tempFile}: {ex.Message}");
+                        Logger.Warn($"Не удалось удалить временную директорию: {ex.Message}");
                     }
                 }
-
-                if (!toktxResult.Success) {
-                    throw new Exception($"toktx packing failed: {toktxResult.Error}");
-                }
-
-                result.Success = true;
-                result.BasisOutput = toktxResult.Output;
-                result.MipLevels = mipmaps.Count;
-
-                Logger.Info($"Успешно упаковано {mipmaps.Count} мипмапов в {outputPath} с помощью toktx");
 
                 Logger.Info($"Conversion successful: {outputPath}");
 

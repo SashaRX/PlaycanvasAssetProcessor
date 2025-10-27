@@ -1,0 +1,516 @@
+{
+  "schema_version": "1.0",
+  "description": "Схема параметров конвертации текстур для toktx (KTX-Software)",
+
+  "sections": [
+    {
+      "name": "Preset",
+      "order": 1,
+      "description": "Выбор базового профиля (меняет дефолты других секций)",
+      "parameters": [
+        {
+          "id": "preset",
+          "display_name": "Preset",
+          "ui_type": "dropdown",
+          "default": "Custom",
+          "options": [
+            "Custom",
+            "Albedo/Color (sRGB)",
+            "Normal (Linear)",
+            "AO/Gloss/Roughness (Linear + Toksvig)",
+            "Height (Linear with Clamp)"
+          ],
+          "cli": null,
+          "description": "Базовый профиль настроек для разных типов текстур",
+          "internal": true
+        }
+      ]
+    },
+
+    {
+      "name": "Compression Settings",
+      "order": 2,
+      "description": "Управляет типом кодека и параметрами качества",
+      "parameters": [
+        {
+          "id": "compressionFormat",
+          "display_name": "Compression Format",
+          "ui_type": "dropdown",
+          "default": "etc1s",
+          "options": ["etc1s", "uastc", "astc"],
+          "cli": "--encode",
+          "description": "Формат сжатия: ETC1S (малый размер), UASTC (высокое качество), ASTC (adaptive)"
+        },
+        {
+          "id": "compressionLevel",
+          "display_name": "Compression Level",
+          "ui_type": "slider",
+          "default": 1,
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "cli": "--clevel",
+          "description": "Уровень компрессии (0=быстро, 5=медленно/лучше). Только для ETC1S",
+          "visibility": {
+            "depends_on": "compressionFormat",
+            "required_value": "etc1s"
+          }
+        },
+        {
+          "id": "qualityLevel",
+          "display_name": "Quality",
+          "ui_type": "slider",
+          "default": 128,
+          "min": 1,
+          "max": 255,
+          "step": 1,
+          "cli": "--qlevel",
+          "description": "Качество сжатия (1=низкое, 255=высокое). Для ETC1S",
+          "visibility": {
+            "depends_on": "compressionFormat",
+            "required_value": "etc1s"
+          }
+        },
+        {
+          "id": "uastcQuality",
+          "display_name": "UASTC Quality",
+          "ui_type": "slider",
+          "default": 2,
+          "min": 0,
+          "max": 4,
+          "step": 1,
+          "cli": "--uastc_quality",
+          "description": "Качество UASTC (0=fastest, 4=slowest/best)",
+          "visibility": {
+            "depends_on": "compressionFormat",
+            "required_value": "uastc"
+          }
+        },
+        {
+          "id": "astcQuality",
+          "display_name": "ASTC Quality",
+          "ui_type": "dropdown",
+          "default": "medium",
+          "options": ["fastest", "fast", "medium", "thorough", "exhaustive"],
+          "cli": "--astc_quality",
+          "description": "Качество ASTC компрессии",
+          "visibility": {
+            "depends_on": "compressionFormat",
+            "required_value": "astc"
+          }
+        },
+        {
+          "id": "perceptualMode",
+          "display_name": "Perceptual Mode",
+          "ui_type": "checkbox",
+          "default": true,
+          "cli": null,
+          "description": "Визуальное улучшение качества. Только для ETC1S/ASTC",
+          "internal": true
+        },
+        {
+          "id": "useRDO",
+          "display_name": "RDO Optimizer",
+          "ui_type": "checkbox",
+          "default": true,
+          "cli": null,
+          "description": "Rate-Distortion Optimization: баланс размера/качества",
+          "internal": true
+        },
+        {
+          "id": "rdoLambda",
+          "display_name": "RDO Lambda (λ)",
+          "ui_type": "numeric",
+          "default": 1.0,
+          "min": 0.01,
+          "max": 10.0,
+          "step": 0.1,
+          "cli": "--uastc_rdo_l",
+          "description": "Параметр RDO для UASTC (больше = меньше размер, меньше качество)",
+          "visibility": {
+            "depends_on": "compressionFormat",
+            "required_value": "uastc"
+          }
+        },
+        {
+          "id": "supercompression",
+          "display_name": "Supercompression (Zstd)",
+          "ui_type": "slider",
+          "default": 9,
+          "min": 1,
+          "max": 22,
+          "step": 1,
+          "cli": "--zcmp",
+          "description": "Уровень Zstandard суперкомпрессии (1=быстро, 22=максимум)"
+        },
+        {
+          "id": "threads",
+          "display_name": "Threads",
+          "ui_type": "dropdown",
+          "default": "Auto",
+          "options": ["Auto", "1", "2", "4", "8", "16", "32"],
+          "cli": "--threads",
+          "description": "Количество потоков (Auto = настройки проекта)",
+          "special_handling": "Если 'Auto', используется globalSettings.ThreadCount. Если ThreadCount=0, флаг не добавляется."
+        }
+      ]
+    },
+
+    {
+      "name": "Alpha Options",
+      "order": 3,
+      "description": "Управление альфа-каналом",
+      "parameters": [
+        {
+          "id": "forceAlpha",
+          "display_name": "Force Alpha Channel",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--target_type RGBA",
+          "description": "Принудительно добавить альфа-канал (даже если его нет)"
+        },
+        {
+          "id": "removeAlpha",
+          "display_name": "Remove Alpha Channel",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--target_type RGB",
+          "description": "Удалить альфа-канал"
+        },
+        {
+          "id": "separateRGAlpha",
+          "display_name": "Separate RG to Color/Alpha (Normals)",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": null,
+          "description": "Разделить RG каналы для XY нормалей (внутренний препроцессинг)",
+          "internal": true
+        }
+      ]
+    },
+
+    {
+      "name": "Color Space",
+      "order": 4,
+      "description": "Управление цветовым пространством",
+      "parameters": [
+        {
+          "id": "colorSpace",
+          "display_name": "Color Space",
+          "ui_type": "radio",
+          "default": "auto",
+          "options": ["auto", "linear", "srgb"],
+          "cli": null,
+          "description": "Цветовое пространство текстуры",
+          "internal": true
+        },
+        {
+          "id": "treatAsLinear",
+          "display_name": "Treat as Linear",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--assign_oetf linear",
+          "description": "Принудительно обрабатывать как линейное пространство"
+        },
+        {
+          "id": "treatAsSRGB",
+          "display_name": "Treat as sRGB",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--assign_oetf srgb",
+          "description": "Принудительно обрабатывать как sRGB"
+        }
+      ]
+    },
+
+    {
+      "name": "Mipmaps",
+      "order": 5,
+      "description": "Настройки генерации мипмапов",
+      "parameters": [
+        {
+          "id": "generateMipmaps",
+          "display_name": "Generate Mipmaps",
+          "ui_type": "checkbox",
+          "default": true,
+          "cli": null,
+          "description": "Генерировать мипмапы (всегда true, т.к. мы генерируем их сами)",
+          "internal": true
+        },
+        {
+          "id": "mipFilter",
+          "display_name": "Filter",
+          "ui_type": "dropdown",
+          "default": "kaiser",
+          "options": [
+            "box", "tent", "bell", "b-spline", "mitchell",
+            "lanczos3", "lanczos4", "lanczos6", "lanczos12",
+            "blackman", "kaiser", "gaussian", "catmullrom",
+            "quadratic_interp", "quadratic_approx", "quadratic_mix",
+            "min", "max"
+          ],
+          "cli": null,
+          "description": "Фильтр для генерации мипмапов (используется внутренним MipGenerator)",
+          "internal": true
+        },
+        {
+          "id": "linearMipFiltering",
+          "display_name": "Linear Mip Filtering",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": null,
+          "description": "Линейная фильтрация при генерации мипмапов (внутренний параметр)",
+          "internal": true
+        },
+        {
+          "id": "clampMipEdges",
+          "display_name": "Clamp Mip Edges",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--wmode clamp",
+          "description": "Ограничить края мипмапов (wrapping mode)"
+        },
+        {
+          "id": "removeTemporalMipmaps",
+          "display_name": "Remove Temporal Mipmaps",
+          "ui_type": "checkbox",
+          "default": true,
+          "cli": null,
+          "description": "Очистить временные мипмапы после сборки (по умолчанию ВКЛ, отключить для отладки)",
+          "internal": true
+        },
+        {
+          "id": "normalizeMipmaps",
+          "display_name": "Normalize Mipmaps (Normal Maps)",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--normalize",
+          "description": "Нормализовать векторы в мипмапах (только для Normal Maps с 2+ компонентами)"
+        }
+      ]
+    },
+
+    {
+      "name": "Normal Maps",
+      "order": 6,
+      "description": "Специальные настройки для карт нормалей",
+      "parameters": [
+        {
+          "id": "convertToXYNormal",
+          "display_name": "Convert to XY(RGB/A) Normal Map",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--normal_mode",
+          "description": "Конвертировать RGB→XY для хранения нормали в R-X/G-Y/B-Z или RGB-X/A-Y"
+        },
+        {
+          "id": "normalizeVectors",
+          "display_name": "Normalize Vectors",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--normalize",
+          "description": "Принудительно нормализовать векторы нормалей (для карт нормалей)"
+        },
+        {
+          "id": "keepRGBLayout",
+          "display_name": "Keep RGB Layout (Custom)",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": "--input_swizzle rgb1",
+          "description": "Оставить RGB-структуру нормалей без преобразования"
+        }
+      ]
+    },
+
+    {
+      "name": "Toksvig (Anti-Aliasing)",
+      "order": 7,
+      "description": "Коррекция Toksvig для gloss/roughness текстур",
+      "parameters": [
+        {
+          "id": "enableToksvig",
+          "display_name": "Enable Toksvig Correction",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": null,
+          "description": "Включить коррекцию Toksvig для Gloss/Roughness (внутренний препроцесс)",
+          "internal": true
+        },
+        {
+          "id": "smoothVariance",
+          "display_name": "Smooth Variance",
+          "ui_type": "checkbox",
+          "default": false,
+          "cli": null,
+          "description": "Сглаживание вариации углов (внутренний препроцесс)",
+          "internal": true,
+          "visibility": {
+            "depends_on": "enableToksvig",
+            "required_value": true
+          }
+        },
+        {
+          "id": "compositePower",
+          "display_name": "Composite Power (k)",
+          "ui_type": "numeric",
+          "default": 1.0,
+          "min": 0.1,
+          "max": 5.0,
+          "step": 0.1,
+          "cli": null,
+          "description": "Степень смешивания нормалей (внутренний параметр)",
+          "internal": true,
+          "visibility": {
+            "depends_on": "enableToksvig",
+            "required_value": true
+          }
+        },
+        {
+          "id": "toksvigMinMipLevel",
+          "display_name": "Min Mip Level",
+          "ui_type": "numeric",
+          "default": 0,
+          "min": 0,
+          "max": 12,
+          "step": 1,
+          "cli": null,
+          "description": "Базовый уровень мипмапов для применения Toksvig (внутренний параметр)",
+          "internal": true,
+          "visibility": {
+            "depends_on": "enableToksvig",
+            "required_value": true
+          }
+        },
+        {
+          "id": "toksvigNormalMapPath",
+          "display_name": "Normal Map Path",
+          "ui_type": "file",
+          "default": null,
+          "cli": null,
+          "description": "Путь к карте нормалей (автоподстановка: nameTex_normal для nameTex_gloss)",
+          "internal": true,
+          "visibility": {
+            "depends_on": "enableToksvig",
+            "required_value": true
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Actions",
+      "order": 8,
+      "description": "Действия конвертации",
+      "parameters": [
+        {
+          "id": "convertSelected",
+          "display_name": "Convert Selected",
+          "ui_type": "button",
+          "cli": null,
+          "description": "Конвертировать выбранные текстуры",
+          "internal": true
+        },
+        {
+          "id": "applyPreset",
+          "display_name": "Apply",
+          "ui_type": "button",
+          "cli": null,
+          "description": "Применить и сохранить текущие настройки как пресет",
+          "internal": true
+        },
+        {
+          "id": "reset",
+          "display_name": "Reset",
+          "ui_type": "button",
+          "cli": null,
+          "description": "Сбросить настройки к значениям по умолчанию",
+          "internal": true
+        }
+      ]
+    }
+  ],
+
+  "presets": [
+    {
+      "name": "Albedo/Color (sRGB)",
+      "description": "Оптимизирован для цветных текстур в sRGB",
+      "texture_type": "Albedo",
+      "values": {
+        "compressionFormat": "etc1s",
+        "qualityLevel": 128,
+        "treatAsSRGB": true,
+        "mipFilter": "kaiser",
+        "perceptualMode": true
+      }
+    },
+    {
+      "name": "Normal (Linear)",
+      "description": "Оптимизирован для карт нормалей",
+      "texture_type": "Normal",
+      "values": {
+        "compressionFormat": "uastc",
+        "uastcQuality": 3,
+        "treatAsLinear": true,
+        "convertToXYNormal": true,
+        "normalizeVectors": true,
+        "mipFilter": "kaiser"
+      }
+    },
+    {
+      "name": "AO/Gloss/Roughness (Linear + Toksvig)",
+      "description": "Оптимизирован для gloss/roughness с коррекцией Toksvig",
+      "texture_type": "Gloss",
+      "values": {
+        "compressionFormat": "etc1s",
+        "qualityLevel": 128,
+        "treatAsLinear": true,
+        "mipFilter": "kaiser",
+        "enableToksvig": true,
+        "compositePower": 1.0
+      }
+    },
+    {
+      "name": "Height (Linear with Clamp)",
+      "description": "Оптимизирован для карт высот",
+      "texture_type": "Height",
+      "values": {
+        "compressionFormat": "etc1s",
+        "qualityLevel": 128,
+        "treatAsLinear": true,
+        "mipFilter": "mitchell",
+        "clampMipEdges": true
+      }
+    }
+  ],
+
+  "cli_flags": {
+    "compression": {
+      "--encode": "etc1s | uastc | astc",
+      "--clevel": "0-5 (ETC1S compression level)",
+      "--qlevel": "1-255 (ETC1S quality)",
+      "--uastc_quality": "0-4 (UASTC quality)",
+      "--astc_quality": "fastest | fast | medium | thorough | exhaustive",
+      "--uastc_rdo_l": "lambda value for RDO",
+      "--zcmp": "1-22 (Zstandard level)"
+    },
+    "color_space": {
+      "--assign_oetf": "linear | srgb"
+    },
+    "alpha": {
+      "--target_type": "R | RG | RGB | RGBA"
+    },
+    "normal_maps": {
+      "--normal_mode": "Convert to XY normal map",
+      "--normalize": "Normalize input normals",
+      "--input_swizzle": "rgb1 (keep RGB layout)"
+    },
+    "mipmaps": {
+      "--genmipmap": "Generate mipmaps (NOT USED - we generate manually)",
+      "--filter": "Filter name (NOT USED - internal MipGenerator)",
+      "--wmode": "clamp | repeat | mirror"
+    },
+    "performance": {
+      "--threads": "Thread count"
+    }
+  }
+}

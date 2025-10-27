@@ -1,4 +1,4 @@
-﻿using AssetProcessor.Settings;
+using AssetProcessor.Settings;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -50,9 +50,7 @@ namespace AssetProcessor.Helpers {
                 // TIFF format
                 else if ((buffer[0] == 0x49 && buffer[1] == 0x49 && buffer[2] == 0x2A && buffer[3] == 0x00) ||
                          (buffer[0] == 0x4D && buffer[1] == 0x4D && buffer[2] == 0x00 && buffer[3] == 0x2A)) {
-                    using MemoryStream stream = new(buffer);
-                    using System.Drawing.Image image = System.Drawing.Image.FromStream(stream);
-                    return (image.Width, image.Height);
+                    return await GetTiffResolutionAsync(url, cancellationToken);
                 }
 
                 throw new Exception("Image format not supported or not a PNG/JPEG/BMP/GIF/TIFF");
@@ -80,6 +78,102 @@ namespace AssetProcessor.Helpers {
             using MemoryStream stream = new(buffer);
             using SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(stream);
             return (image.Width, image.Height);
+        }
+
+        private static async Task<(int Width, int Height)> GetTiffResolutionAsync(string url, CancellationToken cancellationToken) {
+            using HttpClient client = new();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
+            client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 2047);
+
+            HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            await using Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            byte[] buffer = await ReadFullyAsync(responseStream, cancellationToken);
+
+            if (buffer.Length < 8) {
+                throw new Exception("Unable to read TIFF header");
+            }
+
+            bool isLittleEndian = buffer[0] == 0x49 && buffer[1] == 0x49;
+            uint ifdOffset = ReadUInt32(buffer, 4, isLittleEndian);
+
+            if (ifdOffset + 2 >= buffer.Length) {
+                throw new Exception("Invalid TIFF IFD offset");
+            }
+
+            ushort entryCount = ReadUInt16(buffer, (int)ifdOffset, isLittleEndian);
+            int entriesStart = (int)ifdOffset + 2;
+
+            const ushort ImageWidthTag = 256;
+            const ushort ImageLengthTag = 257;
+
+            int? width = null;
+            int? height = null;
+
+            for (int i = 0; i < entryCount; i++) {
+                int entryOffset = entriesStart + (i * 12);
+                if (entryOffset + 12 > buffer.Length) {
+                    break;
+                }
+
+                ushort tag = ReadUInt16(buffer, entryOffset, isLittleEndian);
+                ushort type = ReadUInt16(buffer, entryOffset + 2, isLittleEndian);
+                uint count = ReadUInt32(buffer, entryOffset + 4, isLittleEndian);
+                uint valueOffset = ReadUInt32(buffer, entryOffset + 8, isLittleEndian);
+
+                int value = type switch {
+                    3 when count >= 1 => ReadUInt16Value(buffer, entryOffset + 8, isLittleEndian),
+                    4 when count >= 1 => (int)valueOffset,
+                    _ => -1,
+                };
+
+                if (value < 0) {
+                    continue;
+                }
+
+                if (tag == ImageWidthTag) {
+                    width = value;
+                } else if (tag == ImageLengthTag) {
+                    height = value;
+                }
+
+                if (width.HasValue && height.HasValue) {
+                    return (width.Value, height.Value);
+                }
+            }
+
+            throw new Exception("Unable to determine TIFF image dimensions");
+        }
+
+        private static async Task<byte[]> ReadFullyAsync(Stream stream, CancellationToken cancellationToken) {
+            using MemoryStream memoryStream = new();
+            await stream.CopyToAsync(memoryStream, cancellationToken);
+            return memoryStream.ToArray();
+        }
+
+        private static ushort ReadUInt16(byte[] buffer, int offset, bool littleEndian) {
+            if (littleEndian) {
+                return BitConverter.ToUInt16(buffer, offset);
+            }
+
+            return (ushort)((buffer[offset] << 8) | buffer[offset + 1]);
+        }
+
+        private static uint ReadUInt32(byte[] buffer, int offset, bool littleEndian) {
+            if (littleEndian) {
+                return BitConverter.ToUInt32(buffer, offset);
+            }
+
+            return ((uint)buffer[offset] << 24) | ((uint)buffer[offset + 1] << 16) | ((uint)buffer[offset + 2] << 8) | buffer[offset + 3];
+        }
+
+        private static int ReadUInt16Value(byte[] buffer, int offset, bool littleEndian) {
+            if (littleEndian) {
+                return BitConverter.ToUInt16(buffer, offset);
+            }
+
+            return (buffer[offset] << 8) | buffer[offset + 1];
         }
     }
 }

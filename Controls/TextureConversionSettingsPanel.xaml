@@ -229,9 +229,9 @@
             </StackPanel>
         </GroupBox>
 
-        <!-- Toksvig Settings (for Gloss/Roughness) -->
+        <!-- Toksvig Settings (for Gloss textures) -->
         <GroupBox Header="Toksvig (Anti-Aliasing)" Margin="0,0,0,2" Padding="2"
-                  ToolTip="Toksvig mipmap correction reduces specular aliasing for gloss/roughness textures">
+                  ToolTip="Toksvig mipmap correction reduces specular aliasing for gloss textures">
             <StackPanel>
                 <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
                           ToolTip="Apply Toksvig variance-based roughness adjustment"

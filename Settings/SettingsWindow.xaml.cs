@@ -25,12 +25,12 @@ namespace AssetProcessor {
             }
         }
 
-        public string BasisUExecutablePath {
-            get => _textureSettings.BasisUExecutablePath;
+        public string ToktxExecutablePath {
+            get => _textureSettings.ToktxExecutablePath;
             set {
-                if (_textureSettings.BasisUExecutablePath != value) {
-                    _textureSettings.BasisUExecutablePath = value;
-                    OnPropertyChanged(nameof(BasisUExecutablePath));
+                if (_textureSettings.ToktxExecutablePath != value) {
+                    _textureSettings.ToktxExecutablePath = value;
+                    OnPropertyChanged(nameof(ToktxExecutablePath));
                 }
             }
         }
@@ -97,7 +97,7 @@ namespace AssetProcessor {
             DownloadSemaphoreSlider.Value = AppSettings.Default.DownloadSemaphoreLimit;
             GetTexturesSemaphoreTextBlock.Text = AppSettings.Default.GetTexturesSemaphoreLimit.ToString();
             DownloadSemaphoreTextBlock.Text = AppSettings.Default.DownloadSemaphoreLimit.ToString();
-            BasisUExecutableBox.Text = _textureSettings.BasisUExecutablePath;
+            ToktxExecutableBox.Text = _textureSettings.ToktxExecutablePath;
         }
 
         private void CheckAndRemoveWatermarks() {
@@ -153,49 +153,51 @@ namespace AssetProcessor {
             AppSettings.Default.Save();
 
             // Save texture conversion settings
-            _textureSettings.BasisUExecutablePath = BasisUExecutableBox.Text;
+            _textureSettings.ToktxExecutablePath = ToktxExecutableBox.Text;
             TextureConversionSettingsManager.SaveSettings(_textureSettings);
 
             this.Close();
         }
 
-        private void SelectBasisUExecutable(object sender, RoutedEventArgs e) {
+        private void SelectToktxExecutable(object sender, RoutedEventArgs e) {
             OpenFileDialog fileDialog = new() {
-                Title = "Select basisu executable",
+                Title = "Select toktx executable",
                 Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
                 CheckFileExists = true
             };
 
             if (fileDialog.ShowDialog() == true) {
-                BasisUExecutablePath = fileDialog.FileName;
-                BasisUExecutableBox.Text = fileDialog.FileName;
+                ToktxExecutablePath = fileDialog.FileName;
+                ToktxExecutableBox.Text = fileDialog.FileName;
             }
         }
 
-        private async void TestBasisU_Click(object sender, RoutedEventArgs e) {
-            if (BasisUStatusText != null) {
-                BasisUStatusText.Text = "Testing...";
-                BasisUStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+        private async void TestToktx_Click(object sender, RoutedEventArgs e) {
+            if (ToktxStatusText != null) {
+                ToktxStatusText.Text = "Testing...";
+                ToktxStatusText.Foreground = new SolidColorBrush(Colors.Gray);
             }
 
             try {
-                var path = string.IsNullOrWhiteSpace(BasisUExecutableBox.Text) ? "basisu" : BasisUExecutableBox.Text;
-                var wrapper = new BasisUWrapper(path);
+                var path = string.IsNullOrWhiteSpace(ToktxExecutableBox.Text) ? "toktx" : ToktxExecutableBox.Text;
+                var wrapper = new ToktxWrapper(path);
                 var available = await wrapper.IsAvailableAsync();
 
-                if (BasisUStatusText != null) {
+                if (ToktxStatusText != null) {
                     if (available) {
-                        BasisUStatusText.Text = "✓ basisu is available and working!";
-                        BasisUStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                        // Получаем версию
+                        var version = await wrapper.GetVersionAsync();
+                        ToktxStatusText.Text = $"✓ toktx is available! {version}";
+                        ToktxStatusText.Foreground = new SolidColorBrush(Colors.Green);
                     } else {
-                        BasisUStatusText.Text = "✗ basisu not found or not working";
-                        BasisUStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                        ToktxStatusText.Text = "✗ toktx not found or not working";
+                        ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
                     }
                 }
             } catch (Exception ex) {
-                if (BasisUStatusText != null) {
-                    BasisUStatusText.Text = $"✗ Error: {ex.Message}";
-                    BasisUStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                if (ToktxStatusText != null) {
+                    ToktxStatusText.Text = $"✗ Error: {ex.Message}";
+                    ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
                 }
             }
         }

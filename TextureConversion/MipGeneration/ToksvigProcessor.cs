@@ -222,6 +222,12 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// Сглаживает карту дисперсии с помощью 3x3 блюра
         /// </summary>
         private Image<Rgba32> SmoothVariance(Image<Rgba32> varianceMap) {
+            // Для маленьких изображений (меньше 4x4) пропускаем blur
+            if (varianceMap.Width < 4 || varianceMap.Height < 4) {
+                Logger.Debug($"Изображение слишком маленькое ({varianceMap.Width}x{varianceMap.Height}) для blur, пропускаем сглаживание");
+                return varianceMap.Clone();
+            }
+
             var smoothed = varianceMap.Clone();
 
             // Применяем лёгкий Gaussian blur 3x3

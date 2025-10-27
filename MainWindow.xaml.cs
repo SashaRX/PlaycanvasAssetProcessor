@@ -14,10 +14,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
@@ -120,6 +124,44 @@ namespace AssetProcessor {
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
+        private const double MinPreviewZoom = 0.1;
+        private const double MaxPreviewZoom = 8.0;
+        private const double MinPreviewColumnWidth = 256.0;
+        private const double MaxPreviewColumnWidth = 512.0;
+        private double currentPreviewZoom = 1.0;
+        private bool isKtxPreviewActive;
+        private int currentMipLevel;
+        private bool isUpdatingMipLevel;
+        private List<KtxMipLevel>? currentKtxMipmaps;
+        private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
+        private enum TexturePreviewSourceMode {
+            Source,
+            Ktx2
+        }
+
+        private TexturePreviewSourceMode currentPreviewSourceMode = TexturePreviewSourceMode.Source;
+        private bool isSourcePreviewAvailable;
+        private bool isKtxPreviewAvailable;
+        private bool isUserPreviewSelection;
+        private bool isUpdatingPreviewSourceControls;
+        private bool isMiddleButtonPanning;
+        private bool isUpdatingPreviewWidth;
+        private Point lastPanPoint;
+        private BitmapSource? originalFileBitmapSource;
+        private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private sealed class KtxPreviewCacheEntry {
+            public required DateTime LastWriteTimeUtc { get; init; }
+            public required List<KtxMipLevel> Mipmaps { get; init; }
+        }
+
+        private sealed class KtxMipLevel {
+            public required int Level { get; init; }
+            public required BitmapSource Bitmap { get; init; }
+            public required int Width { get; init; }
+            public required int Height { get; init; }
+        }
+
         private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
         private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
         private readonly object ignoredAssetTypesLock = new();
@@ -143,6 +185,7 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
+            ResetPreviewState();
             _ = InitializeOnStartup();
 
             // Подписка на события панели настроек конвертации
@@ -240,6 +283,217 @@ namespace AssetProcessor {
             }
         }
 
+        private void ResetPreviewState() {
+            currentPreviewZoom = 1.0;
+            ApplyZoomTransform();
+            UpdateZoomText();
+            EndTexturePreviewPan();
+            TexturePreviewScrollViewer?.ScrollToHome();
+            TexturePreviewScrollViewer?.ScrollToLeftEnd();
+            isKtxPreviewActive = false;
+            currentMipLevel = 0;
+            currentKtxMipmaps = null;
+            originalBitmapSource = null;
+            originalFileBitmapSource = null;
+            currentPreviewSourceMode = TexturePreviewSourceMode.Source;
+            isSourcePreviewAvailable = false;
+            isKtxPreviewAvailable = false;
+            isUserPreviewSelection = false;
+            HideMipmapControls();
+            UpdatePreviewSourceControls();
+        }
+
+        private void UpdatePreviewSourceControls() {
+            if (PreviewSourceOriginalRadioButton == null || PreviewSourceKtxRadioButton == null) {
+                return;
+            }
+
+            isUpdatingPreviewSourceControls = true;
+
+            try {
+                PreviewSourceOriginalRadioButton.IsEnabled = isSourcePreviewAvailable;
+                PreviewSourceKtxRadioButton.IsEnabled = isKtxPreviewAvailable;
+
+                PreviewSourceOriginalRadioButton.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Source;
+                PreviewSourceKtxRadioButton.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
+            } finally {
+                isUpdatingPreviewSourceControls = false;
+            }
+        }
+
+        private void PreviewWidthSlider_Loaded(object sender, RoutedEventArgs e) {
+            UpdatePreviewWidthControls(PreviewColumn.ActualWidth > 0 ? PreviewColumn.ActualWidth : PreviewColumn.Width.Value);
+        }
+
+        private void PreviewWidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (isUpdatingPreviewWidth) {
+                return;
+            }
+
+            double clampedWidth = Math.Clamp(e.NewValue, MinPreviewColumnWidth, MaxPreviewColumnWidth);
+            isUpdatingPreviewWidth = true;
+
+            try {
+                PreviewColumn.Width = new GridLength(clampedWidth);
+                UpdatePreviewWidthText(clampedWidth);
+            } finally {
+                isUpdatingPreviewWidth = false;
+            }
+        }
+
+        private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
+            double targetWidth = Math.Clamp(PreviewColumn.ActualWidth, MinPreviewColumnWidth, MaxPreviewColumnWidth);
+            UpdatePreviewWidthControls(targetWidth);
+        }
+
+        private void UpdatePreviewWidthControls(double width) {
+            double clampedWidth = Math.Clamp(width, MinPreviewColumnWidth, MaxPreviewColumnWidth);
+
+            if (PreviewWidthSlider != null) {
+                isUpdatingPreviewWidth = true;
+                PreviewWidthSlider.Value = clampedWidth;
+                isUpdatingPreviewWidth = false;
+            }
+
+            UpdatePreviewWidthText(clampedWidth);
+        }
+
+        private void UpdatePreviewWidthText(double width) {
+            if (PreviewWidthValueTextBlock != null) {
+                PreviewWidthValueTextBlock.Text = $"{(int)Math.Round(width)} px";
+            }
+        }
+
+        private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
+            if (isUpdatingPreviewSourceControls) {
+                return;
+            }
+
+            if (sender == PreviewSourceOriginalRadioButton) {
+                SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
+            } else if (sender == PreviewSourceKtxRadioButton) {
+                SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
+            }
+        }
+
+        private void SetPreviewSourceMode(TexturePreviewSourceMode mode, bool initiatedByUser) {
+            if (initiatedByUser) {
+                isUserPreviewSelection = true;
+            }
+
+            if (mode == TexturePreviewSourceMode.Ktx2 && !isKtxPreviewAvailable) {
+                UpdatePreviewSourceControls();
+                return;
+            }
+
+            if (mode == TexturePreviewSourceMode.Source && !isSourcePreviewAvailable) {
+                UpdatePreviewSourceControls();
+                return;
+            }
+
+            currentPreviewSourceMode = mode;
+
+            if (mode == TexturePreviewSourceMode.Source) {
+                isKtxPreviewActive = false;
+                HideMipmapControls();
+
+                if (originalFileBitmapSource != null) {
+                    originalBitmapSource = originalFileBitmapSource;
+                    _ = UpdateHistogramAsync(originalBitmapSource);
+                    ShowOriginalImage();
+                } else {
+                    TexturePreviewImage.Source = null;
+                }
+            } else if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
+                isKtxPreviewActive = true;
+                UpdateMipmapControls(currentKtxMipmaps);
+                SetCurrentMipLevel(currentMipLevel);
+            }
+
+            UpdatePreviewSourceControls();
+        }
+
+        private void ApplyZoomTransform() {
+            if (TexturePreviewScaleTransform != null) {
+                TexturePreviewScaleTransform.ScaleX = currentPreviewZoom;
+                TexturePreviewScaleTransform.ScaleY = currentPreviewZoom;
+            }
+
+            TexturePreviewScrollViewer?.UpdateLayout();
+        }
+
+        private void UpdateZoomText() {
+            if (TextureZoomTextBlock != null) {
+                TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(currentPreviewZoom * 100, 0)}%";
+            }
+        }
+
+        private void HideMipmapControls() {
+            if (MipmapSliderPanel != null) {
+                MipmapSliderPanel.Visibility = Visibility.Collapsed;
+            }
+
+            if (MipmapLevelSlider != null) {
+                isUpdatingMipLevel = true;
+                MipmapLevelSlider.Value = 0;
+                MipmapLevelSlider.Maximum = 0;
+                MipmapLevelSlider.IsEnabled = false;
+                isUpdatingMipLevel = false;
+            }
+
+            if (MipmapInfoTextBlock != null) {
+                MipmapInfoTextBlock.Text = string.Empty;
+            }
+        }
+
+        private void UpdateMipmapControls(IReadOnlyList<KtxMipLevel> mipmaps) {
+            if (MipmapSliderPanel == null || MipmapLevelSlider == null || MipmapInfoTextBlock == null) {
+                return;
+            }
+
+            isUpdatingMipLevel = true;
+
+            try {
+                MipmapSliderPanel.Visibility = Visibility.Visible;
+                MipmapLevelSlider.Minimum = 0;
+                MipmapLevelSlider.Maximum = Math.Max(0, mipmaps.Count - 1);
+                MipmapLevelSlider.Value = 0;
+                MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
+                MipmapInfoTextBlock.Text = mipmaps.Count > 0
+                    ? $"Мип-уровень 0 из {Math.Max(0, mipmaps.Count - 1)} — {mipmaps[0].Width}×{mipmaps[0].Height}"
+                    : "Мип-уровни недоступны";
+            } finally {
+                isUpdatingMipLevel = false;
+            }
+        }
+
+        private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
+            if (MipmapInfoTextBlock != null) {
+                int maxLevel = Math.Max(0, totalLevels - 1);
+                MipmapInfoTextBlock.Text = $"Мип-уровень {mipLevel.Level} из {maxLevel} — {mipLevel.Width}×{mipLevel.Height}";
+            }
+        }
+
+        private void SetCurrentMipLevel(int level, bool updateSlider = true) {
+            if (currentKtxMipmaps == null || currentKtxMipmaps.Count == 0) {
+                return;
+            }
+
+            int clampedLevel = Math.Clamp(level, 0, currentKtxMipmaps.Count - 1);
+            currentMipLevel = clampedLevel;
+
+            if (updateSlider && MipmapLevelSlider != null) {
+                isUpdatingMipLevel = true;
+                MipmapLevelSlider.Value = clampedLevel;
+                isUpdatingMipLevel = false;
+            }
+
+            var mip = currentKtxMipmaps[clampedLevel];
+            originalBitmapSource = mip.Bitmap.Clone();
+            ShowOriginalImage();
+            UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
+        }
+
         private async Task FilterChannelAsync(string channel) {
             if (TexturePreviewImage.Source is BitmapSource bitmapSource) {
                 originalBitmapSource ??= bitmapSource.Clone();
@@ -250,6 +504,94 @@ namespace AssetProcessor {
                     TexturePreviewImage.Source = filteredBitmap;
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
                 });
+            }
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.MiddleButton == MouseButtonState.Pressed && TexturePreviewScrollViewer != null) {
+                isMiddleButtonPanning = true;
+                lastPanPoint = e.GetPosition(TexturePreviewScrollViewer);
+                TexturePreviewScrollViewer.Cursor = Cursors.ScrollAll;
+                Mouse.Capture(TexturePreviewScrollViewer);
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseMove(object sender, MouseEventArgs e) {
+            if (!isMiddleButtonPanning || TexturePreviewScrollViewer == null) {
+                return;
+            }
+
+            Point currentPoint = e.GetPosition(TexturePreviewScrollViewer);
+            double deltaX = currentPoint.X - lastPanPoint.X;
+            double deltaY = currentPoint.Y - lastPanPoint.Y;
+
+            if (Math.Abs(deltaX) > double.Epsilon) {
+                TexturePreviewScrollViewer.ScrollToHorizontalOffset(TexturePreviewScrollViewer.HorizontalOffset - deltaX);
+            }
+
+            if (Math.Abs(deltaY) > double.Epsilon) {
+                TexturePreviewScrollViewer.ScrollToVerticalOffset(TexturePreviewScrollViewer.VerticalOffset - deltaY);
+            }
+
+            lastPanPoint = currentPoint;
+            e.Handled = true;
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
+            if (e.ChangedButton == MouseButton.Middle) {
+                EndTexturePreviewPan();
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreviewScrollViewer_MouseLeave(object sender, MouseEventArgs e) {
+            if (isMiddleButtonPanning) {
+                EndTexturePreviewPan();
+            }
+        }
+
+        private void TexturePreviewScrollViewer_LostMouseCapture(object sender, MouseEventArgs e) {
+            if (isMiddleButtonPanning) {
+                EndTexturePreviewPan();
+            }
+        }
+
+        private void EndTexturePreviewPan() {
+            if (!isMiddleButtonPanning) {
+                return;
+            }
+
+            isMiddleButtonPanning = false;
+            Mouse.Capture(null);
+
+            if (TexturePreviewScrollViewer != null) {
+                TexturePreviewScrollViewer.Cursor = Cursors.Arrow;
+            }
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
+            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, MinPreviewZoom, MaxPreviewZoom);
+
+            if (Math.Abs(newZoom - currentPreviewZoom) < 0.001) {
+                return;
+            }
+
+            currentPreviewZoom = newZoom;
+            ApplyZoomTransform();
+            UpdateZoomText();
+            e.Handled = true;
+        }
+
+        private void MipmapLevelSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (isUpdatingMipLevel || !isKtxPreviewActive) {
+                return;
+            }
+
+            int newLevel = (int)Math.Round(e.NewValue);
+            if (newLevel != currentMipLevel) {
+                SetCurrentMipLevel(newLevel, updateSlider: false);
             }
         }
 
@@ -689,6 +1031,9 @@ namespace AssetProcessor {
             CancellationToken cancellationToken = textureLoadCancellation.Token;
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                ResetPreviewState();
+                TexturePreviewImage.Source = null;
+
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
                     try {
                         // Обновляем информацию о текстуре сразу
@@ -701,61 +1046,27 @@ namespace AssetProcessor {
                         // Load conversion settings for this texture
                         LoadTextureConversionSettings(selectedTexture);
 
-                        // Проверяем кеш
-                        if (imageCache.TryGetValue(selectedTexture.Path, out BitmapImage? cachedImage)) {
-                            // Используем кешированное изображение - мгновенно!
-                            TexturePreviewImage.Source = cachedImage;
-                            originalBitmapSource = cachedImage.Clone();
-                            // Асинхронное обновление гистограммы
-                            _ = UpdateHistogramAsync(originalBitmapSource);
-                            ShowOriginalImage();
-                            return;
-                        }
+                        Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
 
-                        // Сначала загружаем очень маленькое превью для мгновенного отклика
-                        BitmapImage? thumbnailImage = LoadOptimizedImage(selectedTexture.Path, ThumbnailSize);
-                        if (thumbnailImage == null) {
-                            MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
-                            return;
-                        }
+                        await LoadSourcePreviewAsync(selectedTexture, cancellationToken);
 
-                        TexturePreviewImage.Source = thumbnailImage;
+                        bool ktxLoaded = await ktxPreviewTask;
 
-                        // Асинхронная загрузка оптимизированной текстуры с возможностью отмены
-                        await Task.Run(() => {
-                            if (cancellationToken.IsCancellationRequested) return;
-
-                            // Загружаем изображение с ограничением размера (512px для баланса качества и скорости)
-                            BitmapImage? bitmapImage = LoadOptimizedImage(selectedTexture.Path, MaxPreviewSize);
-
-                            if (bitmapImage == null || cancellationToken.IsCancellationRequested) return;
-
-                            Dispatcher.Invoke(() => {
-                                if (cancellationToken.IsCancellationRequested) return;
-
-                                // Добавляем в кеш
-                                if (!imageCache.ContainsKey(selectedTexture.Path)) {
-                                    imageCache[selectedTexture.Path] = bitmapImage;
-
-                                    // Ограничиваем размер кеша (максимум 50 изображений)
-                                    if (imageCache.Count > 50) {
-                                        var firstKey = imageCache.Keys.First();
-                                        imageCache.Remove(firstKey);
-                                    }
+                        if (!ktxLoaded) {
+                            await Dispatcher.InvokeAsync(() => {
+                                if (cancellationToken.IsCancellationRequested) {
+                                    return;
                                 }
 
-                                TexturePreviewImage.Source = bitmapImage;
+                                isKtxPreviewAvailable = false;
 
-                                // Сохраняем оригинальную текстуру
-                                originalBitmapSource = bitmapImage.Clone();
-
-                                // Асинхронное обновление гистограммы
-                                _ = UpdateHistogramAsync(originalBitmapSource);
-
-                                // Сбрасываем все фильтры
-                                ShowOriginalImage();
+                                if (!isUserPreviewSelection && currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                                    SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: false);
+                                } else {
+                                    UpdatePreviewSourceControls();
+                                }
                             });
-                        }, cancellationToken);
+                        }
                     } catch (OperationCanceledException) {
                         // Загрузка была отменена - это нормально
                     } catch (Exception ex) {
@@ -763,6 +1074,416 @@ namespace AssetProcessor {
                     }
                 }
             }
+        }
+
+        private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
+            string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
+            if (ktxPath == null) {
+                return false;
+            }
+
+            try {
+                List<KtxMipLevel> mipmaps = await LoadKtx2MipmapsAsync(ktxPath, cancellationToken);
+                if (mipmaps.Count == 0 || cancellationToken.IsCancellationRequested) {
+                    return false;
+                }
+
+                await Dispatcher.InvokeAsync(() => {
+                    if (cancellationToken.IsCancellationRequested) {
+                        return;
+                    }
+
+                    currentKtxMipmaps = mipmaps;
+                    currentMipLevel = 0;
+                    isKtxPreviewAvailable = true;
+
+                    if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
+                    } else {
+                        UpdatePreviewSourceControls();
+                    }
+                });
+
+                return true;
+            } catch (OperationCanceledException) {
+                return false;
+            } catch (Exception ex) {
+                logger.Warn(ex, $"Не удалось загрузить предпросмотр KTX2: {ktxPath}");
+                return false;
+            }
+        }
+
+        private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
+            string? texturePath = selectedTexture.Path;
+            if (string.IsNullOrEmpty(texturePath)) {
+                return;
+            }
+
+            if (imageCache.TryGetValue(texturePath, out BitmapImage? cachedImage)) {
+                await Dispatcher.InvokeAsync(() => {
+                    if (cancellationToken.IsCancellationRequested) {
+                        return;
+                    }
+
+                    originalFileBitmapSource = cachedImage;
+                    isSourcePreviewAvailable = true;
+
+                    if (currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                        originalBitmapSource = cachedImage;
+                        _ = UpdateHistogramAsync(originalBitmapSource);
+                        ShowOriginalImage();
+                    }
+
+                    UpdatePreviewSourceControls();
+                });
+
+                return;
+            }
+
+            BitmapImage? thumbnailImage = LoadOptimizedImage(texturePath, ThumbnailSize);
+            if (thumbnailImage == null) {
+                MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
+                return;
+            }
+
+            await Dispatcher.InvokeAsync(() => {
+                if (cancellationToken.IsCancellationRequested) {
+                    return;
+                }
+
+                originalFileBitmapSource = thumbnailImage;
+                isSourcePreviewAvailable = true;
+
+                if (currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                    originalBitmapSource = thumbnailImage;
+                    _ = UpdateHistogramAsync(originalBitmapSource);
+                    ShowOriginalImage();
+                }
+
+                UpdatePreviewSourceControls();
+            });
+
+            if (cancellationToken.IsCancellationRequested) {
+                return;
+            }
+
+            try {
+                await Task.Run(() => {
+                    if (cancellationToken.IsCancellationRequested) {
+                        return;
+                    }
+
+                    BitmapImage? bitmapImage = LoadOptimizedImage(texturePath, MaxPreviewSize);
+
+                    if (bitmapImage == null || cancellationToken.IsCancellationRequested) {
+                        return;
+                    }
+
+                    Dispatcher.Invoke(() => {
+                        if (cancellationToken.IsCancellationRequested) {
+                            return;
+                        }
+
+                        if (!imageCache.ContainsKey(texturePath)) {
+                            imageCache[texturePath] = bitmapImage;
+
+                            if (imageCache.Count > 50) {
+                                string firstKey = imageCache.Keys.First();
+                                imageCache.Remove(firstKey);
+                            }
+                        }
+
+                        originalFileBitmapSource = bitmapImage;
+                        isSourcePreviewAvailable = true;
+
+                        if (currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                            originalBitmapSource = bitmapImage;
+                            _ = UpdateHistogramAsync(originalBitmapSource);
+                            ShowOriginalImage();
+                        }
+
+                        UpdatePreviewSourceControls();
+                    });
+                }, cancellationToken);
+            } catch (OperationCanceledException) {
+                // Прерывание загрузки допустимо при смене выбора
+            }
+        }
+
+        private string? GetExistingKtx2Path(string? sourcePath) {
+            if (string.IsNullOrEmpty(sourcePath)) {
+                return null;
+            }
+
+            string? directory = Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrEmpty(directory)) {
+                return null;
+            }
+
+            string baseName = Path.GetFileNameWithoutExtension(sourcePath);
+            string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
+
+            string directPath = Path.Combine(directory, baseName + ".ktx2");
+            if (File.Exists(directPath)) {
+                return directPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + ".ktx2");
+                if (File.Exists(normalizedDirectPath)) {
+                    return normalizedDirectPath;
+                }
+            }
+
+            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
+            if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
+                return sameDirectoryMatch;
+            }
+
+            string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory);
+            if (!string.IsNullOrEmpty(defaultOutputRoot)) {
+                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
+                if (!string.IsNullOrEmpty(outputMatch)) {
+                    return outputMatch;
+                }
+            }
+
+            return null;
+        }
+
+        private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
+            try {
+                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+            } catch (Exception ex) {
+                logger.Debug(ex, "Не удалось загрузить настройки конвертации для определения каталога KTX2.");
+                return null;
+            }
+
+            string? configuredDirectory = globalTextureSettings?.DefaultOutputDirectory;
+            if (string.IsNullOrWhiteSpace(configuredDirectory)) {
+                return null;
+            }
+
+            List<string> candidates = new();
+
+            if (Path.IsPathRooted(configuredDirectory)) {
+                candidates.Add(configuredDirectory);
+            } else {
+                candidates.Add(Path.Combine(sourceDirectory, configuredDirectory));
+
+                if (!string.IsNullOrEmpty(projectFolderPath)) {
+                    candidates.Add(Path.Combine(projectFolderPath!, configuredDirectory));
+                }
+            }
+
+            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase)) {
+                if (Directory.Exists(candidate)) {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private string? TryFindKtx2InDirectory(string directory, string baseName, string normalizedBaseName, SearchOption searchOption) {
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
+                return null;
+            }
+
+            string? bestMatch = null;
+            DateTime bestTime = DateTime.MinValue;
+            int bestScore = -1;
+            string? newestFile = null;
+            DateTime newestTime = DateTime.MinValue;
+
+            try {
+                foreach (string file in Directory.EnumerateFiles(directory, "*.ktx2", searchOption)) {
+                    DateTime writeTime = File.GetLastWriteTimeUtc(file);
+
+                    if (writeTime > newestTime) {
+                        newestTime = writeTime;
+                        newestFile = file;
+                    }
+
+                    int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
+                    if (score < 0) {
+                        continue;
+                    }
+
+                    if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
+                        bestScore = score;
+                        bestTime = writeTime;
+                        bestMatch = file;
+                    }
+                }
+            } catch (UnauthorizedAccessException ex) {
+                logger.Debug(ex, $"Нет доступа к каталогу {directory} для поиска KTX2.");
+                return null;
+            } catch (DirectoryNotFoundException) {
+                return null;
+            } catch (IOException ex) {
+                logger.Debug(ex, $"Ошибка при сканировании каталога {directory} для поиска KTX2.");
+                return null;
+            }
+
+            return bestMatch ?? newestFile;
+        }
+
+        private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {
+            if (string.IsNullOrWhiteSpace(candidateName)) {
+                return -1;
+            }
+
+            static bool ContainsOrdinal(string source, string value) =>
+                source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                return 500;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                return 450;
+            }
+
+            if (candidateName.StartsWith(baseName, StringComparison.OrdinalIgnoreCase)) {
+                return 400;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                candidateName.StartsWith(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                return 350;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) && ContainsOrdinal(candidateName, normalizedBaseName)) {
+                return 250;
+            }
+
+            if (ContainsOrdinal(candidateName, baseName)) {
+                return 200;
+            }
+
+            return -1;
+        }
+
+        private async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            FileInfo fileInfo = new(ktxPath);
+            DateTime lastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
+
+            if (ktxPreviewCache.TryGetValue(ktxPath, out KtxPreviewCacheEntry? cacheEntry) && cacheEntry.LastWriteTimeUtc == lastWriteTimeUtc) {
+                return cacheEntry.Mipmaps;
+            }
+
+            return await Task.Run(() => ExtractKtxMipmaps(ktxPath, lastWriteTimeUtc, cancellationToken), cancellationToken);
+        }
+
+        private List<KtxMipLevel> ExtractKtxMipmaps(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string basisuPath = GetBasisuExecutablePath();
+            string tempDirectory = Path.Combine(Path.GetTempPath(), "PlaycanvasAssetProcessor", "Preview", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDirectory);
+
+            try {
+                if (!string.IsNullOrEmpty(Path.GetDirectoryName(basisuPath)) && !File.Exists(basisuPath)) {
+                    throw new FileNotFoundException($"Не удалось найти исполняемый файл basisu по пути '{basisuPath}'. Укажите корректный путь в настройках конвертации текстур.", basisuPath);
+                }
+
+                ProcessStartInfo startInfo = new() {
+                    FileName = basisuPath,
+                    Arguments = $"-ktx2_to_png -output_path \"{tempDirectory}\" \"{ktxPath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using Process process = new() { StartInfo = startInfo };
+                try {
+                    if (!process.Start()) {
+                        throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.");
+                    }
+                } catch (Win32Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2. Проверьте путь к утилите в настройках и наличие прав на запуск.", ex);
+                } catch (Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.", ex);
+                }
+
+                string standardOutput = process.StandardOutput.ReadToEnd();
+                string standardError = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0) {
+                    logger.Warn($"basisu завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
+                    throw new InvalidOperationException($"basisu завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
+                if (pngFiles.Length == 0) {
+                    throw new InvalidOperationException("basisu не сгенерировал PNG-файлы для предпросмотра KTX2.");
+                }
+
+                List<KtxMipLevel> mipmaps = pngFiles
+                    .Select(path => new { Path = path, Level = ParseMipLevelFromFile(path) })
+                    .OrderBy(entry => entry.Level)
+                    .Select(entry => CreateMipLevel(entry.Path, entry.Level))
+                    .ToList();
+
+                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
+                    LastWriteTimeUtc = lastWriteTimeUtc,
+                    Mipmaps = mipmaps
+                };
+
+                return mipmaps;
+            } finally {
+                try {
+                    Directory.Delete(tempDirectory, true);
+                } catch (Exception cleanupEx) {
+                    logger.Debug(cleanupEx, $"Не удалось удалить временную директорию предпросмотра: {tempDirectory}");
+                }
+            }
+        }
+
+        private static int ParseMipLevelFromFile(string filePath) {
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            Match match = MipLevelRegex.Match(fileName);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int level)) {
+                return level;
+            }
+
+            Match fallback = Regex.Match(fileName, @"(\d+)$");
+            if (fallback.Success && int.TryParse(fallback.Value, out int fallbackLevel)) {
+                return fallbackLevel;
+            }
+
+            return 0;
+        }
+
+        private KtxMipLevel CreateMipLevel(string filePath, int level) {
+            BitmapImage bitmap = new();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(filePath);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return new KtxMipLevel {
+                Level = level,
+                Bitmap = bitmap,
+                Width = bitmap.PixelWidth,
+                Height = bitmap.PixelHeight
+            };
+        }
+
+        private string GetBasisuExecutablePath() {
+            // basisu используется только для preview KTX файлов (конвертация ktx2 в png для предпросмотра)
+            // Для текстовой конвертации используется toktx
+            return "basisu";
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
@@ -2761,11 +3482,11 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
-                    ? "basisu"
-                    : globalTextureSettings.BasisUExecutablePath;
+                var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
+                    ? "toktx"
+                    : globalTextureSettings.ToktxExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(toktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {

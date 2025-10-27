@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using AssetProcessor.TextureConversion.Core;
@@ -9,12 +10,24 @@ namespace AssetProcessor.Controls {
         private bool _isLoading = false;
         private readonly PresetManager _presetManager = new();
 
+        /// <summary>
+        /// Менеджер настроек конвертации (новая система параметров)
+        /// </summary>
+        private ConversionSettingsManager? _conversionSettingsManager;
+
         public event EventHandler? SettingsChanged;
 
         public TextureConversionSettingsPanel() {
             InitializeComponent();
             InitializePresets();
             InitializeDefaults();
+        }
+
+        /// <summary>
+        /// Устанавливает ConversionSettingsManager для использования новой системы пресетов
+        /// </summary>
+        public void SetConversionSettingsManager(ConversionSettingsManager manager) {
+            _conversionSettingsManager = manager;
         }
 
         private void InitializePresets() {
@@ -203,9 +216,116 @@ namespace AssetProcessor.Controls {
         }
 
         private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading && PresetComboBox.SelectedItem is TextureConversionPreset selectedPreset) {
+            if (_isLoading) return;
+
+            // Новая система: строковые имена пресетов (ConversionSettingsManager)
+            if (PresetComboBox.SelectedItem is string presetName) {
+                if (_conversionSettingsManager != null && presetName != "Custom") {
+                    // Применяем пресет из ConversionSettingsSchema
+                    var presets = ConversionSettingsSchema.GetPredefinedPresets();
+                    var preset = presets.FirstOrDefault(p => p.Name == presetName);
+                    if (preset != null) {
+                        LoadConversionPresetToUI(preset);
+                        OnSettingsChanged();
+                    }
+                }
+            }
+            // Старая система: объекты TextureConversionPreset (PresetManager)
+            else if (PresetComboBox.SelectedItem is TextureConversionPreset selectedPreset) {
                 LoadPresetToUI(selectedPreset);
                 OnSettingsChanged();
+            }
+        }
+
+        /// <summary>
+        /// Загружает ConversionPreset (новая система) в UI
+        /// </summary>
+        private void LoadConversionPresetToUI(ConversionPreset preset) {
+            _isLoading = true;
+
+            try {
+                // Применяем значения параметров из пресета
+                foreach (var param in preset.ParameterValues) {
+                    switch (param.Key) {
+                        case "compressionFormat":
+                            if (Enum.TryParse<CompressionFormat>(param.Value?.ToString(), true, out var format)) {
+                                CompressionFormatComboBox.SelectedItem = format;
+                            }
+                            break;
+
+                        case "outputFormat":
+                            if (Enum.TryParse<OutputFormat>(param.Value?.ToString(), true, out var outputFormat)) {
+                                OutputFormatComboBox.SelectedItem = outputFormat;
+                            }
+                            break;
+
+                        case "qualityLevel":
+                            if (param.Value is int qualityInt) {
+                                ETC1SQualitySlider.Value = qualityInt;
+                            }
+                            break;
+
+                        case "uastcQuality":
+                            if (param.Value is int uastcQuality) {
+                                UASTCQualitySlider.Value = uastcQuality;
+                            }
+                            break;
+
+                        case "uastcRDOLambda":
+                            if (param.Value is double rdoLambda) {
+                                UASTCRDOLambdaSlider.Value = rdoLambda;
+                            }
+                            break;
+
+                        case "treatAsSRGB":
+                            if (param.Value is bool srgb && !srgb) {
+                                ForceLinearCheckBox.IsChecked = false;
+                            }
+                            break;
+
+                        case "treatAsLinear":
+                            if (param.Value is bool linear && linear) {
+                                ForceLinearCheckBox.IsChecked = true;
+                            }
+                            break;
+
+                        case "mipFilter":
+                            if (Enum.TryParse<FilterType>(param.Value?.ToString(), true, out var filter)) {
+                                MipFilterComboBox.SelectedItem = filter;
+                            }
+                            break;
+
+                        case "perceptualMode":
+                            if (param.Value is bool perceptual) {
+                                PerceptualModeCheckBox.IsChecked = perceptual;
+                            }
+                            break;
+
+                        case "normalizeVectors":
+                            if (param.Value is bool normalize) {
+                                NormalizeNormalsCheckBox.IsChecked = normalize;
+                            }
+                            break;
+
+                        case "enableToksvig":
+                            if (param.Value is bool enableToksvig) {
+                                ToksvigEnabledCheckBox.IsChecked = enableToksvig;
+                            }
+                            break;
+
+                        case "compositePower":
+                            if (param.Value is double compositePower) {
+                                ToksvigCompositePowerSlider.Value = compositePower;
+                            }
+                            break;
+                    }
+                }
+
+                UpdateCompressionPanels();
+                UpdateOutputFormatPanels();
+
+            } finally {
+                _isLoading = false;
             }
         }
 

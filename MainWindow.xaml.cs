@@ -121,6 +121,7 @@ namespace AssetProcessor {
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
+        private ConversionSettingsManager? conversionSettingsManager; // Менеджер параметров конвертации
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
@@ -193,6 +194,9 @@ namespace AssetProcessor {
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
+
+            // Инициализация ConversionSettings
+            InitializeConversionSettings();
 
             // Подписка на события панели настроек конвертации
             ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
@@ -3295,6 +3299,65 @@ namespace AssetProcessor {
                 AppSettings.Default.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
             }
             AppSettings.Default.Save();
+        }
+
+        /// <summary>
+        /// Инициализация ConversionSettings менеджера и UI
+        /// </summary>
+        private void InitializeConversionSettings() {
+            try {
+                // Загружаем глобальные настройки
+                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+
+                // Создаем менеджер настроек конвертации
+                conversionSettingsManager = new ConversionSettingsManager(globalTextureSettings);
+
+                // Загружаем UI элементы для ConversionSettings
+                PopulateConversionSettingsUI();
+
+                logger.Info("ConversionSettings инициализированы успешно");
+            } catch (Exception ex) {
+                logger.Error(ex, "Ошибка при инициализации ConversionSettings");
+                MessageBox.Show($"Ошибка инициализации настроек конвертации: {ex.Message}",
+                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Заполняет UI элементы ConversionSettings (пресеты и начальные значения)
+        /// </summary>
+        private void PopulateConversionSettingsUI() {
+            if (conversionSettingsManager == null) {
+                logger.Warn("ConversionSettingsManager не инициализирован");
+                return;
+            }
+
+            try {
+                // Получаем пресеты из схемы
+                var presets = ConversionSettingsSchema.GetPredefinedPresets();
+
+                logger.Info($"Загружено {presets.Count} пресетов из ConversionSettingsSchema");
+
+                // Передаем ConversionSettingsManager в панель настроек конвертации
+                // Это позволит панели использовать новую систему параметров
+                if (ConversionSettingsPanel != null) {
+                    // Передаем менеджер в панель
+                    ConversionSettingsPanel.SetConversionSettingsManager(conversionSettingsManager);
+
+                    // Обновляем пресеты в ComboBox
+                    var presetNames = new List<string> { "Custom" };
+                    presetNames.AddRange(presets.Select(p => p.Name));
+
+                    ConversionSettingsPanel.PresetComboBox.ItemsSource = presetNames;
+                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
+
+                    logger.Info($"Пресеты добавлены в PresetComboBox: {string.Join(", ", presetNames)}");
+                }
+
+            } catch (Exception ex) {
+                logger.Error(ex, "Ошибка при заполнении UI ConversionSettings");
+                throw;
+            }
         }
 
         /// <summary>

@@ -142,6 +142,8 @@ namespace AssetProcessor {
         private bool isKtxPreviewAvailable;
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
+        private bool isMiddleButtonPanning;
+        private Point lastPanPoint;
         private BitmapSource? originalFileBitmapSource;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -282,6 +284,7 @@ namespace AssetProcessor {
             currentPreviewZoom = 1.0;
             ApplyZoomTransform();
             UpdateZoomText();
+            EndTexturePreviewPan();
             TexturePreviewScrollViewer?.ScrollToHome();
             TexturePreviewScrollViewer?.ScrollToLeftEnd();
             isKtxPreviewActive = false;
@@ -453,6 +456,69 @@ namespace AssetProcessor {
                     TexturePreviewImage.Source = filteredBitmap;
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
                 });
+            }
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.MiddleButton == MouseButtonState.Pressed && TexturePreviewScrollViewer != null) {
+                isMiddleButtonPanning = true;
+                lastPanPoint = e.GetPosition(TexturePreviewScrollViewer);
+                TexturePreviewScrollViewer.Cursor = Cursors.ScrollAll;
+                Mouse.Capture(TexturePreviewScrollViewer);
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseMove(object sender, MouseEventArgs e) {
+            if (!isMiddleButtonPanning || TexturePreviewScrollViewer == null) {
+                return;
+            }
+
+            Point currentPoint = e.GetPosition(TexturePreviewScrollViewer);
+            double deltaX = currentPoint.X - lastPanPoint.X;
+            double deltaY = currentPoint.Y - lastPanPoint.Y;
+
+            if (Math.Abs(deltaX) > double.Epsilon) {
+                TexturePreviewScrollViewer.ScrollToHorizontalOffset(TexturePreviewScrollViewer.HorizontalOffset - deltaX);
+            }
+
+            if (Math.Abs(deltaY) > double.Epsilon) {
+                TexturePreviewScrollViewer.ScrollToVerticalOffset(TexturePreviewScrollViewer.VerticalOffset - deltaY);
+            }
+
+            lastPanPoint = currentPoint;
+            e.Handled = true;
+        }
+
+        private void TexturePreviewScrollViewer_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
+            if (e.ChangedButton == MouseButton.Middle) {
+                EndTexturePreviewPan();
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreviewScrollViewer_MouseLeave(object sender, MouseEventArgs e) {
+            if (isMiddleButtonPanning) {
+                EndTexturePreviewPan();
+            }
+        }
+
+        private void TexturePreviewScrollViewer_LostMouseCapture(object sender, MouseEventArgs e) {
+            if (isMiddleButtonPanning) {
+                EndTexturePreviewPan();
+            }
+        }
+
+        private void EndTexturePreviewPan() {
+            if (!isMiddleButtonPanning) {
+                return;
+            }
+
+            isMiddleButtonPanning = false;
+            Mouse.Capture(null);
+
+            if (TexturePreviewScrollViewer != null) {
+                TexturePreviewScrollViewer.Cursor = Cursors.Arrow;
             }
         }
 
@@ -1107,19 +1173,29 @@ namespace AssetProcessor {
             }
 
             string baseName = Path.GetFileNameWithoutExtension(sourcePath);
+            string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
+
             string directPath = Path.Combine(directory, baseName + ".ktx2");
             if (File.Exists(directPath)) {
                 return directPath;
             }
 
-            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, SearchOption.TopDirectoryOnly);
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + ".ktx2");
+                if (File.Exists(normalizedDirectPath)) {
+                    return normalizedDirectPath;
+                }
+            }
+
+            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
             if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
                 return sameDirectoryMatch;
             }
 
             string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory);
             if (!string.IsNullOrEmpty(defaultOutputRoot)) {
-                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, SearchOption.AllDirectories);
+                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
                 if (!string.IsNullOrEmpty(outputMatch)) {
                     return outputMatch;
                 }
@@ -1162,21 +1238,35 @@ namespace AssetProcessor {
             return null;
         }
 
-        private string? TryFindKtx2InDirectory(string directory, string baseName, SearchOption searchOption) {
+        private string? TryFindKtx2InDirectory(string directory, string baseName, string normalizedBaseName, SearchOption searchOption) {
             if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
                 return null;
             }
 
-            string searchPattern = baseName + "*.ktx2";
             string? bestMatch = null;
             DateTime bestTime = DateTime.MinValue;
+            int bestScore = -1;
+            string? newestFile = null;
+            DateTime newestTime = DateTime.MinValue;
 
             try {
-                foreach (string file in Directory.EnumerateFiles(directory, searchPattern, searchOption)) {
+                foreach (string file in Directory.EnumerateFiles(directory, "*.ktx2", searchOption)) {
                     DateTime writeTime = File.GetLastWriteTimeUtc(file);
-                    if (bestMatch == null || writeTime > bestTime) {
-                        bestMatch = file;
+
+                    if (writeTime > newestTime) {
+                        newestTime = writeTime;
+                        newestFile = file;
+                    }
+
+                    int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
+                    if (score < 0) {
+                        continue;
+                    }
+
+                    if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
+                        bestScore = score;
                         bestTime = writeTime;
+                        bestMatch = file;
                     }
                 }
             } catch (UnauthorizedAccessException ex) {
@@ -1189,7 +1279,44 @@ namespace AssetProcessor {
                 return null;
             }
 
-            return bestMatch;
+            return bestMatch ?? newestFile;
+        }
+
+        private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {
+            if (string.IsNullOrWhiteSpace(candidateName)) {
+                return -1;
+            }
+
+            static bool ContainsOrdinal(string source, string value) =>
+                source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                return 500;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                return 450;
+            }
+
+            if (candidateName.StartsWith(baseName, StringComparison.OrdinalIgnoreCase)) {
+                return 400;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                candidateName.StartsWith(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                return 350;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) && ContainsOrdinal(candidateName, normalizedBaseName)) {
+                return 250;
+            }
+
+            if (ContainsOrdinal(candidateName, baseName)) {
+                return 200;
+            }
+
+            return -1;
         }
 
         private async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {

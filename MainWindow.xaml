@@ -410,7 +410,12 @@
                                         <ScrollViewer x:Name="TexturePreviewScrollViewer"
                                                       HorizontalScrollBarVisibility="Auto"
                                                       VerticalScrollBarVisibility="Auto"
-                                                      PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel">
+                                                      PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
+                                                      PreviewMouseDown="TexturePreviewScrollViewer_PreviewMouseDown"
+                                                      PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
+                                                      PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"
+                                                      MouseLeave="TexturePreviewScrollViewer_MouseLeave"
+                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture">
                                             <Grid>
                                                 <Image x:Name="TexturePreviewImage"
                                                        RenderOptions.EdgeMode="Aliased"

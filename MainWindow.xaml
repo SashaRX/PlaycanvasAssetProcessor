@@ -401,12 +401,13 @@
                         <Expander Grid.Row="0" Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Grid>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="*" />
+                                    <RowDefinition x:Name="PreviewContentRow" Height="300" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <Grid Grid.Row="0">
-                                    <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
+                                    <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
                                         <ScrollViewer x:Name="TexturePreviewScrollViewer"
                                                       HorizontalScrollBarVisibility="Auto"
                                                       VerticalScrollBarVisibility="Auto"
@@ -439,7 +440,18 @@
                                     </Canvas>
                                 </Grid>
 
-                                <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
+                                <GridSplitter Grid.Row="1"
+                                              Height="6"
+                                              Margin="0,4,0,4"
+                                              Background="#FFE0E0E0"
+                                              HorizontalAlignment="Stretch"
+                                              ResizeDirection="Rows"
+                                              ResizeBehavior="PreviousAndNext"
+                                              ShowsPreview="False"
+                                              Cursor="SizeNS"
+                                              DragDelta="PreviewHeightGridSplitter_DragDelta" />
+
+                                <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
                                         <TextBlock Text="Ширина превью:" FontSize="10" VerticalAlignment="Center" />
                                         <Slider x:Name="PreviewWidthSlider"

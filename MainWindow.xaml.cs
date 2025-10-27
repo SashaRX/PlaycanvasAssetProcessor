@@ -128,6 +128,9 @@ namespace AssetProcessor {
         private const double MaxPreviewZoom = 8.0;
         private const double MinPreviewColumnWidth = 256.0;
         private const double MaxPreviewColumnWidth = 512.0;
+        private const double MinPreviewContentHeight = 128.0;
+        private const double MaxPreviewContentHeight = 512.0;
+        private const double DefaultPreviewContentHeight = 300.0;
         private double currentPreviewZoom = 1.0;
         private bool isKtxPreviewActive;
         private int currentMipLevel;
@@ -185,6 +188,7 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
+            UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
 
@@ -344,6 +348,7 @@ namespace AssetProcessor {
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
             double targetWidth = Math.Clamp(PreviewColumn.ActualWidth, MinPreviewColumnWidth, MaxPreviewColumnWidth);
             UpdatePreviewWidthControls(targetWidth);
+            ClampPreviewContentHeight();
         }
 
         private void UpdatePreviewWidthControls(double width) {
@@ -356,6 +361,43 @@ namespace AssetProcessor {
             }
 
             UpdatePreviewWidthText(clampedWidth);
+        }
+
+        private void PreviewHeightGridSplitter_DragDelta(object sender, DragDeltaEventArgs e) {
+            if (PreviewContentRow == null) {
+                return;
+            }
+
+            double desiredHeight = PreviewContentRow.ActualHeight + e.VerticalChange;
+            UpdatePreviewContentHeight(desiredHeight);
+            e.Handled = true;
+        }
+
+        private void ClampPreviewContentHeight() {
+            if (PreviewContentRow == null) {
+                return;
+            }
+
+            double currentHeight = PreviewContentRow.ActualHeight;
+
+            if (currentHeight <= 0) {
+                if (PreviewContentRow.Height.IsAbsolute && PreviewContentRow.Height.Value > 0) {
+                    currentHeight = PreviewContentRow.Height.Value;
+                } else {
+                    currentHeight = DefaultPreviewContentHeight;
+                }
+            }
+
+            UpdatePreviewContentHeight(currentHeight);
+        }
+
+        private void UpdatePreviewContentHeight(double desiredHeight) {
+            if (PreviewContentRow == null) {
+                return;
+            }
+
+            double clampedHeight = Math.Clamp(desiredHeight, MinPreviewContentHeight, MaxPreviewContentHeight);
+            PreviewContentRow.Height = new GridLength(clampedHeight);
         }
 
         private void UpdatePreviewWidthText(double width) {
@@ -1316,6 +1358,45 @@ namespace AssetProcessor {
                         bestTime = writeTime;
                         bestMatch = file;
                     }
+                } catch (Win32Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2. Проверьте путь к утилите в настройках и наличие прав на запуск.", ex);
+                } catch (Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.", ex);
+                }
+
+                string standardOutput = process.StandardOutput.ReadToEnd();
+                string standardError = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0) {
+                    logger.Warn($"basisu завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
+                    throw new InvalidOperationException($"basisu завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
+                if (pngFiles.Length == 0) {
+                    throw new InvalidOperationException("basisu не сгенерировал PNG-файлы для предпросмотра KTX2.");
+                }
+
+                List<KtxMipLevel> mipmaps = pngFiles
+                    .Select(path => new { Path = path, Level = ParseMipLevelFromFile(path) })
+                    .OrderBy(entry => entry.Level)
+                    .Select(entry => CreateMipLevel(entry.Path, entry.Level))
+                    .ToList();
+
+                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
+                    LastWriteTimeUtc = lastWriteTimeUtc,
+                    Mipmaps = mipmaps
+                };
+
+                return mipmaps;
+            } finally {
+                try {
+                    Directory.Delete(tempDirectory, true);
+                } catch (Exception cleanupEx) {
+                    logger.Debug(cleanupEx, $"Не удалось удалить временную директорию предпросмотра: {tempDirectory}");
                 }
             } catch (UnauthorizedAccessException ex) {
                 logger.Debug(ex, $"Нет доступа к каталогу {directory} для поиска KTX2.");
@@ -1447,6 +1528,47 @@ namespace AssetProcessor {
                     logger.Debug(cleanupEx, $"Не удалось удалить временную директорию предпросмотра: {tempDirectory}");
                 }
             }
+        }
+
+        private static int ParseMipLevelFromFile(string filePath) {
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            Match match = MipLevelRegex.Match(fileName);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int level)) {
+                return level;
+            }
+
+            Match fallback = Regex.Match(fileName, @"(\d+)$");
+            if (fallback.Success && int.TryParse(fallback.Value, out int fallbackLevel)) {
+                return fallbackLevel;
+            }
+
+            return 0;
+        }
+
+        private KtxMipLevel CreateMipLevel(string filePath, int level) {
+            BitmapImage bitmap = new();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(filePath);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return new KtxMipLevel {
+                Level = level,
+                Bitmap = bitmap,
+                Width = bitmap.PixelWidth,
+                Height = bitmap.PixelHeight
+            };
+        }
+
+        private string GetBasisuExecutablePath() {
+            if (globalTextureSettings == null) {
+                globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+            }
+
+            return string.IsNullOrWhiteSpace(globalTextureSettings?.BasisUExecutablePath)
+                ? "basisu"
+                : globalTextureSettings!.BasisUExecutablePath;
         }
 
         private static int ParseMipLevelFromFile(string filePath) {

@@ -2663,6 +2663,30 @@ namespace AssetProcessor {
                 var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
                 texture.PresetName = matchedPreset?.Name ?? "";
             }
+
+            // Check if compressed file (.ktx2 or .basis) already exists and set CompressedSize
+            if (!string.IsNullOrEmpty(texture.Path) && File.Exists(texture.Path)) {
+                var sourceDir = Path.GetDirectoryName(texture.Path);
+                var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
+
+                if (!string.IsNullOrEmpty(sourceDir) && !string.IsNullOrEmpty(sourceFileName)) {
+                    // Check for .ktx2 file first
+                    var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
+                    if (File.Exists(ktx2Path)) {
+                        var fileInfo = new FileInfo(ktx2Path);
+                        texture.CompressedSize = fileInfo.Length;
+                    } else {
+                        // Check for .basis file as fallback
+                        var basisPath = Path.Combine(sourceDir, sourceFileName + ".basis");
+                        if (File.Exists(basisPath)) {
+                            var fileInfo = new FileInfo(basisPath);
+                            texture.CompressedSize = fileInfo.Length;
+                        } else {
+                            texture.CompressedSize = 0;
+                        }
+                    }
+                }
+            }
         }
 
         private TextureConversion.Core.TextureType MapTextureTypeToCore(string textureType) {

@@ -8,7 +8,8 @@
       "Bash(dotnet build:*)",
       "Bash(git checkout:*)",
       "Bash(git stash:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(dotnet clean)"
     ]
   },
   "outputStyle": "default"

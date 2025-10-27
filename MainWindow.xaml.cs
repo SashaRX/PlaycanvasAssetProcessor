@@ -126,6 +126,8 @@ namespace AssetProcessor {
         private const int ThumbnailSize = 256; // Размер для быстрого превью
         private const double MinPreviewZoom = 0.1;
         private const double MaxPreviewZoom = 8.0;
+        private const double MinPreviewColumnWidth = 256.0;
+        private const double MaxPreviewColumnWidth = 512.0;
         private double currentPreviewZoom = 1.0;
         private bool isKtxPreviewActive;
         private int currentMipLevel;
@@ -143,6 +145,7 @@ namespace AssetProcessor {
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
         private bool isMiddleButtonPanning;
+        private bool isUpdatingPreviewWidth;
         private Point lastPanPoint;
         private BitmapSource? originalFileBitmapSource;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -318,6 +321,49 @@ namespace AssetProcessor {
             }
         }
 
+        private void PreviewWidthSlider_Loaded(object sender, RoutedEventArgs e) {
+            UpdatePreviewWidthControls(PreviewColumn.ActualWidth > 0 ? PreviewColumn.ActualWidth : PreviewColumn.Width.Value);
+        }
+
+        private void PreviewWidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (isUpdatingPreviewWidth) {
+                return;
+            }
+
+            double clampedWidth = Math.Clamp(e.NewValue, MinPreviewColumnWidth, MaxPreviewColumnWidth);
+            isUpdatingPreviewWidth = true;
+
+            try {
+                PreviewColumn.Width = new GridLength(clampedWidth);
+                UpdatePreviewWidthText(clampedWidth);
+            } finally {
+                isUpdatingPreviewWidth = false;
+            }
+        }
+
+        private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
+            double targetWidth = Math.Clamp(PreviewColumn.ActualWidth, MinPreviewColumnWidth, MaxPreviewColumnWidth);
+            UpdatePreviewWidthControls(targetWidth);
+        }
+
+        private void UpdatePreviewWidthControls(double width) {
+            double clampedWidth = Math.Clamp(width, MinPreviewColumnWidth, MaxPreviewColumnWidth);
+
+            if (PreviewWidthSlider != null) {
+                isUpdatingPreviewWidth = true;
+                PreviewWidthSlider.Value = clampedWidth;
+                isUpdatingPreviewWidth = false;
+            }
+
+            UpdatePreviewWidthText(clampedWidth);
+        }
+
+        private void UpdatePreviewWidthText(double width) {
+            if (PreviewWidthValueTextBlock != null) {
+                PreviewWidthValueTextBlock.Text = $"{(int)Math.Round(width)} px";
+            }
+        }
+
         private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
             if (isUpdatingPreviewSourceControls) {
                 return;
@@ -372,6 +418,8 @@ namespace AssetProcessor {
                 TexturePreviewScaleTransform.ScaleX = currentPreviewZoom;
                 TexturePreviewScaleTransform.ScaleY = currentPreviewZoom;
             }
+
+            TexturePreviewScrollViewer?.UpdateLayout();
         }
 
         private void UpdateZoomText() {

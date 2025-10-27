@@ -126,12 +126,11 @@ namespace AssetProcessor {
         private const int ThumbnailSize = 256; // Размер для быстрого превью
         private const double MinPreviewZoom = 0.1;
         private const double MaxPreviewZoom = 8.0;
-        private const double MinPreviewColumnWidth = 256.0;
-        private const double MaxPreviewColumnWidth = 512.0;
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = 512.0;
         private const double DefaultPreviewContentHeight = 300.0;
         private double currentPreviewZoom = 1.0;
+        private double fitPreviewZoom = 1.0;
         private bool isKtxPreviewActive;
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
@@ -147,8 +146,8 @@ namespace AssetProcessor {
         private bool isKtxPreviewAvailable;
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
+        private bool isUserZooming;
         private bool isMiddleButtonPanning;
-        private bool isUpdatingPreviewWidth;
         private Point lastPanPoint;
         private BitmapSource? originalFileBitmapSource;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -289,6 +288,8 @@ namespace AssetProcessor {
 
         private void ResetPreviewState() {
             currentPreviewZoom = 1.0;
+            fitPreviewZoom = 1.0;
+            isUserZooming = false;
             ApplyZoomTransform();
             UpdateZoomText();
             EndTexturePreviewPan();
@@ -325,42 +326,15 @@ namespace AssetProcessor {
             }
         }
 
-        private void PreviewWidthSlider_Loaded(object sender, RoutedEventArgs e) {
-            UpdatePreviewWidthControls(PreviewColumn.ActualWidth > 0 ? PreviewColumn.ActualWidth : PreviewColumn.Width.Value);
-        }
-
-        private void PreviewWidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (isUpdatingPreviewWidth) {
-                return;
-            }
-
-            double clampedWidth = Math.Clamp(e.NewValue, MinPreviewColumnWidth, MaxPreviewColumnWidth);
-            isUpdatingPreviewWidth = true;
-
-            try {
-                PreviewColumn.Width = new GridLength(clampedWidth);
-                UpdatePreviewWidthText(clampedWidth);
-            } finally {
-                isUpdatingPreviewWidth = false;
-            }
-        }
-
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
-            double targetWidth = Math.Clamp(PreviewColumn.ActualWidth, MinPreviewColumnWidth, MaxPreviewColumnWidth);
-            UpdatePreviewWidthControls(targetWidth);
             ClampPreviewContentHeight();
+            RecalculateFitZoom();
         }
 
-        private void UpdatePreviewWidthControls(double width) {
-            double clampedWidth = Math.Clamp(width, MinPreviewColumnWidth, MaxPreviewColumnWidth);
-
-            if (PreviewWidthSlider != null) {
-                isUpdatingPreviewWidth = true;
-                PreviewWidthSlider.Value = clampedWidth;
-                isUpdatingPreviewWidth = false;
+        private void TexturePreviewScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (e.WidthChanged || e.HeightChanged) {
+                RecalculateFitZoom();
             }
-
-            UpdatePreviewWidthText(clampedWidth);
         }
 
         private void PreviewHeightGridSplitter_DragDelta(object sender, DragDeltaEventArgs e) {
@@ -370,6 +344,7 @@ namespace AssetProcessor {
 
             double desiredHeight = PreviewContentRow.ActualHeight + e.VerticalChange;
             UpdatePreviewContentHeight(desiredHeight);
+            RecalculateFitZoom();
             e.Handled = true;
         }
 
@@ -398,12 +373,6 @@ namespace AssetProcessor {
 
             double clampedHeight = Math.Clamp(desiredHeight, MinPreviewContentHeight, MaxPreviewContentHeight);
             PreviewContentRow.Height = new GridLength(clampedHeight);
-        }
-
-        private void UpdatePreviewWidthText(double width) {
-            if (PreviewWidthValueTextBlock != null) {
-                PreviewWidthValueTextBlock.Text = $"{(int)Math.Round(width)} px";
-            }
         }
 
         private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
@@ -467,6 +436,54 @@ namespace AssetProcessor {
         private void UpdateZoomText() {
             if (TextureZoomTextBlock != null) {
                 TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(currentPreviewZoom * 100, 0)}%";
+            }
+        }
+
+        private void RecalculateFitZoom(bool forceApply = false) {
+            if (TexturePreviewScrollViewer == null || TexturePreviewImage?.Source is not BitmapSource bitmapSource) {
+                fitPreviewZoom = 1.0;
+                return;
+            }
+
+            double viewportWidth = TexturePreviewScrollViewer.ViewportWidth;
+            double viewportHeight = TexturePreviewScrollViewer.ViewportHeight;
+
+            if (double.IsNaN(viewportWidth) || viewportWidth <= 0) {
+                viewportWidth = TexturePreviewScrollViewer.ActualWidth;
+            }
+
+            if (double.IsNaN(viewportHeight) || viewportHeight <= 0) {
+                viewportHeight = TexturePreviewScrollViewer.ActualHeight;
+            }
+
+            if (viewportWidth <= 0 || viewportHeight <= 0 || bitmapSource.PixelWidth <= 0 || bitmapSource.PixelHeight <= 0) {
+                fitPreviewZoom = 1.0;
+                return;
+            }
+
+            double scaleX = viewportWidth / bitmapSource.PixelWidth;
+            double scaleY = viewportHeight / bitmapSource.PixelHeight;
+            double targetZoom = Math.Min(scaleX, scaleY);
+
+            if (double.IsNaN(targetZoom) || double.IsInfinity(targetZoom)) {
+                targetZoom = 1.0;
+            }
+
+            fitPreviewZoom = Math.Clamp(targetZoom, MinPreviewZoom, 1.0);
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+
+            if (forceApply || !isUserZooming) {
+                bool zoomChanged = Math.Abs(currentPreviewZoom - minZoom) > 0.001;
+                currentPreviewZoom = minZoom;
+
+                if (zoomChanged || forceApply) {
+                    ApplyZoomTransform();
+                    UpdateZoomText();
+                }
+            } else if (currentPreviewZoom < minZoom - 0.001) {
+                currentPreviewZoom = minZoom;
+                ApplyZoomTransform();
+                UpdateZoomText();
             }
         }
 
@@ -614,13 +631,15 @@ namespace AssetProcessor {
 
         private void TexturePreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
-            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, MinPreviewZoom, MaxPreviewZoom);
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, minZoom, MaxPreviewZoom);
 
             if (Math.Abs(newZoom - currentPreviewZoom) < 0.001) {
                 return;
             }
 
             currentPreviewZoom = newZoom;
+            isUserZooming = true;
             ApplyZoomTransform();
             UpdateZoomText();
             e.Handled = true;
@@ -646,7 +665,10 @@ namespace AssetProcessor {
                     BChannelButton.IsChecked = false;
                     AChannelButton.IsChecked = false;
                     UpdateHistogram(originalBitmapSource);
+                    isUserZooming = false;
                 });
+
+                _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
             }
         }
 
@@ -1358,45 +1380,6 @@ namespace AssetProcessor {
                         bestTime = writeTime;
                         bestMatch = file;
                     }
-                } catch (Win32Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2. Проверьте путь к утилите в настройках и наличие прав на запуск.", ex);
-                } catch (Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.", ex);
-                }
-
-                string standardOutput = process.StandardOutput.ReadToEnd();
-                string standardError = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-
-                if (process.ExitCode != 0) {
-                    logger.Warn($"basisu завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
-                    throw new InvalidOperationException($"basisu завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
-                if (pngFiles.Length == 0) {
-                    throw new InvalidOperationException("basisu не сгенерировал PNG-файлы для предпросмотра KTX2.");
-                }
-
-                List<KtxMipLevel> mipmaps = pngFiles
-                    .Select(path => new { Path = path, Level = ParseMipLevelFromFile(path) })
-                    .OrderBy(entry => entry.Level)
-                    .Select(entry => CreateMipLevel(entry.Path, entry.Level))
-                    .ToList();
-
-                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
-                    LastWriteTimeUtc = lastWriteTimeUtc,
-                    Mipmaps = mipmaps
-                };
-
-                return mipmaps;
-            } finally {
-                try {
-                    Directory.Delete(tempDirectory, true);
-                } catch (Exception cleanupEx) {
-                    logger.Debug(cleanupEx, $"Не удалось удалить временную директорию предпросмотра: {tempDirectory}");
                 }
             } catch (UnauthorizedAccessException ex) {
                 logger.Debug(ex, $"Нет доступа к каталогу {directory} для поиска KTX2.");
@@ -1569,43 +1552,6 @@ namespace AssetProcessor {
             return string.IsNullOrWhiteSpace(globalTextureSettings?.BasisUExecutablePath)
                 ? "basisu"
                 : globalTextureSettings!.BasisUExecutablePath;
-        }
-
-        private static int ParseMipLevelFromFile(string filePath) {
-            string fileName = Path.GetFileNameWithoutExtension(filePath);
-            Match match = MipLevelRegex.Match(fileName);
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int level)) {
-                return level;
-            }
-
-            Match fallback = Regex.Match(fileName, @"(\d+)$");
-            if (fallback.Success && int.TryParse(fallback.Value, out int fallbackLevel)) {
-                return fallbackLevel;
-            }
-
-            return 0;
-        }
-
-        private KtxMipLevel CreateMipLevel(string filePath, int level) {
-            BitmapImage bitmap = new();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(filePath);
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            return new KtxMipLevel {
-                Level = level,
-                Bitmap = bitmap,
-                Width = bitmap.PixelWidth,
-                Height = bitmap.PixelHeight
-            };
-        }
-
-        private string GetBasisuExecutablePath() {
-            // basisu используется только для preview KTX файлов (конвертация ktx2 в png для предпросмотра)
-            // Для текстовой конвертации используется toktx
-            return "basisu";
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {

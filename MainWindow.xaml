@@ -416,7 +416,8 @@
                                                       PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
                                                       PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"
                                                       MouseLeave="TexturePreviewScrollViewer_MouseLeave"
-                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture">
+                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture"
+                                                      SizeChanged="TexturePreviewScrollViewer_SizeChanged">
                                             <Grid>
                                                 <Image x:Name="TexturePreviewImage"
                                                        RenderOptions.EdgeMode="Aliased"
@@ -452,20 +453,6 @@
                                               DragDelta="PreviewHeightGridSplitter_DragDelta" />
 
                                 <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
-                                        <TextBlock Text="Ширина превью:" FontSize="10" VerticalAlignment="Center" />
-                                        <Slider x:Name="PreviewWidthSlider"
-                                                Minimum="256"
-                                                Maximum="512"
-                                                Width="160"
-                                                Margin="6,0,0,0"
-                                                ValueChanged="PreviewWidthSlider_ValueChanged"
-                                                Loaded="PreviewWidthSlider_Loaded" />
-                                        <TextBlock x:Name="PreviewWidthValueTextBlock"
-                                                   FontSize="10"
-                                                   Margin="6,0,0,0"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
                                         <TextBlock Text="Источник превью:" FontSize="10" VerticalAlignment="Center" />
                                         <RadioButton x:Name="PreviewSourceOriginalRadioButton"

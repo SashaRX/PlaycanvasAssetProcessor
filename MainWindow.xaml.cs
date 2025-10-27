@@ -2877,6 +2877,9 @@ namespace AssetProcessor {
                     ProgressBar.Value++;
                 }
 
+                // Force DataGrid to refresh and display updated CompressedSize values
+                TexturesDataGrid.Items.Refresh();
+
                 ProgressTextBlock.Text = $"Completed: {successCount} success, {errorCount} errors";
 
                 // Build result message

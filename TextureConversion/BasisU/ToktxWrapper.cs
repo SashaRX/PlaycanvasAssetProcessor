@@ -95,22 +95,28 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
                 // Собираем аргументы командной строки
                 var args = BuildArguments(mipmapPaths, outputPath, settings);
-                var argsString = string.Join(" ", args);
 
                 Logger.Info($"=== TOKTX COMMAND ===");
                 Logger.Info($"  Executable: {_toktxExecutablePath}");
-                Logger.Info($"  Arguments: {argsString}");
+                Logger.Info($"  Arguments count: {args.Count}");
+                foreach (var arg in args) {
+                    Logger.Info($"    {arg}");
+                }
 
-                // Запускаем toktx
+                // Запускаем toktx с ArgumentList для правильной обработки путей с пробелами
                 var psi = new ProcessStartInfo {
                     FileName = _toktxExecutablePath,
-                    Arguments = argsString,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = Directory.GetCurrentDirectory()
                 };
+
+                // Используем ArgumentList вместо Arguments для правильной обработки кавычек
+                foreach (var arg in args) {
+                    psi.ArgumentList.Add(arg);
+                }
 
                 using var process = Process.Start(psi);
                 if (process == null) {
@@ -214,11 +220,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             // Output file - ПОСЛЕ всех флагов!
-            args.Add($"\"{outputPath}\"");
+            // ArgumentList сам добавит кавычки при необходимости
+            args.Add(outputPath);
 
             // Input files (mipmaps)
             foreach (var mipmapPath in mipmapPaths) {
-                args.Add($"\"{mipmapPath}\"");
+                args.Add(mipmapPath);
             }
 
             return args;

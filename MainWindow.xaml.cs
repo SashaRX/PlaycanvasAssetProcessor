@@ -1358,6 +1358,45 @@ namespace AssetProcessor {
                         bestTime = writeTime;
                         bestMatch = file;
                     }
+                } catch (Win32Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2. Проверьте путь к утилите в настройках и наличие прав на запуск.", ex);
+                } catch (Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.", ex);
+                }
+
+                string standardOutput = process.StandardOutput.ReadToEnd();
+                string standardError = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0) {
+                    logger.Warn($"basisu завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
+                    throw new InvalidOperationException($"basisu завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
+                if (pngFiles.Length == 0) {
+                    throw new InvalidOperationException("basisu не сгенерировал PNG-файлы для предпросмотра KTX2.");
+                }
+
+                List<KtxMipLevel> mipmaps = pngFiles
+                    .Select(path => new { Path = path, Level = ParseMipLevelFromFile(path) })
+                    .OrderBy(entry => entry.Level)
+                    .Select(entry => CreateMipLevel(entry.Path, entry.Level))
+                    .ToList();
+
+                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
+                    LastWriteTimeUtc = lastWriteTimeUtc,
+                    Mipmaps = mipmaps
+                };
+
+                return mipmaps;
+            } finally {
+                try {
+                    Directory.Delete(tempDirectory, true);
+                } catch (Exception cleanupEx) {
+                    logger.Debug(cleanupEx, $"Не удалось удалить временную директорию предпросмотра: {tempDirectory}");
                 }
             } catch (UnauthorizedAccessException ex) {
                 logger.Debug(ex, $"Нет доступа к каталогу {directory} для поиска KTX2.");
@@ -1530,6 +1569,43 @@ namespace AssetProcessor {
             return string.IsNullOrWhiteSpace(globalTextureSettings?.BasisUExecutablePath)
                 ? "basisu"
                 : globalTextureSettings!.BasisUExecutablePath;
+        }
+
+        private static int ParseMipLevelFromFile(string filePath) {
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            Match match = MipLevelRegex.Match(fileName);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int level)) {
+                return level;
+            }
+
+            Match fallback = Regex.Match(fileName, @"(\d+)$");
+            if (fallback.Success && int.TryParse(fallback.Value, out int fallbackLevel)) {
+                return fallbackLevel;
+            }
+
+            return 0;
+        }
+
+        private KtxMipLevel CreateMipLevel(string filePath, int level) {
+            BitmapImage bitmap = new();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(filePath);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return new KtxMipLevel {
+                Level = level,
+                Bitmap = bitmap,
+                Width = bitmap.PixelWidth,
+                Height = bitmap.PixelHeight
+            };
+        }
+
+        private string GetBasisuExecutablePath() {
+            // basisu используется только для preview KTX файлов (конвертация ktx2 в png для предпросмотра)
+            // Для текстовой конвертации используется toktx
+            return "basisu";
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
@@ -3528,11 +3604,11 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
-                    ? "basisu"
-                    : globalTextureSettings.BasisUExecutablePath;
+                var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
+                    ? "toktx"
+                    : globalTextureSettings.ToktxExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(toktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {

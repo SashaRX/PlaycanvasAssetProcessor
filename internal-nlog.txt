@@ -1,0 +1,19 @@
+2025-10-27 19:05:53.2989 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2025-10-27 19:05:53.3018 Info Registered target NLog.Targets.ConsoleTarget(Name=consoleTarget)
+2025-10-27 19:05:53.3018 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2025-10-27 19:05:53.3427 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
+2025-10-27 19:05:53.3481 Info Configuration initialized.
+2025-10-27 19:25:57.0448 Info AppDomain Shutting down. LogFactory closing...
+2025-10-27 19:25:57.0540 Info LogFactory has been closed.
+2025-10-27 19:39:52.2433 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2025-10-27 19:39:52.2433 Info Registered target NLog.Targets.ConsoleTarget(Name=consoleTarget)
+2025-10-27 19:39:52.2433 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2025-10-27 19:39:52.2834 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
+2025-10-27 19:39:52.2889 Info Configuration initialized.
+2025-10-27 21:48:09.1472 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2025-10-27 21:48:09.1472 Info Registered target NLog.Targets.ConsoleTarget(Name=consoleTarget)
+2025-10-27 21:48:09.1472 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2025-10-27 21:48:09.1898 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
+2025-10-27 21:48:09.1898 Info Configuration initialized.
+2025-10-27 21:55:02.6761 Info AppDomain Shutting down. LogFactory closing...
+2025-10-27 21:55:02.6761 Info LogFactory has been closed.

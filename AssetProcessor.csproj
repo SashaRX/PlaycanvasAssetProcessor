@@ -84,6 +84,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <TrimmerRootDescriptor Include="Trimming/TrimmerRoots.xml" />
   </ItemGroup>
 

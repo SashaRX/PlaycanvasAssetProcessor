@@ -10,7 +10,9 @@
       "Bash(git stash:*)",
       "mcp__ide__getDiagnostics",
       "Bash(dotnet clean)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(Get-ChildItem -Path \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" -Filter \"file.txt\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -First 5 FullName)"
     ]
   },
   "outputStyle": "default"

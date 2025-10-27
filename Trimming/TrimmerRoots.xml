@@ -1,0 +1,13 @@
+<linker>
+  <assembly fullname="AssetProcessor">
+    <type fullname="AssetProcessor.Helpers.SizeConverter" />
+    <type fullname="AssetProcessor.Helpers.ResolutionConverter" />
+    <type fullname="AssetProcessor.Helpers.StatusToVisibilityConverter" />
+    <type fullname="AssetProcessor.Helpers.StatusToVisibilityInverseConverter" />
+    <type fullname="AssetProcessor.Helpers.StatusToBackgroundConverter" />
+    <type fullname="AssetProcessor.Helpers.TextureTypeToBackgroundConverter" />
+    <type fullname="AssetProcessor.Helpers.ChannelColorConverter" />
+    <type fullname="AssetProcessor.Controls.TextureConversionSettingsPanel" />
+    <type fullname="AssetProcessor.TextBoxWatermarkBehavior" />
+  </assembly>
+</linker>

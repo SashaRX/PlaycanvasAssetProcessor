@@ -976,9 +976,13 @@ namespace AssetProcessor {
             Directory.CreateDirectory(tempDirectory);
 
             try {
+                if (!string.IsNullOrEmpty(Path.GetDirectoryName(basisuPath)) && !File.Exists(basisuPath)) {
+                    throw new FileNotFoundException($"Не удалось найти исполняемый файл basisu по пути '{basisuPath}'. Укажите корректный путь в настройках конвертации текстур.", basisuPath);
+                }
+
                 ProcessStartInfo startInfo = new() {
                     FileName = basisuPath,
-                    Arguments = $"\"{ktxPath}\" -ktx2_to_png -output_path \"{tempDirectory}\"",
+                    Arguments = $"-ktx2_to_png -output_path \"{tempDirectory}\" \"{ktxPath}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -990,6 +994,8 @@ namespace AssetProcessor {
                     if (!process.Start()) {
                         throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.");
                     }
+                } catch (Win32Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2. Проверьте путь к утилите в настройках и наличие прав на запуск.", ex);
                 } catch (Exception ex) {
                     throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.", ex);
                 }

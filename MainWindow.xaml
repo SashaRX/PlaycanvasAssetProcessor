@@ -391,9 +391,14 @@
 
             <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible">
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
-                    <StackPanel>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <!-- Preview Section -->
-                        <Expander Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="0" Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Grid>
                                 <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
                                     <ScrollViewer x:Name="TexturePreviewScrollViewer"
@@ -452,21 +457,21 @@
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <Expander Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Border BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
                                 <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                             </Border>
                         </Expander>
 
                         <!-- Conversion Settings Panel -->
-                        <Expander x:Name="ConversionSettingsExpander" Header="Conversion Settings"
+                        <Expander Grid.Row="2" x:Name="ConversionSettingsExpander" Header="Conversion Settings"
                                   Style="{StaticResource CompactExpanderStyle}" IsExpanded="True"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
                                                                      SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
                         </Expander>
-                    </StackPanel>
+                    </Grid>
                 </Border>
             </ScrollViewer>
 

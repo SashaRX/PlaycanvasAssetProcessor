@@ -10,12 +10,10 @@ using Newtonsoft.Json.Linq;
 using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
-using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -32,7 +30,6 @@ using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
-using PointF = System.Drawing.PointF;
 using System.Linq;
 using AssetProcessor.TextureConversion.Settings;
 
@@ -398,79 +395,80 @@ namespace AssetProcessor {
         }
 
         private void UpdateUVImage(Mesh mesh) {
-            int width = 512;
-            int height = 512;
+            const int width = 512;
+            const int height = 512;
 
-            // Создаем bitmap для основной UV карты
-            Bitmap bitmap1 = new(width, height);
-            using (Graphics g = Graphics.FromImage(bitmap1)) {
-                g.Clear(System.Drawing.Color.DarkGray);
-                if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null) {
-                    List<Assimp.Vector3D> uvs = mesh.TextureCoordinateChannels[0];
-                    foreach (Face? face in mesh.Faces) {
-                        if (face.IndexCount == 3) {
-                            PointF[] points = new PointF[3];
-                            for (int i = 0; i < 3; i++) {
-                                int vertexIndex = face.Indices[i];
-                                if (vertexIndex < uvs.Count) {
-                                    Assimp.Vector3D uv = uvs[vertexIndex];
-                                    points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
-                                }
-                            }
-                            // Заливка треугольника полупрозрачным цветом
-                            g.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(186, System.Drawing.Color.OrangeRed)), points);
-                            // Обводка треугольника черным цветом
-                            g.DrawPolygon(Pens.DarkBlue, points);
-                        }
-                    }
-                }
-            }
-
-            // Создаем bitmap для дополнительной UV карты
-            Bitmap bitmap2 = new(width, height);
-            bool hasSecondUV = mesh.TextureCoordinateChannels.Length > 1 && mesh.TextureCoordinateChannels[1] != null;
-            using (Graphics g = Graphics.FromImage(bitmap2)) {
-                g.Clear(System.Drawing.Color.DarkGray);
-                if (hasSecondUV) {
-                    List<Assimp.Vector3D> uvs = mesh.TextureCoordinateChannels[1];
-                    foreach (Face? face in mesh.Faces.Where(face => face.IndexCount == 3)) {
-                        PointF[] points = new PointF[3];
-                        for (int i = 0; i < 3; i++) {
-                            int vertexIndex = face.Indices[i];
-                            if (vertexIndex < uvs.Count) {
-                                Assimp.Vector3D uv = uvs[vertexIndex];
-                                points[i] = new PointF(uv.X * width, (1 - uv.Y) * height);
-                            }
-                        }
-                        // Заливка треугольника полупрозрачным цветом
-                        g.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(186, System.Drawing.Color.OrangeRed)), points);
-                        // Обводка треугольника черным цветом
-                        g.DrawPolygon(Pens.DarkBlue, points);
-                    }
-                }
-            }
-
-            // Преобразуем bitmap в BitmapSource для отображения в WPF
-            BitmapSource bitmapSource1 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                bitmap1.GetHbitmap(),
-                IntPtr.Zero,
-                Int32Rect.Empty,
-                BitmapSizeOptions.FromWidthAndHeight(width, height));
-            bitmap1.Dispose();
-
-            BitmapSource bitmapSource2 = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                bitmap2.GetHbitmap(),
-                IntPtr.Zero,
-                Int32Rect.Empty,
-                BitmapSizeOptions.FromWidthAndHeight(width, height));
-            bitmap2.Dispose();
+            BitmapSource primaryUv = CreateUvBitmapSource(mesh, 0, width, height);
+            BitmapSource secondaryUv = CreateUvBitmapSource(mesh, 1, width, height);
 
             Dispatcher.Invoke(() => {
-                UVImage.Source = bitmapSource1;
-                UVImage2.Source = bitmapSource2;
-                //UVImage2Border.Visibility = hasSecondUV ? Visibility.Visible : Visibility.Collapsed;
-                //Console.WriteLine($"UV Map 2 visibility: {UVImage2Border.Visibility}");
+                UVImage.Source = primaryUv;
+                UVImage2.Source = secondaryUv;
             });
+        }
+
+        private static BitmapSource CreateUvBitmapSource(Mesh mesh, int channelIndex, int width, int height) {
+            DrawingVisual visual = new();
+
+            using (DrawingContext drawingContext = visual.RenderOpen()) {
+                SolidColorBrush backgroundBrush = new(Color.FromRgb(169, 169, 169));
+                backgroundBrush.Freeze();
+                drawingContext.DrawRectangle(backgroundBrush, null, new Rect(0, 0, width, height));
+
+                if (mesh.TextureCoordinateChannels.Length > channelIndex) {
+                    List<Assimp.Vector3D>? textureCoordinates = mesh.TextureCoordinateChannels[channelIndex];
+
+                    if (textureCoordinates != null && textureCoordinates.Count > 0) {
+                        SolidColorBrush fillBrush = new(Color.FromArgb(186, 255, 69, 0));
+                        fillBrush.Freeze();
+
+                        SolidColorBrush outlineBrush = new(Color.FromRgb(0, 0, 139));
+                        outlineBrush.Freeze();
+                        Pen outlinePen = new(outlineBrush, 1);
+                        outlinePen.Freeze();
+
+                        foreach (Face face in mesh.Faces) {
+                            if (face.IndexCount != 3) {
+                                continue;
+                            }
+
+                            Point[] points = new Point[3];
+                            bool isValidFace = true;
+
+                            for (int i = 0; i < 3; i++) {
+                                int vertexIndex = face.Indices[i];
+                                if (vertexIndex >= textureCoordinates.Count) {
+                                    isValidFace = false;
+                                    break;
+                                }
+
+                                Assimp.Vector3D uv = textureCoordinates[vertexIndex];
+                                points[i] = new Point(uv.X * width, (1 - uv.Y) * height);
+                            }
+
+                            if (!isValidFace) {
+                                continue;
+                            }
+
+                            StreamGeometry geometry = new();
+                            using (StreamGeometryContext geometryContext = geometry.Open()) {
+                                geometryContext.BeginFigure(points[0], true, true);
+                                geometryContext.LineTo(points[1], true, false);
+                                geometryContext.LineTo(points[2], true, false);
+                            }
+                            geometry.Freeze();
+
+                            drawingContext.DrawGeometry(fillBrush, outlinePen, geometry);
+                        }
+                    }
+                }
+            }
+
+            RenderTargetBitmap renderTarget = new(width, height, 96, 96, PixelFormats.Pbgra32);
+            renderTarget.Render(visual);
+            renderTarget.Freeze();
+
+            return renderTarget;
         }
 
         private void LoadModel(string path) {

@@ -132,6 +132,8 @@ namespace AssetProcessor {
         private const double MaxPreviewContentHeight = 512.0;
         private const double DefaultPreviewContentHeight = 300.0;
         private double currentPreviewZoom = 1.0;
+        private double fitPreviewZoom = 1.0;
+        private bool isUserZooming;
         private bool isKtxPreviewActive;
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
@@ -467,6 +469,54 @@ namespace AssetProcessor {
         private void UpdateZoomText() {
             if (TextureZoomTextBlock != null) {
                 TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(currentPreviewZoom * 100, 0)}%";
+            }
+        }
+
+        private void RecalculateFitZoom(bool forceApply = false) {
+            if (TexturePreviewScrollViewer == null || TexturePreviewImage?.Source is not BitmapSource bitmapSource) {
+                fitPreviewZoom = 1.0;
+                return;
+            }
+
+            double viewportWidth = TexturePreviewScrollViewer.ViewportWidth;
+            double viewportHeight = TexturePreviewScrollViewer.ViewportHeight;
+
+            if (double.IsNaN(viewportWidth) || viewportWidth <= 0) {
+                viewportWidth = TexturePreviewScrollViewer.ActualWidth;
+            }
+
+            if (double.IsNaN(viewportHeight) || viewportHeight <= 0) {
+                viewportHeight = TexturePreviewScrollViewer.ActualHeight;
+            }
+
+            if (viewportWidth <= 0 || viewportHeight <= 0 || bitmapSource.PixelWidth <= 0 || bitmapSource.PixelHeight <= 0) {
+                fitPreviewZoom = 1.0;
+                return;
+            }
+
+            double scaleX = viewportWidth / bitmapSource.PixelWidth;
+            double scaleY = viewportHeight / bitmapSource.PixelHeight;
+            double targetZoom = Math.Min(scaleX, scaleY);
+
+            if (double.IsNaN(targetZoom) || double.IsInfinity(targetZoom)) {
+                targetZoom = 1.0;
+            }
+
+            fitPreviewZoom = Math.Clamp(targetZoom, MinPreviewZoom, 1.0);
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+
+            if (forceApply || !isUserZooming) {
+                bool zoomChanged = Math.Abs(currentPreviewZoom - minZoom) > 0.001;
+                currentPreviewZoom = minZoom;
+
+                if (zoomChanged || forceApply) {
+                    ApplyZoomTransform();
+                    UpdateZoomText();
+                }
+            } else if (currentPreviewZoom < minZoom - 0.001) {
+                currentPreviewZoom = minZoom;
+                ApplyZoomTransform();
+                UpdateZoomText();
             }
         }
 

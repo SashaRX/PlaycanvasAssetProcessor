@@ -2748,26 +2748,26 @@ namespace AssetProcessor {
                         var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
                             .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
 
-                        // Save converted file in the same directory as source PNG
+                        // Save converted file in the same directory as source file
                         var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
-                        // Remove extension from texture name to avoid double extensions
-                        var baseName = Path.GetFileNameWithoutExtension(texture.Name ?? "texture");
+                        // Use Path.GetFileNameWithoutExtension from the actual file path, not the display name
+                        var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
                         var extension = compressionSettings.OutputFormat == TextureConversion.Core.OutputFormat.KTX2
                             ? ".ktx2"
                             : ".basis";
-                        var outputPath = Path.Combine(sourceDir, baseName + extension);
+                        var outputPath = Path.Combine(sourceDir, sourceFileName + extension);
 
-                        MainWindowHelpers.LogInfo($"=== CONVERSION DEBUG ===");
-                        MainWindowHelpers.LogInfo($"  texture.Name: {texture.Name}");
-                        MainWindowHelpers.LogInfo($"  texture.Path: {texture.Path}");
-                        MainWindowHelpers.LogInfo($"  sourceDir: {sourceDir}");
-                        MainWindowHelpers.LogInfo($"  baseName: {baseName}");
-                        MainWindowHelpers.LogInfo($"  extension: {extension}");
-                        MainWindowHelpers.LogInfo($"  outputPath: {outputPath}");
+                        MainWindowHelpers.LogInfo($"=== CONVERSION START ===");
+                        MainWindowHelpers.LogInfo($"  Texture Name: {texture.Name}");
+                        MainWindowHelpers.LogInfo($"  Source Path: {texture.Path}");
+                        MainWindowHelpers.LogInfo($"  Source Dir: {sourceDir}");
+                        MainWindowHelpers.LogInfo($"  Source FileName: {sourceFileName}");
+                        MainWindowHelpers.LogInfo($"  Extension: {extension}");
+                        MainWindowHelpers.LogInfo($"  Expected Output: {outputPath}");
                         MainWindowHelpers.LogInfo($"========================");
 
                         var mipmapOutputDir = ConversionSettingsPanel.SaveSeparateMipmaps
-                            ? Path.Combine(sourceDir, "mipmaps", baseName)
+                            ? Path.Combine(sourceDir, "mipmaps", sourceFileName)
                             : null;
 
                         var result = await pipeline.ConvertTextureAsync(
@@ -2801,42 +2801,60 @@ namespace AssetProcessor {
                             // Записываем размер сжатого файла
                             MainWindowHelpers.LogInfo($"=== CHECKING OUTPUT FILE ===");
                             MainWindowHelpers.LogInfo($"  Expected path: {outputPath}");
+                            MainWindowHelpers.LogInfo($"  File.Exists check...");
 
                             // Ждем немного, чтобы файл точно был записан на диск
-                            await Task.Delay(200);
+                            await Task.Delay(300);
 
+                            // Обновляем FileInfo для получения актуальных данных
+                            bool fileFound = false;
+                            long fileSize = 0;
+                            string actualPath = outputPath;
+
+                            // Проверка 1: Ожидаемый путь
                             if (File.Exists(outputPath)) {
                                 var fileInfo = new FileInfo(outputPath);
-                                var fileSize = fileInfo.Length;
-                                MainWindowHelpers.LogInfo($"  ✓ File exists! Size: {fileSize} bytes ({fileSize / 1024.0:F1} KB)");
-                                MainWindowHelpers.LogInfo($"  Before: texture.CompressedSize = {texture.CompressedSize}");
-                                texture.CompressedSize = fileSize;
-                                MainWindowHelpers.LogInfo($"  After: texture.CompressedSize = {texture.CompressedSize}");
-                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name} ({result.MipLevels} mipmaps, {fileSize / 1024.0:F1} KB)");
+                                fileInfo.Refresh(); // Обновляем информацию о файле
+                                fileSize = fileInfo.Length;
+                                fileFound = true;
+                                MainWindowHelpers.LogInfo($"  ✓ Found at expected path! Size: {fileSize} bytes");
                             } else {
-                                MainWindowHelpers.LogInfo($"  ✗ File NOT found at expected path!");
+                                MainWindowHelpers.LogInfo($"  ✗ NOT found at expected path");
 
-                                // Проверим альтернативные пути
-                                var alternativePath = Path.Combine(sourceDir, texture.Name + extension);
-                                MainWindowHelpers.LogInfo($"  Trying alternative: {alternativePath}");
+                                // Проверка 2: Поиск всех файлов в директории с нужным расширением
+                                MainWindowHelpers.LogInfo($"  Searching directory: {sourceDir}");
+                                if (Directory.Exists(sourceDir)) {
+                                    var allFiles = Directory.GetFiles(sourceDir, $"*{extension}");
+                                    MainWindowHelpers.LogInfo($"  Found {allFiles.Length} {extension} files in directory");
 
-                                if (File.Exists(alternativePath)) {
-                                    var fileInfo = new FileInfo(alternativePath);
-                                    var fileSize = fileInfo.Length;
-                                    texture.CompressedSize = fileSize;
-                                    MainWindowHelpers.LogInfo($"  ✓ Found at alternative path! Size: {fileSize} bytes");
-                                } else {
-                                    MainWindowHelpers.LogInfo($"  ✗ Alternative path also not found!");
-
-                                    // Попробуем найти любые .ktx2 файлы в директории
-                                    MainWindowHelpers.LogInfo($"  Searching for *{extension} files in {sourceDir}:");
-                                    var ktx2Files = Directory.GetFiles(sourceDir, $"*{extension}");
-                                    foreach (var file in ktx2Files) {
-                                        MainWindowHelpers.LogInfo($"    Found: {file}");
+                                    foreach (var file in allFiles) {
+                                        MainWindowHelpers.LogInfo($"    - {Path.GetFileName(file)} ({new FileInfo(file).Length} bytes)");
                                     }
 
-                                    texture.CompressedSize = 0;
+                                    // Ищем файл по базовому имени (без учёта регистра)
+                                    var matchingFile = allFiles.FirstOrDefault(f =>
+                                        Path.GetFileNameWithoutExtension(f).Equals(sourceFileName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (matchingFile != null) {
+                                        actualPath = matchingFile;
+                                        var fileInfo = new FileInfo(matchingFile);
+                                        fileSize = fileInfo.Length;
+                                        fileFound = true;
+                                        MainWindowHelpers.LogInfo($"  ✓ Found matching file: {matchingFile} ({fileSize} bytes)");
+                                    }
                                 }
+                            }
+
+                            if (fileFound && fileSize > 0) {
+                                texture.CompressedSize = fileSize;
+                                MainWindowHelpers.LogInfo($"  ✓ CompressedSize set to: {texture.CompressedSize} bytes ({fileSize / 1024.0:F1} KB)");
+                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name}");
+                                MainWindowHelpers.LogInfo($"  Mipmaps: {result.MipLevels}, Size: {fileSize / 1024.0:F1} KB, Path: {actualPath}");
+                            } else {
+                                MainWindowHelpers.LogError($"  ✗ OUTPUT FILE NOT FOUND OR EMPTY!");
+                                MainWindowHelpers.LogError($"  Expected: {outputPath}");
+                                MainWindowHelpers.LogError($"  Please check basisu conversion output");
+                                texture.CompressedSize = 0;
                             }
                             MainWindowHelpers.LogInfo($"============================");
 

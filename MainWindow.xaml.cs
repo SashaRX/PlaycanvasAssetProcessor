@@ -10,7 +10,6 @@ using Newtonsoft.Json.Linq;
 using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
-using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

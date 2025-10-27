@@ -80,6 +80,21 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 }
             }
 
+            // КРИТИЧЕСКИ ВАЖНО: Удаляем существующий выходной файл!
+            // toktx пытается открыть его как входное изображение если он существует
+            if (File.Exists(outputPath)) {
+                Logger.Info($"Удаляем существующий выходной файл: {outputPath}");
+                try {
+                    File.Delete(outputPath);
+                } catch (Exception ex) {
+                    Logger.Error($"Не удалось удалить файл {outputPath}: {ex.Message}");
+                    return new ToktxResult {
+                        Success = false,
+                        Error = $"Cannot delete existing output file: {outputPath}. {ex.Message}"
+                    };
+                }
+            }
+
             var args = BuildArguments(mipmapPaths, outputPath, settings);
 
             // Логируем полную команду

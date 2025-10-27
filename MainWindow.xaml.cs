@@ -33,6 +33,7 @@ using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 using PointF = System.Drawing.PointF;
 using System.Linq;
+using AssetProcessor.TextureConversion.Settings;
 
 namespace AssetProcessor {
     public enum ColorChannel {
@@ -46,6 +47,12 @@ namespace AssetProcessor {
     public enum UVChannel {
         UV0,
         UV1
+    }
+
+    public enum ConnectionState {
+        Disconnected,    // Не подключены - кнопка "Connect"
+        UpToDate,        // Проект загружен, актуален - кнопка "Refresh" (проверить обновления)
+        NeedsDownload    // Нужно скачать (первый раз ИЛИ есть обновления) - кнопка "Download"
     }
 
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -111,6 +118,8 @@ namespace AssetProcessor {
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
+        private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
+        private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
 
@@ -132,7 +141,11 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
-            _ = LoadLastSettings();
+            _ = InitializeOnStartup();
+
+            // Подписка на события панели настроек конвертации
+            ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
+            ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
 
             // Отображение версии приложения с информацией о бранче и коммите
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
@@ -173,8 +186,28 @@ namespace AssetProcessor {
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
             RenderOptions.SetBitmapScalingMode(UVImage2, BitmapScalingMode.HighQuality);
 
-            // Вызов асинхронного метода
-            _ = InitializeAsync(); // Асинхронный метод вызывается без ожидания завершения
+            // Примечание: InitializeOnStartup() уже вызывается выше (строка 144)
+            // и корректно обрабатывает загрузку локальных файлов без показа MessageBox
+            // Пресеты инициализируются в TextureConversionSettingsPanel
+        }
+
+        private void ConversionSettingsPanel_AutoDetectRequested(object? sender, EventArgs e) {
+            var selectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
+            if (selectedTexture != null && !string.IsNullOrEmpty(selectedTexture.Name)) {
+                bool found = ConversionSettingsPanel.AutoDetectPresetByFileName(selectedTexture.Name);
+                if (found) {
+                    MainWindowHelpers.LogInfo($"Auto-detected preset for '{selectedTexture.Name}'");
+                } else {
+                    MainWindowHelpers.LogInfo($"No matching preset found for '{selectedTexture.Name}'");
+                }
+            } else {
+                MessageBox.Show("Please select a texture first.", "No Texture Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void ConversionSettingsPanel_ConvertRequested(object? sender, EventArgs e) {
+            // Вызываем основную функцию конвертации
+            ProcessTexturesButton_Click(sender ?? this, new RoutedEventArgs());
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -311,10 +344,11 @@ namespace AssetProcessor {
         }
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {
-            comboBox.Items.Clear();
+            var items = new List<string>();
             foreach (object? value in Enum.GetValues(typeof(T))) {
-                comboBox.Items.Add(value.ToString());
+                items.Add(value.ToString() ?? "");
             }
+            comboBox.ItemsSource = items;
         }
 
         #endregion
@@ -575,12 +609,15 @@ namespace AssetProcessor {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
                         ShowTextureViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Visible;
                         break;
                     case "Models":
                         ShowModelViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         break;
                     case "Materials":
                         ShowMaterialViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         break;
                 }
             }
@@ -595,8 +632,8 @@ namespace AssetProcessor {
                 // Проверяем наличие JSON-файла
                 bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
                 if (!jsonLoaded) {
-                    // Если JSON-файл не найден, можно либо предложить подключение к серверу, либо отобразить сообщение.
-                    MessageBox.Show("No saved data found. Please connect to the server.");
+                    // Если JSON-файл не найден, просто логируем (без MessageBox)
+                    MainWindowHelpers.LogInfo($"No local data found for project '{projectName}'. User can connect to server to download.");
                 }
 
                 // Обновляем ветки для выбранного проекта
@@ -613,14 +650,27 @@ namespace AssetProcessor {
                 }
 
                 SaveCurrentSettings();
+
+                // Проверяем состояние проекта если уже подключены
+                if (currentConnectionState != ConnectionState.Disconnected) {
+                    await CheckProjectState();
+                }
             }
         }
 
-        private void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
             SaveCurrentSettings();
+
+            // Проверяем состояние проекта если уже подключены
+            if (currentConnectionState != ConnectionState.Disconnected) {
+                await CheckProjectState();
+            }
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Update selection count in central control box
+            UpdateSelectedTexturesCount();
+
             // Отменяем предыдущую загрузку, если она еще выполняется
             textureLoadCancellation?.Cancel();
             textureLoadCancellation = new CancellationTokenSource();
@@ -635,6 +685,9 @@ namespace AssetProcessor {
                         AssetProcessor.Helpers.SizeConverter sizeConverter = new();
                         object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
+
+                        // Load conversion settings for this texture
+                        LoadTextureConversionSettings(selectedTexture);
 
                         // Проверяем кеш
                         if (imageCache.TryGetValue(selectedTexture.Path, out BitmapImage? cachedImage)) {
@@ -732,6 +785,11 @@ namespace AssetProcessor {
 
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
+                // Initialize conversion settings for the texture if not already set
+                if (string.IsNullOrEmpty(texture.CompressionFormat)) {
+                    InitializeTextureConversionSettings(texture);
+                }
+
                 // Устанавливаем цвет фона в зависимости от типа текстуры
                 if (!string.IsNullOrEmpty(texture.TextureType)) {
                     var backgroundBrush = new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), null!, CultureInfo.InvariantCulture) as System.Windows.Media.Brush;
@@ -792,7 +850,7 @@ namespace AssetProcessor {
             }
         }
 
-        private async void Connect(object? sender, RoutedEventArgs e) {
+        private async void Connect(object? sender, RoutedEventArgs? e) {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
@@ -830,13 +888,108 @@ namespace AssetProcessor {
                             await LoadBranchesAsync(projectId, cancellationToken);
                             UpdateProjectPath(projectId);
                         }
+
+                        // Проверяем состояние проекта (скачан ли, нужно ли обновить)
+                        await CheckProjectState();
                     } else {
                         throw new Exception("Project list is empty");
                     }
                 } catch (Exception ex) {
                     MessageBox.Show($"Error: {ex.Message}");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
                 }
             }
+        }
+
+        /// <summary>
+        /// Проверяет состояние проекта (скачан ли, есть ли обновления)
+        /// </summary>
+        private async Task CheckProjectState() {
+            try {
+                if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    return;
+                }
+
+                // Проверяем наличие assets_list.json
+                string assetsListPath = Path.Combine(projectFolderPath, "assets_list.json");
+
+                if (!File.Exists(assetsListPath)) {
+                    // Проект не скачан - нужна загрузка
+                    MainWindowHelpers.LogInfo("Project not downloaded yet - assets_list.json not found");
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    return;
+                }
+
+                // Проект скачан, проверяем hash для определения обновлений
+                MainWindowHelpers.LogInfo("Project found, checking for updates...");
+                bool hasUpdates = await CheckForUpdates();
+
+                if (hasUpdates) {
+                    // Есть обновления - нужна загрузка
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                } else {
+                    // Проект актуален - можно только обновить вручную
+                    UpdateConnectionButton(ConnectionState.UpToDate);
+                }
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error checking project state: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.NeedsDownload);
+            }
+        }
+
+        /// <summary>
+        /// Проверяет наличие обновлений на сервере
+        /// </summary>
+        /// <returns>true если есть обновления, false если все актуально</returns>
+        private async Task<bool> CheckForUpdates() {
+            try {
+                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                    return false;
+                }
+
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+                string assetsListPath = Path.Combine(projectFolderPath ?? "", "assets_list.json");
+
+                if (!File.Exists(assetsListPath)) {
+                    return true; // Файл не существует = нужно скачать
+                }
+
+                // Получаем локальный JSON
+                string localJson = await File.ReadAllTextAsync(assetsListPath);
+                JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
+
+                // Получаем серверный JSON
+                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+
+                // Сравниваем hash или количество ассетов
+                string localHash = ComputeHash(localJson);
+                string serverHash = ComputeHash(serverData.ToString());
+
+                bool hasChanges = localHash != serverHash;
+
+                if (hasChanges) {
+                    MainWindowHelpers.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
+                } else {
+                    MainWindowHelpers.LogInfo("Project is up to date");
+                }
+
+                return hasChanges;
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error checking for updates: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Вычисляет MD5 hash для строки (для сравнения JSON)
+        /// </summary>
+        private string ComputeHash(string input) {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
+            byte[] hashBytes = md5.ComputeHash(inputBytes);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
         }
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken) {
@@ -886,6 +1039,11 @@ namespace AssetProcessor {
         private void SettingsMenu(object? sender, RoutedEventArgs e) {
             SettingsWindow settingsWindow = new();
             settingsWindow.ShowDialog();
+        }
+
+        private void TextureConversionMenu(object? sender, RoutedEventArgs e) {
+            TextureConversionWindow textureConversionWindow = new();
+            textureConversionWindow.ShowDialog();
         }
 
         private void ExitMenu(object? sender, RoutedEventArgs e) {
@@ -1187,8 +1345,7 @@ namespace AssetProcessor {
         private void NavigateToTextureFromHyperlink(object sender, string mapType, Func<MaterialResource, int?> mapIdSelector) {
             ArgumentNullException.ThrowIfNull(sender);
 
-            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource
-                                          ?? MaterialsDataGrid.SelectedItem as MaterialResource;
+            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource?? MaterialsDataGrid.SelectedItem as MaterialResource;
 
             if (sender is Hyperlink hyperlink)
             {
@@ -1672,7 +1829,7 @@ namespace AssetProcessor {
                     // Сохраняем JSON-ответ в файл
 
                     if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
-                        string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+                        string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
                         await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
                         if (!File.Exists(jsonFilePath)) {
                             MessageBox.Show($"Failed to save the JSON file to {jsonFilePath}. Please check your permissions.");
@@ -1776,10 +1933,10 @@ namespace AssetProcessor {
 
         private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
             try {
-                string jsonFilePath = Path.Combine(Path.Combine(projectFolderPath, projectName), "assets_list.json");
+                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
 
-                if (!Directory.Exists(Path.Combine(projectFolderPath, projectName))) {
-                    Directory.CreateDirectory(Path.Combine(projectFolderPath, projectName));
+                if (!Directory.Exists(projectFolderPath)) {
+                    Directory.CreateDirectory(projectFolderPath);
                 }
 
                 string jsonString = jsonResponse.ToString(Formatting.Indented);
@@ -2051,7 +2208,7 @@ namespace AssetProcessor {
                     throw new Exception("Project folder path or name is null or empty");
                 }
 
-                string jsonFilePath = Path.Combine(projectFolderPath, projectName, "assets_list.json");
+                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
                 if (File.Exists(jsonFilePath)) {
                     string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
                     JArray assetsResponse = JArray.Parse(jsonContent);
@@ -2177,6 +2334,123 @@ namespace AssetProcessor {
             });
         }
 
+        /// <summary>
+        /// Обновляет текст и состояние динамической кнопки подключения
+        /// </summary>
+        private void UpdateConnectionButton(ConnectionState newState) {
+            currentConnectionState = newState;
+
+            Dispatcher.Invoke(() => {
+                bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+
+                switch (currentConnectionState) {
+                    case ConnectionState.Disconnected:
+                        DynamicConnectionButton.Content = "Connect";
+                        DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
+                        DynamicConnectionButton.IsEnabled = true;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)); // Grey
+                        break;
+
+                    case ConnectionState.UpToDate:
+                        DynamicConnectionButton.Content = "Refresh";
+                        DynamicConnectionButton.ToolTip = "Check for updates from PlayCanvas server";
+                        DynamicConnectionButton.IsEnabled = hasSelection;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
+                        break;
+
+                    case ConnectionState.NeedsDownload:
+                        DynamicConnectionButton.Content = "Download";
+                        DynamicConnectionButton.ToolTip = "Download assets from PlayCanvas (list + files)";
+                        DynamicConnectionButton.IsEnabled = hasSelection;
+                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
+                        break;
+                }
+            });
+        }
+
+        /// <summary>
+        /// Обработчик клика по динамической кнопке подключения
+        /// </summary>
+        private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
+            switch (currentConnectionState) {
+                case ConnectionState.Disconnected:
+                    // Подключаемся к PlayCanvas и загружаем список проектов
+                    ConnectToPlayCanvas();
+                    break;
+
+                case ConnectionState.UpToDate:
+                    // Проверяем наличие обновлений на сервере
+                    await RefreshFromServer();
+                    break;
+
+                case ConnectionState.NeedsDownload:
+                    // Скачиваем список ассетов + файлы
+                    await DownloadFromServer();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Подключение к PlayCanvas - загружает список проектов и веток
+        /// </summary>
+        private void ConnectToPlayCanvas() {
+            // Вызываем существующий метод Connect
+            Connect(null, null);
+        }
+
+        /// <summary>
+        /// Проверяет наличие обновлений на сервере (Refresh button)
+        /// Сравнивает hash локального assets_list.json с серверным
+        /// </summary>
+        private async Task RefreshFromServer() {
+            try {
+                DynamicConnectionButton.IsEnabled = false;
+
+                bool hasUpdates = await CheckForUpdates();
+
+                if (hasUpdates) {
+                    // Есть обновления - переключаем на кнопку Download
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    MessageBox.Show("Updates available! Click Download to get them.", "Updates Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                } else {
+                    // Обновлений нет
+                    MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MainWindowHelpers.LogError($"Error in RefreshFromServer: {ex}");
+            } finally {
+                DynamicConnectionButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Скачивает список ассетов с сервера + загружает все файлы (Download button)
+        /// </summary>
+        private async Task DownloadFromServer() {
+            try {
+                CancelButton.IsEnabled = true;
+                DynamicConnectionButton.IsEnabled = false;
+
+                if (cancellationTokenSource != null) {
+                    // Загружаем список ассетов (assets_list.json) с сервера
+                    await TryConnect(cancellationTokenSource.Token);
+
+                    // Теперь скачиваем файлы (текстуры, модели, материалы)
+                    Download(null, null);
+
+                    // После успешной загрузки переключаем на Refresh
+                    UpdateConnectionButton(ConnectionState.UpToDate);
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MainWindowHelpers.LogError($"Error in DownloadFromServer: {ex}");
+            } finally {
+                CancelButton.IsEnabled = false;
+                DynamicConnectionButton.IsEnabled = true;
+            }
+        }
+
         private void SaveCurrentSettings() {
             if (ProjectsComboBox.SelectedItem != null) {
                 AppSettings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
@@ -2187,6 +2461,82 @@ namespace AssetProcessor {
             AppSettings.Default.Save();
         }
 
+        /// <summary>
+        /// Инициализация при запуске программы - проверяет локальные файлы БЕЗ подключения к серверу
+        /// </summary>
+        private async Task InitializeOnStartup() {
+            try {
+                MainWindowHelpers.LogInfo("=== Initializing on startup ===");
+
+                // Загружаем сохраненные настройки
+                string lastProjectId = AppSettings.Default.LastSelectedProjectId;
+                string lastBranchName = AppSettings.Default.LastSelectedBranchName;
+
+                if (string.IsNullOrEmpty(lastProjectId)) {
+                    // Нет сохраненного проекта - показываем кнопку Connect
+                    MainWindowHelpers.LogInfo("No saved project found - showing Connect button");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
+                    return;
+                }
+
+                // Определяем имя проекта из настроек (нужно получить из сохраненного ID)
+                // Временно используем ProjectsFolderPath для поиска
+                string projectsRoot = AppSettings.Default.ProjectsFolderPath;
+                if (string.IsNullOrEmpty(projectsRoot) || !Directory.Exists(projectsRoot)) {
+                    MainWindowHelpers.LogInfo("Projects folder not found - showing Connect button");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
+                    return;
+                }
+
+                // Ищем папки проектов
+                var projectFolders = Directory.GetDirectories(projectsRoot);
+                foreach (var folder in projectFolders) {
+                    string folderName = Path.GetFileName(folder);
+                    string assetsListPath = Path.Combine(folder, "assets_list.json");
+
+                    if (File.Exists(assetsListPath)) {
+                        // Нашли локальный проект!
+                        MainWindowHelpers.LogInfo($"Found local project: {folderName}");
+
+                        projectName = folderName;
+                        projectFolderPath = folder;
+
+                        // Загружаем данные локально
+                        bool loaded = await LoadAssetsFromJsonFileAsync();
+
+                        if (loaded) {
+                            MainWindowHelpers.LogInfo($"Local project loaded successfully: {projectName}");
+
+                            // Показываем пользователю что проект загружен локально
+                            UpdateConnectionStatus(true, $"Loaded offline: {projectName}");
+
+                            // Добавляем проект в ComboBox (как минимум локальное имя)
+                            // Реальный ID будет получен при подключении
+                            if (!Projects.Any(p => p.Value == projectName)) {
+                                Projects.Add(new KeyValuePair<string, string>(lastProjectId, projectName));
+                                ProjectsComboBox.SelectedValue = lastProjectId;
+                            }
+
+                            // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления
+                            UpdateConnectionButton(ConnectionState.UpToDate);
+                            return;
+                        }
+                    }
+                }
+
+                // Не нашли локальных файлов
+                MainWindowHelpers.LogInfo("No local project files found - showing Connect button");
+                UpdateConnectionButton(ConnectionState.Disconnected);
+
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error during startup initialization: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.Disconnected);
+            }
+        }
+
+        /// <summary>
+        /// Загружает последние настройки и подключается к серверу (старый метод)
+        /// </summary>
         private async Task LoadLastSettings() {
             try {
                 userName = AppSettings.Default.UserName.ToLower();
@@ -2244,6 +2594,463 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error loading last settings: {ex.Message}");
             }
         }
+        #endregion
+
+        #region Texture Conversion Settings Handlers
+
+        private void ConversionSettingsExpander_Expanded(object sender, RoutedEventArgs e) {
+            // Settings expanded - could save state if needed
+        }
+
+        private void ConversionSettingsExpander_Collapsed(object sender, RoutedEventArgs e) {
+            // Settings collapsed - could save state if needed
+        }
+
+        private void ConversionSettingsPanel_SettingsChanged(object? sender, EventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                UpdateTextureConversionSettings(selectedTexture);
+            }
+        }
+
+        private void UpdateTextureConversionSettings(TextureResource texture) {
+            try {
+                var compression = ConversionSettingsPanel.GetCompressionSettings();
+                var mipProfile = ConversionSettingsPanel.GetMipProfileSettings();
+
+                texture.CompressionFormat = compression.CompressionFormat.ToString();
+                texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
+
+                MainWindowHelpers.LogInfo($"Updated conversion settings for {texture.Name}");
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error updating conversion settings: {ex.Message}");
+            }
+        }
+
+        private void LoadTextureConversionSettings(TextureResource texture) {
+            var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+            var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                MapTextureTypeToCore(textureType));
+
+            var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+            var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
+            var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
+
+            ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
+            // LoadPresets removed - presets are now managed globally through PresetManager
+
+            texture.CompressionFormat = compression.CompressionFormat.ToString();
+
+            // Auto-detect preset by filename if not already set
+            if (string.IsNullOrEmpty(texture.PresetName)) {
+                var presetManager = new TextureConversion.Settings.PresetManager();
+                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                texture.PresetName = matchedPreset?.Name ?? "";
+            }
+        }
+
+        // Initialize compression format and preset for texture without updating UI panel
+        private void InitializeTextureConversionSettings(TextureResource texture) {
+            var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+            var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                MapTextureTypeToCore(textureType));
+            var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+
+            texture.CompressionFormat = compression.CompressionFormat.ToString();
+
+            // Auto-detect preset by filename if not already set
+            if (string.IsNullOrEmpty(texture.PresetName)) {
+                var presetManager = new TextureConversion.Settings.PresetManager();
+                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                texture.PresetName = matchedPreset?.Name ?? "";
+            }
+
+            // Check if compressed file (.ktx2 or .basis) already exists and set CompressedSize
+            if (!string.IsNullOrEmpty(texture.Path) && File.Exists(texture.Path)) {
+                var sourceDir = Path.GetDirectoryName(texture.Path);
+                var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
+
+                if (!string.IsNullOrEmpty(sourceDir) && !string.IsNullOrEmpty(sourceFileName)) {
+                    // Check for .ktx2 file first
+                    var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
+                    if (File.Exists(ktx2Path)) {
+                        var fileInfo = new FileInfo(ktx2Path);
+                        texture.CompressedSize = fileInfo.Length;
+                    } else {
+                        // Check for .basis file as fallback
+                        var basisPath = Path.Combine(sourceDir, sourceFileName + ".basis");
+                        if (File.Exists(basisPath)) {
+                            var fileInfo = new FileInfo(basisPath);
+                            texture.CompressedSize = fileInfo.Length;
+                        } else {
+                            texture.CompressedSize = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        private TextureConversion.Core.TextureType MapTextureTypeToCore(string textureType) {
+            return textureType.ToLower() switch {
+                "albedo" => TextureConversion.Core.TextureType.Albedo,
+                "normal" => TextureConversion.Core.TextureType.Normal,
+                "roughness" => TextureConversion.Core.TextureType.Roughness,
+                "metallic" => TextureConversion.Core.TextureType.Metallic,
+                "ao" => TextureConversion.Core.TextureType.AmbientOcclusion,
+                "emissive" => TextureConversion.Core.TextureType.Emissive,
+                "gloss" => TextureConversion.Core.TextureType.Gloss,
+                "height" => TextureConversion.Core.TextureType.Height,
+                _ => TextureConversion.Core.TextureType.Generic
+            };
+        }
+
+        #endregion
+
+        #region Central Control Box Handlers
+
+        private async void ProcessTexturesButton_Click(object sender, RoutedEventArgs e) {
+            try {
+                // Get textures to process
+                var texturesToProcess = new List<TextureResource>();
+
+                if (ProcessAllCheckBox.IsChecked == true) {
+                    // Process all enabled textures
+                    texturesToProcess = Textures.Where(t => !string.IsNullOrEmpty(t.Path)).ToList();
+                } else {
+                    // Process selected textures only
+                    texturesToProcess = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+                }
+
+                if (texturesToProcess.Count == 0) {
+                    MessageBox.Show("No textures selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Load global settings
+                if (globalTextureSettings == null) {
+                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+                }
+
+                // Disable buttons during processing
+                ProcessTexturesButton.IsEnabled = false;
+                UploadTexturesButton.IsEnabled = false;
+
+                int successCount = 0;
+                int errorCount = 0;
+                var errorMessages = new List<string>();
+
+                ProgressBar.Maximum = texturesToProcess.Count;
+                ProgressBar.Value = 0;
+
+                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
+                    ? "basisu"
+                    : globalTextureSettings.BasisUExecutablePath;
+
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+
+                foreach (var texture in texturesToProcess) {
+                    try {
+                        if (string.IsNullOrEmpty(texture.Path)) {
+                            var errorMsg = $"{texture.Name ?? "Unknown"}: Empty file path";
+                            MainWindowHelpers.LogError($"Skipping texture with empty path: {texture.Name ?? "Unknown"}");
+                            errorMessages.Add(errorMsg);
+                            errorCount++;
+                            continue;
+                        }
+
+                        ProgressTextBlock.Text = $"Processing {texture.Name}...";
+                        MainWindowHelpers.LogInfo($"Processing texture: {texture.Name}");
+
+                        // Автоматически определяем тип текстуры по имени файла
+                        var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+                        texture.TextureType = textureType; // Сохраняем определённый тип
+
+                        // Создаём профиль мипмапов на основе типа текстуры
+                        var mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                            MapTextureTypeToCore(textureType));
+
+                        // Используем глобальные настройки из TextureConversionSettingsPanel
+                        var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
+                            .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
+
+                        // Save converted file in the same directory as source file
+                        var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
+                        // Use Path.GetFileNameWithoutExtension from the actual file path, not the display name
+                        var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
+                        var extension = compressionSettings.OutputFormat == TextureConversion.Core.OutputFormat.KTX2
+                            ? ".ktx2"
+                            : ".basis";
+                        var outputPath = Path.Combine(sourceDir, sourceFileName + extension);
+
+                        MainWindowHelpers.LogInfo($"=== CONVERSION START ===");
+                        MainWindowHelpers.LogInfo($"  Texture Name: {texture.Name}");
+                        MainWindowHelpers.LogInfo($"  Source Path: {texture.Path}");
+                        MainWindowHelpers.LogInfo($"  Source Dir: {sourceDir}");
+                        MainWindowHelpers.LogInfo($"  Source FileName: {sourceFileName}");
+                        MainWindowHelpers.LogInfo($"  Extension: {extension}");
+                        MainWindowHelpers.LogInfo($"  Expected Output: {outputPath}");
+                        MainWindowHelpers.LogInfo($"========================");
+
+                        var mipmapOutputDir = ConversionSettingsPanel.SaveSeparateMipmaps
+                            ? Path.Combine(sourceDir, "mipmaps", sourceFileName)
+                            : null;
+
+                        var result = await pipeline.ConvertTextureAsync(
+                            texture.Path,
+                            outputPath,
+                            mipProfile,
+                            compressionSettings,
+                            ConversionSettingsPanel.SaveSeparateMipmaps,
+                            mipmapOutputDir
+                        );
+
+                        if (result.Success) {
+                            texture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
+                            texture.MipmapCount = result.MipLevels;
+                            texture.Status = "Converted";
+
+                            // Сохраняем имя пресета, если оно не установлено
+                            if (string.IsNullOrEmpty(texture.PresetName) || texture.PresetName == "(Auto)") {
+                                // Пытаемся определить пресет по имени файла
+                                var presetManager = new TextureConversion.Settings.PresetManager();
+                                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                                if (matchedPreset != null) {
+                                    texture.PresetName = matchedPreset.Name;
+                                } else {
+                                    // Используем имя выбранного в панели пресета
+                                    var selectedPreset = ConversionSettingsPanel.PresetName;
+                                    texture.PresetName = string.IsNullOrEmpty(selectedPreset) ? "(Custom)" : selectedPreset;
+                                }
+                            }
+
+                            // Записываем размер сжатого файла
+                            MainWindowHelpers.LogInfo($"=== CHECKING OUTPUT FILE ===");
+                            MainWindowHelpers.LogInfo($"  Expected path: {outputPath}");
+                            MainWindowHelpers.LogInfo($"  File.Exists check...");
+
+                            // Ждем немного, чтобы файл точно был записан на диск
+                            await Task.Delay(300);
+
+                            // Обновляем FileInfo для получения актуальных данных
+                            bool fileFound = false;
+                            long fileSize = 0;
+                            string actualPath = outputPath;
+
+                            // Проверка 1: Ожидаемый путь
+                            if (File.Exists(outputPath)) {
+                                var fileInfo = new FileInfo(outputPath);
+                                fileInfo.Refresh(); // Обновляем информацию о файле
+                                fileSize = fileInfo.Length;
+                                fileFound = true;
+                                MainWindowHelpers.LogInfo($"  ✓ Found at expected path! Size: {fileSize} bytes");
+                            } else {
+                                MainWindowHelpers.LogInfo($"  ✗ NOT found at expected path");
+
+                                // Проверка 2: Поиск всех файлов в директории с нужным расширением
+                                MainWindowHelpers.LogInfo($"  Searching directory: {sourceDir}");
+                                if (Directory.Exists(sourceDir)) {
+                                    var allFiles = Directory.GetFiles(sourceDir, $"*{extension}");
+                                    MainWindowHelpers.LogInfo($"  Found {allFiles.Length} {extension} files in directory");
+
+                                    foreach (var file in allFiles) {
+                                        MainWindowHelpers.LogInfo($"    - {Path.GetFileName(file)} ({new FileInfo(file).Length} bytes)");
+                                    }
+
+                                    // Ищем файл по базовому имени (без учёта регистра)
+                                    var matchingFile = allFiles.FirstOrDefault(f =>
+                                        Path.GetFileNameWithoutExtension(f).Equals(sourceFileName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (matchingFile != null) {
+                                        actualPath = matchingFile;
+                                        var fileInfo = new FileInfo(matchingFile);
+                                        fileSize = fileInfo.Length;
+                                        fileFound = true;
+                                        MainWindowHelpers.LogInfo($"  ✓ Found matching file: {matchingFile} ({fileSize} bytes)");
+                                    }
+                                }
+                            }
+
+                            if (fileFound && fileSize > 0) {
+                                texture.CompressedSize = fileSize;
+                                MainWindowHelpers.LogInfo($"  ✓ CompressedSize set to: {texture.CompressedSize} bytes ({fileSize / 1024.0:F1} KB)");
+                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name}");
+                                MainWindowHelpers.LogInfo($"  Mipmaps: {result.MipLevels}, Size: {fileSize / 1024.0:F1} KB, Path: {actualPath}");
+                            } else {
+                                MainWindowHelpers.LogError($"  ✗ OUTPUT FILE NOT FOUND OR EMPTY!");
+                                MainWindowHelpers.LogError($"  Expected: {outputPath}");
+                                MainWindowHelpers.LogError($"  Please check basisu conversion output");
+                                texture.CompressedSize = 0;
+                            }
+                            MainWindowHelpers.LogInfo($"============================");
+
+                            successCount++;
+                        } else {
+                            texture.Status = "Error";
+                            errorCount++;
+                            var errorMsg = $"{texture.Name}: {result.Error ?? "Unknown error"}";
+                            errorMessages.Add(errorMsg);
+                            MainWindowHelpers.LogError($"✗ Failed to convert {texture.Name}: {result.Error}");
+                        }
+                    } catch (Exception ex) {
+                        texture.Status = "Error";
+                        errorCount++;
+                        var errorMsg = $"{texture.Name}: {ex.Message}";
+                        errorMessages.Add(errorMsg);
+                        MainWindowHelpers.LogError($"✗ Exception processing {texture.Name}: {ex.Message}\n{ex.StackTrace}");
+                    }
+
+                    ProgressBar.Value++;
+                }
+
+                // Force DataGrid to refresh and display updated CompressedSize values
+                TexturesDataGrid.Items.Refresh();
+
+                ProgressTextBlock.Text = $"Completed: {successCount} success, {errorCount} errors";
+
+                // Build result message
+                var resultMessage = $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}";
+
+                if (errorCount > 0 && errorMessages.Count > 0) {
+                    resultMessage += "\n\nError details:";
+                    var errorsToShow = errorMessages.Take(10).ToList();
+                    foreach (var error in errorsToShow) {
+                        resultMessage += $"\n• {error}";
+                    }
+                    if (errorMessages.Count > 10) {
+                        resultMessage += $"\n... and {errorMessages.Count - 10} more errors (see log file for details)";
+                    }
+                } else if (successCount > 0) {
+                    resultMessage += "\n\nConverted files saved next to source images.";
+                }
+
+                MessageBox.Show(
+                    resultMessage,
+                    "Processing Complete",
+                    MessageBoxButton.OK,
+                    successCount == texturesToProcess.Count ? MessageBoxImage.Information : MessageBoxImage.Warning
+                );
+
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error during batch processing: {ex.Message}");
+                MessageBox.Show($"Error during processing:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } finally {
+                // Принудительно обновляем DataGrid для отображения изменений
+                TexturesDataGrid.Items.Refresh();
+
+                ProcessTexturesButton.IsEnabled = true;
+                UploadTexturesButton.IsEnabled = false; // Keep disabled until upload is implemented
+                ProgressBar.Value = 0;
+                ProgressTextBlock.Text = "";
+            }
+        }
+
+        private void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
+            MessageBox.Show(
+                "Upload functionality coming soon!\n\nThis will upload converted textures to PlayCanvas.",
+                "Coming Soon",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information
+            );
+        }
+
+        private void UpdateSelectedTexturesCount() {
+            int selectedCount = TexturesDataGrid.SelectedItems.Count;
+            SelectedTexturesCountText.Text = selectedCount == 1
+                ? "1 texture"
+                : $"{selectedCount} textures";
+
+            ProcessTexturesButton.IsEnabled = selectedCount > 0 || ProcessAllCheckBox.IsChecked == true;
+        }
+
+        private void ProcessAllCheckBox_Changed(object sender, RoutedEventArgs e) {
+            UpdateSelectedTexturesCount();
+        }
+
+        private void AutoDetectAllButton_Click(object sender, RoutedEventArgs e) {
+            var texturesToProcess = ProcessAllCheckBox.IsChecked == true
+                ? textures.ToList()
+                : TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+
+            if (texturesToProcess.Count == 0) {
+                MessageBox.Show("Please select textures first or enable 'Process All'.",
+                    "No Textures Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            int matchedCount = 0;
+            int notMatchedCount = 0;
+
+            foreach (var texture in texturesToProcess) {
+                if (!string.IsNullOrEmpty(texture.Name)) {
+                    bool found = ConversionSettingsPanel.AutoDetectPresetByFileName(texture.Name);
+                    if (found) {
+                        // Get the detected preset name and store it
+                        var presetManager = new TextureConversion.Settings.PresetManager();
+                        var matchedPreset = presetManager.FindPresetByFileName(texture.Name);
+                        if (matchedPreset != null) {
+                            texture.PresetName = matchedPreset.Name;
+                            matchedCount++;
+                        }
+                    } else {
+                        notMatchedCount++;
+                    }
+                }
+            }
+
+            // Refresh DataGrid to show updated PresetName values
+            TexturesDataGrid.Items.Refresh();
+
+            MainWindowHelpers.LogInfo($"Auto-detect completed: {matchedCount} matched, {notMatchedCount} not matched");
+            MessageBox.Show($"Auto-detect completed:\n\n" +
+                          $"✓ Matched: {matchedCount}\n" +
+                          $"✗ Not matched: {notMatchedCount}",
+                "Auto-detect Results", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        // Context menu handlers for texture rows
+        private void ProcessSelectedTextures_Click(object sender, RoutedEventArgs e) {
+            ProcessTexturesButton_Click(sender, e);
+        }
+
+        private void UploadTexture_Click(object sender, RoutedEventArgs e) {
+            UploadTexturesButton_Click(sender, e);
+        }
+
+        private void OpenFileLocation_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
+                try {
+                    var directory = System.IO.Path.GetDirectoryName(texture.Path);
+                    if (!string.IsNullOrEmpty(directory) && System.IO.Directory.Exists(directory)) {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                            FileName = directory,
+                            UseShellExecute = true
+                        });
+                    } else {
+                        MessageBox.Show("Directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                } catch (Exception ex) {
+                    MessageBox.Show($"Failed to open file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyTexturePath_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
+                try {
+                    System.Windows.Clipboard.SetText(texture.Path);
+                    MessageBox.Show("Path copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                } catch (Exception ex) {
+                    MessageBox.Show($"Failed to copy path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void RefreshPreview_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture) {
+                // Trigger a refresh by re-selecting the texture
+                TexturesDataGrid_SelectionChanged(TexturesDataGrid, null!);
+            }
+        }
+
         #endregion
     }
 }

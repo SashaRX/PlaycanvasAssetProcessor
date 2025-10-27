@@ -3,12 +3,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:AssetProcessor"
+    xmlns:controls="clr-namespace:AssetProcessor.Controls"
     xmlns:help ="clr-namespace:AssetProcessor.Helpers"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
-    xmlns:oxy="http://oxyplot.org/wpf" 
-    xmlns:resources="clr-namespace:AssetProcessor.Resources" 
+    xmlns:oxy="http://oxyplot.org/wpf"
+    xmlns:resources="clr-namespace:AssetProcessor.Resources"
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
@@ -33,6 +34,16 @@
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
+        <!-- Compact style for right panel expanders -->
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
 
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
         <Style TargetType="ComboBoxItem">
@@ -54,6 +65,33 @@
             </Style.Triggers>
         </Style>
 
+        <!-- ContextMenu для заголовков колонок текстур -->
+        <ContextMenu x:Key="TextureColumnHeaderContextMenu">
+            <MenuItem Header="Columns Visibility">
+                <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ID"/>
+                <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
+                <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
+                <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
+                <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
+                <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
+                <MenuItem Header="Compression" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
+                <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
+                <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
+                <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
+            </MenuItem>
+        </ContextMenu>
+
+        <!-- ContextMenu для строк текстур -->
+        <ContextMenu x:Key="TextureRowContextMenu">
+            <MenuItem Header="Process Texture" Click="ProcessSelectedTextures_Click"/>
+            <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
+            <Separator/>
+            <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
+            <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
+            <Separator/>
+            <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
+        </ContextMenu>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -74,50 +112,92 @@
 
         <!-- Панель управления внизу -->
         <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
-            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="718">
-                <StackPanel Orientation="Horizontal" Height="58">
-                    <Button Content="Connect" Margin="4,2,4,2" VerticalAlignment="Center" Width="64" Click="Connect" />
-                    <ComboBox x:Name="ProjectsComboBox" 
-                              ItemsSource="{Binding Projects}" 
-                              DisplayMemberPath="Value" 
-                              SelectedValuePath="Key"
-                              SelectionChanged="ProjectsComboBox_SelectionChanged" Margin="4,2,4,2" MinWidth="100" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
-                        <ComboBox.ItemContainerStyle>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                            </Style>
-                        </ComboBox.ItemContainerStyle>
-                    </ComboBox>
+            <!-- Playcanvas Project Connect (Left Side) -->
+            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="340">
+                <StackPanel Orientation="Vertical" Margin="4,2,4,2">
+                    <!-- Dynamic Action Button -->
+                    <Button x:Name="DynamicConnectionButton"
+                            Content="Connect"
+                            Margin="0,2,0,4"
+                            Height="24"
+                            FontWeight="Bold"
+                            Click="DynamicConnectionButton_Click"
+                            ToolTip="Connect to PlayCanvas"/>
 
-                    <ComboBox x:Name="BranchesComboBox"
-                              ItemsSource="{Binding Branches}"
-                              DisplayMemberPath="Name"
-                              SelectedValuePath="Id"
-                              SelectionChanged="BranchesComboBox_SelectionChanged"
-                              Margin="4,2,4,2" MinWidth="50" Height="20" VerticalContentAlignment="Center" Padding="4,0,4,0" FontSize="13">
-                        <ComboBox.ItemContainerStyle>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                            </Style>
-                        </ComboBox.ItemContainerStyle>
-                    </ComboBox>
+                    <!-- Project and Branch Selection -->
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox x:Name="ProjectsComboBox"
+                                  ItemsSource="{Binding Projects}"
+                                  DisplayMemberPath="Value"
+                                  SelectedValuePath="Key"
+                                  SelectionChanged="ProjectsComboBox_SelectionChanged"
+                                  Margin="0,0,4,0"
+                                  Width="160"
+                                  Height="20"
+                                  VerticalContentAlignment="Center"
+                                  Padding="4,0,4,0"
+                                  FontSize="13">
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
+                        </ComboBox>
 
-                    <Button Content="Get Assets" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="GetListAssets"/>
-                    <Button Content="Download" Margin="4,2,4,2" VerticalAlignment="Center" Width="74" Click="Download" ScrollViewer.VerticalScrollBarVisibility="Disabled"></Button>
-                    <Slider x:Name="slider" 
-                            VerticalAlignment="Center" 
-                            Margin="2,2,2,0"
-                            Padding="10,0,0,0"
-                            Width="256"
-                            Minimum="16"
-                            Maximum="256"
-                            IsSnapToTickEnabled="True" 
-                            Ticks="16,32,64,128,256"
-                            Value="0"/>
+                        <ComboBox x:Name="BranchesComboBox"
+                                  ItemsSource="{Binding Branches}"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Id"
+                                  SelectionChanged="BranchesComboBox_SelectionChanged"
+                                  Width="160"
+                                  Height="20"
+                                  VerticalContentAlignment="Center"
+                                  Padding="4,0,4,0"
+                                  FontSize="13">
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
+                        </ComboBox>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
+
+            <!-- Texture Operations (Right Side) - Only visible for Textures tab -->
+            <GroupBox x:Name="TextureOperationsGroupBox" Header="Texture Operations" VerticalAlignment="Top" Margin="2,2,2,2" Width="460" Visibility="Collapsed">
+                <StackPanel Orientation="Vertical" Margin="4,2,4,2">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
+                        <TextBlock x:Name="SelectedTexturesCountText" Text="0 textures" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Process Buttons -->
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,4">
+                        <Button x:Name="ProcessTexturesButton" Content="Process" Width="80" Margin="0,0,5,0"
+                                Click="ProcessTexturesButton_Click"
+                                ToolTip="Convert selected textures to KTX2 format"
+                                IsEnabled="False"/>
+
+                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="80" Margin="0,0,5,0"
+                                Click="UploadTexturesButton_Click"
+                                ToolTip="Upload converted textures to PlayCanvas (coming soon)"
+                                IsEnabled="False"/>
+
+                        <Button x:Name="AutoDetectAllButton" Content="Auto-detect All" Width="110"
+                                Click="AutoDetectAllButton_Click"
+                                ToolTip="Automatically detect presets for all textures based on filenames"/>
+                    </StackPanel>
+
+                    <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"
+                              ToolTip="Process all textures instead of just selected ones"
+                              Checked="ProcessAllCheckBox_Changed"
+                              Unchecked="ProcessAllCheckBox_Changed"/>
+                </StackPanel>
+            </GroupBox>
+
             <StackPanel Width="121" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
                 <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False"/>
                 <Button Content="Settings" Margin="10,0,10,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting"/>
@@ -163,27 +243,28 @@
                                 CanUserDeleteRows="False"
                                 CanUserSortColumns="True"
                                 Background="#FFD6D6D6">
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Columns Visibility">
-                                        <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ID"/>
-                                        <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
-                                        <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
-                                        <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
-                                        <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
-                                        <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
-                                        <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
-                                    </MenuItem>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="ContextMenu" Value="{StaticResource TextureColumnHeaderContextMenu}"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
+                                </Style>
+                            </DataGrid.RowStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="auto" MinWidth="20"/>
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="35"/>
+                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="45"/>
                                 <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
                                 <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
+                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="auto" MinWidth="60"/>
+                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="auto" MinWidth="50"/>
+                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="auto" MinWidth="80"/>
                                 <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -308,42 +389,55 @@
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible">
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" MinHeight="128" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
-                            <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
-                        </Border>
-                        <Border Grid.Row="0" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
-                            <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" Stretch="Uniform" />
-                        </Border>
-                        <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
-                            <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                            <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                            <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                        </Canvas>
-                        <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
-                            <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                                <StackPanel.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform ScaleX="1"/>
-                                        <SkewTransform/>
-                                        <RotateTransform/>
-                                        <TranslateTransform/>
-                                    </TransformGroup>
-                                </StackPanel.RenderTransform>
-                                <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="Black"/>
-                                <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="Black"/>
-                                <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
-                                <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel>
+                        <!-- Preview Section -->
+                        <Expander Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                            <Grid>
+                                <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
+                                    <Image x:Name="TexturePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MinWidth="128" MinHeight="129" Stretch="Uniform" />
+                                </Border>
+                                <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
+                                    <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                    <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                    <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                </Canvas>
+                                <StackPanel x:Name="ChannelButtonsPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Height="20">
+                                    <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                        <StackPanel.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="1"/>
+                                                <SkewTransform/>
+                                                <RotateTransform/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </StackPanel.RenderTransform>
+                                        <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="Black"/>
+                                        <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="Black"/>
+                                        <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
+                                        <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Expander>
+
+                        <!-- Histogram Section -->
+                        <Expander Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                            <Border BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
+                                <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
+                            </Border>
+                        </Expander>
+
+                        <!-- Conversion Settings Panel -->
+                        <Expander x:Name="ConversionSettingsExpander" Header="Conversion Settings"
+                                  Style="{StaticResource CompactExpanderStyle}" IsExpanded="True"
+                                  Expanded="ConversionSettingsExpander_Expanded"
+                                  Collapsed="ConversionSettingsExpander_Collapsed">
+                            <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
+                                                                     SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
+                        </Expander>
+                    </StackPanel>
                 </Border>
             </ScrollViewer>
 
@@ -448,7 +542,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="AO Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                    <ComboBox x:Name="MaterialAOColorChannelComboBox" SelectedIndex="0" SelectedValue="{Binding SelectedChannel}" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" BorderThickness="1,1,1,1" Height="20">
+                                    <ComboBox x:Name="MaterialAOColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" BorderThickness="1,1,1,1" Height="20">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -465,8 +559,8 @@
                                         </ComboBox.ItemContainerStyle>
                                         <ComboBox.Style>
                                             <Style TargetType="ComboBox">
-                                                <Setter Property="Background" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
-                                                <Setter Property="Foreground" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
+                                                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
+                                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
                                                 <Setter Property="BorderThickness" Value="0"/>
                                             </Style>
                                         </ComboBox.Style>
@@ -536,7 +630,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Diffuse Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                    <ComboBox x:Name="MaterialDiffuseColorChannelComboBox" SelectedIndex="0" SelectedValue="{Binding SelectedChannel}" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="Black">
+                                    <ComboBox x:Name="MaterialDiffuseColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="Black">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -553,8 +647,8 @@
                                         </ComboBox.ItemContainerStyle>
                                         <ComboBox.Style>
                                             <Style TargetType="ComboBox">
-                                                <Setter Property="Background" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
-                                                <Setter Property="Foreground" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
+                                                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
+                                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
                                                 <Setter Property="BorderThickness" Value="0"/>
                                             </Style>
                                         </ComboBox.Style>
@@ -671,7 +765,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Specular Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                    <ComboBox x:Name="MaterialSpecularColorChannelComboBox" SelectedIndex="0" SelectedValue="{Binding SelectedChannel}" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" BorderThickness="1,1,1,1" Height="20" BorderBrush="Black">
+                                    <ComboBox x:Name="MaterialSpecularColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" BorderThickness="1,1,1,1" Height="20" BorderBrush="Black">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -688,8 +782,8 @@
                                         </ComboBox.ItemContainerStyle>
                                         <ComboBox.Style>
                                             <Style TargetType="ComboBox">
-                                                <Setter Property="Background" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
-                                                <Setter Property="Foreground" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
+                                                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
+                                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
                                                 <Setter Property="BorderThickness" Value="0"/>
                                             </Style>
                                         </ComboBox.Style>
@@ -730,7 +824,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="Metalness Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                                    <ComboBox x:Name="MaterialMetalnessColorChannelComboBox" SelectedIndex="0" SelectedValue="{Binding SelectedChannel}" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="Black">
+                                                    <ComboBox x:Name="MaterialMetalnessColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="Black">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -747,8 +841,8 @@
                                                         </ComboBox.ItemContainerStyle>
                                                         <ComboBox.Style>
                                                             <Style TargetType="ComboBox">
-                                                                <Setter Property="Background" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
-                                                                <Setter Property="Foreground" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
+                                                                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
+                                                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
                                                                 <Setter Property="BorderThickness" Value="0"/>
                                                             </Style>
                                                         </ComboBox.Style>
@@ -815,7 +909,7 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="Glossiness Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                            <ComboBox x:Name="MaterialGlossinessColorChannelComboBox" SelectedIndex="0" SelectedValue="{Binding SelectedChannel}" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1">
+                                            <ComboBox x:Name="MaterialGlossinessColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1">
                                                 <ComboBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -832,8 +926,8 @@
                                                 </ComboBox.ItemContainerStyle>
                                                 <ComboBox.Style>
                                                     <Style TargetType="ComboBox">
-                                                        <Setter Property="Background" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
-                                                        <Setter Property="Foreground" Value="{Binding SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
+                                                        <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}"/>
+                                                        <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Self}, Path=SelectedItem, Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}"/>
                                                         <Setter Property="BorderThickness" Value="0"/>
                                                     </Style>
                                                 </ComboBox.Style>

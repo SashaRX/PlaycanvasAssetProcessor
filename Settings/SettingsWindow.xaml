@@ -59,23 +59,120 @@
                 </StackPanel>
             </TabItem>
 
-            <TabItem Header="Basis">
-                <GroupBox x:Name="BasisFolderGroup" Header=" Folder" Margin="2,0,2,0" VerticalAlignment="Top" Height="150">
-                    <StackPanel>
-                        <Grid Margin="2">
-                            <TextBox x:Name="BasisFolderBox" Text="" VerticalContentAlignment="Center" IsReadOnly="True" MinWidth="200" Margin="2" Height="22" VerticalAlignment="Top"/>
-                            <Button Content="Select folder" Click="SelectFolder" AutomationProperties.Name="SelectFolder" Height="22" RenderTransformOrigin="1.514,0.574" HorizontalAlignment="Right" VerticalAlignment="Top" Width="86" Margin="2"/>
-                        </Grid>
-                        <GroupBox x:Name="BasisSetting" Header="Basis Setting" Margin="2,0,2,0" VerticalAlignment="Top" Height="150">
-                            <StackPanel Orientation="Horizontal" Margin="2,2,2,2">
-                                <CheckBox Content="Quality" Margin="2,2,2,2" />
-                                <CheckBox Content="Quality" Margin="2,2,2,2" />
-                                <CheckBox Content="Quality" Margin="2,2,2,2" />
-                                <CheckBox Content="Quality" />
+            <TabItem Header="Basis Universal">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <GroupBox Header="Basis Universal Encoder" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="Path to basisu executable:" Margin="0,0,0,5" FontWeight="Bold"/>
+                                <TextBlock Text="Leave empty to use 'basisu' from PATH" Margin="0,0,0,10" FontSize="10" Foreground="Gray"/>
+
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox x:Name="BasisUExecutableBox"
+                                             Grid.Column="0"
+                                             Text="{Binding BasisUExecutablePath, UpdateSourceTrigger=PropertyChanged}"
+                                             VerticalContentAlignment="Center"
+                                             Margin="0,0,5,0"
+                                             ToolTip="Path to basisu.exe (Windows) or basisu (Linux/Mac)"/>
+
+                                    <Button Grid.Column="1"
+                                            Content="Browse..."
+                                            Click="SelectBasisUExecutable"
+                                            Width="100"/>
+                                </Grid>
+
+                                <TextBlock Text="Installation:" Margin="0,10,0,5" FontWeight="Bold"/>
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,5">
+                                    <Run Text="Windows:"/>
+                                    <LineBreak/>
+                                    <Run Text="  winget install basisu" FontFamily="Consolas"/>
+                                    <LineBreak/>
+                                    <LineBreak/>
+                                    <Run Text="Linux/Mac:"/>
+                                    <LineBreak/>
+                                    <Run Text="  Download from: " FontFamily="Consolas"/>
+                                    <Hyperlink NavigateUri="https://github.com/BinomialLLC/basis_universal/releases"
+                                               RequestNavigate="Hyperlink_RequestNavigate">
+                                        GitHub Releases
+                                    </Hyperlink>
+                                </TextBlock>
+
+                                <Button Content="Test basisu availability"
+                                        Click="TestBasisU_Click"
+                                        Margin="0,10,0,0"
+                                        Width="150"
+                                        HorizontalAlignment="Left"/>
+
+                                <TextBlock x:Name="BasisUStatusText"
+                                           Margin="0,10,0,0"
+                                           FontWeight="Bold"
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Performance Settings (Global)" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="These settings apply to all texture conversions"
+                                           Margin="0,0,0,10"
+                                           FontSize="10"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Use SSE4.1:" VerticalAlignment="Center" Margin="0,5"/>
+                                    <CheckBox Grid.Row="0" Grid.Column="1" x:Name="UseSSE41CheckBox" IsChecked="{Binding UseSSE41}" VerticalAlignment="Center" Margin="0,5"
+                                              ToolTip="Use SSE4.1 CPU instructions for faster encoding"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Use OpenCL:" VerticalAlignment="Center" Margin="0,5"/>
+                                    <CheckBox Grid.Row="1" Grid.Column="1" x:Name="UseOpenCLCheckBox" IsChecked="{Binding UseOpenCL}" VerticalAlignment="Center" Margin="0,5"
+                                              ToolTip="Use OpenCL for GPU acceleration (requires compatible GPU)"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Use Multithreading:" VerticalAlignment="Center" Margin="0,5"/>
+                                    <CheckBox Grid.Row="2" Grid.Column="1" x:Name="UseMultithreadingCheckBox" IsChecked="{Binding UseMultithreading}" VerticalAlignment="Center" Margin="0,5"
+                                              ToolTip="Enable multi-threaded encoding"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Thread Count:" VerticalAlignment="Center" Margin="0,5"/>
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
+                                        <Slider x:Name="ThreadCountSlider"
+                                                Value="{Binding ThreadCount}"
+                                                Minimum="0"
+                                                Maximum="32"
+                                                Width="200"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                VerticalAlignment="Center"
+                                                ToolTip="Number of threads (0 = auto)"/>
+                                        <TextBlock Text="{Binding ElementName=ThreadCountSlider, Path=Value}"
+                                                   Margin="10,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Width="30"/>
+                                        <TextBlock Text="(0 = auto)"
+                                                   Margin="5,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="10"
+                                                   Foreground="Gray"/>
+                                    </StackPanel>
+                                </Grid>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>
-                </GroupBox>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="TinyPng">

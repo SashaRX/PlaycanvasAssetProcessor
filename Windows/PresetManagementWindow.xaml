@@ -1,0 +1,58 @@
+<Window x:Class="AssetProcessor.Windows.PresetManagementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Preset Management" Height="600" Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="New Preset" Width="90" Margin="0,0,5,0" Click="NewPreset_Click"/>
+            <Button Content="Edit" Width="70" Margin="0,0,5,0" Click="EditPreset_Click" x:Name="EditButton" IsEnabled="False"/>
+            <Button Content="Delete" Width="70" Margin="0,0,15,0" Click="DeletePreset_Click" x:Name="DeleteButton" IsEnabled="False"/>
+            <Button Content="Import..." Width="80" Margin="0,0,5,0" Click="ImportPresets_Click"/>
+            <Button Content="Export..." Width="80" Click="ExportPresets_Click"/>
+        </StackPanel>
+
+        <!-- Presets List -->
+        <ListBox Grid.Row="1" x:Name="PresetsListBox" SelectionChanged="PresetsListBox_SelectionChanged">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="5">
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" Margin="0,2,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                            <TextBlock FontSize="10" Foreground="DarkGray">
+                                <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
+                                <Run Text=", "/>
+                                <Run Text="{Binding OutputFormat, Mode=OneWay}"/>
+                                <Run Text=", Q:"/>
+                                <Run Text="{Binding QualityLevel, Mode=OneWay}"/>
+                            </TextBlock>
+                            <TextBlock Text=" (Built-in)" FontSize="10" FontStyle="Italic" Foreground="DarkGray"
+                                       Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Bottom Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Reset to Defaults" Width="120" Margin="0,0,10,0" Click="ResetToDefaults_Click"/>
+            <Button Content="Close" Width="80" Click="Close_Click" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

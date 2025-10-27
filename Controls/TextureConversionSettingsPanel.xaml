@@ -1,0 +1,245 @@
+<UserControl x:Class="AssetProcessor.Controls.TextureConversionSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="280">
+
+    <UserControl.Resources>
+        <ObjectDataProvider x:Key="CompressionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionFormat}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:CompressionFormat"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="OutputFormatValues" MethodName="GetValues" ObjectType="{x:Type core:OutputFormat}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:OutputFormat"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="FilterTypeValues" MethodName="GetValues" ObjectType="{x:Type core:FilterType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:FilterType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="KTX2SupercompressionValues" MethodName="GetValues" ObjectType="{x:Type core:KTX2SupercompressionType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:KTX2SupercompressionType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <!-- Custom ComboBox Style for better readability -->
+        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Custom ComboBoxItem Style -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E3F2FD"/>
+                    <Setter Property="Foreground" Value="#0D47A1"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#BBDEFB"/>
+                    <Setter Property="Foreground" Value="#0D47A1"/>
+                </Trigger>
+                <!-- Highlighted item (mouse over selected item) -->
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="True"/>
+                        <Condition Property="IsMouseOver" Value="True"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="#64B5F6"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </MultiTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel Margin="2">
+        <!-- Preset Selector -->
+        <GroupBox Header="Preset" Margin="0,0,0,2" Padding="2">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
+                          Style="{StaticResource ReadableComboBoxStyle}"
+                          SelectionChanged="PresetComboBox_SelectionChanged"
+                          ToolTip="Select compression preset"/>
+                <Button Content="🔍" Grid.Column="1" Width="30" Margin="0,0,2,0"
+                        Click="AutoDetectPreset_Click"
+                        ToolTip="Auto-detect preset by filename"/>
+                <Button Content="..." Grid.Column="2" Width="30"
+                        Click="ManagePresets_Click"
+                        ToolTip="Manage presets"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Compression Format -->
+        <GroupBox Header="Compression" Margin="0,0,0,2" Padding="2">
+            <StackPanel>
+                <Grid Margin="0,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Format:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox Grid.Column="1" x:Name="CompressionFormatComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
+                              SelectionChanged="CompressionFormatComboBox_SelectionChanged"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Output:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox Grid.Column="1" x:Name="OutputFormatComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
+                              SelectionChanged="OutputFormatComboBox_SelectionChanged"/>
+                </Grid>
+
+                <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed" Margin="0,0,0,3">
+                    <TextBlock Text="KTX2 Supercompression:" FontSize="10" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="KTX2SupercompressionComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
+                              SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"/>
+                </StackPanel>
+
+                <!-- ETC1S Quality -->
+                <StackPanel x:Name="ETC1SPanel" Visibility="Collapsed">
+                    <TextBlock Text="ETC1S Quality:" FontSize="10" Margin="0,0,0,2"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
+                                Minimum="0" Maximum="255" Value="128"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
+                                   Width="30" TextAlignment="Right"/>
+                    </Grid>
+                    <CheckBox x:Name="UseETC1SRDOCheckBox" Content="ETC1S RDO" Margin="0,5,0,0"
+                              IsChecked="True"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                </StackPanel>
+
+                <!-- UASTC Quality -->
+                <StackPanel x:Name="UASTCPanel" Visibility="Collapsed">
+                    <TextBlock Text="UASTC Quality:" FontSize="10" Margin="0,0,0,2"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="UASTCQualitySlider" Grid.Column="0"
+                                Minimum="0" Maximum="4" Value="2"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value}"
+                                   Width="30" TextAlignment="Right"/>
+                    </Grid>
+                    <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,5,0,0" IsChecked="True"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                    <TextBlock Text="RDO Lambda:" FontSize="10" Margin="0,2,0,2"
+                               IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                    <Grid Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.1" Maximum="10" Value="1"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,5,0"
+                                ValueChanged="Slider_ValueChanged"
+                                IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F1}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+
+                <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,5,0,0" IsChecked="True"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
+                <TextBlock Text="Alpha Options:" FontSize="10" Margin="0,10,0,2"/>
+                <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,2"
+                          Checked="ForceAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,2"
+                          Checked="RemoveAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"/>
+
+                <TextBlock Text="Advanced:" FontSize="10" Margin="0,10,0,2"/>
+                <CheckBox x:Name="ForceLinearCheckBox" Content="Treat as Linear (-linear)" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="MipClampCheckBox" Content="Clamp Mip Edges (-mip_clamp)" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (-mip_linear)" Margin="0,0,0,2"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Mipmap Settings -->
+        <GroupBox Header="Mipmaps" Margin="0,0,0,2" Padding="2">
+            <StackPanel>
+                <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,3"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
+                <Grid Margin="0,0,0,3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox Grid.Column="1" x:Name="MipFilterComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
+                              SelectionChanged="ComboBoxSettingChanged"/>
+                </Grid>
+
+                <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,3"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize mipmaps for normal map" Margin="0,5,0,0"
+                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Actions -->
+        <GroupBox Header="Actions" Margin="0,0,0,0" Padding="2">
+            <StackPanel>
+                <Button Content="⚙ Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
+                        Click="Convert_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"
+                        ToolTip="Convert selected texture(s) with current settings"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Apply" x:Name="ApplyButton" Width="60" Margin="0,0,5,0" Click="Apply_Click"/>
+                    <Button Content="Reset" x:Name="ResetButton" Width="60" Click="Reset_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</UserControl>

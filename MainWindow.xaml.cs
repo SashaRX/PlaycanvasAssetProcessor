@@ -1523,13 +1523,9 @@ namespace AssetProcessor {
         }
 
         private string GetBasisuExecutablePath() {
-            if (globalTextureSettings == null) {
-                globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
-            }
-
-            return string.IsNullOrWhiteSpace(globalTextureSettings?.BasisUExecutablePath)
-                ? "basisu"
-                : globalTextureSettings!.BasisUExecutablePath;
+            // KTX2 preview отключён - мы используем только toktx для создания KTX2, а не для preview
+            // basisu больше не используется в проекте
+            return "basisu"; // Возвращаем значение по умолчанию, но метод больше не должен вызываться
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
@@ -3528,11 +3524,11 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                var basisUPath = string.IsNullOrWhiteSpace(globalTextureSettings.BasisUExecutablePath)
-                    ? "basisu"
-                    : globalTextureSettings.BasisUExecutablePath;
+                var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
+                    ? "toktx"
+                    : globalTextureSettings.ToktxExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(basisUPath);
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(toktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {

@@ -389,7 +389,7 @@
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible">
+            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged">
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -422,11 +422,10 @@
                                                        RenderOptions.BitmapScalingMode="HighQuality"
                                                        MinWidth="128"
                                                        MinHeight="129"
-                                                       Stretch="Uniform"
-                                                       RenderTransformOrigin="0.5,0.5">
-                                                    <Image.RenderTransform>
+                                                       Stretch="Uniform">
+                                                    <Image.LayoutTransform>
                                                         <ScaleTransform x:Name="TexturePreviewScaleTransform" ScaleX="1" ScaleY="1" />
-                                                    </Image.RenderTransform>
+                                                    </Image.LayoutTransform>
                                                 </Image>
                                             </Grid>
                                         </ScrollViewer>
@@ -441,6 +440,20 @@
                                 </Grid>
 
                                 <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
+                                        <TextBlock Text="Ширина превью:" FontSize="10" VerticalAlignment="Center" />
+                                        <Slider x:Name="PreviewWidthSlider"
+                                                Minimum="256"
+                                                Maximum="512"
+                                                Width="160"
+                                                Margin="6,0,0,0"
+                                                ValueChanged="PreviewWidthSlider_ValueChanged"
+                                                Loaded="PreviewWidthSlider_Loaded" />
+                                        <TextBlock x:Name="PreviewWidthValueTextBlock"
+                                                   FontSize="10"
+                                                   Margin="6,0,0,0"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
                                         <TextBlock Text="Источник превью:" FontSize="10" VerticalAlignment="Center" />
                                         <RadioButton x:Name="PreviewSourceOriginalRadioButton"

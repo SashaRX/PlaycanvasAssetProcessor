@@ -281,13 +281,25 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// </summary>
         /// <param name="inputPath">Путь к исходной текстуре</param>
         /// <param name="mipmaps">Список мипмапов для сохранения</param>
-        /// <param name="suffix">Суффикс для имени файла (например "_original" или "_toksvig")</param>
+        /// <param name="suffix">Суффикс для имени файла (например "_gloss" или "_toksvig_variance")</param>
         private async Task SaveDebugMipmapsAsync(string inputPath, List<Image<Rgba32>> mipmaps, string suffix) {
             try {
                 var textureDir = Path.GetDirectoryName(inputPath);
                 if (string.IsNullOrEmpty(textureDir)) return;
 
+                // КРИТИЧНО: Удаляем известные суффиксы текстур из fileName чтобы избежать дублирования!
+                // Например: "dirtyLada_gloss.png" → "dirtyLada" (без "_gloss")
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
+
+                // Список суффиксов текстур для удаления
+                string[] textureSuffixes = { "_gloss", "_glossiness", "_smoothness", "_albedo", "_diffuse", "_normal", "_roughness", "_metallic", "_ao", "_emissive" };
+                foreach (var texSuffix in textureSuffixes) {
+                    if (fileName.EndsWith(texSuffix, StringComparison.OrdinalIgnoreCase)) {
+                        fileName = fileName.Substring(0, fileName.Length - texSuffix.Length);
+                        break; // Удаляем только один суффикс
+                    }
+                }
+
                 var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
                 Directory.CreateDirectory(debugMipmapDir);
 

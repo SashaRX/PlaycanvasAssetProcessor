@@ -290,6 +290,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (settings.GenerateMipmaps && mipmapPaths.Count == 1) {
                 // Если toktx должен сгенерировать мипмапы сам
                 args.Add("--genmipmap");
+            } else if (mipmapPaths.Count > 1) {
+                // КРИТИЧНО: Когда передаем ГОТОВЫЕ мипмапы, нужно ЯВНО указать их количество!
+                // Без этого toktx интерпретирует файлы как отдельные текстуры, а не мипмапы
+                args.Add("--levels");
+                args.Add(mipmapPaths.Count.ToString());
             }
 
             if (settings.ClampMipmaps) {

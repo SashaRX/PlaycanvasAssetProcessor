@@ -195,26 +195,22 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // COMPRESSION FORMAT & QUALITY
             // ============================================
+            // ВАЖНО: toktx не позволяет использовать --encode вместе с --zcmp
+            // Поэтому используем старый синтаксис --bcmp/--uastc для совместимости
             if (settings.CompressionFormat == CompressionFormat.ETC1S) {
-                // ETC1S mode
-                args.Add("--encode");
-                args.Add("etc1s");
+                // ETC1S mode - используем --bcmp для совместимости с --zcmp
+                args.Add("--bcmp");
 
-                // Compression level (--clevel 0-5)
+                // Quality передается как аргумент к --bcmp
+                args.Add(settings.QualityLevel.ToString());
+
+                // Compression level работает с --bcmp
                 args.Add("--clevel");
                 args.Add(settings.CompressionLevel.ToString());
 
-                // Quality level (--qlevel 1-255)
-                args.Add("--qlevel");
-                args.Add(settings.QualityLevel.ToString());
-
             } else if (settings.CompressionFormat == CompressionFormat.UASTC) {
                 // UASTC mode
-                args.Add("--encode");
-                args.Add("uastc");
-
-                // UASTC quality (--uastc_quality 0-4)
-                args.Add("--uastc_quality");
+                args.Add("--uastc");
                 args.Add(settings.UASTCQuality.ToString());
 
                 // UASTC RDO

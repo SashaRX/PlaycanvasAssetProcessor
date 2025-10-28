@@ -60,7 +60,7 @@ namespace AssetProcessor.Controls {
             ZstdLevelSlider.Value = 9;
 
             // Alpha Options
-            SeparateAlphaCheckBox.IsChecked = false;
+            // Moved to Normal Maps section
             ForceAlphaCheckBox.IsChecked = false;
             RemoveAlphaCheckBox.IsChecked = false;
 
@@ -71,7 +71,7 @@ namespace AssetProcessor.Controls {
             // Mipmaps
             GenerateMipmapsCheckBox.IsChecked = true;
             MipFilterComboBox.SelectedIndex = 5; // Kaiser
-            LinearMipFilterCheckBox.IsChecked = false;
+            // Removed - conflicted with Gamma Correction
             MipClampCheckBox.IsChecked = false;
             RemoveTemporalMipmapsCheckBox.IsChecked = true;
             ApplyGammaCorrectionCheckBox.IsChecked = true;
@@ -81,7 +81,7 @@ namespace AssetProcessor.Controls {
             ConvertToNormalMapCheckBox.IsChecked = false;
             NormalizeVectorsCheckBox.IsChecked = false;
             NormalizeNormalsCheckBox.IsChecked = false;
-            KeepRGBLayoutCheckBox.IsChecked = false;
+            // Removed - unnecessary option
 
             // Toksvig
             ToksvigEnabledCheckBox.IsChecked = false;
@@ -178,6 +178,49 @@ namespace AssetProcessor.Controls {
             CheckboxSettingChanged(sender, e);
         }
 
+        private void ApplyGammaCorrectionCheckBox_Checked(object sender, RoutedEventArgs e) {
+            // Gamma correction обычно используется для sRGB текстур
+            // Отключение gamma = линейное пространство
+            if (!_isLoading && ApplyGammaCorrectionCheckBox.IsChecked == false) {
+                // Если отключили gamma, можно подсказать использовать Linear
+                if (TreatAsLinearCheckBox.IsChecked != true && TreatAsSRGBCheckBox.IsChecked != true) {
+                    // Пользователь не выбрал явно, оставляем как есть
+                }
+            }
+            CheckboxSettingChanged(sender, e);
+        }
+
+        private void ToksvigEnabledCheckBox_Changed(object sender, RoutedEventArgs e) {
+            if (!_isLoading) {
+                UpdateNormalMapAutoDetect();
+                CheckboxSettingChanged(sender, e);
+            }
+        }
+
+        private void NormalMapPathTextBox_TextChanged(object sender, TextChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateNormalMapAutoDetect();
+                TextBoxSettingChanged(sender, e);
+            }
+        }
+
+        private void UpdateNormalMapAutoDetect() {
+            // Обновляем статус auto-detect для normal map
+            if (string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)) {
+                NormalMapStatusTextBlock.Text = "(auto-detect from filename)";
+                NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
+            } else {
+                var fileName = System.IO.Path.GetFileName(NormalMapPathTextBox.Text);
+                if (System.IO.File.Exists(NormalMapPathTextBox.Text)) {
+                    NormalMapStatusTextBlock.Text = $"✓ Using: {fileName}";
+                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
+                } else {
+                    NormalMapStatusTextBlock.Text = $"⚠ Not found: {fileName}";
+                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                }
+            }
+        }
+
         // ============================================
         // SETTINGS GETTERS
         // ============================================
@@ -207,17 +250,17 @@ namespace AssetProcessor.Controls {
                 KTX2Supercompression = supercompression,
                 KTX2ZstdLevel = (int)Math.Round(ZstdLevelSlider.Value),
                 UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
-                SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
+                // Moved to after GenerateMipmaps
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
                 TreatAsLinear = TreatAsLinearCheckBox.IsChecked ?? false,
                 TreatAsSRGB = TreatAsSRGBCheckBox.IsChecked ?? false,
                 ClampMipmaps = MipClampCheckBox.IsChecked ?? false,
-                UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
+                UseLinearMipFiltering = false, // Removed from UI
                 GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
-                KeepRGBLayout = KeepRGBLayoutCheckBox.IsChecked ?? false,
+                KeepRGBLayout = false, // Removed from UI
                 RemoveTemporaryMipmaps = RemoveTemporalMipmapsCheckBox.IsChecked ?? true
             };
         }
@@ -287,14 +330,15 @@ namespace AssetProcessor.Controls {
             GenerateMipmapsCheckBox.IsChecked = generateMips;
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
             MipClampCheckBox.IsChecked = compression.ClampMipmaps;
-            LinearMipFilterCheckBox.IsChecked = compression.UseLinearMipFiltering;
-            RemoveTemporalMipmapsCheckBox.IsChecked = compression.RemoveTemporaryMipmaps;
 
             // Normal Maps
+            SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
             NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
             ConvertToNormalMapCheckBox.IsChecked = compression.ConvertToNormalMap;
             NormalizeVectorsCheckBox.IsChecked = compression.NormalizeVectors;
-            KeepRGBLayoutCheckBox.IsChecked = compression.KeepRGBLayout;
+
+            // Toksvig (moved RemoveTemporaryMipmaps here, inverted logic)
+            RemoveTemporalMipmapsCheckBox.IsChecked = !compression.RemoveTemporaryMipmaps;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
@@ -452,23 +496,21 @@ namespace AssetProcessor.Controls {
             // Mipmap settings
             GenerateMipmapsCheckBox.IsChecked = preset.GenerateMipmaps;
             MipFilterComboBox.SelectedItem = preset.MipFilter;
-            LinearMipFilterCheckBox.IsChecked = preset.UseLinearMipFiltering;
             MipClampCheckBox.IsChecked = preset.ClampMipmaps;
             ApplyGammaCorrectionCheckBox.IsChecked = preset.ApplyGammaCorrection;
 
             // Advanced settings
             PerceptualModeCheckBox.IsChecked = preset.PerceptualMode;
-            SeparateAlphaCheckBox.IsChecked = preset.SeparateAlpha;
             ForceAlphaCheckBox.IsChecked = preset.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = preset.RemoveAlphaChannel;
             TreatAsLinearCheckBox.IsChecked = preset.TreatAsLinear;
             TreatAsSRGBCheckBox.IsChecked = preset.TreatAsSRGB;
 
             // Normal Maps
+            SeparateAlphaCheckBox.IsChecked = preset.SeparateAlpha;
             NormalizeNormalsCheckBox.IsChecked = preset.NormalizeNormals;
             ConvertToNormalMapCheckBox.IsChecked = preset.ConvertToNormalMap;
             NormalizeVectorsCheckBox.IsChecked = preset.NormalizeVectors;
-            KeepRGBLayoutCheckBox.IsChecked = preset.KeepRGBLayout;
 
             // Toksvig
             LoadToksvigSettings(preset.ToksvigSettings);

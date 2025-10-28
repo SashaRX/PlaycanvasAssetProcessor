@@ -241,9 +241,6 @@
             <!-- 3. ALPHA OPTIONS SECTION -->
             <Expander Header="Alpha Options" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="For normal maps: separate RG channels"/>
                     <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,3"
                               Checked="ForceAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"
                               ToolTip="Add alpha channel (--target_type RGBA)"/>
@@ -280,52 +277,46 @@
                               Margin="0,0,0,5"
                               ToolTip="--filter"/>
 
-                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Use linear filtering for mipmaps"/>
                     <CheckBox x:Name="MipClampCheckBox" Content="Clamp Mip Edges" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                               ToolTip="--wmode clamp"/>
-                    <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Remove Temporal Mipmaps" IsChecked="True" Margin="0,0,0,3"
+                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,3"
+                              Checked="ApplyGammaCorrectionCheckBox_Checked" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Apply gamma 2.2 for sRGB textures. Disable for linear textures (normals, roughness, etc)"/>
+                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps (Debug)" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Clean up temporary mipmap files after conversion"/>
-                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Apply gamma correction during mipmap generation"/>
-                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Save each mipmap level as separate file (debug)"/>
+                              ToolTip="Save each mipmap level as separate file for debugging"/>
                 </StackPanel>
             </Expander>
 
             <!-- 6. NORMAL MAPS SECTION -->
             <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
+                    <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha (2-channel)" Margin="0,0,0,5"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="For 2-channel normal maps: pack X/Y into Color/Alpha"/>
                     <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to XY(RGB/A) Normal Map" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normal_mode: Store normal in RGB or RGBA"/>
+                              ToolTip="--normal_mode: Optimize for normal map storage"/>
                     <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                               ToolTip="--normalize: Force normalize normal vectors"/>
-                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Mipmaps (Normal Map)" Margin="0,0,0,3"
+                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Normalize each mip level for normal maps"/>
-                    <CheckBox x:Name="KeepRGBLayoutCheckBox" Content="Keep RGB Layout (Custom)" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--input_swizzle rgb1: Keep RGB structure"/>
+                              ToolTip="Renormalize normal vectors on each mipmap level"/>
                 </StackPanel>
             </Expander>
 
-            <!-- 7. TOKSVIG SECTION -->
-            <Expander Header="Toksvig (Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+            <!-- 7. TOKSVIG SECTION (For Gloss Maps) -->
+            <Expander Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
                     <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
-                              ToolTip="Apply Toksvig variance-based roughness adjustment"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                              ToolTip="Apply Toksvig variance-based gloss adjustment for specular anti-aliasing"
+                              Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"/>
 
                     <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
                         <TextBlock Text="Composite Power (k) [0.5-2.0]:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Weight of variance influence"/>
+                                   ToolTip="Weight of variance influence on gloss"/>
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -361,8 +352,16 @@
                                   ToolTip="Apply 3x3 blur to variance map"
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
-                        <TextBlock Text="Normal Map Path:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Leave empty for auto-detection"/>
+                        <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Keep Temporal Mipmaps (Debug)" Margin="0,0,0,5"
+                                  IsChecked="False"
+                                  ToolTip="Keep temporary mipmap files to see Toksvig effect"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
+                        <TextBlock Text="Normal Map:" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Auto-detected or manually specified"/>
+                        <TextBlock x:Name="NormalMapStatusTextBlock" Text="(auto-detect from filename)"
+                                   FontSize="9" Foreground="Gray" Margin="0,0,0,2"
+                                   TextWrapping="Wrap"/>
                         <Grid Margin="0,0,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -371,7 +370,7 @@
                             <TextBox x:Name="NormalMapPathTextBox" Grid.Column="0"
                                      Margin="0,0,2,0" Height="22"
                                      ToolTip="Path to normal map (empty = auto-detect)"
-                                     TextChanged="TextBoxSettingChanged"/>
+                                     TextChanged="NormalMapPathTextBox_TextChanged"/>
                             <Button Content="..." Grid.Column="1" Width="25" Height="22"
                                     Click="BrowseNormalMap_Click"
                                     ToolTip="Browse for normal map"/>

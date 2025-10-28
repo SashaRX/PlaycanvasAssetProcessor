@@ -134,10 +134,10 @@ namespace AssetProcessor.TextureConversion.Core {
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
-        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 9)
+        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 3)
         /// Выше = лучше сжатие, медленнее. --zcmp flag
         /// </summary>
-        public int KTX2ZstdLevel { get; set; } = 9;
+        public int KTX2ZstdLevel { get; set; } = 3;
 
         /// <summary>
         /// Конвертировать в XY(RGB/A) Normal Map (--normal_mode)
@@ -172,7 +172,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9,
+                KTX2ZstdLevel = 3,
                 UseETC1SRDO = true
             };
         }
@@ -190,7 +190,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 GenerateMipmaps = true,
                 UseMultithreading = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9,
+                KTX2ZstdLevel = 3,
                 UseETC1SRDO = true
             };
         }

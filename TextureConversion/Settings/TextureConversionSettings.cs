@@ -93,7 +93,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         public float UASTCRDOQuality { get; set; } = 1.0f;
         public bool PerceptualMode { get; set; } = true;
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
-        public int KTX2ZstdLevel { get; set; } = 9;
+        public int KTX2ZstdLevel { get; set; } = 3;
         public bool UseETC1SRDO { get; set; } = true;
         public bool SeparateAlpha { get; set; } = false;
         public bool ForceAlphaChannel { get; set; } = false;

@@ -108,9 +108,9 @@ namespace AssetProcessor.TextureConversion.Settings {
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
-        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 9)
+        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 3)
         /// </summary>
-        public int KTX2ZstdLevel { get; set; } = 9;
+        public int KTX2ZstdLevel { get; set; } = 3;
 
         /// <summary>
         /// Разделить RG на Color/Alpha (для normal maps)
@@ -191,7 +191,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9
+                KTX2ZstdLevel = 3
             };
         }
 
@@ -284,7 +284,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9
+                KTX2ZstdLevel = 3
             };
         }
 
@@ -309,7 +309,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9
+                KTX2ZstdLevel = 3
             };
         }
 
@@ -334,7 +334,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9
+                KTX2ZstdLevel = 3
             };
         }
 
@@ -359,7 +359,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9,
+                KTX2ZstdLevel = 3,
                 ToksvigSettings = new ToksvigSettings {
                     Enabled = true,
                     CompositePower = 1.0f,
@@ -392,7 +392,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 9
+                KTX2ZstdLevel = 3
             };
         }
 

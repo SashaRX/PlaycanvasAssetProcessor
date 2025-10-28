@@ -17,9 +17,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         );
 
         private List<TextureConversionPreset> _presets;
+        private HashSet<string> _hiddenBuiltInPresets; // Список скрытых встроенных пресетов
 
         public PresetManager() {
             _presets = new List<TextureConversionPreset>();
+            _hiddenBuiltInPresets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             LoadPresets();
         }
 
@@ -99,7 +101,10 @@ namespace AssetProcessor.TextureConversion.Settings {
         }
 
         /// <summary>
-        /// Удаляет пользовательский пресет
+        /// Удаляет пресет
+        /// Для встроенных пресетов: добавляет в список скрытых
+        /// Для пользовательских пресетов с именем встроенного: удаляет кастомизацию, восстанавливает встроенный
+        /// Для обычных пользовательских пресетов: просто удаляет
         /// </summary>
         public bool DeletePreset(string name) {
             var preset = _presets.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -109,12 +114,28 @@ namespace AssetProcessor.TextureConversion.Settings {
             }
 
             if (preset.IsBuiltIn) {
-                throw new InvalidOperationException("Cannot delete built-in presets");
-            }
+                // Это встроенный пресет - добавляем в список скрытых
+                _hiddenBuiltInPresets.Add(name);
+                _presets.Remove(preset);
+                SavePresets();
+                return true;
+            } else {
+                // Это пользовательский пресет
+                // Проверяем, переопределяет ли он встроенный
+                var builtInPresets = TextureConversionPreset.GetBuiltInPresets();
+                bool isOverridingBuiltIn = builtInPresets.Any(p =>
+                    p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-            _presets.Remove(preset);
-            SavePresets();
-            return true;
+                _presets.Remove(preset);
+                SavePresets();
+
+                if (isOverridingBuiltIn) {
+                    // Перезагружаем, чтобы восстановить встроенный пресет
+                    LoadPresets();
+                }
+
+                return true;
+            }
         }
 
         /// <summary>
@@ -123,35 +144,59 @@ namespace AssetProcessor.TextureConversion.Settings {
         private void LoadPresets() {
             _presets.Clear();
 
-            // Всегда добавляем встроенные пресеты
-            _presets.AddRange(TextureConversionPreset.GetBuiltInPresets());
-
-            // Загружаем пользовательские пресеты из JSON
+            // Загружаем сохраненные данные (пользовательские пресеты + скрытые встроенные)
+            PresetData? savedData = null;
             if (File.Exists(PresetsFilePath)) {
                 try {
                     string json = File.ReadAllText(PresetsFilePath);
-                    var userPresets = JsonConvert.DeserializeObject<List<TextureConversionPreset>>(json);
-
-                    if (userPresets != null) {
-                        foreach (var preset in userPresets) {
-                            // Убеждаемся что пользовательские пресеты не помечены как встроенные
-                            preset.IsBuiltIn = false;
-
-                            // Проверяем что имя не конфликтует со встроенными
-                            if (!_presets.Any(p => p.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase))) {
-                                _presets.Add(preset);
-                            }
-                        }
-                    }
+                    savedData = JsonConvert.DeserializeObject<PresetData>(json);
                 } catch (Exception ex) {
-                    // Логируем ошибку, но продолжаем работу с встроенными пресетами
+                    // Логируем ошибку, но продолжаем работу
                     Console.WriteLine($"Error loading presets: {ex.Message}");
+                }
+            }
+
+            // Восстанавливаем список скрытых встроенных пресетов
+            _hiddenBuiltInPresets.Clear();
+            if (savedData?.HiddenBuiltInPresets != null) {
+                foreach (var name in savedData.HiddenBuiltInPresets) {
+                    _hiddenBuiltInPresets.Add(name);
+                }
+            }
+
+            // Добавляем встроенные пресеты (кроме скрытых)
+            var builtInPresets = TextureConversionPreset.GetBuiltInPresets();
+            foreach (var preset in builtInPresets) {
+                if (!_hiddenBuiltInPresets.Contains(preset.Name)) {
+                    _presets.Add(preset);
+                }
+            }
+
+            // Загружаем пользовательские пресеты
+            if (savedData?.UserPresets != null) {
+                foreach (var preset in savedData.UserPresets) {
+                    // Убеждаемся что пользовательские пресеты не помечены как встроенные
+                    preset.IsBuiltIn = false;
+
+                    // Если пользовательский пресет имеет то же имя что и встроенный,
+                    // заменяем встроенный (это позволяет переопределять встроенные пресеты)
+                    var existingBuiltIn = _presets.FirstOrDefault(p =>
+                        p.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase) && p.IsBuiltIn);
+
+                    if (existingBuiltIn != null) {
+                        // Заменяем встроенный пресет пользовательским
+                        int index = _presets.IndexOf(existingBuiltIn);
+                        _presets[index] = preset;
+                    } else {
+                        // Добавляем новый пользовательский пресет
+                        _presets.Add(preset);
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Сохраняет пользовательские пресеты в JSON файл
+        /// Сохраняет пользовательские пресеты и список скрытых встроенных в JSON файл
         /// </summary>
         private void SavePresets() {
             try {
@@ -161,9 +206,13 @@ namespace AssetProcessor.TextureConversion.Settings {
                     Directory.CreateDirectory(directory);
                 }
 
-                // Сохраняем только пользовательские пресеты
-                var userPresets = _presets.Where(p => !p.IsBuiltIn).ToList();
-                string json = JsonConvert.SerializeObject(userPresets, Formatting.Indented);
+                // Создаем объект с данными для сохранения
+                var data = new PresetData {
+                    UserPresets = _presets.Where(p => !p.IsBuiltIn).ToList(),
+                    HiddenBuiltInPresets = _hiddenBuiltInPresets.ToList()
+                };
+
+                string json = JsonConvert.SerializeObject(data, Formatting.Indented);
                 File.WriteAllText(PresetsFilePath, json);
             } catch (Exception ex) {
                 throw new InvalidOperationException($"Failed to save presets: {ex.Message}", ex);
@@ -175,7 +224,9 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// </summary>
         public void ResetToDefaults() {
             _presets.RemoveAll(p => !p.IsBuiltIn);
+            _hiddenBuiltInPresets.Clear();
             SavePresets();
+            LoadPresets(); // Перезагружаем чтобы показать все встроенные пресеты
         }
 
         /// <summary>
@@ -235,5 +286,13 @@ namespace AssetProcessor.TextureConversion.Settings {
 
             return importedCount;
         }
+    }
+
+    /// <summary>
+    /// Данные для сериализации пресетов (пользовательские + скрытые встроенные)
+    /// </summary>
+    internal class PresetData {
+        public List<TextureConversionPreset> UserPresets { get; set; } = new();
+        public List<string> HiddenBuiltInPresets { get; set; } = new();
     }
 }

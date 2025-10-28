@@ -485,18 +485,18 @@ namespace AssetProcessor.TextureConversion.Settings {
         }
 
         /// <summary>
-        /// Проверяет, соответствует ли имя файла постфиксам этого пресета
+        /// Проверяет, соответствует ли имя файла постфиксам этого пресета (без учета регистра)
         /// </summary>
         public bool MatchesFileName(string fileName) {
             if (Suffixes == null || Suffixes.Count == 0) {
                 return false;
             }
 
-            var lowerFileName = fileName.ToLowerInvariant();
-            // Убираем расширение
-            var nameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(lowerFileName);
+            // Убираем расширение и приводим к нижнему регистру для сравнения без учета регистра
+            var nameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
 
             foreach (var suffix in Suffixes) {
+                // Сравниваем без учета регистра
                 if (nameWithoutExtension.EndsWith(suffix.ToLowerInvariant())) {
                     return true;
                 }

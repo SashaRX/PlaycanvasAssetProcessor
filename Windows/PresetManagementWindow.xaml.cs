@@ -20,10 +20,9 @@ namespace AssetProcessor.Windows {
 
         private void PresetsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             bool hasSelection = PresetsListBox.SelectedItem != null;
-            var selectedPreset = PresetsListBox.SelectedItem as TextureConversionPreset;
 
             EditButton.IsEnabled = hasSelection;
-            DeleteButton.IsEnabled = hasSelection && selectedPreset != null && !selectedPreset.IsBuiltIn;
+            DeleteButton.IsEnabled = hasSelection; // Теперь можно удалять и встроенные пресеты
         }
 
         private void NewPreset_Click(object sender, RoutedEventArgs e) {
@@ -73,13 +72,24 @@ namespace AssetProcessor.Windows {
             var selectedPreset = PresetsListBox.SelectedItem as TextureConversionPreset;
             if (selectedPreset == null) return;
 
+            string message;
             if (selectedPreset.IsBuiltIn) {
-                MessageBox.Show("Built-in presets cannot be deleted.", "Cannot Delete", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                message = $"Are you sure you want to hide the built-in preset '{selectedPreset.Name}'?\n\nYou can restore it later using 'Reset to Defaults'.";
+            } else {
+                // Проверяем, переопределяет ли этот пользовательский пресет встроенный
+                var builtInPresets = TextureConversionPreset.GetBuiltInPresets();
+                bool isOverridingBuiltIn = builtInPresets.Any(p =>
+                    p.Name.Equals(selectedPreset.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (isOverridingBuiltIn) {
+                    message = $"This will revert '{selectedPreset.Name}' to its default settings.\n\nAre you sure?";
+                } else {
+                    message = $"Are you sure you want to delete preset '{selectedPreset.Name}'?";
+                }
             }
 
             var result = MessageBox.Show(
-                $"Are you sure you want to delete preset '{selectedPreset.Name}'?",
+                message,
                 "Confirm Delete",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question

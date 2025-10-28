@@ -73,10 +73,31 @@ namespace AssetProcessor.Controls {
             LogListView.ItemsSource = _filteredLogs;
             UpdateAutoScrollButton();
 
+            // Register custom target programmatically
+            RegisterLogTarget();
+
             // Subscribe to NLog events via custom target
             LogTarget.Instance.LogReceived += OnLogReceived;
 
             Logger.Info("Log Viewer initialized");
+        }
+
+        private void RegisterLogTarget() {
+            var config = LogManager.Configuration;
+            if (config != null) {
+                // Check if already registered
+                if (config.FindTargetByName<LogTarget>("memoryTarget") == null) {
+                    // Add memory target
+                    config.AddTarget("memoryTarget", LogTarget.Instance);
+
+                    // Add rule to route all logs to memory target
+                    var rule = new NLog.Config.LoggingRule("*", LogLevel.Info, LogTarget.Instance);
+                    config.LoggingRules.Add(rule);
+
+                    // Reconfigure NLog
+                    LogManager.Configuration = config;
+                }
+            }
         }
 
         private void OnLogReceived(LogEventInfo logEvent) {

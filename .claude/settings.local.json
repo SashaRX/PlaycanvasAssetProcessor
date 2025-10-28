@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nCRITICAL FIX: Add --levels flag for pre-generated mipmaps\n\nPROBLEM:\ntoktx was only storing 1 mip level instead of 11:\n```\nktxinfo shows:\nlevelCount: 1  ← WRONG! Should be 11\n```\n\nROOT CAUSE:\nWhen passing multiple PNG files to toktx, it interprets them as:\n- SEPARATE textures (for texture arrays)\n- NOT as mipmap levels\n\nWithout --levels flag, toktx only uses the FIRST file and ignores the rest!\n\nFIX:\nAdd --levels N flag when passing pre-generated mipmaps\nTextureConversion/BasisU/ToktxWrapper.cs:293-298\n\nBefore (BROKEN):\n```bash\ntoktx output.ktx2 mip0.png mip1.png mip2.png ...\n# toktx thinks: \"multiple textures?\" → uses only mip0.png\n# Result: levelCount = 1\n```\n\nAfter (FIXED):\n```bash\ntoktx --levels 11 output.ktx2 mip0.png mip1.png ... mip10.png\n# toktx thinks: \"11 mipmap levels!\" → uses all files\n# Result: levelCount = 11 ✅\n```\n\nCODE CHANGE:\n```csharp\nif (settings.GenerateMipmaps && mipmapPaths.Count == 1) {\n    args.Add(\"--genmipmap\");  // Let toktx generate mipmaps\n} else if (mipmapPaths.Count > 1) {\n    // NEW: Explicitly tell toktx these are mipmap levels!\n    args.Add(\"--levels\");\n    args.Add(mipmapPaths.Count.ToString());\n}\n```\n\nTESTING:\nAfter fix, ktxinfo should show:\n```\nlevelCount: 11  ✅\nLevel0: 1024x1024\nLevel1: 512x512\n...\nLevel10: 1x1\n```\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

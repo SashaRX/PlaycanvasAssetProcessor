@@ -3556,6 +3556,22 @@ namespace AssetProcessor {
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
+            // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
+            // Без этого кэшируется путь от предыдущей текстуры
+            ConversionSettingsPanel.ClearNormalMapPath();
+
+            // КРИТИЧНО: НЕ вызываем LoadSettings() если preset уже выбран пользователем!
+            // LoadSettings() сбрасывает все настройки панели к дефолтам, включая preset dropdown
+            // Вместо этого просто обновляем texture.PresetName из текущего выбора dropdown
+            string currentPreset = ConversionSettingsPanel.PresetComboBox.SelectedItem as string ?? "";
+            if (!string.IsNullOrEmpty(currentPreset) && currentPreset != "Custom") {
+                // Пользователь уже выбрал preset - сохраняем его для текущей текстуры
+                texture.PresetName = currentPreset;
+                MainWindowHelpers.LogInfo($"Using current preset '{currentPreset}' for texture {texture.Name}");
+                return; // НЕ загружаем дефолтные настройки!
+            }
+
+            // Если preset не выбран (Custom), загружаем дефолтные настройки для типа текстуры
             var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
             var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
                 MapTextureTypeToCore(textureType));
@@ -3566,10 +3582,6 @@ namespace AssetProcessor {
 
             ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
             // LoadPresets removed - presets are now managed globally through PresetManager
-
-            // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
-            // Без этого кэшируется путь от предыдущей текстуры
-            ConversionSettingsPanel.ClearNormalMapPath();
 
             texture.CompressionFormat = compression.CompressionFormat.ToString();
 

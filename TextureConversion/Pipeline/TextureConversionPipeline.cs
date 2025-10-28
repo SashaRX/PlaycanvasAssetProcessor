@@ -223,8 +223,8 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                     // Копируем все мипмапы из temp в debug папку
                                     var tempFiles = Directory.GetFiles(tempMipmapDir, "*.png");
                                     foreach (var tempFile in tempFiles) {
-                                        var fileName = Path.GetFileName(tempFile);
-                                        var debugPath = Path.Combine(debugMipmapDir, fileName);
+                                        var tempFileName = Path.GetFileName(tempFile);
+                                        var debugPath = Path.Combine(debugMipmapDir, tempFileName);
                                         File.Copy(tempFile, debugPath, overwrite: true);
                                     }
 

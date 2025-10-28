@@ -209,14 +209,35 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     Logger.Info($"  Mip levels: {mipmaps.Count}");
 
                 } finally {
-                    // Удаляем временные мипмапы
+                    // Обрабатываем временные мипмапы
                     try {
                         if (Directory.Exists(tempMipmapDir)) {
+                            // Если Keep Temporal Mipmaps включен - копируем в debug папку
+                            if (!compressionSettings.RemoveTemporaryMipmaps) {
+                                // Создаём папку "mipmaps" рядом с текстурой
+                                var textureDir = Path.GetDirectoryName(inputPath);
+                                if (!string.IsNullOrEmpty(textureDir)) {
+                                    var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
+                                    Directory.CreateDirectory(debugMipmapDir);
+
+                                    // Копируем все мипмапы из temp в debug папку
+                                    var tempFiles = Directory.GetFiles(tempMipmapDir, "*.png");
+                                    foreach (var tempFile in tempFiles) {
+                                        var fileName = Path.GetFileName(tempFile);
+                                        var debugPath = Path.Combine(debugMipmapDir, fileName);
+                                        File.Copy(tempFile, debugPath, overwrite: true);
+                                    }
+
+                                    Logger.Info($"✓ Debug mipmaps сохранены в: {debugMipmapDir} ({tempFiles.Length} файлов)");
+                                }
+                            }
+
+                            // Всегда удаляем временную директорию (даже если копировали)
                             Directory.Delete(tempMipmapDir, recursive: true);
                             Logger.Info($"Временная директория удалена: {tempMipmapDir}");
                         }
                     } catch (Exception ex) {
-                        Logger.Warn($"Не удалось удалить временную директорию: {ex.Message}");
+                        Logger.Warn($"Не удалось обработать временную директорию: {ex.Message}");
                     }
                 }
 

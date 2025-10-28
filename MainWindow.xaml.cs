@@ -2748,7 +2748,11 @@ namespace AssetProcessor {
                     }
 
                     JToken folder = foldersById[folderId];
-                    string folderName = folder["name"]?.ToString() ?? string.Empty;
+                    // КРИТИЧНО: Очищаем имя папки от newline символов!
+                    string folderName = (folder["name"]?.ToString() ?? string.Empty)
+                        .Replace("\r", "")
+                        .Replace("\n", "")
+                        .Trim();
                     int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
 
                     string fullPath;
@@ -2931,7 +2935,10 @@ namespace AssetProcessor {
 
         private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
             try {
-                string textureName = asset["name"]?.ToString().Split('.')[0] ?? "Unknown";
+                // КРИТИЧНО: Очищаем имя файла от newline символов!
+                string rawFileName = asset["name"]?.ToString() ?? "Unknown";
+                string cleanFileName = rawFileName.Replace("\r", "").Replace("\n", "").Trim();
+                string textureName = cleanFileName.Split('.')[0];
                 int? parentId = asset["parent"]?.Type == JTokenType.Integer ? (int?)asset["parent"] : null;
                 TextureResource texture = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
@@ -2939,7 +2946,7 @@ namespace AssetProcessor {
                     Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath(asset["name"]?.ToString(), parentId),
+                    Path = GetResourcePath(cleanFileName, parentId),
                     Extension = extension,
                     Resolution = new int[2],
                     ResizeResolution = new int[2],
@@ -3557,21 +3564,32 @@ namespace AssetProcessor {
             }
 
             // Set the preset in UI
+            MainWindowHelpers.LogInfo($"Setting preset in UI. Texture preset name: '{texture.PresetName}'");
+            MainWindowHelpers.LogInfo($"PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
+
             if (!string.IsNullOrEmpty(texture.PresetName)) {
                 var presetManager = new TextureConversion.Settings.PresetManager();
                 var preset = presetManager.GetPreset(texture.PresetName);
+                MainWindowHelpers.LogInfo($"Found preset by name: {preset != null}");
                 if (preset != null) {
                     ConversionSettingsPanel.PresetComboBox.SelectedItem = preset;
+                    MainWindowHelpers.LogInfo($"Set PresetComboBox.SelectedItem to preset: {preset.Name}");
                 } else {
                     // Preset not found, select first one
                     if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
                         ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0;
+                        MainWindowHelpers.LogInfo($"Preset not found, selected first preset at index 0");
+                    } else {
+                        MainWindowHelpers.LogError($"PresetComboBox is empty! Cannot select any preset.");
                     }
                 }
             } else {
                 // No preset name, select first one
                 if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
                     ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0;
+                    MainWindowHelpers.LogInfo($"No preset name, selected first preset at index 0");
+                } else {
+                    MainWindowHelpers.LogError($"No preset name and PresetComboBox is empty!");
                 }
             }
         }

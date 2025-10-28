@@ -35,11 +35,19 @@ namespace AssetProcessor.Controls {
         private void InitializePresets() {
             // Загружаем все пресеты (встроенные + пользовательские)
             var presets = _presetManager.GetAllPresets();
+            System.Diagnostics.Debug.WriteLine($"[InitializePresets] Loaded {presets.Count} presets");
+            foreach (var preset in presets) {
+                System.Diagnostics.Debug.WriteLine($"  - {preset.Name} (IsBuiltIn: {preset.IsBuiltIn})");
+            }
+
             PresetComboBox.ItemsSource = presets;
             PresetComboBox.DisplayMemberPath = "Name";
 
             if (presets.Count > 0) {
                 PresetComboBox.SelectedIndex = 0; // Выбираем первый пресет по умолчанию
+                System.Diagnostics.Debug.WriteLine($"[InitializePresets] Selected first preset: {presets[0].Name}");
+            } else {
+                System.Diagnostics.Debug.WriteLine($"[InitializePresets] WARNING: No presets loaded!");
             }
         }
 

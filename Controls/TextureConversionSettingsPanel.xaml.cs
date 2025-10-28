@@ -464,14 +464,20 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
-        public void LoadToksvigSettings(ToksvigSettings settings) {
+        public void LoadToksvigSettings(ToksvigSettings settings, bool loadNormalMapPath = false) {
             _isLoading = true;
 
             ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
             ToksvigCompositePowerSlider.Value = settings.CompositePower;
             ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
             ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
-            NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
+
+            // КРИТИЧНО: НЕ загружаем NormalMapPath по умолчанию!
+            // Это позволяет auto-detect работать для каждой новой текстуры
+            // Загружаем только если явно указано (например, при загрузке сохраненных настроек)
+            if (loadNormalMapPath) {
+                NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
+            }
 
             _isLoading = false;
         }

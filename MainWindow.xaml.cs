@@ -3555,6 +3555,25 @@ namespace AssetProcessor {
                 var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
                 texture.PresetName = matchedPreset?.Name ?? "";
             }
+
+            // Set the preset in UI
+            if (!string.IsNullOrEmpty(texture.PresetName)) {
+                var presetManager = new TextureConversion.Settings.PresetManager();
+                var preset = presetManager.GetPreset(texture.PresetName);
+                if (preset != null) {
+                    ConversionSettingsPanel.PresetComboBox.SelectedItem = preset;
+                } else {
+                    // Preset not found, select first one
+                    if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
+                        ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0;
+                    }
+                }
+            } else {
+                // No preset name, select first one
+                if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
+                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0;
+                }
+            }
         }
 
         // Initialize compression format and preset for texture without updating UI panel

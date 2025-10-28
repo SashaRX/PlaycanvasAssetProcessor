@@ -201,6 +201,18 @@ namespace AssetProcessor.TextureConversion.BasisU {
             }
 
             // ============================================
+            // COLOR SPACE
+            // ============================================
+            // КРИТИЧНО: --assign_oetf ДОЛЖЕН быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
+            if (settings.TreatAsLinear) {
+                args.Add("--assign_oetf");
+                args.Add("linear");
+            } else if (settings.TreatAsSRGB) {
+                args.Add("--assign_oetf");
+                args.Add("srgb");
+            }
+
+            // ============================================
             // COMPRESSION FORMAT & QUALITY
             // ============================================
             // ВАЖНО: toktx не позволяет использовать --encode вместе с --zcmp
@@ -241,17 +253,6 @@ namespace AssetProcessor.TextureConversion.BasisU {
                     args.Add("0"); // ZLIB mode
                 }
                 // None = no --zcmp flag
-            }
-
-            // ============================================
-            // COLOR SPACE
-            // ============================================
-            if (settings.TreatAsLinear) {
-                args.Add("--assign_oetf");
-                args.Add("linear");
-            } else if (settings.TreatAsSRGB) {
-                args.Add("--assign_oetf");
-                args.Add("srgb");
             }
 
             // ============================================

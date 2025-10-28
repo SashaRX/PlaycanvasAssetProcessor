@@ -143,10 +143,17 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             }
 
                             // Освобождаем старые оригинальные мипмапы
-                            foreach (var mip in mipmaps) {
-                                mip.Dispose();
+                            Logger.Info($"Освобождаем {mipmaps.Count} оригинальных мипмапов (до Toksvig)...");
+                            for (int i = 0; i < mipmaps.Count; i++) {
+                                try {
+                                    Logger.Debug($"  Disposing original mip[{i}]: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                                    mipmaps[i].Dispose();
+                                } catch (Exception disposeEx) {
+                                    Logger.Error($"  ОШИБКА при освобождении original mip[{i}]: {disposeEx.Message}");
+                                }
                             }
 
+                            Logger.Info($"Переключаемся на corrected mipmaps ({correctedMipmaps.Count} изображений)");
                             mipmaps = correctedMipmaps;
                             result.ToksvigApplied = true;
                             result.NormalMapUsed = normalMapPath;
@@ -176,7 +183,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         var mipPath = Path.Combine(tempMipmapDir, $"{fileName}_mip{i}.png");
                         Logger.Info($"Сохраняем mipmap level {i} ({mipmaps[i].Width}x{mipmaps[i].Height}) в: {mipPath}");
 
-                        await mipmaps[i].SaveAsPngAsync(mipPath);
+                        try {
+                            await mipmaps[i].SaveAsPngAsync(mipPath);
+                        } catch (ObjectDisposedException disposeEx) {
+                            Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: mip[{i}] УЖЕ ОСВОБОЖДЕН!");
+                            Logger.Error($"  Размер изображения был: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                            Logger.Error($"  Exception: {disposeEx.Message}");
+                            throw;
+                        }
 
                         // Проверяем создание файла
                         if (File.Exists(mipPath)) {
@@ -309,7 +323,15 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                 for (int i = 0; i < mipmaps.Count; i++) {
                     var debugPath = Path.Combine(debugMipmapDir, $"{fileName}{suffix}_mip{i}.png");
-                    await mipmaps[i].SaveAsPngAsync(debugPath);
+                    try {
+                        Logger.Debug($"  Saving debug mip{suffix}[{i}]: {mipmaps[i].Width}x{mipmaps[i].Height} -> {debugPath}");
+                        await mipmaps[i].SaveAsPngAsync(debugPath);
+                    } catch (ObjectDisposedException disposeEx) {
+                        Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: debug mip{suffix}[{i}] УЖЕ ОСВОБОЖДЕН ПРИ СОХРАНЕНИИ!");
+                        Logger.Error($"  debugPath: {debugPath}");
+                        Logger.Error($"  Exception: {disposeEx.Message}");
+                        throw;
+                    }
                 }
 
                 Logger.Info($"✓ Debug mipmaps{suffix} сохранены в: {debugMipmapDir} ({mipmaps.Count} файлов)");

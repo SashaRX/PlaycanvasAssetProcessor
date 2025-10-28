@@ -1,11 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Select-String -Pattern \"error|warning\" -Context 0,1)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add -A)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add TextureConversion/BasisU/ToktxWrapper.cs TextureConversion/Settings/PresetManager.cs Controls/TextureConversionSettingsPanel.xaml.cs MainWindow.xaml.cs)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add MainWindow.xaml MainWindow.xaml.cs)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" commit -m \"$(cat <<''EOF''\nUI improvements: remove width slider, fix KTX preview detection\n\nIMPROVEMENTS:\n\n1. Remove unnecessary ''Preview Width'' slider\n   - Removed PreviewWidthSlider and associated TextBlock from XAML\n   - Removed PreviewWidthSlider_Loaded and PreviewWidthSlider_ValueChanged handlers\n   - Removed UpdatePreviewWidthControls and UpdatePreviewWidthText methods\n   - Removed isUpdatingPreviewWidth flag\n   - Simplified TextureViewerScroll_SizeChanged to only handle height\n   - Cleaner UI with less clutter\n\n2. Fix ''Preview Source'' to detect both .ktx2 and .ktx files\n   - FindKtx2PathForSourcePath now searches for both extensions\n   - TryFindKtx2InDirectory searches with both \"*.ktx2\" and \"*.ktx\" patterns\n   - Nested foreach loops to check both file types\n   - Prioritizes .ktx2 over .ktx when both exist (due to search order)\n   - Fixes issue where .ktx files were not detected for preview\n\nIMPLEMENTATION DETAILS:\n\nMainWindow.xaml:\n- Removed entire StackPanel containing PreviewWidthSlider (lines 455-468)\n- Preview Source radio buttons remain unchanged\n\nMainWindow.xaml.cs:\n- Removed PreviewWidthSlider event handlers\n- Removed UpdatePreviewWidthControls() method\n- Removed UpdatePreviewWidthText() method\n- Removed isUpdatingPreviewWidth field\n- FindKtx2PathForSourcePath: Added foreach loop for extensions\n- TryFindKtx2InDirectory: Added nested foreach for patterns\n\nTESTING:\n- Code compiles successfully\n- Both .ktx2 and .ktx files should now be detected for preview\n- UI is cleaner without width slider\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(dotnet build:*)",
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" status)",
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" diff MainWindow.xaml.cs)",
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" log -1 --name-status)",
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" log --oneline -5)"
     ],
     "deny": [],
     "ask": []

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(\"C:\\Program Files\\KTX-Software\\bin\\toktx.exe\" --help)"
     ],
     "deny": [],
     "ask": []

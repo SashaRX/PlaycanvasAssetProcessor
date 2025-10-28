@@ -295,8 +295,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 // Если toktx должен сгенерировать мипмапы сам
                 args.Add("--genmipmap");
             } else if (usePreGeneratedMipmaps) {
-                // КРИТИЧНО: Когда передаем ГОТОВЫЕ мипмапы, нужно ЯВНО указать их количество!
-                // Без этого toktx интерпретирует файлы как отдельные текстуры, а не мипмапы
+                // КРИТИЧНО: Флаг --mipmap ОБЯЗАТЕЛЕН когда передаём готовые мипмапы!
+                // Без него toktx игнорирует все файлы кроме первого ("Ignoring excess input images")
+                args.Add("--mipmap");
+
+                // --levels ограничивает количество уровней (опционально)
+                // НО в комбинации с --mipmap он ОБЯЗАТЕЛЕН!
                 args.Add("--levels");
                 args.Add(mipmapPaths.Count.ToString());
             }

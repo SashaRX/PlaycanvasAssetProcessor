@@ -3557,65 +3557,43 @@ namespace AssetProcessor {
 
         private void LoadTextureConversionSettings(TextureResource texture) {
             // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
-            // Без этого кэшируется путь от предыдущей текстуры
             ConversionSettingsPanel.ClearNormalMapPath();
 
-            // КРИТИЧНО: НЕ вызываем LoadSettings() если preset уже выбран пользователем!
-            // LoadSettings() сбрасывает все настройки панели к дефолтам, включая preset dropdown
-            // Вместо этого просто обновляем texture.PresetName из текущего выбора dropdown
-            string currentPreset = ConversionSettingsPanel.PresetComboBox.SelectedItem as string ?? "";
-            if (!string.IsNullOrEmpty(currentPreset) && currentPreset != "Custom") {
-                // Пользователь уже выбрал preset - сохраняем его для текущей текстуры
-                texture.PresetName = currentPreset;
-                MainWindowHelpers.LogInfo($"Using current preset '{currentPreset}' for texture {texture.Name}");
-                return; // НЕ загружаем дефолтные настройки!
-            }
+            // КРИТИЧНО: ВСЕГДА auto-detect preset по имени файла ПЕРЕД загрузкой настроек!
+            // Это позволяет автоматически выбирать правильный preset для каждой текстуры
+            var presetManager = new TextureConversion.Settings.PresetManager();
+            var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
 
-            // Если preset не выбран (Custom), загружаем дефолтные настройки для типа текстуры
-            var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
-            var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
-                MapTextureTypeToCore(textureType));
+            if (matchedPreset != null) {
+                // Нашли preset по имени файла (например "gloss" → "Gloss (Linear + Toksvig)")
+                texture.PresetName = matchedPreset.Name;
+                MainWindowHelpers.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
 
-            var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
-            var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
-            var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
-
-            ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
-            // LoadPresets removed - presets are now managed globally through PresetManager
-
-            texture.CompressionFormat = compression.CompressionFormat.ToString();
-
-            // Auto-detect preset by filename if not already set
-            if (string.IsNullOrEmpty(texture.PresetName)) {
-                var presetManager = new TextureConversion.Settings.PresetManager();
-                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
-                texture.PresetName = matchedPreset?.Name ?? "";
-            }
-
-            // Set the preset in UI
-            // КРИТИЧНО: ItemsSource содержит List<string>, поэтому SelectedItem ДОЛЖЕН быть string, а НЕ объект!
-            MainWindowHelpers.LogInfo($"Setting preset in UI. Texture preset name: '{texture.PresetName}'");
-            MainWindowHelpers.LogInfo($"PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
-
-            if (!string.IsNullOrEmpty(texture.PresetName)) {
-                // Проверяем есть ли этот пресет в ComboBox
-                bool presetExists = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>()
-                    .Any(p => p.Equals(texture.PresetName, StringComparison.OrdinalIgnoreCase));
-
-                MainWindowHelpers.LogInfo($"Preset '{texture.PresetName}' exists in ComboBox: {presetExists}");
-
-                if (presetExists) {
-                    // ПРАВИЛЬНО: Устанавливаем строку, а не объект!
-                    ConversionSettingsPanel.PresetComboBox.SelectedItem = texture.PresetName;
-                    MainWindowHelpers.LogInfo($"Set PresetComboBox.SelectedItem to preset name: '{texture.PresetName}'");
+                // Устанавливаем preset в dropdown
+                if (ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().Contains(matchedPreset.Name)) {
+                    ConversionSettingsPanel.PresetComboBox.SelectedItem = matchedPreset.Name;
                 } else {
-                    // Preset not found, но НЕ меняем dropdown - оставляем текущий выбор
-                    MainWindowHelpers.LogInfo($"Preset '{texture.PresetName}' not found in ComboBox, keeping current selection");
+                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
                 }
             } else {
-                // No preset name - НЕ МЕНЯЕМ dropdown, оставляем текущий выбор
-                // Это позволяет пользователю работать с одним пресетом для всех текстур
-                MainWindowHelpers.LogInfo($"No preset name for texture, keeping current dropdown selection");
+                // Preset не найден по имени файла - используем "Custom"
+                texture.PresetName = "";
+                ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
+                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom");
+            }
+
+            // Загружаем default настройки для типа текстуры (если Custom)
+            if (string.IsNullOrEmpty(texture.PresetName)) {
+                var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+                var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                    MapTextureTypeToCore(textureType));
+
+                var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+                var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
+                var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
+
+                ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
+                texture.CompressionFormat = compression.CompressionFormat.ToString();
             }
         }
 

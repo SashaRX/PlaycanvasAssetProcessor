@@ -382,8 +382,20 @@ namespace AssetProcessor.Controls {
                 foreach (var normalSuffix in normalSuffixes) {
                     foreach (var ext in extensions) {
                         var normalMapPath = System.IO.Path.Combine(directory, baseName + normalSuffix + ext);
+
+                        // КРИТИЧНО: Case-insensitive проверка существования файла!
+                        // Файл может быть "oldMailBox_Normal.png" или "oldMailBox_normal.png"
                         if (System.IO.File.Exists(normalMapPath)) {
                             return normalMapPath;
+                        }
+
+                        // Попробуем с заглавной буквы (например "_Normal")
+                        if (normalSuffix.Length > 0) {
+                            string capitalizedSuffix = "_" + char.ToUpper(normalSuffix[1]) + normalSuffix.Substring(2);
+                            var capitalizedPath = System.IO.Path.Combine(directory, baseName + capitalizedSuffix + ext);
+                            if (System.IO.File.Exists(capitalizedPath)) {
+                                return capitalizedPath;
+                            }
                         }
                     }
                 }

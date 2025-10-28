@@ -275,7 +275,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("--normal_mode");
             }
 
-            if (settings.NormalizeVectors) {
+            // КРИТИЧНО: --normalize НЕ совместим с --levels!
+            // --normalize заставляет toktx обрабатывать ОДНО изображение и генерировать мипмапы сам
+            // Поэтому добавляем его ТОЛЬКО если передаем одно изображение
+            bool usePreGeneratedMipmaps = mipmapPaths.Count > 1;
+            if (settings.NormalizeVectors && !usePreGeneratedMipmaps) {
                 args.Add("--normalize");
             }
 
@@ -290,7 +294,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (settings.GenerateMipmaps && mipmapPaths.Count == 1) {
                 // Если toktx должен сгенерировать мипмапы сам
                 args.Add("--genmipmap");
-            } else if (mipmapPaths.Count > 1) {
+            } else if (usePreGeneratedMipmaps) {
                 // КРИТИЧНО: Когда передаем ГОТОВЫЕ мипмапы, нужно ЯВНО указать их количество!
                 // Без этого toktx интерпретирует файлы как отдельные текстуры, а не мипмапы
                 args.Add("--levels");

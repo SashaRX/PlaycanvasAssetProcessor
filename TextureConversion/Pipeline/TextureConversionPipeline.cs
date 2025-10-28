@@ -115,16 +115,25 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                             // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig
                             if (!compressionSettings.RemoveTemporaryMipmaps) {
-                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_original");
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_gloss");
                             }
 
-                            // Применяем Toksvig
-                            var correctedMipmaps = _toksvigProcessor.ApplyToksvigCorrection(
+                            // Применяем Toksvig (возвращает скорректированные мипмапы И карту дисперсии)
+                            var (correctedMipmaps, varianceMipmaps) = _toksvigProcessor.ApplyToksvigCorrectionWithVariance(
                                 mipmaps,
                                 normalMapImage,
                                 toksvigSettings,
                                 isGloss
                             );
+
+                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем карту дисперсии Toksvig
+                            if (!compressionSettings.RemoveTemporaryMipmaps && varianceMipmaps != null) {
+                                await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance");
+                                // Освобождаем карту дисперсии
+                                foreach (var vmap in varianceMipmaps) {
+                                    vmap.Dispose();
+                                }
+                            }
 
                             // Освобождаем старые мипмапы
                             foreach (var mip in mipmaps) {
@@ -137,9 +146,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                             Logger.Info("Toksvig коррекция успешно применена");
 
-                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем СКОРРЕКТИРОВАННЫЕ мипмапы ПОСЛЕ Toksvig
+                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем КОМПОЗИТНЫЕ мипмапы (gloss + toksvig)
                             if (!compressionSettings.RemoveTemporaryMipmaps) {
-                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_toksvig");
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_composite");
                             }
                         }
                     } catch (Exception ex) {

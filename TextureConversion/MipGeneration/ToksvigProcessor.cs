@@ -86,8 +86,12 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 return (glossRoughnessMipmaps, null);
             }
 
-            Logger.Info($"Применяем Toksvig коррекцию: k={settings.CompositePower}, " +
-                       $"minLevel={settings.MinToksvigMipLevel}, smoothVariance={settings.SmoothVariance}");
+            Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            Logger.Info($"🔧 TOKSVIG CORRECTION SETTINGS:");
+            Logger.Info($"   Composite Power (k): {settings.CompositePower:F2}");
+            Logger.Info($"   Min Mip Level: {settings.MinToksvigMipLevel}");
+            Logger.Info($"   Smooth Variance: {settings.SmoothVariance}");
+            Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
             // Генерируем мипмапы для normal map
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
@@ -159,6 +163,13 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             int pixelsChanged = 0;
             float totalDifference = 0f;
             float maxDifference = 0f;
+            float minVariance = float.MaxValue;
+            float maxVariance = float.MinValue;
+            float avgVariance = 0f;
+            float minInput = float.MaxValue;
+            float maxInput = float.MinValue;
+            float minOutput = float.MaxValue;
+            float maxOutput = float.MinValue;
 
             // Создаём корректированный мипмап
             var correctedMip = glossRoughnessMip.Clone();
@@ -170,8 +181,15 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                         // Получаем значение дисперсии из R канала varianceMap
                         float variance = varianceMap[x, point.Y].ToVector4().X;
 
+                        // Статистика variance
+                        avgVariance += variance;
+                        minVariance = Math.Min(minVariance, variance);
+                        maxVariance = Math.Max(maxVariance, variance);
+
                         // Берём только R канал (предполагаем что gloss/roughness в R)
                         float inputValue = pixel.X;
+                        minInput = Math.Min(minInput, inputValue);
+                        maxInput = Math.Max(maxInput, inputValue);
 
                         // Конвертируем в roughness если на входе gloss
                         float roughness = isGloss ? (1.0f - inputValue) : inputValue;
@@ -181,6 +199,8 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
                         // Конвертируем обратно в gloss если нужно
                         float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
+                        minOutput = Math.Min(minOutput, outputValue);
+                        maxOutput = Math.Max(maxOutput, outputValue);
 
                         // Статистика изменений
                         float diff = Math.Abs(outputValue - inputValue);
@@ -201,12 +221,19 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 });
             });
 
-            // Логируем статистику изменений
+            // Логируем подробную статистику
             int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;
+            avgVariance /= totalPixels;
             float avgDifference = pixelsChanged > 0 ? totalDifference / pixelsChanged : 0f;
-            Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
-                       $"{pixelsChanged}/{totalPixels} pixels changed " +
-                       $"(avg diff: {avgDifference:F4}, max diff: {maxDifference:F4})");
+            float changePercent = (float)pixelsChanged / totalPixels * 100f;
+
+            Logger.Info($"");
+            Logger.Info($"  📊 MIP LEVEL {level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}) STATISTICS:");
+            Logger.Info($"     Variance:  min={minVariance:F6}, avg={avgVariance:F6}, max={maxVariance:F6}");
+            Logger.Info($"     Input:     min={minInput:F4}, max={maxInput:F4}");
+            Logger.Info($"     Output:    min={minOutput:F4}, max={maxOutput:F4}");
+            Logger.Info($"     Changed:   {pixelsChanged}/{totalPixels} pixels ({changePercent:F1}%)");
+            Logger.Info($"     Diff:      avg={avgDifference:F4}, max={maxDifference:F4}");
 
             // Возвращаем variance map если нужно, иначе освобождаем
             Image<Rgba32>? returnedVarianceMap = null;

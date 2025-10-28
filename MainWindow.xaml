@@ -382,6 +382,9 @@
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>
+                <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
+                    <controls:LogViewerControl x:Name="LogViewer"/>
+                </TabItem>
             </TabControl>
 
             <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="Gray" FontSize="6"/>

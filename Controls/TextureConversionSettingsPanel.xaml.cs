@@ -333,6 +333,8 @@ namespace AssetProcessor.Controls {
         /// </summary>
         public void SetCurrentTexturePath(string? texturePath) {
             _currentTexturePath = texturePath;
+            // КРИТИЧНО: Если Toksvig УЖЕ включен, запускаем автопоиск СРАЗУ!
+            UpdateNormalMapAutoDetect();
         }
 
         /// <summary>

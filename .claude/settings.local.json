@@ -16,7 +16,11 @@
       "Bash(git merge:*)",
       "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" status)",
       "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" diff --stat)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add Controls/TextureConversionSettingsPanel.xaml Controls/TextureConversionSettingsPanel.xaml.cs TextureConversion/BasisU/BasisUWrapper.cs TextureConversion/BasisU/ToktxWrapper.cs TextureConversion/Core/CompressionSettings.cs TextureConversion/Settings/TextureConversionPreset.cs TextureConversion/Settings/TextureConversionSettings.cs Windows/PresetEditorWindow.xaml.cs)"
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add Controls/TextureConversionSettingsPanel.xaml Controls/TextureConversionSettingsPanel.xaml.cs TextureConversion/BasisU/BasisUWrapper.cs TextureConversion/BasisU/ToktxWrapper.cs TextureConversion/Core/CompressionSettings.cs TextureConversion/Settings/TextureConversionPreset.cs TextureConversion/Settings/TextureConversionSettings.cs Windows/PresetEditorWindow.xaml.cs)",
+      "Bash(Select-String \"error\" -Context 0,2)",
+      "Bash(Select-Object -First 20)",
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add -u)",
+      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" commit -m \"$(cat <<''EOF''\nFix --zcmp restriction: cannot be used with ETC1S format\n\nCRITICAL FIX:\nAccording to toktx documentation, --zcmp (Zstandard supercompression) \ncannot be used with ETC1S/BasisLZ format. It only works with UASTC \nand uncompressed formats.\n\nChanges:\n1. ToktxWrapper: Add format check before adding --zcmp\n   - Only add --zcmp if format != ETC1S\n   - Prevents \"cannot be used with ETC1S\" error\n\n2. Updated default Zstandard level: 9 → 3\n   - Documentation default is 3\n   - Values >20 require significant memory\n   - 3 is good balance of speed/compression\n\n3. Added UI warning in Supercompression section:\n   - \"⚠ Note: Not available for ETC1S\"\n   - Updated tooltip with restrictions\n   - Users understand limitation upfront\n\nThis fixes the actual root cause of toktx errors when using ETC1S with supercompression.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ]
   },
   "outputStyle": "default"

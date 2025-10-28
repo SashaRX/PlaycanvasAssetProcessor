@@ -223,7 +223,9 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // SUPERCOMPRESSION (KTX2 only)
             // ============================================
-            if (settings.OutputFormat == OutputFormat.KTX2) {
+            // ВАЖНО: --zcmp нельзя использовать с ETC1S/BasisLZ!
+            // Только для UASTC и несжатых форматов
+            if (settings.OutputFormat == OutputFormat.KTX2 && settings.CompressionFormat != CompressionFormat.ETC1S) {
                 if (settings.KTX2Supercompression == KTX2SupercompressionType.Zstandard) {
                     args.Add("--zcmp");
                     args.Add(settings.KTX2ZstdLevel.ToString());

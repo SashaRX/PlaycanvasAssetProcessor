@@ -220,17 +220,18 @@
                                   Margin="0,0,0,5"/>
 
                         <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="⚠ Note: Not available for ETC1S" FontSize="9" Foreground="Orange" Margin="0,0,0,2"/>
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="ZstdLevelSlider" Grid.Column="0"
-                                    Minimum="1" Maximum="22" Value="9"
+                                    Minimum="1" Maximum="22" Value="3"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Margin="0,0,5,0"
                                     ValueChanged="Slider_ValueChanged"
-                                    ToolTip="Zstandard compression level"/>
+                                    ToolTip="Zstandard level (default 3). Only for UASTC! Values >20 require more memory."/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=ZstdLevelSlider, Path=Value}"
                                        Width="30" TextAlignment="Right"/>
                         </Grid>

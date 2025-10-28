@@ -57,7 +57,7 @@ namespace AssetProcessor.Controls {
             UseUASTCRDOCheckBox.IsChecked = true;
             PerceptualModeCheckBox.IsChecked = true;
             KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
-            ZstdLevelSlider.Value = 9;
+            ZstdLevelSlider.Value = 3;
 
             // Alpha Options
             // Moved to Normal Maps section

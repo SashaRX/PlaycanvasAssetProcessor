@@ -113,11 +113,6 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                 }
                             }
 
-                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig
-                            if (!compressionSettings.RemoveTemporaryMipmaps) {
-                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_gloss");
-                            }
-
                             // Применяем Toksvig (возвращает скорректированные мипмапы И карту дисперсии)
                             var (correctedMipmaps, varianceMipmaps) = _toksvigProcessor.ApplyToksvigCorrectionWithVariance(
                                 mipmaps,
@@ -126,16 +121,28 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                 isGloss
                             );
 
-                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем карту дисперсии Toksvig
-                            if (!compressionSettings.RemoveTemporaryMipmaps && varianceMipmaps != null) {
-                                await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance");
-                                // Освобождаем карту дисперсии
+                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ВСЕ ТРИ НАБОРА МИПМАПОВ
+                            if (!compressionSettings.RemoveTemporaryMipmaps) {
+                                // 1. ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig (gloss)
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_gloss");
+
+                                // 2. Карта дисперсии Toksvig (показывает влияние normal map)
+                                if (varianceMipmaps != null) {
+                                    await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance");
+                                }
+
+                                // 3. КОМПОЗИТНЫЕ мипмапы (gloss + toksvig correction)
+                                await SaveDebugMipmapsAsync(inputPath, correctedMipmaps, "_composite");
+                            }
+
+                            // Освобождаем variance mipmaps (уже не нужны)
+                            if (varianceMipmaps != null) {
                                 foreach (var vmap in varianceMipmaps) {
                                     vmap.Dispose();
                                 }
                             }
 
-                            // Освобождаем старые мипмапы
+                            // Освобождаем старые оригинальные мипмапы
                             foreach (var mip in mipmaps) {
                                 mip.Dispose();
                             }
@@ -145,11 +152,6 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             result.NormalMapUsed = normalMapPath;
 
                             Logger.Info("Toksvig коррекция успешно применена");
-
-                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем КОМПОЗИТНЫЕ мипмапы (gloss + toksvig)
-                            if (!compressionSettings.RemoveTemporaryMipmaps) {
-                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_composite");
-                            }
                         }
                     } catch (Exception ex) {
                         Logger.Error(ex, "Ошибка при применении Toksvig коррекции");

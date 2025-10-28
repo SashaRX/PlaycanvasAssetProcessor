@@ -3556,6 +3556,9 @@ namespace AssetProcessor {
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
+            // КРИТИЧНО: Устанавливаем путь текущей текстуры для auto-detect normal map!
+            ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
+
             // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
             ConversionSettingsPanel.ClearNormalMapPath();
 

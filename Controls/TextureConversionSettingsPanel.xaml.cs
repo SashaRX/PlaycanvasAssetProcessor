@@ -15,6 +15,11 @@ namespace AssetProcessor.Controls {
         /// </summary>
         private ConversionSettingsManager? _conversionSettingsManager;
 
+        /// <summary>
+        /// Путь к текущей обрабатываемой текстуре (для auto-detect normal map)
+        /// </summary>
+        private string? _currentTexturePath;
+
         public event EventHandler? SettingsChanged;
         public event EventHandler? ConvertRequested;
         public event EventHandler? AutoDetectRequested;
@@ -216,6 +221,25 @@ namespace AssetProcessor.Controls {
         }
 
         private void UpdateNormalMapAutoDetect() {
+            // КРИТИЧНО: Если Toksvig включен И путь пустой И есть текущая текстура - ИЩЕМ normal map!
+            bool toksvigEnabled = ToksvigEnabledCheckBox.IsChecked ?? false;
+            bool pathEmpty = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text);
+
+            if (toksvigEnabled && pathEmpty && !string.IsNullOrWhiteSpace(_currentTexturePath)) {
+                // АВТОПОИСК normal map прямо СЕЙЧАС!
+                var normalMapPath = FindNormalMapForTexture(_currentTexturePath);
+                if (!string.IsNullOrWhiteSpace(normalMapPath)) {
+                    _isLoading = true; // Чтобы не вызывать событие изменения
+                    NormalMapPathTextBox.Text = normalMapPath;
+                    _isLoading = false;
+
+                    var fileName = System.IO.Path.GetFileName(normalMapPath);
+                    NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {fileName}";
+                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
+                    return;
+                }
+            }
+
             // Обновляем статус auto-detect для normal map
             if (string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)) {
                 NormalMapStatusTextBlock.Text = "(auto-detect from filename)";
@@ -302,6 +326,13 @@ namespace AssetProcessor.Controls {
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
                 NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
             };
+        }
+
+        /// <summary>
+        /// Устанавливает путь текущей текстуры (для auto-detect normal map)
+        /// </summary>
+        public void SetCurrentTexturePath(string? texturePath) {
+            _currentTexturePath = texturePath;
         }
 
         /// <summary>

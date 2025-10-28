@@ -102,7 +102,9 @@ namespace AssetProcessor.Resources {
         public string? Path {
             get => path;
             set {
-                path = value;
+                // Sanitize path: remove newlines, carriage returns, and trim whitespace
+                // This prevents issues with paths containing line breaks (from clipboard paste, etc.)
+                path = value?.Replace("\r", "").Replace("\n", "").Trim();
                 OnPropertyChanged(nameof(Path));
             }
         }

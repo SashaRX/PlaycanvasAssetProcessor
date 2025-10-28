@@ -12,7 +12,7 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Composite Power (k) - вес влияния дисперсии нормалей на roughness
-        /// Диапазон: 0.5 - 2.0
+        /// Диапазон: 0.5 - 8.0
         /// По умолчанию: 1.0
         /// </summary>
         public float CompositePower { get; set; } = 1.0f;
@@ -65,8 +65,8 @@ namespace AssetProcessor.TextureConversion.Core {
         /// Валидирует настройки
         /// </summary>
         public bool Validate(out string? error) {
-            if (CompositePower < 0.5f || CompositePower > 2.0f) {
-                error = "CompositePower должен быть в диапазоне 0.5-2.0";
+            if (CompositePower < 0.5f || CompositePower > 8.0f) {
+                error = "CompositePower должен быть в диапазоне 0.5-8.0";
                 return false;
             }
 

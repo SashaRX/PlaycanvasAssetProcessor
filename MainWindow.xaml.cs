@@ -3374,25 +3374,14 @@ namespace AssetProcessor {
             }
 
             try {
-                // Получаем пресеты из схемы
-                var presets = ConversionSettingsSchema.GetPredefinedPresets();
-
-                logger.Info($"Загружено {presets.Count} пресетов из ConversionSettingsSchema");
-
                 // Передаем ConversionSettingsManager в панель настроек конвертации
-                // Это позволит панели использовать новую систему параметров
+                // КРИТИЧНО: Панель сама загрузит пресеты из ConversionSettingsSchema
+                // внутри SetConversionSettingsManager() - не дублируем код здесь!
                 if (ConversionSettingsPanel != null) {
-                    // Передаем менеджер в панель
                     ConversionSettingsPanel.SetConversionSettingsManager(conversionSettingsManager);
 
-                    // Обновляем пресеты в ComboBox
-                    var presetNames = new List<string> { "Custom" };
-                    presetNames.AddRange(presets.Select(p => p.Name));
-
-                    ConversionSettingsPanel.PresetComboBox.ItemsSource = presetNames;
-                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
-
-                    logger.Info($"Пресеты добавлены в PresetComboBox: {string.Join(", ", presetNames)}");
+                    // Логируем для проверки
+                    logger.Info($"ConversionSettingsManager передан в панель. PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
                 }
 
             } catch (Exception ex) {

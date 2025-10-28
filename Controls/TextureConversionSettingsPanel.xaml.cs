@@ -21,7 +21,9 @@ namespace AssetProcessor.Controls {
 
         public TextureConversionSettingsPanel() {
             InitializeComponent();
-            InitializePresets();
+            // КРИТИЧНО: НЕ вызываем InitializePresets() здесь!
+            // Пресеты будут загружены из PopulateConversionSettingsUI() в MainWindow
+            // через новую систему ConversionSettingsSchema
             InitializeDefaults();
         }
 
@@ -30,6 +32,21 @@ namespace AssetProcessor.Controls {
         /// </summary>
         public void SetConversionSettingsManager(ConversionSettingsManager manager) {
             _conversionSettingsManager = manager;
+
+            // КРИТИЧНО: Когда установлен ConversionSettingsManager, загружаем пресеты из новой системы
+            // Это гарантирует что ItemsSource заполнен ПОСЛЕ создания панели
+            if (manager != null) {
+                var presets = ConversionSettingsSchema.GetPredefinedPresets();
+                var presetNames = new List<string> { "Custom" };
+                presetNames.AddRange(presets.Select(p => p.Name));
+
+                PresetComboBox.ItemsSource = presetNames;
+                if (PresetComboBox.Items.Count > 0) {
+                    PresetComboBox.SelectedIndex = 0; // "Custom"
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[SetConversionSettingsManager] Loaded {presets.Count} presets from ConversionSettingsSchema");
+            }
         }
 
         private void InitializePresets() {

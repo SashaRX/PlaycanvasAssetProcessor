@@ -70,7 +70,8 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
                     // Для уровней ниже минимального или если не хватает normal mipmaps - копируем без изменений
                     correctedMipmaps.Add(glossRoughnessMipmaps[level].Clone());
-                    Logger.Debug($"Уровень {level}: копируем без изменений (minLevel={settings.MinToksvigMipLevel})");
+                    Logger.Info($"  Mip{level} ({glossRoughnessMipmaps[level].Width}x{glossRoughnessMipmaps[level].Height}): " +
+                               $"SKIPPED (minLevel={settings.MinToksvigMipLevel})");
                 } else {
                     // Применяем Toksvig коррекцию
                     var correctedMip = ApplyToksvigToLevel(
@@ -111,6 +112,11 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 varianceMap = SmoothVariance(varianceMap);
             }
 
+            // Статистика изменений
+            int pixelsChanged = 0;
+            float totalDifference = 0f;
+            float maxDifference = 0f;
+
             // Создаём корректированный мипмап
             var correctedMip = glossRoughnessMip.Clone();
 
@@ -133,6 +139,14 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                         // Конвертируем обратно в gloss если нужно
                         float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
 
+                        // Статистика изменений
+                        float diff = Math.Abs(outputValue - inputValue);
+                        if (diff > 0.001f) {
+                            pixelsChanged++;
+                            totalDifference += diff;
+                            maxDifference = Math.Max(maxDifference, diff);
+                        }
+
                         // Записываем во все каналы RGB (обычно gloss/roughness одноканальные, но храним в RGB)
                         pixel.X = outputValue;
                         pixel.Y = outputValue;
@@ -143,6 +157,13 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                     }
                 });
             });
+
+            // Логируем статистику изменений
+            int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;
+            float avgDifference = pixelsChanged > 0 ? totalDifference / pixelsChanged : 0f;
+            Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
+                       $"{pixelsChanged}/{totalPixels} pixels changed " +
+                       $"(avg diff: {avgDifference:F4}, max diff: {maxDifference:F4})");
 
             return correctedMip;
         }

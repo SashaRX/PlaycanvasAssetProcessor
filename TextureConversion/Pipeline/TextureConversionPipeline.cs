@@ -142,21 +142,16 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                 }
                             }
 
-                            // Освобождаем старые оригинальные мипмапы
-                            Logger.Info($"Освобождаем {mipmaps.Count} оригинальных мипмапов (до Toksvig)...");
-                            for (int i = 0; i < mipmaps.Count; i++) {
-                                try {
-                                    Logger.Debug($"  Disposing original mip[{i}]: {mipmaps[i].Width}x{mipmaps[i].Height}");
-                                    mipmaps[i].Dispose();
-                                } catch (Exception disposeEx) {
-                                    Logger.Error($"  ОШИБКА при освобождении original mip[{i}]: {disposeEx.Message}");
-                                }
-                            }
+                            // КРИТИЧНО: НЕ освобождаем old mipmaps сразу!
+                            // Сохраняем их для освобождения в конце метода (после toktx packing)
+                            // Это предотвращает race condition если async save не завершился
+                            var oldMipmaps = mipmaps;
 
                             Logger.Info($"Переключаемся на corrected mipmaps ({correctedMipmaps.Count} изображений)");
                             mipmaps = correctedMipmaps;
                             result.ToksvigApplied = true;
                             result.NormalMapUsed = normalMapPath;
+                            result.OldMipmapsToDispose = oldMipmaps; // Сохраняем для освобождения позже
 
                             Logger.Info("Toksvig коррекция успешно применена");
                         }
@@ -278,14 +273,39 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                 Logger.Info($"Conversion successful: {outputPath}");
 
-                // Освобождаем память
+                // Освобождаем память (текущие corrected mipmaps)
                 foreach (var mip in mipmaps) {
                     mip.Dispose();
+                }
+
+                // Освобождаем старые оригинальные мипмapы (если были сохранены в Toksvig)
+                if (result.OldMipmapsToDispose != null) {
+                    Logger.Info($"Освобождаем {result.OldMipmapsToDispose.Count} оригинальных мипмапов (отложенное освобождение)...");
+                    foreach (var oldMip in result.OldMipmapsToDispose) {
+                        try {
+                            oldMip.Dispose();
+                        } catch (Exception disposeEx) {
+                            Logger.Warn($"Не удалось освободить старый мипмап: {disposeEx.Message}");
+                        }
+                    }
+                    result.OldMipmapsToDispose = null;
                 }
             } catch (Exception ex) {
                 Logger.Error(ex, $"Conversion failed: {inputPath}");
                 result.Success = false;
                 result.Error = ex.Message;
+
+                // Освобождаем старые мипмапы даже при ошибке
+                if (result.OldMipmapsToDispose != null) {
+                    foreach (var oldMip in result.OldMipmapsToDispose) {
+                        try {
+                            oldMip.Dispose();
+                        } catch {
+                            // Игнорируем ошибки при cleanup
+                        }
+                    }
+                    result.OldMipmapsToDispose = null;
+                }
             }
 
             result.Duration = DateTime.Now - startTime;
@@ -422,5 +442,10 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// Путь к использованной normal map (если Toksvig применён)
         /// </summary>
         public string? NormalMapUsed { get; set; }
+
+        /// <summary>
+        /// ВНУТРЕННЕЕ: Старые мипмапы для освобождения после завершения
+        /// </summary>
+        internal List<Image<Rgba32>>? OldMipmapsToDispose { get; set; }
     }
 }

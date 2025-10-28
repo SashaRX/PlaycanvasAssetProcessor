@@ -461,7 +461,25 @@ namespace AssetProcessor.Controls {
 
         public bool GenerateMipmaps => GenerateMipmapsCheckBox.IsChecked ?? true;
         public bool SaveSeparateMipmaps => SaveSeparateMipmapsCheckBox.IsChecked ?? false;
-        public string? PresetName => (PresetComboBox.SelectedItem as TextureConversionPreset)?.Name;
+
+        /// <summary>
+        /// Возвращает имя текущего выбранного пресета
+        /// Новая система: строки из ConversionSettingsSchema
+        /// Старая система: объекты TextureConversionPreset
+        /// </summary>
+        public string? PresetName {
+            get {
+                // Новая система (строки)
+                if (PresetComboBox.SelectedItem is string presetName) {
+                    return presetName == "Custom" ? null : presetName;
+                }
+                // Старая система (объекты)
+                if (PresetComboBox.SelectedItem is TextureConversionPreset preset) {
+                    return preset.Name;
+                }
+                return null;
+            }
+        }
 
         // ============================================
         // SETTINGS LOADERS

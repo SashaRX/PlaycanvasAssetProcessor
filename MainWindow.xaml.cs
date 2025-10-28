@@ -631,16 +631,56 @@ namespace AssetProcessor {
         }
 
         private void TexturePreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (TexturePreviewScrollViewer == null || TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            // Определяем минимальный zoom как fitPreviewZoom (чтобы остановить zoom-out когда изображение вписано)
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+
             double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
-            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, MinPreviewZoom, MaxPreviewZoom);
+            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, minZoom, MaxPreviewZoom);
 
             if (Math.Abs(newZoom - currentPreviewZoom) < 0.001) {
                 return;
             }
 
+            // Получаем позицию мыши относительно ScrollViewer
+            Point mousePos = e.GetPosition(TexturePreviewScrollViewer);
+
+            // Получаем текущие scroll offsets
+            double oldHorizontalOffset = TexturePreviewScrollViewer.HorizontalOffset;
+            double oldVerticalOffset = TexturePreviewScrollViewer.VerticalOffset;
+
+            // Вычисляем позицию мыши в координатах контента (изображения) до zoom
+            // contentX/Y = (scrollOffset + mousePos) / currentZoom
+            double contentX = (oldHorizontalOffset + mousePos.X) / currentPreviewZoom;
+            double contentY = (oldVerticalOffset + mousePos.Y) / currentPreviewZoom;
+
+            // Применяем новый zoom
             currentPreviewZoom = newZoom;
             ApplyZoomTransform();
             UpdateZoomText();
+
+            // Обновляем layout чтобы ScrollViewer пересчитал размеры
+            TexturePreviewScrollViewer.UpdateLayout();
+
+            // Вычисляем новые scroll offsets чтобы точка под мышью осталась на месте
+            // newScrollOffset = (contentX * newZoom) - mousePos
+            double newHorizontalOffset = (contentX * newZoom) - mousePos.X;
+            double newVerticalOffset = (contentY * newZoom) - mousePos.Y;
+
+            // Clamp offsets to valid range
+            newHorizontalOffset = Math.Max(0, Math.Min(newHorizontalOffset, TexturePreviewScrollViewer.ScrollableWidth));
+            newVerticalOffset = Math.Max(0, Math.Min(newVerticalOffset, TexturePreviewScrollViewer.ScrollableHeight));
+
+            // Применяем новые offsets
+            TexturePreviewScrollViewer.ScrollToHorizontalOffset(newHorizontalOffset);
+            TexturePreviewScrollViewer.ScrollToVerticalOffset(newVerticalOffset);
+
+            // Устанавливаем флаг что пользователь зумирует
+            isUserZooming = true;
+
             e.Handled = true;
         }
 

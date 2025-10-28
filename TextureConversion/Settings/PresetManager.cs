@@ -151,22 +151,32 @@ namespace AssetProcessor.TextureConversion.Settings {
                     string json = File.ReadAllText(PresetsFilePath);
 
                     // Пробуем загрузить как новый формат (PresetData)
-                    savedData = JsonConvert.DeserializeObject<PresetData>(json);
+                    try {
+                        savedData = JsonConvert.DeserializeObject<PresetData>(json);
+                    } catch {
+                        // Не получилось как PresetData, пробуем старый формат
+                        savedData = null;
+                    }
 
                     // Если получилось null или UserPresets == null, пробуем старый формат (просто массив)
-                    if (savedData?.UserPresets == null) {
-                        var oldFormatPresets = JsonConvert.DeserializeObject<List<TextureConversionPreset>>(json);
-                        if (oldFormatPresets != null) {
-                            // Мигрируем старый формат в новый
-                            savedData = new PresetData {
-                                UserPresets = oldFormatPresets,
-                                HiddenBuiltInPresets = new List<string>()
-                            };
+                    if (savedData == null || savedData.UserPresets == null) {
+                        try {
+                            var oldFormatPresets = JsonConvert.DeserializeObject<List<TextureConversionPreset>>(json);
+                            if (oldFormatPresets != null && oldFormatPresets.Count > 0) {
+                                // Мигрируем старый формат в новый
+                                savedData = new PresetData {
+                                    UserPresets = oldFormatPresets,
+                                    HiddenBuiltInPresets = new List<string>()
+                                };
+                                Console.WriteLine($"Migrated {oldFormatPresets.Count} presets from old format to new format");
+                            }
+                        } catch (Exception ex) {
+                            Console.WriteLine($"Error loading old format presets: {ex.Message}");
                         }
                     }
                 } catch (Exception ex) {
                     // Логируем ошибку, но продолжаем работу
-                    Console.WriteLine($"Error loading presets: {ex.Message}");
+                    Console.WriteLine($"Error loading presets file: {ex.Message}");
                 }
             }
 

@@ -3693,8 +3693,8 @@ namespace AssetProcessor {
                             ? Path.Combine(sourceDir, "mipmaps", sourceFileName)
                             : null;
 
-                        // Получаем настройки Toksvig из панели настроек
-                        var toksvigSettings = ConversionSettingsPanel.GetToksvigSettings();
+                        // Получаем настройки Toksvig из панели настроек с автопоиском normal map
+                        var toksvigSettings = ConversionSettingsPanel.GetToksvigSettingsWithAutoDetect(texture.Path);
 
                         var result = await pipeline.ConvertTextureAsync(
                             texture.Path,

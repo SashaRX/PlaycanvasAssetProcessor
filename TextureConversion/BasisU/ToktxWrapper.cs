@@ -207,14 +207,13 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // Поэтому используем старый синтаксис --bcmp/--uastc для совместимости
             if (settings.CompressionFormat == CompressionFormat.ETC1S) {
                 // ETC1S mode - используем --bcmp для совместимости с --zcmp
-                args.Add("--bcmp");
-
-                // Quality передается как аргумент к --bcmp
-                args.Add(settings.QualityLevel.ToString());
-
-                // Compression level работает с --bcmp
+                // КРИТИЧНО: --clevel ДОЛЖЕН быть ПЕРЕД --bcmp!
                 args.Add("--clevel");
                 args.Add(settings.CompressionLevel.ToString());
+
+                args.Add("--bcmp");
+                // Quality передается как аргумент к --bcmp
+                args.Add(settings.QualityLevel.ToString());
 
             } else if (settings.CompressionFormat == CompressionFormat.UASTC) {
                 // UASTC mode

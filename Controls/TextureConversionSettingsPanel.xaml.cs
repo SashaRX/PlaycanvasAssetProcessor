@@ -279,6 +279,75 @@ namespace AssetProcessor.Controls {
             };
         }
 
+        /// <summary>
+        /// Пытается автоматически найти normal map для текстуры gloss
+        /// </summary>
+        public ToksvigSettings GetToksvigSettingsWithAutoDetect(string glossTexturePath) {
+            var settings = GetToksvigSettings();
+
+            // Если NormalMapPath уже указан вручную, не делаем автопоиск
+            if (!string.IsNullOrWhiteSpace(settings.NormalMapPath)) {
+                return settings;
+            }
+
+            // Автопоиск normal map если Toksvig включен
+            if (settings.Enabled) {
+                var normalMapPath = FindNormalMapForTexture(glossTexturePath);
+                if (!string.IsNullOrWhiteSpace(normalMapPath)) {
+                    settings.NormalMapPath = normalMapPath;
+
+                    // Обновляем UI с найденным путем (серым цветом)
+                    Dispatcher.BeginInvoke(() => {
+                        NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {System.IO.Path.GetFileName(normalMapPath)}";
+                        NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
+                    });
+                }
+            }
+
+            return settings;
+        }
+
+        /// <summary>
+        /// Ищет normal map по имени файла gloss текстуры
+        /// </summary>
+        private string? FindNormalMapForTexture(string texturePath) {
+            if (string.IsNullOrWhiteSpace(texturePath)) return null;
+
+            try {
+                var directory = System.IO.Path.GetDirectoryName(texturePath);
+                if (string.IsNullOrEmpty(directory)) return null;
+
+                var fileNameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(texturePath);
+
+                // Убираем "_gloss", "_glossiness", "_smoothness" из имени
+                var glossSuffixes = new[] { "_gloss", "_glossiness", "_smoothness", "_sm", "_gls" };
+                string baseName = fileNameWithoutExt;
+                foreach (var suffix in glossSuffixes) {
+                    if (baseName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
+                        baseName = baseName.Substring(0, baseName.Length - suffix.Length);
+                        break;
+                    }
+                }
+
+                // Ищем файлы с "_normal", "_norm", "_nrm", "_n"
+                var normalSuffixes = new[] { "_normal", "_norm", "_nrm", "_n", "_normals" };
+                var extensions = new[] { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".tif", ".tiff" };
+
+                foreach (var normalSuffix in normalSuffixes) {
+                    foreach (var ext in extensions) {
+                        var normalMapPath = System.IO.Path.Combine(directory, baseName + normalSuffix + ext);
+                        if (System.IO.File.Exists(normalMapPath)) {
+                            return normalMapPath;
+                        }
+                    }
+                }
+            } catch {
+                // Игнорируем ошибки автопоиска
+            }
+
+            return null;
+        }
+
         public bool GenerateMipmaps => GenerateMipmapsCheckBox.IsChecked ?? true;
         public bool SaveSeparateMipmaps => SaveSeparateMipmapsCheckBox.IsChecked ?? false;
         public string? PresetName => (PresetComboBox.SelectedItem as TextureConversionPreset)?.Name;

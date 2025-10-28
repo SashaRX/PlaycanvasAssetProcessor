@@ -151,7 +151,7 @@ namespace AssetProcessor {
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
         private bool isMiddleButtonPanning;
-        private bool isUpdatingPreviewWidth;
+        // Removed: isUpdatingPreviewWidth (PreviewWidthSlider was removed)
         private Point lastPanPoint;
         private BitmapSource? originalFileBitmapSource;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -331,42 +331,10 @@ namespace AssetProcessor {
             }
         }
 
-        private void PreviewWidthSlider_Loaded(object sender, RoutedEventArgs e) {
-            UpdatePreviewWidthControls(PreviewColumn.ActualWidth > 0 ? PreviewColumn.ActualWidth : PreviewColumn.Width.Value);
-        }
-
-        private void PreviewWidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (isUpdatingPreviewWidth) {
-                return;
-            }
-
-            double clampedWidth = Math.Clamp(e.NewValue, MinPreviewColumnWidth, MaxPreviewColumnWidth);
-            isUpdatingPreviewWidth = true;
-
-            try {
-                PreviewColumn.Width = new GridLength(clampedWidth);
-                UpdatePreviewWidthText(clampedWidth);
-            } finally {
-                isUpdatingPreviewWidth = false;
-            }
-        }
+        // Removed: PreviewWidthSlider methods (slider was removed from UI)
 
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
-            double targetWidth = Math.Clamp(PreviewColumn.ActualWidth, MinPreviewColumnWidth, MaxPreviewColumnWidth);
-            UpdatePreviewWidthControls(targetWidth);
             ClampPreviewContentHeight();
-        }
-
-        private void UpdatePreviewWidthControls(double width) {
-            double clampedWidth = Math.Clamp(width, MinPreviewColumnWidth, MaxPreviewColumnWidth);
-
-            if (PreviewWidthSlider != null) {
-                isUpdatingPreviewWidth = true;
-                PreviewWidthSlider.Value = clampedWidth;
-                isUpdatingPreviewWidth = false;
-            }
-
-            UpdatePreviewWidthText(clampedWidth);
         }
 
         private void PreviewHeightGridSplitter_DragDelta(object sender, DragDeltaEventArgs e) {
@@ -406,11 +374,7 @@ namespace AssetProcessor {
             PreviewContentRow.Height = new GridLength(clampedHeight);
         }
 
-        private void UpdatePreviewWidthText(double width) {
-            if (PreviewWidthValueTextBlock != null) {
-                PreviewWidthValueTextBlock.Text = $"{(int)Math.Round(width)} px";
-            }
-        }
+        // Removed: UpdatePreviewWidthText (PreviewWidthSlider was removed)
 
         private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
             if (isUpdatingPreviewSourceControls) {
@@ -1322,16 +1286,19 @@ namespace AssetProcessor {
             string baseName = Path.GetFileNameWithoutExtension(sourcePath);
             string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
 
-            string directPath = Path.Combine(directory, baseName + ".ktx2");
-            if (File.Exists(directPath)) {
-                return directPath;
-            }
+            // Ищем .ktx2 и .ktx файлы
+            foreach (var extension in new[] { ".ktx2", ".ktx" }) {
+                string directPath = Path.Combine(directory, baseName + extension);
+                if (File.Exists(directPath)) {
+                    return directPath;
+                }
 
-            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-                string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + ".ktx2");
-                if (File.Exists(normalizedDirectPath)) {
-                    return normalizedDirectPath;
+                if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                    !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                    string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + extension);
+                    if (File.Exists(normalizedDirectPath)) {
+                        return normalizedDirectPath;
+                    }
                 }
             }
 
@@ -1397,23 +1364,26 @@ namespace AssetProcessor {
             DateTime newestTime = DateTime.MinValue;
 
             try {
-                foreach (string file in Directory.EnumerateFiles(directory, "*.ktx2", searchOption)) {
-                    DateTime writeTime = File.GetLastWriteTimeUtc(file);
+                // Ищем как .ktx2 так и .ktx файлы
+                foreach (var pattern in new[] { "*.ktx2", "*.ktx" }) {
+                    foreach (string file in Directory.EnumerateFiles(directory, pattern, searchOption)) {
+                        DateTime writeTime = File.GetLastWriteTimeUtc(file);
 
-                    if (writeTime > newestTime) {
-                        newestTime = writeTime;
-                        newestFile = file;
-                    }
+                        if (writeTime > newestTime) {
+                            newestTime = writeTime;
+                            newestFile = file;
+                        }
 
-                    int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
-                    if (score < 0) {
-                        continue;
-                    }
+                        int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
+                        if (score < 0) {
+                            continue;
+                        }
 
-                    if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
-                        bestScore = score;
-                        bestTime = writeTime;
-                        bestMatch = file;
+                        if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
+                            bestScore = score;
+                            bestTime = writeTime;
+                            bestMatch = file;
+                        }
                     }
                 }
             } catch (UnauthorizedAccessException ex) {

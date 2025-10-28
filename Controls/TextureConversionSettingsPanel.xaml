@@ -254,12 +254,19 @@
             <!-- 4. COLOR & SPACE SECTION -->
             <Expander Header="Color &amp; Space" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="TreatAsLinearCheckBox" Content="Treat as Linear" Margin="0,0,0,3"
-                              Checked="TreatAsLinearCheckBox_Checked" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--assign_oetf linear"/>
-                    <CheckBox x:Name="TreatAsSRGBCheckBox" Content="Treat as sRGB" Margin="0,0,0,3"
-                              Checked="TreatAsSRGBCheckBox_Checked" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--assign_oetf srgb"/>
+                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource LabelStyle}" Margin="0,0,0,2"/>
+                    <RadioButton x:Name="OETFAutoRadioButton" Content="Auto (from file)" GroupName="OETF"
+                                 IsChecked="True" Margin="0,0,0,2"
+                                 Checked="OETFRadioButton_Changed"
+                                 ToolTip="Let toktx auto-detect from input file metadata"/>
+                    <RadioButton x:Name="OETFLinearRadioButton" Content="Force Linear" GroupName="OETF"
+                                 Margin="0,0,0,2"
+                                 Checked="OETFRadioButton_Changed"
+                                 ToolTip="--assign_oetf linear (for normal maps, roughness, etc.)"/>
+                    <RadioButton x:Name="OETFSRGBRadioButton" Content="Force sRGB" GroupName="OETF"
+                                 Margin="0,0,0,3"
+                                 Checked="OETFRadioButton_Changed"
+                                 ToolTip="--assign_oetf srgb (for albedo/color maps)"/>
                 </StackPanel>
             </Expander>
 
@@ -293,18 +300,15 @@
             <!-- 6. NORMAL MAPS SECTION -->
             <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha (2-channel)" Margin="0,0,0,5"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="For 2-channel normal maps: pack X/Y into Color/Alpha"/>
                     <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to XY(RGB/A) Normal Map" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normal_mode: Optimize for normal map storage"/>
+                              ToolTip="--normal_mode: 2-channel optimization (RGB=X, A=Y). For 3/4-channel inputs: converts to 2-channel. For 2-channel: optimizes encoding."/>
                     <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normalize: Force normalize normal vectors"/>
+                              ToolTip="--normalize: Force normalize normal vectors to unit length"/>
                     <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Renormalize normal vectors on each mipmap level"/>
+                              ToolTip="Renormalize normal vectors on each mipmap level during generation"/>
                 </StackPanel>
             </Expander>
 

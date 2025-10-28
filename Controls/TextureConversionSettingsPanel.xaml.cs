@@ -60,13 +60,11 @@ namespace AssetProcessor.Controls {
             ZstdLevelSlider.Value = 3;
 
             // Alpha Options
-            // Moved to Normal Maps section
             ForceAlphaCheckBox.IsChecked = false;
             RemoveAlphaCheckBox.IsChecked = false;
 
-            // Color & Space
-            TreatAsLinearCheckBox.IsChecked = false;
-            TreatAsSRGBCheckBox.IsChecked = false;
+            // Color & Space (OETF)
+            OETFAutoRadioButton.IsChecked = true;
 
             // Mipmaps
             GenerateMipmapsCheckBox.IsChecked = true;
@@ -103,6 +101,7 @@ namespace AssetProcessor.Controls {
         private void CompressionFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (!_isLoading) {
                 UpdateCompressionPanels();
+                UpdateOutputFormatPanels(); // Обновляем также output панели (для скрытия суперкомпрессии)
                 OnSettingsChanged();
             }
         }
@@ -135,11 +134,14 @@ namespace AssetProcessor.Controls {
         }
 
         private void UpdateOutputFormatPanels() {
-            if (OutputFormatComboBox.SelectedItem == null) return;
+            if (OutputFormatComboBox.SelectedItem == null || CompressionFormatComboBox.SelectedItem == null) return;
 
             var output = (OutputFormat)OutputFormatComboBox.SelectedItem;
+            var compression = (CompressionFormat)CompressionFormatComboBox.SelectedItem;
 
-            if (output == OutputFormat.KTX2) {
+            // Показываем суперкомпрессию только для KTX2 и только НЕ для ETC1S
+            // (т.к. --zcmp несовместим с ETC1S/BasisLZ)
+            if (output == OutputFormat.KTX2 && compression != CompressionFormat.ETC1S) {
                 KTX2SupercompressionPanel.Visibility = Visibility.Visible;
             } else {
                 KTX2SupercompressionPanel.Visibility = Visibility.Collapsed;
@@ -164,29 +166,13 @@ namespace AssetProcessor.Controls {
             CheckboxSettingChanged(sender, e);
         }
 
-        private void TreatAsLinearCheckBox_Checked(object sender, RoutedEventArgs e) {
-            if (TreatAsSRGBCheckBox.IsChecked == true) {
-                TreatAsSRGBCheckBox.IsChecked = false;
+        private void OETFRadioButton_Changed(object sender, RoutedEventArgs e) {
+            if (!_isLoading) {
+                OnSettingsChanged();
             }
-            CheckboxSettingChanged(sender, e);
-        }
-
-        private void TreatAsSRGBCheckBox_Checked(object sender, RoutedEventArgs e) {
-            if (TreatAsLinearCheckBox.IsChecked == true) {
-                TreatAsLinearCheckBox.IsChecked = false;
-            }
-            CheckboxSettingChanged(sender, e);
         }
 
         private void ApplyGammaCorrectionCheckBox_Checked(object sender, RoutedEventArgs e) {
-            // Gamma correction обычно используется для sRGB текстур
-            // Отключение gamma = линейное пространство
-            if (!_isLoading && ApplyGammaCorrectionCheckBox.IsChecked == false) {
-                // Если отключили gamma, можно подсказать использовать Linear
-                if (TreatAsLinearCheckBox.IsChecked != true && TreatAsSRGBCheckBox.IsChecked != true) {
-                    // Пользователь не выбрал явно, оставляем как есть
-                }
-            }
             CheckboxSettingChanged(sender, e);
         }
 
@@ -250,11 +236,13 @@ namespace AssetProcessor.Controls {
                 KTX2Supercompression = supercompression,
                 KTX2ZstdLevel = (int)Math.Round(ZstdLevelSlider.Value),
                 UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
-                // Moved to after GenerateMipmaps
+                // Alpha options
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
-                TreatAsLinear = TreatAsLinearCheckBox.IsChecked ?? false,
-                TreatAsSRGB = TreatAsSRGBCheckBox.IsChecked ?? false,
+                // OETF (Color Space)
+                TreatAsLinear = OETFLinearRadioButton.IsChecked ?? false,
+                TreatAsSRGB = OETFSRGBRadioButton.IsChecked ?? false,
+                // Mipmaps
                 ClampMipmaps = MipClampCheckBox.IsChecked ?? false,
                 UseLinearMipFiltering = false, // Removed from UI
                 GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
@@ -316,13 +304,17 @@ namespace AssetProcessor.Controls {
             UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
 
             // Alpha
-            SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
             ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;
 
-            // Color & Space
-            TreatAsLinearCheckBox.IsChecked = compression.TreatAsLinear;
-            TreatAsSRGBCheckBox.IsChecked = compression.TreatAsSRGB;
+            // Color & Space (OETF) - RadioButtons
+            if (compression.TreatAsLinear) {
+                OETFLinearRadioButton.IsChecked = true;
+            } else if (compression.TreatAsSRGB) {
+                OETFSRGBRadioButton.IsChecked = true;
+            } else {
+                OETFAutoRadioButton.IsChecked = true;
+            }
 
             // Mipmaps
             MipFilterComboBox.SelectedItem = mipProfile.Filter;
@@ -332,7 +324,6 @@ namespace AssetProcessor.Controls {
             MipClampCheckBox.IsChecked = compression.ClampMipmaps;
 
             // Normal Maps
-            SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
             NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
             ConvertToNormalMapCheckBox.IsChecked = compression.ConvertToNormalMap;
             NormalizeVectorsCheckBox.IsChecked = compression.NormalizeVectors;
@@ -425,14 +416,14 @@ namespace AssetProcessor.Controls {
                             break;
 
                         case "treatAsSRGB":
-                            if (param.Value is bool srgb) {
-                                TreatAsSRGBCheckBox.IsChecked = srgb;
+                            if (param.Value is bool srgb && srgb) {
+                                OETFSRGBRadioButton.IsChecked = true;
                             }
                             break;
 
                         case "treatAsLinear":
-                            if (param.Value is bool linear) {
-                                TreatAsLinearCheckBox.IsChecked = linear;
+                            if (param.Value is bool linear && linear) {
+                                OETFLinearRadioButton.IsChecked = true;
                             }
                             break;
 
@@ -503,11 +494,17 @@ namespace AssetProcessor.Controls {
             PerceptualModeCheckBox.IsChecked = preset.PerceptualMode;
             ForceAlphaCheckBox.IsChecked = preset.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = preset.RemoveAlphaChannel;
-            TreatAsLinearCheckBox.IsChecked = preset.TreatAsLinear;
-            TreatAsSRGBCheckBox.IsChecked = preset.TreatAsSRGB;
+
+            // Color Space (OETF) - RadioButtons
+            if (preset.TreatAsLinear) {
+                OETFLinearRadioButton.IsChecked = true;
+            } else if (preset.TreatAsSRGB) {
+                OETFSRGBRadioButton.IsChecked = true;
+            } else {
+                OETFAutoRadioButton.IsChecked = true;
+            }
 
             // Normal Maps
-            SeparateAlphaCheckBox.IsChecked = preset.SeparateAlpha;
             NormalizeNormalsCheckBox.IsChecked = preset.NormalizeNormals;
             ConvertToNormalMapCheckBox.IsChecked = preset.ConvertToNormalMap;
             NormalizeVectorsCheckBox.IsChecked = preset.NormalizeVectors;

@@ -193,6 +193,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
             var args = new List<string>();
 
             // ============================================
+            // OUTPUT FORMAT
+            // ============================================
+            // КРИТИЧНО: --t2 должен быть первым для KTX2 формата
+            if (settings.OutputFormat == OutputFormat.KTX2) {
+                args.Add("--t2");
+            }
+
+            // ============================================
             // COMPRESSION FORMAT & QUALITY
             // ============================================
             // ВАЖНО: toktx не позволяет использовать --encode вместе с --zcmp

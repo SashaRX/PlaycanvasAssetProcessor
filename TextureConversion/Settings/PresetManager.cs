@@ -149,7 +149,21 @@ namespace AssetProcessor.TextureConversion.Settings {
             if (File.Exists(PresetsFilePath)) {
                 try {
                     string json = File.ReadAllText(PresetsFilePath);
+
+                    // Пробуем загрузить как новый формат (PresetData)
                     savedData = JsonConvert.DeserializeObject<PresetData>(json);
+
+                    // Если получилось null или UserPresets == null, пробуем старый формат (просто массив)
+                    if (savedData?.UserPresets == null) {
+                        var oldFormatPresets = JsonConvert.DeserializeObject<List<TextureConversionPreset>>(json);
+                        if (oldFormatPresets != null) {
+                            // Мигрируем старый формат в новый
+                            savedData = new PresetData {
+                                UserPresets = oldFormatPresets,
+                                HiddenBuiltInPresets = new List<string>()
+                            };
+                        }
+                    }
                 } catch (Exception ex) {
                     // Логируем ошибку, но продолжаем работу
                     Console.WriteLine($"Error loading presets: {ex.Message}");

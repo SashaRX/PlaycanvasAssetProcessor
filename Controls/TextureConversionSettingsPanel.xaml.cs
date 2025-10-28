@@ -4,9 +4,11 @@ using System.Windows;
 using System.Windows.Controls;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
+using NLog;
 
 namespace AssetProcessor.Controls {
     public partial class TextureConversionSettingsPanel : UserControl {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private bool _isLoading = false;
         private readonly PresetManager _presetManager = new();
 
@@ -225,9 +227,17 @@ namespace AssetProcessor.Controls {
             bool toksvigEnabled = ToksvigEnabledCheckBox.IsChecked ?? false;
             bool pathEmpty = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text);
 
+            Logger.Info($"=== UpdateNormalMapAutoDetect called ===");
+            Logger.Info($"  toksvigEnabled: {toksvigEnabled}");
+            Logger.Info($"  pathEmpty: {pathEmpty}");
+            Logger.Info($"  _currentTexturePath: {_currentTexturePath}");
+
             if (toksvigEnabled && pathEmpty && !string.IsNullOrWhiteSpace(_currentTexturePath)) {
+                Logger.Info($"  Conditions met! Searching for normal map...");
                 // АВТОПОИСК normal map прямо СЕЙЧАС!
                 var normalMapPath = FindNormalMapForTexture(_currentTexturePath);
+                Logger.Info($"  FindNormalMapForTexture result: {normalMapPath}");
+
                 if (!string.IsNullOrWhiteSpace(normalMapPath)) {
                     _isLoading = true; // Чтобы не вызывать событие изменения
                     NormalMapPathTextBox.Text = normalMapPath;
@@ -236,8 +246,13 @@ namespace AssetProcessor.Controls {
                     var fileName = System.IO.Path.GetFileName(normalMapPath);
                     NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {fileName}";
                     NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
+                    Logger.Info($"  ✓ Auto-detected and set: {fileName}");
                     return;
+                } else {
+                    Logger.Warn($"  ✗ Normal map not found for: {_currentTexturePath}");
                 }
+            } else {
+                Logger.Info($"  Conditions NOT met, skipping auto-detect");
             }
 
             // Обновляем статус auto-detect для normal map
@@ -332,6 +347,11 @@ namespace AssetProcessor.Controls {
         /// Устанавливает путь текущей текстуры (для auto-detect normal map)
         /// </summary>
         public void SetCurrentTexturePath(string? texturePath) {
+            Logger.Info($"=== SetCurrentTexturePath called ===");
+            Logger.Info($"  texturePath: {texturePath}");
+            Logger.Info($"  Toksvig enabled: {ToksvigEnabledCheckBox.IsChecked ?? false}");
+            Logger.Info($"  NormalMapPath empty: {string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)}");
+
             _currentTexturePath = texturePath;
             // КРИТИЧНО: Если Toksvig УЖЕ включен, запускаем автопоиск СРАЗУ!
             UpdateNormalMapAutoDetect();

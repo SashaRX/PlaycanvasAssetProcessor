@@ -179,7 +179,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // Перцептивный режим
             // basisu по умолчанию использует perceptual режим для фотографического контента
             // Опция -linear отключает perceptual режим для не-фотографического контента
-            if (settings.ForceLinearColorSpace || (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S)) {
+            if (settings.TreatAsLinear || (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S)) {
                 args.Add("-linear");
             }
 

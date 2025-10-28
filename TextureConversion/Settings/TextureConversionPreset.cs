@@ -38,7 +38,12 @@ namespace AssetProcessor.TextureConversion.Settings {
         public OutputFormat OutputFormat { get; set; } = OutputFormat.KTX2;
 
         /// <summary>
-        /// Уровень качества для ETC1S (0-255)
+        /// Уровень компрессии для ETC1S (0-5)
+        /// </summary>
+        public int CompressionLevel { get; set; } = 1;
+
+        /// <summary>
+        /// Уровень качества для ETC1S (1-255)
         /// </summary>
         public int QualityLevel { get; set; } = 128;
 
@@ -103,12 +108,12 @@ namespace AssetProcessor.TextureConversion.Settings {
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
-        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 6)
+        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 9)
         /// </summary>
-        public int KTX2ZstdLevel { get; set; } = 6;
+        public int KTX2ZstdLevel { get; set; } = 9;
 
         /// <summary>
-        /// Разделить RG на Color/Alpha
+        /// Разделить RG на Color/Alpha (для normal maps)
         /// </summary>
         public bool SeparateAlpha { get; set; } = false;
 
@@ -123,9 +128,14 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool RemoveAlphaChannel { get; set; } = false;
 
         /// <summary>
-        /// Обрабатывать как линейное цветовое пространство
+        /// Трактовать как линейное цветовое пространство
         /// </summary>
-        public bool ForceLinearColorSpace { get; set; } = false;
+        public bool TreatAsLinear { get; set; } = false;
+
+        /// <summary>
+        /// Трактовать как sRGB цветовое пространство
+        /// </summary>
+        public bool TreatAsSRGB { get; set; } = false;
 
         /// <summary>
         /// Клампить края мипмапов
@@ -133,9 +143,34 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool ClampMipmaps { get; set; } = false;
 
         /// <summary>
-        /// Использовать линейный фильтр для мипов в basisu
+        /// Использовать линейный фильтр для мипов
         /// </summary>
         public bool UseLinearMipFiltering { get; set; } = false;
+
+        /// <summary>
+        /// Конвертировать в XY(RGB/A) Normal Map
+        /// </summary>
+        public bool ConvertToNormalMap { get; set; } = false;
+
+        /// <summary>
+        /// Нормализовать векторы
+        /// </summary>
+        public bool NormalizeVectors { get; set; } = false;
+
+        /// <summary>
+        /// Оставить RGB структуру без преобразования
+        /// </summary>
+        public bool KeepRGBLayout { get; set; } = false;
+
+        /// <summary>
+        /// Удалять временные мипмапы
+        /// </summary>
+        public bool RemoveTemporaryMipmaps { get; set; } = true;
+
+        /// <summary>
+        /// Настройки Toksvig для Gloss текстур
+        /// </summary>
+        public ToksvigSettings ToksvigSettings { get; set; } = new();
 
         /// <summary>
         /// Создает встроенный пресет "Default ETC1S"
@@ -147,6 +182,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 IsBuiltIn = true,
                 CompressionFormat = CompressionFormat.ETC1S,
                 OutputFormat = OutputFormat.KTX2,
+                CompressionLevel = 1,
                 QualityLevel = 128,
                 UseETC1SRDO = true,
                 GenerateMipmaps = true,
@@ -154,7 +190,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ApplyGammaCorrection = true,
                 UseMultithreading = true,
                 PerceptualMode = true,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9
             };
         }
 
@@ -228,10 +265,10 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// </summary>
         public static TextureConversionPreset CreateNormalMap() {
             return new TextureConversionPreset {
-                Name = "Normal Map",
-                Description = "Optimized for normal maps (UASTC, no gamma)",
+                Name = "Normal (Linear)",
+                Description = "Optimized for normal maps (UASTC, linear, normalize)",
                 IsBuiltIn = true,
-                Suffixes = new List<string> { "_normal", "_norm", "_nrm", "_n" },
+                Suffixes = new List<string> { "_normal", "_norm", "_nrm", "_n", "_normals" },
                 CompressionFormat = CompressionFormat.UASTC,
                 OutputFormat = OutputFormat.KTX2,
                 UASTCQuality = 3,
@@ -240,10 +277,14 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = false,
+                TreatAsLinear = true,
                 NormalizeNormals = true,
+                NormalizeVectors = true,
+                ConvertToNormalMap = true, // --normal_mode
                 UseMultithreading = true,
                 PerceptualMode = false,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9
             };
         }
 
@@ -252,20 +293,23 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// </summary>
         public static TextureConversionPreset CreateAlbedo() {
             return new TextureConversionPreset {
-                Name = "Albedo",
-                Description = "Optimized for albedo/diffuse maps",
+                Name = "Albedo/Color (sRGB)",
+                Description = "Optimized for albedo/diffuse maps with gamma correction",
                 IsBuiltIn = true,
-                Suffixes = new List<string> { "_albedo", "_diffuse", "_color", "_basecolor", "_diff" },
+                Suffixes = new List<string> { "_albedo", "_diffuse", "_color", "_basecolor", "_diff", "_base" },
                 CompressionFormat = CompressionFormat.ETC1S,
                 OutputFormat = OutputFormat.KTX2,
+                CompressionLevel = 1,
                 QualityLevel = 128,
                 UseETC1SRDO = true,
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = true,
+                TreatAsSRGB = true,
                 UseMultithreading = true,
                 PerceptualMode = true,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9
             };
         }
 
@@ -274,20 +318,81 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// </summary>
         public static TextureConversionPreset CreateRoughness() {
             return new TextureConversionPreset {
-                Name = "Roughness",
-                Description = "Optimized for roughness/metallic/AO maps",
+                Name = "Roughness/Metallic/AO",
+                Description = "Optimized for roughness/metallic/AO maps (Linear)",
                 IsBuiltIn = true,
                 Suffixes = new List<string> { "_roughness", "_rough", "_metallic", "_metal", "_ao", "_ambient", "_occlusion" },
                 CompressionFormat = CompressionFormat.ETC1S,
                 OutputFormat = OutputFormat.KTX2,
+                CompressionLevel = 1,
                 QualityLevel = 128,
                 UseETC1SRDO = true,
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = false,
+                TreatAsLinear = true,
                 UseMultithreading = true,
                 PerceptualMode = false,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9
+            };
+        }
+
+        /// <summary>
+        /// Создает пресет для Gloss текстур с Toksvig
+        /// </summary>
+        public static TextureConversionPreset CreateGloss() {
+            return new TextureConversionPreset {
+                Name = "Gloss (Linear + Toksvig)",
+                Description = "Optimized for gloss maps with Toksvig anti-aliasing",
+                IsBuiltIn = true,
+                Suffixes = new List<string> { "_gloss", "_glossiness", "_smoothness" },
+                CompressionFormat = CompressionFormat.ETC1S,
+                OutputFormat = OutputFormat.KTX2,
+                CompressionLevel = 1,
+                QualityLevel = 128,
+                UseETC1SRDO = true,
+                GenerateMipmaps = true,
+                MipFilter = FilterType.Kaiser,
+                ApplyGammaCorrection = false,
+                TreatAsLinear = true,
+                UseMultithreading = true,
+                PerceptualMode = false,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9,
+                ToksvigSettings = new ToksvigSettings {
+                    Enabled = true,
+                    CompositePower = 1.0f,
+                    MinToksvigMipLevel = 1,
+                    SmoothVariance = true,
+                    NormalMapPath = null // Автоопределение
+                }
+            };
+        }
+
+        /// <summary>
+        /// Создает пресет для Height текстур
+        /// </summary>
+        public static TextureConversionPreset CreateHeight() {
+            return new TextureConversionPreset {
+                Name = "Height (Linear with Clamp)",
+                Description = "Optimized for height/displacement maps",
+                IsBuiltIn = true,
+                Suffixes = new List<string> { "_height", "_displacement", "_disp", "_bump" },
+                CompressionFormat = CompressionFormat.ETC1S,
+                OutputFormat = OutputFormat.KTX2,
+                CompressionLevel = 1,
+                QualityLevel = 128,
+                UseETC1SRDO = true,
+                GenerateMipmaps = true,
+                MipFilter = FilterType.Kaiser,
+                ApplyGammaCorrection = false,
+                TreatAsLinear = true,
+                ClampMipmaps = true,
+                UseMultithreading = true,
+                PerceptualMode = false,
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9
             };
         }
 
@@ -321,6 +426,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 CreateAlbedo(),
                 CreateNormalMap(),
                 CreateRoughness(),
+                CreateGloss(),
+                CreateHeight(),
                 CreateEmissive(),
                 CreateDefaultETC1S(),
                 CreateDefaultUASTC(),
@@ -336,6 +443,7 @@ namespace AssetProcessor.TextureConversion.Settings {
             return new CompressionSettings {
                 CompressionFormat = this.CompressionFormat,
                 OutputFormat = this.OutputFormat,
+                CompressionLevel = this.CompressionLevel,
                 QualityLevel = this.QualityLevel,
                 UASTCQuality = this.UASTCQuality,
                 UseUASTCRDO = this.UseUASTCRDO,
@@ -350,9 +458,14 @@ namespace AssetProcessor.TextureConversion.Settings {
                 SeparateAlpha = this.SeparateAlpha,
                 ForceAlphaChannel = this.ForceAlphaChannel,
                 RemoveAlphaChannel = this.RemoveAlphaChannel,
-                ForceLinearColorSpace = this.ForceLinearColorSpace,
+                TreatAsLinear = this.TreatAsLinear,
+                TreatAsSRGB = this.TreatAsSRGB,
                 ClampMipmaps = this.ClampMipmaps,
-                UseLinearMipFiltering = this.UseLinearMipFiltering
+                UseLinearMipFiltering = this.UseLinearMipFiltering,
+                ConvertToNormalMap = this.ConvertToNormalMap,
+                NormalizeVectors = this.NormalizeVectors,
+                KeepRGBLayout = this.KeepRGBLayout,
+                RemoveTemporaryMipmaps = this.RemoveTemporaryMipmaps
             };
         }
 

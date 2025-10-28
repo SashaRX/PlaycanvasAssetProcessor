@@ -86,20 +86,27 @@ namespace AssetProcessor.TextureConversion.Settings {
     public class CompressionSettingsData {
         public CompressionFormat CompressionFormat { get; set; } = CompressionFormat.ETC1S;
         public OutputFormat OutputFormat { get; set; } = OutputFormat.KTX2;
+        public int CompressionLevel { get; set; } = 1;
         public int QualityLevel { get; set; } = 128;
         public int UASTCQuality { get; set; } = 2;
         public bool UseUASTCRDO { get; set; } = true;
         public float UASTCRDOQuality { get; set; } = 1.0f;
         public bool PerceptualMode { get; set; } = true;
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
+        public int KTX2ZstdLevel { get; set; } = 9;
         public bool UseETC1SRDO { get; set; } = true;
         public bool SeparateAlpha { get; set; } = false;
         public bool ForceAlphaChannel { get; set; } = false;
         public bool RemoveAlphaChannel { get; set; } = false;
         public bool ClampMipmaps { get; set; } = false;
-        public bool ForceLinearColorSpace { get; set; } = false;
+        public bool TreatAsLinear { get; set; } = false;
+        public bool TreatAsSRGB { get; set; } = false;
         public bool UseLinearMipFiltering { get; set; } = false;
-        public bool GenerateMipmaps { get; set; } = true; // Добавлено: теперь хранится в настройках
+        public bool GenerateMipmaps { get; set; } = true;
+        public bool ConvertToNormalMap { get; set; } = false;
+        public bool NormalizeVectors { get; set; } = false;
+        public bool KeepRGBLayout { get; set; } = false;
+        public bool RemoveTemporaryMipmaps { get; set; } = true;
 
         /// <summary>
         /// Создает CompressionSettings из настроек с применением глобальных настроек
@@ -108,24 +115,31 @@ namespace AssetProcessor.TextureConversion.Settings {
             return new CompressionSettings {
                 CompressionFormat = CompressionFormat,
                 OutputFormat = OutputFormat,
+                CompressionLevel = CompressionLevel,
                 QualityLevel = QualityLevel,
                 UASTCQuality = UASTCQuality,
                 UseUASTCRDO = UseUASTCRDO,
                 UASTCRDOQuality = UASTCRDOQuality,
-                GenerateMipmaps = GenerateMipmaps, // ИСПРАВЛЕНО: используем значение из UI
+                GenerateMipmaps = GenerateMipmaps,
                 UseMultithreading = globalSettings.UseMultithreading,
                 ThreadCount = globalSettings.ThreadCount,
                 PerceptualMode = PerceptualMode,
                 UseSSE41 = globalSettings.UseSSE41,
                 UseOpenCL = globalSettings.UseOpenCL,
                 KTX2Supercompression = KTX2Supercompression,
+                KTX2ZstdLevel = KTX2ZstdLevel,
                 UseETC1SRDO = UseETC1SRDO,
                 SeparateAlpha = SeparateAlpha,
                 ForceAlphaChannel = ForceAlphaChannel,
                 RemoveAlphaChannel = RemoveAlphaChannel,
                 ClampMipmaps = ClampMipmaps,
-                ForceLinearColorSpace = ForceLinearColorSpace,
-                UseLinearMipFiltering = UseLinearMipFiltering
+                TreatAsLinear = TreatAsLinear,
+                TreatAsSRGB = TreatAsSRGB,
+                UseLinearMipFiltering = UseLinearMipFiltering,
+                ConvertToNormalMap = ConvertToNormalMap,
+                NormalizeVectors = NormalizeVectors,
+                KeepRGBLayout = KeepRGBLayout,
+                RemoveTemporaryMipmaps = RemoveTemporaryMipmaps
             };
         }
 
@@ -136,20 +150,27 @@ namespace AssetProcessor.TextureConversion.Settings {
             return new CompressionSettingsData {
                 CompressionFormat = settings.CompressionFormat,
                 OutputFormat = settings.OutputFormat,
+                CompressionLevel = settings.CompressionLevel,
                 QualityLevel = settings.QualityLevel,
                 UASTCQuality = settings.UASTCQuality,
                 UseUASTCRDO = settings.UseUASTCRDO,
                 UASTCRDOQuality = settings.UASTCRDOQuality,
                 PerceptualMode = settings.PerceptualMode,
                 KTX2Supercompression = settings.KTX2Supercompression,
+                KTX2ZstdLevel = settings.KTX2ZstdLevel,
                 UseETC1SRDO = settings.UseETC1SRDO,
                 SeparateAlpha = settings.SeparateAlpha,
                 ForceAlphaChannel = settings.ForceAlphaChannel,
                 RemoveAlphaChannel = settings.RemoveAlphaChannel,
                 ClampMipmaps = settings.ClampMipmaps,
-                ForceLinearColorSpace = settings.ForceLinearColorSpace,
+                TreatAsLinear = settings.TreatAsLinear,
+                TreatAsSRGB = settings.TreatAsSRGB,
                 UseLinearMipFiltering = settings.UseLinearMipFiltering,
-                GenerateMipmaps = settings.GenerateMipmaps
+                GenerateMipmaps = settings.GenerateMipmaps,
+                ConvertToNormalMap = settings.ConvertToNormalMap,
+                NormalizeVectors = settings.NormalizeVectors,
+                KeepRGBLayout = settings.KeepRGBLayout,
+                RemoveTemporaryMipmaps = settings.RemoveTemporaryMipmaps
             };
         }
     }

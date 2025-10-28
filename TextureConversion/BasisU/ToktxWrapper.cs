@@ -192,38 +192,119 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
             var args = new List<string>();
 
-            // Compression format
+            // ============================================
+            // COMPRESSION FORMAT & QUALITY
+            // ============================================
             if (settings.CompressionFormat == CompressionFormat.ETC1S) {
-                args.Add("--bcmp");
+                // ETC1S mode
+                args.Add("--encode");
+                args.Add("etc1s");
+
+                // Compression level (--clevel 0-5)
+                args.Add("--clevel");
+                args.Add(settings.CompressionLevel.ToString());
+
+                // Quality level (--qlevel 1-255)
+                args.Add("--qlevel");
                 args.Add(settings.QualityLevel.ToString());
+
             } else if (settings.CompressionFormat == CompressionFormat.UASTC) {
-                args.Add("--uastc");
+                // UASTC mode
+                args.Add("--encode");
+                args.Add("uastc");
+
+                // UASTC quality (--uastc_quality 0-4)
+                args.Add("--uastc_quality");
                 args.Add(settings.UASTCQuality.ToString());
 
+                // UASTC RDO
                 if (settings.UseUASTCRDO) {
                     args.Add("--uastc_rdo_l");
                     args.Add(FormattableString.Invariant($"{settings.UASTCRDOQuality}"));
                 }
             }
 
-            // Color space
-            if (settings.ForceLinearColorSpace) {
-                args.Add("--linear");
-            } else if (settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S) {
-                args.Add("--srgb");
+            // ============================================
+            // SUPERCOMPRESSION (KTX2 only)
+            // ============================================
+            if (settings.OutputFormat == OutputFormat.KTX2) {
+                if (settings.KTX2Supercompression == KTX2SupercompressionType.Zstandard) {
+                    args.Add("--zcmp");
+                    args.Add(settings.KTX2ZstdLevel.ToString());
+                } else if (settings.KTX2Supercompression == KTX2SupercompressionType.ZLIB) {
+                    args.Add("--zcmp");
+                    args.Add("0"); // ZLIB mode
+                }
+                // None = no --zcmp flag
             }
 
-            // Multithreading
+            // ============================================
+            // COLOR SPACE
+            // ============================================
+            if (settings.TreatAsLinear) {
+                args.Add("--assign_oetf");
+                args.Add("linear");
+            } else if (settings.TreatAsSRGB) {
+                args.Add("--assign_oetf");
+                args.Add("srgb");
+            }
+
+            // ============================================
+            // ALPHA CHANNEL OPTIONS
+            // ============================================
+            if (settings.ForceAlphaChannel) {
+                args.Add("--target_type");
+                args.Add("RGBA");
+            } else if (settings.RemoveAlphaChannel) {
+                args.Add("--target_type");
+                args.Add("RGB");
+            }
+
+            // ============================================
+            // NORMAL MAPS
+            // ============================================
+            if (settings.ConvertToNormalMap) {
+                args.Add("--normal_mode");
+            }
+
+            if (settings.NormalizeVectors) {
+                args.Add("--normalize");
+            }
+
+            if (settings.KeepRGBLayout) {
+                args.Add("--input_swizzle");
+                args.Add("rgb1");
+            }
+
+            // ============================================
+            // MIPMAPS
+            // ============================================
+            if (settings.GenerateMipmaps && mipmapPaths.Count == 1) {
+                // Если toktx должен сгенерировать мипмапы сам
+                args.Add("--genmipmap");
+            }
+
+            if (settings.ClampMipmaps) {
+                args.Add("--wmode");
+                args.Add("clamp");
+            }
+
+            // ============================================
+            // MULTITHREADING
+            // ============================================
             if (settings.UseMultithreading && settings.ThreadCount > 0) {
                 args.Add("--threads");
                 args.Add(settings.ThreadCount.ToString());
             }
 
-            // Output file - ПОСЛЕ всех флагов!
-            // ArgumentList сам добавит кавычки при необходимости
+            // ============================================
+            // OUTPUT FILE - ПОСЛЕ всех флагов!
+            // ============================================
             args.Add(outputPath);
 
-            // Input files (mipmaps)
+            // ============================================
+            // INPUT FILES (mipmaps)
+            // ============================================
             foreach (var mipmapPath in mipmapPaths) {
                 args.Add(mipmapPath);
             }

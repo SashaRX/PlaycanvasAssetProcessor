@@ -14,7 +14,13 @@ namespace AssetProcessor.TextureConversion.Core {
         public OutputFormat OutputFormat { get; set; } = OutputFormat.KTX2;
 
         /// <summary>
-        /// Уровень качества для ETC1S (0-255, по умолчанию 128)
+        /// Уровень компрессии для ETC1S (0-5, по умолчанию 1)
+        /// 0 = fastest, 5 = slowest but best compression
+        /// </summary>
+        public int CompressionLevel { get; set; } = 1;
+
+        /// <summary>
+        /// Уровень качества для ETC1S (1-255, по умолчанию 128)
         /// Выше = лучше качество, больше размер файла
         /// </summary>
         public int QualityLevel { get; set; } = 128;
@@ -78,17 +84,17 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool PerceptualMode { get; set; } = true;
 
         /// <summary>
-        /// Сжать альфа-канал отдельно (для ETC1S)
+        /// Сжать альфа-канал отдельно (для ETC1S) - Separate RG to Color/Alpha
         /// </summary>
         public bool SeparateAlpha { get; set; } = false;
 
         /// <summary>
-        /// Принудительно добавлять альфа-канал (-force_alpha)
+        /// Принудительно добавлять альфа-канал (--target_type RGBA)
         /// </summary>
         public bool ForceAlphaChannel { get; set; } = false;
 
         /// <summary>
-        /// Удалять альфа-канал (-no_alpha)
+        /// Удалять альфа-канал (--target_type RGB)
         /// </summary>
         public bool RemoveAlphaChannel { get; set; } = false;
 
@@ -98,9 +104,14 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool ClampMipmaps { get; set; } = false;
 
         /// <summary>
-        /// Принудительно трактовать данные как линейные (-linear)
+        /// Трактовать как линейное пространство (--assign_oetf linear)
         /// </summary>
-        public bool ForceLinearColorSpace { get; set; } = false;
+        public bool TreatAsLinear { get; set; } = false;
+
+        /// <summary>
+        /// Трактовать как sRGB пространство (--assign_oetf srgb)
+        /// </summary>
+        public bool TreatAsSRGB { get; set; } = false;
 
         /// <summary>
         /// Использовать линейный фильтр для генерации мипов (-mip_linear)
@@ -123,10 +134,30 @@ namespace AssetProcessor.TextureConversion.Core {
         public KTX2SupercompressionType KTX2Supercompression { get; set; } = KTX2SupercompressionType.Zstandard;
 
         /// <summary>
-        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 6)
-        /// Выше = лучше сжатие, медленнее
+        /// Уровень Zstandard сжатия для KTX2 (1-22, по умолчанию 9)
+        /// Выше = лучше сжатие, медленнее. --zcmp flag
         /// </summary>
-        public int KTX2ZstdLevel { get; set; } = 6;
+        public int KTX2ZstdLevel { get; set; } = 9;
+
+        /// <summary>
+        /// Конвертировать в XY(RGB/A) Normal Map (--normal_mode)
+        /// </summary>
+        public bool ConvertToNormalMap { get; set; } = false;
+
+        /// <summary>
+        /// Нормализовать векторы нормалей (--normalize)
+        /// </summary>
+        public bool NormalizeVectors { get; set; } = false;
+
+        /// <summary>
+        /// Оставить RGB структуру без преобразования (--input_swizzle rgb1)
+        /// </summary>
+        public bool KeepRGBLayout { get; set; } = false;
+
+        /// <summary>
+        /// Удалять временные мипмапы после конвертации
+        /// </summary>
+        public bool RemoveTemporaryMipmaps { get; set; } = true;
 
         /// <summary>
         /// Создает настройки по умолчанию для ETC1S
@@ -135,11 +166,13 @@ namespace AssetProcessor.TextureConversion.Core {
             return new CompressionSettings {
                 CompressionFormat = CompressionFormat.ETC1S,
                 OutputFormat = OutputFormat.KTX2,
+                CompressionLevel = 1,
                 QualityLevel = 128,
                 GenerateMipmaps = true,
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9,
                 UseETC1SRDO = true
             };
         }
@@ -157,6 +190,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 GenerateMipmaps = true,
                 UseMultithreading = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                KTX2ZstdLevel = 9,
                 UseETC1SRDO = true
             };
         }

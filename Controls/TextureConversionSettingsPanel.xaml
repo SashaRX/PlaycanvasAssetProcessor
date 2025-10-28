@@ -5,9 +5,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="280">
+             d:DesignHeight="700" d:DesignWidth="280">
 
     <UserControl.Resources>
+        <!-- Enum Data Providers -->
         <ObjectDataProvider x:Key="CompressionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionFormat}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="core:CompressionFormat"/>
@@ -32,17 +33,39 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <!-- Custom ComboBox Style for better readability -->
+        <!-- Compact Expander Style -->
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,3"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HeaderTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="11" Margin="0,2"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Compact GroupBox Style -->
+        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- ComboBox Style -->
         <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Background" Value="#F5F5F5"/>
             <Setter Property="Foreground" Value="#2C3E50"/>
             <Setter Property="BorderBrush" Value="#BDC3C7"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="5,3"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11"/>
         </Style>
 
-        <!-- Custom ComboBoxItem Style -->
         <Style TargetType="ComboBoxItem">
             <Setter Property="Background" Value="White"/>
             <Setter Property="Foreground" Value="#2C3E50"/>
@@ -56,255 +79,320 @@
                     <Setter Property="Background" Value="#BBDEFB"/>
                     <Setter Property="Foreground" Value="#0D47A1"/>
                 </Trigger>
-                <!-- Highlighted item (mouse over selected item) -->
-                <MultiTrigger>
-                    <MultiTrigger.Conditions>
-                        <Condition Property="IsSelected" Value="True"/>
-                        <Condition Property="IsMouseOver" Value="True"/>
-                    </MultiTrigger.Conditions>
-                    <Setter Property="Background" Value="#64B5F6"/>
-                    <Setter Property="Foreground" Value="#FFFFFF"/>
-                </MultiTrigger>
             </Style.Triggers>
+        </Style>
+
+        <!-- Label Style -->
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
         </Style>
     </UserControl.Resources>
 
-    <StackPanel Margin="2">
-        <!-- Preset Selector -->
-        <GroupBox Header="Preset" Margin="0,0,0,2" Padding="2">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
-                          Style="{StaticResource ReadableComboBoxStyle}"
-                          SelectionChanged="PresetComboBox_SelectionChanged"
-                          ToolTip="Select compression preset"/>
-                <Button Content="🔍" Grid.Column="1" Width="30" Margin="0,0,2,0"
-                        Click="AutoDetectPreset_Click"
-                        ToolTip="Auto-detect preset by filename"/>
-                <Button Content="..." Grid.Column="2" Width="30"
-                        Click="ManagePresets_Click"
-                        ToolTip="Manage presets"/>
-            </Grid>
-        </GroupBox>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="2">
 
-        <!-- Compression Format -->
-        <GroupBox Header="Compression" Margin="0,0,0,2" Padding="2">
-            <StackPanel>
-                <Grid Margin="0,0,0,2">
+            <!-- 1. PRESET SECTION -->
+            <GroupBox Header="Preset" Style="{StaticResource CompactGroupBoxStyle}">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Format:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <ComboBox Grid.Column="1" x:Name="CompressionFormatComboBox"
+                    <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              SelectionChanged="PresetComboBox_SelectionChanged"
+                              ToolTip="Select compression preset"/>
+                    <Button Content="🔍" Grid.Column="1" Width="30" Margin="0,0,2,0"
+                            Click="AutoDetectPreset_Click"
+                            ToolTip="Auto-detect preset by filename"/>
+                    <Button Content="..." Grid.Column="2" Width="30"
+                            Click="ManagePresets_Click"
+                            ToolTip="Manage presets"/>
+                </Grid>
+            </GroupBox>
+
+            <!-- 2. COMPRESSION SETTINGS SECTION -->
+            <Expander Header="Compression Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
+                <StackPanel Margin="5,2,0,0">
+                    <!-- Compression Format -->
+                    <TextBlock Text="Compression Format:" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="CompressionFormatComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
-                              SelectionChanged="CompressionFormatComboBox_SelectionChanged"/>
-                </Grid>
+                              SelectionChanged="CompressionFormatComboBox_SelectionChanged"
+                              Margin="0,0,0,5"/>
 
-                <Grid Margin="0,0,0,3">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Output:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <ComboBox Grid.Column="1" x:Name="OutputFormatComboBox"
+                    <!-- Compression Level (ETC1S only) -->
+                    <StackPanel x:Name="CompressionLevelPanel" Visibility="Collapsed">
+                        <TextBlock Text="Compression Level (0-5):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="CompressionLevelSlider" Grid.Column="0"
+                                    Minimum="0" Maximum="5" Value="1"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"
+                                    ToolTip="0=fastest, 5=slowest/best"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=CompressionLevelSlider, Path=Value}"
+                                       Width="30" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Quality (ETC1S) -->
+                    <StackPanel x:Name="ETC1SQualityPanel" Visibility="Collapsed">
+                        <TextBlock Text="Quality (1-255):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
+                                    Minimum="1" Maximum="255" Value="128"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
+                                       Width="30" TextAlignment="Right"/>
+                        </Grid>
+                        <CheckBox x:Name="UseETC1SRDOCheckBox" Content="RDO Optimizer" Margin="0,0,0,5"
+                                  IsChecked="True"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                    </StackPanel>
+
+                    <!-- Quality (UASTC) -->
+                    <StackPanel x:Name="UASTCQualityPanel" Visibility="Collapsed">
+                        <TextBlock Text="UASTC Quality (0-4):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="UASTCQualitySlider" Grid.Column="0"
+                                    Minimum="0" Maximum="4" Value="2"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value}"
+                                       Width="30" TextAlignment="Right"/>
+                        </Grid>
+                        <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,0,0,2" IsChecked="True"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                        <TextBlock Text="RDO Lambda:" Style="{StaticResource LabelStyle}"
+                                   IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.1" Maximum="10" Value="1"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"
+                                    IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F1}}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,0,0,5" IsChecked="True"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Visual quality improvement (ETC1S/ASTC only)"/>
+
+                    <!-- Output Format -->
+                    <TextBlock Text="Output Format:" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="OutputFormatComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
-                              SelectionChanged="OutputFormatComboBox_SelectionChanged"/>
-                </Grid>
+                              SelectionChanged="OutputFormatComboBox_SelectionChanged"
+                              Margin="0,0,0,5"/>
 
-                <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed" Margin="0,0,0,3">
-                    <TextBlock Text="KTX2 Supercompression:" FontSize="10" Margin="0,0,0,2"/>
-                    <ComboBox x:Name="KTX2SupercompressionComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
-                              SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"/>
+                    <!-- KTX2 Supercompression -->
+                    <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed">
+                        <TextBlock Text="KTX2 Supercompression:" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="KTX2SupercompressionComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
+                                  SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"
+                                  Margin="0,0,0,5"/>
+
+                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ZstdLevelSlider" Grid.Column="0"
+                                    Minimum="1" Maximum="22" Value="9"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"
+                                    ToolTip="Zstandard compression level"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ZstdLevelSlider, Path=Value}"
+                                       Width="30" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
+            </Expander>
 
-                <!-- ETC1S Quality -->
-                <StackPanel x:Name="ETC1SPanel" Visibility="Collapsed">
-                    <TextBlock Text="ETC1S Quality:" FontSize="10" Margin="0,0,0,2"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
-                                Minimum="0" Maximum="255" Value="128"
-                                TickFrequency="1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"
-                                ValueChanged="Slider_ValueChanged"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
-                                   Width="30" TextAlignment="Right"/>
-                    </Grid>
-                    <CheckBox x:Name="UseETC1SRDOCheckBox" Content="ETC1S RDO" Margin="0,5,0,0"
-                              IsChecked="True"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+            <!-- 3. ALPHA OPTIONS SECTION -->
+            <Expander Header="Alpha Options" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="5,2,0,0">
+                    <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="For normal maps: separate RG channels"/>
+                    <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,3"
+                              Checked="ForceAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Add alpha channel (--target_type RGBA)"/>
+                    <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
+                              Checked="RemoveAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Remove alpha channel (--target_type RGB)"/>
                 </StackPanel>
+            </Expander>
 
-                <!-- UASTC Quality -->
-                <StackPanel x:Name="UASTCPanel" Visibility="Collapsed">
-                    <TextBlock Text="UASTC Quality:" FontSize="10" Margin="0,0,0,2"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="UASTCQualitySlider" Grid.Column="0"
-                                Minimum="0" Maximum="4" Value="2"
-                                TickFrequency="1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"
-                                ValueChanged="Slider_ValueChanged"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value}"
-                                   Width="30" TextAlignment="Right"/>
-                    </Grid>
-                    <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,5,0,0" IsChecked="True"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                    <TextBlock Text="RDO Lambda:" FontSize="10" Margin="0,2,0,2"
-                               IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
-                    <Grid Margin="0,2,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.1" Maximum="10" Value="1"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,5,0"
-                                ValueChanged="Slider_ValueChanged"
-                                IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F1}}"
-                                   Width="40" TextAlignment="Right"/>
-                    </Grid>
+            <!-- 4. COLOR & SPACE SECTION -->
+            <Expander Header="Color &amp; Space" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="5,2,0,0">
+                    <CheckBox x:Name="TreatAsLinearCheckBox" Content="Treat as Linear" Margin="0,0,0,3"
+                              Checked="TreatAsLinearCheckBox_Checked" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--assign_oetf linear"/>
+                    <CheckBox x:Name="TreatAsSRGBCheckBox" Content="Treat as sRGB" Margin="0,0,0,3"
+                              Checked="TreatAsSRGBCheckBox_Checked" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--assign_oetf srgb"/>
                 </StackPanel>
+            </Expander>
 
-                <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,5,0,0" IsChecked="True"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+            <!-- 5. MIPMAPS SECTION -->
+            <Expander Header="Mipmaps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
+                <StackPanel Margin="5,2,0,0">
+                    <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,5"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--genmipmap"/>
 
-                <TextBlock Text="Alpha Options:" FontSize="10" Margin="0,10,0,2"/>
-                <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,2"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,2"
-                          Checked="ForceAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"/>
-                <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,2"
-                          Checked="RemoveAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"/>
-
-                <TextBlock Text="Advanced:" FontSize="10" Margin="0,10,0,2"/>
-                <CheckBox x:Name="ForceLinearCheckBox" Content="Treat as Linear (-linear)" Margin="0,0,0,2"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                <CheckBox x:Name="MipClampCheckBox" Content="Clamp Mip Edges (-mip_clamp)" Margin="0,0,0,2"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (-mip_linear)" Margin="0,0,0,2"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-            </StackPanel>
-        </GroupBox>
-
-        <!-- Mipmap Settings -->
-        <GroupBox Header="Mipmaps" Margin="0,0,0,2" Padding="2">
-            <StackPanel>
-                <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,3"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-
-                <Grid Margin="0,0,0,3">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <ComboBox Grid.Column="1" x:Name="MipFilterComboBox"
+                    <TextBlock Text="Filter:" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="MipFilterComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
-                              SelectionChanged="ComboBoxSettingChanged"/>
-                </Grid>
-
-                <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,3"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize mipmaps for normal map" Margin="0,5,0,0"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-            </StackPanel>
-        </GroupBox>
-
-        <!-- Toksvig Settings (for Gloss textures) -->
-        <GroupBox Header="Toksvig (Anti-Aliasing)" Margin="0,0,0,2" Padding="2"
-                  ToolTip="Toksvig mipmap correction reduces specular aliasing for gloss textures">
-            <StackPanel>
-                <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
-                          ToolTip="Apply Toksvig variance-based roughness adjustment"
-                          Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-
-                <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
-                    <TextBlock Text="Composite Power (k):" FontSize="10" Margin="0,0,0,2"
-                               ToolTip="Weight of variance influence (0.5-2.0)"/>
-                    <Grid Margin="0,0,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="ToksvigCompositePowerSlider" Grid.Column="0"
-                                Minimum="0.5" Maximum="2.0" Value="1.0"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"
-                                ValueChanged="Slider_ValueChanged"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigCompositePowerSlider, Path=Value, StringFormat={}{0:F1}}"
-                                   Width="30" TextAlignment="Right"/>
-                    </Grid>
-
-                    <TextBlock Text="Min Mip Level:" FontSize="10" Margin="0,0,0,2"
-                               ToolTip="Minimum mipmap level to apply Toksvig (0=all levels, 1=skip base level)"/>
-                    <Grid Margin="0,0,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="ToksvigMinMipLevelSlider" Grid.Column="0"
-                                Minimum="0" Maximum="5" Value="1"
-                                TickFrequency="1" IsSnapToTickEnabled="True"
-                                Margin="0,0,5,0"
-                                ValueChanged="Slider_ValueChanged"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigMinMipLevelSlider, Path=Value}"
-                                   Width="30" TextAlignment="Right"/>
-                    </Grid>
-
-                    <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance" IsChecked="True"
+                              SelectionChanged="ComboBoxSettingChanged"
                               Margin="0,0,0,5"
-                              ToolTip="Apply 3x3 blur to variance map for smoother results"
+                              ToolTip="--filter"/>
+
+                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Use linear filtering for mipmaps"/>
+                    <CheckBox x:Name="MipClampCheckBox" Content="Clamp Mip Edges" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--wmode clamp"/>
+                    <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Remove Temporal Mipmaps" IsChecked="True" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Clean up temporary mipmap files after conversion"/>
+                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Apply gamma correction during mipmap generation"/>
+                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Save each mipmap level as separate file (debug)"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 6. NORMAL MAPS SECTION -->
+            <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="5,2,0,0">
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to XY(RGB/A) Normal Map" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--normal_mode: Store normal in RGB or RGBA"/>
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--normalize: Force normalize normal vectors"/>
+                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Mipmaps (Normal Map)" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="Normalize each mip level for normal maps"/>
+                    <CheckBox x:Name="KeepRGBLayoutCheckBox" Content="Keep RGB Layout (Custom)" Margin="0,0,0,3"
+                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                              ToolTip="--input_swizzle rgb1: Keep RGB structure"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 7. TOKSVIG SECTION -->
+            <Expander Header="Toksvig (Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="5,2,0,0">
+                    <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
+                              ToolTip="Apply Toksvig variance-based roughness adjustment"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
-                    <TextBlock Text="Normal Map Path:" FontSize="10" Margin="0,0,0,2"
-                               ToolTip="Leave empty for auto-detection"/>
-                    <Grid Margin="0,0,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="NormalMapPathTextBox" Grid.Column="0"
-                                 Margin="0,0,2,0" Height="22"
-                                 ToolTip="Path to normal map (empty = auto-detect)"
-                                 TextChanged="TextBoxSettingChanged"/>
-                        <Button Content="..." Grid.Column="1" Width="25" Height="22"
-                                Click="BrowseNormalMap_Click"
-                                ToolTip="Browse for normal map"/>
-                    </Grid>
-                </StackPanel>
-            </StackPanel>
-        </GroupBox>
+                    <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
+                        <TextBlock Text="Composite Power (k) [0.5-2.0]:" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Weight of variance influence"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigCompositePowerSlider" Grid.Column="0"
+                                    Minimum="0.5" Maximum="2.0" Value="1.0"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigCompositePowerSlider, Path=Value, StringFormat={}{0:F1}}"
+                                       Width="30" TextAlignment="Right"/>
+                        </Grid>
 
-        <!-- Actions -->
-        <GroupBox Header="Actions" Margin="0,0,0,0" Padding="2">
-            <StackPanel>
-                <Button Content="⚙ Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
-                        Click="Convert_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"
-                        ToolTip="Convert selected texture(s) with current settings"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="Apply" x:Name="ApplyButton" Width="60" Margin="0,0,5,0" Click="Apply_Click"/>
-                    <Button Content="Reset" x:Name="ResetButton" Width="60" Click="Reset_Click"/>
+                        <TextBlock Text="Min Mip Level:" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Minimum mipmap level to apply Toksvig"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigMinMipLevelSlider" Grid.Column="0"
+                                    Minimum="0" Maximum="5" Value="1"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,5,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigMinMipLevelSlider, Path=Value}"
+                                       Width="30" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance" IsChecked="True"
+                                  Margin="0,0,0,5"
+                                  ToolTip="Apply 3x3 blur to variance map"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
+                        <TextBlock Text="Normal Map Path:" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Leave empty for auto-detection"/>
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="NormalMapPathTextBox" Grid.Column="0"
+                                     Margin="0,0,2,0" Height="22"
+                                     ToolTip="Path to normal map (empty = auto-detect)"
+                                     TextChanged="TextBoxSettingChanged"/>
+                            <Button Content="..." Grid.Column="1" Width="25" Height="22"
+                                    Click="BrowseNormalMap_Click"
+                                    ToolTip="Browse for normal map"/>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
-        </GroupBox>
-    </StackPanel>
+            </Expander>
+
+            <!-- 8. ACTIONS SECTION -->
+            <GroupBox Header="Actions" Style="{StaticResource CompactGroupBoxStyle}">
+                <StackPanel>
+                    <Button Content="⚙ Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
+                            Click="Convert_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"
+                            ToolTip="Convert selected texture(s) with current settings"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="Apply" x:Name="ApplyButton" Width="60" Margin="0,0,5,0" Click="Apply_Click"/>
+                        <Button Content="Reset" x:Name="ResetButton" Width="60" Click="Reset_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

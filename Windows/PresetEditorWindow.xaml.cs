@@ -38,7 +38,7 @@ namespace AssetProcessor.Windows {
                 SeparateAlphaCheckBox.IsChecked = _originalPreset.SeparateAlpha;
                 ForceAlphaCheckBox.IsChecked = _originalPreset.ForceAlphaChannel;
                 RemoveAlphaCheckBox.IsChecked = _originalPreset.RemoveAlphaChannel;
-                ForceLinearCheckBox.IsChecked = _originalPreset.ForceLinearColorSpace;
+                ForceLinearCheckBox.IsChecked = _originalPreset.TreatAsLinear;
                 ClampMipmapsCheckBox.IsChecked = _originalPreset.ClampMipmaps;
                 LinearMipFilterCheckBox.IsChecked = _originalPreset.UseLinearMipFiltering;
 
@@ -183,7 +183,7 @@ namespace AssetProcessor.Windows {
                 SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
-                ForceLinearColorSpace = ForceLinearCheckBox.IsChecked ?? false,
+                TreatAsLinear = ForceLinearCheckBox.IsChecked ?? false,
                 ClampMipmaps = ClampMipmapsCheckBox.IsChecked ?? false,
                 UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
                 IsBuiltIn = false

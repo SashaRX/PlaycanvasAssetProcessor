@@ -16,6 +16,8 @@ namespace AssetProcessor.Controls {
         private ConversionSettingsManager? _conversionSettingsManager;
 
         public event EventHandler? SettingsChanged;
+        public event EventHandler? ConvertRequested;
+        public event EventHandler? AutoDetectRequested;
 
         public TextureConversionSettingsPanel() {
             InitializeComponent();
@@ -44,24 +46,44 @@ namespace AssetProcessor.Controls {
         private void InitializeDefaults() {
             _isLoading = true;
 
-            // Set default values
+            // Compression Settings
             CompressionFormatComboBox.SelectedItem = CompressionFormat.ETC1S;
             OutputFormatComboBox.SelectedItem = OutputFormat.KTX2;
-            MipFilterComboBox.SelectedIndex = 5; // Kaiser
-            KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
-            UseUASTCRDOCheckBox.IsChecked = true;
+            CompressionLevelSlider.Value = 1;
+            ETC1SQualitySlider.Value = 128;
+            UASTCQualitySlider.Value = 2;
             UASTCRDOLambdaSlider.Value = 1.0;
             UseETC1SRDOCheckBox.IsChecked = true;
+            UseUASTCRDOCheckBox.IsChecked = true;
             PerceptualModeCheckBox.IsChecked = true;
+            KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
+            ZstdLevelSlider.Value = 9;
+
+            // Alpha Options
             SeparateAlphaCheckBox.IsChecked = false;
             ForceAlphaCheckBox.IsChecked = false;
             RemoveAlphaCheckBox.IsChecked = false;
-            ForceLinearCheckBox.IsChecked = false;
-            MipClampCheckBox.IsChecked = false;
-            LinearMipFilterCheckBox.IsChecked = false;
-            NormalizeNormalsCheckBox.IsChecked = false;
 
-            // Toksvig defaults
+            // Color & Space
+            TreatAsLinearCheckBox.IsChecked = false;
+            TreatAsSRGBCheckBox.IsChecked = false;
+
+            // Mipmaps
+            GenerateMipmapsCheckBox.IsChecked = true;
+            MipFilterComboBox.SelectedIndex = 5; // Kaiser
+            LinearMipFilterCheckBox.IsChecked = false;
+            MipClampCheckBox.IsChecked = false;
+            RemoveTemporalMipmapsCheckBox.IsChecked = true;
+            ApplyGammaCorrectionCheckBox.IsChecked = true;
+            SaveSeparateMipmapsCheckBox.IsChecked = false;
+
+            // Normal Maps
+            ConvertToNormalMapCheckBox.IsChecked = false;
+            NormalizeVectorsCheckBox.IsChecked = false;
+            NormalizeNormalsCheckBox.IsChecked = false;
+            KeepRGBLayoutCheckBox.IsChecked = false;
+
+            // Toksvig
             ToksvigEnabledCheckBox.IsChecked = false;
             ToksvigCompositePowerSlider.Value = 1.0;
             ToksvigMinMipLevelSlider.Value = 1;
@@ -74,16 +96,13 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
+        // ============================================
+        // COMPRESSION FORMAT HANDLING
+        // ============================================
+
         private void CompressionFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (!_isLoading) {
                 UpdateCompressionPanels();
-                OnSettingsChanged();
-            }
-        }
-
-        private void OutputFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading) {
-                UpdateOutputFormatPanels();
                 OnSettingsChanged();
             }
         }
@@ -94,11 +113,24 @@ namespace AssetProcessor.Controls {
             var format = (CompressionFormat)CompressionFormatComboBox.SelectedItem;
 
             if (format == CompressionFormat.ETC1S) {
-                ETC1SPanel.Visibility = Visibility.Visible;
-                UASTCPanel.Visibility = Visibility.Collapsed;
+                CompressionLevelPanel.Visibility = Visibility.Visible;
+                ETC1SQualityPanel.Visibility = Visibility.Visible;
+                UASTCQualityPanel.Visibility = Visibility.Collapsed;
             } else {
-                ETC1SPanel.Visibility = Visibility.Collapsed;
-                UASTCPanel.Visibility = Visibility.Visible;
+                CompressionLevelPanel.Visibility = Visibility.Collapsed;
+                ETC1SQualityPanel.Visibility = Visibility.Collapsed;
+                UASTCQualityPanel.Visibility = Visibility.Visible;
+            }
+        }
+
+        // ============================================
+        // OUTPUT FORMAT HANDLING
+        // ============================================
+
+        private void OutputFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateOutputFormatPanels();
+                OnSettingsChanged();
             }
         }
 
@@ -113,6 +145,42 @@ namespace AssetProcessor.Controls {
                 KTX2SupercompressionPanel.Visibility = Visibility.Collapsed;
             }
         }
+
+        // ============================================
+        // MUTUAL EXCLUSION CHECKBOXES
+        // ============================================
+
+        private void ForceAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (RemoveAlphaCheckBox.IsChecked == true) {
+                RemoveAlphaCheckBox.IsChecked = false;
+            }
+            CheckboxSettingChanged(sender, e);
+        }
+
+        private void RemoveAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (ForceAlphaCheckBox.IsChecked == true) {
+                ForceAlphaCheckBox.IsChecked = false;
+            }
+            CheckboxSettingChanged(sender, e);
+        }
+
+        private void TreatAsLinearCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (TreatAsSRGBCheckBox.IsChecked == true) {
+                TreatAsSRGBCheckBox.IsChecked = false;
+            }
+            CheckboxSettingChanged(sender, e);
+        }
+
+        private void TreatAsSRGBCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (TreatAsLinearCheckBox.IsChecked == true) {
+                TreatAsLinearCheckBox.IsChecked = false;
+            }
+            CheckboxSettingChanged(sender, e);
+        }
+
+        // ============================================
+        // SETTINGS GETTERS
+        // ============================================
 
         public CompressionSettingsData GetCompressionSettings() {
             var format = CompressionFormatComboBox.SelectedItem != null
@@ -130,19 +198,27 @@ namespace AssetProcessor.Controls {
             return new CompressionSettingsData {
                 CompressionFormat = format,
                 OutputFormat = outputFormat,
+                CompressionLevel = (int)Math.Round(CompressionLevelSlider.Value),
                 QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
                 UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? true,
                 UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = supercompression,
+                KTX2ZstdLevel = (int)Math.Round(ZstdLevelSlider.Value),
                 UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
                 SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
+                TreatAsLinear = TreatAsLinearCheckBox.IsChecked ?? false,
+                TreatAsSRGB = TreatAsSRGBCheckBox.IsChecked ?? false,
                 ClampMipmaps = MipClampCheckBox.IsChecked ?? false,
-                ForceLinearColorSpace = ForceLinearCheckBox.IsChecked ?? false,
-                UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false
+                UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
+                GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
+                ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
+                NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
+                KeepRGBLayout = KeepRGBLayoutCheckBox.IsChecked ?? false,
+                RemoveTemporaryMipmaps = RemoveTemporalMipmapsCheckBox.IsChecked ?? true
             };
         }
 
@@ -162,35 +238,63 @@ namespace AssetProcessor.Controls {
             };
         }
 
+        public ToksvigSettings GetToksvigSettings() {
+            return new ToksvigSettings {
+                Enabled = ToksvigEnabledCheckBox.IsChecked ?? false,
+                CompositePower = (float)ToksvigCompositePowerSlider.Value,
+                MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
+                SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
+            };
+        }
+
         public bool GenerateMipmaps => GenerateMipmapsCheckBox.IsChecked ?? true;
         public bool SaveSeparateMipmaps => SaveSeparateMipmapsCheckBox.IsChecked ?? false;
         public string? PresetName => (PresetComboBox.SelectedItem as TextureConversionPreset)?.Name;
 
+        // ============================================
+        // SETTINGS LOADERS
+        // ============================================
+
         public void LoadSettings(CompressionSettingsData compression, MipProfileSettings mipProfile, bool generateMips, bool saveSeparateMips) {
             _isLoading = true;
 
+            // Compression
             CompressionFormatComboBox.SelectedItem = compression.CompressionFormat;
             OutputFormatComboBox.SelectedItem = compression.OutputFormat;
+            CompressionLevelSlider.Value = compression.CompressionLevel;
             ETC1SQualitySlider.Value = compression.QualityLevel;
             UASTCQualitySlider.Value = compression.UASTCQuality;
             UseUASTCRDOCheckBox.IsChecked = compression.UseUASTCRDO;
             UASTCRDOLambdaSlider.Value = compression.UASTCRDOQuality;
             PerceptualModeCheckBox.IsChecked = compression.PerceptualMode;
+            KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
+            ZstdLevelSlider.Value = compression.KTX2ZstdLevel;
+            UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
 
+            // Alpha
+            SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
+            ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
+            RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;
+
+            // Color & Space
+            TreatAsLinearCheckBox.IsChecked = compression.TreatAsLinear;
+            TreatAsSRGBCheckBox.IsChecked = compression.TreatAsSRGB;
+
+            // Mipmaps
             MipFilterComboBox.SelectedItem = mipProfile.Filter;
             ApplyGammaCorrectionCheckBox.IsChecked = mipProfile.ApplyGammaCorrection;
             GenerateMipmapsCheckBox.IsChecked = generateMips;
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
-            NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
-
-            KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
-            UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
-            SeparateAlphaCheckBox.IsChecked = compression.SeparateAlpha;
-            ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
-            RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;
-            ForceLinearCheckBox.IsChecked = compression.ForceLinearColorSpace;
             MipClampCheckBox.IsChecked = compression.ClampMipmaps;
             LinearMipFilterCheckBox.IsChecked = compression.UseLinearMipFiltering;
+            RemoveTemporalMipmapsCheckBox.IsChecked = compression.RemoveTemporaryMipmaps;
+
+            // Normal Maps
+            NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
+            ConvertToNormalMapCheckBox.IsChecked = compression.ConvertToNormalMap;
+            NormalizeVectorsCheckBox.IsChecked = compression.NormalizeVectors;
+            KeepRGBLayoutCheckBox.IsChecked = compression.KeepRGBLayout;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
@@ -198,22 +302,21 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
-        // OBSOLETE: This method is no longer used after preset system refactoring
-        // Presets are now loaded through InitializePresets() using PresetManager
-        [Obsolete("Use InitializePresets() instead")]
-        public void LoadPresets(string[] presetNames, string? selectedPreset = null) {
-            // Convert to list for ItemsSource compatibility
-            var presetList = new List<object> { "(Custom)" };
-            presetList.AddRange(presetNames);
+        public void LoadToksvigSettings(ToksvigSettings settings) {
+            _isLoading = true;
 
-            PresetComboBox.ItemsSource = presetList;
+            ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
+            ToksvigCompositePowerSlider.Value = settings.CompositePower;
+            ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
+            ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
+            NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
 
-            if (!string.IsNullOrEmpty(selectedPreset) && presetList.Contains(selectedPreset)) {
-                PresetComboBox.SelectedItem = selectedPreset;
-            } else {
-                PresetComboBox.SelectedIndex = 0; // Custom
-            }
+            _isLoading = false;
         }
+
+        // ============================================
+        // PRESET HANDLING
+        // ============================================
 
         private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (_isLoading) return;
@@ -278,14 +381,14 @@ namespace AssetProcessor.Controls {
                             break;
 
                         case "treatAsSRGB":
-                            if (param.Value is bool srgb && !srgb) {
-                                ForceLinearCheckBox.IsChecked = false;
+                            if (param.Value is bool srgb) {
+                                TreatAsSRGBCheckBox.IsChecked = srgb;
                             }
                             break;
 
                         case "treatAsLinear":
-                            if (param.Value is bool linear && linear) {
-                                ForceLinearCheckBox.IsChecked = true;
+                            if (param.Value is bool linear) {
+                                TreatAsLinearCheckBox.IsChecked = linear;
                             }
                             break;
 
@@ -303,7 +406,7 @@ namespace AssetProcessor.Controls {
 
                         case "normalizeVectors":
                             if (param.Value is bool normalize) {
-                                NormalizeNormalsCheckBox.IsChecked = normalize;
+                                NormalizeVectorsCheckBox.IsChecked = normalize;
                             }
                             break;
 
@@ -335,7 +438,9 @@ namespace AssetProcessor.Controls {
             // Compression settings
             CompressionFormatComboBox.SelectedItem = preset.CompressionFormat;
             OutputFormatComboBox.SelectedItem = preset.OutputFormat;
+            CompressionLevelSlider.Value = preset.CompressionLevel;
             KTX2SupercompressionComboBox.SelectedItem = preset.KTX2Supercompression;
+            ZstdLevelSlider.Value = preset.KTX2ZstdLevel;
 
             // Quality settings
             ETC1SQualitySlider.Value = preset.QualityLevel;
@@ -349,24 +454,29 @@ namespace AssetProcessor.Controls {
             MipFilterComboBox.SelectedItem = preset.MipFilter;
             LinearMipFilterCheckBox.IsChecked = preset.UseLinearMipFiltering;
             MipClampCheckBox.IsChecked = preset.ClampMipmaps;
+            ApplyGammaCorrectionCheckBox.IsChecked = preset.ApplyGammaCorrection;
 
             // Advanced settings
             PerceptualModeCheckBox.IsChecked = preset.PerceptualMode;
             SeparateAlphaCheckBox.IsChecked = preset.SeparateAlpha;
             ForceAlphaCheckBox.IsChecked = preset.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = preset.RemoveAlphaChannel;
-            ForceLinearCheckBox.IsChecked = preset.ForceLinearColorSpace;
+            TreatAsLinearCheckBox.IsChecked = preset.TreatAsLinear;
+            TreatAsSRGBCheckBox.IsChecked = preset.TreatAsSRGB;
+
+            // Normal Maps
             NormalizeNormalsCheckBox.IsChecked = preset.NormalizeNormals;
+            ConvertToNormalMapCheckBox.IsChecked = preset.ConvertToNormalMap;
+            NormalizeVectorsCheckBox.IsChecked = preset.NormalizeVectors;
+            KeepRGBLayoutCheckBox.IsChecked = preset.KeepRGBLayout;
+
+            // Toksvig
+            LoadToksvigSettings(preset.ToksvigSettings);
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
 
             _isLoading = false;
-        }
-
-        private void AutoDetectPreset_Click(object sender, RoutedEventArgs e) {
-            // Вызываем событие, чтобы MainWindow мог передать имя файла
-            OnAutoDetectRequested();
         }
 
         /// <summary>
@@ -387,11 +497,8 @@ namespace AssetProcessor.Controls {
             return false;
         }
 
-        // Событие для запроса автоопределения
-        public event EventHandler? AutoDetectRequested;
-
-        private void OnAutoDetectRequested() {
-            AutoDetectRequested?.Invoke(this, EventArgs.Empty);
+        private void AutoDetectPreset_Click(object sender, RoutedEventArgs e) {
+            OnAutoDetectRequested();
         }
 
         private void ManagePresets_Click(object sender, RoutedEventArgs e) {
@@ -412,6 +519,10 @@ namespace AssetProcessor.Controls {
             }
         }
 
+        // ============================================
+        // ACTIONS
+        // ============================================
+
         private void Convert_Click(object sender, RoutedEventArgs e) {
             OnConvertRequested();
         }
@@ -425,12 +536,21 @@ namespace AssetProcessor.Controls {
             OnSettingsChanged();
         }
 
-        // Событие для запроса конвертации
-        public event EventHandler? ConvertRequested;
+        private void BrowseNormalMap_Click(object sender, RoutedEventArgs e) {
+            var dialog = new Microsoft.Win32.OpenFileDialog {
+                Title = "Select Normal Map",
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.tga;*.bmp)|*.png;*.jpg;*.jpeg;*.tga;*.bmp|All Files (*.*)|*.*",
+                CheckFileExists = true
+            };
 
-        private void OnConvertRequested() {
-            ConvertRequested?.Invoke(this, EventArgs.Empty);
+            if (dialog.ShowDialog() == true) {
+                NormalMapPathTextBox.Text = dialog.FileName;
+            }
         }
+
+        // ============================================
+        // EVENT HANDLERS
+        // ============================================
 
         private void CheckboxSettingChanged(object sender, RoutedEventArgs e) {
             if (!_isLoading) {
@@ -456,68 +576,22 @@ namespace AssetProcessor.Controls {
             }
         }
 
-        private void ForceAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
-            if (RemoveAlphaCheckBox.IsChecked == true) {
-                RemoveAlphaCheckBox.IsChecked = false;
-            }
-            CheckboxSettingChanged(sender, e);
-        }
-
-        private void RemoveAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
-            if (ForceAlphaCheckBox.IsChecked == true) {
-                ForceAlphaCheckBox.IsChecked = false;
-            }
-            CheckboxSettingChanged(sender, e);
-        }
-
-        private void OnSettingsChanged() {
-            SettingsChanged?.Invoke(this, EventArgs.Empty);
-        }
-
         private void TextBoxSettingChanged(object sender, TextChangedEventArgs e) {
             if (!_isLoading) {
                 OnSettingsChanged();
             }
         }
 
-        private void BrowseNormalMap_Click(object sender, RoutedEventArgs e) {
-            var dialog = new Microsoft.Win32.OpenFileDialog {
-                Title = "Select Normal Map",
-                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.tga;*.bmp)|*.png;*.jpg;*.jpeg;*.tga;*.bmp|All Files (*.*)|*.*",
-                CheckFileExists = true
-            };
-
-            if (dialog.ShowDialog() == true) {
-                NormalMapPathTextBox.Text = dialog.FileName;
-            }
+        private void OnSettingsChanged() {
+            SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>
-        /// Получает настройки Toksvig из UI
-        /// </summary>
-        public ToksvigSettings GetToksvigSettings() {
-            return new ToksvigSettings {
-                Enabled = ToksvigEnabledCheckBox.IsChecked ?? false,
-                CompositePower = (float)ToksvigCompositePowerSlider.Value,
-                MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
-                SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
-                NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
-            };
+        private void OnConvertRequested() {
+            ConvertRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>
-        /// Загружает настройки Toksvig в UI
-        /// </summary>
-        public void LoadToksvigSettings(ToksvigSettings settings) {
-            _isLoading = true;
-
-            ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
-            ToksvigCompositePowerSlider.Value = settings.CompositePower;
-            ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
-            ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
-            NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
-
-            _isLoading = false;
+        private void OnAutoDetectRequested() {
+            AutoDetectRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 }

@@ -313,7 +313,8 @@ namespace AssetProcessor.Controls {
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
                 KeepRGBLayout = false, // Removed from UI
-                RemoveTemporaryMipmaps = RemoveTemporalMipmapsCheckBox.IsChecked ?? true
+                // КРИТИЧНО: Checkbox называется "Keep" но свойство "Remove" - нужна инверсия!
+                RemoveTemporaryMipmaps = !(RemoveTemporalMipmapsCheckBox.IsChecked ?? false)
             };
         }
 

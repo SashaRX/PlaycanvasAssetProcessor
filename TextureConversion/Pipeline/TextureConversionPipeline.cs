@@ -113,6 +113,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                 }
                             }
 
+                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig
+                            if (!compressionSettings.RemoveTemporaryMipmaps) {
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_original");
+                            }
+
                             // Применяем Toksvig
                             var correctedMipmaps = _toksvigProcessor.ApplyToksvigCorrection(
                                 mipmaps,
@@ -131,6 +136,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             result.NormalMapUsed = normalMapPath;
 
                             Logger.Info("Toksvig коррекция успешно применена");
+
+                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем СКОРРЕКТИРОВАННЫЕ мипмапы ПОСЛЕ Toksvig
+                            if (!compressionSettings.RemoveTemporaryMipmaps) {
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_toksvig");
+                            }
                         }
                     } catch (Exception ex) {
                         Logger.Error(ex, "Ошибка при применении Toksvig коррекции");
@@ -255,6 +265,34 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
             result.Duration = DateTime.Now - startTime;
             return result;
+        }
+
+        /// <summary>
+        /// Сохраняет мипмапы в debug папку для инспекции
+        /// </summary>
+        /// <param name="inputPath">Путь к исходной текстуре</param>
+        /// <param name="mipmaps">Список мипмапов для сохранения</param>
+        /// <param name="suffix">Суффикс для имени файла (например "_original" или "_toksvig")</param>
+        private async Task SaveDebugMipmapsAsync(string inputPath, List<Image<Rgba32>> mipmaps, string suffix) {
+            try {
+                var textureDir = Path.GetDirectoryName(inputPath);
+                if (string.IsNullOrEmpty(textureDir)) return;
+
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
+                var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
+                Directory.CreateDirectory(debugMipmapDir);
+
+                Logger.Info($"Сохраняем {mipmaps.Count} debug mipmaps{suffix}...");
+
+                for (int i = 0; i < mipmaps.Count; i++) {
+                    var debugPath = Path.Combine(debugMipmapDir, $"{fileName}{suffix}_mip{i}.png");
+                    await mipmaps[i].SaveAsPngAsync(debugPath);
+                }
+
+                Logger.Info($"✓ Debug mipmaps{suffix} сохранены в: {debugMipmapDir} ({mipmaps.Count} файлов)");
+            } catch (Exception ex) {
+                Logger.Warn($"Не удалось сохранить debug mipmaps{suffix}: {ex.Message}");
+            }
         }
 
         /// <summary>

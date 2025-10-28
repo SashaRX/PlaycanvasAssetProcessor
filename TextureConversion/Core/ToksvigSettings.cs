@@ -19,9 +19,9 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Минимальный уровень мипмапа для применения Toksvig
-        /// По умолчанию: 1 (не трогаем уровень 0)
+        /// По умолчанию: 0 (применяем начиная с базового уровня)
         /// </summary>
-        public int MinToksvigMipLevel { get; set; } = 1;
+        public int MinToksvigMipLevel { get; set; } = 0;
 
         /// <summary>
         /// Применять ли сглаживание дисперсии (3x3 blur)
@@ -42,7 +42,7 @@ namespace AssetProcessor.TextureConversion.Core {
             return new ToksvigSettings {
                 Enabled = false,
                 CompositePower = 1.0f,
-                MinToksvigMipLevel = 1,
+                MinToksvigMipLevel = 0,
                 SmoothVariance = true,
                 NormalMapPath = null
             };

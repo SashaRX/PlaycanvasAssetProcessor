@@ -5,7 +5,9 @@
       "Bash(\"C:\\Program Files\\KTX-Software\\bin\\toktx.exe\" --help)",
       "Bash(dotnet build:*)",
       "Bash(cat:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Read(//c/project/playcanvas_projects/North Wind/content/models/props/**)",
+      "Bash(sha256sum:*)"
     ],
     "deny": [],
     "ask": []

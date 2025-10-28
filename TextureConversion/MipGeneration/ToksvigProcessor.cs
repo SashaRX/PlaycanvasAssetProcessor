@@ -240,7 +240,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         }
 
         /// <summary>
-        /// Вычисляет локальную дисперсию нормалей в окне 3x3
+        /// Вычисляет локальную дисперсию нормалей в окне 3x3 (по методу Unreal Engine Toksvig)
         /// </summary>
         private float CalculateLocalVariance(Image<Rgba32> normalMip, int centerX, int centerY) {
             // Собираем нормали в окне 3x3
@@ -253,39 +253,40 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
                     var pixel = normalMip[x, y].ToVector4();
 
-                    // Конвертируем из [0,1] в [-1,1]
+                    // Конвертируем из [0,1] в [-1,1] (как в Unreal)
                     var normal = new Vector3(
                         pixel.X * 2.0f - 1.0f,
                         pixel.Y * 2.0f - 1.0f,
                         pixel.Z * 2.0f - 1.0f
                     );
 
-                    // Нормализуем
-                    float length = normal.Length();
-                    if (length > Epsilon) {
-                        normal /= length;
-                    }
-
+                    // НЕ нормализуем индивидуальные нормали - используем как есть
                     normals.Add(normal);
                 }
             }
 
-            // Вычисляем среднюю нормаль
-            var avgNormal = Vector3.Zero;
+            // Вычисляем среднюю (композитную) нормаль
+            var compositeNormal = Vector3.Zero;
             foreach (var n in normals) {
-                avgNormal += n;
+                compositeNormal += n;
             }
-            avgNormal /= normals.Count;
+            compositeNormal /= normals.Count;
 
-            // Нормализуем среднюю нормаль
-            float avgLength = avgNormal.Length();
-            if (avgLength > Epsilon) {
-                avgNormal /= avgLength;
+            // Вычисляем длину композитной нормали
+            float lengthN = compositeNormal.Length();
+
+            // Защита от деления на ноль
+            if (lengthN < Epsilon) {
+                return 0.0f; // Нет дисперсии для нулевого вектора
             }
 
-            // Дисперсия = 1 - длина средней нормали
-            // Чем больше разброс нормалей, тем короче средний вектор
-            float variance = Math.Max(0.0f, 1.0f - avgLength);
+            // Формула Toksvig из Unreal:
+            // Variance = (1 - LengthN) / LengthN
+            // Чем короче композитная нормаль, тем больше дисперсия
+            float variance = (1.0f - lengthN) / lengthN;
+
+            // Вычитаем небольшое смещение (как в Unreal) для уменьшения шума
+            variance = Math.Max(0.0f, variance - 0.00004f);
 
             return variance;
         }
@@ -309,21 +310,37 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         }
 
         /// <summary>
-        /// Применяет формулу Toksvig для коррекции roughness
+        /// Применяет формулу Toksvig для коррекции roughness (адаптировано из Unreal Engine)
         /// </summary>
         /// <param name="roughness">Входное значение roughness [0,1]</param>
         /// <param name="variance">Дисперсия нормалей [0,1]</param>
         /// <param name="k">Composite Power (вес влияния)</param>
         /// <returns>Скорректированное значение roughness</returns>
         private float ApplyToksvigFormula(float roughness, float variance, float k) {
-            // Конвертируем roughness в GGX alpha
-            float alpha = roughness * roughness;
+            // Применяем CompositePower к дисперсии (как в Unreal)
+            float adjustedVariance = variance * k;
 
-            // Применяем Toksvig: alpha' = clamp(alpha + k * variance, epsilon, 1)
-            float correctedAlpha = Math.Clamp(alpha + k * variance, Epsilon, 1.0f);
+            // Конвертируем roughness в alpha (GGX)
+            float a = roughness * roughness;
+            float a2 = a * a;
 
-            // Конвертируем обратно в roughness
-            float correctedRoughness = MathF.Sqrt(correctedAlpha);
+            // Формула Toksvig из Unreal Engine:
+            // B = 2 * variance * (a2 - 1)
+            // a2_corrected = (B - a2) / (B - 1)
+            float B = 2.0f * adjustedVariance * (a2 - 1.0f);
+
+            // Защита от деления на ноль
+            if (Math.Abs(B - 1.0f) < Epsilon) {
+                return roughness; // Нет коррекции
+            }
+
+            float a2_corrected = (B - a2) / (B - 1.0f);
+
+            // Clamp для предотвращения некорректных значений
+            a2_corrected = Math.Clamp(a2_corrected, Epsilon * Epsilon, 1.0f);
+
+            // Конвертируем обратно: roughness = a2^0.25
+            float correctedRoughness = MathF.Pow(a2_corrected, 0.25f);
 
             return correctedRoughness;
         }

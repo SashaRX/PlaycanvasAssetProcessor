@@ -3567,6 +3567,10 @@ namespace AssetProcessor {
             ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
             // LoadPresets removed - presets are now managed globally through PresetManager
 
+            // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
+            // Без этого кэшируется путь от предыдущей текстуры
+            ConversionSettingsPanel.ClearNormalMapPath();
+
             texture.CompressionFormat = compression.CompressionFormat.ToString();
 
             // Auto-detect preset by filename if not already set
@@ -3593,22 +3597,13 @@ namespace AssetProcessor {
                     ConversionSettingsPanel.PresetComboBox.SelectedItem = texture.PresetName;
                     MainWindowHelpers.LogInfo($"Set PresetComboBox.SelectedItem to preset name: '{texture.PresetName}'");
                 } else {
-                    // Preset not found, select "Custom"
-                    if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
-                        ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
-                        MainWindowHelpers.LogInfo($"Preset '{texture.PresetName}' not found, selected 'Custom' at index 0");
-                    } else {
-                        MainWindowHelpers.LogError($"PresetComboBox is empty! Cannot select any preset.");
-                    }
+                    // Preset not found, но НЕ меняем dropdown - оставляем текущий выбор
+                    MainWindowHelpers.LogInfo($"Preset '{texture.PresetName}' not found in ComboBox, keeping current selection");
                 }
             } else {
-                // No preset name, select "Custom"
-                if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
-                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
-                    MainWindowHelpers.LogInfo($"No preset name, selected 'Custom' at index 0");
-                } else {
-                    MainWindowHelpers.LogError($"No preset name and PresetComboBox is empty!");
-                }
+                // No preset name - НЕ МЕНЯЕМ dropdown, оставляем текущий выбор
+                // Это позволяет пользователю работать с одним пресетом для всех текстур
+                MainWindowHelpers.LogInfo($"No preset name for texture, keeping current dropdown selection");
             }
         }
 

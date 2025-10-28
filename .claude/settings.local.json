@@ -1,12 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" log --oneline -3)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" push origin master)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" log --oneline -5 origin/master)",
-      "Bash(dotnet clean:*)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" add MainWindow.xaml.cs \"Controls/TextureConversionSettingsPanel.xaml.cs\")",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" commit -m \"$(cat <<''EOF''\nCRITICAL FIX: Path newline sanitization + preset dropdown logging\n\nFIXES:\n\n1. **Fix paths with newline characters breaking toktx**\n   - Added sanitization in BuildFolderPath: cleans folder names from API\n   - Added sanitization in ProcessTextureAsset: cleans file names from API\n   - Removes \\r and \\n from folder/file names from PlayCanvas API\n   - Prevents \"NorthnWind\" path corruption that breaks toktx\n   - MainWindow.xaml.cs:2751-2755, 2938-2941\n\n2. **Add extensive logging for preset dropdown debugging**\n   - Added logging in LoadTextureConversionSettings\n   - Shows: preset name, PresetComboBox items count, found preset status\n   - Added logging in InitializePresets\n   - Shows: loaded presets count, preset names, IsBuiltIn flag\n   - MainWindow.xaml.cs:3567-3594\n   - TextureConversionSettingsPanel.xaml.cs:38-51\n\n3. **Normal map auto-detection working correctly**\n   - Logic already correct: removes _gloss suffix, searches for _normal\n   - No changes needed\n\n4. **KTX preview auto-switch working correctly**\n   - GetExistingKtx2Path searches both .ktx2 and .ktx\n   - Auto-switches when file exists\n   - No changes needed\n\nIMPLEMENTATION DETAILS:\n\nMainWindow.xaml.cs BuildFolderPath:\n```csharp\nstring folderName = (folder[\"name\"]?.ToString() ?? string.Empty)\n    .Replace(\"r\", \"\")\n    .Replace(\"n\", \"\")\n    .Trim();\n```\n\nMainWindow.xaml.cs ProcessTextureAsset:\n```csharp\nstring rawFileName = asset[\"name\"]?.ToString() ?? \"Unknown\";\nstring cleanFileName = rawFileName.Replace(\"r\", \"\").Replace(\"n\", \"\").Trim();\n```\n\nTESTING:\n- Build succeeds\n- toktx should no longer fail with newline paths\n- Logging will help debug preset dropdown issue\n- Check Debug output window for preset loading info\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

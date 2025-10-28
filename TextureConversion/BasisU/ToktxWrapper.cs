@@ -223,8 +223,10 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("--clevel");
                 args.Add(settings.CompressionLevel.ToString());
 
-                args.Add("--bcmp");
-                // Quality передается как аргумент к --bcmp
+                args.Add("--bcmp");  // Включает ETC1S кодек (БЕЗ аргументов!)
+
+                // КРИТИЧНО: Quality передается через ОТДЕЛЬНЫЙ флаг --qlevel, а НЕ как аргумент --bcmp!
+                args.Add("--qlevel");
                 args.Add(settings.QualityLevel.ToString());
 
             } else if (settings.CompressionFormat == CompressionFormat.UASTC) {

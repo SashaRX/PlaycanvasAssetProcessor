@@ -305,6 +305,16 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
+        /// Очищает путь к normal map (для auto-detect при выборе новой текстуры)
+        /// </summary>
+        public void ClearNormalMapPath() {
+            _isLoading = true;
+            NormalMapPathTextBox.Text = string.Empty;
+            UpdateNormalMapAutoDetect();
+            _isLoading = false;
+        }
+
+        /// <summary>
         /// Пытается автоматически найти normal map для текстуры gloss
         /// </summary>
         public ToksvigSettings GetToksvigSettingsWithAutoDetect(string glossTexturePath) {

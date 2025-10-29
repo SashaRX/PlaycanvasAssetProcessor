@@ -86,12 +86,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 return (glossRoughnessMipmaps, null);
             }
 
-            Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            Logger.Info($"🔧 TOKSVIG CORRECTION SETTINGS:");
-            Logger.Info($"   Composite Power (k): {settings.CompositePower:F2}");
-            Logger.Info($"   Min Mip Level: {settings.MinToksvigMipLevel}");
-            Logger.Info($"   Smooth Variance: {settings.SmoothVariance}");
-            Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1}, minLevel={settings.MinToksvigMipLevel}, smooth={settings.SmoothVariance}");
 
             // Генерируем мипмапы для normal map
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
@@ -221,19 +216,16 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 });
             });
 
-            // Логируем подробную статистику
+            // Логируем только важные уровни (0, 1, 2) и если есть изменения
             int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;
             avgVariance /= totalPixels;
             float avgDifference = pixelsChanged > 0 ? totalDifference / pixelsChanged : 0f;
             float changePercent = (float)pixelsChanged / totalPixels * 100f;
 
-            Logger.Info($"");
-            Logger.Info($"  📊 MIP LEVEL {level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}) STATISTICS:");
-            Logger.Info($"     Variance:  min={minVariance:F6}, avg={avgVariance:F6}, max={maxVariance:F6}");
-            Logger.Info($"     Input:     min={minInput:F4}, max={maxInput:F4}");
-            Logger.Info($"     Output:    min={minOutput:F4}, max={maxOutput:F4}");
-            Logger.Info($"     Changed:   {pixelsChanged}/{totalPixels} pixels ({changePercent:F1}%)");
-            Logger.Info($"     Diff:      avg={avgDifference:F4}, max={maxDifference:F4}");
+            if (level <= 2 || pixelsChanged > 0) {
+                Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
+                           $"variance={avgVariance:F4}, changed={changePercent:F1}%, diff={avgDifference:F3}");
+            }
 
             // Возвращаем variance map если нужно, иначе освобождаем
             Image<Rgba32>? returnedVarianceMap = null;

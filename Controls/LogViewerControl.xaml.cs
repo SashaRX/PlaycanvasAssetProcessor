@@ -67,6 +67,7 @@ namespace AssetProcessor.Controls {
         private readonly ObservableCollection<LogEntry> _filteredLogs = new();
         private bool _autoScroll = true;
         private string _searchText = "";
+        private bool _isInitialized = false;
 
         public LogViewerControl() {
             InitializeComponent();
@@ -82,15 +83,20 @@ namespace AssetProcessor.Controls {
         }
 
         private void LogViewerControl_Loaded(object sender, RoutedEventArgs e) {
-            // Register custom target programmatically
-            RegisterLogTarget();
+            // Only register once
+            if (!_isInitialized) {
+                _isInitialized = true;
 
-            // Subscribe to NLog events via custom target
-            if (LogTarget.Instance != null) {
-                LogTarget.Instance.LogReceived += OnLogReceived;
+                // Register custom target programmatically
+                RegisterLogTarget();
+
+                // Subscribe to NLog events via custom target
+                if (LogTarget.Instance != null) {
+                    LogTarget.Instance.LogReceived += OnLogReceived;
+                }
+
+                Logger.Info("Log Viewer initialized");
             }
-
-            Logger.Info("Log Viewer initialized");
         }
 
         private void RegisterLogTarget() {

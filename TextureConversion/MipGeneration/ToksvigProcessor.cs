@@ -166,10 +166,11 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float minOutput = float.MaxValue;
             float maxOutput = float.MinValue;
 
-            // КРИТИЧНО: Создаём НОВЫЙ image вместо клонирования, чтобы гарантировать независимость
-            var correctedMip = new Image<Rgba32>(glossRoughnessMip.Width, glossRoughnessMip.Height);
+            // КРИТИЧНО: Клонируем оригинальный мипмап чтобы сохранить формат (RGB/RGBA/etc)
+            // Затем перезаписываем пиксели напрямую через индексатор
+            var correctedMip = glossRoughnessMip.Clone();
 
-            // Обрабатываем каждый пиксель
+            // Обрабатываем каждый пиксель напрямую
             for (int y = 0; y < glossRoughnessMip.Height; y++) {
                 for (int x = 0; x < glossRoughnessMip.Width; x++) {
                     // Читаем оригинальный пиксель
@@ -207,7 +208,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                         maxDifference = Math.Max(maxDifference, diff);
                     }
 
-                    // Конвертируем обратно в байты и записываем в НОВЫЙ image
+                    // Конвертируем обратно в байты и записываем НАПРЯМУЮ в клонированный image
                     byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
                     correctedMip[x, y] = new Rgba32(outputByte, outputByte, outputByte, inputPixel.A);
                 }

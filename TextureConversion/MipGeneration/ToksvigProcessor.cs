@@ -166,55 +166,52 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float minOutput = float.MaxValue;
             float maxOutput = float.MinValue;
 
-            // Создаём корректированный мипмап
-            var correctedMip = glossRoughnessMip.Clone();
+            // КРИТИЧНО: Создаём НОВЫЙ image вместо клонирования, чтобы гарантировать независимость
+            var correctedMip = new Image<Rgba32>(glossRoughnessMip.Width, glossRoughnessMip.Height);
 
-            correctedMip.Mutate(ctx => {
-                ctx.ProcessPixelRowsAsVector4((row, point) => {
-                    for (int x = 0; x < row.Length; x++) {
-                        var pixel = row[x];
-                        // Получаем значение дисперсии из R канала varianceMap
-                        float variance = varianceMap[x, point.Y].ToVector4().X;
+            // Обрабатываем каждый пиксель
+            for (int y = 0; y < glossRoughnessMip.Height; y++) {
+                for (int x = 0; x < glossRoughnessMip.Width; x++) {
+                    // Читаем оригинальный пиксель
+                    var inputPixel = glossRoughnessMip[x, y];
 
-                        // Статистика variance
-                        avgVariance += variance;
-                        minVariance = Math.Min(minVariance, variance);
-                        maxVariance = Math.Max(maxVariance, variance);
+                    // Получаем значение дисперсии из R канала varianceMap
+                    float variance = varianceMap[x, y].R / 255.0f;
 
-                        // Берём только R канал (предполагаем что gloss/roughness в R)
-                        float inputValue = pixel.X;
-                        minInput = Math.Min(minInput, inputValue);
-                        maxInput = Math.Max(maxInput, inputValue);
+                    // Статистика variance
+                    avgVariance += variance;
+                    minVariance = Math.Min(minVariance, variance);
+                    maxVariance = Math.Max(maxVariance, variance);
 
-                        // Конвертируем в roughness если на входе gloss
-                        float roughness = isGloss ? (1.0f - inputValue) : inputValue;
+                    // Берём только R канал (предполагаем что gloss/roughness в R)
+                    float inputValue = inputPixel.R / 255.0f;
+                    minInput = Math.Min(minInput, inputValue);
+                    maxInput = Math.Max(maxInput, inputValue);
 
-                        // Применяем Toksvig коррекцию
-                        float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
+                    // Конвертируем в roughness если на входе gloss
+                    float roughness = isGloss ? (1.0f - inputValue) : inputValue;
 
-                        // Конвертируем обратно в gloss если нужно
-                        float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
-                        minOutput = Math.Min(minOutput, outputValue);
-                        maxOutput = Math.Max(maxOutput, outputValue);
+                    // Применяем Toksvig коррекцию
+                    float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
 
-                        // Статистика изменений
-                        float diff = Math.Abs(outputValue - inputValue);
-                        if (diff > 0.001f) {
-                            pixelsChanged++;
-                            totalDifference += diff;
-                            maxDifference = Math.Max(maxDifference, diff);
-                        }
+                    // Конвертируем обратно в gloss если нужно
+                    float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
+                    minOutput = Math.Min(minOutput, outputValue);
+                    maxOutput = Math.Max(maxOutput, outputValue);
 
-                        // Записываем во все каналы RGB (обычно gloss/roughness одноканальные, но храним в RGB)
-                        pixel.X = outputValue;
-                        pixel.Y = outputValue;
-                        pixel.Z = outputValue;
-                        // Alpha не трогаем
-
-                        row[x] = pixel;
+                    // Статистика изменений
+                    float diff = Math.Abs(outputValue - inputValue);
+                    if (diff > 0.001f) {
+                        pixelsChanged++;
+                        totalDifference += diff;
+                        maxDifference = Math.Max(maxDifference, diff);
                     }
-                });
-            });
+
+                    // Конвертируем обратно в байты и записываем в НОВЫЙ image
+                    byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
+                    correctedMip[x, y] = new Rgba32(outputByte, outputByte, outputByte, inputPixel.A);
+                }
+            }
 
             // Логируем только важные уровни (0, 1, 2) и если есть изменения
             int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;

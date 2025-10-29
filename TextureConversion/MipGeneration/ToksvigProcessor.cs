@@ -176,9 +176,17 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float minOutput = float.MaxValue;
             float maxOutput = float.MinValue;
 
-            // КРИТИЧНО: Создаём ПОЛНОСТЬЮ НОВЫЙ image, НЕ используем Clone()!
-            // Clone() может создавать shallow copy и делить pixel buffer с оригиналом!
-            var correctedMip = new Image<Rgba32>(glossRoughnessMip.Width, glossRoughnessMip.Height);
+            // КРИТИЧНО: Клонируем для сохранения формата (RGB/RGBA),
+            // затем ЯВНО копируем все пиксели чтобы форсировать независимость буфера
+            var correctedMip = glossRoughnessMip.Clone();
+
+            // Принудительная полная независимость: копируем ВСЕ пиксели из оригинала
+            // ПЕРЕД применением Toksvig, чтобы гарантировать что correctedMip независим
+            for (int py = 0; py < glossRoughnessMip.Height; py++) {
+                for (int px = 0; px < glossRoughnessMip.Width; px++) {
+                    correctedMip[px, py] = glossRoughnessMip[px, py];
+                }
+            }
 
             // Для первых 3 пикселей логируем детальный расчёт (только для уровней 0-1)
             int debugPixelCount = 0;

@@ -83,8 +83,13 @@ namespace AssetProcessor.Controls {
         }
 
         private void RegisterLogTarget() {
-            var config = LogManager.Configuration;
-            if (config != null) {
+            try {
+                var config = LogManager.Configuration;
+                if (config == null) {
+                    // Create new configuration if none exists
+                    config = new NLog.Config.LoggingConfiguration();
+                }
+
                 // Check if already registered
                 if (config.FindTargetByName<LogTarget>("memoryTarget") == null) {
                     // Add memory target
@@ -97,6 +102,9 @@ namespace AssetProcessor.Controls {
                     // Reconfigure NLog
                     LogManager.Configuration = config;
                 }
+            } catch (Exception ex) {
+                // Fallback: write to debug output if NLog setup fails
+                System.Diagnostics.Debug.WriteLine($"Failed to register log target: {ex.Message}");
             }
         }
 

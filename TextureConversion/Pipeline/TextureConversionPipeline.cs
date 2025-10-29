@@ -133,6 +133,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                                 // 3. КОМПОЗИТНЫЕ мипмапы (gloss + toksvig correction)
                                 await SaveDebugMipmapsAsync(inputPath, correctedMipmaps, "_composite");
+
+                                // ВЕРИФИКАЦИЯ: проверяем что файлы на диске РЕАЛЬНО различаются
+                                await VerifyDebugMipmapsOnDisk(inputPath, "_gloss", "_composite");
                             }
 
                             // Освобождаем variance mipmaps (уже не нужны)
@@ -364,7 +367,30 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     var debugPath = Path.Combine(debugMipmapDir, $"{fileName}{suffix}_mip{i}.png");
                     try {
                         Logger.Debug($"  Saving debug mip{suffix}[{i}]: {mipmaps[i].Width}x{mipmaps[i].Height} -> {debugPath}");
-                        await mipmaps[i].SaveAsPngAsync(debugPath);
+
+                        // КРИТИЧНО: Сохраняем синхронно в MemoryStream, затем записываем на диск
+                        // Это гарантирует что данные зафиксированы ДО того как image может быть изменён
+                        using var ms = new MemoryStream();
+                        await mipmaps[i].SaveAsPngAsync(ms);
+                        ms.Position = 0;
+
+                        // Теперь записываем из MemoryStream на диск
+                        using var fs = new FileStream(debugPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        await ms.CopyToAsync(fs);
+                        await fs.FlushAsync();
+
+                        // КРИТИЧНО: Flush(true) заставляет ОС записать данные на диск НЕМЕДЛЕННО
+                        fs.Flush(flushToDisk: true);
+
+                        // Проверяем что файл реально создан И имеет правильный размер
+                        if (!File.Exists(debugPath)) {
+                            Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: файл {debugPath} НЕ СОЗДАН после SaveAsPngAsync!");
+                        } else {
+                            var fileInfo = new FileInfo(debugPath);
+                            if (fileInfo.Length != ms.Length) {
+                                Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: файл {debugPath} создан, но размер неверный! Expected: {ms.Length}, actual: {fileInfo.Length}");
+                            }
+                        }
                     } catch (ObjectDisposedException disposeEx) {
                         Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: debug mip{suffix}[{i}] УЖЕ ОСВОБОЖДЕН ПРИ СОХРАНЕНИИ!");
                         Logger.Error($"  debugPath: {debugPath}");
@@ -376,6 +402,63 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 Logger.Info($"✓ Debug mipmaps{suffix} сохранены в: {debugMipmapDir} ({mipmaps.Count} файлов)");
             } catch (Exception ex) {
                 Logger.Warn($"Не удалось сохранить debug mipmaps{suffix}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Проверяет что файлы на диске РЕАЛЬНО различаются (для отладки race condition)
+        /// </summary>
+        private async Task VerifyDebugMipmapsOnDisk(string inputPath, string suffix1, string suffix2) {
+            try {
+                var textureDir = Path.GetDirectoryName(inputPath);
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
+                var debugMipmapDir = Path.Combine(textureDir!, "mipmaps");
+
+                if (!Directory.Exists(debugMipmapDir)) {
+                    Logger.Warn("Debug mipmap directory не существует, верификация пропущена");
+                    return;
+                }
+
+                Logger.Info($"━━━ ВЕРИФИКАЦИЯ ФАЙЛОВ НА ДИСКЕ ━━━");
+
+                // Проверяем первые 3 мипа (обычно mip0-2 самые важные)
+                for (int i = 0; i < 3; i++) {
+                    var path1 = Path.Combine(debugMipmapDir, $"{fileName}{suffix1}_mip{i}.png");
+                    var path2 = Path.Combine(debugMipmapDir, $"{fileName}{suffix2}_mip{i}.png");
+
+                    if (!File.Exists(path1) || !File.Exists(path2)) {
+                        Logger.Debug($"  mip{i}: файлы не найдены (возможно мип отсутствует)");
+                        continue;
+                    }
+
+                    // Вычисляем SHA256 hash для обоих файлов НА ДИСКЕ
+                    string hash1, hash2;
+                    using (var sha256 = System.Security.Cryptography.SHA256.Create()) {
+                        using (var fs1 = File.OpenRead(path1)) {
+                            var hashBytes1 = await sha256.ComputeHashAsync(fs1);
+                            hash1 = BitConverter.ToString(hashBytes1).Replace("-", "").Substring(0, 12);
+                        }
+                        sha256.Initialize(); // Сбрасываем для второго файла
+                        using (var fs2 = File.OpenRead(path2)) {
+                            var hashBytes2 = await sha256.ComputeHashAsync(fs2);
+                            hash2 = BitConverter.ToString(hashBytes2).Replace("-", "").Substring(0, 12);
+                        }
+                    }
+
+                    // Сравниваем хеши
+                    if (hash1 == hash2) {
+                        Logger.Error($"  ✗ mip{i}: ФАЙЛЫ ИДЕНТИЧНЫ НА ДИСКЕ! hash={hash1}");
+                        Logger.Error($"    {suffix1}: {path1}");
+                        Logger.Error($"    {suffix2}: {path2}");
+                    } else {
+                        Logger.Info($"  ✓ mip{i}: файлы различаются ({suffix1}: {hash1}, {suffix2}: {hash2})");
+                    }
+                }
+
+                Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            } catch (Exception ex) {
+                Logger.Warn($"Не удалось верифицировать debug mipmaps: {ex.Message}");
             }
         }
 

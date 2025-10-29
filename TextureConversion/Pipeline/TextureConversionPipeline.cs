@@ -414,20 +414,30 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
                 var debugMipmapDir = Path.Combine(textureDir!, "mipmaps");
 
+                Logger.Info($"━━━ ВЕРИФИКАЦИЯ ФАЙЛОВ НА ДИСКЕ ━━━");
+                Logger.Info($"  inputPath: {inputPath}");
+                Logger.Info($"  fileName: {fileName}");
+                Logger.Info($"  debugMipmapDir: {debugMipmapDir}");
+                Logger.Info($"  Directory.Exists: {Directory.Exists(debugMipmapDir)}");
+
                 if (!Directory.Exists(debugMipmapDir)) {
-                    Logger.Warn("Debug mipmap directory не существует, верификация пропущена");
+                    Logger.Error($"  ✗ Debug mipmap directory НЕ СУЩЕСТВУЕТ: {debugMipmapDir}");
+                    Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                     return;
                 }
-
-                Logger.Info($"━━━ ВЕРИФИКАЦИЯ ФАЙЛОВ НА ДИСКЕ ━━━");
 
                 // Проверяем первые 3 мипа (обычно mip0-2 самые важные)
                 for (int i = 0; i < 3; i++) {
                     var path1 = Path.Combine(debugMipmapDir, $"{fileName}{suffix1}_mip{i}.png");
                     var path2 = Path.Combine(debugMipmapDir, $"{fileName}{suffix2}_mip{i}.png");
 
-                    if (!File.Exists(path1) || !File.Exists(path2)) {
-                        Logger.Debug($"  mip{i}: файлы не найдены (возможно мип отсутствует)");
+                    bool exists1 = File.Exists(path1);
+                    bool exists2 = File.Exists(path2);
+
+                    if (!exists1 || !exists2) {
+                        Logger.Warn($"  ⚠ mip{i}: файлы не найдены (exists1={exists1}, exists2={exists2})");
+                        Logger.Warn($"    path1: {path1}");
+                        Logger.Warn($"    path2: {path2}");
                         continue;
                     }
 

@@ -105,3 +105,8 @@
 2025-10-29 01:03:36.9814 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
 2025-10-29 01:03:37.0230 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
 2025-10-29 01:03:37.0287 Info Configuration initialized.
+2025-10-29 01:13:45.7573 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2025-10-29 01:13:45.7573 Info Registered target NLog.Targets.ConsoleTarget(Name=consoleTarget)
+2025-10-29 01:13:45.7573 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2025-10-29 01:13:45.7972 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
+2025-10-29 01:13:45.8028 Info Configuration initialized.

@@ -70,14 +70,25 @@ namespace AssetProcessor.Controls {
 
         public LogViewerControl() {
             InitializeComponent();
-            LogListView.ItemsSource = _filteredLogs;
+
+            if (LogListView != null) {
+                LogListView.ItemsSource = _filteredLogs;
+            }
+
             UpdateAutoScrollButton();
 
+            // Register custom target and subscribe in Loaded event to avoid initialization issues
+            Loaded += LogViewerControl_Loaded;
+        }
+
+        private void LogViewerControl_Loaded(object sender, RoutedEventArgs e) {
             // Register custom target programmatically
             RegisterLogTarget();
 
             // Subscribe to NLog events via custom target
-            LogTarget.Instance.LogReceived += OnLogReceived;
+            if (LogTarget.Instance != null) {
+                LogTarget.Instance.LogReceived += OnLogReceived;
+            }
 
             Logger.Info("Log Viewer initialized");
         }
@@ -129,12 +140,17 @@ namespace AssetProcessor.Controls {
         }
 
         private bool ShouldShowLog(LogEntry entry) {
-            // Filter by level
+            // Filter by level (if buttons are initialized)
             bool levelMatch = false;
-            if (FilterDebugBtn.IsChecked == true && entry.LogLevel == LogLevel.Debug) levelMatch = true;
-            if (FilterInfoBtn.IsChecked == true && entry.LogLevel == LogLevel.Info) levelMatch = true;
-            if (FilterWarnBtn.IsChecked == true && entry.LogLevel == LogLevel.Warn) levelMatch = true;
-            if (FilterErrorBtn.IsChecked == true && (entry.LogLevel == LogLevel.Error || entry.LogLevel == LogLevel.Fatal)) levelMatch = true;
+            if (FilterDebugBtn?.IsChecked == true && entry.LogLevel == LogLevel.Debug) levelMatch = true;
+            if (FilterInfoBtn?.IsChecked == true && entry.LogLevel == LogLevel.Info) levelMatch = true;
+            if (FilterWarnBtn?.IsChecked == true && entry.LogLevel == LogLevel.Warn) levelMatch = true;
+            if (FilterErrorBtn?.IsChecked == true && (entry.LogLevel == LogLevel.Error || entry.LogLevel == LogLevel.Fatal)) levelMatch = true;
+
+            // If no buttons are initialized yet, show all logs
+            if (FilterDebugBtn == null && FilterInfoBtn == null && FilterWarnBtn == null && FilterErrorBtn == null) {
+                levelMatch = true;
+            }
 
             if (!levelMatch) return false;
 
@@ -156,24 +172,30 @@ namespace AssetProcessor.Controls {
             }
             UpdateStatusBar();
 
-            if (_autoScroll && _filteredLogs.Count > 0) {
+            if (_autoScroll && _filteredLogs.Count > 0 && LogListView != null) {
                 LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
             }
         }
 
         private void UpdateStatusBar() {
-            LogCountText.Text = $"{_filteredLogs.Count} / {_allLogs.Count} logs";
+            if (LogCountText != null) {
+                LogCountText.Text = $"{_filteredLogs.Count} / {_allLogs.Count} logs";
+            }
 
-            if (_filteredLogs.Count < _allLogs.Count) {
-                StatusText.Text = $"Filtered: {_allLogs.Count - _filteredLogs.Count} logs hidden";
-            } else {
-                StatusText.Text = "Ready";
+            if (StatusText != null) {
+                if (_filteredLogs.Count < _allLogs.Count) {
+                    StatusText.Text = $"Filtered: {_allLogs.Count - _filteredLogs.Count} logs hidden";
+                } else {
+                    StatusText.Text = "Ready";
+                }
             }
         }
 
         private void UpdateAutoScrollButton() {
-            AutoScrollBtn.Content = _autoScroll ? "📌 Auto-scroll ON" : "📌 Auto-scroll OFF";
-            AutoScrollBtn.FontWeight = _autoScroll ? FontWeights.Bold : FontWeights.Normal;
+            if (AutoScrollBtn != null) {
+                AutoScrollBtn.Content = _autoScroll ? "📌 Auto-scroll ON" : "📌 Auto-scroll OFF";
+                AutoScrollBtn.FontWeight = _autoScroll ? FontWeights.Bold : FontWeights.Normal;
+            }
         }
 
         // Event Handlers

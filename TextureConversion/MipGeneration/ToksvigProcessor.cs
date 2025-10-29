@@ -170,6 +170,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             // Затем перезаписываем пиксели напрямую через индексатор
             var correctedMip = glossRoughnessMip.Clone();
 
+            // Для первых 3 пикселей логируем детальный расчёт (только для уровней 0-1)
+            int debugPixelCount = 0;
+            const int maxDebugPixels = 3;
+
             // Обрабатываем каждый пиксель напрямую
             for (int y = 0; y < glossRoughnessMip.Height; y++) {
                 for (int x = 0; x < glossRoughnessMip.Width; x++) {
@@ -200,6 +204,13 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                     minOutput = Math.Min(minOutput, outputValue);
                     maxOutput = Math.Max(maxOutput, outputValue);
 
+                    // Детальное логирование для первых пикселей (только level 0-1)
+                    if (level <= 1 && debugPixelCount < maxDebugPixels && Math.Abs(outputValue - inputValue) > 0.01f) {
+                        debugPixelCount++;
+                        Logger.Info($"    [{level}] Pixel({x},{y}): in={inputValue:F3}, var={variance:F4}, " +
+                                   $"rough={roughness:F3}→{correctedRoughness:F3}, out={outputValue:F3}, diff={Math.Abs(outputValue - inputValue):F3}");
+                    }
+
                     // Статистика изменений
                     float diff = Math.Abs(outputValue - inputValue);
                     if (diff > 0.001f) {
@@ -221,8 +232,11 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float changePercent = (float)pixelsChanged / totalPixels * 100f;
 
             if (level <= 2 || pixelsChanged > 0) {
+                // Показываем adjustedVariance для понимания влияния CompositePower
+                float adjustedVariance = avgVariance * settings.CompositePower;
                 Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
-                           $"variance={avgVariance:F4}, changed={changePercent:F1}%, diff={avgDifference:F3}");
+                           $"var={avgVariance:F4}, var*k={adjustedVariance:F4}, " +
+                           $"changed={changePercent:F1}%, avgDiff={avgDifference:F3}, maxDiff={maxDifference:F3}");
             }
 
             // Возвращаем variance map если нужно, иначе освобождаем

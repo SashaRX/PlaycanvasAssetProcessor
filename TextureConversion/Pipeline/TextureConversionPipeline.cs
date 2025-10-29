@@ -339,18 +339,26 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
                 Directory.CreateDirectory(debugMipmapDir);
 
-                // Вычисляем SHA256 hash первого мипмапа для верификации
-                string hash = "N/A";
+                // Вычисляем SHA256 hash для mip0 и mip1 для верификации
+                string hash0 = "N/A", hash1 = "N/A";
                 if (mipmaps.Count > 0) {
                     using var ms = new MemoryStream();
                     mipmaps[0].SaveAsPng(ms);
                     ms.Position = 0;
                     using var sha256 = System.Security.Cryptography.SHA256.Create();
                     var hashBytes = sha256.ComputeHash(ms);
-                    hash = BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 16); // Первые 16 символов
+                    hash0 = BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12);
+                }
+                if (mipmaps.Count > 1) {
+                    using var ms = new MemoryStream();
+                    mipmaps[1].SaveAsPng(ms);
+                    ms.Position = 0;
+                    using var sha256 = System.Security.Cryptography.SHA256.Create();
+                    var hashBytes = sha256.ComputeHash(ms);
+                    hash1 = BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12);
                 }
 
-                Logger.Info($"Сохраняем {mipmaps.Count} debug mipmaps{suffix}... (mip0 hash: {hash})");
+                Logger.Info($"Сохраняем {mipmaps.Count} debug mipmaps{suffix}... (mip0: {hash0}, mip1: {hash1})");
 
                 for (int i = 0; i < mipmaps.Count; i++) {
                     var debugPath = Path.Combine(debugMipmapDir, $"{fileName}{suffix}_mip{i}.png");

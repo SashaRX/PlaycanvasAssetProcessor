@@ -119,3 +119,5 @@
 2025-10-29 01:32:25.2540 Info Closing old configuration.
 2025-10-29 01:32:25.2540 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=31, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
 2025-10-29 01:32:25.2540 Info Configuration initialized.
+2025-10-29 01:39:51.9687 Info AppDomain Shutting down. LogFactory closing...
+2025-10-29 01:39:51.9687 Info LogFactory has been closed.

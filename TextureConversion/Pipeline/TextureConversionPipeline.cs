@@ -339,7 +339,18 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
                 Directory.CreateDirectory(debugMipmapDir);
 
-                Logger.Info($"Сохраняем {mipmaps.Count} debug mipmaps{suffix}...");
+                // Вычисляем SHA256 hash первого мипмапа для верификации
+                string hash = "N/A";
+                if (mipmaps.Count > 0) {
+                    using var ms = new MemoryStream();
+                    mipmaps[0].SaveAsPng(ms);
+                    ms.Position = 0;
+                    using var sha256 = System.Security.Cryptography.SHA256.Create();
+                    var hashBytes = sha256.ComputeHash(ms);
+                    hash = BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 16); // Первые 16 символов
+                }
+
+                Logger.Info($"Сохраняем {mipmaps.Count} debug mipmaps{suffix}... (mip0 hash: {hash})");
 
                 for (int i = 0; i < mipmaps.Count; i++) {
                     var debugPath = Path.Combine(debugMipmapDir, $"{fileName}{suffix}_mip{i}.png");

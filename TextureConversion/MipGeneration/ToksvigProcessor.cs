@@ -100,8 +100,16 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
             for (int level = 0; level < glossRoughnessMipmaps.Count; level++) {
                 if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
-                    // Для уровней ниже минимального или если не хватает normal mipmaps - копируем без изменений
-                    correctedMipmaps.Add(glossRoughnessMipmaps[level].Clone());
+                    // КРИТИЧНО: НЕ используем Clone() - он может share pixel data!
+                    // Создаем ПОЛНОСТЬЮ НЕЗАВИСИМУЮ копию через pixel-by-pixel copy
+                    var original = glossRoughnessMipmaps[level];
+                    var independentCopy = new Image<Rgba32>(original.Width, original.Height);
+                    for (int y = 0; y < original.Height; y++) {
+                        for (int x = 0; x < original.Width; x++) {
+                            independentCopy[x, y] = original[x, y];
+                        }
+                    }
+                    correctedMipmaps.Add(independentCopy);
 
                     // Для variance создаём пустую карту
                     if (captureVariance) {

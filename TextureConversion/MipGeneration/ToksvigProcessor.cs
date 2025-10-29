@@ -100,10 +100,12 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
             for (int level = 0; level < glossRoughnessMipmaps.Count; level++) {
                 if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
-                    // КРИТИЧНО: НЕ используем Clone() - он может share pixel data!
-                    // Создаем ПОЛНОСТЬЮ НЕЗАВИСИМУЮ копию через pixel-by-pixel copy
+                    // КРИТИЧНО: Клонируем чтобы сохранить формат (RGB/RGBA),
+                    // затем ЯВНО копируем пиксели чтобы форсировать независимость данных
                     var original = glossRoughnessMipmaps[level];
-                    var independentCopy = new Image<Rgba32>(original.Width, original.Height);
+                    var independentCopy = original.Clone();
+
+                    // Явное pixel-by-pixel копирование форсирует независимость буфера
                     for (int y = 0; y < original.Height; y++) {
                         for (int x = 0; x < original.Width; x++) {
                             independentCopy[x, y] = original[x, y];

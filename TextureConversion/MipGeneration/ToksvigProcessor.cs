@@ -100,17 +100,21 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
             for (int level = 0; level < glossRoughnessMipmaps.Count; level++) {
                 if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
-                    // КРИТИЧНО: Клонируем чтобы сохранить формат (RGB/RGBA),
-                    // затем ЯВНО копируем пиксели чтобы форсировать независимость данных
+                    // КРИТИЧНО: НЕ используем Clone() - создаём НОВЫЙ Image с независимым буфером
                     var original = glossRoughnessMipmaps[level];
-                    var independentCopy = original.Clone();
+                    var independentCopy = new Image<Rgba32>(
+                        Configuration.Default,
+                        original.Width,
+                        original.Height);
 
-                    // Явное pixel-by-pixel копирование форсирует независимость буфера
-                    for (int y = 0; y < original.Height; y++) {
-                        for (int x = 0; x < original.Width; x++) {
-                            independentCopy[x, y] = original[x, y];
+                    // Копируем пиксели через ProcessPixelRows (ГАРАНТИРОВАННО независимый буфер)
+                    original.ProcessPixelRows(independentCopy, (sourceAccessor, targetAccessor) => {
+                        for (int y = 0; y < sourceAccessor.Height; y++) {
+                            var sourceRow = sourceAccessor.GetRowSpan(y);
+                            var targetRow = targetAccessor.GetRowSpan(y);
+                            sourceRow.CopyTo(targetRow);
                         }
-                    }
+                    });
                     correctedMipmaps.Add(independentCopy);
 
                     // Для variance создаём пустую карту
@@ -176,17 +180,21 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float minOutput = float.MaxValue;
             float maxOutput = float.MinValue;
 
-            // КРИТИЧНО: Клонируем для сохранения формата (RGB/RGBA),
-            // затем ЯВНО копируем все пиксели чтобы форсировать независимость буфера
-            var correctedMip = glossRoughnessMip.Clone();
+            // КРИТИЧНО: НЕ ИСПОЛЬЗУЕМ Clone() - он создаёт shallow copy с SHARED pixel buffer!
+            // Создаём ПОЛНОСТЬЮ НОВЫЙ Image и копируем пиксели ВРУЧНУЮ
+            var correctedMip = new Image<Rgba32>(
+                Configuration.Default,
+                glossRoughnessMip.Width,
+                glossRoughnessMip.Height);
 
-            // Принудительная полная независимость: копируем ВСЕ пиксели из оригинала
-            // ПЕРЕД применением Toksvig, чтобы гарантировать что correctedMip независим
-            for (int py = 0; py < glossRoughnessMip.Height; py++) {
-                for (int px = 0; px < glossRoughnessMip.Width; px++) {
-                    correctedMip[px, py] = glossRoughnessMip[px, py];
+            // Копируем ВСЕ пиксели из оригинала в НОВЫЙ независимый буфер
+            glossRoughnessMip.ProcessPixelRows(correctedMip, (sourceAccessor, targetAccessor) => {
+                for (int y = 0; y < sourceAccessor.Height; y++) {
+                    var sourceRow = sourceAccessor.GetRowSpan(y);
+                    var targetRow = targetAccessor.GetRowSpan(y);
+                    sourceRow.CopyTo(targetRow);
                 }
-            }
+            });
 
             // Для первых 3 пикселей логируем детальный расчёт (только для уровней 0-1)
             int debugPixelCount = 0;

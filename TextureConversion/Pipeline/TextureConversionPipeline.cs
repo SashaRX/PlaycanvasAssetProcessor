@@ -113,22 +113,48 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                 }
                             }
 
-                            // Применяем Toksvig
-                            var correctedMipmaps = _toksvigProcessor.ApplyToksvigCorrection(
+                            // Применяем Toksvig (возвращает скорректированные мипмапы И карту дисперсии)
+                            var (correctedMipmaps, varianceMipmaps) = _toksvigProcessor.ApplyToksvigCorrectionWithVariance(
                                 mipmaps,
                                 normalMapImage,
                                 toksvigSettings,
                                 isGloss
                             );
 
-                            // Освобождаем старые мипмапы
-                            foreach (var mip in mipmaps) {
-                                mip.Dispose();
+                            // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ВСЕ ТРИ НАБОРА МИПМАПОВ
+                            if (!compressionSettings.RemoveTemporaryMipmaps) {
+                                // 1. ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig (gloss/roughness до коррекции)
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_gloss_mip");
+
+                                // 2. Карта дисперсии Toksvig (показывает влияние normal map)
+                                if (varianceMipmaps != null) {
+                                    await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance_mip");
+                                }
+
+                                // 3. КОМПОЗИТНЫЕ мипмапы (gloss/roughness + toksvig correction)
+                                await SaveDebugMipmapsAsync(inputPath, correctedMipmaps, "_composite_mip");
+
+                                // ВЕРИФИКАЦИЯ: проверяем что файлы на диске РЕАЛЬНО различаются
+                                await VerifyDebugMipmapsOnDisk(inputPath, "_gloss_mip", "_composite_mip");
                             }
 
+                            // Освобождаем variance mipmaps (уже не нужны)
+                            if (varianceMipmaps != null) {
+                                foreach (var vmap in varianceMipmaps) {
+                                    vmap.Dispose();
+                                }
+                            }
+
+                            // КРИТИЧНО: НЕ освобождаем old mipmaps сразу!
+                            // Сохраняем их для освобождения в конце метода (после toktx packing)
+                            // Это предотвращает race condition если async save не завершился
+                            var oldMipmaps = mipmaps;
+
+                            Logger.Info($"Переключаемся на corrected mipmaps ({correctedMipmaps.Count} изображений)");
                             mipmaps = correctedMipmaps;
                             result.ToksvigApplied = true;
                             result.NormalMapUsed = normalMapPath;
+                            result.OldMipmapsToDispose = oldMipmaps; // Сохраняем для освобождения позже
 
                             Logger.Info("Toksvig коррекция успешно применена");
                         }
@@ -140,6 +166,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 }
 
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
+
+                // Флаг: были ли сохранены debug mipmaps для Toksvig (чтобы избежать дублирования)
+                bool toksvigDebugMipmapsSaved = result.ToksvigApplied && !compressionSettings.RemoveTemporaryMipmaps;
 
                 // ВСЕГДА сохраняем все мипмапы во временную директорию для toktx
                 var tempMipmapDir = Path.Combine(Path.GetTempPath(), "TexTool_Mipmaps", Guid.NewGuid().ToString());
@@ -155,7 +184,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         var mipPath = Path.Combine(tempMipmapDir, $"{fileName}_mip{i}.png");
                         Logger.Info($"Сохраняем mipmap level {i} ({mipmaps[i].Width}x{mipmaps[i].Height}) в: {mipPath}");
 
-                        await mipmaps[i].SaveAsPngAsync(mipPath);
+                        try {
+                            await mipmaps[i].SaveAsPngAsync(mipPath);
+                        } catch (ObjectDisposedException disposeEx) {
+                            Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: mip[{i}] УЖЕ ОСВОБОЖДЕН!");
+                            Logger.Error($"  Размер изображения был: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                            Logger.Error($"  Exception: {disposeEx.Message}");
+                            throw;
+                        }
 
                         // Проверяем создание файла
                         if (File.Exists(mipPath)) {
@@ -209,31 +245,237 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     Logger.Info($"  Mip levels: {mipmaps.Count}");
 
                 } finally {
-                    // Удаляем временные мипмапы
+                    // Обрабатываем временные мипмапы
                     try {
                         if (Directory.Exists(tempMipmapDir)) {
+                            // Если Keep Temporal Mipmaps включен - копируем в debug папку
+                            // НО: пропускаем если уже сохранили Toksvig debug mipmaps (чтобы избежать дублирования)
+                            if (!compressionSettings.RemoveTemporaryMipmaps && !toksvigDebugMipmapsSaved) {
+                                // Создаём папку "mipmaps" рядом с текстурой
+                                var textureDir = Path.GetDirectoryName(inputPath);
+                                if (!string.IsNullOrEmpty(textureDir)) {
+                                    var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
+                                    Directory.CreateDirectory(debugMipmapDir);
+
+                                    // Копируем все мипмапы из temp в debug папку
+                                    var tempFiles = Directory.GetFiles(tempMipmapDir, "*.png");
+                                    foreach (var tempFile in tempFiles) {
+                                        var tempFileName = Path.GetFileName(tempFile);
+                                        var debugPath = Path.Combine(debugMipmapDir, tempFileName);
+                                        File.Copy(tempFile, debugPath, overwrite: true);
+                                    }
+
+                                    Logger.Info($"✓ Debug mipmaps сохранены в: {debugMipmapDir} ({tempFiles.Length} файлов)");
+                                }
+                            } else if (toksvigDebugMipmapsSaved) {
+                                Logger.Info($"Пропускаем копирование temp mipmaps (уже сохранены Toksvig debug mipmaps)");
+                            }
+
+                            // Всегда удаляем временную директорию (даже если копировали)
                             Directory.Delete(tempMipmapDir, recursive: true);
                             Logger.Info($"Временная директория удалена: {tempMipmapDir}");
                         }
                     } catch (Exception ex) {
-                        Logger.Warn($"Не удалось удалить временную директорию: {ex.Message}");
+                        Logger.Warn($"Не удалось обработать временную директорию: {ex.Message}");
                     }
                 }
 
                 Logger.Info($"Conversion successful: {outputPath}");
 
-                // Освобождаем память
+                // Освобождаем память (текущие corrected mipmaps)
                 foreach (var mip in mipmaps) {
                     mip.Dispose();
+                }
+
+                // Освобождаем старые оригинальные мипмapы (если были сохранены в Toksvig)
+                if (result.OldMipmapsToDispose != null) {
+                    Logger.Info($"Освобождаем {result.OldMipmapsToDispose.Count} оригинальных мипмапов (отложенное освобождение)...");
+                    foreach (var oldMip in result.OldMipmapsToDispose) {
+                        try {
+                            oldMip.Dispose();
+                        } catch (Exception disposeEx) {
+                            Logger.Warn($"Не удалось освободить старый мипмап: {disposeEx.Message}");
+                        }
+                    }
+                    result.OldMipmapsToDispose = null;
                 }
             } catch (Exception ex) {
                 Logger.Error(ex, $"Conversion failed: {inputPath}");
                 result.Success = false;
                 result.Error = ex.Message;
+
+                // Освобождаем старые мипмапы даже при ошибке
+                if (result.OldMipmapsToDispose != null) {
+                    foreach (var oldMip in result.OldMipmapsToDispose) {
+                        try {
+                            oldMip.Dispose();
+                        } catch {
+                            // Игнорируем ошибки при cleanup
+                        }
+                    }
+                    result.OldMipmapsToDispose = null;
+                }
             }
 
             result.Duration = DateTime.Now - startTime;
             return result;
+        }
+
+        /// <summary>
+        /// Сохраняет мипмапы в debug папку для инспекции
+        /// </summary>
+        /// <param name="inputPath">Путь к исходной текстуре</param>
+        /// <param name="mipmaps">Список мипмапов для сохранения</param>
+        /// <param name="suffix">Суффикс для имени файла (например "_gloss" или "_toksvig_variance")</param>
+        private async Task SaveDebugMipmapsAsync(string inputPath, List<Image<Rgba32>> mipmaps, string suffix) {
+            try {
+                var textureDir = Path.GetDirectoryName(inputPath);
+                if (string.IsNullOrEmpty(textureDir)) return;
+
+                // КРИТИЧНО: Удаляем известные суффиксы текстур из fileName чтобы избежать дублирования!
+                // Например: "dirtyLada_gloss.png" → "dirtyLada" (без "_gloss")
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
+
+                // Список суффиксов текстур для удаления
+                string[] textureSuffixes = { "_gloss", "_glossiness", "_smoothness", "_albedo", "_diffuse", "_normal", "_roughness", "_metallic", "_ao", "_emissive" };
+                foreach (var texSuffix in textureSuffixes) {
+                    if (fileName.EndsWith(texSuffix, StringComparison.OrdinalIgnoreCase)) {
+                        fileName = fileName.Substring(0, fileName.Length - texSuffix.Length);
+                        break; // Удаляем только один суффикс
+                    }
+                }
+
+                var debugMipmapDir = Path.Combine(textureDir, "mipmaps");
+                Directory.CreateDirectory(debugMipmapDir);
+
+                // Вычисляем SHA256 hash для mip0 и mip1 для верификации
+                string hash0 = "N/A", hash1 = "N/A";
+                if (mipmaps.Count > 0) {
+                    using var ms = new MemoryStream();
+                    mipmaps[0].SaveAsPng(ms);
+                    ms.Position = 0;
+                    using var sha256 = System.Security.Cryptography.SHA256.Create();
+                    var hashBytes = sha256.ComputeHash(ms);
+                    hash0 = BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12);
+                }
+                if (mipmaps.Count > 1) {
+                    using var ms = new MemoryStream();
+                    mipmaps[1].SaveAsPng(ms);
+                    ms.Position = 0;
+                    using var sha256 = System.Security.Cryptography.SHA256.Create();
+                    var hashBytes = sha256.ComputeHash(ms);
+                    hash1 = BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12);
+                }
+
+                Logger.Info($"Сохраняем {mipmaps.Count} debug mipmaps{suffix}... (mip0: {hash0}, mip1: {hash1})");
+
+                for (int i = 0; i < mipmaps.Count; i++) {
+                    var debugPath = Path.Combine(debugMipmapDir, $"{fileName}{suffix}_mip{i}.png");
+                    try {
+                        Logger.Debug($"  Saving debug mip{suffix}[{i}]: {mipmaps[i].Width}x{mipmaps[i].Height} -> {debugPath}");
+
+                        // КРИТИЧНО: Сохраняем синхронно в MemoryStream, затем записываем на диск
+                        // Это гарантирует что данные зафиксированы ДО того как image может быть изменён
+                        using var ms = new MemoryStream();
+                        await mipmaps[i].SaveAsPngAsync(ms);
+                        ms.Position = 0;
+
+                        // Теперь записываем из MemoryStream на диск
+                        using var fs = new FileStream(debugPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        await ms.CopyToAsync(fs);
+                        await fs.FlushAsync();
+
+                        // КРИТИЧНО: Flush(true) заставляет ОС записать данные на диск НЕМЕДЛЕННО
+                        fs.Flush(flushToDisk: true);
+
+                        // Проверяем что файл реально создан И имеет правильный размер
+                        if (!File.Exists(debugPath)) {
+                            Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: файл {debugPath} НЕ СОЗДАН после SaveAsPngAsync!");
+                        } else {
+                            var fileInfo = new FileInfo(debugPath);
+                            if (fileInfo.Length != ms.Length) {
+                                Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: файл {debugPath} создан, но размер неверный! Expected: {ms.Length}, actual: {fileInfo.Length}");
+                            }
+                        }
+                    } catch (ObjectDisposedException disposeEx) {
+                        Logger.Error($"КРИТИЧЕСКАЯ ОШИБКА: debug mip{suffix}[{i}] УЖЕ ОСВОБОЖДЕН ПРИ СОХРАНЕНИИ!");
+                        Logger.Error($"  debugPath: {debugPath}");
+                        Logger.Error($"  Exception: {disposeEx.Message}");
+                        throw;
+                    }
+                }
+
+                Logger.Info($"✓ Debug mipmaps{suffix} сохранены в: {debugMipmapDir} ({mipmaps.Count} файлов)");
+            } catch (Exception ex) {
+                Logger.Warn($"Не удалось сохранить debug mipmaps{suffix}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Проверяет что файлы на диске РЕАЛЬНО различаются (для отладки race condition)
+        /// </summary>
+        private async Task VerifyDebugMipmapsOnDisk(string inputPath, string suffix1, string suffix2) {
+            try {
+                var textureDir = Path.GetDirectoryName(inputPath);
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
+                var debugMipmapDir = Path.Combine(textureDir!, "mipmaps");
+
+                Logger.Info($"━━━ ВЕРИФИКАЦИЯ ФАЙЛОВ НА ДИСКЕ ━━━");
+                Logger.Info($"  inputPath: {inputPath}");
+                Logger.Info($"  fileName: {fileName}");
+                Logger.Info($"  debugMipmapDir: {debugMipmapDir}");
+                Logger.Info($"  Directory.Exists: {Directory.Exists(debugMipmapDir)}");
+
+                if (!Directory.Exists(debugMipmapDir)) {
+                    Logger.Error($"  ✗ Debug mipmap directory НЕ СУЩЕСТВУЕТ: {debugMipmapDir}");
+                    Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                    return;
+                }
+
+                // Проверяем первые 3 мипа (обычно mip0-2 самые важные)
+                for (int i = 0; i < 3; i++) {
+                    var path1 = Path.Combine(debugMipmapDir, $"{fileName}{suffix1}_mip{i}.png");
+                    var path2 = Path.Combine(debugMipmapDir, $"{fileName}{suffix2}_mip{i}.png");
+
+                    bool exists1 = File.Exists(path1);
+                    bool exists2 = File.Exists(path2);
+
+                    if (!exists1 || !exists2) {
+                        Logger.Warn($"  ⚠ mip{i}: файлы не найдены (exists1={exists1}, exists2={exists2})");
+                        Logger.Warn($"    path1: {path1}");
+                        Logger.Warn($"    path2: {path2}");
+                        continue;
+                    }
+
+                    // Вычисляем SHA256 hash для обоих файлов НА ДИСКЕ
+                    string hash1, hash2;
+                    using (var sha256 = System.Security.Cryptography.SHA256.Create()) {
+                        using (var fs1 = File.OpenRead(path1)) {
+                            var hashBytes1 = await sha256.ComputeHashAsync(fs1);
+                            hash1 = BitConverter.ToString(hashBytes1).Replace("-", "").Substring(0, 12);
+                        }
+                        sha256.Initialize(); // Сбрасываем для второго файла
+                        using (var fs2 = File.OpenRead(path2)) {
+                            var hashBytes2 = await sha256.ComputeHashAsync(fs2);
+                            hash2 = BitConverter.ToString(hashBytes2).Replace("-", "").Substring(0, 12);
+                        }
+                    }
+
+                    // Сравниваем хеши
+                    if (hash1 == hash2) {
+                        Logger.Error($"  ✗ mip{i}: ФАЙЛЫ ИДЕНТИЧНЫ НА ДИСКЕ! hash={hash1}");
+                        Logger.Error($"    {suffix1}: {path1}");
+                        Logger.Error($"    {suffix2}: {path2}");
+                    } else {
+                        Logger.Info($"  ✓ mip{i}: файлы различаются ({suffix1}: {hash1}, {suffix2}: {hash2})");
+                    }
+                }
+
+                Logger.Info($"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            } catch (Exception ex) {
+                Logger.Warn($"Не удалось верифицировать debug mipmaps: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -318,5 +560,10 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// Путь к использованной normal map (если Toksvig применён)
         /// </summary>
         public string? NormalMapUsed { get; set; }
+
+        /// <summary>
+        /// ВНУТРЕННЕЕ: Старые мипмапы для освобождения после завершения
+        /// </summary>
+        internal List<Image<Rgba32>>? OldMipmapsToDispose { get; set; }
     }
 }

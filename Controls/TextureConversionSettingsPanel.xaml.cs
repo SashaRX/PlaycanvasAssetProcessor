@@ -4,9 +4,11 @@ using System.Windows;
 using System.Windows.Controls;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
+using NLog;
 
 namespace AssetProcessor.Controls {
     public partial class TextureConversionSettingsPanel : UserControl {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private bool _isLoading = false;
         private readonly PresetManager _presetManager = new();
 
@@ -15,13 +17,20 @@ namespace AssetProcessor.Controls {
         /// </summary>
         private ConversionSettingsManager? _conversionSettingsManager;
 
+        /// <summary>
+        /// Путь к текущей обрабатываемой текстуре (для auto-detect normal map)
+        /// </summary>
+        private string? _currentTexturePath;
+
         public event EventHandler? SettingsChanged;
         public event EventHandler? ConvertRequested;
         public event EventHandler? AutoDetectRequested;
 
         public TextureConversionSettingsPanel() {
             InitializeComponent();
-            InitializePresets();
+            // КРИТИЧНО: НЕ вызываем InitializePresets() здесь!
+            // Пресеты будут загружены из PopulateConversionSettingsUI() в MainWindow
+            // через новую систему ConversionSettingsSchema
             InitializeDefaults();
         }
 
@@ -30,6 +39,21 @@ namespace AssetProcessor.Controls {
         /// </summary>
         public void SetConversionSettingsManager(ConversionSettingsManager manager) {
             _conversionSettingsManager = manager;
+
+            // КРИТИЧНО: Когда установлен ConversionSettingsManager, загружаем пресеты из новой системы
+            // Это гарантирует что ItemsSource заполнен ПОСЛЕ создания панели
+            if (manager != null) {
+                var presets = ConversionSettingsSchema.GetPredefinedPresets();
+                var presetNames = new List<string> { "Custom" };
+                presetNames.AddRange(presets.Select(p => p.Name));
+
+                PresetComboBox.ItemsSource = presetNames;
+                if (PresetComboBox.Items.Count > 0) {
+                    PresetComboBox.SelectedIndex = 0; // "Custom"
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[SetConversionSettingsManager] Loaded {presets.Count} presets from ConversionSettingsSchema");
+            }
         }
 
         private void InitializePresets() {
@@ -92,7 +116,7 @@ namespace AssetProcessor.Controls {
             // Toksvig
             ToksvigEnabledCheckBox.IsChecked = false;
             ToksvigCompositePowerSlider.Value = 1.0;
-            ToksvigMinMipLevelSlider.Value = 1;
+            ToksvigMinMipLevelSlider.Value = 0;
             ToksvigSmoothVarianceCheckBox.IsChecked = true;
             NormalMapPathTextBox.Text = string.Empty;
 
@@ -199,6 +223,38 @@ namespace AssetProcessor.Controls {
         }
 
         private void UpdateNormalMapAutoDetect() {
+            // КРИТИЧНО: Если Toksvig включен И путь пустой И есть текущая текстура - ИЩЕМ normal map!
+            bool toksvigEnabled = ToksvigEnabledCheckBox.IsChecked ?? false;
+            bool pathEmpty = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text);
+
+            Logger.Info($"=== UpdateNormalMapAutoDetect called ===");
+            Logger.Info($"  toksvigEnabled: {toksvigEnabled}");
+            Logger.Info($"  pathEmpty: {pathEmpty}");
+            Logger.Info($"  _currentTexturePath: {_currentTexturePath}");
+
+            if (toksvigEnabled && pathEmpty && !string.IsNullOrWhiteSpace(_currentTexturePath)) {
+                Logger.Info($"  Conditions met! Searching for normal map...");
+                // АВТОПОИСК normal map прямо СЕЙЧАС!
+                var normalMapPath = FindNormalMapForTexture(_currentTexturePath);
+                Logger.Info($"  FindNormalMapForTexture result: {normalMapPath}");
+
+                if (!string.IsNullOrWhiteSpace(normalMapPath)) {
+                    _isLoading = true; // Чтобы не вызывать событие изменения
+                    NormalMapPathTextBox.Text = normalMapPath;
+                    _isLoading = false;
+
+                    var fileName = System.IO.Path.GetFileName(normalMapPath);
+                    NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {fileName}";
+                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
+                    Logger.Info($"  ✓ Auto-detected and set: {fileName}");
+                    return;
+                } else {
+                    Logger.Warn($"  ✗ Normal map not found for: {_currentTexturePath}");
+                }
+            } else {
+                Logger.Info($"  Conditions NOT met, skipping auto-detect");
+            }
+
             // Обновляем статус auto-detect для normal map
             if (string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)) {
                 NormalMapStatusTextBlock.Text = "(auto-detect from filename)";
@@ -257,7 +313,8 @@ namespace AssetProcessor.Controls {
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
                 KeepRGBLayout = false, // Removed from UI
-                RemoveTemporaryMipmaps = RemoveTemporalMipmapsCheckBox.IsChecked ?? true
+                // КРИТИЧНО: Checkbox называется "Keep" но свойство "Remove" - нужна инверсия!
+                RemoveTemporaryMipmaps = !(RemoveTemporalMipmapsCheckBox.IsChecked ?? false)
             };
         }
 
@@ -285,6 +342,30 @@ namespace AssetProcessor.Controls {
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
                 NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
             };
+        }
+
+        /// <summary>
+        /// Устанавливает путь текущей текстуры (для auto-detect normal map)
+        /// </summary>
+        public void SetCurrentTexturePath(string? texturePath) {
+            Logger.Info($"=== SetCurrentTexturePath called ===");
+            Logger.Info($"  texturePath: {texturePath}");
+            Logger.Info($"  Toksvig enabled: {ToksvigEnabledCheckBox.IsChecked ?? false}");
+            Logger.Info($"  NormalMapPath empty: {string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)}");
+
+            _currentTexturePath = texturePath;
+            // КРИТИЧНО: Если Toksvig УЖЕ включен, запускаем автопоиск СРАЗУ!
+            UpdateNormalMapAutoDetect();
+        }
+
+        /// <summary>
+        /// Очищает путь к normal map (для auto-detect при выборе новой текстуры)
+        /// </summary>
+        public void ClearNormalMapPath() {
+            _isLoading = true;
+            NormalMapPathTextBox.Text = string.Empty;
+            UpdateNormalMapAutoDetect();
+            _isLoading = false;
         }
 
         /// <summary>
@@ -316,12 +397,23 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
+        /// Sanitizes file path by removing newlines and whitespace
+        /// </summary>
+        private static string SanitizePath(string? path) {
+            if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+            return path.Replace("\r", "").Replace("\n", "").Trim();
+        }
+
+        /// <summary>
         /// Ищет normal map по имени файла gloss текстуры
         /// </summary>
         private string? FindNormalMapForTexture(string texturePath) {
             if (string.IsNullOrWhiteSpace(texturePath)) return null;
 
             try {
+                // КРИТИЧНО: Sanitize path перед использованием File.Exists!
+                texturePath = SanitizePath(texturePath);
+
                 var directory = System.IO.Path.GetDirectoryName(texturePath);
                 if (string.IsNullOrEmpty(directory)) return null;
 
@@ -344,8 +436,20 @@ namespace AssetProcessor.Controls {
                 foreach (var normalSuffix in normalSuffixes) {
                     foreach (var ext in extensions) {
                         var normalMapPath = System.IO.Path.Combine(directory, baseName + normalSuffix + ext);
+
+                        // КРИТИЧНО: Case-insensitive проверка существования файла!
+                        // Файл может быть "oldMailBox_Normal.png" или "oldMailBox_normal.png"
                         if (System.IO.File.Exists(normalMapPath)) {
                             return normalMapPath;
+                        }
+
+                        // Попробуем с заглавной буквы (например "_Normal")
+                        if (normalSuffix.Length > 0) {
+                            string capitalizedSuffix = "_" + char.ToUpper(normalSuffix[1]) + normalSuffix.Substring(2);
+                            var capitalizedPath = System.IO.Path.Combine(directory, baseName + capitalizedSuffix + ext);
+                            if (System.IO.File.Exists(capitalizedPath)) {
+                                return capitalizedPath;
+                            }
                         }
                     }
                 }
@@ -358,7 +462,25 @@ namespace AssetProcessor.Controls {
 
         public bool GenerateMipmaps => GenerateMipmapsCheckBox.IsChecked ?? true;
         public bool SaveSeparateMipmaps => SaveSeparateMipmapsCheckBox.IsChecked ?? false;
-        public string? PresetName => (PresetComboBox.SelectedItem as TextureConversionPreset)?.Name;
+
+        /// <summary>
+        /// Возвращает имя текущего выбранного пресета
+        /// Новая система: строки из ConversionSettingsSchema
+        /// Старая система: объекты TextureConversionPreset
+        /// </summary>
+        public string? PresetName {
+            get {
+                // Новая система (строки)
+                if (PresetComboBox.SelectedItem is string presetName) {
+                    return presetName == "Custom" ? null : presetName;
+                }
+                // Старая система (объекты)
+                if (PresetComboBox.SelectedItem is TextureConversionPreset preset) {
+                    return preset.Name;
+                }
+                return null;
+            }
+        }
 
         // ============================================
         // SETTINGS LOADERS
@@ -414,14 +536,20 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
-        public void LoadToksvigSettings(ToksvigSettings settings) {
+        public void LoadToksvigSettings(ToksvigSettings settings, bool loadNormalMapPath = false) {
             _isLoading = true;
 
             ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
             ToksvigCompositePowerSlider.Value = settings.CompositePower;
             ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
             ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
-            NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
+
+            // КРИТИЧНО: НЕ загружаем NormalMapPath по умолчанию!
+            // Это позволяет auto-detect работать для каждой новой текстуры
+            // Загружаем только если явно указано (например, при загрузке сохраненных настроек)
+            if (loadNormalMapPath) {
+                NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
+            }
 
             _isLoading = false;
         }

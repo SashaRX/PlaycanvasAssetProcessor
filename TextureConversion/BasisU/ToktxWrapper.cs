@@ -223,8 +223,10 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("--clevel");
                 args.Add(settings.CompressionLevel.ToString());
 
-                args.Add("--bcmp");
-                // Quality передается как аргумент к --bcmp
+                args.Add("--bcmp");  // Включает ETC1S кодек (БЕЗ аргументов!)
+
+                // КРИТИЧНО: Quality передается через ОТДЕЛЬНЫЙ флаг --qlevel, а НЕ как аргумент --bcmp!
+                args.Add("--qlevel");
                 args.Add(settings.QualityLevel.ToString());
 
             } else if (settings.CompressionFormat == CompressionFormat.UASTC) {
@@ -273,7 +275,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add("--normal_mode");
             }
 
-            if (settings.NormalizeVectors) {
+            // КРИТИЧНО: --normalize НЕ совместим с --levels!
+            // --normalize заставляет toktx обрабатывать ОДНО изображение и генерировать мипмапы сам
+            // Поэтому добавляем его ТОЛЬКО если передаем одно изображение
+            bool usePreGeneratedMipmaps = mipmapPaths.Count > 1;
+            if (settings.NormalizeVectors && !usePreGeneratedMipmaps) {
                 args.Add("--normalize");
             }
 
@@ -288,6 +294,15 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (settings.GenerateMipmaps && mipmapPaths.Count == 1) {
                 // Если toktx должен сгенерировать мипмапы сам
                 args.Add("--genmipmap");
+            } else if (usePreGeneratedMipmaps) {
+                // КРИТИЧНО: Флаг --mipmap ОБЯЗАТЕЛЕН когда передаём готовые мипмапы!
+                // Без него toktx игнорирует все файлы кроме первого ("Ignoring excess input images")
+                args.Add("--mipmap");
+
+                // --levels ограничивает количество уровней (опционально)
+                // НО в комбинации с --mipmap он ОБЯЗАТЕЛЕН!
+                args.Add("--levels");
+                args.Add(mipmapPaths.Count.ToString());
             }
 
             if (settings.ClampMipmaps) {

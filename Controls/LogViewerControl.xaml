@@ -1,0 +1,140 @@
+<UserControl x:Class="AssetProcessor.Controls.LogViewerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <!-- Style for log level filter buttons -->
+        <Style x:Key="FilterButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <!-- Style for log items based on level -->
+        <Style x:Key="LogItemStyle" TargetType="ListViewItem">
+            <Setter Property="Padding" Value="5,2"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Padding="8,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Filter Buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+
+                    <ToggleButton x:Name="FilterDebugBtn" Content="DEBUG" IsChecked="False"
+                                  Style="{StaticResource FilterButtonStyle}"
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
+                                  Foreground="#606060" Background="#E8E8E8"/>
+
+                    <ToggleButton x:Name="FilterInfoBtn" Content="INFO" IsChecked="True"
+                                  Style="{StaticResource FilterButtonStyle}"
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
+                                  Foreground="#1976D2" Background="#E3F2FD"/>
+
+                    <ToggleButton x:Name="FilterWarnBtn" Content="WARN" IsChecked="True"
+                                  Style="{StaticResource FilterButtonStyle}"
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
+                                  Foreground="#F57C00" Background="#FFF3E0"/>
+
+                    <ToggleButton x:Name="FilterErrorBtn" Content="ERROR" IsChecked="True"
+                                  Style="{StaticResource FilterButtonStyle}"
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
+                                  Foreground="#D32F2F" Background="#FFEBEE"/>
+                </StackPanel>
+
+                <!-- Search Box -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,0">
+                    <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox x:Name="SearchTextBox" Width="250"
+                             TextChanged="SearchTextBox_TextChanged"
+                             VerticalContentAlignment="Center"
+                             Padding="5,3"/>
+                </StackPanel>
+
+                <!-- Control Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="AutoScrollBtn" Content="📌 Auto-scroll" Width="95" Height="26"
+                            Click="AutoScrollBtn_Click"
+                            ToolTip="Auto-scroll to bottom on new logs"
+                            Margin="0,0,5,0"/>
+                    <Button x:Name="ClearBtn" Content="🗑️ Clear" Width="75" Height="26"
+                            Click="ClearBtn_Click"
+                            ToolTip="Clear all logs"/>
+                    <Button x:Name="ExportBtn" Content="💾 Export" Width="80" Height="26"
+                            Click="ExportBtn_Click"
+                            ToolTip="Export logs to file"
+                            Margin="5,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Log Display -->
+        <ListView x:Name="LogListView" Grid.Row="1"
+                  ItemContainerStyle="{StaticResource LogItemStyle}"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  SelectionMode="Extended"
+                  BorderThickness="0">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Time" Width="90" DisplayMemberBinding="{Binding Timestamp}"/>
+                    <GridViewColumn Header="Level" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Level}" FontWeight="Bold" Foreground="{Binding LevelColor}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Logger" Width="180" DisplayMemberBinding="{Binding Logger}"/>
+                    <GridViewColumn Header="Message" Width="800">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Message}"
+                                          TextWrapping="NoWrap"
+                                          Foreground="{Binding MessageColor}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="#F9F9F9" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0" Padding="8,3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText" Grid.Column="0" Text="Ready" VerticalAlignment="Center" FontSize="10"/>
+                <TextBlock x:Name="LogCountText" Grid.Column="1" Text="0 logs" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

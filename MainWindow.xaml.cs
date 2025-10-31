@@ -59,6 +59,22 @@ namespace AssetProcessor {
 
     public partial class MainWindow : Window, INotifyPropertyChanged {
 
+        /// <summary>
+        /// КРИТИЧНО: Универсальный sanitizer для всех путей файлов и папок.
+        /// Удаляет символы новой строки (\r, \n) и лишние пробелы, которые могут приходить из PlayCanvas API.
+        /// ВСЕГДА применяйте этот метод к путям перед File/Directory операциями!
+        /// </summary>
+        private static string SanitizePath(string? path) {
+            if (string.IsNullOrWhiteSpace(path)) {
+                return string.Empty;
+            }
+
+            return path
+                .Replace("\r", "")   // Удаляем \r
+                .Replace("\n", "")   // Удаляем \n (КРИТИЧНО! Ломает toktx и File.Exists)
+                .Trim();             // Удаляем пробелы по краям
+        }
+
         private ObservableCollection<TextureResource> textures = [];
         public ObservableCollection<TextureResource> Textures {
             get { return textures; }
@@ -1317,6 +1333,10 @@ namespace AssetProcessor {
             if (string.IsNullOrEmpty(sourcePath)) {
                 return null;
             }
+
+            // КРИТИЧНО: Применяем SanitizePath к входному пути!
+            // Без этого File.Exists() не найдёт файл если путь содержит \n
+            sourcePath = SanitizePath(sourcePath);
 
             string? directory = Path.GetDirectoryName(sourcePath);
             if (string.IsNullOrEmpty(directory)) {
@@ -2760,11 +2780,8 @@ namespace AssetProcessor {
                     }
 
                     JToken folder = foldersById[folderId];
-                    // КРИТИЧНО: Очищаем имя папки от newline символов!
-                    string folderName = (folder["name"]?.ToString() ?? string.Empty)
-                        .Replace("\r", "")
-                        .Replace("\n", "")
-                        .Trim();
+                    // КРИТИЧНО: Используем SanitizePath для очистки имени папки от \r, \n и пробелов!
+                    string folderName = SanitizePath(folder["name"]?.ToString());
                     int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
 
                     string fullPath;
@@ -2776,6 +2793,9 @@ namespace AssetProcessor {
                         // Папка верхнего уровня (parent == 0 или null)
                         fullPath = folderName;
                     }
+
+                    // КРИТИЧНО: Применяем SanitizePath к финальному пути для гарантии
+                    fullPath = SanitizePath(fullPath);
 
                     folderPaths[folderId] = fullPath;
                     return fullPath;
@@ -2947,18 +2967,22 @@ namespace AssetProcessor {
 
         private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
             try {
-                // КРИТИЧНО: Очищаем имя файла от newline символов!
+                // КРИТИЧНО: Используем SanitizePath для очистки имени файла от \r, \n и пробелов!
                 string rawFileName = asset["name"]?.ToString() ?? "Unknown";
-                string cleanFileName = rawFileName.Replace("\r", "").Replace("\n", "").Trim();
+                string cleanFileName = SanitizePath(rawFileName);
                 string textureName = cleanFileName.Split('.')[0];
                 int? parentId = asset["parent"]?.Type == JTokenType.Integer ? (int?)asset["parent"] : null;
+
+                // КРИТИЧНО: Применяем SanitizePath к пути текстуры!
+                string texturePath = SanitizePath(GetResourcePath(cleanFileName, parentId));
+
                 TextureResource texture = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
                     Name = textureName,
                     Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = GetResourcePath(cleanFileName, parentId),
+                    Path = texturePath,
                     Extension = extension,
                     Resolution = new int[2],
                     ResizeResolution = new int[2],
@@ -3362,25 +3386,14 @@ namespace AssetProcessor {
             }
 
             try {
-                // Получаем пресеты из схемы
-                var presets = ConversionSettingsSchema.GetPredefinedPresets();
-
-                logger.Info($"Загружено {presets.Count} пресетов из ConversionSettingsSchema");
-
                 // Передаем ConversionSettingsManager в панель настроек конвертации
-                // Это позволит панели использовать новую систему параметров
+                // КРИТИЧНО: Панель сама загрузит пресеты из ConversionSettingsSchema
+                // внутри SetConversionSettingsManager() - не дублируем код здесь!
                 if (ConversionSettingsPanel != null) {
-                    // Передаем менеджер в панель
                     ConversionSettingsPanel.SetConversionSettingsManager(conversionSettingsManager);
 
-                    // Обновляем пресеты в ComboBox
-                    var presetNames = new List<string> { "Custom" };
-                    presetNames.AddRange(presets.Select(p => p.Name));
-
-                    ConversionSettingsPanel.PresetComboBox.ItemsSource = presetNames;
-                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
-
-                    logger.Info($"Пресеты добавлены в PresetComboBox: {string.Join(", ", presetNames)}");
+                    // Логируем для проверки
+                    logger.Info($"ConversionSettingsManager передан в панель. PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
                 }
 
             } catch (Exception ex) {
@@ -3555,54 +3568,47 @@ namespace AssetProcessor {
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
-            var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
-            var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
-                MapTextureTypeToCore(textureType));
+            // КРИТИЧНО: Устанавливаем путь текущей текстуры для auto-detect normal map!
+            ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
 
-            var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
-            var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
-            var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
+            // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
+            ConversionSettingsPanel.ClearNormalMapPath();
 
-            ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
-            // LoadPresets removed - presets are now managed globally through PresetManager
+            // КРИТИЧНО: ВСЕГДА auto-detect preset по имени файла ПЕРЕД загрузкой настроек!
+            // Это позволяет автоматически выбирать правильный preset для каждой текстуры
+            var presetManager = new TextureConversion.Settings.PresetManager();
+            var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
 
-            texture.CompressionFormat = compression.CompressionFormat.ToString();
+            if (matchedPreset != null) {
+                // Нашли preset по имени файла (например "gloss" → "Gloss (Linear + Toksvig)")
+                texture.PresetName = matchedPreset.Name;
+                MainWindowHelpers.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
 
-            // Auto-detect preset by filename if not already set
-            if (string.IsNullOrEmpty(texture.PresetName)) {
-                var presetManager = new TextureConversion.Settings.PresetManager();
-                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
-                texture.PresetName = matchedPreset?.Name ?? "";
-            }
-
-            // Set the preset in UI
-            MainWindowHelpers.LogInfo($"Setting preset in UI. Texture preset name: '{texture.PresetName}'");
-            MainWindowHelpers.LogInfo($"PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
-
-            if (!string.IsNullOrEmpty(texture.PresetName)) {
-                var presetManager = new TextureConversion.Settings.PresetManager();
-                var preset = presetManager.GetPreset(texture.PresetName);
-                MainWindowHelpers.LogInfo($"Found preset by name: {preset != null}");
-                if (preset != null) {
-                    ConversionSettingsPanel.PresetComboBox.SelectedItem = preset;
-                    MainWindowHelpers.LogInfo($"Set PresetComboBox.SelectedItem to preset: {preset.Name}");
+                // Устанавливаем preset в dropdown
+                if (ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().Contains(matchedPreset.Name)) {
+                    ConversionSettingsPanel.PresetComboBox.SelectedItem = matchedPreset.Name;
                 } else {
-                    // Preset not found, select first one
-                    if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
-                        ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0;
-                        MainWindowHelpers.LogInfo($"Preset not found, selected first preset at index 0");
-                    } else {
-                        MainWindowHelpers.LogError($"PresetComboBox is empty! Cannot select any preset.");
-                    }
+                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
                 }
             } else {
-                // No preset name, select first one
-                if (ConversionSettingsPanel.PresetComboBox.Items.Count > 0) {
-                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0;
-                    MainWindowHelpers.LogInfo($"No preset name, selected first preset at index 0");
-                } else {
-                    MainWindowHelpers.LogError($"No preset name and PresetComboBox is empty!");
-                }
+                // Preset не найден по имени файла - используем "Custom"
+                texture.PresetName = "";
+                ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
+                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom");
+            }
+
+            // Загружаем default настройки для типа текстуры (если Custom)
+            if (string.IsNullOrEmpty(texture.PresetName)) {
+                var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+                var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                    MapTextureTypeToCore(textureType));
+
+                var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+                var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
+                var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
+
+                ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
+                texture.CompressionFormat = compression.CompressionFormat.ToString();
             }
         }
 

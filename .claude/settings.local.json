@@ -1,13 +1,13 @@
 {
   "permissions": {
     "allow": [
+      "Bash(git commit:*)",
+      "Bash(\"C:\\Program Files\\KTX-Software\\bin\\toktx.exe\" --help)",
       "Bash(dotnet build:*)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" status)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" diff MainWindow.xaml.cs)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" log -1 --name-status)",
-      "Bash(git -C \"D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\" log --oneline -5)",
+      "Bash(cat:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFEATURE: Use ktx tool for KTX2 preview instead of basisu\n\nЗаменил basisu на ktx из KTX-Software для извлечения мипмапов из KTX2 файлов:\n\n1. Обновлён ExtractKtxMipmaps():\n   - Используется утилита ''ktx extract'' вместо basisu\n   - Команда: ktx extract input.ktx2 --output-dir temp_dir\n   - Поддержка KTX2 файлов созданных toktx\n\n2. Добавлен GetKtxToolExecutablePath():\n   - Возвращает путь к утилите ktx (по умолчанию из PATH)\n   - Аналогично существующему GetBasisuExecutablePath()\n\n3. Преимущества:\n   - Корректная работа с KTX2 файлами от toktx\n   - Извлечение всех мипмапов из KTX2\n   - Поддержка путей с пробелами через ArgumentList\n\nТеперь KTX2 preview работает с файлами созданными через toktx.\nUI для переключения мипмапов уже существует (MipmapLevelSlider).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Read(//c/project/playcanvas_projects/North Wind/content/models/props/**)",
+      "Bash(sha256sum:*)"
     ],
     "deny": [],
     "ask": []

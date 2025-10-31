@@ -22,6 +22,24 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         }
 
         /// <summary>
+        /// Применяет Toksvig коррекцию к gloss/roughness текстуре и возвращает карту дисперсии
+        /// </summary>
+        /// <param name="glossRoughnessMipmaps">Мипмапы gloss или roughness текстуры</param>
+        /// <param name="normalMapImage">Normal map изображение</param>
+        /// <param name="settings">Настройки Toksvig</param>
+        /// <param name="isGloss">true если входные данные - gloss, false если roughness</param>
+        /// <returns>Tuple: (скорректированные мипмапы, карты дисперсии для debug)</returns>
+        public (List<Image<Rgba32>> correctedMipmaps, List<Image<Rgba32>>? varianceMipmaps) ApplyToksvigCorrectionWithVariance(
+            List<Image<Rgba32>> glossRoughnessMipmaps,
+            Image<Rgba32> normalMapImage,
+            ToksvigSettings settings,
+            bool isGloss) {
+
+            var result = ApplyToksvigCorrectionInternal(glossRoughnessMipmaps, normalMapImage, settings, isGloss, captureVariance: true);
+            return (result.correctedMipmaps, result.varianceMipmaps);
+        }
+
+        /// <summary>
         /// Применяет Toksvig коррекцию к gloss/roughness текстуре
         /// </summary>
         /// <param name="glossRoughnessMipmaps">Мипмапы gloss или roughness текстуры</param>
@@ -35,14 +53,28 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             ToksvigSettings settings,
             bool isGloss) {
 
+            var result = ApplyToksvigCorrectionInternal(glossRoughnessMipmaps, normalMapImage, settings, isGloss, captureVariance: false);
+            return result.correctedMipmaps;
+        }
+
+        /// <summary>
+        /// Внутренний метод применения Toksvig коррекции
+        /// </summary>
+        private (List<Image<Rgba32>> correctedMipmaps, List<Image<Rgba32>>? varianceMipmaps) ApplyToksvigCorrectionInternal(
+            List<Image<Rgba32>> glossRoughnessMipmaps,
+            Image<Rgba32> normalMapImage,
+            ToksvigSettings settings,
+            bool isGloss,
+            bool captureVariance) {
+
             if (!settings.Enabled) {
                 Logger.Info("Toksvig не включён, возвращаем оригинальные мипмапы");
-                return glossRoughnessMipmaps;
+                return (glossRoughnessMipmaps, null);
             }
 
             if (!settings.Validate(out var error)) {
                 Logger.Warn($"Некорректные настройки Toksvig: {error}. Пропускаем коррекцию.");
-                return glossRoughnessMipmaps;
+                return (glossRoughnessMipmaps, null);
             }
 
             // Проверяем совпадение размеров
@@ -51,11 +83,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 Logger.Warn($"Размеры gloss/roughness ({glossRoughnessMipmaps[0].Width}x{glossRoughnessMipmaps[0].Height}) " +
                            $"и normal map ({normalMapImage.Width}x{normalMapImage.Height}) не совпадают. " +
                            $"Пропускаем Toksvig коррекцию.");
-                return glossRoughnessMipmaps;
+                return (glossRoughnessMipmaps, null);
             }
 
-            Logger.Info($"Применяем Toksvig коррекцию: k={settings.CompositePower}, " +
-                       $"minLevel={settings.MinToksvigMipLevel}, smoothVariance={settings.SmoothVariance}");
+            Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1} (effective: k^1.5={MathF.Pow(settings.CompositePower, 1.5f):F1}), minLevel={settings.MinToksvigMipLevel}, smooth={settings.SmoothVariance}");
 
             // Генерируем мипмапы для normal map
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
@@ -65,23 +96,48 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
             // Создаём корректированные мипмапы
             var correctedMipmaps = new List<Image<Rgba32>>();
+            var varianceMipmaps = captureVariance ? new List<Image<Rgba32>>() : null;
 
             for (int level = 0; level < glossRoughnessMipmaps.Count; level++) {
                 if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
-                    // Для уровней ниже минимального или если не хватает normal mipmaps - копируем без изменений
-                    correctedMipmaps.Add(glossRoughnessMipmaps[level].Clone());
-                    Logger.Debug($"Уровень {level}: копируем без изменений (minLevel={settings.MinToksvigMipLevel})");
+                    // КРИТИЧНО: НЕ используем Clone() - создаём НОВЫЙ Image с независимым буфером
+                    var original = glossRoughnessMipmaps[level];
+                    var independentCopy = new Image<Rgba32>(
+                        Configuration.Default,
+                        original.Width,
+                        original.Height);
+
+                    // Копируем пиксели через ProcessPixelRows (ГАРАНТИРОВАННО независимый буфер)
+                    original.ProcessPixelRows(independentCopy, (sourceAccessor, targetAccessor) => {
+                        for (int y = 0; y < sourceAccessor.Height; y++) {
+                            var sourceRow = sourceAccessor.GetRowSpan(y);
+                            var targetRow = targetAccessor.GetRowSpan(y);
+                            sourceRow.CopyTo(targetRow);
+                        }
+                    });
+                    correctedMipmaps.Add(independentCopy);
+
+                    // Для variance создаём пустую карту
+                    if (captureVariance) {
+                        varianceMipmaps!.Add(new Image<Rgba32>(glossRoughnessMipmaps[level].Width, glossRoughnessMipmaps[level].Height));
+                    }
+
+                    Logger.Info($"  Mip{level} ({glossRoughnessMipmaps[level].Width}x{glossRoughnessMipmaps[level].Height}): " +
+                               $"SKIPPED (minLevel={settings.MinToksvigMipLevel})");
                 } else {
                     // Применяем Toksvig коррекцию
-                    var correctedMip = ApplyToksvigToLevel(
+                    var (correctedMip, varianceMap) = ApplyToksvigToLevel(
                         glossRoughnessMipmaps[level],
                         normalMipmaps[level],
                         settings,
                         isGloss,
-                        level);
+                        level,
+                        captureVariance);
 
                     correctedMipmaps.Add(correctedMip);
-                    Logger.Debug($"Уровень {level}: применена Toksvig коррекция");
+                    if (captureVariance && varianceMap != null) {
+                        varianceMipmaps!.Add(varianceMap);
+                    }
                 }
             }
 
@@ -90,18 +146,19 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 mip.Dispose();
             }
 
-            return correctedMipmaps;
+            return (correctedMipmaps, varianceMipmaps);
         }
 
         /// <summary>
         /// Применяет Toksvig коррекцию к одному уровню мипмапа
         /// </summary>
-        private Image<Rgba32> ApplyToksvigToLevel(
+        private (Image<Rgba32> correctedMip, Image<Rgba32>? varianceMap) ApplyToksvigToLevel(
             Image<Rgba32> glossRoughnessMip,
             Image<Rgba32> normalMip,
             ToksvigSettings settings,
             bool isGloss,
-            int level) {
+            int level,
+            bool captureVariance) {
 
             // Вычисляем дисперсию normal map
             var varianceMap = CalculateNormalVariance(normalMip);
@@ -111,40 +168,112 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 varianceMap = SmoothVariance(varianceMap);
             }
 
-            // Создаём корректированный мипмап
-            var correctedMip = glossRoughnessMip.Clone();
+            // Статистика изменений
+            int pixelsChanged = 0;
+            float totalDifference = 0f;
+            float maxDifference = 0f;
+            float minVariance = float.MaxValue;
+            float maxVariance = float.MinValue;
+            float avgVariance = 0f;
+            float minInput = float.MaxValue;
+            float maxInput = float.MinValue;
+            float minOutput = float.MaxValue;
+            float maxOutput = float.MinValue;
 
-            correctedMip.Mutate(ctx => {
-                ctx.ProcessPixelRowsAsVector4((row, point) => {
-                    for (int x = 0; x < row.Length; x++) {
-                        var pixel = row[x];
-                        // Получаем значение дисперсии из R канала varianceMap
-                        float variance = varianceMap[x, point.Y].ToVector4().X;
+            // КРИТИЧНО: НЕ ИСПОЛЬЗУЕМ Clone() - он создаёт shallow copy с SHARED pixel buffer!
+            // Создаём ПОЛНОСТЬЮ НОВЫЙ Image и копируем пиксели ВРУЧНУЮ
+            var correctedMip = new Image<Rgba32>(
+                Configuration.Default,
+                glossRoughnessMip.Width,
+                glossRoughnessMip.Height);
 
-                        // Берём только R канал (предполагаем что gloss/roughness в R)
-                        float inputValue = pixel.X;
-
-                        // Конвертируем в roughness если на входе gloss
-                        float roughness = isGloss ? (1.0f - inputValue) : inputValue;
-
-                        // Применяем Toksvig коррекцию
-                        float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
-
-                        // Конвертируем обратно в gloss если нужно
-                        float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
-
-                        // Записываем во все каналы RGB (обычно gloss/roughness одноканальные, но храним в RGB)
-                        pixel.X = outputValue;
-                        pixel.Y = outputValue;
-                        pixel.Z = outputValue;
-                        // Alpha не трогаем
-
-                        row[x] = pixel;
-                    }
-                });
+            // Копируем ВСЕ пиксели из оригинала в НОВЫЙ независимый буфер
+            glossRoughnessMip.ProcessPixelRows(correctedMip, (sourceAccessor, targetAccessor) => {
+                for (int y = 0; y < sourceAccessor.Height; y++) {
+                    var sourceRow = sourceAccessor.GetRowSpan(y);
+                    var targetRow = targetAccessor.GetRowSpan(y);
+                    sourceRow.CopyTo(targetRow);
+                }
             });
 
-            return correctedMip;
+            // Для первых 3 пикселей логируем детальный расчёт (только для уровней 0-1)
+            int debugPixelCount = 0;
+            const int maxDebugPixels = 3;
+
+            // Обрабатываем каждый пиксель напрямую
+            for (int y = 0; y < glossRoughnessMip.Height; y++) {
+                for (int x = 0; x < glossRoughnessMip.Width; x++) {
+                    // Читаем оригинальный пиксель
+                    var inputPixel = glossRoughnessMip[x, y];
+
+                    // Получаем значение дисперсии из R канала varianceMap
+                    float variance = varianceMap[x, y].R / 255.0f;
+
+                    // Статистика variance
+                    avgVariance += variance;
+                    minVariance = Math.Min(minVariance, variance);
+                    maxVariance = Math.Max(maxVariance, variance);
+
+                    // Берём только R канал (предполагаем что gloss/roughness в R)
+                    float inputValue = inputPixel.R / 255.0f;
+                    minInput = Math.Min(minInput, inputValue);
+                    maxInput = Math.Max(maxInput, inputValue);
+
+                    // Конвертируем в roughness если на входе gloss
+                    float roughness = isGloss ? (1.0f - inputValue) : inputValue;
+
+                    // Применяем Toksvig коррекцию
+                    float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
+
+                    // Конвертируем обратно в gloss если нужно
+                    float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
+                    minOutput = Math.Min(minOutput, outputValue);
+                    maxOutput = Math.Max(maxOutput, outputValue);
+
+                    // Детальное логирование для первых пикселей (только level 0-1)
+                    if (level <= 1 && debugPixelCount < maxDebugPixels && Math.Abs(outputValue - inputValue) > 0.01f) {
+                        debugPixelCount++;
+                        Logger.Info($"    [{level}] Pixel({x},{y}): in={inputValue:F3}, var={variance:F4}, " +
+                                   $"rough={roughness:F3}→{correctedRoughness:F3}, out={outputValue:F3}, diff={Math.Abs(outputValue - inputValue):F3}");
+                    }
+
+                    // Статистика изменений
+                    float diff = Math.Abs(outputValue - inputValue);
+                    if (diff > 0.001f) {
+                        pixelsChanged++;
+                        totalDifference += diff;
+                        maxDifference = Math.Max(maxDifference, diff);
+                    }
+
+                    // Конвертируем обратно в байты и записываем НАПРЯМУЮ в клонированный image
+                    byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
+                    correctedMip[x, y] = new Rgba32(outputByte, outputByte, outputByte, inputPixel.A);
+                }
+            }
+
+            // Логируем только важные уровни (0, 1, 2) и если есть изменения
+            int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;
+            avgVariance /= totalPixels;
+            float avgDifference = pixelsChanged > 0 ? totalDifference / pixelsChanged : 0f;
+            float changePercent = (float)pixelsChanged / totalPixels * 100f;
+
+            if (level <= 2 || pixelsChanged > 0) {
+                // Показываем adjustedVariance для понимания влияния CompositePower (с учётом степенной зависимости k^1.5)
+                float adjustedVariance = avgVariance * MathF.Pow(settings.CompositePower, 1.5f);
+                Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
+                           $"var={avgVariance:F4}, var*k^1.5={adjustedVariance:F4}, k={settings.CompositePower:F1}, " +
+                           $"changed={changePercent:F1}%, avgDiff={avgDifference:F3}, maxDiff={maxDifference:F3}");
+            }
+
+            // Возвращаем variance map если нужно, иначе освобождаем
+            Image<Rgba32>? returnedVarianceMap = null;
+            if (captureVariance) {
+                returnedVarianceMap = varianceMap;
+            } else {
+                varianceMap.Dispose();
+            }
+
+            return (correctedMip, returnedVarianceMap);
         }
 
         /// <summary>
@@ -168,7 +297,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         }
 
         /// <summary>
-        /// Вычисляет локальную дисперсию нормалей в окне 3x3
+        /// Вычисляет локальную дисперсию нормалей в окне 3x3 (по методу Unreal Engine Toksvig)
         /// </summary>
         private float CalculateLocalVariance(Image<Rgba32> normalMip, int centerX, int centerY) {
             // Собираем нормали в окне 3x3
@@ -181,39 +310,40 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
                     var pixel = normalMip[x, y].ToVector4();
 
-                    // Конвертируем из [0,1] в [-1,1]
+                    // Конвертируем из [0,1] в [-1,1] (как в Unreal)
                     var normal = new Vector3(
                         pixel.X * 2.0f - 1.0f,
                         pixel.Y * 2.0f - 1.0f,
                         pixel.Z * 2.0f - 1.0f
                     );
 
-                    // Нормализуем
-                    float length = normal.Length();
-                    if (length > Epsilon) {
-                        normal /= length;
-                    }
-
+                    // НЕ нормализуем индивидуальные нормали - используем как есть
                     normals.Add(normal);
                 }
             }
 
-            // Вычисляем среднюю нормаль
-            var avgNormal = Vector3.Zero;
+            // Вычисляем среднюю (композитную) нормаль
+            var compositeNormal = Vector3.Zero;
             foreach (var n in normals) {
-                avgNormal += n;
+                compositeNormal += n;
             }
-            avgNormal /= normals.Count;
+            compositeNormal /= normals.Count;
 
-            // Нормализуем среднюю нормаль
-            float avgLength = avgNormal.Length();
-            if (avgLength > Epsilon) {
-                avgNormal /= avgLength;
+            // Вычисляем длину композитной нормали
+            float lengthN = compositeNormal.Length();
+
+            // Защита от деления на ноль
+            if (lengthN < Epsilon) {
+                return 0.0f; // Нет дисперсии для нулевого вектора
             }
 
-            // Дисперсия = 1 - длина средней нормали
-            // Чем больше разброс нормалей, тем короче средний вектор
-            float variance = Math.Max(0.0f, 1.0f - avgLength);
+            // Формула Toksvig из Unreal:
+            // Variance = (1 - LengthN) / LengthN
+            // Чем короче композитная нормаль, тем больше дисперсия
+            float variance = (1.0f - lengthN) / lengthN;
+
+            // Вычитаем небольшое смещение (как в Unreal) для уменьшения шума
+            variance = Math.Max(0.0f, variance - 0.00004f);
 
             return variance;
         }
@@ -237,21 +367,39 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         }
 
         /// <summary>
-        /// Применяет формулу Toksvig для коррекции roughness
+        /// Применяет формулу Toksvig для коррекции roughness (адаптировано из Unreal Engine)
         /// </summary>
         /// <param name="roughness">Входное значение roughness [0,1]</param>
         /// <param name="variance">Дисперсия нормалей [0,1]</param>
         /// <param name="k">Composite Power (вес влияния)</param>
         /// <returns>Скорректированное значение roughness</returns>
         private float ApplyToksvigFormula(float roughness, float variance, float k) {
-            // Конвертируем roughness в GGX alpha
-            float alpha = roughness * roughness;
+            // Применяем CompositePower к дисперсии с усиленным влиянием
+            // Используем степенную зависимость k^1.5 для более заметного эффекта при высоких значениях k
+            // k=1.0 → 1.0 (без изменений), k=2.0 → 2.83, k=4.0 → 8.0, k=8.0 → 22.6
+            float adjustedVariance = variance * MathF.Pow(k, 1.5f);
 
-            // Применяем Toksvig: alpha' = clamp(alpha + k * variance, epsilon, 1)
-            float correctedAlpha = Math.Clamp(alpha + k * variance, Epsilon, 1.0f);
+            // Конвертируем roughness в alpha (GGX)
+            float a = roughness * roughness;
+            float a2 = a * a;
 
-            // Конвертируем обратно в roughness
-            float correctedRoughness = MathF.Sqrt(correctedAlpha);
+            // Формула Toksvig из Unreal Engine:
+            // B = 2 * variance * (a2 - 1)
+            // a2_corrected = (B - a2) / (B - 1)
+            float B = 2.0f * adjustedVariance * (a2 - 1.0f);
+
+            // Защита от деления на ноль
+            if (Math.Abs(B - 1.0f) < Epsilon) {
+                return roughness; // Нет коррекции
+            }
+
+            float a2_corrected = (B - a2) / (B - 1.0f);
+
+            // Clamp для предотвращения некорректных значений
+            a2_corrected = Math.Clamp(a2_corrected, Epsilon * Epsilon, 1.0f);
+
+            // Конвертируем обратно: roughness = a2^0.25
+            float correctedRoughness = MathF.Pow(a2_corrected, 0.25f);
 
             return correctedRoughness;
         }

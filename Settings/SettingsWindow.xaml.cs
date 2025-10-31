@@ -220,12 +220,13 @@ namespace AssetProcessor {
                     // toktx --version выводит версию в stdout
                     bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
                     if (hasOutput || process.ExitCode == 0) {
-                        // Извлекаем версию из stdout (формат: "toktx v4.0" или "toktx v4.3.2")
+                        // Извлекаем версию из stdout (формат: "toktx v4.0" или "toktx v4.3.2" или "toktx v4.4.1~5")
                         string version = "unknown";
                         if (!string.IsNullOrWhiteSpace(stdout)) {
-                            var match = System.Text.RegularExpressions.Regex.Match(stdout, @"v?(\d+\.\d+(?:\.\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            // Ищем версию: v4.4.1~5 или v4.3.2 или просто 4.0
+                            var match = System.Text.RegularExpressions.Regex.Match(stdout, @"(v\d+\.\d+(?:\.\d+)?(?:~\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                             if (match.Success) {
-                                version = "v" + match.Groups[1].Value.Trim();
+                                version = match.Groups[1].Value.Trim();
                             }
                         }
                         ToktxStatusText.Text = $"✓ toktx {version}";

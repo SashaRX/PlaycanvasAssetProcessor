@@ -414,6 +414,7 @@
                                         <ScrollViewer x:Name="TexturePreviewScrollViewer"
                                                       HorizontalScrollBarVisibility="Auto"
                                                       VerticalScrollBarVisibility="Auto"
+                                                      PanningMode="None"
                                                       PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
                                                       PreviewMouseDown="TexturePreviewScrollViewer_PreviewMouseDown"
                                                       PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"

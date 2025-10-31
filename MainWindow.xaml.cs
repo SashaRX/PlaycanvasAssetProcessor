@@ -310,9 +310,11 @@ namespace AssetProcessor {
         }
 
         private void ResetPreviewState() {
-            currentPreviewZoom = 1.0;
-            ApplyZoomTransform();
-            UpdateZoomText();
+            // ВАЖНО: НЕ сбрасываем currentPreviewZoom! Пользователь хочет сохранить свой масштаб
+            // currentPreviewZoom = 1.0;  ← УДАЛЕНО
+            // ApplyZoomTransform();      ← УДАЛЕНО
+            // UpdateZoomText();          ← УДАЛЕНО
+
             EndTexturePreviewPan();
             TexturePreviewScrollViewer?.ScrollToHome();
             TexturePreviewScrollViewer?.ScrollToLeftEnd();
@@ -325,6 +327,7 @@ namespace AssetProcessor {
             isSourcePreviewAvailable = false;
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
+            isUserZooming = false; // Сбрасываем флаг ручного зумирования для новой текстуры
             HideMipmapControls();
             UpdatePreviewSourceControls();
         }
@@ -486,18 +489,18 @@ namespace AssetProcessor {
                 targetZoom = 1.0;
             }
 
+            // НОВАЯ ЛОГИКА: только обновляем fitPreviewZoom для расчёта minZoom
             fitPreviewZoom = Math.Clamp(targetZoom, MinPreviewZoom, 1.0);
             double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
 
-            if (forceApply || !isUserZooming) {
-                bool zoomChanged = Math.Abs(currentPreviewZoom - minZoom) > 0.001;
+            // ПРИМЕНЯЕМ зум ТОЛЬКО если forceApply=true (для новых текстур при первой загрузке)
+            // Во всех остальных случаях ТОЛЬКО пересчитываем minZoom, но НЕ применяем
+            if (forceApply) {
                 currentPreviewZoom = minZoom;
-
-                if (zoomChanged || forceApply) {
-                    ApplyZoomTransform();
-                    UpdateZoomText();
-                }
+                ApplyZoomTransform();
+                UpdateZoomText();
             } else if (currentPreviewZoom < minZoom - 0.001) {
+                // Подтягиваем зум до minZoom если он ниже (защита от слишком маленького зума)
                 currentPreviewZoom = minZoom;
                 ApplyZoomTransform();
                 UpdateZoomText();
@@ -592,7 +595,7 @@ namespace AssetProcessor {
         }
 
         private void TexturePreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
-            if (e.MiddleButton == MouseButtonState.Pressed && TexturePreviewScrollViewer != null) {
+            if (e.LeftButton == MouseButtonState.Pressed && TexturePreviewScrollViewer != null) {
                 isMiddleButtonPanning = true;
                 lastPanPoint = e.GetPosition(TexturePreviewScrollViewer);
                 TexturePreviewScrollViewer.Cursor = Cursors.ScrollAll;
@@ -623,7 +626,7 @@ namespace AssetProcessor {
         }
 
         private void TexturePreviewScrollViewer_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
-            if (e.ChangedButton == MouseButton.Middle) {
+            if (e.ChangedButton == MouseButton.Left) {
                 EndTexturePreviewPan();
                 e.Handled = true;
             }
@@ -732,7 +735,7 @@ namespace AssetProcessor {
             }
         }
 
-        private async void ShowOriginalImage(bool recalculateFitZoom = true) {
+        private async void ShowOriginalImage(bool recalculateFitZoom = false) {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
                     TexturePreviewImage.Source = originalBitmapSource;
@@ -743,11 +746,10 @@ namespace AssetProcessor {
                     UpdateHistogram(originalBitmapSource);
                 });
 
-                // Пересчитываем fitZoom только если это запрошено (для новых текстур, но НЕ для смены мипмапов)
+                // НОВАЯ ЛОГИКА: пересчитываем fitZoom только если явно запрошено
+                // По умолчанию НЕ трогаем зум - пользователь сам управляет масштабом!
                 if (recalculateFitZoom) {
-                    // Для новых текстур применяем fitZoom только если пользователь не зумировал вручную
-                    bool hadUserZoom = isUserZooming;
-                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: !hadUserZoom)), DispatcherPriority.Background);
+                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: false)), DispatcherPriority.Background);
                 }
             }
         }
@@ -1282,6 +1284,8 @@ namespace AssetProcessor {
                         originalBitmapSource = cachedImage;
                         _ = UpdateHistogramAsync(originalBitmapSource);
                         ShowOriginalImage();
+                        // Применяем fitZoom при первой загрузке новой текстуры
+                        _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
                     }
 
                     UpdatePreviewSourceControls();
@@ -1308,6 +1312,8 @@ namespace AssetProcessor {
                     originalBitmapSource = thumbnailImage;
                     _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
+                    // Применяем fitZoom при первой загрузке новой текстуры
+                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
                 }
 
                 UpdatePreviewSourceControls();
@@ -1350,6 +1356,7 @@ namespace AssetProcessor {
                             originalBitmapSource = bitmapImage;
                             _ = UpdateHistogramAsync(originalBitmapSource);
                             ShowOriginalImage();
+                            // НЕ применяем fitZoom для full resolution - это обновление кэша, зум уже установлен
                         }
 
                         UpdatePreviewSourceControls();

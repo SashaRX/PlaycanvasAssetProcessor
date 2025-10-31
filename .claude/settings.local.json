@@ -18,7 +18,8 @@
       "Bash(taskkill:*)",
       "Bash(Get-Command ktx,toktx -ErrorAction SilentlyContinue)",
       "Bash(Select-Object -ExpandProperty Source)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

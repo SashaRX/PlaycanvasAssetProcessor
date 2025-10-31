@@ -309,6 +309,11 @@ namespace AssetProcessor {
             }
         }
 
+        private void FitToWindow_Click(object sender, RoutedEventArgs e) {
+            // Вписываем текстуру в окно
+            RecalculateFitZoom(forceApply: true);
+        }
+
         private void ResetPreviewState() {
             // ВАЖНО: НЕ сбрасываем currentPreviewZoom! Пользователь хочет сохранить свой масштаб
             // currentPreviewZoom = 1.0;  ← УДАЛЕНО
@@ -582,11 +587,9 @@ namespace AssetProcessor {
                 UpdateHistogram(originalBitmapSource);
             });
 
-            // NVIDIA Texture Tools стиль: показываем мипмапы в реальном размере 1:1
-            // Маленькие мипмапы отображаются в центре viewport без масштабирования
-            currentPreviewZoom = 1.0;
+            // Сохраняем текущий zoom и позицию viewport при переключении мипмапов
+            // Все мипмапы отображаются с одинаковым масштабом и смещением
             ApplyZoomTransform();
-            UpdateZoomText();
 
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }

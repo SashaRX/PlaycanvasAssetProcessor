@@ -62,98 +62,89 @@
             <TabItem Header="Texture Conversion">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <GroupBox Header="KTX-Software Tools" Margin="0,0,0,8">
-                            <StackPanel>
-                                <TextBlock Text="Leave paths empty to use tools from PATH" Margin="0,0,0,8" FontSize="10" Foreground="Gray"/>
+                        <GroupBox Header="KTX-Software Tools" Margin="0,0,0,6">
+                            <StackPanel Margin="2">
+                                <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
 
                                 <!-- toktx -->
-                                <TextBlock Text="toktx (texture creation):" Margin="0,0,0,3" FontWeight="SemiBold" FontSize="11"/>
-                                <Grid Margin="0,0,0,8">
+                                <TextBlock Text="toktx:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
+                                <Grid Margin="0,0,0,2">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="50"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBox x:Name="ToktxExecutableBox"
                                              Grid.Column="0"
                                              Text="{Binding ToktxExecutablePath, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalContentAlignment="Center"
-                                             Margin="0,0,5,0"
-                                             ToolTip="Path to toktx.exe"/>
+                                             Height="22"
+                                             Margin="0,0,4,0"
+                                             FontSize="10"/>
 
                                     <Button Grid.Column="1"
-                                            Content="Browse..."
+                                            Content="Browse"
                                             Click="SelectToktxExecutable"
-                                            Width="70"
-                                            Height="24"
-                                            Margin="0,0,5,0"/>
+                                            Height="22"
+                                            Margin="0,0,4,0"
+                                            FontSize="10"/>
 
                                     <Button Grid.Column="2"
                                             Content="Test"
                                             Click="TestToktx_Click"
-                                            Width="50"
-                                            Height="24"/>
+                                            Height="22"
+                                            FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="ToktxStatusText" Margin="0,0,0,8" FontSize="10" Foreground="Gray"/>
+                                <TextBlock x:Name="ToktxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
 
                                 <!-- ktx -->
-                                <TextBlock Text="ktx (mipmap extraction for preview):" Margin="0,0,0,3" FontWeight="SemiBold" FontSize="11"/>
-                                <Grid Margin="0,0,0,8">
+                                <TextBlock Text="ktx:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
+                                <Grid Margin="0,0,0,2">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="50"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBox x:Name="KtxExecutableBox"
                                              Grid.Column="0"
                                              Text="{Binding KtxExecutablePath, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalContentAlignment="Center"
-                                             Margin="0,0,5,0"
-                                             ToolTip="Path to ktx.exe"/>
+                                             Height="22"
+                                             Margin="0,0,4,0"
+                                             FontSize="10"/>
 
                                     <Button Grid.Column="1"
-                                            Content="Browse..."
+                                            Content="Browse"
                                             Click="SelectKtxExecutable"
-                                            Width="70"
-                                            Height="24"
-                                            Margin="0,0,5,0"/>
+                                            Height="22"
+                                            Margin="0,0,4,0"
+                                            FontSize="10"/>
 
                                     <Button Grid.Column="2"
                                             Content="Test"
                                             Click="TestKtx_Click"
-                                            Width="50"
-                                            Height="24"/>
+                                            Height="22"
+                                            FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,8" FontSize="10" Foreground="Gray"/>
+                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
 
                                 <!-- Installation info -->
-                                <TextBlock Text="Installation:" Margin="0,4,0,3" FontWeight="SemiBold" FontSize="11"/>
-                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,0" FontSize="10">
-                                    <Run Text="Windows:"/>
+                                <TextBlock Text="Install:" Margin="0,2,0,0" FontWeight="SemiBold" FontSize="10"/>
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,0" FontSize="9">
                                     <Run Text="winget install KhronosGroup.KTX-Software" FontFamily="Consolas"/>
-                                    <LineBreak/>
-                                    <Run Text="Other:"/>
-                                    <Hyperlink NavigateUri="https://github.com/KhronosGroup/KTX-Software/releases"
-                                               RequestNavigate="Hyperlink_RequestNavigate">
-                                        GitHub Releases
-                                    </Hyperlink>
                                 </TextBlock>
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="Performance Settings (Global)" Margin="0,0,0,10">
-                            <StackPanel>
-                                <TextBlock Text="These settings apply to all texture conversions"
-                                           Margin="0,0,0,10"
-                                           FontSize="10"
-                                           Foreground="Gray"
-                                           TextWrapping="Wrap"/>
+                        <GroupBox Header="Performance (Global)" Margin="0,0,0,6">
+                            <StackPanel Margin="2">
+                                <TextBlock Text="Apply to all conversions" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
@@ -163,37 +154,34 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Use SSE4.1:" VerticalAlignment="Center" Margin="0,5"/>
-                                    <CheckBox Grid.Row="0" Grid.Column="1" x:Name="UseSSE41CheckBox" IsChecked="{Binding UseSSE41}" VerticalAlignment="Center" Margin="0,5"
-                                              ToolTip="Use SSE4.1 CPU instructions for faster encoding"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="SSE4.1:" VerticalAlignment="Center" Margin="0,2" FontSize="10"/>
+                                    <CheckBox Grid.Row="0" Grid.Column="1" x:Name="UseSSE41CheckBox" IsChecked="{Binding UseSSE41}" VerticalAlignment="Center" Margin="0,2"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Use OpenCL:" VerticalAlignment="Center" Margin="0,5"/>
-                                    <CheckBox Grid.Row="1" Grid.Column="1" x:Name="UseOpenCLCheckBox" IsChecked="{Binding UseOpenCL}" VerticalAlignment="Center" Margin="0,5"
-                                              ToolTip="Use OpenCL for GPU acceleration (requires compatible GPU)"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="OpenCL:" VerticalAlignment="Center" Margin="0,2" FontSize="10"/>
+                                    <CheckBox Grid.Row="1" Grid.Column="1" x:Name="UseOpenCLCheckBox" IsChecked="{Binding UseOpenCL}" VerticalAlignment="Center" Margin="0,2"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Use Multithreading:" VerticalAlignment="Center" Margin="0,5"/>
-                                    <CheckBox Grid.Row="2" Grid.Column="1" x:Name="UseMultithreadingCheckBox" IsChecked="{Binding UseMultithreading}" VerticalAlignment="Center" Margin="0,5"
-                                              ToolTip="Enable multi-threaded encoding"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Multithreading:" VerticalAlignment="Center" Margin="0,2" FontSize="10"/>
+                                    <CheckBox Grid.Row="2" Grid.Column="1" x:Name="UseMultithreadingCheckBox" IsChecked="{Binding UseMultithreading}" VerticalAlignment="Center" Margin="0,2"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Thread Count:" VerticalAlignment="Center" Margin="0,5"/>
-                                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Threads:" VerticalAlignment="Center" Margin="0,2" FontSize="10"/>
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,2">
                                         <Slider x:Name="ThreadCountSlider"
                                                 Value="{Binding ThreadCount}"
                                                 Minimum="0"
                                                 Maximum="32"
-                                                Width="200"
+                                                Width="160"
                                                 TickFrequency="1"
                                                 IsSnapToTickEnabled="True"
-                                                VerticalAlignment="Center"
-                                                ToolTip="Number of threads (0 = auto)"/>
+                                                VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding ElementName=ThreadCountSlider, Path=Value}"
-                                                   Margin="10,0,0,0"
+                                                   Margin="6,0,0,0"
                                                    VerticalAlignment="Center"
-                                                   Width="30"/>
-                                        <TextBlock Text="(0 = auto)"
-                                                   Margin="5,0,0,0"
+                                                   Width="20"
+                                                   FontSize="10"/>
+                                        <TextBlock Text="(0=auto)"
+                                                   Margin="3,0,0,0"
                                                    VerticalAlignment="Center"
-                                                   FontSize="10"
+                                                   FontSize="9"
                                                    Foreground="Gray"/>
                                     </StackPanel>
                                 </Grid>

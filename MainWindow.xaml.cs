@@ -566,7 +566,7 @@ namespace AssetProcessor {
 
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
-            ShowOriginalImage();
+            ShowOriginalImage(recalculateFitZoom: false); // НЕ пересчитываем fitZoom при смене мипмапов!
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }
 
@@ -630,6 +630,15 @@ namespace AssetProcessor {
         private void TexturePreviewScrollViewer_LostMouseCapture(object sender, MouseEventArgs e) {
             if (isMiddleButtonPanning) {
                 EndTexturePreviewPan();
+            }
+        }
+
+        private void TexturePreviewScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e) {
+            // Обновляем fitZoom при изменении размера окна просмотра
+            // Это предотвращает "люфт" когда пользователь изменяет размер окна
+            if (TexturePreviewImage?.Source != null) {
+                // Пересчитываем fitZoom, но НЕ применяем его если пользователь зумировал вручную
+                RecalculateFitZoom(forceApply: false);
             }
         }
 
@@ -711,11 +720,8 @@ namespace AssetProcessor {
             }
         }
 
-        private async void ShowOriginalImage() {
+        private async void ShowOriginalImage(bool recalculateFitZoom = true) {
             if (originalBitmapSource != null) {
-                // Запоминаем был ли установлен пользовательский зум
-                bool hadUserZoom = isUserZooming;
-
                 await Dispatcher.InvokeAsync(() => {
                     TexturePreviewImage.Source = originalBitmapSource;
                     RChannelButton.IsChecked = false;
@@ -725,8 +731,12 @@ namespace AssetProcessor {
                     UpdateHistogram(originalBitmapSource);
                 });
 
-                // Пересчитываем fitZoom, но применяем его только если пользователь не зумировал вручную
-                _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: !hadUserZoom)), DispatcherPriority.Background);
+                // Пересчитываем fitZoom только если это запрошено (для новых текстур, но НЕ для смены мипмапов)
+                if (recalculateFitZoom) {
+                    // Для новых текстур применяем fitZoom только если пользователь не зумировал вручную
+                    bool hadUserZoom = isUserZooming;
+                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: !hadUserZoom)), DispatcherPriority.Background);
+                }
             }
         }
 

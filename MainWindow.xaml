@@ -419,7 +419,8 @@
                                                       PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
                                                       PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"
                                                       MouseLeave="TexturePreviewScrollViewer_MouseLeave"
-                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture">
+                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture"
+                                                      SizeChanged="TexturePreviewScrollViewer_SizeChanged">
                                             <Grid>
                                                 <Image x:Name="TexturePreviewImage"
                                                        RenderOptions.EdgeMode="Aliased"

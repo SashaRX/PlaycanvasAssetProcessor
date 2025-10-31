@@ -1198,11 +1198,11 @@ namespace AssetProcessor {
         private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
             string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
             if (ktxPath == null) {
-                logger.Debug($"KTX2 файл не найден для: {selectedTexture.Path}");
+                logger.Info($"KTX2 файл не найден для: {selectedTexture.Path}");
                 return false;
             }
 
-            logger.Info($"Найден KTX2 файл: {ktxPath}");
+            logger.Info($"✓ Найден KTX2 файл: {ktxPath}");
 
             try {
                 List<KtxMipLevel> mipmaps = await LoadKtx2MipmapsAsync(ktxPath, cancellationToken);

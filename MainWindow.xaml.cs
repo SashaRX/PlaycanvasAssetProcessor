@@ -576,13 +576,17 @@ namespace AssetProcessor {
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение БЕЗ пересчёта fitZoom - сохраняем текущий зум пользователя!
+            // Обновляем изображение
             Dispatcher.Invoke(() => {
                 TexturePreviewImage.Source = originalBitmapSource;
                 UpdateHistogram(originalBitmapSource);
             });
 
-            // НЕ пересчитываем fitZoom! Пользователь должен видеть все мипмапы в едином масштабе!
+            // NVIDIA Texture Tools стиль: показываем мипмапы в реальном размере 1:1
+            // Маленькие мипмапы отображаются в центре viewport без масштабирования
+            currentPreviewZoom = 1.0;
+            ApplyZoomTransform();
+            UpdateZoomText();
 
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }

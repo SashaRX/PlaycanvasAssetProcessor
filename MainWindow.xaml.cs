@@ -651,14 +651,14 @@ namespace AssetProcessor {
         }
 
         private void TexturePreviewScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e) {
-            // При просмотре мипмапов НЕ трогаем зум вообще - пользователь должен видеть единый масштаб
-            if (isKtxPreviewActive) {
-                return;
-            }
+            // ВАЖНО: ВСЕГДА пересчитываем fitZoom при изменении размера viewport
+            // Это нужно чтобы подтянуть currentZoom если он стал меньше нового fitZoom
+            // (например, если пользователь уменьшил viewport через splitter)
 
-            // Обновляем fitZoom только для обычных текстур
-            if (TexturePreviewImage?.Source != null && !isUserZooming) {
-                // Пересчитываем fitZoom только если пользователь НЕ зумировал вручную
+            if (TexturePreviewImage?.Source != null) {
+                // forceApply=false означает что зум применится только если:
+                // 1. forceApply=true (не наш случай)
+                // 2. currentZoom < новый minZoom (подтянем зум чтобы изображение не уехало за края)
                 RecalculateFitZoom(forceApply: false);
             }
         }

@@ -123,19 +123,19 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                             // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ВСЕ ТРИ НАБОРА МИПМАПОВ
                             if (!compressionSettings.RemoveTemporaryMipmaps) {
-                                // 1. ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig (результат mipGenerator)
-                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_mip");
+                                // 1. ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig (gloss/roughness до коррекции)
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_gloss_mip");
 
                                 // 2. Карта дисперсии Toksvig (показывает влияние normal map)
                                 if (varianceMipmaps != null) {
                                     await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance_mip");
                                 }
 
-                                // 3. КОМПОЗИТНЫЕ мипмапы (mip + toksvig correction)
+                                // 3. КОМПОЗИТНЫЕ мипмапы (gloss/roughness + toksvig correction)
                                 await SaveDebugMipmapsAsync(inputPath, correctedMipmaps, "_composite_mip");
 
                                 // ВЕРИФИКАЦИЯ: проверяем что файлы на диске РЕАЛЬНО различаются
-                                await VerifyDebugMipmapsOnDisk(inputPath, "_mip", "_composite_mip");
+                                await VerifyDebugMipmapsOnDisk(inputPath, "_gloss_mip", "_composite_mip");
                             }
 
                             // Освобождаем variance mipmaps (уже не нужны)
@@ -166,6 +166,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 }
 
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
+
+                // Флаг: были ли сохранены debug mipmaps для Toksvig (чтобы избежать дублирования)
+                bool toksvigDebugMipmapsSaved = result.ToksvigApplied && !compressionSettings.RemoveTemporaryMipmaps;
 
                 // ВСЕГДА сохраняем все мипмапы во временную директорию для toktx
                 var tempMipmapDir = Path.Combine(Path.GetTempPath(), "TexTool_Mipmaps", Guid.NewGuid().ToString());
@@ -246,7 +249,8 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     try {
                         if (Directory.Exists(tempMipmapDir)) {
                             // Если Keep Temporal Mipmaps включен - копируем в debug папку
-                            if (!compressionSettings.RemoveTemporaryMipmaps) {
+                            // НО: пропускаем если уже сохранили Toksvig debug mipmaps (чтобы избежать дублирования)
+                            if (!compressionSettings.RemoveTemporaryMipmaps && !toksvigDebugMipmapsSaved) {
                                 // Создаём папку "mipmaps" рядом с текстурой
                                 var textureDir = Path.GetDirectoryName(inputPath);
                                 if (!string.IsNullOrEmpty(textureDir)) {
@@ -263,6 +267,8 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                                     Logger.Info($"✓ Debug mipmaps сохранены в: {debugMipmapDir} ({tempFiles.Length} файлов)");
                                 }
+                            } else if (toksvigDebugMipmapsSaved) {
+                                Logger.Info($"Пропускаем копирование temp mipmaps (уже сохранены Toksvig debug mipmaps)");
                             }
 
                             // Всегда удаляем временную директорию (даже если копировали)

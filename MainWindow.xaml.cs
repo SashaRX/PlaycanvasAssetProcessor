@@ -154,11 +154,20 @@ namespace AssetProcessor {
         private bool isKtxPreviewActive;
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
+        private bool isUpdatingZoomSlider;
         private List<KtxMipLevel>? currentKtxMipmaps;
+        private readonly ObservableCollection<MipPreviewItem> mipPreviewItems = [];
         private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
         private enum TexturePreviewSourceMode {
             Source,
             Ktx2
+        }
+
+        private enum TexturePreviewBackgroundMode {
+            Checkerboard,
+            MidGray,
+            Black,
+            White
         }
 
         private TexturePreviewSourceMode currentPreviewSourceMode = TexturePreviewSourceMode.Source;
@@ -171,6 +180,8 @@ namespace AssetProcessor {
         private Point lastPanPoint;
         private BitmapSource? originalFileBitmapSource;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private TexturePreviewBackgroundMode currentPreviewBackgroundMode = TexturePreviewBackgroundMode.Checkerboard;
+        private readonly Brush checkerboardBrush;
 
         private sealed class KtxPreviewCacheEntry {
             public required DateTime LastWriteTimeUtc { get; init; }
@@ -182,6 +193,15 @@ namespace AssetProcessor {
             public required BitmapSource Bitmap { get; init; }
             public required int Width { get; init; }
             public required int Height { get; init; }
+        }
+
+        private sealed class MipPreviewItem {
+            public required int Level { get; init; }
+            public required int Width { get; init; }
+            public required int Height { get; init; }
+            public required string Title { get; init; }
+            public required string Resolution { get; init; }
+            public required BitmapSource Thumbnail { get; init; }
         }
 
         private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
@@ -205,8 +225,12 @@ namespace AssetProcessor {
             get { return branches; }
         }
 
+        public ObservableCollection<MipPreviewItem> MipPreviewItems => mipPreviewItems;
+
         public MainWindow() {
             InitializeComponent();
+            checkerboardBrush = (Brush)FindResource("CheckeredBrush");
+            ApplyPreviewBackground();
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -356,16 +380,6 @@ namespace AssetProcessor {
             ClampPreviewContentHeight();
         }
 
-        private void PreviewHeightGridSplitter_DragDelta(object sender, DragDeltaEventArgs e) {
-            if (PreviewContentRow == null) {
-                return;
-            }
-
-            double desiredHeight = PreviewContentRow.ActualHeight + e.VerticalChange;
-            UpdatePreviewContentHeight(desiredHeight);
-            e.Handled = true;
-        }
-
         private void ClampPreviewContentHeight() {
             if (PreviewContentRow == null) {
                 return;
@@ -438,7 +452,6 @@ namespace AssetProcessor {
             } else if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
                 isKtxPreviewActive = true;
                 UpdateMipmapControls(currentKtxMipmaps);
-                SetCurrentMipLevel(currentMipLevel);
 
                 // Применяем fitZoom при первом переключении на KTX2 для новой текстуры
                 // (если пользователь ещё не зумировал вручную)
@@ -450,13 +463,35 @@ namespace AssetProcessor {
             UpdatePreviewSourceControls();
         }
 
-        private void ApplyZoomTransform() {
+        private void ApplyZoomTransform(bool updateSlider = true) {
             if (TexturePreviewScaleTransform != null) {
                 TexturePreviewScaleTransform.ScaleX = currentPreviewZoom;
                 TexturePreviewScaleTransform.ScaleY = currentPreviewZoom;
             }
 
             TexturePreviewScrollViewer?.UpdateLayout();
+
+            if (updateSlider) {
+                UpdateZoomSlider();
+            }
+        }
+
+        private void UpdateZoomSlider() {
+            if (PreviewZoomSlider == null) {
+                return;
+            }
+
+            if (isUpdatingZoomSlider) {
+                return;
+            }
+
+            try {
+                isUpdatingZoomSlider = true;
+                double clampedValue = Math.Clamp(currentPreviewZoom, PreviewZoomSlider.Minimum, PreviewZoomSlider.Maximum);
+                PreviewZoomSlider.Value = clampedValue;
+            } finally {
+                isUpdatingZoomSlider = false;
+            }
         }
 
         private void UpdateZoomText() {
@@ -518,11 +553,11 @@ namespace AssetProcessor {
                 MipmapSliderPanel.Visibility = Visibility.Collapsed;
             }
 
-            if (MipmapLevelSlider != null) {
+            mipPreviewItems.Clear();
+
+            if (MipLevelListBox != null) {
                 isUpdatingMipLevel = true;
-                MipmapLevelSlider.Value = 0;
-                MipmapLevelSlider.Maximum = 0;
-                MipmapLevelSlider.IsEnabled = false;
+                MipLevelListBox.SelectedIndex = -1;
                 isUpdatingMipLevel = false;
             }
 
@@ -532,34 +567,62 @@ namespace AssetProcessor {
         }
 
         private void UpdateMipmapControls(IReadOnlyList<KtxMipLevel> mipmaps) {
-            if (MipmapSliderPanel == null || MipmapLevelSlider == null || MipmapInfoTextBlock == null) {
+            if (MipmapSliderPanel == null || MipmapInfoTextBlock == null || MipLevelListBox == null) {
                 return;
             }
 
-            isUpdatingMipLevel = true;
+            mipPreviewItems.Clear();
 
-            try {
-                MipmapSliderPanel.Visibility = Visibility.Visible;
-                MipmapLevelSlider.Minimum = 0;
-                MipmapLevelSlider.Maximum = Math.Max(0, mipmaps.Count - 1);
-                MipmapLevelSlider.Value = 0;
-                MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
-                MipmapInfoTextBlock.Text = mipmaps.Count > 0
-                    ? $"Мип-уровень 0 из {Math.Max(0, mipmaps.Count - 1)} — {mipmaps[0].Width}×{mipmaps[0].Height}"
-                    : "Мип-уровни недоступны";
-            } finally {
-                isUpdatingMipLevel = false;
+            if (mipmaps.Count == 0) {
+                HideMipmapControls();
+                return;
             }
+
+            foreach (KtxMipLevel mip in mipmaps) {
+                BitmapSource thumbnail = CreateMipThumbnail(mip.Bitmap, 72);
+                mipPreviewItems.Add(new MipPreviewItem {
+                    Level = mip.Level,
+                    Width = mip.Width,
+                    Height = mip.Height,
+                    Title = $"L{mip.Level}",
+                    Resolution = $"{mip.Width}×{mip.Height}",
+                    Thumbnail = thumbnail
+                });
+            }
+
+            MipmapSliderPanel.Visibility = Visibility.Visible;
+            currentMipLevel = Math.Clamp(currentMipLevel, 0, mipmaps.Count - 1);
+            SetCurrentMipLevel(currentMipLevel, updateSelection: true);
+        }
+
+        private static BitmapSource CreateMipThumbnail(BitmapSource source, int maxDimension) {
+            int maxSourceDimension = Math.Max(source.PixelWidth, source.PixelHeight);
+            if (maxSourceDimension <= 0) {
+                return source;
+            }
+
+            double scale = 1.0;
+            if (maxSourceDimension > maxDimension && maxDimension > 0) {
+                scale = (double)maxDimension / maxSourceDimension;
+            }
+
+            if (scale >= 1.0) {
+                return source;
+            }
+
+            TransformedBitmap transformed = new(source, new ScaleTransform(scale, scale));
+            transformed.Freeze();
+            return transformed;
         }
 
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
                 int maxLevel = Math.Max(0, totalLevels - 1);
-                MipmapInfoTextBlock.Text = $"Мип-уровень {mipLevel.Level} из {maxLevel} — {mipLevel.Width}×{mipLevel.Height}";
+                MipmapInfoTextBlock.Text = $"Уровень L{mipLevel.Level} из L{maxLevel} — {mipLevel.Width}×{mipLevel.Height}";
             }
         }
 
-        private void SetCurrentMipLevel(int level, bool updateSlider = true) {
+        private void SetCurrentMipLevel(int level, bool updateSelection = true) {
             if (currentKtxMipmaps == null || currentKtxMipmaps.Count == 0) {
                 return;
             }
@@ -567,10 +630,21 @@ namespace AssetProcessor {
             int clampedLevel = Math.Clamp(level, 0, currentKtxMipmaps.Count - 1);
             currentMipLevel = clampedLevel;
 
-            if (updateSlider && MipmapLevelSlider != null) {
-                isUpdatingMipLevel = true;
-                MipmapLevelSlider.Value = clampedLevel;
-                isUpdatingMipLevel = false;
+            if (updateSelection && MipLevelListBox != null && mipPreviewItems.Count > 0) {
+                int index = -1;
+                for (int i = 0; i < mipPreviewItems.Count; i++) {
+                    if (mipPreviewItems[i].Level == clampedLevel) {
+                        index = i;
+                        break;
+                    }
+                }
+
+                if (index >= 0) {
+                    isUpdatingMipLevel = true;
+                    MipLevelListBox.SelectedIndex = index;
+                    MipLevelListBox.ScrollIntoView(mipPreviewItems[index]);
+                    isUpdatingMipLevel = false;
+                }
             }
 
             var mip = currentKtxMipmaps[clampedLevel];
@@ -736,15 +810,98 @@ namespace AssetProcessor {
             e.Handled = true;
         }
 
-        private void MipmapLevelSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (isUpdatingMipLevel || !isKtxPreviewActive) {
+        private void PreviewZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (TexturePreviewImage?.Source == null || PreviewZoomSlider == null) {
                 return;
             }
 
-            int newLevel = (int)Math.Round(e.NewValue);
-            if (newLevel != currentMipLevel) {
-                SetCurrentMipLevel(newLevel, updateSlider: false);
+            if (isUpdatingZoomSlider) {
+                return;
             }
+
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+            double clampedZoom = Math.Clamp(e.NewValue, minZoom, MaxPreviewZoom);
+
+            if (Math.Abs(clampedZoom - e.NewValue) > 0.0001) {
+                try {
+                    isUpdatingZoomSlider = true;
+                    PreviewZoomSlider.Value = clampedZoom;
+                } finally {
+                    isUpdatingZoomSlider = false;
+                }
+            }
+
+            if (Math.Abs(clampedZoom - currentPreviewZoom) < 0.0001) {
+                return;
+            }
+
+            currentPreviewZoom = clampedZoom;
+            isUserZooming = true;
+            ApplyZoomTransform(updateSlider: false);
+            UpdateZoomText();
+        }
+
+        private void FitToViewButton_Click(object sender, RoutedEventArgs e) {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            isUserZooming = false;
+            RecalculateFitZoom(forceApply: true);
+            UpdateZoomText();
+        }
+
+        private void OneToOneButton_Click(object sender, RoutedEventArgs e) {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+            currentPreviewZoom = Math.Clamp(1.0, minZoom, MaxPreviewZoom);
+            isUserZooming = true;
+            ApplyZoomTransform();
+            UpdateZoomText();
+        }
+
+        private void MipLevelListBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!isKtxPreviewActive || MipLevelListBox?.SelectedItem is not MipPreviewItem item) {
+                return;
+            }
+
+            if (isUpdatingMipLevel) {
+                return;
+            }
+
+            if (item.Level == currentMipLevel) {
+                return;
+            }
+
+            SetCurrentMipLevel(item.Level, updateSelection: false);
+        }
+
+        private void PreviewBackgroundComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (PreviewBackgroundComboBox?.SelectedItem is ComboBoxItem comboBoxItem && comboBoxItem.Tag is string tag) {
+                if (Enum.TryParse<TexturePreviewBackgroundMode>(tag, ignoreCase: true, out TexturePreviewBackgroundMode mode)) {
+                    currentPreviewBackgroundMode = mode;
+                    ApplyPreviewBackground();
+                }
+            }
+        }
+
+        private void ApplyPreviewBackground() {
+            if (TexturePreviewBackgroundBorder == null) {
+                return;
+            }
+
+            Brush brush = currentPreviewBackgroundMode switch {
+                TexturePreviewBackgroundMode.Checkerboard => checkerboardBrush,
+                TexturePreviewBackgroundMode.MidGray => Brushes.DimGray,
+                TexturePreviewBackgroundMode.Black => Brushes.Black,
+                TexturePreviewBackgroundMode.White => Brushes.White,
+                _ => checkerboardBrush
+            };
+
+            TexturePreviewBackgroundBorder.Background = brush;
         }
 
         private async void ShowOriginalImage(bool recalculateFitZoom = false) {

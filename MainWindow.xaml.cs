@@ -566,7 +566,16 @@ namespace AssetProcessor {
 
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
-            ShowOriginalImage(recalculateFitZoom: false); // НЕ пересчитываем fitZoom при смене мипмапов!
+
+            // Обновляем изображение
+            Dispatcher.Invoke(() => {
+                TexturePreviewImage.Source = originalBitmapSource;
+                UpdateHistogram(originalBitmapSource);
+            });
+
+            // Пересчитываем fitZoom для нового размера мипмапа, но НЕ применяем если пользователь зумировал
+            _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: false)), DispatcherPriority.Background);
+
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }
 
@@ -3932,6 +3941,25 @@ namespace AssetProcessor {
                             MainWindowHelpers.LogInfo($"============================");
 
                             successCount++;
+
+                            // Если это текущая выбранная текстура - перезагружаем preview и переключаемся на KTX2
+                            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture && selectedTexture == texture) {
+                                MainWindowHelpers.LogInfo($"Текущая текстура сконвертирована, перезагружаем preview...");
+
+                                // Перезагружаем KTX2 preview
+                                await Dispatcher.InvokeAsync(async () => {
+                                    try {
+                                        bool ktx2Loaded = await TryLoadKtx2PreviewAsync(texture, CancellationToken.None);
+                                        if (ktx2Loaded) {
+                                            // Автоматически переключаемся на KTX2 preview
+                                            SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
+                                            MainWindowHelpers.LogInfo("✓ KTX2 preview загружен и отображён");
+                                        }
+                                    } catch (Exception ex) {
+                                        MainWindowHelpers.LogError($"Ошибка при загрузке KTX2 preview: {ex.Message}");
+                                    }
+                                });
+                            }
                         } else {
                             texture.Status = "Error";
                             errorCount++;

@@ -1745,6 +1745,23 @@ namespace AssetProcessor {
         }
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
+            // Отменяем все активные операции перед закрытием
+            try {
+                cancellationTokenSource?.Cancel();
+                textureLoadCancellation?.Cancel();
+
+                // Даём задачам немного времени на корректную отмену
+                System.Threading.Thread.Sleep(100);
+
+                cancellationTokenSource?.Dispose();
+                textureLoadCancellation?.Dispose();
+
+                // Освобождаем PlayCanvasService
+                playCanvasService?.Dispose();
+            } catch (Exception ex) {
+                logger.Error(ex, "Ошибка при отмене операций во время закрытия окна");
+            }
+
             SaveCurrentSettings();
         }
 
@@ -2630,7 +2647,7 @@ namespace AssetProcessor {
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    PlayCanvasService playCanvasService = new();
+                    using PlayCanvasService playCanvasService = new();
                     string apiKey = AppSettings.Default.PlaycanvasApiKey;
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
@@ -3117,7 +3134,7 @@ namespace AssetProcessor {
                             break;
                     }
 
-                    PlayCanvasService playCanvasService = new();
+                    using PlayCanvasService playCanvasService = new();
                     string apiKey = AppSettings.Default.PlaycanvasApiKey;
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 

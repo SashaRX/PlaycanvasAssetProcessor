@@ -4,11 +4,27 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 
 namespace AssetProcessor.Services {
-    public class PlayCanvasService : IPlayCanvasService {
+    public class PlayCanvasService : IPlayCanvasService, IDisposable {
         private readonly HttpClient client;
+        private bool disposed = false;
 
         public PlayCanvasService() {
             client = new HttpClient();
+        }
+
+        public void Dispose() {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing) {
+            if (!disposed) {
+                if (disposing) {
+                    // Освобождаем управляемые ресурсы
+                    client?.Dispose();
+                }
+                disposed = true;
+            }
         }
 
         private void AddAuthorizationHeader(string? apiKey) {

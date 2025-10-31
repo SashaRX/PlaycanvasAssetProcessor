@@ -185,6 +185,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         public string ToktxExecutablePath { get; set; } = "toktx";
 
         /// <summary>
+        /// Путь к ktx исполняемому файлу (KTX-Software) для извлечения мипмапов
+        /// </summary>
+        public string KtxExecutablePath { get; set; } = "ktx";
+
+        /// <summary>
         /// Выходная директория по умолчанию
         /// </summary>
         public string DefaultOutputDirectory { get; set; } = "output_textures";

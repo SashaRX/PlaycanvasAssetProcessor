@@ -1623,8 +1623,9 @@ namespace AssetProcessor {
 
         private string GetKtxToolExecutablePath() {
             // Используем утилиту ktx из KTX-Software для извлечения мипмапов из KTX2
-            // По умолчанию ищем в PATH
-            return "ktx";
+            // Загружаем путь из настроек, если не указан - используем "ktx" из PATH
+            var settings = TextureConversionSettingsManager.LoadSettings();
+            return string.IsNullOrWhiteSpace(settings.KtxExecutablePath) ? "ktx" : settings.KtxExecutablePath;
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {

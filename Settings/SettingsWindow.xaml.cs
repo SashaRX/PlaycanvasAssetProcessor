@@ -35,6 +35,16 @@ namespace AssetProcessor {
             }
         }
 
+        public string KtxExecutablePath {
+            get => _textureSettings.KtxExecutablePath;
+            set {
+                if (_textureSettings.KtxExecutablePath != value) {
+                    _textureSettings.KtxExecutablePath = value;
+                    OnPropertyChanged(nameof(KtxExecutablePath));
+                }
+            }
+        }
+
         public bool UseSSE41 {
             get => _textureSettings.UseSSE41;
             set {
@@ -98,6 +108,7 @@ namespace AssetProcessor {
             GetTexturesSemaphoreTextBlock.Text = AppSettings.Default.GetTexturesSemaphoreLimit.ToString();
             DownloadSemaphoreTextBlock.Text = AppSettings.Default.DownloadSemaphoreLimit.ToString();
             ToktxExecutableBox.Text = _textureSettings.ToktxExecutablePath;
+            KtxExecutableBox.Text = _textureSettings.KtxExecutablePath;
         }
 
         private void CheckAndRemoveWatermarks() {
@@ -154,6 +165,7 @@ namespace AssetProcessor {
 
             // Save texture conversion settings
             _textureSettings.ToktxExecutablePath = ToktxExecutableBox.Text;
+            _textureSettings.KtxExecutablePath = KtxExecutableBox.Text;
             TextureConversionSettingsManager.SaveSettings(_textureSettings);
 
             this.Close();
@@ -196,6 +208,65 @@ namespace AssetProcessor {
                 if (ToktxStatusText != null) {
                     ToktxStatusText.Text = $"✗ Error: {ex.Message}";
                     ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                }
+            }
+        }
+
+        private void SelectKtxExecutable(object sender, RoutedEventArgs e) {
+            OpenFileDialog fileDialog = new() {
+                Title = "Select ktx executable",
+                Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (fileDialog.ShowDialog() == true) {
+                KtxExecutablePath = fileDialog.FileName;
+                KtxExecutableBox.Text = fileDialog.FileName;
+            }
+        }
+
+        private async void TestKtx_Click(object sender, RoutedEventArgs e) {
+            if (KtxStatusText != null) {
+                KtxStatusText.Text = "Testing...";
+                KtxStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+            }
+
+            try {
+                var path = string.IsNullOrWhiteSpace(KtxExecutableBox.Text) ? "ktx" : KtxExecutableBox.Text;
+
+                ProcessStartInfo startInfo = new() {
+                    FileName = path,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null) {
+                    if (KtxStatusText != null) {
+                        KtxStatusText.Text = "✗ ktx not found or not working";
+                        KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                    return;
+                }
+
+                await process.WaitForExitAsync();
+
+                if (KtxStatusText != null) {
+                    if (process.ExitCode == 0) {
+                        KtxStatusText.Text = "✓ ktx is available and working!";
+                        KtxStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                    } else {
+                        KtxStatusText.Text = "✗ ktx not found or not working";
+                        KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                }
+            } catch (Exception ex) {
+                if (KtxStatusText != null) {
+                    KtxStatusText.Text = $"✗ Error: {ex.Message}";
+                    KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
                 }
             }
         }

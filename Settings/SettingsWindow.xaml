@@ -62,14 +62,16 @@
             <TabItem Header="Texture Conversion">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <GroupBox Header="toktx (KTX-Software)" Margin="0,0,0,10">
+                        <GroupBox Header="KTX-Software Tools" Margin="0,0,0,8">
                             <StackPanel>
-                                <TextBlock Text="Path to toktx executable:" Margin="0,0,0,5" FontWeight="Bold"/>
-                                <TextBlock Text="Leave empty to use 'toktx' from PATH" Margin="0,0,0,10" FontSize="10" Foreground="Gray"/>
+                                <TextBlock Text="Leave paths empty to use tools from PATH" Margin="0,0,0,8" FontSize="10" Foreground="Gray"/>
 
-                                <Grid Margin="0,0,0,10">
+                                <!-- toktx -->
+                                <TextBlock Text="toktx (texture creation):" Margin="0,0,0,3" FontWeight="SemiBold" FontSize="11"/>
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
@@ -78,40 +80,66 @@
                                              Text="{Binding ToktxExecutablePath, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalContentAlignment="Center"
                                              Margin="0,0,5,0"
-                                             ToolTip="Path to toktx.exe (Windows) or toktx (Linux/Mac)"/>
+                                             ToolTip="Path to toktx.exe"/>
 
                                     <Button Grid.Column="1"
                                             Content="Browse..."
                                             Click="SelectToktxExecutable"
-                                            Width="100"/>
-                                </Grid>
+                                            Width="70"
+                                            Height="24"
+                                            Margin="0,0,5,0"/>
 
-                                <TextBlock Text="Installation:" Margin="0,10,0,5" FontWeight="Bold"/>
-                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,5">
+                                    <Button Grid.Column="2"
+                                            Content="Test"
+                                            Click="TestToktx_Click"
+                                            Width="50"
+                                            Height="24"/>
+                                </Grid>
+                                <TextBlock x:Name="ToktxStatusText" Margin="0,0,0,8" FontSize="10" Foreground="Gray"/>
+
+                                <!-- ktx -->
+                                <TextBlock Text="ktx (mipmap extraction for preview):" Margin="0,0,0,3" FontWeight="SemiBold" FontSize="11"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox x:Name="KtxExecutableBox"
+                                             Grid.Column="0"
+                                             Text="{Binding KtxExecutablePath, UpdateSourceTrigger=PropertyChanged}"
+                                             VerticalContentAlignment="Center"
+                                             Margin="0,0,5,0"
+                                             ToolTip="Path to ktx.exe"/>
+
+                                    <Button Grid.Column="1"
+                                            Content="Browse..."
+                                            Click="SelectKtxExecutable"
+                                            Width="70"
+                                            Height="24"
+                                            Margin="0,0,5,0"/>
+
+                                    <Button Grid.Column="2"
+                                            Content="Test"
+                                            Click="TestKtx_Click"
+                                            Width="50"
+                                            Height="24"/>
+                                </Grid>
+                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,8" FontSize="10" Foreground="Gray"/>
+
+                                <!-- Installation info -->
+                                <TextBlock Text="Installation:" Margin="0,4,0,3" FontWeight="SemiBold" FontSize="11"/>
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,0" FontSize="10">
                                     <Run Text="Windows:"/>
+                                    <Run Text="winget install KhronosGroup.KTX-Software" FontFamily="Consolas"/>
                                     <LineBreak/>
-                                    <Run Text="  winget install KhronosGroup.KTX-Software" FontFamily="Consolas"/>
-                                    <LineBreak/>
-                                    <LineBreak/>
-                                    <Run Text="Linux/Mac:"/>
-                                    <LineBreak/>
-                                    <Run Text="  Download from: " FontFamily="Consolas"/>
+                                    <Run Text="Other:"/>
                                     <Hyperlink NavigateUri="https://github.com/KhronosGroup/KTX-Software/releases"
                                                RequestNavigate="Hyperlink_RequestNavigate">
                                         GitHub Releases
                                     </Hyperlink>
                                 </TextBlock>
-
-                                <Button Content="Test toktx availability"
-                                        Click="TestToktx_Click"
-                                        Margin="0,10,0,0"
-                                        Width="150"
-                                        HorizontalAlignment="Left"/>
-
-                                <TextBlock x:Name="ToktxStatusText"
-                                           Margin="0,10,0,0"
-                                           FontWeight="Bold"
-                                           Foreground="Gray"/>
                             </StackPanel>
                         </GroupBox>
 

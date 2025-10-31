@@ -216,15 +216,21 @@ namespace AssetProcessor {
                 string stderr = await process.StandardError.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
+                // Логируем для отладки
+                System.Diagnostics.Debug.WriteLine($"toktx --version ExitCode: {process.ExitCode}");
+                System.Diagnostics.Debug.WriteLine($"toktx --version stdout: '{stdout}'");
+                System.Diagnostics.Debug.WriteLine($"toktx --version stderr: '{stderr}'");
+
                 if (ToktxStatusText != null) {
                     // toktx --version выводит версию в stdout
                     bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
                     if (hasOutput || process.ExitCode == 0) {
                         // Извлекаем версию из stdout (формат: "toktx v4.0" или "toktx v4.3.2" или "toktx v4.4.1~5")
                         string version = "unknown";
-                        if (!string.IsNullOrWhiteSpace(stdout)) {
+                        string output = stdout + stderr; // Проверяем оба потока
+                        if (!string.IsNullOrWhiteSpace(output)) {
                             // Ищем версию: v4.4.1~5 или v4.3.2 или просто 4.0
-                            var match = System.Text.RegularExpressions.Regex.Match(stdout, @"(v\d+\.\d+(?:\.\d+)?(?:~\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            var match = System.Text.RegularExpressions.Regex.Match(output, @"(v\d+\.\d+(?:\.\d+)?(?:~\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                             if (match.Success) {
                                 version = match.Groups[1].Value.Trim();
                             }

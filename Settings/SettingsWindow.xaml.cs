@@ -192,15 +192,46 @@ namespace AssetProcessor {
 
             try {
                 var path = string.IsNullOrWhiteSpace(ToktxExecutableBox.Text) ? "toktx" : ToktxExecutableBox.Text;
-                var wrapper = new ToktxWrapper(path);
-                var available = await wrapper.IsAvailableAsync();
+
+                // Получаем версию toktx
+                ProcessStartInfo startInfo = new() {
+                    FileName = path,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null) {
+                    if (ToktxStatusText != null) {
+                        ToktxStatusText.Text = "✗ toktx not found";
+                        ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                    return;
+                }
+
+                string stdout = await process.StandardOutput.ReadToEndAsync();
+                string stderr = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
 
                 if (ToktxStatusText != null) {
-                    if (available) {
-                        ToktxStatusText.Text = "✓ toktx is available and working!";
+                    // toktx --version выводит версию в stdout
+                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
+                    if (hasOutput || process.ExitCode == 0) {
+                        // Извлекаем версию из stdout (формат: "toktx v4.0" или "toktx v4.3.2")
+                        string version = "unknown";
+                        if (!string.IsNullOrWhiteSpace(stdout)) {
+                            var match = System.Text.RegularExpressions.Regex.Match(stdout, @"v?(\d+\.\d+(?:\.\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            if (match.Success) {
+                                version = "v" + match.Groups[1].Value.Trim();
+                            }
+                        }
+                        ToktxStatusText.Text = $"✓ toktx {version}";
                         ToktxStatusText.Foreground = new SolidColorBrush(Colors.Green);
                     } else {
-                        ToktxStatusText.Text = "✗ toktx not found or not working";
+                        ToktxStatusText.Text = $"✗ Exit code: {process.ExitCode}";
                         ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
                     }
                 }
@@ -234,10 +265,10 @@ namespace AssetProcessor {
             try {
                 var path = string.IsNullOrWhiteSpace(KtxExecutableBox.Text) ? "ktx" : KtxExecutableBox.Text;
 
-                // ktx может не поддерживать --version, попробуем просто запустить без аргументов
+                // Получаем версию ktx
                 ProcessStartInfo startInfo = new() {
                     FileName = path,
-                    Arguments = "help",
+                    Arguments = "--version",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -258,10 +289,18 @@ namespace AssetProcessor {
                 await process.WaitForExitAsync();
 
                 if (KtxStatusText != null) {
-                    // ktx возвращает 0 для help или если выводит что-то в stdout/stderr
+                    // ktx --version выводит версию в stdout
                     bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
                     if (hasOutput || process.ExitCode == 0) {
-                        KtxStatusText.Text = "✓ ktx is available and working!";
+                        // Извлекаем версию из stdout (формат: "ktx version: v4.0" или "ktx version: v4.3.2")
+                        string version = "unknown";
+                        if (!string.IsNullOrWhiteSpace(stdout)) {
+                            var match = System.Text.RegularExpressions.Regex.Match(stdout, @"version:\s*(.+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            if (match.Success) {
+                                version = match.Groups[1].Value.Trim();
+                            }
+                        }
+                        KtxStatusText.Text = $"✓ ktx {version}";
                         KtxStatusText.Foreground = new SolidColorBrush(Colors.Green);
                     } else {
                         KtxStatusText.Text = $"✗ Exit code: {process.ExitCode}";

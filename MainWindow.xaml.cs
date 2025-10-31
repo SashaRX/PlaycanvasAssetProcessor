@@ -1540,10 +1540,15 @@ namespace AssetProcessor {
                     CreateNoWindow = true
                 };
 
-                // ktx extract --all input.ktx2 output_base_name
+                // ktx extract --level all --transcode rgba8 input.ktx2 output_base_name
+                // --level all: извлекает все уровни мипмапов
+                // --transcode rgba8: декодирует Basis/UASTC в RGBA8 перед извлечением
                 // Создаст файлы: output_base_name_level0.png, output_base_name_level1.png, ...
                 startInfo.ArgumentList.Add("extract");
-                startInfo.ArgumentList.Add("--all"); // Извлечь все слои/уровни/грани
+                startInfo.ArgumentList.Add("--level");
+                startInfo.ArgumentList.Add("all");
+                startInfo.ArgumentList.Add("--transcode");
+                startInfo.ArgumentList.Add("rgba8");
                 startInfo.ArgumentList.Add(ktxPath);
                 startInfo.ArgumentList.Add(outputBaseName);
 

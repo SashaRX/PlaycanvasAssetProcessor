@@ -713,6 +713,9 @@ namespace AssetProcessor {
 
         private async void ShowOriginalImage() {
             if (originalBitmapSource != null) {
+                // Запоминаем был ли установлен пользовательский зум
+                bool hadUserZoom = isUserZooming;
+
                 await Dispatcher.InvokeAsync(() => {
                     TexturePreviewImage.Source = originalBitmapSource;
                     RChannelButton.IsChecked = false;
@@ -720,10 +723,10 @@ namespace AssetProcessor {
                     BChannelButton.IsChecked = false;
                     AChannelButton.IsChecked = false;
                     UpdateHistogram(originalBitmapSource);
-                    isUserZooming = false;
                 });
 
-                _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
+                // Пересчитываем fitZoom, но применяем его только если пользователь не зумировал вручную
+                _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: !hadUserZoom)), DispatcherPriority.Background);
             }
         }
 

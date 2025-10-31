@@ -46,7 +46,6 @@
             </DrawingBrush.Drawing>
         </DrawingBrush>
 
-
         <Style TargetType="Expander">
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Padding" Value="2"/>
@@ -428,162 +427,101 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition x:Name="PreviewContentRow" Height="300" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <Grid Grid.Row="0">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <ComboBox x:Name="PreviewBackgroundComboBox"
-                                                      Width="140"
-                                                      SelectedIndex="0"
-                                                      SelectionChanged="PreviewBackgroundComboBox_SelectionChanged">
-                                                <ComboBoxItem Content="Шахматка" Tag="Checkerboard" />
-                                                <ComboBoxItem Content="Серый фон" Tag="MidGray" />
-                                                <ComboBoxItem Content="Чёрный фон" Tag="Black" />
-                                                <ComboBoxItem Content="Белый фон" Tag="White" />
-                                            </ComboBox>
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                            <TextBlock x:Name="TextureNameTextBlock"
-                                                       Text="Texture Name:"
-                                                       FontSize="11"
-                                                       FontWeight="SemiBold"
-                                                       TextAlignment="Right" />
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
-                                                <TextBlock x:Name="TextureResolutionTextBlock"
-                                                           Text="Resolution:"
-                                                           FontSize="10"
-                                                           Margin="0,0,12,0" />
-                                                <TextBlock x:Name="TextureSizeTextBlock"
-                                                           Text="Size:"
-                                                           FontSize="10"
-                                                           Margin="0,0,12,0" />
-                                                <TextBlock x:Name="TextureZoomTextBlock"
-                                                           Text="Масштаб: 100%"
-                                                           FontSize="10" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <Border x:Name="TexturePreviewBackgroundBorder"
-                                            Grid.Row="1"
-                                            Background="{StaticResource CheckeredBrush}"
-                                            BorderBrush="#FF7A7A7A"
-                                            BorderThickness="1">
-                                        <Grid>
-                                            <ScrollViewer x:Name="TexturePreviewScrollViewer"
-                                                          HorizontalScrollBarVisibility="Auto"
-                                                          VerticalScrollBarVisibility="Auto"
-                                                          PanningMode="None"
-                                                          PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
-                                                          MouseWheel="TexturePreviewScrollViewer_MouseWheel"
-                                                          PreviewMouseDown="TexturePreviewScrollViewer_PreviewMouseDown"
-                                                          PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
-                                                          PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"
-                                                          MouseLeave="TexturePreviewScrollViewer_MouseLeave"
-                                                          LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture"
-                                                          SizeChanged="TexturePreviewScrollViewer_SizeChanged">
-                                                <Grid>
-                                                    <Image x:Name="TexturePreviewImage"
-                                                           RenderOptions.EdgeMode="Aliased"
-                                                           RenderOptions.BitmapScalingMode="HighQuality"
-                                                           MinWidth="128"
-                                                           MinHeight="128"
-                                                           Stretch="Uniform">
-                                                        <Image.LayoutTransform>
-                                                            <ScaleTransform x:Name="TexturePreviewScaleTransform" ScaleX="1" ScaleY="1" />
-                                                        </Image.LayoutTransform>
-                                                    </Image>
-                                                </Grid>
-                                            </ScrollViewer>
-
-                                            <Border x:Name="TexturePreviewOverlayPanel"
-                                                    Background="#CC1E1E1E"
-                                                    CornerRadius="4"
-                                                    Padding="10"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Margin="12"
-                                                    Visibility="Collapsed">
-                                                <StackPanel>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                        <RadioButton x:Name="FullImageModeRadioButton"
-                                                                     Content="Full Image"
-                                                                     GroupName="PreviewZoomModes"
-                                                                     Margin="0,0,8,0"
-                                                                     Foreground="White"
-                                                                     Checked="FullImageModeRadioButton_Checked" />
-                                                        <RadioButton x:Name="PixelSizeModeRadioButton"
-                                                                     Content="Pixel Size"
-                                                                     GroupName="PreviewZoomModes"
-                                                                     Foreground="White"
-                                                                     Checked="PixelSizeModeRadioButton_Checked" />
-                                                    </StackPanel>
-                                                    <CheckBox x:Name="DisplayCompressedCheckBox"
-                                                              Content="Display Compressed"
-                                                              Margin="0,0,0,6"
-                                                              Foreground="White"
-                                                              Checked="DisplayCompressedCheckBox_Checked"
-                                                              Unchecked="DisplayCompressedCheckBox_Unchecked" />
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                        <RadioButton x:Name="ChannelColorRadioButton"
-                                                                     Content="Color"
-                                                                     GroupName="PreviewChannelModes"
-                                                                     Tag="Color"
-                                                                     Foreground="White"
-                                                                     Checked="PreviewChannelRadioButton_Checked" />
-                                                        <RadioButton x:Name="ChannelAlphaRadioButton"
-                                                                     Content="Alpha"
-                                                                     GroupName="PreviewChannelModes"
-                                                                     Margin="10,0,0,0"
-                                                                     Tag="Alpha"
-                                                                     Foreground="White"
-                                                                     Checked="PreviewChannelRadioButton_Checked" />
-                                                        <RadioButton x:Name="ChannelColorAlphaRadioButton"
-                                                                     Content="Both"
-                                                                     GroupName="PreviewChannelModes"
-                                                                     Margin="10,0,0,0"
-                                                                     Tag="Both"
-                                                                     Foreground="White"
-                                                                     Checked="PreviewChannelRadioButton_Checked" />
-                                                    </StackPanel>
-                                                    <StackPanel x:Name="MipSelectorPanel"
-                                                                Orientation="Horizontal"
-                                                                Margin="0,0,0,4"
-                                                                Visibility="Collapsed">
-                                                        <TextBlock Text="Mip"
-                                                                   VerticalAlignment="Center"
-                                                                   Foreground="White" />
-                                                        <xctk:IntegerUpDown x:Name="MipLevelUpDown"
-                                                                            Width="70"
-                                                                            Margin="6,0,0,0"
-                                                                            Minimum="0"
-                                                                            Maximum="0"
-                                                                            Value="0"
-                                                                            Foreground="White"
-                                                                            HorizontalContentAlignment="Center"
-                                                                            ValueChanged="MipLevelUpDown_ValueChanged" />
-                                                    </StackPanel>
-                                                    <TextBlock x:Name="MipmapInfoTextBlock"
-                                                               Foreground="White"
-                                                               FontSize="10" />
-                                                </StackPanel>
-                                            </Border>
-                                        </Grid>
+                                    <Border Background="{StaticResource CheckeredBrush}" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
+                                        <ScrollViewer x:Name="TexturePreviewScrollViewer"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      PanningMode="None"
+                                                      PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
+                                                      MouseWheel="TexturePreviewScrollViewer_MouseWheel"
+                                                      PreviewMouseDown="TexturePreviewScrollViewer_PreviewMouseDown"
+                                                      PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
+                                                      PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"
+                                                      MouseLeave="TexturePreviewScrollViewer_MouseLeave"
+                                                      LostMouseCapture="TexturePreviewScrollViewer_LostMouseCapture"
+                                                      SizeChanged="TexturePreviewScrollViewer_SizeChanged">
+                                            <Grid>
+                                                <Image x:Name="TexturePreviewImage"
+                                                       RenderOptions.EdgeMode="Aliased"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       MinWidth="128"
+                                                       MinHeight="129"
+                                                       Stretch="Uniform">
+                                                    <Image.LayoutTransform>
+                                                        <ScaleTransform x:Name="TexturePreviewScaleTransform" ScaleX="1" ScaleY="1" />
+                                                    </Image.LayoutTransform>
+                                                </Image>
+                                            </Grid>
+                                        </ScrollViewer>
                                     </Border>
+
+                                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
+                                        <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                        <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                        <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                        <TextBlock x:Name="TextureZoomTextBlock" Text="Масштаб: 100%" Canvas.Left="10" Canvas.Top="70" Background="#AAFFFFFF" Padding="2" FontSize="10" />
+                                    </Canvas>
                                 </Grid>
 
+                                <GridSplitter Grid.Row="1"
+                                              Height="6"
+                                              Margin="0,4,0,4"
+                                              Background="#FFE0E0E0"
+                                              HorizontalAlignment="Stretch"
+                                              ResizeDirection="Rows"
+                                              ResizeBehavior="PreviousAndNext"
+                                              ShowsPreview="False"
+                                              Cursor="SizeNS"
+                                              DragDelta="PreviewHeightGridSplitter_DragDelta" />
+
+                                <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
+                                        <TextBlock Text="Источник превью:" FontSize="10" VerticalAlignment="Center" />
+                                        <RadioButton x:Name="PreviewSourceOriginalRadioButton"
+                                                     Content="Source"
+                                                     GroupName="TexturePreviewSource"
+                                                     Margin="8,0,0,0"
+                                                     Checked="PreviewSourceRadioButton_Checked" />
+                                        <RadioButton x:Name="PreviewSourceKtxRadioButton"
+                                                     Content="KTX2"
+                                                     GroupName="TexturePreviewSource"
+                                                     Margin="8,0,0,0"
+                                                     Checked="PreviewSourceRadioButton_Checked" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,6" RenderTransformOrigin="0.5,0.5">
+                                        <StackPanel.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="1"/>
+                                                <SkewTransform/>
+                                                <RotateTransform/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </StackPanel.RenderTransform>
+                                        <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="Black"/>
+                                        <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="Black"/>
+                                        <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
+                                        <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
+                                    </StackPanel>
+                                    <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="#AAFFFFFF" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock x:Name="MipmapInfoTextBlock" Text="Уровень мипа" FontSize="10" Margin="0,0,0,4" />
+                                            <Slider x:Name="MipmapLevelSlider"
+                                                    Minimum="0"
+                                                    Maximum="0"
+                                                    TickFrequency="1"
+                                                    IsSnapToTickEnabled="True"
+                                                    AutoToolTipPlacement="TopLeft"
+                                                    AutoToolTipPrecision="0"
+                                                    ValueChanged="MipmapLevelSlider_ValueChanged"
+                                                    Width="220" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
                             </Grid>
                         </Expander>
 

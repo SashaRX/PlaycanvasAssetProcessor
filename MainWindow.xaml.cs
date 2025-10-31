@@ -57,6 +57,15 @@ namespace AssetProcessor {
         NeedsDownload    // Нужно скачать (первый раз ИЛИ есть обновления) - кнопка "Download"
     }
 
+    public sealed class MipPreviewItem {
+        public required int Level { get; init; }
+        public required int Width { get; init; }
+        public required int Height { get; init; }
+        public required string Title { get; init; }
+        public required string Resolution { get; init; }
+        public required BitmapSource Thumbnail { get; init; }
+    }
+
     public partial class MainWindow : Window, INotifyPropertyChanged {
 
         /// <summary>
@@ -193,15 +202,6 @@ namespace AssetProcessor {
             public required BitmapSource Bitmap { get; init; }
             public required int Width { get; init; }
             public required int Height { get; init; }
-        }
-
-        public sealed class MipPreviewItem {
-            public required int Level { get; init; }
-            public required int Width { get; init; }
-            public required int Height { get; init; }
-            public required string Title { get; init; }
-            public required string Resolution { get; init; }
-            public required BitmapSource Thumbnail { get; init; }
         }
 
         private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };

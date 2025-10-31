@@ -215,23 +215,27 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // COMPRESSION FORMAT & QUALITY
             // ============================================
-            // ВАЖНО: toktx не позволяет использовать --encode вместе с --zcmp
-            // Поэтому используем старый синтаксис --bcmp/--uastc для совместимости
+            // Используем новый синтаксис --encode (toktx v4.4+)
             if (settings.CompressionFormat == CompressionFormat.ETC1S) {
-                // ETC1S mode - используем --bcmp для совместимости с --zcmp
-                // КРИТИЧНО: --clevel ДОЛЖЕН быть ПЕРЕД --bcmp!
+                // ETC1S mode - современный синтаксис
+                args.Add("--encode");
+                args.Add("etc1s");
+
+                // Compression level для ETC1S
                 args.Add("--clevel");
                 args.Add(settings.CompressionLevel.ToString());
 
-                args.Add("--bcmp");  // Включает ETC1S кодек (БЕЗ аргументов!)
-
-                // КРИТИЧНО: Quality передается через ОТДЕЛЬНЫЙ флаг --qlevel, а НЕ как аргумент --bcmp!
+                // Quality level для ETC1S
                 args.Add("--qlevel");
                 args.Add(settings.QualityLevel.ToString());
 
             } else if (settings.CompressionFormat == CompressionFormat.UASTC) {
-                // UASTC mode
-                args.Add("--uastc");
+                // UASTC mode - современный синтаксис
+                args.Add("--encode");
+                args.Add("uastc");
+
+                // UASTC quality level
+                args.Add("--uastc_quality");
                 args.Add(settings.UASTCQuality.ToString());
 
                 // UASTC RDO
@@ -244,8 +248,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // SUPERCOMPRESSION (KTX2 only)
             // ============================================
-            // ВАЖНО: --zcmp нельзя использовать с ETC1S/BasisLZ!
-            // Только для UASTC и несжатых форматов
+            // --zcmp можно использовать с UASTC и несжатыми форматами
+            // ETC1S уже имеет встроенное BasisLZ суперсжатие, поэтому --zcmp не нужен
             if (settings.OutputFormat == OutputFormat.KTX2 && settings.CompressionFormat != CompressionFormat.ETC1S) {
                 if (settings.KTX2Supercompression == KTX2SupercompressionType.Zstandard) {
                     args.Add("--zcmp");

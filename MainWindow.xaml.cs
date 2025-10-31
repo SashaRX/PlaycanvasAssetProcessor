@@ -155,6 +155,12 @@ namespace AssetProcessor {
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
         private List<KtxMipLevel>? currentKtxMipmaps;
+
+        // Для постоянного физического размера мипмапов
+        private double baseDisplayWidth;  // Базовый физический размер отображения в пикселях экрана
+        private double baseDisplayHeight;
+        private int baseTextureWidth;     // Размер базовой текстуры (обычно mip0)
+        private int baseTextureHeight;
         private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
         private enum TexturePreviewSourceMode {
             Source,
@@ -328,6 +334,13 @@ namespace AssetProcessor {
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
             isUserZooming = false; // Сбрасываем флаг ручного зумирования для новой текстуры
+
+            // Сбрасываем базовый размер для новой текстуры
+            baseDisplayWidth = 0;
+            baseDisplayHeight = 0;
+            baseTextureWidth = 0;
+            baseTextureHeight = 0;
+
             HideMipmapControls();
             UpdatePreviewSourceControls();
         }
@@ -576,15 +589,43 @@ namespace AssetProcessor {
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение БЕЗ пересчёта fitZoom - сохраняем текущий зум пользователя!
+            // Обновляем изображение
             Dispatcher.Invoke(() => {
                 TexturePreviewImage.Source = originalBitmapSource;
                 UpdateHistogram(originalBitmapSource);
             });
 
-            // НЕ пересчитываем fitZoom! Пользователь должен видеть все мипмапы в едином масштабе!
+            // НОВАЯ ЛОГИКА: Рассчитываем зум для мипмапа чтобы он занимал тот же физический размер
+            CalculateMipmapZoom(mip);
 
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
+        }
+
+        /// <summary>
+        /// Рассчитывает зум для мипмапа чтобы он занимал постоянный физический размер на экране
+        /// </summary>
+        private void CalculateMipmapZoom(KtxMipLevel mip) {
+            // Если базовый размер не установлен, устанавливаем его из текущего мипмапа
+            if (baseTextureWidth == 0 || baseTextureHeight == 0) {
+                baseTextureWidth = mip.Width;
+                baseTextureHeight = mip.Height;
+                baseDisplayWidth = mip.Width * currentPreviewZoom;
+                baseDisplayHeight = mip.Height * currentPreviewZoom;
+                return;
+            }
+
+            // Рассчитываем зум чтобы мипмап занимал тот же физический размер что и базовая текстура
+            // baseDisplayWidth = baseTextureWidth * baseZoom
+            // Нам нужно: mipWidth * mipZoom = baseDisplayWidth
+            // Следовательно: mipZoom = baseDisplayWidth / mipWidth
+            double targetZoom = baseDisplayWidth / mip.Width;
+
+            // Ограничиваем зум допустимыми пределами
+            targetZoom = Math.Clamp(targetZoom, MinPreviewZoom, MaxPreviewZoom);
+
+            currentPreviewZoom = targetZoom;
+            ApplyZoomTransform();
+            UpdateZoomText();
         }
 
         private async Task FilterChannelAsync(string channel) {
@@ -726,6 +767,15 @@ namespace AssetProcessor {
 
             // Устанавливаем флаг что пользователь зумирует
             isUserZooming = true;
+
+            // Если просматриваем мипмапы, обновляем базовый размер
+            if (isKtxPreviewActive && TexturePreviewImage.Source is BitmapSource bitmapSource) {
+                baseDisplayWidth = bitmapSource.PixelWidth * newZoom;
+                baseDisplayHeight = bitmapSource.PixelHeight * newZoom;
+                // Базовый размер текстуры остаётся неизменным (размер текущего мипмапа)
+                baseTextureWidth = bitmapSource.PixelWidth;
+                baseTextureHeight = bitmapSource.PixelHeight;
+            }
 
             e.Handled = true;
         }

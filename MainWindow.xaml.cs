@@ -57,15 +57,6 @@ namespace AssetProcessor {
         NeedsDownload    // Нужно скачать (первый раз ИЛИ есть обновления) - кнопка "Download"
     }
 
-    public sealed class MipPreviewItem {
-        public required int Level { get; init; }
-        public required int Width { get; init; }
-        public required int Height { get; init; }
-        public required string Title { get; init; }
-        public required string Resolution { get; init; }
-        public required BitmapSource Thumbnail { get; init; }
-    }
-
     public partial class MainWindow : Window, INotifyPropertyChanged {
 
         /// <summary>
@@ -163,10 +154,24 @@ namespace AssetProcessor {
         private bool isKtxPreviewActive;
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
-        private bool isUpdatingZoomSlider;
         private List<KtxMipLevel>? currentKtxMipmaps;
-        private readonly ObservableCollection<MipPreviewItem> mipPreviewItems = [];
         private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
+        private enum PreviewZoomMode {
+            Fit,
+            OneToOne,
+            Custom
+        }
+
+        private enum PreviewChannelMode {
+            Color,
+            Alpha,
+            ColorAlpha
+        }
+
+        private PreviewZoomMode currentZoomMode = PreviewZoomMode.Fit;
+        private bool isUpdatingZoomModeControls;
+        private PreviewChannelMode currentChannelMode = PreviewChannelMode.ColorAlpha;
+        private bool isUpdatingChannelControls;
         private enum TexturePreviewSourceMode {
             Source,
             Ktx2
@@ -224,8 +229,6 @@ namespace AssetProcessor {
         public ObservableCollection<Branch> Branches {
             get { return branches; }
         }
-
-        public ObservableCollection<MipPreviewItem> MipPreviewItems => mipPreviewItems;
 
         public MainWindow() {
             InitializeComponent();
@@ -312,25 +315,105 @@ namespace AssetProcessor {
         }
 
         #region UI Viewer
-        private async void FilterButton_Click(object sender, RoutedEventArgs e) {
-            if (sender is ToggleButton button) {
-                string? channel = button.Tag.ToString();
-                if (button.IsChecked == true) {
-                    // Сброс всех остальных кнопок
-                    RChannelButton.IsChecked = button == RChannelButton;
-                    GChannelButton.IsChecked = button == GChannelButton;
-                    BChannelButton.IsChecked = button == BChannelButton;
-                    AChannelButton.IsChecked = button == AChannelButton;
-
-                    // Применяем фильтр
-                    if (!string.IsNullOrEmpty(channel)) {
-                        await FilterChannelAsync(channel);
-                    }
-                } else {
-                    // Сбрасываем фильтр, если кнопка была отжата
-                    ShowOriginalImage();
-                }
+        private async void PreviewChannelRadioButton_Checked(object sender, RoutedEventArgs e) {
+            if (isUpdatingChannelControls) {
+                return;
             }
+
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            if (sender is not RadioButton radio || radio.Tag is not string tag) {
+                return;
+            }
+
+            PreviewChannelMode mode = tag switch {
+                "Color" => PreviewChannelMode.Color,
+                "Alpha" => PreviewChannelMode.Alpha,
+                "Both" => PreviewChannelMode.ColorAlpha,
+                _ => PreviewChannelMode.ColorAlpha
+            };
+
+            await SetPreviewChannelModeAsync(mode, initiatedByUser: true);
+        }
+
+        private async Task SetPreviewChannelModeAsync(PreviewChannelMode mode, bool initiatedByUser) {
+            if (initiatedByUser && currentChannelMode == mode) {
+                return;
+            }
+
+            currentChannelMode = mode;
+            UpdateChannelControls();
+
+            switch (mode) {
+                case PreviewChannelMode.Color:
+                    await ShowColorOnlyAsync();
+                    break;
+                case PreviewChannelMode.Alpha:
+                    await FilterChannelAsync("A");
+                    break;
+                case PreviewChannelMode.ColorAlpha:
+                default:
+                    ShowOriginalImage();
+                    break;
+            }
+        }
+
+        private void UpdateChannelControls() {
+            if (ChannelColorRadioButton == null || ChannelAlphaRadioButton == null || ChannelColorAlphaRadioButton == null) {
+                return;
+            }
+
+            isUpdatingChannelControls = true;
+
+            try {
+                ChannelColorRadioButton.IsChecked = currentChannelMode == PreviewChannelMode.Color;
+                ChannelAlphaRadioButton.IsChecked = currentChannelMode == PreviewChannelMode.Alpha;
+                ChannelColorAlphaRadioButton.IsChecked = currentChannelMode == PreviewChannelMode.ColorAlpha;
+            } finally {
+                isUpdatingChannelControls = false;
+            }
+        }
+
+        private Task ApplyCurrentChannelModeAsync() {
+            return SetPreviewChannelModeAsync(currentChannelMode, initiatedByUser: false);
+        }
+
+        private async Task ShowColorOnlyAsync() {
+            if (TexturePreviewImage.Source is not BitmapSource bitmapSource) {
+                return;
+            }
+
+            originalBitmapSource ??= bitmapSource.Clone();
+            BitmapSource baseBitmap = originalBitmapSource.Clone();
+            baseBitmap.Freeze();
+
+            BitmapSource colorBitmap = await Task.Run(() => CreateColorOnlyBitmap(baseBitmap));
+
+            await Dispatcher.InvokeAsync(() => {
+                TexturePreviewImage.Source = colorBitmap;
+                UpdateHistogram(colorBitmap);
+                UpdatePreviewOverlayState();
+            });
+        }
+
+        private static BitmapSource CreateColorOnlyBitmap(BitmapSource source) {
+            FormatConvertedBitmap converted = new(source, PixelFormats.Bgra32, null, 0);
+            int width = converted.PixelWidth;
+            int height = converted.PixelHeight;
+            int stride = width * 4;
+            byte[] pixels = new byte[stride * height];
+            converted.CopyPixels(pixels, stride, 0);
+
+            for (int i = 3; i < pixels.Length; i += 4) {
+                pixels[i] = 255;
+            }
+
+            WriteableBitmap output = new(width, height, source.DpiX, source.DpiY, PixelFormats.Bgra32, null);
+            output.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
+            output.Freeze();
+            return output;
         }
 
         private void ResetPreviewState() {
@@ -353,25 +436,56 @@ namespace AssetProcessor {
             isUserPreviewSelection = false;
             isUserZooming = false; // Сбрасываем флаг ручного зумирования для новой текстуры
             HideMipmapControls();
+            if (TexturePreviewOverlayPanel != null) {
+                TexturePreviewOverlayPanel.Visibility = Visibility.Collapsed;
+            }
+            currentZoomMode = PreviewZoomMode.Fit;
+            UpdateZoomModeControls();
+            currentChannelMode = PreviewChannelMode.ColorAlpha;
+            UpdateChannelControls();
             UpdatePreviewSourceControls();
         }
 
         private void UpdatePreviewSourceControls() {
-            if (PreviewSourceOriginalRadioButton == null || PreviewSourceKtxRadioButton == null) {
+            if (DisplayCompressedCheckBox == null) {
                 return;
             }
 
             isUpdatingPreviewSourceControls = true;
 
             try {
-                PreviewSourceOriginalRadioButton.IsEnabled = isSourcePreviewAvailable;
-                PreviewSourceKtxRadioButton.IsEnabled = isKtxPreviewAvailable;
+                bool canShowSource = isSourcePreviewAvailable;
+                bool canShowCompressed = isKtxPreviewAvailable;
 
-                PreviewSourceOriginalRadioButton.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Source;
-                PreviewSourceKtxRadioButton.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
+                DisplayCompressedCheckBox.IsEnabled = canShowSource && canShowCompressed;
+                DisplayCompressedCheckBox.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
+
+                if (!canShowCompressed) {
+                    DisplayCompressedCheckBox.ToolTip = "KTX2 превью недоступно";
+                } else if (!canShowSource) {
+                    DisplayCompressedCheckBox.ToolTip = "Исходное превью недоступно";
+                } else {
+                    DisplayCompressedCheckBox.ToolTip = null;
+                }
             } finally {
                 isUpdatingPreviewSourceControls = false;
             }
+        }
+
+        private void DisplayCompressedCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (isUpdatingPreviewSourceControls) {
+                return;
+            }
+
+            SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
+        }
+
+        private void DisplayCompressedCheckBox_Unchecked(object sender, RoutedEventArgs e) {
+            if (isUpdatingPreviewSourceControls) {
+                return;
+            }
+
+            SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
         }
 
         // Removed: PreviewWidthSlider methods (slider was removed from UI)
@@ -409,18 +523,6 @@ namespace AssetProcessor {
 
         // Removed: UpdatePreviewWidthText (PreviewWidthSlider was removed)
 
-        private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
-            if (isUpdatingPreviewSourceControls) {
-                return;
-            }
-
-            if (sender == PreviewSourceOriginalRadioButton) {
-                SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
-            } else if (sender == PreviewSourceKtxRadioButton) {
-                SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
-            }
-        }
-
         private void SetPreviewSourceMode(TexturePreviewSourceMode mode, bool initiatedByUser) {
             if (initiatedByUser) {
                 isUserPreviewSelection = true;
@@ -446,8 +548,10 @@ namespace AssetProcessor {
                     originalBitmapSource = originalFileBitmapSource;
                     _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
+                    _ = ApplyCurrentChannelModeAsync();
                 } else {
                     TexturePreviewImage.Source = null;
+                    UpdatePreviewOverlayState();
                 }
             } else if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
                 isKtxPreviewActive = true;
@@ -463,41 +567,72 @@ namespace AssetProcessor {
             UpdatePreviewSourceControls();
         }
 
-        private void ApplyZoomTransform(bool updateSlider = true) {
+        private void ApplyZoomTransform() {
             if (TexturePreviewScaleTransform != null) {
                 TexturePreviewScaleTransform.ScaleX = currentPreviewZoom;
                 TexturePreviewScaleTransform.ScaleY = currentPreviewZoom;
             }
 
             TexturePreviewScrollViewer?.UpdateLayout();
-
-            if (updateSlider) {
-                UpdateZoomSlider();
-            }
-        }
-
-        private void UpdateZoomSlider() {
-            if (PreviewZoomSlider == null) {
-                return;
-            }
-
-            if (isUpdatingZoomSlider) {
-                return;
-            }
-
-            try {
-                isUpdatingZoomSlider = true;
-                double clampedValue = Math.Clamp(currentPreviewZoom, PreviewZoomSlider.Minimum, PreviewZoomSlider.Maximum);
-                PreviewZoomSlider.Value = clampedValue;
-            } finally {
-                isUpdatingZoomSlider = false;
-            }
         }
 
         private void UpdateZoomText() {
             if (TextureZoomTextBlock != null) {
                 TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(currentPreviewZoom * 100, 0)}%";
             }
+        }
+
+        private void UpdateZoomModeControls() {
+            if (FullImageModeRadioButton == null || PixelSizeModeRadioButton == null) {
+                return;
+            }
+
+            isUpdatingZoomModeControls = true;
+
+            try {
+                switch (currentZoomMode) {
+                    case PreviewZoomMode.Fit:
+                        FullImageModeRadioButton.IsChecked = true;
+                        PixelSizeModeRadioButton.IsChecked = false;
+                        break;
+                    case PreviewZoomMode.OneToOne:
+                        FullImageModeRadioButton.IsChecked = false;
+                        PixelSizeModeRadioButton.IsChecked = true;
+                        break;
+                    default:
+                        FullImageModeRadioButton.IsChecked = false;
+                        PixelSizeModeRadioButton.IsChecked = false;
+                        break;
+                }
+            } finally {
+                isUpdatingZoomModeControls = false;
+            }
+        }
+
+        private void FullImageModeRadioButton_Checked(object sender, RoutedEventArgs e) {
+            if (isUpdatingZoomModeControls || TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            currentZoomMode = PreviewZoomMode.Fit;
+            UpdateZoomModeControls();
+            isUserZooming = false;
+            RecalculateFitZoom(forceApply: true);
+            UpdateZoomText();
+        }
+
+        private void PixelSizeModeRadioButton_Checked(object sender, RoutedEventArgs e) {
+            if (isUpdatingZoomModeControls || TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+            currentPreviewZoom = Math.Clamp(1.0, minZoom, MaxPreviewZoom);
+            currentZoomMode = PreviewZoomMode.OneToOne;
+            UpdateZoomModeControls();
+            isUserZooming = true;
+            ApplyZoomTransform();
+            UpdateZoomText();
         }
 
         private void RecalculateFitZoom(bool forceApply = false) {
@@ -538,82 +673,79 @@ namespace AssetProcessor {
             // Во всех остальных случаях ТОЛЬКО пересчитываем minZoom, но НЕ применяем
             if (forceApply) {
                 currentPreviewZoom = minZoom;
+                currentZoomMode = PreviewZoomMode.Fit;
+                UpdateZoomModeControls();
                 ApplyZoomTransform();
                 UpdateZoomText();
             } else if (currentPreviewZoom < minZoom - 0.001) {
                 // Подтягиваем зум до minZoom если он ниже (защита от слишком маленького зума)
                 currentPreviewZoom = minZoom;
+                currentZoomMode = PreviewZoomMode.Fit;
+                UpdateZoomModeControls();
                 ApplyZoomTransform();
                 UpdateZoomText();
             }
         }
 
         private void HideMipmapControls() {
-            if (MipmapSliderPanel != null) {
-                MipmapSliderPanel.Visibility = Visibility.Collapsed;
+            if (MipLevelUpDown != null) {
+                isUpdatingMipLevel = true;
+                MipLevelUpDown.Minimum = 0;
+                MipLevelUpDown.Maximum = 0;
+                MipLevelUpDown.Value = 0;
+                MipLevelUpDown.IsEnabled = false;
+                isUpdatingMipLevel = false;
             }
 
-            mipPreviewItems.Clear();
-
-            if (MipLevelListBox != null) {
-                isUpdatingMipLevel = true;
-                MipLevelListBox.SelectedIndex = -1;
-                isUpdatingMipLevel = false;
+            if (MipSelectorPanel != null) {
+                MipSelectorPanel.Visibility = Visibility.Collapsed;
             }
 
             if (MipmapInfoTextBlock != null) {
                 MipmapInfoTextBlock.Text = string.Empty;
             }
+
+            UpdatePreviewOverlayState();
         }
 
         private void UpdateMipmapControls(IReadOnlyList<KtxMipLevel> mipmaps) {
-            if (MipmapSliderPanel == null || MipmapInfoTextBlock == null || MipLevelListBox == null) {
+            if (MipLevelUpDown == null || MipSelectorPanel == null || MipmapInfoTextBlock == null) {
                 return;
             }
-
-            mipPreviewItems.Clear();
 
             if (mipmaps.Count == 0) {
                 HideMipmapControls();
+                UpdatePreviewOverlayState();
                 return;
             }
 
-            foreach (KtxMipLevel mip in mipmaps) {
-                BitmapSource thumbnail = CreateMipThumbnail(mip.Bitmap, 72);
-                mipPreviewItems.Add(new MipPreviewItem {
-                    Level = mip.Level,
-                    Width = mip.Width,
-                    Height = mip.Height,
-                    Title = $"L{mip.Level}",
-                    Resolution = $"{mip.Width}×{mip.Height}",
-                    Thumbnail = thumbnail
-                });
-            }
-
-            MipmapSliderPanel.Visibility = Visibility.Visible;
+            isUpdatingMipLevel = true;
+            MipLevelUpDown.Minimum = 0;
+            MipLevelUpDown.Maximum = mipmaps.Count - 1;
+            MipLevelUpDown.IsEnabled = true;
             currentMipLevel = Math.Clamp(currentMipLevel, 0, mipmaps.Count - 1);
-            SetCurrentMipLevel(currentMipLevel, updateSelection: true);
+            MipLevelUpDown.Value = currentMipLevel;
+            isUpdatingMipLevel = false;
+
+            MipSelectorPanel.Visibility = Visibility.Visible;
+            SetCurrentMipLevel(currentMipLevel, updateControl: false);
+            UpdatePreviewOverlayState();
         }
 
-        private static BitmapSource CreateMipThumbnail(BitmapSource source, int maxDimension) {
-            int maxSourceDimension = Math.Max(source.PixelWidth, source.PixelHeight);
-            if (maxSourceDimension <= 0) {
-                return source;
+        private void UpdatePreviewOverlayState() {
+            if (TexturePreviewOverlayPanel == null) {
+                return;
             }
 
-            double scale = 1.0;
-            if (maxSourceDimension > maxDimension && maxDimension > 0) {
-                scale = (double)maxDimension / maxSourceDimension;
-            }
+            bool hasImage = TexturePreviewImage?.Source != null;
+            TexturePreviewOverlayPanel.Visibility = hasImage ? Visibility.Visible : Visibility.Collapsed;
 
-            if (scale >= 1.0) {
-                return source;
+            if (MipSelectorPanel != null) {
+                bool canShowMipSelector = hasImage && isKtxPreviewActive && currentKtxMipmaps != null && currentKtxMipmaps.Count > 0;
+                MipSelectorPanel.Visibility = canShowMipSelector ? Visibility.Visible : Visibility.Collapsed;
             }
-
-            TransformedBitmap transformed = new(source, new ScaleTransform(scale, scale));
-            transformed.Freeze();
-            return transformed;
         }
+
 
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
@@ -622,7 +754,7 @@ namespace AssetProcessor {
             }
         }
 
-        private void SetCurrentMipLevel(int level, bool updateSelection = true) {
+        private void SetCurrentMipLevel(int level, bool updateControl = true) {
             if (currentKtxMipmaps == null || currentKtxMipmaps.Count == 0) {
                 return;
             }
@@ -630,19 +762,11 @@ namespace AssetProcessor {
             int clampedLevel = Math.Clamp(level, 0, currentKtxMipmaps.Count - 1);
             currentMipLevel = clampedLevel;
 
-            if (updateSelection && MipLevelListBox != null && mipPreviewItems.Count > 0) {
-                int index = -1;
-                for (int i = 0; i < mipPreviewItems.Count; i++) {
-                    if (mipPreviewItems[i].Level == clampedLevel) {
-                        index = i;
-                        break;
-                    }
-                }
-
-                if (index >= 0) {
+            if (updateControl && MipLevelUpDown != null) {
+                try {
                     isUpdatingMipLevel = true;
-                    MipLevelListBox.SelectedIndex = index;
-                    MipLevelListBox.ScrollIntoView(mipPreviewItems[index]);
+                    MipLevelUpDown.Value = clampedLevel;
+                } finally {
                     isUpdatingMipLevel = false;
                 }
             }
@@ -650,15 +774,24 @@ namespace AssetProcessor {
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение БЕЗ пересчёта fitZoom - сохраняем текущий зум пользователя!
             Dispatcher.Invoke(() => {
                 TexturePreviewImage.Source = originalBitmapSource;
                 UpdateHistogram(originalBitmapSource);
+                UpdatePreviewOverlayState();
             });
 
-            // НЕ пересчитываем fitZoom! Пользователь должен видеть все мипмапы в едином масштабе!
-
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
+            _ = ApplyCurrentChannelModeAsync();
+        }
+
+        private void MipLevelUpDown_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
+            if (!isKtxPreviewActive || isUpdatingMipLevel) {
+                return;
+            }
+
+            if (e.NewValue is int level) {
+                SetCurrentMipLevel(level, updateControl: false);
+            }
         }
 
         private async Task FilterChannelAsync(string channel) {
@@ -670,6 +803,7 @@ namespace AssetProcessor {
                 Dispatcher.Invoke(() => {
                     TexturePreviewImage.Source = filteredBitmap;
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
+                    UpdatePreviewOverlayState();
                 });
             }
         }
@@ -779,6 +913,8 @@ namespace AssetProcessor {
 
             // Применяем новый zoom
             currentPreviewZoom = newZoom;
+            currentZoomMode = PreviewZoomMode.Custom;
+            UpdateZoomModeControls();
             ApplyZoomTransform();
             UpdateZoomText();
 
@@ -810,42 +946,13 @@ namespace AssetProcessor {
             e.Handled = true;
         }
 
-        private void PreviewZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (TexturePreviewImage?.Source == null || PreviewZoomSlider == null) {
-                return;
-            }
-
-            if (isUpdatingZoomSlider) {
-                return;
-            }
-
-            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
-            double clampedZoom = Math.Clamp(e.NewValue, minZoom, MaxPreviewZoom);
-
-            if (Math.Abs(clampedZoom - e.NewValue) > 0.0001) {
-                try {
-                    isUpdatingZoomSlider = true;
-                    PreviewZoomSlider.Value = clampedZoom;
-                } finally {
-                    isUpdatingZoomSlider = false;
-                }
-            }
-
-            if (Math.Abs(clampedZoom - currentPreviewZoom) < 0.0001) {
-                return;
-            }
-
-            currentPreviewZoom = clampedZoom;
-            isUserZooming = true;
-            ApplyZoomTransform(updateSlider: false);
-            UpdateZoomText();
-        }
-
         private void FitToViewButton_Click(object sender, RoutedEventArgs e) {
             if (TexturePreviewImage?.Source == null) {
                 return;
             }
 
+            currentZoomMode = PreviewZoomMode.Fit;
+            UpdateZoomModeControls();
             isUserZooming = false;
             RecalculateFitZoom(forceApply: true);
             UpdateZoomText();
@@ -858,25 +965,11 @@ namespace AssetProcessor {
 
             double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
             currentPreviewZoom = Math.Clamp(1.0, minZoom, MaxPreviewZoom);
+            currentZoomMode = PreviewZoomMode.OneToOne;
+            UpdateZoomModeControls();
             isUserZooming = true;
             ApplyZoomTransform();
             UpdateZoomText();
-        }
-
-        private void MipLevelListBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!isKtxPreviewActive || MipLevelListBox?.SelectedItem is not MipPreviewItem item) {
-                return;
-            }
-
-            if (isUpdatingMipLevel) {
-                return;
-            }
-
-            if (item.Level == currentMipLevel) {
-                return;
-            }
-
-            SetCurrentMipLevel(item.Level, updateSelection: false);
         }
 
         private void PreviewBackgroundComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -908,15 +1001,10 @@ namespace AssetProcessor {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
                     TexturePreviewImage.Source = originalBitmapSource;
-                    RChannelButton.IsChecked = false;
-                    GChannelButton.IsChecked = false;
-                    BChannelButton.IsChecked = false;
-                    AChannelButton.IsChecked = false;
                     UpdateHistogram(originalBitmapSource);
+                    UpdatePreviewOverlayState();
                 });
 
-                // НОВАЯ ЛОГИКА: пересчитываем fitZoom только если явно запрошено
-                // По умолчанию НЕ трогаем зум - пользователь сам управляет масштабом!
                 if (recalculateFitZoom) {
                     _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: false)), DispatcherPriority.Background);
                 }
@@ -1348,6 +1436,7 @@ namespace AssetProcessor {
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
                 ResetPreviewState();
                 TexturePreviewImage.Source = null;
+                UpdatePreviewOverlayState();
 
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
                     try {
@@ -1453,6 +1542,7 @@ namespace AssetProcessor {
                         originalBitmapSource = cachedImage;
                         _ = UpdateHistogramAsync(originalBitmapSource);
                         ShowOriginalImage();
+                        _ = ApplyCurrentChannelModeAsync();
                         // Применяем fitZoom при первой загрузке новой текстуры
                         _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
                     }
@@ -1481,6 +1571,7 @@ namespace AssetProcessor {
                     originalBitmapSource = thumbnailImage;
                     _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
+                    _ = ApplyCurrentChannelModeAsync();
                     // Применяем fitZoom при первой загрузке новой текстуры
                     _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
                 }

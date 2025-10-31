@@ -1537,10 +1537,12 @@ namespace AssetProcessor {
                 };
 
                 // Используем ArgumentList для правильной обработки путей с пробелами
+                // Сначала пробуем современный синтаксис с --outdir (KTX-Software 4.3+)
+                // Если не работает, упадёт и мы поймём что нужен другой формат
                 startInfo.ArgumentList.Add("extract");
-                startInfo.ArgumentList.Add(ktxPath);
-                startInfo.ArgumentList.Add("--output-dir");
+                startInfo.ArgumentList.Add("--outdir");
                 startInfo.ArgumentList.Add(tempDirectory);
+                startInfo.ArgumentList.Add(ktxPath);
 
                 using Process process = new() { StartInfo = startInfo };
                 try {

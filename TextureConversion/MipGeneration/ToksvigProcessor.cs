@@ -86,7 +86,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 return (glossRoughnessMipmaps, null);
             }
 
-            Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1}, minLevel={settings.MinToksvigMipLevel}, smooth={settings.SmoothVariance}");
+            Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1} (effective: k^1.5={MathF.Pow(settings.CompositePower, 1.5f):F1}), minLevel={settings.MinToksvigMipLevel}, smooth={settings.SmoothVariance}");
 
             // Генерируем мипмапы для normal map
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
@@ -258,10 +258,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float changePercent = (float)pixelsChanged / totalPixels * 100f;
 
             if (level <= 2 || pixelsChanged > 0) {
-                // Показываем adjustedVariance для понимания влияния CompositePower
-                float adjustedVariance = avgVariance * settings.CompositePower;
+                // Показываем adjustedVariance для понимания влияния CompositePower (с учётом степенной зависимости k^1.5)
+                float adjustedVariance = avgVariance * MathF.Pow(settings.CompositePower, 1.5f);
                 Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
-                           $"var={avgVariance:F4}, var*k={adjustedVariance:F4}, " +
+                           $"var={avgVariance:F4}, var*k^1.5={adjustedVariance:F4}, k={settings.CompositePower:F1}, " +
                            $"changed={changePercent:F1}%, avgDiff={avgDifference:F3}, maxDiff={maxDifference:F3}");
             }
 
@@ -374,8 +374,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// <param name="k">Composite Power (вес влияния)</param>
         /// <returns>Скорректированное значение roughness</returns>
         private float ApplyToksvigFormula(float roughness, float variance, float k) {
-            // Применяем CompositePower к дисперсии (как в Unreal)
-            float adjustedVariance = variance * k;
+            // Применяем CompositePower к дисперсии с усиленным влиянием
+            // Используем степенную зависимость k^1.5 для более заметного эффекта при высоких значениях k
+            // k=1.0 → 1.0 (без изменений), k=2.0 → 2.83, k=4.0 → 8.0, k=8.0 → 22.6
+            float adjustedVariance = variance * MathF.Pow(k, 1.5f);
 
             // Конвертируем roughness в alpha (GGX)
             float a = roughness * roughness;

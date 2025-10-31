@@ -363,7 +363,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ToksvigSettings = new ToksvigSettings {
                     Enabled = true,
                     CompositePower = 1.0f,
-                    MinToksvigMipLevel = 1,
+                    MinToksvigMipLevel = 0,
                     SmoothVariance = true,
                     NormalMapPath = null // Автоопределение
                 }

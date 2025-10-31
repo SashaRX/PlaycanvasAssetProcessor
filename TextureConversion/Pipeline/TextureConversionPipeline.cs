@@ -123,19 +123,19 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                             // ЕСЛИ Keep Temporal Mipmaps включен - сохраняем ВСЕ ТРИ НАБОРА МИПМАПОВ
                             if (!compressionSettings.RemoveTemporaryMipmaps) {
-                                // 1. ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig (gloss)
-                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_gloss");
+                                // 1. ОРИГИНАЛЬНЫЕ мипмапы БЕЗ Toksvig (результат mipGenerator)
+                                await SaveDebugMipmapsAsync(inputPath, mipmaps, "_mip");
 
                                 // 2. Карта дисперсии Toksvig (показывает влияние normal map)
                                 if (varianceMipmaps != null) {
-                                    await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance");
+                                    await SaveDebugMipmapsAsync(inputPath, varianceMipmaps, "_toksvig_variance_mip");
                                 }
 
-                                // 3. КОМПОЗИТНЫЕ мипмапы (gloss + toksvig correction)
-                                await SaveDebugMipmapsAsync(inputPath, correctedMipmaps, "_composite");
+                                // 3. КОМПОЗИТНЫЕ мипмапы (mip + toksvig correction)
+                                await SaveDebugMipmapsAsync(inputPath, correctedMipmaps, "_composite_mip");
 
                                 // ВЕРИФИКАЦИЯ: проверяем что файлы на диске РЕАЛЬНО различаются
-                                await VerifyDebugMipmapsOnDisk(inputPath, "_gloss", "_composite");
+                                await VerifyDebugMipmapsOnDisk(inputPath, "_mip", "_composite_mip");
                             }
 
                             // Освобождаем variance mipmaps (уже не нужны)

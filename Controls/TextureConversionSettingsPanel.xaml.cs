@@ -116,7 +116,7 @@ namespace AssetProcessor.Controls {
             // Toksvig
             ToksvigEnabledCheckBox.IsChecked = false;
             ToksvigCompositePowerSlider.Value = 1.0;
-            ToksvigMinMipLevelSlider.Value = 1;
+            ToksvigMinMipLevelSlider.Value = 0;
             ToksvigSmoothVarianceCheckBox.IsChecked = true;
             NormalMapPathTextBox.Text = string.Empty;
 

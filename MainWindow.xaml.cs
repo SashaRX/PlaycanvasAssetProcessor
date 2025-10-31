@@ -1528,22 +1528,24 @@ namespace AssetProcessor {
                     throw new FileNotFoundException($"Не удалось найти исполняемый файл ktx по пути '{ktxToolPath}'. Убедитесь что KTX-Software установлен.", ktxToolPath);
                 }
 
-                // Копируем KTX файл во временную директорию чтобы извлечь мипмапы туда же
-                string tempKtxPath = Path.Combine(tempDirectory, Path.GetFileName(ktxPath));
-                File.Copy(ktxPath, tempKtxPath);
+                // ktx v4.0 синтаксис: ktx extract [options] <input-file> <output>
+                // Используем --all для извлечения всех уровней мипмапов
+                string outputBaseName = Path.Combine(tempDirectory, Path.GetFileNameWithoutExtension(ktxPath));
 
                 ProcessStartInfo startInfo = new() {
                     FileName = ktxToolPath,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = tempDirectory // Извлекаем в текущую директорию процесса
+                    CreateNoWindow = true
                 };
 
-                // Старый синтаксис ktx extract (без параметров пути - извлекает в текущую директорию)
+                // ktx extract --all input.ktx2 output_base_name
+                // Создаст файлы: output_base_name_level0.png, output_base_name_level1.png, ...
                 startInfo.ArgumentList.Add("extract");
-                startInfo.ArgumentList.Add(Path.GetFileName(tempKtxPath)); // Используем только имя файла
+                startInfo.ArgumentList.Add("--all"); // Извлечь все слои/уровни/грани
+                startInfo.ArgumentList.Add(ktxPath);
+                startInfo.ArgumentList.Add(outputBaseName);
 
                 using Process process = new() { StartInfo = startInfo };
                 try {

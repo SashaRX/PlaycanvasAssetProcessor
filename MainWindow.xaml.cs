@@ -1562,15 +1562,23 @@ namespace AssetProcessor {
                 string standardError = process.StandardError.ReadToEnd();
                 process.WaitForExit();
 
+                // Логируем результат даже при успехе для диагностики
+                logger.Info($"ktx extract завершён. ExitCode={process.ExitCode}, StdOut={standardOutput}, StdErr={standardError}");
+
                 if (process.ExitCode != 0) {
-                    logger.Warn($"ktx завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
+                    logger.Warn($"ktx завершился с кодом {process.ExitCode} при обработке {ktxPath}");
                     throw new InvalidOperationException($"ktx завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // Логируем какие файлы были созданы
+                string[] allFiles = Directory.GetFiles(tempDirectory, "*.*", SearchOption.TopDirectoryOnly);
+                logger.Info($"Файлы в {tempDirectory}: {string.Join(", ", allFiles.Select(Path.GetFileName))}");
+
                 string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
                 if (pngFiles.Length == 0) {
+                    logger.Warn($"ktx не создал PNG файлы. Всего файлов в директории: {allFiles.Length}");
                     throw new InvalidOperationException("ktx не сгенерировал PNG-файлы для предпросмотра KTX2.");
                 }
 

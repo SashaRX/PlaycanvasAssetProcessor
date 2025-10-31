@@ -195,7 +195,7 @@ namespace AssetProcessor {
             public required int Height { get; init; }
         }
 
-        private sealed class MipPreviewItem {
+        public sealed class MipPreviewItem {
             public required int Level { get; init; }
             public required int Width { get; init; }
             public required int Height { get; init; }

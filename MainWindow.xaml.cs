@@ -1552,6 +1552,13 @@ namespace AssetProcessor {
                 startInfo.ArgumentList.Add(ktxPath);
                 startInfo.ArgumentList.Add(outputBaseName);
 
+                // Логируем точную команду для диагностики
+                string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
+                logger.Info($"Выполняем команду: {commandLine}");
+                logger.Info($"Рабочая директория: {tempDirectory}");
+                logger.Info($"Входной файл существует: {File.Exists(ktxPath)}");
+                logger.Info($"Выходной базовый путь: {outputBaseName}");
+
                 using Process process = new() { StartInfo = startInfo };
                 try {
                     if (!process.Start()) {

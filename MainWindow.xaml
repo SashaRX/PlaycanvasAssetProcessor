@@ -416,6 +416,7 @@
                                                       VerticalScrollBarVisibility="Auto"
                                                       PanningMode="None"
                                                       PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
+                                                      MouseWheel="TexturePreviewScrollViewer_MouseWheel"
                                                       PreviewMouseDown="TexturePreviewScrollViewer_PreviewMouseDown"
                                                       PreviewMouseMove="TexturePreviewScrollViewer_PreviewMouseMove"
                                                       PreviewMouseUp="TexturePreviewScrollViewer_PreviewMouseUp"

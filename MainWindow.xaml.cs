@@ -439,6 +439,12 @@ namespace AssetProcessor {
                 isKtxPreviewActive = true;
                 UpdateMipmapControls(currentKtxMipmaps);
                 SetCurrentMipLevel(currentMipLevel);
+
+                // Применяем fitZoom при первом переключении на KTX2 для новой текстуры
+                // (если пользователь ещё не зумировал вручную)
+                if (!isUserZooming) {
+                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
+                }
             }
 
             UpdatePreviewSourceControls();
@@ -721,6 +727,12 @@ namespace AssetProcessor {
             // Устанавливаем флаг что пользователь зумирует
             isUserZooming = true;
 
+            e.Handled = true;
+        }
+
+        private void TexturePreviewScrollViewer_MouseWheel(object sender, MouseWheelEventArgs e) {
+            // Блокируем обычное событие MouseWheel чтобы ScrollViewer не обрабатывал его
+            // Все зумирование происходит в PreviewMouseWheel обработчике
             e.Handled = true;
         }
 

@@ -19,7 +19,9 @@
       "Bash(Get-Command ktx,toktx -ErrorAction SilentlyContinue)",
       "Bash(Select-Object -ExpandProperty Source)",
       "Bash(git revert:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dotnet build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

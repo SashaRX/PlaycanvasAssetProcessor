@@ -1529,8 +1529,10 @@ namespace AssetProcessor {
                 }
 
                 // ktx v4.0 синтаксис: ktx extract [options] <input-file> <output>
-                // Используем --all для извлечения всех уровней мипмапов
-                string outputBaseName = Path.Combine(tempDirectory, Path.GetFileNameWithoutExtension(ktxPath));
+                // Когда используется --level all, output интерпретируется как ДИРЕКТОРИЯ
+                // ktx создаст файлы: output/output_level0.png, output/output_level1.png, ...
+                // Поэтому передаём tempDirectory напрямую как output path
+                string outputBaseName = Path.Combine(tempDirectory, "mip");
 
                 ProcessStartInfo startInfo = new() {
                     FileName = ktxToolPath,
@@ -1557,7 +1559,9 @@ namespace AssetProcessor {
                 logger.Info($"Выполняем команду: {commandLine}");
                 logger.Info($"Рабочая директория: {tempDirectory}");
                 logger.Info($"Входной файл существует: {File.Exists(ktxPath)}");
+                logger.Info($"Размер входного файла: {new FileInfo(ktxPath).Length} байт");
                 logger.Info($"Выходной базовый путь: {outputBaseName}");
+                logger.Info($"Директория для вывода существует: {Directory.Exists(tempDirectory)}");
 
                 using Process process = new() { StartInfo = startInfo };
                 try {
@@ -1584,13 +1588,22 @@ namespace AssetProcessor {
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Логируем какие файлы были созданы
-                string[] allFiles = Directory.GetFiles(tempDirectory, "*.*", SearchOption.TopDirectoryOnly);
-                logger.Info($"Файлы в {tempDirectory}: {string.Join(", ", allFiles.Select(Path.GetFileName))}");
+                // ktx extract создаёт поддиректорию с именем outputBaseName
+                // Файлы будут в формате: mip/mip_level0.png, mip/mip_level1.png, ...
+                string extractedDirectory = outputBaseName;
 
-                string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
+                // Логируем какие файлы были созданы
+                string[] allFiles = Directory.Exists(extractedDirectory)
+                    ? Directory.GetFiles(extractedDirectory, "*.*", SearchOption.TopDirectoryOnly)
+                    : Array.Empty<string>();
+                logger.Info($"Файлы в {extractedDirectory}: {string.Join(", ", allFiles.Select(Path.GetFileName))}");
+
+                string[] pngFiles = Directory.Exists(extractedDirectory)
+                    ? Directory.GetFiles(extractedDirectory, "*.png", SearchOption.TopDirectoryOnly)
+                    : Array.Empty<string>();
                 if (pngFiles.Length == 0) {
                     logger.Warn($"ktx не создал PNG файлы. Всего файлов в директории: {allFiles.Length}");
+                    logger.Warn($"Директория существует: {Directory.Exists(extractedDirectory)}");
                     throw new InvalidOperationException("ktx не сгенерировал PNG-файлы для предпросмотра KTX2.");
                 }
 

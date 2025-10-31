@@ -15,7 +15,9 @@
       "Bash(git commit -m \"$(cat <<''EOF''\nFIX: Add transcode flag to ktx extract for Basis/UASTC textures\n\nДобавлен флаг --transcode rgba8 для извлечения мипмапов:\n- Изменена команда: ktx extract --level all --transcode rgba8 <input> <output>\n- --transcode rgba8 декодирует Basis-LZ/UASTC в RGBA8 перед извлечением\n- Необходимо для KTX2 файлов созданных с toktx --encode basis-lz/uastc\n\nТеперь ktx сможет извлечь мипмапы из сжатых KTX2 файлов.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit:*)",
       "Bash(where:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(Get-Command ktx,toktx -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty Source)"
     ],
     "deny": [],
     "ask": []

@@ -1512,33 +1512,39 @@ namespace AssetProcessor {
         private List<KtxMipLevel> ExtractKtxMipmaps(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
             cancellationToken.ThrowIfCancellationRequested();
 
-            string basisuPath = GetBasisuExecutablePath();
+            // Используем ktx (из KTX-Software) вместо basisu для извлечения мипмапов из KTX2
+            string ktxToolPath = GetKtxToolExecutablePath();
             string tempDirectory = Path.Combine(Path.GetTempPath(), "PlaycanvasAssetProcessor", "Preview", Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempDirectory);
 
             try {
-                if (!string.IsNullOrEmpty(Path.GetDirectoryName(basisuPath)) && !File.Exists(basisuPath)) {
-                    throw new FileNotFoundException($"Не удалось найти исполняемый файл basisu по пути '{basisuPath}'. Укажите корректный путь в настройках конвертации текстур.", basisuPath);
+                if (!string.IsNullOrEmpty(Path.GetDirectoryName(ktxToolPath)) && !File.Exists(ktxToolPath)) {
+                    throw new FileNotFoundException($"Не удалось найти исполняемый файл ktx по пути '{ktxToolPath}'. Убедитесь что KTX-Software установлен.", ktxToolPath);
                 }
 
                 ProcessStartInfo startInfo = new() {
-                    FileName = basisuPath,
-                    Arguments = $"-ktx2_to_png -output_path \"{tempDirectory}\" \"{ktxPath}\"",
+                    FileName = ktxToolPath,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
 
+                // Используем ArgumentList для правильной обработки путей с пробелами
+                startInfo.ArgumentList.Add("extract");
+                startInfo.ArgumentList.Add(ktxPath);
+                startInfo.ArgumentList.Add("--output-dir");
+                startInfo.ArgumentList.Add(tempDirectory);
+
                 using Process process = new() { StartInfo = startInfo };
                 try {
                     if (!process.Start()) {
-                        throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.");
+                        throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2.");
                     }
                 } catch (Win32Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2. Проверьте путь к утилите в настройках и наличие прав на запуск.", ex);
+                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2. Проверьте что KTX-Software установлен и доступен в PATH.", ex);
                 } catch (Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить basisu для извлечения предпросмотра KTX2.", ex);
+                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2.", ex);
                 }
 
                 string standardOutput = process.StandardOutput.ReadToEnd();
@@ -1546,15 +1552,15 @@ namespace AssetProcessor {
                 process.WaitForExit();
 
                 if (process.ExitCode != 0) {
-                    logger.Warn($"basisu завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
-                    throw new InvalidOperationException($"basisu завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
+                    logger.Warn($"ktx завершился с кодом {process.ExitCode} при обработке {ktxPath}. StdOut: {standardOutput}. StdErr: {standardError}");
+                    throw new InvalidOperationException($"ktx завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string[] pngFiles = Directory.GetFiles(tempDirectory, "*.png", SearchOption.TopDirectoryOnly);
                 if (pngFiles.Length == 0) {
-                    throw new InvalidOperationException("basisu не сгенерировал PNG-файлы для предпросмотра KTX2.");
+                    throw new InvalidOperationException("ktx не сгенерировал PNG-файлы для предпросмотра KTX2.");
                 }
 
                 List<KtxMipLevel> mipmaps = pngFiles
@@ -1613,6 +1619,12 @@ namespace AssetProcessor {
             // KTX2 preview отключён - мы используем только toktx для создания KTX2, а не для preview
             // basisu больше не используется в проекте
             return "basisu"; // Возвращаем значение по умолчанию, но метод больше не должен вызываться
+        }
+
+        private string GetKtxToolExecutablePath() {
+            // Используем утилиту ktx из KTX-Software для извлечения мипмапов из KTX2
+            // По умолчанию ищем в PATH
+            return "ktx";
         }
 
         private BitmapImage? LoadOptimizedImage(string path, int maxSize) {

@@ -1162,8 +1162,10 @@ namespace AssetProcessor {
                         object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
 
-                        // Load conversion settings for this texture
-                        LoadTextureConversionSettings(selectedTexture);
+                        // Load conversion settings for this texture asynchronously to avoid blocking UI
+                        Task settingsTask = Task.Run(() => {
+                            Dispatcher.Invoke(() => LoadTextureConversionSettings(selectedTexture));
+                        }, cancellationToken);
 
                         Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
 

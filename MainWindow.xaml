@@ -476,7 +476,8 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Row="1"
+                                    <Border x:Name="TexturePreviewBackgroundBorder"
+                                            Grid.Row="1"
                                             Background="{StaticResource CheckeredBrush}"
                                             BorderBrush="#FF7A7A7A"
                                             BorderThickness="1">

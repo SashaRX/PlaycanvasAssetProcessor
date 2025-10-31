@@ -234,9 +234,10 @@ namespace AssetProcessor {
             try {
                 var path = string.IsNullOrWhiteSpace(KtxExecutableBox.Text) ? "ktx" : KtxExecutableBox.Text;
 
+                // ktx может не поддерживать --version, попробуем просто запустить без аргументов
                 ProcessStartInfo startInfo = new() {
                     FileName = path,
-                    Arguments = "--version",
+                    Arguments = "help",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -246,20 +247,24 @@ namespace AssetProcessor {
                 using var process = Process.Start(startInfo);
                 if (process == null) {
                     if (KtxStatusText != null) {
-                        KtxStatusText.Text = "✗ ktx not found or not working";
+                        KtxStatusText.Text = "✗ ktx not found";
                         KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
                     }
                     return;
                 }
 
+                string stdout = await process.StandardOutput.ReadToEndAsync();
+                string stderr = await process.StandardError.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
                 if (KtxStatusText != null) {
-                    if (process.ExitCode == 0) {
+                    // ktx возвращает 0 для help или если выводит что-то в stdout/stderr
+                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
+                    if (hasOutput || process.ExitCode == 0) {
                         KtxStatusText.Text = "✓ ktx is available and working!";
                         KtxStatusText.Foreground = new SolidColorBrush(Colors.Green);
                     } else {
-                        KtxStatusText.Text = "✗ ktx not found or not working";
+                        KtxStatusText.Text = $"✗ Exit code: {process.ExitCode}";
                         KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
                     }
                 }

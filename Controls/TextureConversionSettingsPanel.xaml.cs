@@ -415,7 +415,7 @@ namespace AssetProcessor.Controls {
                 texturePath = SanitizePath(texturePath);
 
                 var directory = System.IO.Path.GetDirectoryName(texturePath);
-                if (string.IsNullOrEmpty(directory)) return null;
+                if (string.IsNullOrEmpty(directory) || !System.IO.Directory.Exists(directory)) return null;
 
                 var fileNameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(texturePath);
 
@@ -429,26 +429,27 @@ namespace AssetProcessor.Controls {
                     }
                 }
 
+                // ОПТИМИЗАЦИЯ: Получаем все файлы в директории ОДИН РАЗ вместо множественных File.Exists
+                var allFiles = System.IO.Directory.GetFiles(directory);
+                var fileNameLookup = new HashSet<string>(
+                    allFiles.Select(System.IO.Path.GetFileName).Where(fn => fn != null)!,
+                    StringComparer.OrdinalIgnoreCase);
+
                 // Ищем файлы с "_normal", "_norm", "_nrm", "_n"
                 var normalSuffixes = new[] { "_normal", "_norm", "_nrm", "_n", "_normals" };
                 var extensions = new[] { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".tif", ".tiff" };
 
                 foreach (var normalSuffix in normalSuffixes) {
                     foreach (var ext in extensions) {
-                        var normalMapPath = System.IO.Path.Combine(directory, baseName + normalSuffix + ext);
+                        var normalFileName = baseName + normalSuffix + ext;
 
-                        // КРИТИЧНО: Case-insensitive проверка существования файла!
-                        // Файл может быть "oldMailBox_Normal.png" или "oldMailBox_normal.png"
-                        if (System.IO.File.Exists(normalMapPath)) {
-                            return normalMapPath;
-                        }
-
-                        // Попробуем с заглавной буквы (например "_Normal")
-                        if (normalSuffix.Length > 0) {
-                            string capitalizedSuffix = "_" + char.ToUpper(normalSuffix[1]) + normalSuffix.Substring(2);
-                            var capitalizedPath = System.IO.Path.Combine(directory, baseName + capitalizedSuffix + ext);
-                            if (System.IO.File.Exists(capitalizedPath)) {
-                                return capitalizedPath;
+                        // Case-insensitive поиск в HashSet (очень быстро!)
+                        if (fileNameLookup.Contains(normalFileName)) {
+                            // Находим точное имя файла с правильным регистром
+                            var actualFileName = allFiles.FirstOrDefault(f =>
+                                string.Equals(System.IO.Path.GetFileName(f), normalFileName, StringComparison.OrdinalIgnoreCase));
+                            if (actualFileName != null) {
+                                return actualFileName;
                             }
                         }
                     }

@@ -497,7 +497,10 @@ namespace AssetProcessor {
 
             // НОВАЯ ЛОГИКА: только обновляем fitPreviewZoom для расчёта minZoom
             fitPreviewZoom = Math.Clamp(targetZoom, MinPreviewZoom, 1.0);
-            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+
+            double minZoom = isUserZooming
+                ? MinPreviewZoom
+                : Math.Max(fitPreviewZoom, MinPreviewZoom);
 
             // ПРИМЕНЯЕМ зум ТОЛЬКО если forceApply=true (для новых текстур при первой загрузке)
             // Во всех остальных случаях ТОЛЬКО пересчитываем minZoom, но НЕ применяем

@@ -563,7 +563,9 @@ namespace AssetProcessor {
                 UpdateZoomText();
                 UpdateLogicalZoomFromCurrent();
             } else {
-                UpdateLogicalZoomFromCurrent();
+                if (!isUserZooming) {
+                    UpdateLogicalZoomFromCurrent();
+                }
             }
         }
 

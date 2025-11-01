@@ -548,7 +548,7 @@
                         </Expander>
                     </Grid>
                 </Border>
-            </ScrollViewer>
+            </controls:PreviewHostScrollViewer>
 
             <Border x:Name="ModelViewer" Visibility="Collapsed" Background="#FF414D58" Grid.RowSpan="1" Grid.ColumnSpan="1" Grid.Column="2" MinWidth="256" MinHeight="256">
                 <Grid>

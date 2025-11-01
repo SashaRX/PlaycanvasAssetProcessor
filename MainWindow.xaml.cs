@@ -503,21 +503,35 @@ namespace AssetProcessor {
         }
 
         private void ApplyNormalizedZoomToCurrentImage() {
+            Point? anchorPoint = CapturePreviewAnchor();
+
             if (basePreviewWidth <= 0 || currentPreviewImageWidth <= 0) {
                 ApplyZoomTransform();
+                RestorePreviewAnchor(anchorPoint);
                 UpdateZoomText();
+                UpdateNormalizedZoomFromCurrent();
                 return;
             }
 
             double targetZoom = normalizedPreviewZoom * basePreviewWidth / currentPreviewImageWidth;
-            targetZoom = Math.Clamp(targetZoom, MinPreviewZoom, MaxPreviewZoom);
+
+            if (double.IsNaN(targetZoom) || double.IsInfinity(targetZoom)) {
+                targetZoom = currentPreviewZoom;
+            }
+
+            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
+            double maxZoom = Math.Max(minZoom, GetDynamicMaxPreviewZoom());
+
+            targetZoom = Math.Clamp(targetZoom, minZoom, maxZoom);
 
             if (Math.Abs(targetZoom - currentPreviewZoom) > 0.001) {
                 currentPreviewZoom = targetZoom;
             }
 
             ApplyZoomTransform();
+            RestorePreviewAnchor(anchorPoint);
             UpdateZoomText();
+            UpdateNormalizedZoomFromCurrent();
         }
 
         private void RecalculateFitZoom(bool forceApply = false) {
@@ -757,7 +771,8 @@ namespace AssetProcessor {
             double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
 
             double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
-            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, minZoom, MaxPreviewZoom);
+            double dynamicMaxZoom = Math.Max(minZoom, GetDynamicMaxPreviewZoom());
+            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, minZoom, dynamicMaxZoom);
 
             if (Math.Abs(newZoom - currentPreviewZoom) < 0.001) {
                 return;
@@ -801,6 +816,68 @@ namespace AssetProcessor {
             isUserZooming = true;
 
             e.Handled = true;
+        }
+
+        private double GetDynamicMaxPreviewZoom() {
+            if (basePreviewWidth > 0 && currentPreviewImageWidth > 0) {
+                double ratio = (double)basePreviewWidth / currentPreviewImageWidth;
+
+                if (!double.IsFinite(ratio) || ratio <= 0) {
+                    ratio = 1.0;
+                }
+
+                return MaxPreviewZoom * ratio;
+            }
+
+            return MaxPreviewZoom;
+        }
+
+        private Point? CapturePreviewAnchor() {
+            if (TexturePreviewScrollViewer == null || currentPreviewZoom <= 0) {
+                return null;
+            }
+
+            double viewportWidth = TexturePreviewScrollViewer.ViewportWidth;
+            if (double.IsNaN(viewportWidth) || viewportWidth <= 0) {
+                viewportWidth = TexturePreviewScrollViewer.ActualWidth;
+            }
+
+            double viewportHeight = TexturePreviewScrollViewer.ViewportHeight;
+            if (double.IsNaN(viewportHeight) || viewportHeight <= 0) {
+                viewportHeight = TexturePreviewScrollViewer.ActualHeight;
+            }
+
+            double centerX = TexturePreviewScrollViewer.HorizontalOffset + (viewportWidth / 2.0);
+            double centerY = TexturePreviewScrollViewer.VerticalOffset + (viewportHeight / 2.0);
+
+            return new Point(centerX / currentPreviewZoom, centerY / currentPreviewZoom);
+        }
+
+        private void RestorePreviewAnchor(Point? anchorPoint) {
+            if (anchorPoint == null || TexturePreviewScrollViewer == null) {
+                return;
+            }
+
+            TexturePreviewScrollViewer.UpdateLayout();
+
+            double viewportWidth = TexturePreviewScrollViewer.ViewportWidth;
+            if (double.IsNaN(viewportWidth) || viewportWidth <= 0) {
+                viewportWidth = TexturePreviewScrollViewer.ActualWidth;
+            }
+
+            double viewportHeight = TexturePreviewScrollViewer.ViewportHeight;
+            if (double.IsNaN(viewportHeight) || viewportHeight <= 0) {
+                viewportHeight = TexturePreviewScrollViewer.ActualHeight;
+            }
+
+            double targetHorizontalOffset = (anchorPoint.Value.X * currentPreviewZoom) - (viewportWidth / 2.0);
+            double targetVerticalOffset = (anchorPoint.Value.Y * currentPreviewZoom) - (viewportHeight / 2.0);
+
+            targetHorizontalOffset = Math.Clamp(targetHorizontalOffset, 0, TexturePreviewScrollViewer.ScrollableWidth);
+            targetVerticalOffset = Math.Clamp(targetVerticalOffset, 0, TexturePreviewScrollViewer.ScrollableHeight);
+
+            TexturePreviewScrollViewer.ScrollToHorizontalOffset(targetHorizontalOffset);
+            TexturePreviewScrollViewer.ScrollToVerticalOffset(targetVerticalOffset);
         }
 
         private void TexturePreviewScrollViewer_MouseWheel(object sender, MouseWheelEventArgs e) {

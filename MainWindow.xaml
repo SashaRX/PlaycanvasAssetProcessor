@@ -414,7 +414,13 @@
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged">
+            <ScrollViewer x:Name="TextureViewerScroll"
+                          Grid.Column="2"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Visibility="Visible"
+                          SizeChanged="TextureViewerScroll_SizeChanged"
+                          PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -434,8 +440,8 @@
                                 <Grid Grid.Row="0">
                                     <Border Background="{StaticResource CheckeredBrush}" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
                                         <ScrollViewer x:Name="TexturePreviewScrollViewer"
-                                                      HorizontalScrollBarVisibility="Auto"
-                                                      VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Hidden"
+                                                      VerticalScrollBarVisibility="Hidden"
                                                       PanningMode="None"
                                                       PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
                                                       MouseWheel="TexturePreviewScrollViewer_MouseWheel"

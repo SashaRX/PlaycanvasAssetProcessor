@@ -356,6 +356,28 @@ namespace AssetProcessor {
             ClampPreviewContentHeight();
         }
 
+        private void TextureViewerScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (TexturePreviewScrollViewer == null) {
+                return;
+            }
+
+            if (IsEventFromPreviewArea(e.OriginalSource as DependencyObject)) {
+                e.Handled = true;
+            }
+        }
+
+        private bool IsEventFromPreviewArea(DependencyObject? source) {
+            while (source != null) {
+                if (ReferenceEquals(source, TexturePreviewScrollViewer) || ReferenceEquals(source, TexturePreviewImage)) {
+                    return true;
+                }
+
+                source = VisualTreeHelper.GetParent(source);
+            }
+
+            return false;
+        }
+
         private void PreviewHeightGridSplitter_DragDelta(object sender, DragDeltaEventArgs e) {
             if (PreviewContentRow == null) {
                 return;
@@ -576,13 +598,15 @@ namespace AssetProcessor {
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение БЕЗ пересчёта fitZoom - сохраняем текущий зум пользователя!
+            // Обновляем изображение, сохраняя текущий зум пользователя; пересчёт fitZoom выполняем отдельно при необходимости.
             Dispatcher.Invoke(() => {
                 TexturePreviewImage.Source = originalBitmapSource;
                 UpdateHistogram(originalBitmapSource);
             });
 
-            // НЕ пересчитываем fitZoom! Пользователь должен видеть все мипмапы в едином масштабе!
+            _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: !isUserZooming)), DispatcherPriority.Background);
+
+            // При ручном зуме оставляем текущий масштаб, иначе подгоняем под доступную область.
 
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }

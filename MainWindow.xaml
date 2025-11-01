@@ -414,13 +414,13 @@
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
                 Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll"
+            <controls:PreviewHostScrollViewer x:Name="TextureViewerScroll"
                           Grid.Column="2"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
                           Visibility="Visible"
                           SizeChanged="TextureViewerScroll_SizeChanged"
-                          PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
+                          ScrollBlockElement="{Binding ElementName=TexturePreviewScrollViewer}">
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -466,7 +466,7 @@
                                         </ScrollViewer>
                                     </Border>
 
-                                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">
+                                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1" IsHitTestVisible="False">
                                         <TextBlock x:Name="TextureNameTextBlock" Text="Texture Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
                                         <TextBlock x:Name="TextureResolutionTextBlock" Text="Resolution:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
                                         <TextBlock x:Name="TextureSizeTextBlock" Text="Size:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />

@@ -150,9 +150,9 @@ namespace AssetProcessor {
         private const double DefaultPreviewContentHeight = 300.0;
         private double currentPreviewZoom = 1.0;
         private double fitPreviewZoom = 1.0;
-        private double logicalPreviewZoom = 1.0;
-        private int referencePreviewWidth;
-        private int referencePreviewHeight;
+        private double normalizedPreviewZoom = 1.0;
+        private int basePreviewWidth;
+        private int basePreviewHeight;
         private int currentPreviewImageWidth;
         private int currentPreviewImageHeight;
         private bool isUserZooming;
@@ -333,9 +333,9 @@ namespace AssetProcessor {
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
             isUserZooming = false; // Сбрасываем флаг ручного зумирования для новой текстуры
-            logicalPreviewZoom = currentPreviewZoom;
-            referencePreviewWidth = 0;
-            referencePreviewHeight = 0;
+            normalizedPreviewZoom = currentPreviewZoom;
+            basePreviewWidth = 0;
+            basePreviewHeight = 0;
             currentPreviewImageWidth = 0;
             currentPreviewImageHeight = 0;
             HideMipmapControls();
@@ -480,28 +480,36 @@ namespace AssetProcessor {
             currentPreviewImageHeight = height;
         }
 
-        private void SetReferencePreviewSize(int width, int height) {
-            referencePreviewWidth = width;
-            referencePreviewHeight = height;
-            UpdateLogicalZoomFromCurrent();
+        private void EnsureBasePreviewSize(int width, int height) {
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+
+            if (basePreviewWidth == width && basePreviewHeight == height) {
+                return;
+            }
+
+            basePreviewWidth = width;
+            basePreviewHeight = height;
+            UpdateNormalizedZoomFromCurrent();
         }
 
-        private void UpdateLogicalZoomFromCurrent() {
-            if (referencePreviewWidth > 0 && currentPreviewImageWidth > 0) {
-                logicalPreviewZoom = currentPreviewZoom * currentPreviewImageWidth / referencePreviewWidth;
+        private void UpdateNormalizedZoomFromCurrent() {
+            if (basePreviewWidth > 0 && currentPreviewImageWidth > 0) {
+                normalizedPreviewZoom = currentPreviewZoom * currentPreviewImageWidth / basePreviewWidth;
             } else {
-                logicalPreviewZoom = currentPreviewZoom;
+                normalizedPreviewZoom = currentPreviewZoom;
             }
         }
 
-        private void ApplyLogicalZoomToCurrentImage() {
-            if (referencePreviewWidth <= 0 || currentPreviewImageWidth <= 0) {
+        private void ApplyNormalizedZoomToCurrentImage() {
+            if (basePreviewWidth <= 0 || currentPreviewImageWidth <= 0) {
                 ApplyZoomTransform();
                 UpdateZoomText();
                 return;
             }
 
-            double targetZoom = logicalPreviewZoom * referencePreviewWidth / currentPreviewImageWidth;
+            double targetZoom = normalizedPreviewZoom * basePreviewWidth / currentPreviewImageWidth;
             targetZoom = Math.Clamp(targetZoom, MinPreviewZoom, MaxPreviewZoom);
 
             if (Math.Abs(targetZoom - currentPreviewZoom) > 0.001) {
@@ -555,16 +563,16 @@ namespace AssetProcessor {
                 currentPreviewZoom = minZoom;
                 ApplyZoomTransform();
                 UpdateZoomText();
-                UpdateLogicalZoomFromCurrent();
+                UpdateNormalizedZoomFromCurrent();
             } else if (currentPreviewZoom < minZoom - 0.001) {
                 // Подтягиваем зум до minZoom если он ниже (защита от слишком маленького зума)
                 currentPreviewZoom = minZoom;
                 ApplyZoomTransform();
                 UpdateZoomText();
-                UpdateLogicalZoomFromCurrent();
+                UpdateNormalizedZoomFromCurrent();
             } else {
                 if (!isUserZooming) {
-                    UpdateLogicalZoomFromCurrent();
+                    UpdateNormalizedZoomFromCurrent();
                 }
             }
         }
@@ -634,13 +642,13 @@ namespace AssetProcessor {
 
             // Обновляем изображение, сохраняя текущий зум пользователя; пересчёт fitZoom выполняем отдельно при необходимости.
             Dispatcher.Invoke(() => {
-                if ((referencePreviewWidth == 0 || referencePreviewHeight == 0) && currentKtxMipmaps.Count > 0) {
-                    SetReferencePreviewSize(currentKtxMipmaps[0].Width, currentKtxMipmaps[0].Height);
+                if (currentKtxMipmaps.Count > 0) {
+                    EnsureBasePreviewSize(currentKtxMipmaps[0].Width, currentKtxMipmaps[0].Height);
                 }
 
                 TexturePreviewImage.Source = originalBitmapSource;
                 UpdateCurrentPreviewImageSize(mip.Width, mip.Height);
-                ApplyLogicalZoomToCurrentImage();
+                ApplyNormalizedZoomToCurrentImage();
                 UpdateHistogram(originalBitmapSource);
             });
 
@@ -789,7 +797,7 @@ namespace AssetProcessor {
             TexturePreviewScrollViewer.ScrollToVerticalOffset(newVerticalOffset);
 
             // Устанавливаем флаг что пользователь зумирует
-            UpdateLogicalZoomFromCurrent();
+            UpdateNormalizedZoomFromCurrent();
             isUserZooming = true;
 
             e.Handled = true;
@@ -816,11 +824,11 @@ namespace AssetProcessor {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
                     TexturePreviewImage.Source = originalBitmapSource;
-                    if (!isKtxPreviewActive) {
-                        SetReferencePreviewSize(originalBitmapSource.PixelWidth, originalBitmapSource.PixelHeight);
-                    }
                     UpdateCurrentPreviewImageSize(originalBitmapSource.PixelWidth, originalBitmapSource.PixelHeight);
-                    ApplyLogicalZoomToCurrentImage();
+                    if (!isKtxPreviewActive) {
+                        EnsureBasePreviewSize(originalBitmapSource.PixelWidth, originalBitmapSource.PixelHeight);
+                    }
+                    ApplyNormalizedZoomToCurrentImage();
                     RChannelButton.IsChecked = false;
                     GChannelButton.IsChecked = false;
                     BChannelButton.IsChecked = false;
@@ -1331,7 +1339,7 @@ namespace AssetProcessor {
                     currentMipLevel = 0;
                     isKtxPreviewAvailable = true;
                     if (mipmaps.Count > 0) {
-                        SetReferencePreviewSize(mipmaps[0].Width, mipmaps[0].Height);
+                        EnsureBasePreviewSize(mipmaps[0].Width, mipmaps[0].Height);
                     }
 
                     if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {

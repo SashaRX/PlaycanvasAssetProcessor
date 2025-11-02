@@ -141,16 +141,11 @@ namespace AssetProcessor {
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
         private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
         private const int ThumbnailSize = 256; // Размер для быстрого превью
-        private const double MinPreviewZoom = 0.1;
-        private const double MaxPreviewZoom = 8.0;
         private const double MinPreviewColumnWidth = 256.0;
         private const double MaxPreviewColumnWidth = 512.0;
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = 512.0;
         private const double DefaultPreviewContentHeight = 300.0;
-        private double currentPreviewZoom = 1.0;
-        private double fitPreviewZoom = 1.0;
-        private bool isUserZooming;
         private bool isKtxPreviewActive;
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
@@ -166,9 +161,7 @@ namespace AssetProcessor {
         private bool isKtxPreviewAvailable;
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
-        private bool isMiddleButtonPanning;
         // Removed: isUpdatingPreviewWidth (PreviewWidthSlider was removed)
-        private Point lastPanPoint;
         private BitmapSource? originalFileBitmapSource;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -310,18 +303,7 @@ namespace AssetProcessor {
             }
         }
 
-        private void FitToWindow_Click(object sender, RoutedEventArgs e) {
-            // Вписываем текстуру в окно
-            RecalculateFitZoom(forceApply: true);
-        }
-
         private void ResetPreviewState() {
-            // ВАЖНО: НЕ сбрасываем currentPreviewZoom! Пользователь хочет сохранить свой масштаб
-            // currentPreviewZoom = 1.0;  ← УДАЛЕНО
-            // ApplyZoomTransform();      ← УДАЛЕНО
-            // UpdateZoomText();          ← УДАЛЕНО
-
-            EndTexturePreviewPan();
             TexturePreviewScrollViewer?.ScrollToHome();
             TexturePreviewScrollViewer?.ScrollToLeftEnd();
             isKtxPreviewActive = false;
@@ -333,7 +315,6 @@ namespace AssetProcessor {
             isSourcePreviewAvailable = false;
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
-            isUserZooming = false; // Сбрасываем флаг ручного зумирования для новой текстуры
             HideMipmapControls();
             UpdatePreviewSourceControls();
         }
@@ -445,78 +426,9 @@ namespace AssetProcessor {
                 isKtxPreviewActive = true;
                 UpdateMipmapControls(currentKtxMipmaps);
                 SetCurrentMipLevel(currentMipLevel);
-
-                // Применяем fitZoom при первом переключении на KTX2 для новой текстуры
-                // (если пользователь ещё не зумировал вручную)
-                if (!isUserZooming) {
-                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
-                }
             }
 
             UpdatePreviewSourceControls();
-        }
-
-        private void ApplyZoomTransform() {
-            if (TexturePreviewScaleTransform != null) {
-                TexturePreviewScaleTransform.ScaleX = currentPreviewZoom;
-                TexturePreviewScaleTransform.ScaleY = currentPreviewZoom;
-            }
-
-            TexturePreviewScrollViewer?.UpdateLayout();
-        }
-
-        private void UpdateZoomText() {
-            if (TextureZoomTextBlock != null) {
-                TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(currentPreviewZoom * 100, 0)}%";
-            }
-        }
-
-        private void RecalculateFitZoom(bool forceApply = false) {
-            if (TexturePreviewScrollViewer == null || TexturePreviewImage?.Source is not BitmapSource bitmapSource) {
-                fitPreviewZoom = 1.0;
-                return;
-            }
-
-            double viewportWidth = TexturePreviewScrollViewer.ViewportWidth;
-            double viewportHeight = TexturePreviewScrollViewer.ViewportHeight;
-
-            if (double.IsNaN(viewportWidth) || viewportWidth <= 0) {
-                viewportWidth = TexturePreviewScrollViewer.ActualWidth;
-            }
-
-            if (double.IsNaN(viewportHeight) || viewportHeight <= 0) {
-                viewportHeight = TexturePreviewScrollViewer.ActualHeight;
-            }
-
-            if (viewportWidth <= 0 || viewportHeight <= 0 || bitmapSource.PixelWidth <= 0 || bitmapSource.PixelHeight <= 0) {
-                fitPreviewZoom = 1.0;
-                return;
-            }
-
-            double scaleX = viewportWidth / bitmapSource.PixelWidth;
-            double scaleY = viewportHeight / bitmapSource.PixelHeight;
-            double targetZoom = Math.Min(scaleX, scaleY);
-
-            if (double.IsNaN(targetZoom) || double.IsInfinity(targetZoom)) {
-                targetZoom = 1.0;
-            }
-
-            // НОВАЯ ЛОГИКА: только обновляем fitPreviewZoom для расчёта minZoom
-            fitPreviewZoom = Math.Clamp(targetZoom, MinPreviewZoom, 1.0);
-            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
-
-            // ПРИМЕНЯЕМ зум ТОЛЬКО если forceApply=true (для новых текстур при первой загрузке)
-            // Во всех остальных случаях ТОЛЬКО пересчитываем minZoom, но НЕ применяем
-            if (forceApply) {
-                currentPreviewZoom = minZoom;
-                ApplyZoomTransform();
-                UpdateZoomText();
-            } else if (currentPreviewZoom < minZoom - 0.001) {
-                // Подтягиваем зум до minZoom если он ниже (защита от слишком маленького зума)
-                currentPreviewZoom = minZoom;
-                ApplyZoomTransform();
-                UpdateZoomText();
-            }
         }
 
         private void HideMipmapControls() {
@@ -588,10 +500,6 @@ namespace AssetProcessor {
                 UpdateHistogram(originalBitmapSource);
             });
 
-            // Сохраняем текущий zoom и позицию viewport при переключении мипмапов
-            // Все мипмапы отображаются с одинаковым масштабом и смещением
-            ApplyZoomTransform();
-
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }
 
@@ -606,142 +514,6 @@ namespace AssetProcessor {
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
                 });
             }
-        }
-
-        private void TexturePreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
-            if (e.LeftButton == MouseButtonState.Pressed && TexturePreviewScrollViewer != null) {
-                isMiddleButtonPanning = true;
-                lastPanPoint = e.GetPosition(TexturePreviewScrollViewer);
-                TexturePreviewScrollViewer.Cursor = Cursors.ScrollAll;
-                Mouse.Capture(TexturePreviewScrollViewer);
-                e.Handled = true;
-            }
-        }
-
-        private void TexturePreviewScrollViewer_PreviewMouseMove(object sender, MouseEventArgs e) {
-            if (!isMiddleButtonPanning || TexturePreviewScrollViewer == null) {
-                return;
-            }
-
-            Point currentPoint = e.GetPosition(TexturePreviewScrollViewer);
-            double deltaX = currentPoint.X - lastPanPoint.X;
-            double deltaY = currentPoint.Y - lastPanPoint.Y;
-
-            if (Math.Abs(deltaX) > double.Epsilon) {
-                TexturePreviewScrollViewer.ScrollToHorizontalOffset(TexturePreviewScrollViewer.HorizontalOffset - deltaX);
-            }
-
-            if (Math.Abs(deltaY) > double.Epsilon) {
-                TexturePreviewScrollViewer.ScrollToVerticalOffset(TexturePreviewScrollViewer.VerticalOffset - deltaY);
-            }
-
-            lastPanPoint = currentPoint;
-            e.Handled = true;
-        }
-
-        private void TexturePreviewScrollViewer_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
-            if (e.ChangedButton == MouseButton.Left) {
-                EndTexturePreviewPan();
-                e.Handled = true;
-            }
-        }
-
-        private void TexturePreviewScrollViewer_MouseLeave(object sender, MouseEventArgs e) {
-            if (isMiddleButtonPanning) {
-                EndTexturePreviewPan();
-            }
-        }
-
-        private void TexturePreviewScrollViewer_LostMouseCapture(object sender, MouseEventArgs e) {
-            if (isMiddleButtonPanning) {
-                EndTexturePreviewPan();
-            }
-        }
-
-        private void TexturePreviewScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e) {
-            // ВАЖНО: ВСЕГДА пересчитываем fitZoom при изменении размера viewport
-            // Это нужно чтобы подтянуть currentZoom если он стал меньше нового fitZoom
-            // (например, если пользователь уменьшил viewport через splitter)
-
-            if (TexturePreviewImage?.Source != null) {
-                // forceApply=false означает что зум применится только если:
-                // 1. forceApply=true (не наш случай)
-                // 2. currentZoom < новый minZoom (подтянем зум чтобы изображение не уехало за края)
-                RecalculateFitZoom(forceApply: false);
-            }
-        }
-
-        private void EndTexturePreviewPan() {
-            if (!isMiddleButtonPanning) {
-                return;
-            }
-
-            isMiddleButtonPanning = false;
-            Mouse.Capture(null);
-
-            if (TexturePreviewScrollViewer != null) {
-                TexturePreviewScrollViewer.Cursor = Cursors.Arrow;
-            }
-        }
-
-        private void TexturePreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (TexturePreviewScrollViewer == null || TexturePreviewImage?.Source == null) {
-                return;
-            }
-
-            // Определяем минимальный zoom как fitPreviewZoom (чтобы остановить zoom-out когда изображение вписано)
-            double minZoom = Math.Max(fitPreviewZoom, MinPreviewZoom);
-
-            double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
-            double newZoom = Math.Clamp(currentPreviewZoom * zoomFactor, minZoom, MaxPreviewZoom);
-
-            if (Math.Abs(newZoom - currentPreviewZoom) < 0.001) {
-                return;
-            }
-
-            // Получаем позицию мыши относительно ScrollViewer
-            Point mousePos = e.GetPosition(TexturePreviewScrollViewer);
-
-            // Получаем текущие scroll offsets
-            double oldHorizontalOffset = TexturePreviewScrollViewer.HorizontalOffset;
-            double oldVerticalOffset = TexturePreviewScrollViewer.VerticalOffset;
-
-            // Вычисляем позицию мыши в координатах контента (изображения) до zoom
-            // contentX/Y = (scrollOffset + mousePos) / currentZoom
-            double contentX = (oldHorizontalOffset + mousePos.X) / currentPreviewZoom;
-            double contentY = (oldVerticalOffset + mousePos.Y) / currentPreviewZoom;
-
-            // Применяем новый zoom
-            currentPreviewZoom = newZoom;
-            ApplyZoomTransform();
-            UpdateZoomText();
-
-            // Обновляем layout чтобы ScrollViewer пересчитал размеры
-            TexturePreviewScrollViewer.UpdateLayout();
-
-            // Вычисляем новые scroll offsets чтобы точка под мышью осталась на месте
-            // newScrollOffset = (contentX * newZoom) - mousePos
-            double newHorizontalOffset = (contentX * newZoom) - mousePos.X;
-            double newVerticalOffset = (contentY * newZoom) - mousePos.Y;
-
-            // Clamp offsets to valid range
-            newHorizontalOffset = Math.Max(0, Math.Min(newHorizontalOffset, TexturePreviewScrollViewer.ScrollableWidth));
-            newVerticalOffset = Math.Max(0, Math.Min(newVerticalOffset, TexturePreviewScrollViewer.ScrollableHeight));
-
-            // Применяем новые offsets
-            TexturePreviewScrollViewer.ScrollToHorizontalOffset(newHorizontalOffset);
-            TexturePreviewScrollViewer.ScrollToVerticalOffset(newVerticalOffset);
-
-            // Устанавливаем флаг что пользователь зумирует
-            isUserZooming = true;
-
-            e.Handled = true;
-        }
-
-        private void TexturePreviewScrollViewer_MouseWheel(object sender, MouseWheelEventArgs e) {
-            // Блокируем обычное событие MouseWheel чтобы ScrollViewer не обрабатывал его
-            // Все зумирование происходит в PreviewMouseWheel обработчике
-            e.Handled = true;
         }
 
         private void MipmapLevelSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -765,12 +537,6 @@ namespace AssetProcessor {
                     AChannelButton.IsChecked = false;
                     UpdateHistogram(originalBitmapSource);
                 });
-
-                // НОВАЯ ЛОГИКА: пересчитываем fitZoom только если явно запрошено
-                // По умолчанию НЕ трогаем зум - пользователь сам управляет масштабом!
-                if (recalculateFitZoom) {
-                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: false)), DispatcherPriority.Background);
-                }
             }
         }
 
@@ -1318,8 +1084,6 @@ namespace AssetProcessor {
                         originalBitmapSource = cachedImage;
                         _ = UpdateHistogramAsync(originalBitmapSource);
                         ShowOriginalImage();
-                        // Применяем fitZoom при первой загрузке новой текстуры
-                        _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
                     }
 
                     UpdatePreviewSourceControls();
@@ -1346,8 +1110,6 @@ namespace AssetProcessor {
                     originalBitmapSource = thumbnailImage;
                     _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
-                    // Применяем fitZoom при первой загрузке новой текстуры
-                    _ = Dispatcher.BeginInvoke(new Action(() => RecalculateFitZoom(forceApply: true)), DispatcherPriority.Background);
                 }
 
                 UpdatePreviewSourceControls();

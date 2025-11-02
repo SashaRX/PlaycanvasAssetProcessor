@@ -148,12 +148,10 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = 512.0;
         private const double DefaultPreviewContentHeight = 300.0;
-        private const double MinLogicalPreviewZoom = 0.01;
         private double currentPreviewZoom = 1.0;
         private double fitPreviewZoom = 1.0;
-        private double logicalPreviewZoom = 1.0;
-        private int basePreviewWidth;
-        private int basePreviewHeight;
+        private int baseTextureWidth;
+        private int baseTextureHeight;
         private int currentPreviewImageWidth;
         private int currentPreviewImageHeight;
         private bool isUserZooming;
@@ -321,7 +319,6 @@ namespace AssetProcessor {
             TexturePreviewScrollViewer?.ScrollToHome();
             TexturePreviewScrollViewer?.ScrollToLeftEnd();
             currentPreviewZoom = 1.0;
-            logicalPreviewZoom = 1.0;
             fitPreviewZoom = 1.0;
             UpdateZoomText();
             isKtxPreviewActive = false;
@@ -334,8 +331,8 @@ namespace AssetProcessor {
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
             isUserZooming = false; // Сбрасываем флаг ручного зумирования для новой текстуры
-            basePreviewWidth = 0;
-            basePreviewHeight = 0;
+            baseTextureWidth = 0;
+            baseTextureHeight = 0;
             currentPreviewImageWidth = 0;
             currentPreviewImageHeight = 0;
             HideMipmapControls();
@@ -471,93 +468,59 @@ namespace AssetProcessor {
 
         private void UpdateZoomText() {
             if (TextureZoomTextBlock != null) {
-                TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(logicalPreviewZoom * 100, 0)}%";
+                TextureZoomTextBlock.Text = $"Масштаб: {Math.Round(currentPreviewZoom * 100, 0)}%";
             }
+        }
+
+        private void SetBaseTextureSize(int width, int height) {
+            if (width <= 0 || height <= 0) {
+                baseTextureWidth = 0;
+                baseTextureHeight = 0;
+                return;
+            }
+
+            baseTextureWidth = width;
+            baseTextureHeight = height;
         }
 
         private void UpdateCurrentPreviewImageSize(int width, int height) {
-            currentPreviewImageWidth = width;
-            currentPreviewImageHeight = height;
-            logicalPreviewZoom = ClampLogicalZoom(logicalPreviewZoom);
-        }
-
-        private void EnsureBasePreviewSize(int width, int height) {
-            if (width <= 0 || height <= 0) {
-                return;
-            }
-
-            if (basePreviewWidth == width && basePreviewHeight == height) {
-                return;
-            }
-
-            basePreviewWidth = width;
-            basePreviewHeight = height;
-            logicalPreviewZoom = ClampLogicalZoom(logicalPreviewZoom);
-        }
-
-        private double GetCurrentLevelScale() {
-            if (basePreviewWidth > 0 && currentPreviewImageWidth > 0) {
-                double scale = (double)basePreviewWidth / currentPreviewImageWidth;
-
-                if (!double.IsFinite(scale) || scale <= 0) {
-                    return 1.0;
-                }
-
-                return scale;
-            }
-
-            return 1.0;
+            currentPreviewImageWidth = Math.Max(1, width);
+            currentPreviewImageHeight = Math.Max(1, height);
         }
 
         private double GetMinActualZoom() {
-            return Math.Max(fitPreviewZoom, MinPreviewZoom);
+            return MinPreviewZoom;
         }
 
         private double GetMaxActualZoom() {
             double dynamicMax = GetDynamicMaxPreviewZoom();
-            double minZoom = GetMinActualZoom();
-            return Math.Max(minZoom, dynamicMax);
+            return Math.Max(MinPreviewZoom, dynamicMax);
         }
 
-        private double ClampLogicalZoom(double logicalZoom) {
-            double levelScale = GetCurrentLevelScale();
-            double minActual = GetMinActualZoom();
-            double maxActual = GetMaxActualZoom();
-
-            double minLogical = Math.Max(MinLogicalPreviewZoom, minActual / levelScale);
-            double maxLogical = Math.Max(minLogical, maxActual / levelScale);
-
-            if (!double.IsFinite(logicalZoom) || logicalZoom <= 0) {
-                logicalZoom = minLogical;
-            }
-
-            return Math.Clamp(logicalZoom, minLogical, maxLogical);
-        }
-
-        private void ApplyLogicalZoom(bool preserveAnchor = true) {
+        private void ApplyZoom(double newZoom, bool preserveAnchor = true) {
             if (TexturePreviewScrollViewer == null) {
+                currentPreviewZoom = newZoom;
+                UpdateZoomText();
                 return;
             }
 
-            logicalPreviewZoom = ClampLogicalZoom(logicalPreviewZoom);
+            double minZoom = GetMinActualZoom();
+            double maxZoom = GetMaxActualZoom();
+
+            if (!double.IsFinite(newZoom) || newZoom <= 0) {
+                newZoom = minZoom;
+            }
+
+            newZoom = Math.Clamp(newZoom, minZoom, maxZoom);
+
+            if (Math.Abs(newZoom - currentPreviewZoom) < 0.0001) {
+                UpdateZoomText();
+                return;
+            }
 
             Point? anchorPoint = preserveAnchor ? CapturePreviewAnchor() : null;
 
-            double levelScale = GetCurrentLevelScale();
-            double minActual = GetMinActualZoom();
-            double maxActual = GetMaxActualZoom();
-            double targetActual = logicalPreviewZoom * levelScale;
-
-            if (!double.IsFinite(targetActual) || targetActual <= 0) {
-                targetActual = minActual;
-            }
-
-            targetActual = Math.Clamp(targetActual, minActual, maxActual);
-
-            if (Math.Abs(targetActual - currentPreviewZoom) > 0.001) {
-                currentPreviewZoom = targetActual;
-            }
-
+            currentPreviewZoom = newZoom;
             ApplyZoomTransform();
 
             if (preserveAnchor) {
@@ -593,26 +556,21 @@ namespace AssetProcessor {
             double scaleY = viewportHeight / bitmapSource.PixelHeight;
             double targetZoom = Math.Min(scaleX, scaleY);
 
-            if (double.IsNaN(targetZoom) || double.IsInfinity(targetZoom)) {
+            if (!double.IsFinite(targetZoom) || targetZoom <= 0) {
                 targetZoom = 1.0;
             }
 
-            fitPreviewZoom = Math.Clamp(targetZoom, MinPreviewZoom, 1.0);
+            double fitLimit = Math.Min(targetZoom, 1.0);
 
-            double minActual = isUserZooming
-                ? MinPreviewZoom
-                : Math.Max(fitPreviewZoom, MinPreviewZoom);
-
-            double levelScale = GetCurrentLevelScale();
-            double minLogical = Math.Max(MinLogicalPreviewZoom, minActual / levelScale);
+            fitPreviewZoom = Math.Clamp(fitLimit, MinPreviewZoom, GetMaxActualZoom());
 
             if (forceApply) {
-                logicalPreviewZoom = minLogical;
-                ApplyLogicalZoom(preserveAnchor: false);
+                ApplyZoom(fitPreviewZoom, preserveAnchor: false);
                 isUserZooming = false;
-            } else if (currentPreviewZoom < minActual - 0.001) {
-                logicalPreviewZoom = minLogical;
-                ApplyLogicalZoom(preserveAnchor: false);
+            } else if (!isUserZooming && currentPreviewZoom < fitPreviewZoom) {
+                ApplyZoom(fitPreviewZoom, preserveAnchor: false);
+            } else if (currentPreviewZoom < MinPreviewZoom) {
+                ApplyZoom(MinPreviewZoom, preserveAnchor: false);
             }
         }
 
@@ -679,15 +637,40 @@ namespace AssetProcessor {
             var mip = currentKtxMipmaps[clampedLevel];
             originalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение, сохраняя текущий зум пользователя; пересчёт fitZoom выполняем отдельно при необходимости.
+            double previousZoom = currentPreviewZoom;
+            int previousWidth = currentPreviewImageWidth;
+            int previousHeight = currentPreviewImageHeight;
+            bool preserveUserZoom = isUserZooming;
+
             Dispatcher.Invoke(() => {
+                Point? anchor = CapturePreviewAnchor();
+
                 if (currentKtxMipmaps.Count > 0) {
-                    EnsureBasePreviewSize(currentKtxMipmaps[0].Width, currentKtxMipmaps[0].Height);
+                    SetBaseTextureSize(currentKtxMipmaps[0].Width, currentKtxMipmaps[0].Height);
                 }
 
                 TexturePreviewImage.Source = originalBitmapSource;
+
                 UpdateCurrentPreviewImageSize(mip.Width, mip.Height);
-                ApplyLogicalZoom();
+
+                double targetZoom = previousZoom;
+
+                if (preserveUserZoom && previousWidth > 0 && previousHeight > 0) {
+                    double widthRatio = (double)previousWidth / currentPreviewImageWidth;
+                    double heightRatio = (double)previousHeight / currentPreviewImageHeight;
+                    double compensation = Math.Max(widthRatio, heightRatio);
+
+                    if (double.IsFinite(compensation) && compensation > 0) {
+                        targetZoom = previousZoom * compensation;
+                    }
+                }
+
+                ApplyZoom(targetZoom, preserveAnchor: false);
+
+                if (anchor.HasValue) {
+                    RestorePreviewAnchor(anchor);
+                }
+
                 UpdateHistogram(originalBitmapSource);
             });
 
@@ -792,16 +775,13 @@ namespace AssetProcessor {
                 return;
             }
 
-            double levelScale = GetCurrentLevelScale();
-            double minActual = GetMinActualZoom();
-            double maxActual = GetMaxActualZoom();
-            double minLogical = Math.Max(MinLogicalPreviewZoom, minActual / levelScale);
-            double maxLogical = Math.Max(minLogical, maxActual / levelScale);
+            double minZoom = GetMinActualZoom();
+            double maxZoom = GetMaxActualZoom();
 
             double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
-            double newLogicalZoom = Math.Clamp(logicalPreviewZoom * zoomFactor, minLogical, maxLogical);
+            double targetZoom = Math.Clamp(currentPreviewZoom * zoomFactor, minZoom, maxZoom);
 
-            if (Math.Abs(newLogicalZoom - logicalPreviewZoom) < 0.001) {
+            if (Math.Abs(targetZoom - currentPreviewZoom) < 0.001) {
                 return;
             }
 
@@ -809,7 +789,7 @@ namespace AssetProcessor {
 
             double currentActualZoom = currentPreviewZoom;
             if (!double.IsFinite(currentActualZoom) || currentActualZoom <= 0) {
-                currentActualZoom = Math.Max(minActual, 1.0);
+                currentActualZoom = Math.Max(minZoom, 1.0);
             }
 
             double oldHorizontalOffset = TexturePreviewScrollViewer.HorizontalOffset;
@@ -818,8 +798,7 @@ namespace AssetProcessor {
             double contentX = (oldHorizontalOffset + mousePos.X) / currentActualZoom;
             double contentY = (oldVerticalOffset + mousePos.Y) / currentActualZoom;
 
-            logicalPreviewZoom = newLogicalZoom;
-            ApplyLogicalZoom(preserveAnchor: false);
+            ApplyZoom(targetZoom, preserveAnchor: false);
 
             double newActualZoom = currentPreviewZoom;
 
@@ -840,8 +819,8 @@ namespace AssetProcessor {
         }
 
         private double GetDynamicMaxPreviewZoom() {
-            if (basePreviewWidth > 0 && currentPreviewImageWidth > 0) {
-                double ratio = (double)basePreviewWidth / currentPreviewImageWidth;
+            if (baseTextureWidth > 0 && currentPreviewImageWidth > 0) {
+                double ratio = (double)baseTextureWidth / currentPreviewImageWidth;
 
                 if (!double.IsFinite(ratio) || ratio <= 0) {
                     ratio = 1.0;
@@ -921,12 +900,37 @@ namespace AssetProcessor {
         private async void ShowOriginalImage(bool recalculateFitZoom = false) {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
+                    Point? anchor = CapturePreviewAnchor();
+
+                    double previousZoom = currentPreviewZoom;
+                    int previousWidth = currentPreviewImageWidth;
+                    int previousHeight = currentPreviewImageHeight;
+
                     TexturePreviewImage.Source = originalBitmapSource;
                     UpdateCurrentPreviewImageSize(originalBitmapSource.PixelWidth, originalBitmapSource.PixelHeight);
+
                     if (!isKtxPreviewActive) {
-                        EnsureBasePreviewSize(originalBitmapSource.PixelWidth, originalBitmapSource.PixelHeight);
+                        SetBaseTextureSize(originalBitmapSource.PixelWidth, originalBitmapSource.PixelHeight);
                     }
-                    ApplyLogicalZoom();
+
+                    double targetZoom = previousZoom;
+
+                    if (previousWidth > 0 && previousHeight > 0) {
+                        double widthRatio = (double)previousWidth / currentPreviewImageWidth;
+                        double heightRatio = (double)previousHeight / currentPreviewImageHeight;
+                        double compensation = Math.Max(widthRatio, heightRatio);
+
+                        if (double.IsFinite(compensation) && compensation > 0) {
+                            targetZoom = previousZoom * compensation;
+                        }
+                    }
+
+                    ApplyZoom(targetZoom, preserveAnchor: false);
+
+                    if (anchor.HasValue) {
+                        RestorePreviewAnchor(anchor);
+                    }
+
                     RChannelButton.IsChecked = false;
                     GChannelButton.IsChecked = false;
                     BChannelButton.IsChecked = false;
@@ -1437,7 +1441,7 @@ namespace AssetProcessor {
                     currentMipLevel = 0;
                     isKtxPreviewAvailable = true;
                     if (mipmaps.Count > 0) {
-                        EnsureBasePreviewSize(mipmaps[0].Width, mipmaps[0].Height);
+                        SetBaseTextureSize(mipmaps[0].Width, mipmaps[0].Height);
                     }
 
                     if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {

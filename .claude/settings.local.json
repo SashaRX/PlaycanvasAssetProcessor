@@ -21,7 +21,9 @@
       "Bash(git revert:*)",
       "Bash(findstr:*)",
       "Bash(dotnet build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(Stop-Process -Id 49532 -Force)",
+      "Bash(Select-String -Pattern \"успешно|error|warning\" -CaseSensitive:$false)"
     ],
     "deny": [],
     "ask": []

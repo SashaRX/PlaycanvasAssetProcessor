@@ -3589,8 +3589,30 @@ namespace AssetProcessor {
                                 }
                             }
 
-                            // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления
-                            UpdateConnectionButton(ConnectionState.UpToDate);
+                            // Добавляем последнюю выбранную ветку из настроек
+                            if (!string.IsNullOrEmpty(lastBranchName)) {
+                                MainWindowHelpers.LogInfo($"Adding last selected branch: {lastBranchName}");
+                                // Создаём фиктивную ветку с сохранённым именем (ID будет получен при подключении)
+                                Branch savedBranch = new Branch { Id = "offline", Name = lastBranchName };
+
+                                isBranchInitializationInProgress = true;
+                                try {
+                                    Branches.Clear();
+                                    Branches.Add(savedBranch);
+                                    BranchesComboBox.SelectedIndex = 0;
+                                } finally {
+                                    isBranchInitializationInProgress = false;
+                                }
+
+                                // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления
+                                // ВАЖНО: Вызываем ПОСЛЕ установки ветки, чтобы hasSelection был true
+                                UpdateConnectionButton(ConnectionState.UpToDate);
+                            } else {
+                                // Нет сохранённой ветки - показываем Connect для получения веток с сервера
+                                MainWindowHelpers.LogInfo("No saved branch - showing Connect button");
+                                UpdateConnectionButton(ConnectionState.Disconnected);
+                            }
+
                             return;
                         }
                     }

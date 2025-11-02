@@ -1217,8 +1217,14 @@ namespace AssetProcessor {
                         object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
 
+                        // Debounce: wait a bit to see if user is still scrolling
+                        await Task.Delay(50, cancellationToken);
+
                         // Load conversion settings for this texture
                         LoadTextureConversionSettings(selectedTexture);
+
+                        // Check cancellation before starting heavy operations
+                        cancellationToken.ThrowIfCancellationRequested();
 
                         Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
 

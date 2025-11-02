@@ -1477,19 +1477,12 @@ namespace AssetProcessor {
             string? bestMatch = null;
             DateTime bestTime = DateTime.MinValue;
             int bestScore = -1;
-            string? newestFile = null;
-            DateTime newestTime = DateTime.MinValue;
 
             try {
                 // Ищем как .ktx2 так и .ktx файлы
                 foreach (var pattern in new[] { "*.ktx2", "*.ktx" }) {
                     foreach (string file in Directory.EnumerateFiles(directory, pattern, searchOption)) {
                         DateTime writeTime = File.GetLastWriteTimeUtc(file);
-
-                        if (writeTime > newestTime) {
-                            newestTime = writeTime;
-                            newestFile = file;
-                        }
 
                         int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
                         if (score < 0) {
@@ -1513,7 +1506,9 @@ namespace AssetProcessor {
                 return null;
             }
 
-            return bestMatch ?? newestFile;
+            // Возвращаем ТОЛЬКО точное совпадение, НЕ возвращаем самый новый файл!
+            // Если нет совпадения - вернём null, а не случайный ktx2 файл
+            return bestMatch;
         }
 
         private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {

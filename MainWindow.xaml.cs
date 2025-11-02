@@ -3527,104 +3527,85 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Инициализация при запуске программы - проверяет локальные файлы БЕЗ подключения к серверу
+        /// Инициализация при запуске программы - подключается к серверу и загружает проекты
+        /// Если hash локального JSON совпадает с серверным - загружает локально
         /// </summary>
         private async Task InitializeOnStartup() {
             try {
                 MainWindowHelpers.LogInfo("=== Initializing on startup ===");
 
-                // Загружаем сохраненные настройки
-                string lastProjectId = AppSettings.Default.LastSelectedProjectId;
-                string lastBranchName = AppSettings.Default.LastSelectedBranchName;
-
-                if (string.IsNullOrEmpty(lastProjectId)) {
-                    // Нет сохраненного проекта - показываем кнопку Connect
-                    MainWindowHelpers.LogInfo("No saved project found - showing Connect button");
+                // Проверяем наличие API ключа и username
+                if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
+                    string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+                    MainWindowHelpers.LogInfo("No API key or username - showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
 
-                // Определяем имя проекта из настроек (нужно получить из сохраненного ID)
-                // Временно используем ProjectsFolderPath для поиска
-                string projectsRoot = AppSettings.Default.ProjectsFolderPath;
-                if (string.IsNullOrEmpty(projectsRoot) || !Directory.Exists(projectsRoot)) {
-                    MainWindowHelpers.LogInfo("Projects folder not found - showing Connect button");
-                    UpdateConnectionButton(ConnectionState.Disconnected);
-                    return;
-                }
-
-                // Ищем папки проектов
-                var projectFolders = Directory.GetDirectories(projectsRoot);
-                foreach (var folder in projectFolders) {
-                    string folderName = Path.GetFileName(folder);
-                    string assetsListPath = Path.Combine(folder, "assets_list.json");
-
-                    if (File.Exists(assetsListPath)) {
-                        // Нашли локальный проект!
-                        MainWindowHelpers.LogInfo($"Found local project: {folderName}");
-
-                        projectName = folderName;
-                        projectFolderPath = folder;
-
-                        // Загружаем данные локально
-                        bool loaded = await LoadAssetsFromJsonFileAsync();
-
-                        if (loaded) {
-                            MainWindowHelpers.LogInfo($"Local project loaded successfully: {projectName}");
-
-                            // Показываем пользователю что проект загружен локально
-                            UpdateConnectionStatus(true, $"Loaded offline: {projectName}");
-
-                            // Добавляем проект в ComboBox (как минимум локальное имя)
-                            // Реальный ID будет получен при подключении
-                            if (!Projects.Any(p => p.Value == projectName)) {
-                                Projects.Add(new KeyValuePair<string, string>(lastProjectId, projectName));
-
-                                // Устанавливаем флаг чтобы избежать повторной загрузки через SelectionChanged
-                                isProjectInitializationInProgress = true;
-                                try {
-                                    ProjectsComboBox.SelectedValue = lastProjectId;
-                                } finally {
-                                    isProjectInitializationInProgress = false;
-                                }
-                            }
-
-                            // Добавляем последнюю выбранную ветку из настроек
-                            if (!string.IsNullOrEmpty(lastBranchName)) {
-                                MainWindowHelpers.LogInfo($"Adding last selected branch: {lastBranchName}");
-                                // Создаём фиктивную ветку с сохранённым именем (ID будет получен при подключении)
-                                Branch savedBranch = new Branch { Id = "offline", Name = lastBranchName };
-
-                                isBranchInitializationInProgress = true;
-                                try {
-                                    Branches.Clear();
-                                    Branches.Add(savedBranch);
-                                    BranchesComboBox.SelectedIndex = 0;
-                                } finally {
-                                    isBranchInitializationInProgress = false;
-                                }
-
-                                // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления
-                                // ВАЖНО: Вызываем ПОСЛЕ установки ветки, чтобы hasSelection был true
-                                UpdateConnectionButton(ConnectionState.UpToDate);
-                            } else {
-                                // Нет сохранённой ветки - показываем Connect для получения веток с сервера
-                                MainWindowHelpers.LogInfo("No saved branch - showing Connect button");
-                                UpdateConnectionButton(ConnectionState.Disconnected);
-                            }
-
-                            return;
-                        }
-                    }
-                }
-
-                // Не нашли локальных файлов
-                MainWindowHelpers.LogInfo("No local project files found - showing Connect button");
-                UpdateConnectionButton(ConnectionState.Disconnected);
+                // Подключаемся к серверу и загружаем список проектов
+                MainWindowHelpers.LogInfo("Connecting to PlayCanvas server...");
+                await LoadLastSettings();
 
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error during startup initialization: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.Disconnected);
+            }
+        }
+
+        /// <summary>
+        /// Умная загрузка ассетов: проверяет hash и загружает локально если актуально
+        /// Если hash отличается - загружает с сервера
+        /// </summary>
+        private async Task SmartLoadAssets() {
+            try {
+                MainWindowHelpers.LogInfo("=== SmartLoadAssets: Checking for updates ===");
+
+                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                    MainWindowHelpers.LogInfo("No project or branch selected");
+                    UpdateConnectionButton(ConnectionState.Disconnected);
+                    return;
+                }
+
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+                string assetsListPath = Path.Combine(projectFolderPath ?? "", "assets_list.json");
+
+                // Проверяем наличие локального JSON
+                bool localFileExists = File.Exists(assetsListPath);
+
+                if (localFileExists) {
+                    MainWindowHelpers.LogInfo($"Local assets_list.json found: {assetsListPath}");
+
+                    // Получаем hash локального JSON
+                    string localJson = await File.ReadAllTextAsync(assetsListPath);
+                    string localHash = ComputeHash(localJson);
+                    MainWindowHelpers.LogInfo($"Local hash: {localHash.Substring(0, 16)}...");
+
+                    // Получаем данные с сервера для сравнения hash
+                    MainWindowHelpers.LogInfo("Fetching assets from server to check hash...");
+                    JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                    string serverHash = ComputeHash(serverData.ToString());
+                    MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
+
+                    if (localHash == serverHash) {
+                        // Hash совпадают - загружаем локально (быстро!)
+                        MainWindowHelpers.LogInfo("Hashes match! Loading from local JSON...");
+                        await LoadAssetsFromJsonFileAsync();
+                        UpdateConnectionButton(ConnectionState.UpToDate);
+                    } else {
+                        // Hash отличаются - нужно обновить
+                        MainWindowHelpers.LogInfo("Hashes differ! Need to download updates.");
+                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    }
+                } else {
+                    // Локального файла нет - нужна загрузка
+                    MainWindowHelpers.LogInfo("No local assets_list.json found - need to download");
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                }
+
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error in SmartLoadAssets: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
         }
 
@@ -3692,10 +3673,12 @@ namespace AssetProcessor {
                             }
                         }
 
-                        // Загружаем данные из JSON после установки проекта и ветки
+                        // Загружаем данные с проверкой hash
                         projectName = MainWindowHelpers.CleanProjectName(((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Value);
                         projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-                        await LoadAssetsFromJsonFileAsync();
+
+                        // Умная загрузка: проверяем hash и загружаем локально если актуально
+                        await SmartLoadAssets();
                     }
                 }
                 projectFolderPath = AppSettings.Default.ProjectsFolderPath;

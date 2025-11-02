@@ -1135,7 +1135,10 @@ namespace AssetProcessor {
         }
 
         private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            MainWindowHelpers.LogInfo($"=== ProjectsComboBox_SelectionChanged CALLED, isProjectInitializationInProgress={isProjectInitializationInProgress} ===");
+
             if (isProjectInitializationInProgress) {
+                MainWindowHelpers.LogInfo("Skipping ProjectsComboBox_SelectionChanged - initialization in progress");
                 return;
             }
 
@@ -1145,6 +1148,7 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
 
                 // Проверяем наличие JSON-файла
+                MainWindowHelpers.LogInfo("Calling LoadAssetsFromJsonFileAsync from ProjectsComboBox_SelectionChanged");
                 bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
                 if (!jsonLoaded) {
                     // Если JSON-файл не найден, просто логируем (без MessageBox)
@@ -2803,6 +2807,8 @@ namespace AssetProcessor {
 
         private async Task TryConnect(CancellationToken cancellationToken) {
             try {
+                MainWindowHelpers.LogInfo("=== TryConnect CALLED ===");
+
                 if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
                     MessageBox.Show("Please select a project and a branch");
                     return;
@@ -2811,8 +2817,10 @@ namespace AssetProcessor {
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
+                MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
                 JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
                 if (assetsResponse != null) {
+                    MainWindowHelpers.LogInfo("Assets received from server, processing...");
                     // Строим иерархию папок из списка ассетов
                     BuildFolderHierarchyFromAssets(assetsResponse);
                     // Сохраняем JSON-ответ в файл
@@ -2855,6 +2863,7 @@ namespace AssetProcessor {
                     await Task.WhenAll(tasks);
 
                     RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
+                    MainWindowHelpers.LogInfo("=== TryConnect COMPLETED ===");
                 } else {
                     UpdateConnectionStatus(false, "Failed to connect");
                 }
@@ -3208,12 +3217,15 @@ namespace AssetProcessor {
 
         private async Task<bool> LoadAssetsFromJsonFileAsync() {
             try {
+                MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
+
                 if (String.IsNullOrEmpty(projectFolderPath) || String.IsNullOrEmpty(projectName)) {
                     throw new Exception("Project folder path or name is null or empty");
                 }
 
                 string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
                 if (File.Exists(jsonFilePath)) {
+                    MainWindowHelpers.LogInfo($"Loading from JSON file: {jsonFilePath}");
                     string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
                     JArray assetsResponse = JArray.Parse(jsonContent);
 
@@ -3221,6 +3233,7 @@ namespace AssetProcessor {
                     BuildFolderHierarchyFromAssets(assetsResponse);
 
                     await ProcessAssetsFromJson(assetsResponse);
+                    MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
                     return true;
                 }
             } catch (JsonReaderException ex) {
@@ -3566,7 +3579,14 @@ namespace AssetProcessor {
                             // Реальный ID будет получен при подключении
                             if (!Projects.Any(p => p.Value == projectName)) {
                                 Projects.Add(new KeyValuePair<string, string>(lastProjectId, projectName));
-                                ProjectsComboBox.SelectedValue = lastProjectId;
+
+                                // Устанавливаем флаг чтобы избежать повторной загрузки через SelectionChanged
+                                isProjectInitializationInProgress = true;
+                                try {
+                                    ProjectsComboBox.SelectedValue = lastProjectId;
+                                } finally {
+                                    isProjectInitializationInProgress = false;
+                                }
                             }
 
                             // Устанавливаем состояние "Refresh" - проект загружен, можно проверить обновления

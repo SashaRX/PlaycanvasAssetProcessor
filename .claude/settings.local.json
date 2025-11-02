@@ -23,7 +23,12 @@
       "Bash(dotnet build:*)",
       "Bash(git add:*)",
       "Bash(Stop-Process -Id 49532 -Force)",
-      "Bash(Select-String -Pattern \"успешно|error|warning\" -CaseSensitive:$false)"
+      "Bash(Select-String -Pattern \"успешно|error|warning\" -CaseSensitive:$false)",
+      "Bash(Stop-Process -Id 43388 -Force)",
+      "Bash(Get-Content MainWindow.xaml.cs)",
+      "Bash(Select-String -Pattern \"LogInfo|LogError|MessageBox\")",
+      "Bash(Select-String -Pattern \"[А-Яа-яЁё]\")",
+      "Bash(Select-Object -First 30)"
     ],
     "deny": [],
     "ask": []

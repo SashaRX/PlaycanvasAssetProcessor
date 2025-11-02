@@ -1521,53 +1521,26 @@ namespace AssetProcessor {
                 return -1;
             }
 
-            static bool ContainsOrdinal(string source, string value) =>
-                source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+            // ТОЛЬКО точные совпадения полного имени файла (без расширения)
+            // texture_gloss.ktx2 должен матчить ТОЛЬКО texture_gloss.png
+            // НЕ должен матчить texture_normal.ktx2 или texture.ktx2
 
-            // Точное совпадение - наивысший приоритет
+            // 1. Точное совпадение полного имени - наивысший приоритет
             if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
                 return 500;
             }
 
+            // 2. Точное совпадение нормализованного имени (без суффикса типа)
+            // Например: texture_gloss.png → нормализуется в "texture"
+            // Матчит texture.ktx2, но НЕ матчит texture_normal.ktx2
             if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
                 candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
                 return 450;
             }
 
-            // ВАЖНО: Проверяем что после baseName нет дополнительных букв/цифр
-            // albedo.ktx2 должен матчить albedo.png, но НЕ albedo_normal.ktx2
-            // Разрешаем только если после baseName идёт подчёркивание или конец строки
-            if (candidateName.StartsWith(baseName, StringComparison.OrdinalIgnoreCase)) {
-                // Проверяем что после baseName идёт либо конец строки, либо подчёркивание + суффикс
-                if (candidateName.Length > baseName.Length) {
-                    char nextChar = candidateName[baseName.Length];
-                    // Разрешаем только если следующий символ - НЕ буква/цифра (например '_', '-', '.')
-                    if (char.IsLetterOrDigit(nextChar)) {
-                        // Это albedo_normal, а не albedo - отклоняем!
-                        return -1;
-                    }
-                }
-                return 400;
-            }
-
-            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                candidateName.StartsWith(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-                if (candidateName.Length > normalizedBaseName.Length) {
-                    char nextChar = candidateName[normalizedBaseName.Length];
-                    if (char.IsLetterOrDigit(nextChar)) {
-                        return -1;
-                    }
-                }
-                return 350;
-            }
-
-            if (!string.IsNullOrWhiteSpace(normalizedBaseName) && ContainsOrdinal(candidateName, normalizedBaseName)) {
-                return 250;
-            }
-
-            if (ContainsOrdinal(candidateName, baseName)) {
-                return 200;
-            }
+            // УБРАНЫ все fallback на частичные совпадения!
+            // Больше НЕ ищем файлы которые просто "содержат" baseName
+            // Это предотвращает ложные совпадения типа texture_normal при поиске texture_gloss
 
             return -1;
         }

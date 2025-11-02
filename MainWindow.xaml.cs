@@ -1253,20 +1253,20 @@ namespace AssetProcessor {
         private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
             string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
             if (ktxPath == null) {
-                logger.Info($"KTX2 файл не найден для: {selectedTexture.Path}");
+                logger.Info($"KTX2 file not found for: {selectedTexture.Path}");
                 return false;
             }
 
-            logger.Info($"✓ Найден KTX2 файл: {ktxPath}");
+            logger.Info($"Found KTX2 file: {ktxPath}");
 
             try {
                 List<KtxMipLevel> mipmaps = await LoadKtx2MipmapsAsync(ktxPath, cancellationToken);
                 if (mipmaps.Count == 0 || cancellationToken.IsCancellationRequested) {
-                    logger.Warn($"Не удалось извлечь мипмапы из KTX2: {ktxPath}");
+                    logger.Warn($"Failed to extract mipmaps from KTX2: {ktxPath}");
                     return false;
                 }
 
-                logger.Info($"Извлечено {mipmaps.Count} мипмапов из KTX2");
+                logger.Info($"Extracted {mipmaps.Count} mipmaps from KTX2");
 
                 await Dispatcher.InvokeAsync(() => {
                     if (cancellationToken.IsCancellationRequested) {
@@ -1288,7 +1288,7 @@ namespace AssetProcessor {
             } catch (OperationCanceledException) {
                 return false;
             } catch (Exception ex) {
-                logger.Warn(ex, $"Не удалось загрузить предпросмотр KTX2: {ktxPath}");
+                logger.Warn(ex, $"Failed to load KTX2 preview: {ktxPath}");
                 return false;
             }
         }
@@ -1603,12 +1603,12 @@ namespace AssetProcessor {
 
                 // Логируем точную команду для диагностики
                 string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
-                logger.Info($"Выполняем команду: {commandLine}");
-                logger.Info($"Рабочая директория: {tempDirectory}");
-                logger.Info($"Входной файл существует: {File.Exists(ktxPath)}");
-                logger.Info($"Размер входного файла: {new FileInfo(ktxPath).Length} байт");
-                logger.Info($"Выходной базовый путь: {outputBaseName}");
-                logger.Info($"Директория для вывода существует: {Directory.Exists(tempDirectory)}");
+                logger.Info($"Executing command: {commandLine}");
+                logger.Info($"Working directory: {tempDirectory}");
+                logger.Info($"Input file exists: {File.Exists(ktxPath)}");
+                logger.Info($"Input file size: {new FileInfo(ktxPath).Length} bytes");
+                logger.Info($"Output base path: {outputBaseName}");
+                logger.Info($"Output directory exists: {Directory.Exists(tempDirectory)}");
 
                 using Process process = new() { StartInfo = startInfo };
                 try {
@@ -1626,11 +1626,11 @@ namespace AssetProcessor {
                 process.WaitForExit();
 
                 // Логируем результат даже при успехе для диагностики
-                logger.Info($"ktx extract завершён. ExitCode={process.ExitCode}, StdOut={standardOutput}, StdErr={standardError}");
+                logger.Info($"ktx extract completed. ExitCode={process.ExitCode}, StdOut={standardOutput}, StdErr={standardError}");
 
                 if (process.ExitCode != 0) {
-                    logger.Warn($"ktx завершился с кодом {process.ExitCode} при обработке {ktxPath}");
-                    throw new InvalidOperationException($"ktx завершился с кодом {process.ExitCode} при подготовке предпросмотра.");
+                    logger.Warn($"ktx exited with code {process.ExitCode} while processing {ktxPath}");
+                    throw new InvalidOperationException($"ktx exited with code {process.ExitCode} while preparing preview.");
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1643,15 +1643,15 @@ namespace AssetProcessor {
                 string[] allFiles = Directory.Exists(extractedDirectory)
                     ? Directory.GetFiles(extractedDirectory, "*.*", SearchOption.TopDirectoryOnly)
                     : Array.Empty<string>();
-                logger.Info($"Файлы в {extractedDirectory}: {string.Join(", ", allFiles.Select(Path.GetFileName))}");
+                logger.Info($"Files in {extractedDirectory}: {string.Join(", ", allFiles.Select(Path.GetFileName))}");
 
                 string[] pngFiles = Directory.Exists(extractedDirectory)
                     ? Directory.GetFiles(extractedDirectory, "*.png", SearchOption.TopDirectoryOnly)
                     : Array.Empty<string>();
                 if (pngFiles.Length == 0) {
-                    logger.Warn($"ktx не создал PNG файлы. Всего файлов в директории: {allFiles.Length}");
-                    logger.Warn($"Директория существует: {Directory.Exists(extractedDirectory)}");
-                    throw new InvalidOperationException("ktx не сгенерировал PNG-файлы для предпросмотра KTX2.");
+                    logger.Warn($"ktx did not create PNG files. Total files in directory: {allFiles.Length}");
+                    logger.Warn($"Directory exists: {Directory.Exists(extractedDirectory)}");
+                    throw new InvalidOperationException("ktx did not generate PNG files for KTX2 preview.");
                 }
 
                 List<KtxMipLevel> mipmaps = pngFiles
@@ -1803,7 +1803,7 @@ namespace AssetProcessor {
                 // Освобождаем PlayCanvasService
                 playCanvasService?.Dispose();
             } catch (Exception ex) {
-                logger.Error(ex, "Ошибка при отмене операций во время закрытия окна");
+                logger.Error(ex, "Error canceling operations during window closing");
             }
 
             SaveCurrentSettings();
@@ -3492,11 +3492,11 @@ namespace AssetProcessor {
                 // Загружаем UI элементы для ConversionSettings
                 PopulateConversionSettingsUI();
 
-                logger.Info("ConversionSettings инициализированы успешно");
+                logger.Info("ConversionSettings initialized successfully");
             } catch (Exception ex) {
-                logger.Error(ex, "Ошибка при инициализации ConversionSettings");
-                MessageBox.Show($"Ошибка инициализации настроек конвертации: {ex.Message}",
-                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                logger.Error(ex, "Error initializing ConversionSettings");
+                MessageBox.Show($"Error initializing conversion settings: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -3505,7 +3505,7 @@ namespace AssetProcessor {
         /// </summary>
         private void PopulateConversionSettingsUI() {
             if (conversionSettingsManager == null) {
-                logger.Warn("ConversionSettingsManager не инициализирован");
+                logger.Warn("ConversionSettingsManager not initialized");
                 return;
             }
 
@@ -3517,11 +3517,11 @@ namespace AssetProcessor {
                     ConversionSettingsPanel.SetConversionSettingsManager(conversionSettingsManager);
 
                     // Логируем для проверки
-                    logger.Info($"ConversionSettingsManager передан в панель. PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
+                    logger.Info($"ConversionSettingsManager passed to panel. PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
                 }
 
             } catch (Exception ex) {
-                logger.Error(ex, "Ошибка при заполнении UI ConversionSettings");
+                logger.Error(ex, "Error populating ConversionSettings UI");
                 throw;
             }
         }

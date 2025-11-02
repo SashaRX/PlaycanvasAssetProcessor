@@ -1856,10 +1856,16 @@ namespace AssetProcessor {
                             Projects.Add(project);
                         }
 
-                        if (!string.IsNullOrEmpty(lastSelectedProjectId) && projectsDict.ContainsKey(lastSelectedProjectId)) {
-                            ProjectsComboBox.SelectedValue = lastSelectedProjectId;
-                        } else {
-                            ProjectsComboBox.SelectedIndex = 0;
+                        // Устанавливаем флаг чтобы избежать двойной загрузки через SelectionChanged
+                        isProjectInitializationInProgress = true;
+                        try {
+                            if (!string.IsNullOrEmpty(lastSelectedProjectId) && projectsDict.ContainsKey(lastSelectedProjectId)) {
+                                ProjectsComboBox.SelectedValue = lastSelectedProjectId;
+                            } else {
+                                ProjectsComboBox.SelectedIndex = 0;
+                            }
+                        } finally {
+                            isProjectInitializationInProgress = false;
                         }
 
                         if (ProjectsComboBox.SelectedItem != null) {

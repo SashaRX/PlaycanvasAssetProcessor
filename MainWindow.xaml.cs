@@ -188,6 +188,7 @@ namespace AssetProcessor {
         private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
         private readonly object ignoredAssetTypesLock = new();
         private bool isBranchInitializationInProgress;
+        private bool isProjectInitializationInProgress;
 
         private ObservableCollection<KeyValuePair<string, string>> projects = [];
         public ObservableCollection<KeyValuePair<string, string>> Projects {
@@ -1134,6 +1135,10 @@ namespace AssetProcessor {
         }
 
         private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (isProjectInitializationInProgress) {
+                return;
+            }
+
             if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
                 projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
@@ -3601,10 +3606,15 @@ namespace AssetProcessor {
                         Projects.Add(project);
                     }
 
-                    if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedProjectId) && projectsDict.ContainsKey(AppSettings.Default.LastSelectedProjectId)) {
-                        ProjectsComboBox.SelectedValue = AppSettings.Default.LastSelectedProjectId;
-                    } else {
-                        ProjectsComboBox.SelectedIndex = 0;
+                    isProjectInitializationInProgress = true;
+                    try {
+                        if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedProjectId) && projectsDict.ContainsKey(AppSettings.Default.LastSelectedProjectId)) {
+                            ProjectsComboBox.SelectedValue = AppSettings.Default.LastSelectedProjectId;
+                        } else {
+                            ProjectsComboBox.SelectedIndex = 0;
+                        }
+                    } finally {
+                        isProjectInitializationInProgress = false;
                     }
 
                     if (ProjectsComboBox.SelectedItem != null) {
@@ -3617,17 +3627,27 @@ namespace AssetProcessor {
                                 Branches.Add(branch);
                             }
 
-                            if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
-                                Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
-                                if (selectedBranch != null) {
-                                    BranchesComboBox.SelectedValue = selectedBranch.Id;
+                            isBranchInitializationInProgress = true;
+                            try {
+                                if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
+                                    Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
+                                    if (selectedBranch != null) {
+                                        BranchesComboBox.SelectedValue = selectedBranch.Id;
+                                    } else {
+                                        BranchesComboBox.SelectedIndex = 0;
+                                    }
                                 } else {
                                     BranchesComboBox.SelectedIndex = 0;
                                 }
-                            } else {
-                                BranchesComboBox.SelectedIndex = 0;
+                            } finally {
+                                isBranchInitializationInProgress = false;
                             }
                         }
+
+                        // Загружаем данные из JSON после установки проекта и ветки
+                        projectName = MainWindowHelpers.CleanProjectName(((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Value);
+                        projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+                        await LoadAssetsFromJsonFileAsync();
                     }
                 }
                 projectFolderPath = AppSettings.Default.ProjectsFolderPath;

@@ -33,7 +33,9 @@
       "Bash(git checkout:*)",
       "Bash(Get-Process -Name \"AssetProcessor\" -ErrorAction SilentlyContinue)",
       "Bash(Select-Object -ExpandProperty Id)",
-      "Bash(Stop-Process -Id 40896 -Force)"
+      "Bash(Stop-Process -Id 40896 -Force)",
+      "Bash(Select-String -Pattern \"error|warning|succeeded|failed\" -Context 0,2)",
+      "Bash(Select-Object -Last 10)"
     ],
     "deny": [],
     "ask": []

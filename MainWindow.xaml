@@ -419,10 +419,9 @@
                                             <Image x:Name="TexturePreviewImage"
                                                    RenderOptions.EdgeMode="Aliased"
                                                    RenderOptions.BitmapScalingMode="HighQuality"
-                                                   Stretch="None"
-                                                   HorizontalAlignment="Left"
-                                                   VerticalAlignment="Top"
-                                                   RenderTransformOrigin="0,0"
+                                                   Stretch="Uniform"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
                                                    SizeChanged="TexturePreviewImage_SizeChanged"
                                                    MouseDown="TexturePreviewImage_MouseDown"
                                                    MouseMove="TexturePreviewImage_MouseMove"
@@ -466,43 +465,6 @@
                                                      GroupName="TexturePreviewSource"
                                                      Margin="8,0,0,0"
                                                      Checked="PreviewSourceRadioButton_Checked" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
-                                        <TextBlock Text="Масштаб:" FontSize="10" VerticalAlignment="Center" />
-                                        <Slider x:Name="ZoomSlider"
-                                                Minimum="0.125"
-                                                Maximum="16"
-                                                Value="1"
-                                                Margin="8,0,0,0"
-                                                Width="200"
-                                                IsMoveToPointEnabled="True"
-                                                ValueChanged="ZoomSlider_ValueChanged" />
-                                        <TextBlock x:Name="ZoomValueTextBlock"
-                                                   Text="100%"
-                                                   Margin="8,0,0,0"
-                                                   FontSize="10"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
-                                        <Button x:Name="FitZoomButton"
-                                                Content="Fit"
-                                                Width="48"
-                                                Margin="0,0,6,0"
-                                                Click="FitZoomButton_Click" />
-                                        <Button x:Name="Zoom100Button"
-                                                Content="100%"
-                                                Width="60"
-                                                Margin="0,0,6,0"
-                                                Click="Zoom100Button_Click" />
-                                        <Button x:Name="Zoom200Button"
-                                                Content="200%"
-                                                Width="60"
-                                                Margin="0,0,6,0"
-                                                Click="Zoom200Button_Click" />
-                                        <Button x:Name="ResetPanButton"
-                                                Content="Сброс панорамы"
-                                                Width="120"
-                                                Click="ResetPanButton_Click" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,6" RenderTransformOrigin="0.5,0.5">
                                         <StackPanel.RenderTransform>

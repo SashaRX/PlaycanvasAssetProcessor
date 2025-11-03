@@ -162,6 +162,7 @@ namespace AssetProcessor {
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
         private MatrixTransform? previewTransform;
+        // LEGACY: Zoom/Pan fields - kept for compatibility with remaining legacy code
         private bool isPanningPreview;
         private Point lastPanPosition;
         private double centerNormX = 0.5;
@@ -171,7 +172,7 @@ namespace AssetProcessor {
         private double currentZoom = 1.0;
         private double fitZoom = 1.0;
         private bool isFitMode = true;
-        private bool isUpdatingZoomSlider;
+        // private bool isUpdatingZoomSlider; // Removed: UI control deleted
         private bool fitZoomUpdateScheduled;
         private bool forceFitOnNextUpdate;
         private const double MinZoom = 0.125;
@@ -337,22 +338,11 @@ namespace AssetProcessor {
             UpdatePreviewSourceControls();
         }
 
+        // LEGACY: Simplified zoom state reset for fallback mode
         private void ResetZoomState() {
-            StopPanning();
-            centerNormX = 0.5;
-            centerNormY = 0.5;
-            panOffsetX = 0;
-            panOffsetY = 0;
             if (previewTransform != null) {
                 previewTransform.Matrix = Matrix.Identity;
             }
-
-            currentZoom = 1.0;
-            fitZoom = 1.0;
-            isFitMode = true;
-            fitZoomUpdateScheduled = false;
-            forceFitOnNextUpdate = false;
-            UpdateZoomUi();
         }
 
         private void ClearPreviewReferenceSize() {
@@ -407,105 +397,43 @@ namespace AssetProcessor {
             return Math.Clamp(value, 0.0, 1.0);
         }
 
+        // LEGACY: Simplified fallback preview - just displays image without transform
         private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
             if (TexturePreviewImage == null) {
                 return;
             }
 
-            (double normX, double normY)? preservedCenter = null;
-            if (preserveViewport && TexturePreviewImage.Source is BitmapSource previousBitmap) {
-                preservedCenter = CaptureViewportCenterNormalized(previousBitmap);
-            }
-
-            if (setReference) {
-                SetPreviewReferenceSize(bitmap);
-            } else {
-                EnsurePreviewReferenceSize(bitmap);
-            }
-
+            // Simple fallback mode: just set the image source
             TexturePreviewImage.Source = bitmap;
 
-            if (previewTransform == null) {
-                return;
-            }
-
-            if (preservedCenter.HasValue) {
-                RestoreViewportCenterNormalized(bitmap, preservedCenter.Value.normX, preservedCenter.Value.normY);
-            } else {
-                centerNormX = 0.5;
-                centerNormY = 0.5;
-                UpdateTransform(true);
-            }
-
-            UpdateZoomUi();
-
-            Dispatcher.BeginInvoke(new Action(() => {
-                if (TexturePreviewImage?.Source == bitmap) {
-                    UpdateTransform(true);
-                }
-            }), DispatcherPriority.Loaded);
-        }
-
-        private void UpdateZoomUi() {
-            if (ZoomValueTextBlock != null) {
-                ZoomValueTextBlock.Text = $"{currentZoom * 100:0.#}%";
-            }
-
-            if (ZoomSlider != null) {
-                bool previous = isUpdatingZoomSlider;
-                isUpdatingZoomSlider = true;
-                ZoomSlider.Value = currentZoom;
-                isUpdatingZoomSlider = previous;
+            // Reset transform to identity (no zoom/pan)
+            if (previewTransform != null) {
+                previewTransform.Matrix = Matrix.Identity;
             }
         }
 
+        // LEGACY: UpdateZoomUi removed - controls deleted
+        // private void UpdateZoomUi() {
+        //     if (ZoomValueTextBlock != null) {
+        //         ZoomValueTextBlock.Text = $"{currentZoom * 100:0.#}%";
+        //     }
+        //
+        //     if (ZoomSlider != null) {
+        //         bool previous = isUpdatingZoomSlider;
+        //         isUpdatingZoomSlider = true;
+        //         ZoomSlider.Value = currentZoom;
+        //         isUpdatingZoomSlider = previous;
+        //     }
+        // }
+
+        // LEGACY: ScheduleFitZoomUpdate disabled
         private void ScheduleFitZoomUpdate(bool forceApply) {
-            if (forceApply) {
-                forceFitOnNextUpdate = true;
-            }
-
-            if (fitZoomUpdateScheduled) {
-                return;
-            }
-
-            fitZoomUpdateScheduled = true;
-
-            Dispatcher.BeginInvoke(new Action(() => {
-                fitZoomUpdateScheduled = false;
-                bool apply = forceFitOnNextUpdate || isFitMode;
-                forceFitOnNextUpdate = false;
-                RecalculateFitZoom(apply);
-            }), DispatcherPriority.Loaded);
+            // Disabled for fallback mode
         }
 
+        // LEGACY: RecalculateFitZoom disabled
         private void RecalculateFitZoom(bool apply) {
-            if (TexturePreviewImage?.Source is not BitmapSource bitmap || previewTransform == null) {
-                return;
-            }
-
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            if (viewportWidth <= 0 || viewportHeight <= 0) {
-                return;
-            }
-
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            if (imageWidth <= 0 || imageHeight <= 0) {
-                return;
-            }
-
-            EnsurePreviewReferenceSize(bitmap);
-            double referenceWidth = previewReferenceWidth > 0 ? previewReferenceWidth : imageWidth;
-            double referenceHeight = previewReferenceHeight > 0 ? previewReferenceHeight : imageHeight;
-
-            double newFitZoom = Math.Min(viewportWidth / referenceWidth, viewportHeight / referenceHeight);
-            newFitZoom = Math.Clamp(newFitZoom, MinZoom, MaxZoom);
-            fitZoom = newFitZoom;
-
-            if (apply) {
-                ApplyFitZoom();
-            } else {
-                UpdateZoomUi();
-            }
+            // Disabled for fallback mode
         }
 
         private static (double width, double height) GetImageSizeInDips(BitmapSource bitmap) {
@@ -572,36 +500,9 @@ namespace AssetProcessor {
             return effectiveZoom;
         }
 
+        // LEGACY: UpdateTransform disabled - using simple Stretch="Uniform" instead
         private void UpdateTransform(bool rebuildFromCenter) {
-            if (previewTransform == null || TexturePreviewImage?.Source is not BitmapSource bitmap) {
-                return;
-            }
-
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            if (viewportWidth <= 0 || viewportHeight <= 0) {
-                return;
-            }
-
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            if (imageWidth <= 0 || imageHeight <= 0) {
-                return;
-            }
-
-            double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
-            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
-                return;
-            }
-
-            if (rebuildFromCenter) {
-                RebuildPanFromCenter(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-            } else {
-                UpdateCenterFromPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-            }
-
-            Matrix matrix = Matrix.Identity;
-            matrix.Scale(effectiveZoom, effectiveZoom);
-            matrix.Translate(panOffsetX, panOffsetY);
-            previewTransform.Matrix = matrix;
+            // Disabled for fallback mode
         }
 
         private void RebuildPanFromCenter(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
@@ -739,17 +640,9 @@ namespace AssetProcessor {
             UpdateTransform(true);
         }
 
+        // LEGACY: ApplyFitZoom disabled
         private void ApplyFitZoom() {
-            if (TexturePreviewImage?.Source is not BitmapSource) {
-                return;
-            }
-
-            currentZoom = fitZoom;
-            centerNormX = 0.5;
-            centerNormY = 0.5;
-            isFitMode = true;
-            UpdateTransform(true);
-            UpdateZoomUi();
+            // Disabled for fallback mode
         }
 
         private void ApplyZoomWithPivot(double newZoom, Point pivot) {
@@ -797,7 +690,7 @@ namespace AssetProcessor {
             currentZoom = newZoom;
             isFitMode = false;
             UpdateTransform(false);
-            UpdateZoomUi();
+            // UpdateZoomUi(); // LEGACY: removed
         }
 
         private void SetZoomAndCenter(double zoom) {
@@ -810,7 +703,7 @@ namespace AssetProcessor {
             centerNormY = 0.5;
             isFitMode = false;
             UpdateTransform(true);
-            UpdateZoomUi();
+            // UpdateZoomUi(); // LEGACY: removed
         }
 
         private void ResetPan() {
@@ -937,114 +830,62 @@ namespace AssetProcessor {
             }
         }
 
+        // LEGACY: Mouse wheel zoom removed
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (TexturePreviewImage?.Source == null) {
-                return;
-            }
-
-            double factor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
-            double targetZoom = Math.Clamp(currentZoom * factor, MinZoom, MaxZoom);
-            if (Math.Abs(targetZoom - currentZoom) < 0.0001) {
-                return;
-            }
-
-            FrameworkElement? reference = GetPanReferenceElement();
-            Point pivot = reference != null
-                ? ToImageSpace(e.GetPosition(reference), reference)
-                : new Point(0, 0);
-            ApplyZoomWithPivot(targetZoom, pivot);
-            e.Handled = true;
+            // Disabled for fallback mode
         }
 
-        private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (isUpdatingZoomSlider || TexturePreviewImage?.Source == null) {
-                return;
-            }
+        // LEGACY: Zoom/Pan controls removed - fallback to simple preview
+        // private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+        //     if (isUpdatingZoomSlider || TexturePreviewImage?.Source == null) {
+        //         return;
+        //     }
+        //
+        //     double newZoom = e.NewValue;
+        //     if (double.IsNaN(newZoom) || newZoom <= 0) {
+        //         return;
+        //     }
+        //
+        //     Point pivot = GetViewportCenterInImageSpace();
+        //     ApplyZoomWithPivot(newZoom, pivot);
+        // }
+        //
+        // private void FitZoomButton_Click(object sender, RoutedEventArgs e) {
+        //     if (TexturePreviewImage?.Source == null) {
+        //         return;
+        //     }
+        //
+        //     isFitMode = true;
+        //     ScheduleFitZoomUpdate(true);
+        // }
+        //
+        // private void Zoom100Button_Click(object sender, RoutedEventArgs e) {
+        //     SetZoomAndCenter(1.0);
+        // }
+        //
+        // private void Zoom200Button_Click(object sender, RoutedEventArgs e) {
+        //     SetZoomAndCenter(2.0);
+        // }
+        //
+        // private void ResetPanButton_Click(object sender, RoutedEventArgs e) {
+        //     ResetPan();
+        // }
 
-            double newZoom = e.NewValue;
-            if (double.IsNaN(newZoom) || newZoom <= 0) {
-                return;
-            }
-
-            Point pivot = GetViewportCenterInImageSpace();
-            ApplyZoomWithPivot(newZoom, pivot);
-        }
-
-        private void FitZoomButton_Click(object sender, RoutedEventArgs e) {
-            if (TexturePreviewImage?.Source == null) {
-                return;
-            }
-
-            isFitMode = true;
-            ScheduleFitZoomUpdate(true);
-        }
-
-        private void Zoom100Button_Click(object sender, RoutedEventArgs e) {
-            SetZoomAndCenter(1.0);
-        }
-
-        private void Zoom200Button_Click(object sender, RoutedEventArgs e) {
-            SetZoomAndCenter(2.0);
-        }
-
-        private void ResetPanButton_Click(object sender, RoutedEventArgs e) {
-            ResetPan();
-        }
-
+        // LEGACY: Mouse pan removed - will use D3D11 viewer
         private void TexturePreviewImage_MouseDown(object sender, MouseButtonEventArgs e) {
-            if (TexturePreviewImage?.Source == null) {
-                return;
-            }
-
-            bool isSpacePressed = Keyboard.IsKeyDown(Key.Space);
-            bool shouldPan = e.ChangedButton == MouseButton.Middle || (e.ChangedButton == MouseButton.Left && isSpacePressed);
-            if (!shouldPan) {
-                return;
-            }
-
-            FrameworkElement? reference = GetPanReferenceElement();
-            if (reference == null) {
-                return;
-            }
-
-            Point position = e.GetPosition(reference);
-            StartPanning(position);
-            e.Handled = true;
+            // Disabled for fallback mode
         }
 
         private void TexturePreviewImage_MouseMove(object sender, MouseEventArgs e) {
-            if (!isPanningPreview || previewTransform == null) {
-                return;
-            }
-
-            FrameworkElement? reference = GetPanReferenceElement();
-            if (reference == null) {
-                return;
-            }
-
-            Point currentPosition = e.GetPosition(reference);
-            Vector delta = currentPosition - lastPanPosition;
-            if (Math.Abs(delta.X) > double.Epsilon || Math.Abs(delta.Y) > double.Epsilon) {
-                ApplyPanDelta(delta);
-                lastPanPosition = currentPosition;
-            }
+            // Disabled for fallback mode
         }
 
         private void TexturePreviewImage_MouseUp(object sender, MouseButtonEventArgs e) {
-            if (!isPanningPreview) {
-                return;
-            }
-
-            if (e.ChangedButton == MouseButton.Middle || e.ChangedButton == MouseButton.Left) {
-                StopPanning();
-                e.Handled = true;
-            }
+            // Disabled for fallback mode
         }
 
         private void TexturePreviewImage_MouseLeave(object sender, MouseEventArgs e) {
-            if (e.LeftButton == MouseButtonState.Released && e.MiddleButton == MouseButtonState.Released) {
-                StopPanning();
-            }
+            // Disabled for fallback mode
         }
 
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {

@@ -401,31 +401,30 @@ namespace AssetProcessor {
             return Math.Clamp(value, 0.0, 1.0);
         }
 
-        private void PreserveViewportAfterBitmapChange(BitmapSource previousBitmap, BitmapSource newBitmap) {
+        private bool TryPreserveViewportAfterBitmapChange(BitmapSource previousBitmap, BitmapSource newBitmap, out Matrix matrix) {
+            matrix = Matrix.Identity;
+
             if (previewTransform == null) {
-                return;
+                return false;
             }
 
             Matrix currentMatrix = previewTransform.Matrix;
 
             (double viewportWidth, double viewportHeight) = GetViewportSize();
             if (viewportWidth <= 0 || viewportHeight <= 0) {
-                previewTransform.Matrix = ClampTransform(currentMatrix);
-                return;
+                return false;
             }
 
             (double oldWidth, double oldHeight) = GetImageSizeInDips(previousBitmap);
             (double newWidth, double newHeight) = GetImageSizeInDips(newBitmap);
 
             if (oldWidth <= 0 || oldHeight <= 0 || newWidth <= 0 || newHeight <= 0) {
-                previewTransform.Matrix = ClampTransform(currentMatrix);
-                return;
+                return false;
             }
 
             Matrix inverse = currentMatrix;
             if (!inverse.HasInverse) {
-                previewTransform.Matrix = ClampTransform(currentMatrix);
-                return;
+                return false;
             }
 
             inverse.Invert();
@@ -453,14 +452,39 @@ namespace AssetProcessor {
             double newScale = oldScale * scaleRatio;
             Point newCenter = new(newWidth * normalizedX, newHeight * normalizedY);
 
-            Matrix matrix = Matrix.Identity;
+            matrix = Matrix.Identity;
             matrix.Scale(newScale, newScale);
 
             double offsetX = (viewportWidth / 2.0) - (newScale * newCenter.X);
             double offsetY = (viewportHeight / 2.0) - (newScale * newCenter.Y);
             matrix.Translate(offsetX, offsetY);
 
-            previewTransform.Matrix = ClampTransform(matrix);
+            return true;
+        }
+
+        private Matrix BuildMatrixForZoom(BitmapSource bitmap, double zoom) {
+            EnsurePreviewReferenceSize(bitmap);
+
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                return Matrix.Identity;
+            }
+
+            double clampedZoom = double.IsFinite(zoom) && zoom > 0 ? zoom : 1.0;
+            double scaleMultiplier = GetScaleMultiplier(imageWidth, imageHeight);
+            double actualScale = clampedZoom * scaleMultiplier;
+
+            if (!double.IsFinite(actualScale) || actualScale <= 0) {
+                actualScale = 1.0;
+            }
+
+            Matrix matrix = Matrix.Identity;
+            matrix.Scale(actualScale, actualScale);
+
+            Vector offsets = GetViewportOffsets(bitmap, clampedZoom);
+            matrix.Translate(offsets.X, offsets.Y);
+
+            return matrix;
         }
 
         private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
@@ -482,12 +506,17 @@ namespace AssetProcessor {
                 return;
             }
 
-            if (preserveViewport && previousBitmap != null) {
-                PreserveViewportAfterBitmapChange(previousBitmap, bitmap);
+            Matrix targetMatrix;
+
+            if (preserveViewport && previousBitmap != null &&
+                TryPreserveViewportAfterBitmapChange(previousBitmap, bitmap, out Matrix preservedMatrix)) {
+                targetMatrix = preservedMatrix;
             } else {
-                Matrix matrix = preserveViewport ? previewTransform.Matrix : Matrix.Identity;
-                previewTransform.Matrix = ClampTransform(matrix);
+                double targetZoom = isFitMode ? fitZoom : currentZoom;
+                targetMatrix = BuildMatrixForZoom(bitmap, targetZoom);
             }
+
+            previewTransform.Matrix = ClampTransform(targetMatrix);
         }
 
         private void UpdateZoomUi() {
@@ -694,14 +723,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            EnsurePreviewReferenceSize(bitmap);
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            double actualScale = zoom * GetScaleMultiplier(imageWidth, imageHeight);
-
-            Matrix matrix = Matrix.Identity;
-            matrix.Scale(actualScale, actualScale);
-            Vector offsets = GetViewportOffsets(bitmap, zoom);
-            matrix.Translate(offsets.X, offsets.Y);
+            Matrix matrix = BuildMatrixForZoom(bitmap, zoom);
             matrix = ClampTransform(matrix);
             previewTransform.Matrix = matrix;
 
@@ -742,10 +764,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            Matrix matrix = previewTransform.Matrix;
-            Vector offsets = GetViewportOffsets(bitmap, currentZoom);
-            matrix.OffsetX = offsets.X;
-            matrix.OffsetY = offsets.Y;
+            Matrix matrix = BuildMatrixForZoom(bitmap, currentZoom);
             matrix = ClampTransform(matrix);
             previewTransform.Matrix = matrix;
         }

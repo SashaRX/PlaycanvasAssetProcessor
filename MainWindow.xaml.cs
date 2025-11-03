@@ -604,8 +604,16 @@ namespace AssetProcessor {
             CenterImageOnViewport();
         }
 
+        private FrameworkElement? GetPanReferenceElement() {
+            if (TexturePreviewScrollViewer != null) {
+                return TexturePreviewScrollViewer;
+            }
+
+            return TexturePreviewImage;
+        }
+
         private void StartPanning(Point startPosition) {
-            FrameworkElement reference = TexturePreviewScrollViewer ?? TexturePreviewImage;
+            FrameworkElement? reference = GetPanReferenceElement();
             if (reference == null) {
                 return;
             }
@@ -720,7 +728,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            FrameworkElement reference = TexturePreviewScrollViewer ?? TexturePreviewImage;
+            FrameworkElement? reference = GetPanReferenceElement();
             if (reference == null) {
                 return;
             }
@@ -735,7 +743,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            FrameworkElement reference = TexturePreviewScrollViewer ?? TexturePreviewImage;
+            FrameworkElement? reference = GetPanReferenceElement();
             if (reference == null) {
                 return;
             }

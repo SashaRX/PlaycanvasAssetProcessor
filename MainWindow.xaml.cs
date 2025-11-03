@@ -161,8 +161,25 @@ namespace AssetProcessor {
         private bool isKtxPreviewAvailable;
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
+        private MatrixTransform? previewTransform;
+        private bool isPanningPreview;
+        private Point lastPanPosition;
+        private double centerNormX = 0.5;
+        private double centerNormY = 0.5;
+        private double panOffsetX;
+        private double panOffsetY;
+        private double currentZoom = 1.0;
+        private double fitZoom = 1.0;
+        private bool isFitMode = true;
+        private bool isUpdatingZoomSlider;
+        private bool fitZoomUpdateScheduled;
+        private bool forceFitOnNextUpdate;
+        private const double MinZoom = 0.125;
+        private const double MaxZoom = 16.0;
         // Removed: isUpdatingPreviewWidth (PreviewWidthSlider was removed)
         private BitmapSource? originalFileBitmapSource;
+        private double previewReferenceWidth;
+        private double previewReferenceHeight;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private sealed class KtxPreviewCacheEntry {
@@ -201,6 +218,7 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
+            previewTransform = TexturePreviewTransform;
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -304,8 +322,7 @@ namespace AssetProcessor {
         }
 
         private void ResetPreviewState() {
-            TexturePreviewScrollViewer?.ScrollToHome();
-            TexturePreviewScrollViewer?.ScrollToLeftEnd();
+            ResetZoomState();
             isKtxPreviewActive = false;
             currentMipLevel = 0;
             currentKtxMipmaps = null;
@@ -315,8 +332,576 @@ namespace AssetProcessor {
             isSourcePreviewAvailable = false;
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
+            ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
+        }
+
+        private void ResetZoomState() {
+            StopPanning();
+            centerNormX = 0.5;
+            centerNormY = 0.5;
+            panOffsetX = 0;
+            panOffsetY = 0;
+            if (previewTransform != null) {
+                previewTransform.Matrix = Matrix.Identity;
+            }
+
+            currentZoom = 1.0;
+            fitZoom = 1.0;
+            isFitMode = true;
+            fitZoomUpdateScheduled = false;
+            forceFitOnNextUpdate = false;
+            UpdateZoomUi();
+        }
+
+        private void ClearPreviewReferenceSize() {
+            previewReferenceWidth = 0;
+            previewReferenceHeight = 0;
+        }
+
+        private void SetPreviewReferenceSize(BitmapSource bitmap) {
+            (double width, double height) = GetImageSizeInDips(bitmap);
+
+            previewReferenceWidth = double.IsFinite(width) && width > 0 ? width : 0;
+            previewReferenceHeight = double.IsFinite(height) && height > 0 ? height : 0;
+        }
+
+        private void EnsurePreviewReferenceSize(BitmapSource bitmap) {
+            if (previewReferenceWidth <= 0 || previewReferenceHeight <= 0) {
+                SetPreviewReferenceSize(bitmap);
+            }
+        }
+
+        private double GetScaleMultiplier(double imageWidth, double imageHeight) {
+            double multiplierX = (previewReferenceWidth > 0 && imageWidth > 0)
+                ? previewReferenceWidth / imageWidth
+                : double.NaN;
+            double multiplierY = (previewReferenceHeight > 0 && imageHeight > 0)
+                ? previewReferenceHeight / imageHeight
+                : double.NaN;
+
+            double multiplier = double.IsFinite(multiplierX) && multiplierX > 0 ? multiplierX : double.NaN;
+            if (!double.IsFinite(multiplier) || multiplier <= 0) {
+                multiplier = double.IsFinite(multiplierY) && multiplierY > 0 ? multiplierY : 1.0;
+            }
+
+            if (!double.IsFinite(multiplier) || multiplier <= 0) {
+                multiplier = 1.0;
+            }
+
+            return multiplier;
+        }
+
+        private double GetScaleMultiplier(BitmapSource bitmap) {
+            EnsurePreviewReferenceSize(bitmap);
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            return GetScaleMultiplier(imageWidth, imageHeight);
+        }
+
+        private static double ClampNormalized(double value) {
+            if (!double.IsFinite(value)) {
+                return 0.5;
+            }
+
+            return Math.Clamp(value, 0.0, 1.0);
+        }
+
+        private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
+            if (TexturePreviewImage == null) {
+                return;
+            }
+
+            (double normX, double normY)? preservedCenter = null;
+            if (preserveViewport && TexturePreviewImage.Source is BitmapSource previousBitmap) {
+                preservedCenter = CaptureViewportCenterNormalized(previousBitmap);
+            }
+
+            if (setReference) {
+                SetPreviewReferenceSize(bitmap);
+            } else {
+                EnsurePreviewReferenceSize(bitmap);
+            }
+
+            TexturePreviewImage.Source = bitmap;
+
+            if (previewTransform == null) {
+                return;
+            }
+
+            if (preservedCenter.HasValue) {
+                RestoreViewportCenterNormalized(bitmap, preservedCenter.Value.normX, preservedCenter.Value.normY);
+            } else {
+                centerNormX = 0.5;
+                centerNormY = 0.5;
+                UpdateTransform(true);
+            }
+
+            UpdateZoomUi();
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturePreviewImage?.Source == bitmap) {
+                    UpdateTransform(true);
+                }
+            }), DispatcherPriority.Loaded);
+        }
+
+        private void UpdateZoomUi() {
+            if (ZoomValueTextBlock != null) {
+                ZoomValueTextBlock.Text = $"{currentZoom * 100:0.#}%";
+            }
+
+            if (ZoomSlider != null) {
+                bool previous = isUpdatingZoomSlider;
+                isUpdatingZoomSlider = true;
+                ZoomSlider.Value = currentZoom;
+                isUpdatingZoomSlider = previous;
+            }
+        }
+
+        private void ScheduleFitZoomUpdate(bool forceApply) {
+            if (forceApply) {
+                forceFitOnNextUpdate = true;
+            }
+
+            if (fitZoomUpdateScheduled) {
+                return;
+            }
+
+            fitZoomUpdateScheduled = true;
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                fitZoomUpdateScheduled = false;
+                bool apply = forceFitOnNextUpdate || isFitMode;
+                forceFitOnNextUpdate = false;
+                RecalculateFitZoom(apply);
+            }), DispatcherPriority.Loaded);
+        }
+
+        private void RecalculateFitZoom(bool apply) {
+            if (TexturePreviewImage?.Source is not BitmapSource bitmap || previewTransform == null) {
+                return;
+            }
+
+            (double viewportWidth, double viewportHeight) = GetViewportSize();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                return;
+            }
+
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                return;
+            }
+
+            EnsurePreviewReferenceSize(bitmap);
+            double referenceWidth = previewReferenceWidth > 0 ? previewReferenceWidth : imageWidth;
+            double referenceHeight = previewReferenceHeight > 0 ? previewReferenceHeight : imageHeight;
+
+            double newFitZoom = Math.Min(viewportWidth / referenceWidth, viewportHeight / referenceHeight);
+            newFitZoom = Math.Clamp(newFitZoom, MinZoom, MaxZoom);
+            fitZoom = newFitZoom;
+
+            if (apply) {
+                ApplyFitZoom();
+            } else {
+                UpdateZoomUi();
+            }
+        }
+
+        private static (double width, double height) GetImageSizeInDips(BitmapSource bitmap) {
+            if (bitmap == null) {
+                return (0, 0);
+            }
+
+            double dpiX = bitmap.DpiX;
+            double dpiY = bitmap.DpiY;
+            if (dpiX <= 0) {
+                dpiX = 96.0;
+            }
+            if (dpiY <= 0) {
+                dpiY = 96.0;
+            }
+
+            double width = bitmap.PixelWidth * 96.0 / dpiX;
+            double height = bitmap.PixelHeight * 96.0 / dpiY;
+            return (width, height);
+        }
+
+        private (double width, double height) GetViewportSize() {
+            if (TexturePreviewViewport != null) {
+                double width = TexturePreviewViewport.ActualWidth;
+                double height = TexturePreviewViewport.ActualHeight;
+
+                if (double.IsNaN(width) || width < 0) {
+                    width = 0;
+                }
+
+                if (double.IsNaN(height) || height < 0) {
+                    height = 0;
+                }
+
+                return (width, height);
+            }
+
+            if (TexturePreviewImage != null) {
+                double width = TexturePreviewImage.ActualWidth;
+                double height = TexturePreviewImage.ActualHeight;
+
+                if (double.IsNaN(width)) {
+                    width = 0;
+                }
+
+                if (double.IsNaN(height)) {
+                    height = 0;
+                }
+
+                return (width, height);
+            }
+
+            return (0, 0);
+        }
+
+        private double GetEffectiveZoom(BitmapSource bitmap, double zoom) {
+            EnsurePreviewReferenceSize(bitmap);
+            double scaleMultiplier = GetScaleMultiplier(bitmap);
+            double effectiveZoom = zoom * scaleMultiplier;
+            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
+                effectiveZoom = 1.0;
+            }
+
+            return effectiveZoom;
+        }
+
+        private void UpdateTransform(bool rebuildFromCenter) {
+            if (previewTransform == null || TexturePreviewImage?.Source is not BitmapSource bitmap) {
+                return;
+            }
+
+            (double viewportWidth, double viewportHeight) = GetViewportSize();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                return;
+            }
+
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                return;
+            }
+
+            double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
+            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
+                return;
+            }
+
+            if (rebuildFromCenter) {
+                RebuildPanFromCenter(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+            } else {
+                UpdateCenterFromPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+            }
+
+            Matrix matrix = Matrix.Identity;
+            matrix.Scale(effectiveZoom, effectiveZoom);
+            matrix.Translate(panOffsetX, panOffsetY);
+            previewTransform.Matrix = matrix;
+        }
+
+        private void RebuildPanFromCenter(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
+            centerNormX = ClampNormalized(centerNormX);
+            centerNormY = ClampNormalized(centerNormY);
+
+            double centerX = centerNormX * imageWidth;
+            double centerY = centerNormY * imageHeight;
+
+            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+
+            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
+            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+
+            panOffsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
+            panOffsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
+
+            ClampPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+        }
+
+        private void UpdateCenterFromPan(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
+            ClampPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+
+            double centerX = (viewportWidth / 2.0 - panOffsetX) / effectiveZoom;
+            double centerY = (viewportHeight / 2.0 - panOffsetY) / effectiveZoom;
+
+            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+
+            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
+            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+
+            panOffsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
+            panOffsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
+        }
+
+        private void ClampPan(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
+            double scaledWidth = imageWidth * effectiveZoom;
+            double scaledHeight = imageHeight * effectiveZoom;
+
+            if (!double.IsFinite(scaledWidth) || scaledWidth < 0) {
+                scaledWidth = 0;
+            }
+
+            if (!double.IsFinite(scaledHeight) || scaledHeight < 0) {
+                scaledHeight = 0;
+            }
+
+            if (scaledWidth <= viewportWidth) {
+                panOffsetX = (viewportWidth - scaledWidth) / 2.0;
+            } else {
+                double minOffsetX = viewportWidth - scaledWidth;
+                double maxOffsetX = 0;
+                if (!double.IsFinite(minOffsetX)) {
+                    minOffsetX = 0;
+                }
+
+                panOffsetX = Math.Clamp(panOffsetX, minOffsetX, maxOffsetX);
+            }
+
+            if (scaledHeight <= viewportHeight) {
+                panOffsetY = (viewportHeight - scaledHeight) / 2.0;
+            } else {
+                double minOffsetY = viewportHeight - scaledHeight;
+                double maxOffsetY = 0;
+                if (!double.IsFinite(minOffsetY)) {
+                    minOffsetY = 0;
+                }
+
+                panOffsetY = Math.Clamp(panOffsetY, minOffsetY, maxOffsetY);
+            }
+        }
+
+        private static (double centerX, double centerY) ClampCenter(
+            double centerX,
+            double centerY,
+            double imageWidth,
+            double imageHeight,
+            double viewportWidth,
+            double viewportHeight,
+            double effectiveZoom) {
+
+            double scaledWidth = imageWidth * effectiveZoom;
+            double scaledHeight = imageHeight * effectiveZoom;
+
+            if (scaledWidth <= viewportWidth || imageWidth <= 0) {
+                centerX = imageWidth / 2.0;
+            } else {
+                double halfViewportWidth = viewportWidth / (2.0 * effectiveZoom);
+                if (!double.IsFinite(halfViewportWidth) || halfViewportWidth <= 0) {
+                    halfViewportWidth = 0;
+                }
+
+                double minCenterX = halfViewportWidth;
+                double maxCenterX = imageWidth - halfViewportWidth;
+                if (minCenterX > maxCenterX) {
+                    double mid = imageWidth / 2.0;
+                    minCenterX = mid;
+                    maxCenterX = mid;
+                }
+
+                centerX = Math.Clamp(centerX, minCenterX, maxCenterX);
+            }
+
+            if (scaledHeight <= viewportHeight || imageHeight <= 0) {
+                centerY = imageHeight / 2.0;
+            } else {
+                double halfViewportHeight = viewportHeight / (2.0 * effectiveZoom);
+                if (!double.IsFinite(halfViewportHeight) || halfViewportHeight <= 0) {
+                    halfViewportHeight = 0;
+                }
+
+                double minCenterY = halfViewportHeight;
+                double maxCenterY = imageHeight - halfViewportHeight;
+                if (minCenterY > maxCenterY) {
+                    double mid = imageHeight / 2.0;
+                    minCenterY = mid;
+                    maxCenterY = mid;
+                }
+
+                centerY = Math.Clamp(centerY, minCenterY, maxCenterY);
+            }
+
+            return (centerX, centerY);
+        }
+
+        private (double normX, double normY)? CaptureViewportCenterNormalized(BitmapSource bitmap) {
+            _ = bitmap;
+            return (centerNormX, centerNormY);
+        }
+
+        private void RestoreViewportCenterNormalized(BitmapSource bitmap, double normX, double normY) {
+            _ = bitmap;
+            centerNormX = ClampNormalized(normX);
+            centerNormY = ClampNormalized(normY);
+            UpdateTransform(true);
+        }
+
+        private void ApplyFitZoom() {
+            if (TexturePreviewImage?.Source is not BitmapSource) {
+                return;
+            }
+
+            currentZoom = fitZoom;
+            centerNormX = 0.5;
+            centerNormY = 0.5;
+            isFitMode = true;
+            UpdateTransform(true);
+            UpdateZoomUi();
+        }
+
+        private void ApplyZoomWithPivot(double newZoom, Point pivot) {
+            if (TexturePreviewImage?.Source is not BitmapSource bitmap) {
+                return;
+            }
+
+            newZoom = Math.Clamp(newZoom, MinZoom, MaxZoom);
+            if (Math.Abs(newZoom - currentZoom) < 0.0001) {
+                return;
+            }
+
+            (double viewportWidth, double viewportHeight) = GetViewportSize();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                return;
+            }
+
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                return;
+            }
+
+            double oldEffective = GetEffectiveZoom(bitmap, currentZoom);
+            double newEffective = GetEffectiveZoom(bitmap, newZoom);
+
+            if (!double.IsFinite(oldEffective) || oldEffective <= 0 ||
+                !double.IsFinite(newEffective) || newEffective <= 0) {
+                return;
+            }
+
+            if (!double.IsFinite(pivot.X) || !double.IsFinite(pivot.Y)) {
+                pivot = new Point(imageWidth / 2.0, imageHeight / 2.0);
+            }
+
+            Matrix currentMatrix = previewTransform?.Matrix ?? Matrix.Identity;
+            Point pivotScreen = currentMatrix.Transform(pivot);
+
+            if (!double.IsFinite(pivotScreen.X) || !double.IsFinite(pivotScreen.Y)) {
+                return;
+            }
+
+            panOffsetX = pivotScreen.X - pivot.X * newEffective;
+            panOffsetY = pivotScreen.Y - pivot.Y * newEffective;
+
+            currentZoom = newZoom;
+            isFitMode = false;
+            UpdateTransform(false);
+            UpdateZoomUi();
+        }
+
+        private void SetZoomAndCenter(double zoom) {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            currentZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+            centerNormX = 0.5;
+            centerNormY = 0.5;
+            isFitMode = false;
+            UpdateTransform(true);
+            UpdateZoomUi();
+        }
+
+        private void ResetPan() {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            centerNormX = 0.5;
+            centerNormY = 0.5;
+            UpdateTransform(true);
+        }
+
+        private Point ToImageSpace(Point referencePoint, FrameworkElement referenceElement) {
+            if (TexturePreviewImage == null) {
+                return referencePoint;
+            }
+
+            Point pointInImage = referenceElement == TexturePreviewImage
+                ? referencePoint
+                : referenceElement.TranslatePoint(referencePoint, TexturePreviewImage);
+
+            if (previewTransform != null) {
+                Matrix inverse = previewTransform.Matrix;
+                if (inverse.HasInverse) {
+                    inverse.Invert();
+                    pointInImage = inverse.Transform(pointInImage);
+                }
+            }
+
+            return pointInImage;
+        }
+
+        private Point GetViewportCenterInImageSpace() {
+            if (TexturePreviewImage == null) {
+                return new Point(0, 0);
+            }
+
+            if (TexturePreviewImage.Source is not BitmapSource bitmap) {
+                return new Point(TexturePreviewImage.ActualWidth / 2.0, TexturePreviewImage.ActualHeight / 2.0);
+            }
+
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            return new Point(centerNormX * imageWidth, centerNormY * imageHeight);
+        }
+
+        private FrameworkElement? GetPanReferenceElement() {
+            if (TexturePreviewViewport != null) {
+                return TexturePreviewViewport;
+            }
+
+            return TexturePreviewImage;
+        }
+
+        private void StartPanning(Point startPosition) {
+            FrameworkElement? reference = GetPanReferenceElement();
+            if (reference == null) {
+                return;
+            }
+
+            lastPanPosition = startPosition;
+            isPanningPreview = true;
+            isFitMode = false;
+            TexturePreviewImage?.CaptureMouse();
+            TexturePreviewImage?.Focus();
+            if (TexturePreviewImage != null) {
+                TexturePreviewImage.Cursor = Cursors.SizeAll;
+            }
+        }
+
+        private void StopPanning() {
+            if (!isPanningPreview) {
+                return;
+            }
+
+            isPanningPreview = false;
+            TexturePreviewImage?.ReleaseMouseCapture();
+            TexturePreviewImage?.ClearValue(CursorProperty);
+        }
+
+        private void ApplyPanDelta(Vector delta) {
+            if (TexturePreviewImage?.Source is not BitmapSource) {
+                return;
+            }
+
+            if (!double.IsFinite(delta.X) || !double.IsFinite(delta.Y)) {
+                return;
+            }
+
+            panOffsetX += delta.X;
+            panOffsetY += delta.Y;
+            UpdateTransform(false);
         }
 
         private void UpdatePreviewSourceControls() {
@@ -338,6 +923,129 @@ namespace AssetProcessor {
         }
 
         // Removed: PreviewWidthSlider methods (slider was removed from UI)
+
+        private void TexturePreviewViewport_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (TexturePreviewImage?.Source != null) {
+                UpdateTransform(true);
+                ScheduleFitZoomUpdate(false);
+            }
+        }
+
+        private void TexturePreviewImage_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (TexturePreviewImage?.Source != null) {
+                UpdateTransform(true);
+            }
+        }
+
+        private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            double factor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
+            double targetZoom = Math.Clamp(currentZoom * factor, MinZoom, MaxZoom);
+            if (Math.Abs(targetZoom - currentZoom) < 0.0001) {
+                return;
+            }
+
+            FrameworkElement? reference = GetPanReferenceElement();
+            Point pivot = reference != null
+                ? ToImageSpace(e.GetPosition(reference), reference)
+                : new Point(0, 0);
+            ApplyZoomWithPivot(targetZoom, pivot);
+            e.Handled = true;
+        }
+
+        private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (isUpdatingZoomSlider || TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            double newZoom = e.NewValue;
+            if (double.IsNaN(newZoom) || newZoom <= 0) {
+                return;
+            }
+
+            Point pivot = GetViewportCenterInImageSpace();
+            ApplyZoomWithPivot(newZoom, pivot);
+        }
+
+        private void FitZoomButton_Click(object sender, RoutedEventArgs e) {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            isFitMode = true;
+            ScheduleFitZoomUpdate(true);
+        }
+
+        private void Zoom100Button_Click(object sender, RoutedEventArgs e) {
+            SetZoomAndCenter(1.0);
+        }
+
+        private void Zoom200Button_Click(object sender, RoutedEventArgs e) {
+            SetZoomAndCenter(2.0);
+        }
+
+        private void ResetPanButton_Click(object sender, RoutedEventArgs e) {
+            ResetPan();
+        }
+
+        private void TexturePreviewImage_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (TexturePreviewImage?.Source == null) {
+                return;
+            }
+
+            bool isSpacePressed = Keyboard.IsKeyDown(Key.Space);
+            bool shouldPan = e.ChangedButton == MouseButton.Middle || (e.ChangedButton == MouseButton.Left && isSpacePressed);
+            if (!shouldPan) {
+                return;
+            }
+
+            FrameworkElement? reference = GetPanReferenceElement();
+            if (reference == null) {
+                return;
+            }
+
+            Point position = e.GetPosition(reference);
+            StartPanning(position);
+            e.Handled = true;
+        }
+
+        private void TexturePreviewImage_MouseMove(object sender, MouseEventArgs e) {
+            if (!isPanningPreview || previewTransform == null) {
+                return;
+            }
+
+            FrameworkElement? reference = GetPanReferenceElement();
+            if (reference == null) {
+                return;
+            }
+
+            Point currentPosition = e.GetPosition(reference);
+            Vector delta = currentPosition - lastPanPosition;
+            if (Math.Abs(delta.X) > double.Epsilon || Math.Abs(delta.Y) > double.Epsilon) {
+                ApplyPanDelta(delta);
+                lastPanPosition = currentPosition;
+            }
+        }
+
+        private void TexturePreviewImage_MouseUp(object sender, MouseButtonEventArgs e) {
+            if (!isPanningPreview) {
+                return;
+            }
+
+            if (e.ChangedButton == MouseButton.Middle || e.ChangedButton == MouseButton.Left) {
+                StopPanning();
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreviewImage_MouseLeave(object sender, MouseEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Released && e.MiddleButton == MouseButtonState.Released) {
+                StopPanning();
+            }
+        }
 
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
             ClampPreviewContentHeight();
@@ -496,10 +1204,13 @@ namespace AssetProcessor {
 
             // Обновляем изображение
             Dispatcher.Invoke(() => {
-                TexturePreviewImage.Source = originalBitmapSource;
+                bool hasPrevious = TexturePreviewImage.Source is BitmapSource;
+                bool preserveViewport = hasPrevious && previewTransform != null;
+                UpdatePreviewImage(originalBitmapSource, setReference: clampedLevel == 0, preserveViewport: preserveViewport);
                 UpdateHistogram(originalBitmapSource);
             });
 
+            ScheduleFitZoomUpdate(false);
             UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
         }
 
@@ -510,7 +1221,7 @@ namespace AssetProcessor {
 
                 // Обновляем UI в основном потоке
                 Dispatcher.Invoke(() => {
-                    TexturePreviewImage.Source = filteredBitmap;
+                    UpdatePreviewImage(filteredBitmap, setReference: false, preserveViewport: true);
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
                 });
             }
@@ -530,12 +1241,16 @@ namespace AssetProcessor {
         private async void ShowOriginalImage(bool recalculateFitZoom = false) {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
-                    TexturePreviewImage.Source = originalBitmapSource;
+                    bool hasPrevious = TexturePreviewImage.Source is BitmapSource;
+                    bool preserveViewport = hasPrevious && !recalculateFitZoom;
+                    bool setReference = !hasPrevious || recalculateFitZoom || previewReferenceWidth <= 0 || !isKtxPreviewActive;
+                    UpdatePreviewImage(originalBitmapSource, setReference, preserveViewport);
                     RChannelButton.IsChecked = false;
                     GChannelButton.IsChecked = false;
                     BChannelButton.IsChecked = false;
                     AChannelButton.IsChecked = false;
                     UpdateHistogram(originalBitmapSource);
+                    ScheduleFitZoomUpdate(recalculateFitZoom);
                 });
             }
         }

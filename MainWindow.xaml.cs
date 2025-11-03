@@ -166,6 +166,8 @@ namespace AssetProcessor {
         private Point lastPanPosition;
         private double centerNormX = 0.5;
         private double centerNormY = 0.5;
+        private double panOffsetX;
+        private double panOffsetY;
         private double currentZoom = 1.0;
         private double fitZoom = 1.0;
         private bool isFitMode = true;
@@ -341,6 +343,8 @@ namespace AssetProcessor {
             StopPanning();
             centerNormX = 0.5;
             centerNormY = 0.5;
+            panOffsetX = 0;
+            panOffsetY = 0;
             if (previewTransform != null) {
                 previewTransform.Matrix = Matrix.Identity;
             }
@@ -436,6 +440,12 @@ namespace AssetProcessor {
             }
 
             UpdateZoomUi();
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturePreviewImage?.Source == bitmap) {
+                    UpdateTransform(true);
+                }
+            }), DispatcherPriority.Loaded);
         }
 
         private void UpdateZoomUi() {
@@ -580,7 +590,7 @@ namespace AssetProcessor {
             return effectiveZoom;
         }
 
-        private void UpdateTransform(bool clampCenter) {
+        private void UpdateTransform(bool rebuildFromCenter) {
             if (previewTransform == null || TexturePreviewImage?.Source is not BitmapSource bitmap) {
                 return;
             }
@@ -600,25 +610,86 @@ namespace AssetProcessor {
                 return;
             }
 
+            if (rebuildFromCenter) {
+                RebuildPanFromCenter(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+            } else {
+                UpdateCenterFromPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+            }
+
+            Matrix matrix = Matrix.Identity;
+            matrix.Scale(effectiveZoom, effectiveZoom);
+            matrix.Translate(panOffsetX, panOffsetY);
+            previewTransform.Matrix = matrix;
+        }
+
+        private void RebuildPanFromCenter(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
             centerNormX = ClampNormalized(centerNormX);
             centerNormY = ClampNormalized(centerNormY);
 
             double centerX = centerNormX * imageWidth;
             double centerY = centerNormY * imageHeight;
 
-            if (clampCenter) {
-                (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-                centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
-                centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+
+            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
+            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+
+            panOffsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
+            panOffsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
+
+            ClampPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+        }
+
+        private void UpdateCenterFromPan(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
+            ClampPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+
+            double centerX = (viewportWidth / 2.0 - panOffsetX) / effectiveZoom;
+            double centerY = (viewportHeight / 2.0 - panOffsetY) / effectiveZoom;
+
+            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+
+            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
+            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+
+            panOffsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
+            panOffsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
+        }
+
+        private void ClampPan(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
+            double scaledWidth = imageWidth * effectiveZoom;
+            double scaledHeight = imageHeight * effectiveZoom;
+
+            if (!double.IsFinite(scaledWidth) || scaledWidth < 0) {
+                scaledWidth = 0;
             }
 
-            double offsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
-            double offsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
+            if (!double.IsFinite(scaledHeight) || scaledHeight < 0) {
+                scaledHeight = 0;
+            }
 
-            Matrix matrix = Matrix.Identity;
-            matrix.Scale(effectiveZoom, effectiveZoom);
-            matrix.Translate(offsetX, offsetY);
-            previewTransform.Matrix = matrix;
+            if (scaledWidth <= viewportWidth) {
+                panOffsetX = (viewportWidth - scaledWidth) / 2.0;
+            } else {
+                double minOffsetX = viewportWidth - scaledWidth;
+                double maxOffsetX = 0;
+                if (!double.IsFinite(minOffsetX)) {
+                    minOffsetX = 0;
+                }
+
+                panOffsetX = Math.Clamp(panOffsetX, minOffsetX, maxOffsetX);
+            }
+
+            if (scaledHeight <= viewportHeight) {
+                panOffsetY = (viewportHeight - scaledHeight) / 2.0;
+            } else {
+                double minOffsetY = viewportHeight - scaledHeight;
+                double maxOffsetY = 0;
+                if (!double.IsFinite(minOffsetY)) {
+                    minOffsetY = 0;
+                }
+
+                panOffsetY = Math.Clamp(panOffsetY, minOffsetY, maxOffsetY);
+            }
         }
 
         private static (double centerX, double centerY) ClampCenter(
@@ -734,12 +805,12 @@ namespace AssetProcessor {
             Matrix currentMatrix = previewTransform?.Matrix ?? Matrix.Identity;
             Point pivotScreen = currentMatrix.Transform(pivot);
 
-            double centerX = (viewportWidth / 2.0 - pivotScreen.X + pivot.X * newEffective) / newEffective;
-            double centerY = (viewportHeight / 2.0 - pivotScreen.Y + pivot.Y * newEffective) / newEffective;
+            if (!double.IsFinite(pivotScreen.X) || !double.IsFinite(pivotScreen.Y)) {
+                return;
+            }
 
-            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, newEffective);
-            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
-            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+            panOffsetX = pivotScreen.X - pivot.X * newEffective;
+            panOffsetY = pivotScreen.Y - pivot.Y * newEffective;
 
             currentZoom = newZoom;
             isFitMode = false;
@@ -838,35 +909,17 @@ namespace AssetProcessor {
         }
 
         private void ApplyPanDelta(Vector delta) {
-            if (TexturePreviewImage?.Source is not BitmapSource bitmap) {
+            if (TexturePreviewImage?.Source is not BitmapSource) {
                 return;
             }
 
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            if (viewportWidth <= 0 || viewportHeight <= 0) {
+            if (!double.IsFinite(delta.X) || !double.IsFinite(delta.Y)) {
                 return;
             }
 
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            if (imageWidth <= 0 || imageHeight <= 0) {
-                return;
-            }
-
-            double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
-            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
-                return;
-            }
-
-            double deltaNormX = delta.X / (imageWidth * effectiveZoom);
-            double deltaNormY = delta.Y / (imageHeight * effectiveZoom);
-
-            if (!double.IsFinite(deltaNormX) || !double.IsFinite(deltaNormY)) {
-                return;
-            }
-
-            centerNormX -= deltaNormX;
-            centerNormY -= deltaNormY;
-            UpdateTransform(true);
+            panOffsetX += delta.X;
+            panOffsetY += delta.Y;
+            UpdateTransform(false);
         }
 
         private void UpdatePreviewSourceControls() {
@@ -893,6 +946,12 @@ namespace AssetProcessor {
             if (TexturePreviewImage?.Source != null) {
                 UpdateTransform(true);
                 ScheduleFitZoomUpdate(false);
+            }
+        }
+
+        private void TexturePreviewImage_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (TexturePreviewImage?.Source != null) {
+                UpdateTransform(true);
             }
         }
 

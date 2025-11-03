@@ -411,30 +411,28 @@
 
                                 <Grid Grid.Row="0">
                                     <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
-                                        <ScrollViewer x:Name="TexturePreviewScrollViewer"
-                                                      HorizontalScrollBarVisibility="Disabled"
-                                                      VerticalScrollBarVisibility="Disabled"
-                                                      PreviewMouseWheel="TexturePreviewScrollViewer_PreviewMouseWheel"
-                                                      SizeChanged="TexturePreviewScrollViewer_SizeChanged">
-                                            <Grid Background="Transparent">
-                                                <Image x:Name="TexturePreviewImage"
-                                                       RenderOptions.EdgeMode="Aliased"
-                                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                                       Stretch="None"
-                                                       HorizontalAlignment="Left"
-                                                       VerticalAlignment="Top"
-                                                       RenderTransformOrigin="0,0"
-                                                       SizeChanged="TexturePreviewImage_SizeChanged"
-                                                       MouseDown="TexturePreviewImage_MouseDown"
-                                                       MouseMove="TexturePreviewImage_MouseMove"
-                                                       MouseUp="TexturePreviewImage_MouseUp"
-                                                       MouseLeave="TexturePreviewImage_MouseLeave">
-                                                    <Image.RenderTransform>
-                                                        <MatrixTransform x:Name="TexturePreviewTransform" />
-                                                    </Image.RenderTransform>
-                                                </Image>
-                                            </Grid>
-                                        </ScrollViewer>
+                                        <Grid x:Name="TexturePreviewViewport"
+                                              Background="Transparent"
+                                              ClipToBounds="True"
+                                              PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel"
+                                              SizeChanged="TexturePreviewViewport_SizeChanged">
+                                            <Image x:Name="TexturePreviewImage"
+                                                   RenderOptions.EdgeMode="Aliased"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Stretch="None"
+                                                   HorizontalAlignment="Left"
+                                                   VerticalAlignment="Top"
+                                                   RenderTransformOrigin="0,0"
+                                                   SizeChanged="TexturePreviewImage_SizeChanged"
+                                                   MouseDown="TexturePreviewImage_MouseDown"
+                                                   MouseMove="TexturePreviewImage_MouseMove"
+                                                   MouseUp="TexturePreviewImage_MouseUp"
+                                                   MouseLeave="TexturePreviewImage_MouseLeave">
+                                                <Image.RenderTransform>
+                                                    <MatrixTransform x:Name="TexturePreviewTransform" />
+                                                </Image.RenderTransform>
+                                            </Image>
+                                        </Grid>
                                     </Border>
 
                                     <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1">

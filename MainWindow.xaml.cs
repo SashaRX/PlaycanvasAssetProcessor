@@ -323,8 +323,6 @@ namespace AssetProcessor {
 
         private void ResetPreviewState() {
             ResetZoomState();
-            TexturePreviewScrollViewer?.ScrollToHome();
-            TexturePreviewScrollViewer?.ScrollToLeftEnd();
             isKtxPreviewActive = false;
             currentMipLevel = 0;
             currentKtxMipmaps = null;
@@ -530,31 +528,15 @@ namespace AssetProcessor {
         }
 
         private (double width, double height) GetViewportSize() {
-            if (TexturePreviewScrollViewer != null) {
-                double width = TexturePreviewScrollViewer.ViewportWidth;
-                double height = TexturePreviewScrollViewer.ViewportHeight;
+            if (TexturePreviewViewport != null) {
+                double width = TexturePreviewViewport.ActualWidth;
+                double height = TexturePreviewViewport.ActualHeight;
 
-                if (double.IsNaN(width) || width <= 0) {
-                    width = TexturePreviewScrollViewer.ActualWidth;
-                }
-
-                if (double.IsNaN(height) || height <= 0) {
-                    height = TexturePreviewScrollViewer.ActualHeight;
-                }
-
-                if ((double.IsNaN(width) || width <= 0) && TexturePreviewScrollViewer.Content is FrameworkElement content) {
-                    width = content.ActualWidth;
-                }
-
-                if ((double.IsNaN(height) || height <= 0) && TexturePreviewScrollViewer.Content is FrameworkElement contentElement) {
-                    height = contentElement.ActualHeight;
-                }
-
-                if (double.IsNaN(width)) {
+                if (double.IsNaN(width) || width < 0) {
                     width = 0;
                 }
 
-                if (double.IsNaN(height)) {
+                if (double.IsNaN(height) || height < 0) {
                     height = 0;
                 }
 
@@ -875,8 +857,8 @@ namespace AssetProcessor {
         }
 
         private FrameworkElement? GetPanReferenceElement() {
-            if (TexturePreviewScrollViewer != null) {
-                return TexturePreviewScrollViewer;
+            if (TexturePreviewViewport != null) {
+                return TexturePreviewViewport;
             }
 
             return TexturePreviewImage;
@@ -942,7 +924,7 @@ namespace AssetProcessor {
 
         // Removed: PreviewWidthSlider methods (slider was removed from UI)
 
-        private void TexturePreviewScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e) {
+        private void TexturePreviewViewport_SizeChanged(object sender, SizeChangedEventArgs e) {
             if (TexturePreviewImage?.Source != null) {
                 UpdateTransform(true);
                 ScheduleFitZoomUpdate(false);
@@ -955,7 +937,7 @@ namespace AssetProcessor {
             }
         }
 
-        private void TexturePreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+        private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             if (TexturePreviewImage?.Source == null) {
                 return;
             }

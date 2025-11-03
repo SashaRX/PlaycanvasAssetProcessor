@@ -174,6 +174,8 @@ namespace AssetProcessor {
         private const double MaxZoom = 16.0;
         // Removed: isUpdatingPreviewWidth (PreviewWidthSlider was removed)
         private BitmapSource? originalFileBitmapSource;
+        private double previewReferenceWidth;
+        private double previewReferenceHeight;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private sealed class KtxPreviewCacheEntry {
@@ -328,6 +330,7 @@ namespace AssetProcessor {
             isSourcePreviewAvailable = false;
             isKtxPreviewAvailable = false;
             isUserPreviewSelection = false;
+            ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
         }
@@ -344,6 +347,147 @@ namespace AssetProcessor {
             fitZoomUpdateScheduled = false;
             forceFitOnNextUpdate = false;
             UpdateZoomUi();
+        }
+
+        private void ClearPreviewReferenceSize() {
+            previewReferenceWidth = 0;
+            previewReferenceHeight = 0;
+        }
+
+        private void SetPreviewReferenceSize(BitmapSource bitmap) {
+            (double width, double height) = GetImageSizeInDips(bitmap);
+
+            previewReferenceWidth = double.IsFinite(width) && width > 0 ? width : 0;
+            previewReferenceHeight = double.IsFinite(height) && height > 0 ? height : 0;
+        }
+
+        private void EnsurePreviewReferenceSize(BitmapSource bitmap) {
+            if (previewReferenceWidth <= 0 || previewReferenceHeight <= 0) {
+                SetPreviewReferenceSize(bitmap);
+            }
+        }
+
+        private double GetScaleMultiplier(double imageWidth, double imageHeight) {
+            double multiplierX = (previewReferenceWidth > 0 && imageWidth > 0)
+                ? previewReferenceWidth / imageWidth
+                : double.NaN;
+            double multiplierY = (previewReferenceHeight > 0 && imageHeight > 0)
+                ? previewReferenceHeight / imageHeight
+                : double.NaN;
+
+            double multiplier = double.IsFinite(multiplierX) && multiplierX > 0 ? multiplierX : double.NaN;
+            if (!double.IsFinite(multiplier) || multiplier <= 0) {
+                multiplier = double.IsFinite(multiplierY) && multiplierY > 0 ? multiplierY : 1.0;
+            }
+
+            if (!double.IsFinite(multiplier) || multiplier <= 0) {
+                multiplier = 1.0;
+            }
+
+            return multiplier;
+        }
+
+        private double GetScaleMultiplier(BitmapSource bitmap) {
+            EnsurePreviewReferenceSize(bitmap);
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            return GetScaleMultiplier(imageWidth, imageHeight);
+        }
+
+        private static double ClampNormalized(double value) {
+            if (!double.IsFinite(value)) {
+                return 0.5;
+            }
+
+            return Math.Clamp(value, 0.0, 1.0);
+        }
+
+        private void PreserveViewportAfterBitmapChange(BitmapSource previousBitmap, BitmapSource newBitmap) {
+            if (previewTransform == null) {
+                return;
+            }
+
+            Matrix currentMatrix = previewTransform.Matrix;
+
+            (double viewportWidth, double viewportHeight) = GetViewportSize();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                previewTransform.Matrix = ClampTransform(currentMatrix);
+                return;
+            }
+
+            (double oldWidth, double oldHeight) = GetImageSizeInDips(previousBitmap);
+            (double newWidth, double newHeight) = GetImageSizeInDips(newBitmap);
+
+            if (oldWidth <= 0 || oldHeight <= 0 || newWidth <= 0 || newHeight <= 0) {
+                previewTransform.Matrix = ClampTransform(currentMatrix);
+                return;
+            }
+
+            Matrix inverse = currentMatrix;
+            if (!inverse.HasInverse) {
+                previewTransform.Matrix = ClampTransform(currentMatrix);
+                return;
+            }
+
+            inverse.Invert();
+
+            Point viewportCenter = new(viewportWidth / 2.0, viewportHeight / 2.0);
+            Point oldCenter = inverse.Transform(viewportCenter);
+
+            double normalizedX = ClampNormalized(oldCenter.X / oldWidth);
+            double normalizedY = ClampNormalized(oldCenter.Y / oldHeight);
+
+            double oldScale = currentMatrix.M11;
+            if (!double.IsFinite(oldScale) || oldScale <= 0) {
+                oldScale = currentZoom * GetScaleMultiplier(previousBitmap);
+            }
+
+            if (!double.IsFinite(oldScale) || oldScale <= 0) {
+                oldScale = 1.0;
+            }
+
+            double scaleRatio = oldWidth / newWidth;
+            if (!double.IsFinite(scaleRatio) || scaleRatio <= 0) {
+                scaleRatio = 1.0;
+            }
+
+            double newScale = oldScale * scaleRatio;
+            Point newCenter = new(newWidth * normalizedX, newHeight * normalizedY);
+
+            Matrix matrix = Matrix.Identity;
+            matrix.Scale(newScale, newScale);
+
+            double offsetX = (viewportWidth / 2.0) - (newScale * newCenter.X);
+            double offsetY = (viewportHeight / 2.0) - (newScale * newCenter.Y);
+            matrix.Translate(offsetX, offsetY);
+
+            previewTransform.Matrix = ClampTransform(matrix);
+        }
+
+        private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
+            if (TexturePreviewImage == null) {
+                return;
+            }
+
+            BitmapSource? previousBitmap = preserveViewport ? TexturePreviewImage.Source as BitmapSource : null;
+
+            if (setReference) {
+                SetPreviewReferenceSize(bitmap);
+            } else {
+                EnsurePreviewReferenceSize(bitmap);
+            }
+
+            TexturePreviewImage.Source = bitmap;
+
+            if (previewTransform == null) {
+                return;
+            }
+
+            if (preserveViewport && previousBitmap != null) {
+                PreserveViewportAfterBitmapChange(previousBitmap, bitmap);
+            } else {
+                Matrix matrix = preserveViewport ? previewTransform.Matrix : Matrix.Identity;
+                previewTransform.Matrix = ClampTransform(matrix);
+            }
         }
 
         private void UpdateZoomUi() {
@@ -393,7 +537,11 @@ namespace AssetProcessor {
                 return;
             }
 
-            double newFitZoom = Math.Min(viewportWidth / imageWidth, viewportHeight / imageHeight);
+            EnsurePreviewReferenceSize(bitmap);
+            double referenceWidth = previewReferenceWidth > 0 ? previewReferenceWidth : imageWidth;
+            double referenceHeight = previewReferenceHeight > 0 ? previewReferenceHeight : imageHeight;
+
+            double newFitZoom = Math.Min(viewportWidth / referenceWidth, viewportHeight / referenceHeight);
             newFitZoom = Math.Clamp(newFitZoom, MinZoom, MaxZoom);
             fitZoom = newFitZoom;
 
@@ -510,8 +658,14 @@ namespace AssetProcessor {
             }
 
             (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            double scaledWidth = imageWidth * zoom;
-            double scaledHeight = imageHeight * zoom;
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                return new Vector(0, 0);
+            }
+
+            EnsurePreviewReferenceSize(bitmap);
+            double actualScale = zoom * GetScaleMultiplier(imageWidth, imageHeight);
+            double scaledWidth = imageWidth * actualScale;
+            double scaledHeight = imageHeight * actualScale;
             double offsetX = (viewportWidth - scaledWidth) / 2.0;
             double offsetY = (viewportHeight - scaledHeight) / 2.0;
             return new Vector(offsetX, offsetY);
@@ -540,8 +694,12 @@ namespace AssetProcessor {
                 return;
             }
 
+            EnsurePreviewReferenceSize(bitmap);
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            double actualScale = zoom * GetScaleMultiplier(imageWidth, imageHeight);
+
             Matrix matrix = Matrix.Identity;
-            matrix.Scale(zoom, zoom);
+            matrix.Scale(actualScale, actualScale);
             Vector offsets = GetViewportOffsets(bitmap, zoom);
             matrix.Translate(offsets.X, offsets.Y);
             matrix = ClampTransform(matrix);
@@ -933,7 +1091,9 @@ namespace AssetProcessor {
 
             // Обновляем изображение
             Dispatcher.Invoke(() => {
-                TexturePreviewImage.Source = originalBitmapSource;
+                bool hasPrevious = TexturePreviewImage.Source is BitmapSource;
+                bool preserveViewport = hasPrevious && previewTransform != null;
+                UpdatePreviewImage(originalBitmapSource, setReference: clampedLevel == 0, preserveViewport: preserveViewport);
                 UpdateHistogram(originalBitmapSource);
             });
 
@@ -948,7 +1108,7 @@ namespace AssetProcessor {
 
                 // Обновляем UI в основном потоке
                 Dispatcher.Invoke(() => {
-                    TexturePreviewImage.Source = filteredBitmap;
+                    UpdatePreviewImage(filteredBitmap, setReference: false, preserveViewport: true);
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
                 });
             }
@@ -968,7 +1128,10 @@ namespace AssetProcessor {
         private async void ShowOriginalImage(bool recalculateFitZoom = false) {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
-                    TexturePreviewImage.Source = originalBitmapSource;
+                    bool hasPrevious = TexturePreviewImage.Source is BitmapSource;
+                    bool preserveViewport = hasPrevious && !recalculateFitZoom;
+                    bool setReference = !hasPrevious || recalculateFitZoom || previewReferenceWidth <= 0 || !isKtxPreviewActive;
+                    UpdatePreviewImage(originalBitmapSource, setReference, preserveViewport);
                     RChannelButton.IsChecked = false;
                     GChannelButton.IsChecked = false;
                     BChannelButton.IsChecked = false;

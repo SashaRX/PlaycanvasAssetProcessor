@@ -1,5 +1,20 @@
 namespace AssetProcessor.TextureConversion.Core {
     /// <summary>
+    /// Режимы расчёта дисперсии для Toksvig
+    /// </summary>
+    public enum ToksvigCalculationMode {
+        /// <summary>
+        /// Классический режим: 3x3 окно без нормализации, GaussianBlur, k^1.5
+        /// </summary>
+        Classic,
+
+        /// <summary>
+        /// Упрощённый режим: нормализация нормалей, Box 2x2, линейный CompositePower, порог дисперсии
+        /// </summary>
+        Simplified
+    }
+
+    /// <summary>
     /// Настройки для Toksvig mipmap generation
     /// Используется для уменьшения specular aliasing ("искр") в PBR материалах
     /// путём коррекции gloss/roughness карт на основе дисперсии normal map
@@ -36,6 +51,19 @@ namespace AssetProcessor.TextureConversion.Core {
         public string? NormalMapPath { get; set; }
 
         /// <summary>
+        /// Режим расчёта дисперсии
+        /// По умолчанию: Classic
+        /// </summary>
+        public ToksvigCalculationMode CalculationMode { get; set; } = ToksvigCalculationMode.Classic;
+
+        /// <summary>
+        /// Порог дисперсии (dead zone) - дисперсия ниже этого значения обнуляется
+        /// Применяется только в Simplified режиме
+        /// По умолчанию: 0.002
+        /// </summary>
+        public float VarianceThreshold { get; set; } = 0.002f;
+
+        /// <summary>
         /// Создаёт настройки Toksvig по умолчанию
         /// </summary>
         public static ToksvigSettings CreateDefault() {
@@ -44,7 +72,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 CompositePower = 1.0f,
                 MinToksvigMipLevel = 0,
                 SmoothVariance = true,
-                NormalMapPath = null
+                NormalMapPath = null,
+                CalculationMode = ToksvigCalculationMode.Classic,
+                VarianceThreshold = 0.002f
             };
         }
 
@@ -57,7 +87,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 CompositePower = CompositePower,
                 MinToksvigMipLevel = MinToksvigMipLevel,
                 SmoothVariance = SmoothVariance,
-                NormalMapPath = NormalMapPath
+                NormalMapPath = NormalMapPath,
+                CalculationMode = CalculationMode,
+                VarianceThreshold = VarianceThreshold
             };
         }
 
@@ -72,6 +104,11 @@ namespace AssetProcessor.TextureConversion.Core {
 
             if (MinToksvigMipLevel < 0) {
                 error = "MinToksvigMipLevel не может быть отрицательным";
+                return false;
+            }
+
+            if (VarianceThreshold < 0f || VarianceThreshold > 1.0f) {
+                error = "VarianceThreshold должен быть в диапазоне 0.0-1.0";
                 return false;
             }
 

@@ -33,6 +33,12 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
+        <ObjectDataProvider x:Key="ToksvigCalculationModeValues" MethodName="GetValues" ObjectType="{x:Type core:ToksvigCalculationMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ToksvigCalculationMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
         <!-- Compact Expander Style -->
         <Style x:Key="CompactExpanderStyle" TargetType="Expander">
             <Setter Property="Margin" Value="0,0,0,3"/>
@@ -320,6 +326,14 @@
                               Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"/>
 
                     <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
+                        <TextBlock Text="Calculation Mode:" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Classic (3x3, k^1.5) or Simplified (Box 2x2, linear k, threshold)"/>
+                        <ComboBox x:Name="ToksvigCalculationModeComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"
+                                  SelectionChanged="ToksvigCalculationModeComboBox_SelectionChanged"
+                                  Margin="0,0,0,5"/>
+
                         <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource LabelStyle}"
                                    ToolTip="Weight of variance influence on gloss"/>
                         <Grid Margin="0,0,0,5">
@@ -352,10 +366,28 @@
                                        Width="30" TextAlignment="Right"/>
                         </Grid>
 
-                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance" IsChecked="True"
+                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance (Classic only)" IsChecked="True"
                                   Margin="0,0,0,5"
-                                  ToolTip="Apply 3x3 blur to variance map"
+                                  ToolTip="Apply 3x3 blur to variance map (only in Classic mode)"
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
+                        <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
+                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"
+                                       ToolTip="Variance below this value is set to 0 (reduces noise)"/>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="ToksvigVarianceThresholdSlider" Grid.Column="0"
+                                        Minimum="0" Maximum="0.01" Value="0.002"
+                                        TickFrequency="0.0001" SmallChange="0.0001"
+                                        Margin="0,0,5,0"
+                                        ValueChanged="Slider_ValueChanged"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigVarianceThresholdSlider, Path=Value, StringFormat={}{0:F4}}"
+                                           Width="50" TextAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
 
                         <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Keep Temporal Mipmaps (Debug)" Margin="0,0,0,5"
                                   IsChecked="False"

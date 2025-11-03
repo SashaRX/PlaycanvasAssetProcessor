@@ -115,13 +115,16 @@ namespace AssetProcessor.Controls {
 
             // Toksvig
             ToksvigEnabledCheckBox.IsChecked = false;
+            ToksvigCalculationModeComboBox.SelectedItem = ToksvigCalculationMode.Classic;
             ToksvigCompositePowerSlider.Value = 1.0;
             ToksvigMinMipLevelSlider.Value = 0;
             ToksvigSmoothVarianceCheckBox.IsChecked = true;
+            ToksvigVarianceThresholdSlider.Value = 0.002;
             NormalMapPathTextBox.Text = string.Empty;
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
+            UpdateToksvigCalculationModePanels();
 
             _isLoading = false;
         }
@@ -177,6 +180,31 @@ namespace AssetProcessor.Controls {
                 KTX2SupercompressionPanel.Visibility = Visibility.Visible;
             } else {
                 KTX2SupercompressionPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // ============================================
+        // TOKSVIG CALCULATION MODE HANDLING
+        // ============================================
+
+        private void ToksvigCalculationModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateToksvigCalculationModePanels();
+                OnSettingsChanged();
+            }
+        }
+
+        private void UpdateToksvigCalculationModePanels() {
+            if (ToksvigCalculationModeComboBox.SelectedItem == null) return;
+
+            var mode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem;
+
+            if (mode == ToksvigCalculationMode.Simplified) {
+                ToksvigSimplifiedSettingsPanel.Visibility = Visibility.Visible;
+                ToksvigSmoothVarianceCheckBox.IsEnabled = false; // Smooth variance only for Classic mode
+            } else {
+                ToksvigSimplifiedSettingsPanel.Visibility = Visibility.Collapsed;
+                ToksvigSmoothVarianceCheckBox.IsEnabled = true;
             }
         }
 
@@ -335,11 +363,17 @@ namespace AssetProcessor.Controls {
         }
 
         public ToksvigSettings GetToksvigSettings() {
+            var mode = ToksvigCalculationModeComboBox.SelectedItem != null
+                ? (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem
+                : ToksvigCalculationMode.Classic;
+
             return new ToksvigSettings {
                 Enabled = ToksvigEnabledCheckBox.IsChecked ?? false,
+                CalculationMode = mode,
                 CompositePower = (float)ToksvigCompositePowerSlider.Value,
                 MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
                 NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
             };
         }
@@ -541,9 +575,11 @@ namespace AssetProcessor.Controls {
             _isLoading = true;
 
             ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
+            ToksvigCalculationModeComboBox.SelectedItem = settings.CalculationMode;
             ToksvigCompositePowerSlider.Value = settings.CompositePower;
             ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
             ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
+            ToksvigVarianceThresholdSlider.Value = settings.VarianceThreshold;
 
             // КРИТИЧНО: НЕ загружаем NormalMapPath по умолчанию!
             // Это позволяет auto-detect работать для каждой новой текстуры
@@ -551,6 +587,8 @@ namespace AssetProcessor.Controls {
             if (loadNormalMapPath) {
                 NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
             }
+
+            UpdateToksvigCalculationModePanels();
 
             _isLoading = false;
         }

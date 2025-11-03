@@ -86,7 +86,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 return (glossRoughnessMipmaps, null);
             }
 
-            Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1} (effective: k^1.5={MathF.Pow(settings.CompositePower, 1.5f):F1}), minLevel={settings.MinToksvigMipLevel}, smooth={settings.SmoothVariance}");
+            string modeInfo = settings.CalculationMode == ToksvigCalculationMode.Simplified
+                ? $"Simplified (linear k, box 2x2, threshold={settings.VarianceThreshold:F4})"
+                : $"Classic (k^1.5={MathF.Pow(settings.CompositePower, 1.5f):F1}, 3x3, smooth={settings.SmoothVariance})";
+            Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1}, mode={modeInfo}, minLevel={settings.MinToksvigMipLevel}");
 
             // Генерируем мипмапы для normal map
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
@@ -160,11 +163,18 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             int level,
             bool captureVariance) {
 
-            // Вычисляем дисперсию normal map
-            var varianceMap = CalculateNormalVariance(normalMip);
+            // Вычисляем дисперсию normal map в зависимости от режима
+            Image<Rgba32> varianceMap;
+            if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
+                // Simplified режим: нормализация + Box 2x2
+                varianceMap = CalculateNormalVarianceSimplified(normalMip);
+            } else {
+                // Classic режим: 3x3 окно без нормализации
+                varianceMap = CalculateNormalVariance(normalMip);
+            }
 
-            // Применяем сглаживание дисперсии если включено
-            if (settings.SmoothVariance) {
+            // Применяем сглаживание дисперсии если включено и это Classic режим
+            if (settings.SmoothVariance && settings.CalculationMode == ToksvigCalculationMode.Classic) {
                 varianceMap = SmoothVariance(varianceMap);
             }
 
@@ -209,6 +219,13 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                     // Получаем значение дисперсии из R канала varianceMap
                     float variance = varianceMap[x, y].R / 255.0f;
 
+                    // Применяем порог дисперсии (dead zone) в Simplified режиме
+                    if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
+                        if (variance < settings.VarianceThreshold) {
+                            variance = 0.0f;
+                        }
+                    }
+
                     // Статистика variance
                     avgVariance += variance;
                     minVariance = Math.Min(minVariance, variance);
@@ -223,7 +240,8 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                     float roughness = isGloss ? (1.0f - inputValue) : inputValue;
 
                     // Применяем Toksvig коррекцию
-                    float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower);
+                    bool useLinearPower = settings.CalculationMode == ToksvigCalculationMode.Simplified;
+                    float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower, useLinearPower);
 
                     // Конвертируем обратно в gloss если нужно
                     float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
@@ -258,10 +276,18 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             float changePercent = (float)pixelsChanged / totalPixels * 100f;
 
             if (level <= 2 || pixelsChanged > 0) {
-                // Показываем adjustedVariance для понимания влияния CompositePower (с учётом степенной зависимости k^1.5)
-                float adjustedVariance = avgVariance * MathF.Pow(settings.CompositePower, 1.5f);
+                // Показываем adjustedVariance в зависимости от режима
+                float adjustedVariance;
+                string varianceLabel;
+                if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
+                    adjustedVariance = avgVariance * settings.CompositePower;
+                    varianceLabel = "var*k";
+                } else {
+                    adjustedVariance = avgVariance * MathF.Pow(settings.CompositePower, 1.5f);
+                    varianceLabel = "var*k^1.5";
+                }
                 Logger.Info($"  Mip{level} ({glossRoughnessMip.Width}x{glossRoughnessMip.Height}): " +
-                           $"var={avgVariance:F4}, var*k^1.5={adjustedVariance:F4}, k={settings.CompositePower:F1}, " +
+                           $"var={avgVariance:F4}, {varianceLabel}={adjustedVariance:F4}, k={settings.CompositePower:F1}, " +
                            $"changed={changePercent:F1}%, avgDiff={avgDifference:F3}, maxDiff={maxDifference:F3}");
             }
 
@@ -278,7 +304,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
         /// <summary>
         /// Вычисляет дисперсию нормалей для каждого пикселя
-        /// Использует локальное окно 3x3 для вычисления дисперсии
+        /// Использует локальное окно 3x3 для вычисления дисперсии (Classic режим)
         /// </summary>
         private Image<Rgba32> CalculateNormalVariance(Image<Rgba32> normalMip) {
             var varianceMap = new Image<Rgba32>(normalMip.Width, normalMip.Height);
@@ -294,6 +320,86 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             }
 
             return varianceMap;
+        }
+
+        /// <summary>
+        /// Вычисляет дисперсию нормалей для каждого пикселя (Simplified режим)
+        /// Нормализует каждую нормаль, усредняет Box 2x2, затем берёт |N̄|
+        /// </summary>
+        private Image<Rgba32> CalculateNormalVarianceSimplified(Image<Rgba32> normalMip) {
+            var varianceMap = new Image<Rgba32>(normalMip.Width, normalMip.Height);
+
+            for (int y = 0; y < normalMip.Height; y++) {
+                for (int x = 0; x < normalMip.Width; x++) {
+                    // Вычисляем дисперсию в окне 2x2 с нормализацией
+                    float variance = CalculateLocalVarianceBox2x2Normalized(normalMip, x, y);
+
+                    // Сохраняем дисперсию в R канал (используем grayscale)
+                    varianceMap[x, y] = new Rgba32(variance, variance, variance, 1.0f);
+                }
+            }
+
+            return varianceMap;
+        }
+
+        /// <summary>
+        /// Вычисляет локальную дисперсию нормалей в окне 2x2 с нормализацией
+        /// 1. Нормализует каждую нормаль
+        /// 2. Усредняет их (Box 2x2)
+        /// 3. Берёт длину усредненной нормали
+        /// 4. Вычисляет дисперсию по формуле (1 - |N̄|) / |N̄|
+        /// </summary>
+        private float CalculateLocalVarianceBox2x2Normalized(Image<Rgba32> normalMip, int centerX, int centerY) {
+            // Собираем нормализованные нормали в окне 2x2
+            var normals = new List<Vector3>();
+
+            // Box 2x2: берём центральный пиксель и соседей справа, снизу и по диагонали
+            for (int dy = 0; dy <= 1; dy++) {
+                for (int dx = 0; dx <= 1; dx++) {
+                    int x = Math.Clamp(centerX + dx, 0, normalMip.Width - 1);
+                    int y = Math.Clamp(centerY + dy, 0, normalMip.Height - 1);
+
+                    var pixel = normalMip[x, y].ToVector4();
+
+                    // Конвертируем из [0,1] в [-1,1]
+                    var normal = new Vector3(
+                        pixel.X * 2.0f - 1.0f,
+                        pixel.Y * 2.0f - 1.0f,
+                        pixel.Z * 2.0f - 1.0f
+                    );
+
+                    // НОРМАЛИЗУЕМ каждую нормаль перед усреднением
+                    float length = normal.Length();
+                    if (length > Epsilon) {
+                        normal = Vector3.Normalize(normal);
+                    }
+
+                    normals.Add(normal);
+                }
+            }
+
+            // Усредняем нормализованные нормали (Box 2x2 - один проход)
+            var avgNormal = Vector3.Zero;
+            foreach (var n in normals) {
+                avgNormal += n;
+            }
+            avgNormal /= normals.Count;
+
+            // Берём длину усредненной нормали
+            float lengthN = avgNormal.Length();
+
+            // Защита от деления на ноль
+            if (lengthN < Epsilon) {
+                return 0.0f;
+            }
+
+            // Формула Toksvig: Variance = (1 - |N̄|) / |N̄|
+            float variance = (1.0f - lengthN) / lengthN;
+
+            // Вычитаем небольшое смещение для уменьшения шума
+            variance = Math.Max(0.0f, variance - 0.00004f);
+
+            return variance;
         }
 
         /// <summary>
@@ -372,12 +478,19 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// <param name="roughness">Входное значение roughness [0,1]</param>
         /// <param name="variance">Дисперсия нормалей [0,1]</param>
         /// <param name="k">Composite Power (вес влияния)</param>
+        /// <param name="useLinearPower">Использовать линейный CompositePower (true для Simplified режима)</param>
         /// <returns>Скорректированное значение roughness</returns>
-        private float ApplyToksvigFormula(float roughness, float variance, float k) {
-            // Применяем CompositePower к дисперсии с усиленным влиянием
-            // Используем степенную зависимость k^1.5 для более заметного эффекта при высоких значениях k
-            // k=1.0 → 1.0 (без изменений), k=2.0 → 2.83, k=4.0 → 8.0, k=8.0 → 22.6
-            float adjustedVariance = variance * MathF.Pow(k, 1.5f);
+        private float ApplyToksvigFormula(float roughness, float variance, float k, bool useLinearPower) {
+            // Применяем CompositePower к дисперсии
+            float adjustedVariance;
+            if (useLinearPower) {
+                // Simplified режим: линейная зависимость Variance *= CompositePower
+                adjustedVariance = variance * k;
+            } else {
+                // Classic режим: степенная зависимость k^1.5 для более заметного эффекта при высоких значениях k
+                // k=1.0 → 1.0 (без изменений), k=2.0 → 2.83, k=4.0 → 8.0, k=8.0 → 22.6
+                adjustedVariance = variance * MathF.Pow(k, 1.5f);
+            }
 
             // Конвертируем roughness в alpha (GGX)
             float a = roughness * roughness;
@@ -420,10 +533,16 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             // Берём указанный уровень
             var normalMip = normalMipmaps[settings.MinToksvigMipLevel];
 
-            // Вычисляем дисперсию
-            var varianceMap = CalculateNormalVariance(normalMip);
+            // Вычисляем дисперсию в зависимости от режима
+            Image<Rgba32> varianceMap;
+            if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
+                varianceMap = CalculateNormalVarianceSimplified(normalMip);
+            } else {
+                varianceMap = CalculateNormalVariance(normalMip);
+            }
 
-            if (settings.SmoothVariance) {
+            // Применяем сглаживание только в Classic режиме
+            if (settings.SmoothVariance && settings.CalculationMode == ToksvigCalculationMode.Classic) {
                 var smoothedVariance = SmoothVariance(varianceMap);
                 varianceMap.Dispose();
                 varianceMap = smoothedVariance;

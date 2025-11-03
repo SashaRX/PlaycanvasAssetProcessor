@@ -164,8 +164,8 @@ namespace AssetProcessor {
         private MatrixTransform? previewTransform;
         private bool isPanningPreview;
         private Point lastPanPosition;
-        private double panOffsetX;
-        private double panOffsetY;
+        private double centerNormX = 0.5;
+        private double centerNormY = 0.5;
         private double currentZoom = 1.0;
         private double fitZoom = 1.0;
         private bool isFitMode = true;
@@ -339,8 +339,8 @@ namespace AssetProcessor {
 
         private void ResetZoomState() {
             StopPanning();
-            panOffsetX = 0;
-            panOffsetY = 0;
+            centerNormX = 0.5;
+            centerNormY = 0.5;
             if (previewTransform != null) {
                 previewTransform.Matrix = Matrix.Identity;
             }
@@ -430,8 +430,8 @@ namespace AssetProcessor {
             if (preservedCenter.HasValue) {
                 RestoreViewportCenterNormalized(bitmap, preservedCenter.Value.normX, preservedCenter.Value.normY);
             } else {
-                panOffsetX = 0;
-                panOffsetY = 0;
+                centerNormX = 0.5;
+                centerNormY = 0.5;
                 UpdateTransform(true);
             }
 
@@ -532,6 +532,14 @@ namespace AssetProcessor {
                     height = TexturePreviewScrollViewer.ActualHeight;
                 }
 
+                if ((double.IsNaN(width) || width <= 0) && TexturePreviewScrollViewer.Content is FrameworkElement content) {
+                    width = content.ActualWidth;
+                }
+
+                if ((double.IsNaN(height) || height <= 0) && TexturePreviewScrollViewer.Content is FrameworkElement contentElement) {
+                    height = contentElement.ActualHeight;
+                }
+
                 if (double.IsNaN(width)) {
                     width = 0;
                 }
@@ -572,7 +580,7 @@ namespace AssetProcessor {
             return effectiveZoom;
         }
 
-        private void UpdateTransform(bool clampPan = true) {
+        private void UpdateTransform(bool clampCenter) {
             if (previewTransform == null || TexturePreviewImage?.Source is not BitmapSource bitmap) {
                 return;
             }
@@ -588,35 +596,24 @@ namespace AssetProcessor {
             }
 
             double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
-            double scaledWidth = imageWidth * effectiveZoom;
-            double scaledHeight = imageHeight * effectiveZoom;
-            double baseOffsetX = (viewportWidth - scaledWidth) / 2.0;
-            double baseOffsetY = (viewportHeight - scaledHeight) / 2.0;
-
-            double offsetX = baseOffsetX + panOffsetX;
-            double offsetY = baseOffsetY + panOffsetY;
-
-            if (clampPan) {
-                if (scaledWidth <= viewportWidth) {
-                    offsetX = baseOffsetX;
-                    panOffsetX = 0;
-                } else {
-                    double minOffsetX = viewportWidth - scaledWidth;
-                    double maxOffsetX = 0.0;
-                    offsetX = Math.Clamp(offsetX, minOffsetX, maxOffsetX);
-                    panOffsetX = offsetX - baseOffsetX;
-                }
-
-                if (scaledHeight <= viewportHeight) {
-                    offsetY = baseOffsetY;
-                    panOffsetY = 0;
-                } else {
-                    double minOffsetY = viewportHeight - scaledHeight;
-                    double maxOffsetY = 0.0;
-                    offsetY = Math.Clamp(offsetY, minOffsetY, maxOffsetY);
-                    panOffsetY = offsetY - baseOffsetY;
-                }
+            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
+                return;
             }
+
+            centerNormX = ClampNormalized(centerNormX);
+            centerNormY = ClampNormalized(centerNormY);
+
+            double centerX = centerNormX * imageWidth;
+            double centerY = centerNormY * imageHeight;
+
+            if (clampCenter) {
+                (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
+                centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
+                centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
+            }
+
+            double offsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
+            double offsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
 
             Matrix matrix = Matrix.Identity;
             matrix.Scale(effectiveZoom, effectiveZoom);
@@ -624,70 +621,68 @@ namespace AssetProcessor {
             previewTransform.Matrix = matrix;
         }
 
-        private (double normX, double normY)? CaptureViewportCenterNormalized(BitmapSource bitmap) {
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            if (viewportWidth <= 0 || viewportHeight <= 0) {
-                return null;
-            }
-
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            if (imageWidth <= 0 || imageHeight <= 0) {
-                return null;
-            }
-
-            double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
-            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
-                return null;
-            }
+        private static (double centerX, double centerY) ClampCenter(
+            double centerX,
+            double centerY,
+            double imageWidth,
+            double imageHeight,
+            double viewportWidth,
+            double viewportHeight,
+            double effectiveZoom) {
 
             double scaledWidth = imageWidth * effectiveZoom;
             double scaledHeight = imageHeight * effectiveZoom;
-            double baseOffsetX = (viewportWidth - scaledWidth) / 2.0;
-            double baseOffsetY = (viewportHeight - scaledHeight) / 2.0;
-            double offsetX = baseOffsetX + panOffsetX;
-            double offsetY = baseOffsetY + panOffsetY;
 
-            double imageCenterX = (viewportWidth / 2.0 - offsetX) / effectiveZoom;
-            double imageCenterY = (viewportHeight / 2.0 - offsetY) / effectiveZoom;
-            if (!double.IsFinite(imageCenterX) || !double.IsFinite(imageCenterY)) {
-                return null;
+            if (scaledWidth <= viewportWidth || imageWidth <= 0) {
+                centerX = imageWidth / 2.0;
+            } else {
+                double halfViewportWidth = viewportWidth / (2.0 * effectiveZoom);
+                if (!double.IsFinite(halfViewportWidth) || halfViewportWidth <= 0) {
+                    halfViewportWidth = 0;
+                }
+
+                double minCenterX = halfViewportWidth;
+                double maxCenterX = imageWidth - halfViewportWidth;
+                if (minCenterX > maxCenterX) {
+                    double mid = imageWidth / 2.0;
+                    minCenterX = mid;
+                    maxCenterX = mid;
+                }
+
+                centerX = Math.Clamp(centerX, minCenterX, maxCenterX);
             }
 
-            double normX = imageWidth > 0 ? imageCenterX / imageWidth : 0.5;
-            double normY = imageHeight > 0 ? imageCenterY / imageHeight : 0.5;
+            if (scaledHeight <= viewportHeight || imageHeight <= 0) {
+                centerY = imageHeight / 2.0;
+            } else {
+                double halfViewportHeight = viewportHeight / (2.0 * effectiveZoom);
+                if (!double.IsFinite(halfViewportHeight) || halfViewportHeight <= 0) {
+                    halfViewportHeight = 0;
+                }
 
-            return (ClampNormalized(normX), ClampNormalized(normY));
+                double minCenterY = halfViewportHeight;
+                double maxCenterY = imageHeight - halfViewportHeight;
+                if (minCenterY > maxCenterY) {
+                    double mid = imageHeight / 2.0;
+                    minCenterY = mid;
+                    maxCenterY = mid;
+                }
+
+                centerY = Math.Clamp(centerY, minCenterY, maxCenterY);
+            }
+
+            return (centerX, centerY);
+        }
+
+        private (double normX, double normY)? CaptureViewportCenterNormalized(BitmapSource bitmap) {
+            _ = bitmap;
+            return (centerNormX, centerNormY);
         }
 
         private void RestoreViewportCenterNormalized(BitmapSource bitmap, double normX, double normY) {
-            if (previewTransform == null) {
-                return;
-            }
-
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            if (viewportWidth <= 0 || viewportHeight <= 0) {
-                return;
-            }
-
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            if (imageWidth <= 0 || imageHeight <= 0) {
-                return;
-            }
-
-            double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
-            double scaledWidth = imageWidth * effectiveZoom;
-            double scaledHeight = imageHeight * effectiveZoom;
-            double baseOffsetX = (viewportWidth - scaledWidth) / 2.0;
-            double baseOffsetY = (viewportHeight - scaledHeight) / 2.0;
-
-            double targetImageX = imageWidth * ClampNormalized(normX);
-            double targetImageY = imageHeight * ClampNormalized(normY);
-            double offsetX = (viewportWidth / 2.0) - (targetImageX * effectiveZoom);
-            double offsetY = (viewportHeight / 2.0) - (targetImageY * effectiveZoom);
-
-            panOffsetX = offsetX - baseOffsetX;
-            panOffsetY = offsetY - baseOffsetY;
-
+            _ = bitmap;
+            centerNormX = ClampNormalized(normX);
+            centerNormY = ClampNormalized(normY);
             UpdateTransform(true);
         }
 
@@ -697,8 +692,8 @@ namespace AssetProcessor {
             }
 
             currentZoom = fitZoom;
-            panOffsetX = 0;
-            panOffsetY = 0;
+            centerNormX = 0.5;
+            centerNormY = 0.5;
             isFitMode = true;
             UpdateTransform(true);
             UpdateZoomUi();
@@ -714,8 +709,21 @@ namespace AssetProcessor {
                 return;
             }
 
+            (double viewportWidth, double viewportHeight) = GetViewportSize();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                return;
+            }
+
             (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
             if (imageWidth <= 0 || imageHeight <= 0) {
+                return;
+            }
+
+            double oldEffective = GetEffectiveZoom(bitmap, currentZoom);
+            double newEffective = GetEffectiveZoom(bitmap, newZoom);
+
+            if (!double.IsFinite(oldEffective) || oldEffective <= 0 ||
+                !double.IsFinite(newEffective) || newEffective <= 0) {
                 return;
             }
 
@@ -723,37 +731,19 @@ namespace AssetProcessor {
                 pivot = new Point(imageWidth / 2.0, imageHeight / 2.0);
             }
 
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            double oldEffective = GetEffectiveZoom(bitmap, currentZoom);
-            double newEffective = GetEffectiveZoom(bitmap, newZoom);
+            Matrix currentMatrix = previewTransform?.Matrix ?? Matrix.Identity;
+            Point pivotScreen = currentMatrix.Transform(pivot);
 
-            if (viewportWidth > 0 && viewportHeight > 0 &&
-                double.IsFinite(oldEffective) && double.IsFinite(newEffective)) {
-                double oldScaledWidth = imageWidth * oldEffective;
-                double oldScaledHeight = imageHeight * oldEffective;
-                double oldBaseOffsetX = (viewportWidth - oldScaledWidth) / 2.0;
-                double oldBaseOffsetY = (viewportHeight - oldScaledHeight) / 2.0;
-                double oldOffsetX = oldBaseOffsetX + panOffsetX;
-                double oldOffsetY = oldBaseOffsetY + panOffsetY;
+            double centerX = (viewportWidth / 2.0 - pivotScreen.X + pivot.X * newEffective) / newEffective;
+            double centerY = (viewportHeight / 2.0 - pivotScreen.Y + pivot.Y * newEffective) / newEffective;
 
-                double targetScreenX = pivot.X * oldEffective + oldOffsetX;
-                double targetScreenY = pivot.Y * oldEffective + oldOffsetY;
-
-                double newScaledWidth = imageWidth * newEffective;
-                double newScaledHeight = imageHeight * newEffective;
-                double newBaseOffsetX = (viewportWidth - newScaledWidth) / 2.0;
-                double newBaseOffsetY = (viewportHeight - newScaledHeight) / 2.0;
-
-                double newOffsetX = targetScreenX - pivot.X * newEffective;
-                double newOffsetY = targetScreenY - pivot.Y * newEffective;
-
-                panOffsetX = newOffsetX - newBaseOffsetX;
-                panOffsetY = newOffsetY - newBaseOffsetY;
-            }
+            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, newEffective);
+            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
+            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
 
             currentZoom = newZoom;
             isFitMode = false;
-            UpdateTransform(true);
+            UpdateTransform(false);
             UpdateZoomUi();
         }
 
@@ -763,8 +753,8 @@ namespace AssetProcessor {
             }
 
             currentZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
-            panOffsetX = 0;
-            panOffsetY = 0;
+            centerNormX = 0.5;
+            centerNormY = 0.5;
             isFitMode = false;
             UpdateTransform(true);
             UpdateZoomUi();
@@ -775,8 +765,8 @@ namespace AssetProcessor {
                 return;
             }
 
-            panOffsetX = 0;
-            panOffsetY = 0;
+            centerNormX = 0.5;
+            centerNormY = 0.5;
             UpdateTransform(true);
         }
 
@@ -805,17 +795,12 @@ namespace AssetProcessor {
                 return new Point(0, 0);
             }
 
-            FrameworkElement? reference = GetPanReferenceElement();
-            if (reference == null) {
+            if (TexturePreviewImage.Source is not BitmapSource bitmap) {
                 return new Point(TexturePreviewImage.ActualWidth / 2.0, TexturePreviewImage.ActualHeight / 2.0);
             }
 
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            double centerX = viewportWidth > 0 ? viewportWidth / 2.0 : reference.ActualWidth / 2.0;
-            double centerY = viewportHeight > 0 ? viewportHeight / 2.0 : reference.ActualHeight / 2.0;
-
-            Point viewportCenter = new(centerX, centerY);
-            return ToImageSpace(viewportCenter, reference);
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            return new Point(centerNormX * imageWidth, centerNormY * imageHeight);
         }
 
         private FrameworkElement? GetPanReferenceElement() {
@@ -850,6 +835,38 @@ namespace AssetProcessor {
             isPanningPreview = false;
             TexturePreviewImage?.ReleaseMouseCapture();
             TexturePreviewImage?.ClearValue(CursorProperty);
+        }
+
+        private void ApplyPanDelta(Vector delta) {
+            if (TexturePreviewImage?.Source is not BitmapSource bitmap) {
+                return;
+            }
+
+            (double viewportWidth, double viewportHeight) = GetViewportSize();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                return;
+            }
+
+            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                return;
+            }
+
+            double effectiveZoom = GetEffectiveZoom(bitmap, currentZoom);
+            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
+                return;
+            }
+
+            double deltaNormX = delta.X / (imageWidth * effectiveZoom);
+            double deltaNormY = delta.Y / (imageHeight * effectiveZoom);
+
+            if (!double.IsFinite(deltaNormX) || !double.IsFinite(deltaNormY)) {
+                return;
+            }
+
+            centerNormX -= deltaNormX;
+            centerNormY -= deltaNormY;
+            UpdateTransform(true);
         }
 
         private void UpdatePreviewSourceControls() {
@@ -967,9 +984,7 @@ namespace AssetProcessor {
             Point currentPosition = e.GetPosition(reference);
             Vector delta = currentPosition - lastPanPosition;
             if (Math.Abs(delta.X) > double.Epsilon || Math.Abs(delta.Y) > double.Epsilon) {
-                panOffsetX += delta.X;
-                panOffsetY += delta.Y;
-                UpdateTransform(true);
+                ApplyPanDelta(delta);
                 lastPanPosition = currentPosition;
             }
         }

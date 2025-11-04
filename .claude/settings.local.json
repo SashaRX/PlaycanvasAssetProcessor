@@ -40,7 +40,8 @@
       "Bash(nul)",
       "Bash(Get-Command ktx.exe -ErrorAction SilentlyContinue)",
       "Bash(Get-Command ktx -ErrorAction SilentlyContinue)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(ForEach-Object { Stop-Process -Id $_ -Force })"
     ],
     "deny": [],
     "ask": []

@@ -35,7 +35,12 @@
       "Bash(Select-Object -ExpandProperty Id)",
       "Bash(Stop-Process -Id 40896 -Force)",
       "Bash(Select-String -Pattern \"error|warning|succeeded|failed\" -Context 0,2)",
-      "Bash(Select-Object -Last 10)"
+      "Bash(Select-Object -Last 10)",
+      "Bash(dotnet add:*)",
+      "Bash(nul)",
+      "Bash(Get-Command ktx.exe -ErrorAction SilentlyContinue)",
+      "Bash(Get-Command ktx -ErrorAction SilentlyContinue)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

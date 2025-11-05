@@ -77,24 +77,28 @@ float4 PSMain(PSInput input) : SV_TARGET
     }
 
     // Apply channel mask (for R/G/B/A channel viewing)
-    // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale alpha
+    // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale
     if (channelMask != 0xFFFFFFFF)
     {
         bool showR = (channelMask & 0x01) != 0;
         bool showG = (channelMask & 0x02) != 0;
         bool showB = (channelMask & 0x04) != 0;
         bool showA = (channelMask & 0x08) != 0;
-        bool showAlphaGray = (channelMask & 0x10) != 0;
+        bool showGrayscale = (channelMask & 0x10) != 0;
 
-        if (showAlphaGray)
+        if (showGrayscale)
         {
-            // Show alpha as grayscale
-            float alpha = color.a;
-            return float4(alpha, alpha, alpha, 1.0);
+            // Show single channel as grayscale
+            float value = 0.0;
+            if (showR) value = color.r;
+            else if (showG) value = color.g;
+            else if (showB) value = color.b;
+            else if (showA) value = color.a;
+            return float4(value, value, value, 1.0);
         }
         else
         {
-            // Apply channel mask
+            // Apply channel mask (show channels as-is)
             color.r = showR ? color.r : 0.0;
             color.g = showG ? color.g : 0.0;
             color.b = showB ? color.b : 0.0;
@@ -109,9 +113,10 @@ float4 PSMain(PSInput input) : SV_TARGET
         color.rgb *= exposureMul;
     }
 
-    // Apply gamma correction
-    // If gamma == 1.0, no correction (linear)
-    // If gamma == 2.2, apply sRGB encoding
+    // Apply gamma correction for monitor display
+    // Gamma is always applied, even with channel masks, to ensure correct display
+    // If gamma == 1.0, no correction (for sRGB textures - already encoded)
+    // If gamma == 2.2, apply sRGB encoding (for Linear textures)
     if (gamma != 1.0)
     {
         color.rgb = pow(max(color.rgb, 0.0), 1.0 / gamma);

@@ -43,6 +43,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private float zoomLevel = 1.0f;
     private float panX = 0.0f;
     private float panY = 0.0f;
+    private uint channelMask = 0xFFFFFFFF; // All channels enabled by default
+    private float currentGamma = 2.2f; // Default: sRGB gamma
+    private float originalGamma = 2.2f; // Original gamma set during LoadTexture (for restoring after mask)
 
     // Lock for thread-safe access to texture resources
     private readonly object renderLock = new object();
@@ -68,6 +71,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
     public int TextureWidth => currentTexture?.Width ?? 0;
     public int TextureHeight => currentTexture?.Height ?? 0;
     public int MipCount => currentTexture?.MipCount ?? 0;
+    public bool IsSRGB => currentTexture?.IsSRGB ?? true; // Default to sRGB if no texture
 
     /// <summary>
     /// Initialize D3D11 device and resources.
@@ -101,7 +105,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 null,
                 DriverType.Hardware,
                 DeviceCreationFlags.BgraSupport,
-                null,
+                Array.Empty<FeatureLevel>(),
                 swapChainDesc,
                 out swapChain,
                 out device,
@@ -272,12 +276,58 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Load texture data into GPU.
     /// </summary>
     public void LoadTexture(TextureData textureData) {
-        logger.Info($"LoadTexture called: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+        logger.Info($"LoadTexture called: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips, sRGB={textureData.IsSRGB}");
 
         lock (renderLock) {
             logger.Info($"LoadTexture acquired lock, loading texture...");
 
             currentTexture = textureData;
+
+            // Set gamma based on texture format and type
+            // Understanding:
+            // - Monitor expects sRGB-encoded data
+            // - Swapchain is R8G8B8A8_UNorm (no automatic sRGB conversion)
+            // - Shader applies pow(color, 1/gamma) for encoding
+            //
+            // For PNG textures (loaded as R8G8B8A8_UNorm, no hardware sRGB decode):
+            //   - IsSRGB=true (Albedo): PNG bytes are already sRGB-encoded
+            //     -> gamma = 1.0 (pass through as-is, already correct for display)
+            //   - IsSRGB=false (Normal/Roughness): PNG bytes are linear
+            //     -> gamma = 2.2 (encode Linear->sRGB for display)
+            //
+            // For KTX2 textures:
+            //   - BC7_UNorm_SRgb: Hardware decodes sRGB->Linear automatically
+            //     -> gamma = 2.2 (re-encode Linear->sRGB for display)
+            //   - BC7_UNorm: Hardware treats as linear
+            //     -> gamma = 2.2 (encode Linear->sRGB for display)
+
+            // Monitors expect sRGB-encoded data for correct display
+            // Swapchain is R8G8B8A8_UNorm (no automatic sRGB conversion)
+            // Shader applies: output = pow(input, 1/gamma)
+            //
+            // For PNG textures (loaded as R8G8B8A8_UNorm):
+            //   - IsSRGB=true (Albedo): bytes are already sRGB-encoded
+            //     → gamma=1.0 (pass-through, monitor expects sRGB)
+            //   - IsSRGB=false (Normal): bytes are linear
+            //     → gamma=2.2 (encode Linear→sRGB for monitor)
+            //
+            // For KTX2 textures:
+            //   - BC7_UNorm_SRgb: GPU decodes sRGB→Linear automatically
+            //     → gamma=2.2 (re-encode Linear→sRGB for monitor)
+            //   - BC7_UNorm: GPU treats as Linear
+            //     → gamma=2.2 (encode Linear→sRGB for monitor)
+
+            if (textureData.SourceFormat.Contains("PNG")) {
+                // PNG: Check IsSRGB flag to determine if bytes are already sRGB-encoded
+                currentGamma = textureData.IsSRGB ? 1.0f : 2.2f;
+                originalGamma = currentGamma; // Save for restoring after mask
+                logger.Info($"PNG texture: Set gamma to {currentGamma} (IsSRGB={textureData.IsSRGB})");
+            } else {
+                // KTX2: GPU output is always Linear, need to encode to sRGB for monitor
+                currentGamma = 2.2f;
+                originalGamma = currentGamma; // Save for restoring after mask
+                logger.Info($"KTX2 texture: Set gamma to {currentGamma} (format={textureData.CompressionFormat})");
+            }
 
             // Dispose old texture
             logger.Info("Disposing old texture resources...");
@@ -301,9 +351,11 @@ public sealed class D3D11TextureRenderer : IDisposable {
             };
             logger.Info($"Using compressed D3D11 format: {format} for {textureData.CompressionFormat}");
         } else {
-            // Uncompressed RGBA8
-            format = textureData.IsSRGB ? Format.R8G8B8A8_UNorm_SRgb : Format.R8G8B8A8_UNorm;
-            logger.Info($"Using uncompressed D3D11 format: {format}");
+            // Uncompressed RGBA8 - WPF gives us BGRA32, so use BGRA format
+            // Always use UNorm (no automatic sRGB decode)
+            // Gamma correction in shader will handle sRGB encoding for display
+            format = Format.B8G8R8A8_UNorm;
+            logger.Info($"Using uncompressed D3D11 format: {format} (BGRA byte order from WPF, no auto sRGB decode)");
         }
 
         // Create texture description
@@ -366,13 +418,15 @@ public sealed class D3D11TextureRenderer : IDisposable {
             }
         }
 
-            // Reset view state
+            // Don't reset view state - preserve zoom/pan when switching textures
+            // Only reset mip level since the new texture might have different mip count
             currentMipLevel = 0;
-            zoomLevel = 1.0f;
-            panX = 0.0f;
-            panY = 0.0f;
+            // Keep existing zoom and pan values
+            // zoomLevel = 1.0f;  // DON'T RESET
+            // panX = 0.0f;        // DON'T RESET
+            // panY = 0.0f;        // DON'T RESET
 
-            logger.Info("LoadTexture completed, releasing lock");
+            logger.Info($"LoadTexture completed, preserving zoom={zoomLevel} pan=({panX},{panY}), releasing lock");
         } // lock (renderLock)
     }
 
@@ -454,8 +508,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
             PosScale = posScale,
             MipLevel = currentMipLevel,
             Exposure = 0.0f,
-            Gamma = 2.2f,
-            ChannelMask = 0xFFFFFFFF
+            Gamma = currentGamma,
+            ChannelMask = channelMask
         };
 
         var mapped = context!.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
@@ -494,9 +548,36 @@ public sealed class D3D11TextureRenderer : IDisposable {
         }
     }
 
+    public void SetChannelMask(uint mask) {
+        lock (renderLock) {
+            channelMask = mask;
+        }
+    }
+
+    public void SetGamma(float gamma) {
+        lock (renderLock) {
+            currentGamma = gamma;
+        }
+    }
+
+    public void RestoreOriginalGamma() {
+        lock (renderLock) {
+            currentGamma = originalGamma;
+        }
+    }
+
     public void SetFilter(bool linear) {
         lock (renderLock) {
             useLinearFilter = linear;
+        }
+    }
+
+    public void ResetView() {
+        lock (renderLock) {
+            zoomLevel = 1.0f;
+            panX = 0.0f;
+            panY = 0.0f;
+            currentMipLevel = 0;
         }
     }
 

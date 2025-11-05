@@ -89,5 +89,21 @@
             get => (string)this[nameof(LastSelectedBranchName)];
             set => this[nameof(LastSelectedBranchName)] = value;
         }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("True")]
+        public bool UseD3D11Preview {
+            get => (bool)this[nameof(UseD3D11Preview)];
+            set => this[nameof(UseD3D11Preview)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("True")]
+        public bool UseD3D11NativeKtx2 {
+            get => (bool)this[nameof(UseD3D11NativeKtx2)];
+            set => this[nameof(UseD3D11NativeKtx2)] = value;
+        }
     }
 }

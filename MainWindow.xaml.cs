@@ -162,37 +162,23 @@ namespace AssetProcessor {
         private bool isKtxPreviewAvailable;
         private bool isUserPreviewSelection;
         private bool isUpdatingPreviewSourceControls;
-        private MatrixTransform? previewTransform;
-        // LEGACY: Zoom/Pan fields - kept for compatibility with remaining legacy code
-        private bool isPanningPreview;
-        private Point lastPanPosition;
-        private double centerNormX = 0.5;
-        private double centerNormY = 0.5;
-        private double panOffsetX;
-        private double panOffsetY;
-        private double currentZoom = 1.0;
-        private double fitZoom = 1.0;
-        private bool isFitMode = true;
-        // private bool isUpdatingZoomSlider; // Removed: UI control deleted
-        private bool fitZoomUpdateScheduled;
-        private bool forceFitOnNextUpdate;
-        private const double MinZoom = 0.125;
-        private const double MaxZoom = 16.0;
-        // Removed: isUpdatingPreviewWidth (PreviewWidthSlider was removed)
+        // Current loaded texture paths for preview renderer switching
+        private string? currentLoadedTexturePath;
+        private string? currentLoadedKtx2Path;
+        private TextureResource? currentSelectedTexture; // Currently selected texture for sRGB detection
+        private string? currentActiveChannelMask; // Current active RGBA mask (null = no mask, "R"/"G"/"B"/"A" = active mask)
+        // Legacy fields removed - zoom/pan now handled natively by D3D11TextureViewerControl
         private BitmapSource? originalFileBitmapSource;
         private double previewReferenceWidth;
         private double previewReferenceHeight;
 
-        // D3D11 Texture Viewer state
-        private float d3d11Zoom = 1.0f;
-        private float d3d11PanX = 0.0f;
-        private float d3d11PanY = 0.0f;
-        private bool isD3D11Panning = false;
-        private Point lastD3D11MousePosition;
+        // D3D11 Texture Viewer state (zoom/pan now handled in control itself)
         private bool isD3D11RenderLoopEnabled = true;
 
         // KTX2 preview mode: true = D3D11 native, false = PNG extraction (old method)
-        private bool useD3D11NativeKtx2 = true; // TODO: Add to settings
+        private bool useD3D11NativeKtx2;
+        // Track which preview renderer is currently active
+        private bool isUsingD3D11Renderer = true;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private sealed class KtxPreviewCacheEntry {
@@ -318,6 +304,15 @@ namespace AssetProcessor {
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e) {
             logger.Info("MainWindow loaded - D3D11 viewer ready");
+
+            // Apply UseD3D11Preview setting on startup
+            bool useD3D11 = AppSettings.Default.UseD3D11Preview;
+            SwitchPreviewRenderer(useD3D11);
+            logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
+
+            // Apply UseD3D11NativeKtx2 setting on startup
+            useD3D11NativeKtx2 = AppSettings.Default.UseD3D11NativeKtx2;
+            logger.Info($"Applied UseD3D11NativeKtx2 setting on startup: {useD3D11NativeKtx2}");
         }
 
         private void OnD3D11Rendering(object? sender, EventArgs e) {
@@ -330,67 +325,32 @@ namespace AssetProcessor {
             // D3D11TextureViewerControl will handle resize automatically via OnRenderSizeChanged
         }
 
-        private void TexturePreview_MouseWheel(object sender, MouseWheelEventArgs e) {
-            if (D3D11TextureViewer?.Renderer == null) return;
-
-            logger.Info($"Mouse wheel: delta={e.Delta}, zoom before={d3d11Zoom}");
-
-            // Zoom with mouse wheel
-            float zoomDelta = e.Delta > 0 ? 1.1f : 0.9f;
-            d3d11Zoom *= zoomDelta;
-            d3d11Zoom = Math.Clamp(d3d11Zoom, 0.125f, 16.0f);
-
-            D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
-
-            logger.Info($"Zoom after={d3d11Zoom}");
-            e.Handled = true;
+        private void TexturePreviewViewport_MouseEnter(object sender, MouseEventArgs e) {
+            // Focus the Grid when mouse enters so MouseWheel events are received
+            TexturePreviewViewport?.Focus();
         }
 
-        private void TexturePreview_MouseDown(object sender, MouseButtonEventArgs e) {
-            if (e.MiddleButton == MouseButtonState.Pressed) {
-                Point mousePos = e.GetPosition(TexturePreviewViewport);
-                logger.Info($"Middle button down at {mousePos.X}, {mousePos.Y}");
-
-                isD3D11Panning = true;
-                lastD3D11MousePosition = mousePos;
-                TexturePreviewMouseOverlay.CaptureMouse();
+        // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
+        private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            // Only handle zoom if D3D11 renderer is active (not in WPF mode)
+            if (isUsingD3D11Renderer) {
+                D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
                 e.Handled = true;
             }
         }
 
-        private void TexturePreview_MouseUp(object sender, MouseButtonEventArgs e) {
-            if (e.MiddleButton == MouseButtonState.Released && isD3D11Panning) {
-                logger.Info("Middle button up - stop panning");
-                isD3D11Panning = false;
-                TexturePreviewMouseOverlay.ReleaseMouseCapture();
-                e.Handled = true;
-            }
-        }
-
-        private void TexturePreview_MouseMove(object sender, MouseEventArgs e) {
-            if (!isD3D11Panning || D3D11TextureViewer?.Renderer == null) return;
-
-            Point currentPosition = e.GetPosition(TexturePreviewViewport);
-            double deltaX = currentPosition.X - lastD3D11MousePosition.X;
-            double deltaY = currentPosition.Y - lastD3D11MousePosition.Y;
-
-            // Convert screen delta to normalized texture space
-            // Account for zoom level
-            float panSpeed = 0.002f / d3d11Zoom;
-            d3d11PanX += (float)deltaX * panSpeed;
-            d3d11PanY -= (float)deltaY * panSpeed; // Invert Y for correct direction
-
-            D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
-
-            lastD3D11MousePosition = currentPosition;
-            e.Handled = true;
-        }
+        // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl
 
         /// <summary>
         /// Loads texture data into the D3D11 viewer.
         /// </summary>
         private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
             logger.Info($"LoadTextureToD3D11Viewer called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}, isSRGB={isSRGB}");
+
+            if (bitmap == null) {
+                logger.Warn("Bitmap is null");
+                return;
+            }
 
             if (D3D11TextureViewer?.Renderer == null) {
                 logger.Warn("D3D11 viewer or renderer is null");
@@ -422,14 +382,17 @@ namespace AssetProcessor {
                     RowPitch = stride
                 };
 
+                // For PNG textures, always load as non-sRGB format (R8G8B8A8_UNorm)
+                // This preserves raw byte values for accurate channel visualization
+                // IsSRGB field indicates whether PNG *contains* sRGB data (not GPU format)
                 var textureData = new TextureData {
                     Width = width,
                     Height = height,
                     MipLevels = new List<MipLevel> { mipLevel },
-                    IsSRGB = isSRGB,
+                    IsSRGB = isSRGB, // True if PNG contains sRGB data (Albedo), False if Linear (Normal, Roughness)
                     HasAlpha = true,
                     IsHDR = false,
-                    SourceFormat = "PNG/RGBA8"
+                    SourceFormat = $"PNG/RGBA8 (isSRGB={isSRGB})"
                 };
 
                 logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
@@ -439,22 +402,29 @@ namespace AssetProcessor {
                     logger.Info("Calling LoadTexture on renderer...");
                     D3D11TextureViewer.Renderer.LoadTexture(textureData);
                     logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
+
+                    // Update format info in UI
+                    Dispatcher.Invoke(() => {
+                        if (TextureFormatTextBlock != null) {
+                            string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                            TextureFormatTextBlock.Text = $"Format: {formatInfo}";
+                        }
+                    });
+
+                    // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
                 } else {
                     logger.Error("D3D11TextureViewer.Renderer is null!");
                 }
-
-                // Reset zoom/pan to defaults
-                d3d11Zoom = 1.0f;
-                d3d11PanX = 0.0f;
-                d3d11PanY = 0.0f;
-                D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
-                D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
             } catch (Exception ex) {
                 logger.Error(ex, "Failed to load texture to D3D11 viewer");
             } finally {
                 // Re-enable render loop
                 isD3D11RenderLoopEnabled = true;
                 logger.Info("Render loop re-enabled");
+
+                // Force immediate render to update viewport with current zoom/pan
+                D3D11TextureViewer?.Renderer?.Render();
+                logger.Info("Forced render to apply current zoom/pan");
             }
         }
 
@@ -476,12 +446,16 @@ namespace AssetProcessor {
                     D3D11TextureViewer.Renderer.LoadTexture(textureData);
                     logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
-                    // Reset zoom/pan to defaults
-                    d3d11Zoom = 1.0f;
-                    d3d11PanX = 0.0f;
-                    d3d11PanY = 0.0f;
-                    D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
-                    D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
+                    // Update format info in UI
+                    if (TextureFormatTextBlock != null) {
+                        string compressionFormat = textureData.CompressionFormat ?? "Unknown";
+                        string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
+                        TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}";
+                    }
+
+                    // Trigger immediate render to show the updated texture with preserved zoom/pan
+                    D3D11TextureViewer.Renderer.Render();
+                    logger.Info("Forced render to apply current zoom/pan after KTX2 load");
                 });
 
                 return true;
@@ -495,15 +469,8 @@ namespace AssetProcessor {
         /// Clears the D3D11 viewer (equivalent to setting Image.Source = null).
         /// </summary>
         private void ClearD3D11Viewer() {
-            // D3D11TextureRenderer doesn't have a Clear method, but we can just leave it as-is
-            // or reset zoom/pan
-            if (D3D11TextureViewer?.Renderer != null) {
-                d3d11Zoom = 1.0f;
-                d3d11PanX = 0.0f;
-                d3d11PanY = 0.0f;
-                D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
-                D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
-            }
+            // D3D11TextureRenderer doesn't have a Clear method
+            // Note: NOT resetting zoom/pan to preserve user's viewport between textures
         }
 
         #endregion
@@ -530,8 +497,45 @@ namespace AssetProcessor {
             }
         }
 
+        /// <summary>
+        /// Synchronize channel button GUI state with currentActiveChannelMask.
+        /// </summary>
+        private void UpdateChannelButtonsState() {
+            RChannelButton.IsChecked = currentActiveChannelMask == "R";
+            GChannelButton.IsChecked = currentActiveChannelMask == "G";
+            BChannelButton.IsChecked = currentActiveChannelMask == "B";
+            AChannelButton.IsChecked = currentActiveChannelMask == "A";
+        }
+
+        private void FitResetButton_Click(object sender, RoutedEventArgs e) {
+            // Reset zoom/pan (call on control, not renderer, to reset local state too)
+            D3D11TextureViewer?.ResetView();
+            logger.Info("Fit/Reset: Reset zoom/pan");
+
+            // Reset channel masks without reloading texture or changing Source/KTX mode
+            currentActiveChannelMask = null;
+            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF); // All channels
+                D3D11TextureViewer.Renderer.RestoreOriginalGamma(); // Restore original gamma (before mask override)
+                D3D11TextureViewer.Renderer.Render(); // Force redraw
+            }
+
+            // Reset channel buttons UI
+            UpdateChannelButtonsState();
+
+            logger.Info("Fit/Reset: Reset channel masks (without changing Source/KTX mode)");
+        }
+
+        private void FilterToggleButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is ToggleButton button) {
+                bool useLinearFilter = button.IsChecked ?? true;
+                D3D11TextureViewer?.Renderer?.SetFilter(useLinearFilter);
+                logger.Info($"Filter toggle: {(useLinearFilter ? "Trilinear" : "Point")}");
+            }
+        }
+
         private void ResetPreviewState() {
-            ResetZoomState();
+            // Zoom/pan state now handled by D3D11TextureViewerControl
             isKtxPreviewActive = false;
             currentMipLevel = 0;
             currentKtxMipmaps = null;
@@ -544,13 +548,6 @@ namespace AssetProcessor {
             ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
-        }
-
-        // LEGACY: Simplified zoom state reset for fallback mode
-        private void ResetZoomState() {
-            if (previewTransform != null) {
-                previewTransform.Matrix = Matrix.Identity;
-            }
         }
 
         private void ClearPreviewReferenceSize() {
@@ -608,6 +605,12 @@ namespace AssetProcessor {
         // Updated: Use D3D11 viewer for texture preview
         private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
             logger.Info($"UpdatePreviewImage called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}");
+
+            if (bitmap == null) {
+                logger.Warn("Bitmap is null in UpdatePreviewImage");
+                return;
+            }
+
             logger.Info("About to check D3D11TextureViewer");
 
             if (D3D11TextureViewer == null) {
@@ -619,14 +622,13 @@ namespace AssetProcessor {
             logger.Info("About to call LoadTextureToD3D11Viewer from UpdatePreviewImage");
 
             try {
-                // Determine if texture is sRGB based on context
-                // For now, assume most textures are sRGB unless they are normal maps
-                bool isSRGB = true; // Default to sRGB
+                // Determine if texture is sRGB based on texture type
+                bool isSRGB = IsSRGBTexture(currentSelectedTexture);
                 logger.Info("Getting bitmap dimensions...");
                 int w = bitmap.PixelWidth;
                 int h = bitmap.PixelHeight;
                 logger.Info($"Bitmap dimensions: {w}x{h}");
-                logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB}");
+                logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={currentSelectedTexture?.TextureType})");
                 LoadTextureToD3D11Viewer(bitmap, isSRGB);
                 logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
             } catch (Exception ex) {
@@ -712,141 +714,6 @@ namespace AssetProcessor {
             // Disabled for fallback mode
         }
 
-        private void RebuildPanFromCenter(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
-            centerNormX = ClampNormalized(centerNormX);
-            centerNormY = ClampNormalized(centerNormY);
-
-            double centerX = centerNormX * imageWidth;
-            double centerY = centerNormY * imageHeight;
-
-            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-
-            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
-            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
-
-            panOffsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
-            panOffsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
-
-            ClampPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-        }
-
-        private void UpdateCenterFromPan(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
-            ClampPan(imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-
-            double centerX = (viewportWidth / 2.0 - panOffsetX) / effectiveZoom;
-            double centerY = (viewportHeight / 2.0 - panOffsetY) / effectiveZoom;
-
-            (centerX, centerY) = ClampCenter(centerX, centerY, imageWidth, imageHeight, viewportWidth, viewportHeight, effectiveZoom);
-
-            centerNormX = imageWidth > 0 ? centerX / imageWidth : 0.5;
-            centerNormY = imageHeight > 0 ? centerY / imageHeight : 0.5;
-
-            panOffsetX = viewportWidth / 2.0 - centerX * effectiveZoom;
-            panOffsetY = viewportHeight / 2.0 - centerY * effectiveZoom;
-        }
-
-        private void ClampPan(double imageWidth, double imageHeight, double viewportWidth, double viewportHeight, double effectiveZoom) {
-            double scaledWidth = imageWidth * effectiveZoom;
-            double scaledHeight = imageHeight * effectiveZoom;
-
-            if (!double.IsFinite(scaledWidth) || scaledWidth < 0) {
-                scaledWidth = 0;
-            }
-
-            if (!double.IsFinite(scaledHeight) || scaledHeight < 0) {
-                scaledHeight = 0;
-            }
-
-            if (scaledWidth <= viewportWidth) {
-                panOffsetX = (viewportWidth - scaledWidth) / 2.0;
-            } else {
-                double minOffsetX = viewportWidth - scaledWidth;
-                double maxOffsetX = 0;
-                if (!double.IsFinite(minOffsetX)) {
-                    minOffsetX = 0;
-                }
-
-                panOffsetX = Math.Clamp(panOffsetX, minOffsetX, maxOffsetX);
-            }
-
-            if (scaledHeight <= viewportHeight) {
-                panOffsetY = (viewportHeight - scaledHeight) / 2.0;
-            } else {
-                double minOffsetY = viewportHeight - scaledHeight;
-                double maxOffsetY = 0;
-                if (!double.IsFinite(minOffsetY)) {
-                    minOffsetY = 0;
-                }
-
-                panOffsetY = Math.Clamp(panOffsetY, minOffsetY, maxOffsetY);
-            }
-        }
-
-        private static (double centerX, double centerY) ClampCenter(
-            double centerX,
-            double centerY,
-            double imageWidth,
-            double imageHeight,
-            double viewportWidth,
-            double viewportHeight,
-            double effectiveZoom) {
-
-            double scaledWidth = imageWidth * effectiveZoom;
-            double scaledHeight = imageHeight * effectiveZoom;
-
-            if (scaledWidth <= viewportWidth || imageWidth <= 0) {
-                centerX = imageWidth / 2.0;
-            } else {
-                double halfViewportWidth = viewportWidth / (2.0 * effectiveZoom);
-                if (!double.IsFinite(halfViewportWidth) || halfViewportWidth <= 0) {
-                    halfViewportWidth = 0;
-                }
-
-                double minCenterX = halfViewportWidth;
-                double maxCenterX = imageWidth - halfViewportWidth;
-                if (minCenterX > maxCenterX) {
-                    double mid = imageWidth / 2.0;
-                    minCenterX = mid;
-                    maxCenterX = mid;
-                }
-
-                centerX = Math.Clamp(centerX, minCenterX, maxCenterX);
-            }
-
-            if (scaledHeight <= viewportHeight || imageHeight <= 0) {
-                centerY = imageHeight / 2.0;
-            } else {
-                double halfViewportHeight = viewportHeight / (2.0 * effectiveZoom);
-                if (!double.IsFinite(halfViewportHeight) || halfViewportHeight <= 0) {
-                    halfViewportHeight = 0;
-                }
-
-                double minCenterY = halfViewportHeight;
-                double maxCenterY = imageHeight - halfViewportHeight;
-                if (minCenterY > maxCenterY) {
-                    double mid = imageHeight / 2.0;
-                    minCenterY = mid;
-                    maxCenterY = mid;
-                }
-
-                centerY = Math.Clamp(centerY, minCenterY, maxCenterY);
-            }
-
-            return (centerX, centerY);
-        }
-
-        private (double normX, double normY)? CaptureViewportCenterNormalized(BitmapSource bitmap) {
-            _ = bitmap;
-            return (centerNormX, centerNormY);
-        }
-
-        private void RestoreViewportCenterNormalized(BitmapSource bitmap, double normX, double normY) {
-            _ = bitmap;
-            centerNormX = ClampNormalized(normX);
-            centerNormY = ClampNormalized(normY);
-            UpdateTransform(true);
-        }
-
         // LEGACY: ApplyFitZoom disabled
         private void ApplyFitZoom() {
             // Disabled for fallback mode
@@ -906,6 +773,66 @@ namespace AssetProcessor {
             } finally {
                 isUpdatingPreviewSourceControls = false;
             }
+        }
+
+        /// <summary>
+        /// Determines if a texture should be treated as sRGB based on its type or name.
+        /// </summary>
+        private bool IsSRGBTexture(TextureResource? texture) {
+            if (texture == null) {
+                return true; // Default to sRGB
+            }
+
+            string? textureType = texture.TextureType;
+            if (string.IsNullOrEmpty(textureType)) {
+                // Auto-detect from filename if type not set
+                textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
+            }
+
+            // Linear texture types
+            return textureType?.ToLower() switch {
+                "normal" => false,      // Normal maps are linear
+                "gloss" => false,       // Gloss is linear
+                "roughness" => false,   // Roughness is linear
+                "metallic" => false,    // Metallic is linear
+                "ao" => false,          // Ambient occlusion is linear
+                "opacity" => false,     // Opacity is linear
+                "height" => false,      // Height is linear
+                _ => true               // Default: Albedo, Emissive, Specular, Other = sRGB
+            };
+        }
+
+        /// <summary>
+        /// Prepares a BitmapSource for WPF display.
+        /// DISABLED: Gamma correction was causing image distortion (compression and left shift).
+        /// WPF fallback mode now shows raw image data without gamma correction.
+        /// </summary>
+        private BitmapSource PrepareForWPFDisplay(BitmapSource bitmap) {
+            // DISABLED: Gamma correction was causing image distortion issues
+            // - Images appeared compressed horizontally
+            // - Images shifted to the left
+            // - Inconsistent with D3D11 display
+            //
+            // Since WPF mode is only a fallback when D3D11 fails,
+            // and most users will use D3D11 mode which handles gamma correctly,
+            // we're disabling gamma correction in WPF mode to avoid distortion.
+            //
+            // If gamma correction is needed in the future for WPF mode,
+            // the issue might be related to:
+            // 1. Incorrect stride calculation
+            // 2. Pixel format mismatch
+            // 3. DPI scaling issues
+
+            return bitmap; // Return original bitmap without modification
+        }
+
+        /// <summary>
+        /// Applies sRGB gamma correction to a single byte channel (Linear -> sRGB).
+        /// </summary>
+        private static byte ApplyGammaToByteChannel(byte value) {
+            float normalized = value / 255.0f;
+            float corrected = MathF.Pow(normalized, 1.0f / 2.2f); // Linear -> sRGB
+            return (byte)Math.Clamp(corrected * 255.0f, 0, 255);
         }
 
         // Removed: PreviewWidthSlider methods (slider was removed from UI)
@@ -1033,7 +960,14 @@ namespace AssetProcessor {
                 if (originalFileBitmapSource != null) {
                     originalBitmapSource = originalFileBitmapSource;
                     _ = UpdateHistogramAsync(originalBitmapSource);
-                    ShowOriginalImage();
+                    ShowOriginalImage(); // This will clear currentActiveChannelMask and reset GUI buttons
+
+                    // Update format text for Source mode
+                    if (TextureFormatTextBlock != null) {
+                        bool isSRGB = IsSRGBTexture(currentSelectedTexture);
+                        string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                        TextureFormatTextBlock.Text = $"Format: {formatInfo}";
+                    }
                 } else {
                     ClearD3D11Viewer();
                 }
@@ -1043,13 +977,28 @@ namespace AssetProcessor {
                 // FIXED: Check if we're using D3D11 native KTX2 (no extracted mipmaps)
                 // or old PNG extraction method
                 if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
-                    // Old method: extracted PNG mipmaps available
+                    // Old method: extracted PNG mipmaps available (WPF mode)
                     UpdateMipmapControls(currentKtxMipmaps);
                     SetCurrentMipLevel(currentMipLevel);
+                } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
+                    // New method: Reload KTX2 natively to D3D11
+                    _ = Task.Run(async () => {
+                        try {
+                            await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
+                            await Dispatcher.InvokeAsync(() => {
+                                if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
+                                    UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
+                                    logger.Info($"Reloaded KTX2 to D3D11 when switching to KTX2 mode - {D3D11TextureViewer.Renderer.MipCount} mip levels");
+                                }
+                            });
+                        } catch (Exception ex) {
+                            logger.Error(ex, "Failed to reload KTX2 when switching to KTX2 mode");
+                        }
+                    });
                 } else if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
-                    // New method: KTX2 loaded natively in D3D11
+                    // KTX2 already loaded in D3D11
                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
-                    logger.Info($"KTX2 loaded natively in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
+                    logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
                 } else {
                     HideMipmapControls();
                 }
@@ -1073,6 +1022,16 @@ namespace AssetProcessor {
 
             if (MipmapInfoTextBlock != null) {
                 MipmapInfoTextBlock.Text = string.Empty;
+            }
+        }
+
+        private void ShowMipmapControls() {
+            if (MipmapSliderPanel != null) {
+                MipmapSliderPanel.Visibility = Visibility.Visible;
+            }
+
+            if (MipmapLevelSlider != null) {
+                MipmapLevelSlider.IsEnabled = true;
             }
         }
 
@@ -1153,6 +1112,13 @@ namespace AssetProcessor {
             // Обновляем изображение
             Dispatcher.Invoke(() => {
                 UpdatePreviewImage(originalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
+
+                // Update WPF Image if in WPF preview mode
+                if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
+                    WpfTexturePreviewImage.Source = PrepareForWPFDisplay(originalBitmapSource);
+                    logger.Info($"Updated WPF Image in SetCurrentMipLevel: level {clampedLevel}");
+                }
+
                 UpdateHistogram(originalBitmapSource);
             });
 
@@ -1161,12 +1127,47 @@ namespace AssetProcessor {
         }
 
         private async Task FilterChannelAsync(string channel) {
+            // Save current active mask
+            currentActiveChannelMask = channel;
+
+            // Apply channel filter to D3D11 renderer if active
+            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                // Convert channel to mask
+                // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale
+                uint mask = channel switch {
+                    "R" => 0x11, // R channel + grayscale (0x01 | 0x10)
+                    "G" => 0x12, // G channel + grayscale (0x02 | 0x10)
+                    "B" => 0x14, // B channel + grayscale (0x04 | 0x10)
+                    "A" => 0x18, // A channel + grayscale (0x08 | 0x10)
+                    _ => 0xFFFFFFFF // All channels
+                };
+                D3D11TextureViewer.Renderer.SetChannelMask(mask);
+
+                // When showing channel mask, always use gamma=1.0 to show raw LINEAR channel values
+                // (no gamma correction - display raw bytes directly)
+                D3D11TextureViewer.Renderer.SetGamma(1.0f);
+                D3D11TextureViewer.Renderer.Render();
+
+                logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}, forced gamma=1.0 for raw linear display");
+                return;
+            }
+
+            // WPF mode: use bitmap filtering
             if (originalBitmapSource != null) {
                 BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
 
                 // Обновляем UI в основном потоке
                 Dispatcher.Invoke(() => {
                     UpdatePreviewImage(filteredBitmap, setReference: false, preserveViewport: true);
+
+                    // Update WPF Image if in WPF preview mode
+                    if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
+                        // Note: filtered bitmaps are already processed, may not need gamma correction
+                        // But apply it anyway for consistency if texture is linear
+                        WpfTexturePreviewImage.Source = PrepareForWPFDisplay(filteredBitmap);
+                        logger.Info($"Updated WPF Image in FilterChannelAsync: {channel}");
+                    }
+
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
                 });
             }
@@ -1202,13 +1203,27 @@ namespace AssetProcessor {
         }
 
         private async void ShowOriginalImage(bool recalculateFitZoom = false) {
+            // Clear current active mask
+            currentActiveChannelMask = null;
+
+            // Reset channel filter in D3D11 mode
+            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF); // All channels
+                D3D11TextureViewer.Renderer.RestoreOriginalGamma(); // Restore original gamma (if it was overridden for mask)
+                logger.Info($"Reset D3D11 channel mask to all channels and restored original gamma");
+            }
+
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
                     UpdatePreviewImage(originalBitmapSource, setReference: true, preserveViewport: !recalculateFitZoom);
-                    RChannelButton.IsChecked = false;
-                    GChannelButton.IsChecked = false;
-                    BChannelButton.IsChecked = false;
-                    AChannelButton.IsChecked = false;
+
+                    // Update WPF Image if in WPF preview mode
+                    if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
+                        WpfTexturePreviewImage.Source = PrepareForWPFDisplay(originalBitmapSource);
+                        logger.Info($"Updated WPF Image in ShowOriginalImage");
+                    }
+
+                    UpdateChannelButtonsState();
                     UpdateHistogram(originalBitmapSource);
                     ScheduleFitZoomUpdate(recalculateFitZoom);
                 });
@@ -1658,6 +1673,15 @@ namespace AssetProcessor {
                         object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
                         TextureSizeTextBlock.Text = "Size: " + size;
 
+                        // Add color space info
+                        bool isSRGB = IsSRGBTexture(selectedTexture);
+                        string colorSpace = isSRGB ? "sRGB" : "Linear";
+                        string textureType = selectedTexture.TextureType ?? "Unknown";
+                        TextureColorSpaceTextBlock.Text = $"Color Space: {colorSpace} ({textureType})";
+
+                        // Format will be updated when texture is loaded
+                        TextureFormatTextBlock.Text = "Format: Loading...";
+
                         // Debounce: wait a bit to see if user is still scrolling
                         await Task.Delay(50, cancellationToken);
 
@@ -1671,8 +1695,8 @@ namespace AssetProcessor {
                         // to prevent conflicts
                         bool ktxLoaded = false;
 
-                        if (useD3D11NativeKtx2) {
-                            // NEW METHOD: Try D3D11 native KTX2 loading first
+                        if (useD3D11NativeKtx2 && isUsingD3D11Renderer) {
+                            // D3D11 MODE: Try D3D11 native KTX2 loading (only if D3D11 renderer is active)
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
 
                             if (ktxLoaded) {
@@ -1683,7 +1707,7 @@ namespace AssetProcessor {
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
                             }
                         } else {
-                            // OLD METHOD: PNG extraction with parallel loading
+                            // WPF MODE: Use PNG extraction for mipmaps (old method)
                             Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
                             await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
                             ktxLoaded = await ktxPreviewTask;
@@ -1739,6 +1763,10 @@ namespace AssetProcessor {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
+
+                    // Save current loaded texture paths for preview renderer switching
+                    currentLoadedTexturePath = selectedTexture.Path;
+                    currentLoadedKtx2Path = ktxPath;
 
                     // Mark KTX2 preview as available
                     isKtxPreviewAvailable = true;
@@ -1814,6 +1842,13 @@ namespace AssetProcessor {
         }
 
         private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
+            // Reset channel masks when loading new texture
+            currentActiveChannelMask = null;
+            Dispatcher.Invoke(() => UpdateChannelButtonsState());
+
+            // Store currently selected texture for sRGB detection
+            currentSelectedTexture = selectedTexture;
+
             string? texturePath = selectedTexture.Path;
             if (string.IsNullOrEmpty(texturePath)) {
                 return;
@@ -1824,6 +1859,9 @@ namespace AssetProcessor {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
+
+                    // Save current loaded texture path for preview renderer switching
+                    currentLoadedTexturePath = texturePath;
 
                     originalFileBitmapSource = cachedImage;
                     isSourcePreviewAvailable = true;
@@ -1851,6 +1889,9 @@ namespace AssetProcessor {
                 if (cancellationToken.IsCancellationRequested) {
                     return;
                 }
+
+                // Save current loaded texture path for preview renderer switching
+                currentLoadedTexturePath = texturePath;
 
                 originalFileBitmapSource = thumbnailImage;
                 isSourcePreviewAvailable = true;
@@ -2078,10 +2119,10 @@ namespace AssetProcessor {
                 return cacheEntry.Mipmaps;
             }
 
-            return await Task.Run(() => ExtractKtxMipmaps(ktxPath, lastWriteTimeUtc, cancellationToken), cancellationToken);
+            return await ExtractKtxMipmapsAsync(ktxPath, lastWriteTimeUtc, cancellationToken);
         }
 
-        private List<KtxMipLevel> ExtractKtxMipmaps(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
+        private async Task<List<KtxMipLevel>> ExtractKtxMipmapsAsync(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
             cancellationToken.ThrowIfCancellationRequested();
 
             // Используем ktx (из KTX-Software) вместо basisu для извлечения мипмапов из KTX2
@@ -2140,9 +2181,9 @@ namespace AssetProcessor {
                     throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2.", ex);
                 }
 
-                string standardOutput = process.StandardOutput.ReadToEnd();
-                string standardError = process.StandardError.ReadToEnd();
-                process.WaitForExit();
+                string standardOutput = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+                string standardError = await process.StandardError.ReadToEndAsync(cancellationToken);
+                await process.WaitForExitAsync(cancellationToken);
 
                 // Логируем результат даже при успехе для диагностики
                 logger.Info($"ktx extract completed. ExitCode={process.ExitCode}, StdOut={standardOutput}, StdErr={standardError}");
@@ -2335,7 +2376,95 @@ namespace AssetProcessor {
 
         private void Setting(object? sender, RoutedEventArgs e) {
             SettingsWindow settingsWindow = new();
+            // Subscribe to preview renderer changes
+            settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
+            settingsWindow.OnKtx2PreviewModeChanged += HandleKtx2PreviewModeChanged;
             settingsWindow.ShowDialog();
+            // Unsubscribe after window closes
+            settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
+            settingsWindow.OnKtx2PreviewModeChanged -= HandleKtx2PreviewModeChanged;
+        }
+
+        private void HandlePreviewRendererChanged(bool useD3D11) {
+            SwitchPreviewRenderer(useD3D11);
+        }
+
+        private void HandleKtx2PreviewModeChanged(bool useD3D11Native) {
+            useD3D11NativeKtx2 = useD3D11Native;
+            logger.Info($"KTX2 preview mode changed to: {(useD3D11Native ? "D3D11 Native" : "PNG Extraction")}");
+            // If currently viewing a KTX2 texture, reload it with the new mode
+            if (TexturesDataGrid.SelectedItem is TextureResource texture) {
+                logger.Info($"Reloading current texture with new KTX2 preview mode");
+                // Re-trigger selection to reload preview with new mode
+                TexturesDataGrid_SelectionChanged(TexturesDataGrid, null!);
+            }
+        }
+
+        private async void SwitchPreviewRenderer(bool useD3D11) {
+            if (useD3D11) {
+                // Switch to D3D11 renderer
+                isUsingD3D11Renderer = true;
+                D3D11TextureViewer.Visibility = Visibility.Visible;
+                WpfTexturePreviewImage.Visibility = Visibility.Collapsed;
+                logger.Info("Switched to D3D11 preview renderer");
+
+                // Show mipmap controls if KTX2 is available
+                if (isKtxPreviewAvailable && currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    ShowMipmapControls();
+                }
+
+                // Reload current texture to D3D11 based on current preview source mode
+                if (currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2 && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
+                    // Reload KTX2
+                    try {
+                        await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
+                        logger.Info($"Reloaded KTX2 to D3D11 viewer: {currentLoadedKtx2Path}");
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Failed to reload KTX2 to D3D11 viewer");
+                    }
+                } else if (currentPreviewSourceMode == TexturePreviewSourceMode.Source && originalFileBitmapSource != null) {
+                    // Reload Source (PNG) to D3D11
+                    try {
+                        bool isSRGB = IsSRGBTexture(currentSelectedTexture);
+                        LoadTextureToD3D11Viewer(originalFileBitmapSource, isSRGB);
+                        logger.Info($"Reloaded Source PNG to D3D11 viewer, sRGB={isSRGB}");
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Failed to reload Source PNG to D3D11 viewer");
+                    }
+                }
+            } else {
+                // Switch to WPF Image renderer (legacy mode)
+                isUsingD3D11Renderer = false;
+                D3D11TextureViewer.Visibility = Visibility.Collapsed;
+                WpfTexturePreviewImage.Visibility = Visibility.Visible;
+                logger.Info("Switched to WPF preview renderer");
+
+                // Show mipmap controls if KTX2 is available (WPF uses PNG extraction)
+                if (isKtxPreviewAvailable) {
+                    ShowMipmapControls();
+                }
+
+                // Load current texture to WPF Image
+                if (!string.IsNullOrEmpty(currentLoadedTexturePath) && File.Exists(currentLoadedTexturePath)) {
+                    try {
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.UriSource = new Uri(currentLoadedTexturePath, UriKind.Absolute);
+                        bitmap.EndInit();
+                        bitmap.Freeze();
+
+                        WpfTexturePreviewImage.Source = PrepareForWPFDisplay(bitmap);
+                        logger.Info($"Loaded source texture to WPF Image: {currentLoadedTexturePath}");
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Failed to load texture to WPF Image");
+                        WpfTexturePreviewImage.Source = null;
+                    }
+                } else {
+                    logger.Warn("No source texture path available for WPF preview");
+                    WpfTexturePreviewImage.Source = null;
+                }
+            }
         }
 
         private async void GetListAssets(object sender, RoutedEventArgs e) {
@@ -2358,7 +2487,13 @@ namespace AssetProcessor {
             if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
                 SettingsWindow settingsWindow = new();
+                // Subscribe to preview renderer changes
+                settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
+                settingsWindow.OnKtx2PreviewModeChanged += HandleKtx2PreviewModeChanged;
                 settingsWindow.ShowDialog();
+                // Unsubscribe after window closes
+                settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
+                settingsWindow.OnKtx2PreviewModeChanged -= HandleKtx2PreviewModeChanged;
                 return; // Прерываем выполнение Connect, если данные не заполнены
             } else {
                 try {
@@ -2550,7 +2685,13 @@ namespace AssetProcessor {
 
         private void SettingsMenu(object? sender, RoutedEventArgs e) {
             SettingsWindow settingsWindow = new();
+            // Subscribe to preview renderer changes
+            settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
+            settingsWindow.OnKtx2PreviewModeChanged += HandleKtx2PreviewModeChanged;
             settingsWindow.ShowDialog();
+            // Unsubscribe after window closes
+            settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
+            settingsWindow.OnKtx2PreviewModeChanged -= HandleKtx2PreviewModeChanged;
         }
 
         private void TextureConversionMenu(object? sender, RoutedEventArgs e) {

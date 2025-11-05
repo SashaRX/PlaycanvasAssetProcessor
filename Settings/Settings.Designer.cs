@@ -175,5 +175,29 @@ namespace AssetProcessor.Settings {
                 this["DownloadSemaphoreLimit"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool UseD3D11Preview {
+            get {
+                return ((bool)(this["UseD3D11Preview"]));
+            }
+            set {
+                this["UseD3D11Preview"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool UseD3D11NativeKtx2 {
+            get {
+                return ((bool)(this["UseD3D11NativeKtx2"]));
+            }
+            set {
+                this["UseD3D11NativeKtx2"] = value;
+            }
+        }
     }
 }

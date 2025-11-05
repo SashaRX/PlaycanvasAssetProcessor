@@ -44,5 +44,11 @@
     <Setting Name="DownloadSemaphoreLimit" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">8</Value>
     </Setting>
+    <Setting Name="UseD3D11Preview" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="UseD3D11NativeKtx2" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

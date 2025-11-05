@@ -8,7 +8,13 @@
       "Bash(Select-String -Pattern \"error|warning CS0103\")",
       "mcp__ide__getDiagnostics",
       "Bash(dotnet build:*)",
-      "Bash(Select-Object -Last 30)"
+      "Bash(Select-Object -Last 30)",
+      "Bash(nul)",
+      "Bash(Stop-Process -Id 51012 -Force)",
+      "Bash(taskkill /F /PID 51012)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 51012\")",
+      "Bash(Out-String -Stream)",
+      "Bash(Select-Object -Last 50)"
     ],
     "deny": [],
     "ask": []

@@ -188,14 +188,35 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="D3D11 Texture Viewer (Test)" Margin="0,0,0,6">
+                        <GroupBox Header="Texture Preview Renderer" Margin="0,0,0,6">
                             <StackPanel Margin="2">
-                                <TextBlock Text="Test the new GPU-based texture viewer" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
-                                <Button Content="Open D3D11 Viewer Test Window"
-                                        Click="TestD3D11Viewer_Click"
-                                        Height="24"
-                                        Margin="0,2,0,0"
-                                        FontSize="10"/>
+                                <TextBlock Text="Choose which renderer to use for texture preview" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+                                <RadioButton x:Name="UseD3D11PreviewRadioButton"
+                                             Content="D3D11 (GPU-accelerated, supports mipmaps)"
+                                             Margin="0,2,0,0"
+                                             FontSize="10"
+                                             Checked="PreviewRendererChanged"/>
+                                <RadioButton x:Name="UseWPFPreviewRadioButton"
+                                             Content="WPF Image (software, legacy mode)"
+                                             Margin="0,2,0,0"
+                                             FontSize="10"
+                                             Checked="PreviewRendererChanged"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="KTX2 Preview Mode" Margin="0,0,0,6">
+                            <StackPanel Margin="2">
+                                <TextBlock Text="Choose how to preview KTX2 textures (requires D3D11 renderer)" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+                                <RadioButton x:Name="UseD3D11NativeKtx2RadioButton"
+                                             Content="D3D11 Native KTX2 (GPU loading, all features)"
+                                             Margin="0,2,0,0"
+                                             FontSize="10"
+                                             Checked="Ktx2PreviewModeChanged"/>
+                                <RadioButton x:Name="UsePngExtractionKtx2RadioButton"
+                                             Content="PNG Extraction (CPU decode, legacy mode)"
+                                             Margin="0,2,0,0"
+                                             FontSize="10"
+                                             Checked="Ktx2PreviewModeChanged"/>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>

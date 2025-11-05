@@ -187,6 +187,17 @@
                                 </Grid>
                             </StackPanel>
                         </GroupBox>
+
+                        <GroupBox Header="D3D11 Texture Viewer (Test)" Margin="0,0,0,6">
+                            <StackPanel Margin="2">
+                                <TextBlock Text="Test the new GPU-based texture viewer" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+                                <Button Content="Open D3D11 Viewer Test Window"
+                                        Click="TestD3D11Viewer_Click"
+                                        Height="24"
+                                        Margin="0,2,0,0"
+                                        FontSize="10"/>
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

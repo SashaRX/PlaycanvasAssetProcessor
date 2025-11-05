@@ -5,6 +5,7 @@ cbuffer ShaderConstants : register(b0)
 {
     float2 uvScale;      // UV scaling for zoom
     float2 uvOffset;     // UV offset for pan
+    float2 posScale;     // Position scaling for aspect ratio correction
     float mipLevel;      // Manual mip level (-1 for auto)
     float exposure;      // HDR exposure (EV)
     float gamma;         // Gamma correction (2.2 for sRGB, 1.0 for linear)
@@ -30,7 +31,10 @@ struct PSInput
 PSInput VSMain(VSInput input)
 {
     PSInput output;
-    output.position = float4(input.position, 0.0, 1.0);
+
+    // Apply aspect ratio correction to position
+    float2 pos = input.position * posScale;
+    output.position = float4(pos, 0.0, 1.0);
 
     // Apply zoom/pan to UV
     output.texcoord = input.texcoord * uvScale + uvOffset;
@@ -45,14 +49,21 @@ float3 SRGBToLinear(float3 srgb)
 }
 
 // Linear to sRGB
-float3 LinearToSRGB(float3 linear)
+float3 LinearToSRGB(float3 linearColor)
 {
-    return pow(linear, 1.0 / 2.2);
+    return pow(linearColor, 1.0 / 2.2);
 }
 
 // Pixel Shader
 float4 PSMain(PSInput input) : SV_TARGET
 {
+    // Clip pixels outside UV [0, 1] range (texture bounds)
+    if (input.texcoord.x < 0.0 || input.texcoord.x > 1.0 ||
+        input.texcoord.y < 0.0 || input.texcoord.y > 1.0)
+    {
+        discard;
+    }
+
     float4 color;
 
     // Sample texture with manual mip level or auto mip

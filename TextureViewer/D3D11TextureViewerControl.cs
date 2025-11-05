@@ -110,8 +110,12 @@ public class D3D11TextureViewerControl : HwndHost {
     }
 
     private IntPtr CreateHostWindow(IntPtr hwndParent) {
+        // WS_EX_TRANSPARENT makes window transparent to mouse events
+        // This allows WPF overlay on top to capture mouse input
+        const int WS_EX_TRANSPARENT = 0x00000020;
+
         IntPtr hwnd = CreateWindowEx(
-            0,
+            WS_EX_TRANSPARENT,  // Extended style for mouse transparency
             WindowClassName,
             "",
             WS_CHILD | WS_VISIBLE,
@@ -126,6 +130,7 @@ public class D3D11TextureViewerControl : HwndHost {
             throw new Exception($"Failed to create host window: {Marshal.GetLastWin32Error()}");
         }
 
+        logger.Info($"Created HwndHost with WS_EX_TRANSPARENT for mouse passthrough");
         return hwnd;
     }
 

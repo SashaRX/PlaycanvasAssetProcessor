@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using NLog;
 
@@ -29,9 +30,165 @@ public static class Ktx2TextureLoader {
         }
 
         try {
-            return LoadFromHandle(textureHandle);
+            return LoadFromHandle(textureHandle, filePath);
         } finally {
             LibKtxNative.ktxTexture2_Destroy(textureHandle);
+        }
+    }
+
+    private static string FindKtxExecutable() {
+        // Common installation paths
+        string[] searchPaths = {
+            @"C:\Program Files\KTX-Software\bin\ktx.exe",
+            @"C:\Program Files (x86)\KTX-Software\bin\ktx.exe",
+            "ktx.exe", // Try PATH
+            "ktx" // Try PATH without .exe
+        };
+
+        foreach (var path in searchPaths) {
+            try {
+                if (Path.IsPathRooted(path)) {
+                    if (File.Exists(path)) {
+                        logger.Info($"Found ktx.exe at: {path}");
+                        return path;
+                    }
+                } else {
+                    // Try to find in PATH
+                    var psi = new System.Diagnostics.ProcessStartInfo {
+                        FileName = path,
+                        Arguments = "--version",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using var process = System.Diagnostics.Process.Start(psi);
+                    if (process != null) {
+                        process.WaitForExit();
+                        if (process.ExitCode == 0 || process.ExitCode == 1) { // Some versions return 1 for --version
+                            logger.Info($"Found ktx via PATH: {path}");
+                            return path;
+                        }
+                    }
+                }
+            } catch {
+                // Continue searching
+            }
+        }
+
+        throw new Exception("ktx.exe not found. Please install KTX-Software or add ktx to PATH.");
+    }
+
+    private static TextureData LoadViaKtxExtract(string filePath) {
+        logger.Info($"Loading KTX2 via ktx extract tool: {filePath}");
+
+        // Create temp directory
+        string tempDir = Path.Combine(Path.GetTempPath(), "ktx_extract_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        try {
+            string outputBase = Path.Combine(tempDir, "mip");
+
+            // Run ktx extract command
+            // Try to find ktx.exe in common locations
+            string ktxExe = FindKtxExecutable();
+
+            var psi = new System.Diagnostics.ProcessStartInfo {
+                FileName = ktxExe,
+                Arguments = $"extract --level all --transcode rgba8 \"{filePath}\" \"{outputBase}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            logger.Info($"Running: ktx extract --level all --transcode rgba8 \"{filePath}\" \"{outputBase}\"");
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process == null) {
+                throw new Exception("Failed to start ktx process");
+            }
+
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            logger.Info($"ktx extract exit code: {process.ExitCode}");
+            if (!string.IsNullOrEmpty(stdout)) logger.Info($"stdout: {stdout}");
+            if (!string.IsNullOrEmpty(stderr)) logger.Info($"stderr: {stderr}");
+
+            if (process.ExitCode != 0) {
+                throw new Exception($"ktx extract failed with exit code {process.ExitCode}");
+            }
+
+            // Find all extracted PNG files
+            var pngFiles = Directory.GetFiles(tempDir, "*.png")
+                .OrderBy(f => f)
+                .ToList();
+
+            if (pngFiles.Count == 0) {
+                throw new Exception("No PNG files extracted by ktx");
+            }
+
+            logger.Info($"Found {pngFiles.Count} extracted PNG files");
+
+            // Load first PNG as base mip
+            var baseImage = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(pngFiles[0]);
+            int width = baseImage.Width;
+            int height = baseImage.Height;
+
+            var mipLevels = new List<MipLevel>();
+
+            // Load all mips
+            for (int i = 0; i < pngFiles.Count; i++) {
+                using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(pngFiles[i]);
+
+                byte[] mipData = new byte[img.Width * img.Height * 4];
+                img.ProcessPixelRows(accessor => {
+                    for (int y = 0; y < img.Height; y++) {
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * img.Width * 4;
+                        for (int x = 0; x < img.Width; x++) {
+                            var pixel = row[x];
+                            int pixelOffset = rowOffset + x * 4;
+                            mipData[pixelOffset] = pixel.R;
+                            mipData[pixelOffset + 1] = pixel.G;
+                            mipData[pixelOffset + 2] = pixel.B;
+                            mipData[pixelOffset + 3] = pixel.A;
+                        }
+                    }
+                });
+
+                mipLevels.Add(new MipLevel {
+                    Level = i,
+                    Width = img.Width,
+                    Height = img.Height,
+                    Data = mipData,
+                    RowPitch = img.Width * 4
+                });
+
+                logger.Info($"Loaded mip {i}: {img.Width}x{img.Height}");
+            }
+
+            return new TextureData {
+                Width = width,
+                Height = height,
+                MipLevels = mipLevels,
+                IsSRGB = true,
+                HasAlpha = true,
+                SourceFormat = $"KTX2 (via ktx extract)",
+                IsHDR = false,
+                IsCompressed = false,
+                CompressionFormat = null
+            };
+        } finally {
+            // Cleanup temp directory
+            try {
+                Directory.Delete(tempDir, true);
+            } catch {
+                // Ignore cleanup errors
+            }
         }
     }
 
@@ -56,7 +213,7 @@ public static class Ktx2TextureLoader {
             }
 
             try {
-                return LoadFromHandle(textureHandle);
+                return LoadFromHandle(textureHandle, ""); // No filePath for memory loading
             } finally {
                 LibKtxNative.ktxTexture2_Destroy(textureHandle);
             }
@@ -66,119 +223,429 @@ public static class Ktx2TextureLoader {
     }
 
     /// <summary>
+    /// Helper to decode Vulkan format codes to human-readable names.
+    /// </summary>
+    private static string GetVkFormatName(uint vkFormat) {
+        // Also check if the value looks like byte-swapped (common structure alignment issue)
+        uint swapped = ((vkFormat & 0xFF) << 24) | ((vkFormat & 0xFF00) << 8) |
+                       ((vkFormat & 0xFF0000) >> 8) | ((vkFormat & 0xFF000000) >> 24);
+
+        return vkFormat switch {
+            0 => "UNDEFINED",
+            37 => "R8G8B8A8_SRGB",
+            43 => "B8G8R8A8_SRGB",
+            44 => "R8G8B8A8_UNORM",
+            50 => "B8G8R8A8_UNORM",
+            146 => "BC7_SRGB_BLOCK",
+            145 => "BC7_UNORM_BLOCK",
+            134 => "BC1_RGBA_SRGB_BLOCK",
+            133 => "BC1_RGBA_UNORM_BLOCK",
+            _ => swapped switch {
+                37 => $"R8G8B8A8_SRGB (byte-swapped: {vkFormat})",
+                43 => $"B8G8R8A8_SRGB (byte-swapped: {vkFormat})",
+                44 => $"R8G8B8A8_UNORM (byte-swapped: {vkFormat})",
+                50 => $"B8G8R8A8_UNORM (byte-swapped: {vkFormat})",
+                146 => $"BC7_SRGB_BLOCK (byte-swapped: {vkFormat})",
+                145 => $"BC7_UNORM_BLOCK (byte-swapped: {vkFormat})",
+                _ => $"UNKNOWN({vkFormat}, swapped={swapped})"
+            }
+        };
+    }
+
+    /// <summary>
     /// Load texture data from a ktxTexture2 handle.
     /// </summary>
-    private static TextureData LoadFromHandle(IntPtr textureHandle) {
-        // Read texture info
+    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath) {
+        // Read basic texture info from structure (minimal fields only)
         var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
 
-        logger.Info($"KTX2 info: {tex.baseWidth}x{tex.baseHeight}, {tex.numLevels} mips, vkFormat={tex.vkFormat}, supercompression={tex.supercompressionScheme}");
+        logger.Info($"KTX2 structure read: baseWidth={tex.baseWidth}, baseHeight={tex.baseHeight}, numLevels={tex.numLevels}, vkFormat={tex.vkFormat}");
+        logger.Info($"KTX2 structure: isArray={tex.isArray}, isCubemap={tex.isCubemap}, isCompressed={tex.isCompressed}");
+
+        // Read OETF (transfer function) from DFD to determine sRGB vs linear
+        uint oetf = LibKtxNative.ktxTexture2_GetOETF(textureHandle);
+        var transfer = (LibKtxNative.KhrDfTransfer)oetf;
+        bool isSRGB = transfer switch {
+            LibKtxNative.KhrDfTransfer.KHR_DF_TRANSFER_SRGB => true,       // sRGB
+            LibKtxNative.KhrDfTransfer.KHR_DF_TRANSFER_ITU => true,        // BT.709 (same as sRGB)
+            LibKtxNative.KhrDfTransfer.KHR_DF_TRANSFER_LINEAR => false,    // Linear
+            _ => true  // Default to sRGB for safety (unspecified/unknown)
+        };
+        logger.Info($"DFD OETF: {transfer} ({oetf}), sRGB: {isSRGB}");
 
         // Check if needs transcoding (Basis Universal compressed)
         bool needsTranscode = LibKtxNative.ktxTexture2_NeedsTranscoding(textureHandle);
+        string? transcodeFormat = null; // Track what format we transcoded to
 
         if (needsTranscode) {
-            logger.Info("KTX2 texture is Basis Universal compressed, transcoding to RGBA32...");
+            logger.Info("KTX2 texture is Basis Universal compressed, transcoding to BC3...");
 
+            // Transcode Basis Universal to BC3_RGBA
+            // libktx vcpkg v4.4.2 supports BC3, BC7 may not work properly
             var transcodeResult = LibKtxNative.ktxTexture2_TranscodeBasis(
                 textureHandle,
-                LibKtxNative.KtxTranscodeFormat.KTX_TTF_RGBA32,
+                LibKtxNative.KtxTranscodeFormat.KTX_TTF_BC3_RGBA,
                 0);
 
             if (transcodeResult != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                throw new Exception($"Failed to transcode KTX2: {LibKtxNative.GetErrorString(transcodeResult)}");
+                throw new Exception($"Failed to transcode Basis Universal texture: {LibKtxNative.GetErrorString(transcodeResult)}");
             }
 
-            logger.Info("Transcode successful");
+            logger.Info("Transcode to BC3 completed successfully");
 
-            // Re-read texture structure after transcoding
+            // We KNOW we transcoded to BC3 - use sRGB variant based on source VkFormat
+            transcodeFormat = isSRGB ? "BC3_SRGB_BLOCK" : "BC3_UNORM_BLOCK";
+
+            // Re-read structure after transcode
             tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
         }
 
-        // Get data pointer
-        IntPtr dataPtr = LibKtxNative.ktxTexture_GetData(textureHandle);
-        if (dataPtr == IntPtr.Zero) {
-            throw new Exception("Failed to get KTX2 data pointer");
+        // Check actual data size after transcode
+        logger.Info($"tex.dataSize after transcode: {tex.dataSize} bytes");
+
+        // Calculate expected size for RGBA32
+        long expectedSize = 0;
+        for (int i = 0; i < tex.numLevels; i++) {
+            int w = (int)Math.Max(1, tex.baseWidth >> i);
+            int h = (int)Math.Max(1, tex.baseHeight >> i);
+            expectedSize += w * h * 4L;
         }
+        logger.Info($"Expected total size for RGBA32: {expectedSize} bytes ({expectedSize / (1024*1024)} MB)");
 
-        int baseWidth = (int)tex.baseWidth;
-        int baseHeight = (int)tex.baseHeight;
-        int mipCount = (int)tex.numLevels;
+        // Extract mip levels using iterator callback
+        // This is the safest way that works regardless of internal format
+        var mipLevels = new List<MipLevel>();
 
-        // Extract all mip levels
-        var mipLevels = new List<MipLevel>(mipCount);
+        LibKtxNative.KtxIterCallback callback = (int miplevel, int face, int width, int height, int depth, UIntPtr imageSize, IntPtr pixels, IntPtr userdata) => {
+            int size = (int)imageSize;
 
-        for (int level = 0; level < mipCount; level++) {
-            int mipWidth = Math.Max(1, baseWidth >> level);
-            int mipHeight = Math.Max(1, baseHeight >> level);
+            logger.Info($"Iterator callback: mip={miplevel}, {width}x{height}, size={size} bytes");
 
-            // Get offset to this mip level
-            var offsetResult = LibKtxNative.ktxTexture_GetImageOffset(
-                textureHandle,
-                (uint)level,
-                0, // layer
-                0, // faceSlice
-                out UIntPtr offset);
+            // Copy pixel data
+            byte[] mipData = new byte[size];
+            Marshal.Copy(pixels, mipData, 0, size);
 
-            if (offsetResult != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                throw new Exception($"Failed to get offset for mip {level}: {LibKtxNative.GetErrorString(offsetResult)}");
+            // Log first 32 bytes
+            string hexDump = string.Join(" ", mipData.Take(Math.Min(32, size)).Select(b => b.ToString("X2")));
+            logger.Info($"Mip {miplevel} first 32 bytes: {hexDump}");
+
+            // Detect format from data size to calculate correct RowPitch
+            int expectedRGBA32 = width * height * 4;
+            float bytesPerPixel = (float)size / (width * height);
+            int rowPitch;
+
+            if (bytesPerPixel < 1.0f) {
+                // Block compressed format (BC7, BC1, etc.)
+                // BC7/BC1/BC3 = 16 bytes per 4x4 block
+                int blocksPerRow = (width + 3) / 4;
+                rowPitch = blocksPerRow * 16;
+                logger.Info($"Mip {miplevel}: Detected block compression, {bytesPerPixel:F2} bytes/pixel, rowPitch={rowPitch}");
+            } else {
+                // Uncompressed format (RGBA32)
+                rowPitch = width * 4;
+                logger.Info($"Mip {miplevel}: Detected uncompressed RGBA32, rowPitch={rowPitch}");
             }
 
-            // Get size of this mip level
-            UIntPtr mipSize = LibKtxNative.ktxTexture_GetImageSize(textureHandle, (uint)level);
-            int expectedSize = mipWidth * mipHeight * 4; // RGBA8
+            mipLevels.Add(new MipLevel {
+                Level = miplevel,
+                Width = width,
+                Height = height,
+                Data = mipData,
+                RowPitch = rowPitch
+            });
 
-            if ((int)mipSize != expectedSize) {
-                logger.Warn($"Mip {level} size mismatch: expected {expectedSize}, got {mipSize}");
-            }
+            return LibKtxNative.KtxErrorCode.KTX_SUCCESS;
+        };
 
-            // Copy mip data
-            byte[] mipData = new byte[expectedSize];
-            IntPtr mipPtr = IntPtr.Add(dataPtr, (int)offset);
-            Marshal.Copy(mipPtr, mipData, 0, Math.Min(expectedSize, (int)mipSize));
+        var iterResult = LibKtxNative.ktxTexture_IterateLevelFaces(textureHandle, callback, IntPtr.Zero);
+        logger.Info($"ktxTexture_IterateLevelFaces returned: {iterResult}");
 
-            var mipLevel = new MipLevel {
-                Level = level,
-                Width = mipWidth,
-                Height = mipHeight,
-                Data = mipData
-            };
-
-            mipLevels.Add(mipLevel);
-
-            logger.Debug($"Extracted mip {level}: {mipWidth}x{mipHeight}, {mipData.Length} bytes");
+        if (iterResult != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
+            throw new Exception($"Failed to iterate texture levels: {LibKtxNative.GetErrorString(iterResult)}");
         }
 
-        // Determine format info
+        logger.Info($"Successfully extracted {mipLevels.Count} mip levels (before filtering)");
+
+        if (mipLevels.Count == 0) {
+            throw new Exception("No mip levels extracted from KTX2 texture");
+        }
+
+        // Filter out mips with inconsistent format
+        // BC7 blocks are 4x4, so for mips < 4x4 libktx returns uncompressed RGBA32
+        // D3D11 texture must have uniform format across all mips
+
+        // Detect primary format from first mip
+        var firstMip = mipLevels[0];
+        int mip0ExpectedRGBA = firstMip.Width * firstMip.Height * 4;
+        float mip0BytesPerPixel = (float)firstMip.Data.Length / (firstMip.Width * firstMip.Height);
+        bool primaryIsCompressed = mip0BytesPerPixel < 1.0f;
+
+        logger.Info($"Primary format detection: mip0 has {mip0BytesPerPixel:F2} bytes/pixel, compressed={primaryIsCompressed}");
+
+        // Filter mips to keep only those matching primary format
+        int originalMipCount = mipLevels.Count;
+        mipLevels = mipLevels.Where(mip => {
+            float mipBytesPerPixel = (float)mip.Data.Length / (mip.Width * mip.Height);
+            bool mipIsCompressed = mipBytesPerPixel < 1.0f;
+            bool matches = mipIsCompressed == primaryIsCompressed;
+
+            if (!matches) {
+                logger.Warn($"Discarding mip {mip.Level} ({mip.Width}x{mip.Height}): format mismatch (compressed={mipIsCompressed}, expected={primaryIsCompressed})");
+            }
+
+            return matches;
+        }).ToList();
+
+        if (mipLevels.Count < originalMipCount) {
+            logger.Info($"Filtered mips: kept {mipLevels.Count} / {originalMipCount} (discarded {originalMipCount - mipLevels.Count} with mismatched format)");
+        }
+
+        // Use real dimensions from first mip level (iterator gives correct values)
+        int actualWidth = mipLevels.Count > 0 ? mipLevels[0].Width : (int)tex.baseWidth;
+        int actualHeight = mipLevels.Count > 0 ? mipLevels[0].Height : (int)tex.baseHeight;
+
+        // Determine format: if we transcoded, we KNOW the format; otherwise detect from data
+        string detectedFormat;
+        bool isCompressed;
+        bool hasAlpha = true;
+
+        if (transcodeFormat != null) {
+            // We transcoded - use the format we requested from libktx
+            detectedFormat = transcodeFormat;
+            isCompressed = true;
+            logger.Info($"Using transcode target format: {detectedFormat}");
+        } else {
+            // No transcode - detect format from data size
+            int mip0Actual = mipLevels[0].Data.Length;
+            float bytesPerPixel = (float)mip0Actual / (actualWidth * actualHeight);
+
+            logger.Info($"Format detection: mip0 size={mip0Actual}, bytes/pixel={bytesPerPixel:F2}");
+
+            isCompressed = bytesPerPixel < 2.0f; // Less than 2 bytes per pixel = compressed
+
+            if (isCompressed) {
+                // Compressed format - detect from bytesPerPixel
+                string formatSuffix = isSRGB ? "_SRGB_BLOCK" : "_UNORM_BLOCK";
+
+                if (Math.Abs(bytesPerPixel - 0.5f) < 0.1f) {
+                    detectedFormat = "BC7" + formatSuffix;
+                    logger.Info($"Detected BC7 block compression (0.5 bytes/pixel), sRGB={isSRGB}");
+                } else if (Math.Abs(bytesPerPixel - 1.0f) < 0.1f) {
+                    detectedFormat = "BC3" + formatSuffix;
+                    logger.Info($"Detected BC3 block compression (1.0 bytes/pixel), sRGB={isSRGB}");
+                } else {
+                    detectedFormat = $"COMPRESSED_UNKNOWN({bytesPerPixel:F2} bytes/pixel)";
+                    logger.Warn($"Unknown compressed format: {bytesPerPixel:F2} bytes/pixel");
+                }
+            } else {
+                // Uncompressed RGBA8
+                detectedFormat = isSRGB ? "R8G8B8A8_SRGB" : "R8G8B8A8_UNORM";
+                logger.Info($"Detected uncompressed RGBA8 format (4 bytes/pixel), sRGB={isSRGB}");
+            }
+        }
+
         string sourceFormat = needsTranscode
-            ? $"KTX2/BasisU (scheme={tex.supercompressionScheme})"
-            : $"KTX2 (vkFormat={tex.vkFormat})";
+            ? $"KTX2/BasisU -> {detectedFormat}"
+            : $"KTX2 ({detectedFormat})";
 
-        // Check for sRGB format (common Vulkan sRGB formats)
-        bool isSRGB = tex.vkFormat == 37 || // VK_FORMAT_R8G8B8A8_SRGB
-                      tex.vkFormat == 43 || // VK_FORMAT_B8G8R8A8_SRGB
-                      tex.vkFormat == 29;   // VK_FORMAT_R8G8B8_SRGB
-
-        // Check for alpha (RGBA formats)
-        bool hasAlpha = tex.vkFormat == 37 || // VK_FORMAT_R8G8B8A8_SRGB
-                        tex.vkFormat == 43 || // VK_FORMAT_B8G8R8A8_SRGB
-                        tex.vkFormat == 44;   // VK_FORMAT_B8G8R8A8_UNORM
-
-        // After transcoding, we always have RGBA8
-        if (needsTranscode) {
-            hasAlpha = true;
-        }
-
-        logger.Info($"KTX2 loaded successfully: {baseWidth}x{baseHeight}, {mipCount} mips, sRGB={isSRGB}, alpha={hasAlpha}");
+        logger.Info($"KTX2 loaded successfully: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, format={detectedFormat}, sRGB={isSRGB}, alpha={hasAlpha}");
 
         return new TextureData {
-            Width = baseWidth,
-            Height = baseHeight,
+            Width = actualWidth,
+            Height = actualHeight,
             MipLevels = mipLevels,
             IsSRGB = isSRGB,
             HasAlpha = hasAlpha,
             SourceFormat = sourceFormat,
-            IsHDR = false // KTX2 can be HDR but we'd need to check vkFormat more carefully
+            IsHDR = false,
+            IsCompressed = isCompressed,
+            CompressionFormat = isCompressed ? detectedFormat : null
         };
+    }
+
+    /// <summary>
+    /// Load KTX2 via basisu CLI decoder (fallback when libktx transcode doesn't work).
+    /// </summary>
+    private static TextureData LoadViaBasisuCli(string filePath) {
+        logger.Info($"Loading KTX2 via basisu CLI: {filePath}");
+
+        // Create temp directory for unpacked PNGs
+        string tempDir = Path.Combine(Path.GetTempPath(), "basisu_unpack_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        try {
+            // Find basisu.exe
+            string? basisuExe = FindBasisuExecutable();
+            logger.Info($"FindBasisuExecutable returned: {basisuExe ?? "(null)"}");
+            if (basisuExe == null) {
+                throw new Exception("basisu.exe not found. Please install Basis Universal or add basisu to PATH.");
+            }
+
+            // Copy KTX2 to temp dir (basisu outputs to same directory as input)
+            string tempKtx = Path.Combine(tempDir, Path.GetFileName(filePath));
+            File.Copy(filePath, tempKtx);
+            logger.Info($"Copied KTX2 to temp location: {tempKtx}");
+
+            // Run basisu -unpack
+            var psi = new System.Diagnostics.ProcessStartInfo {
+                FileName = basisuExe,
+                Arguments = $"-unpack \"{tempKtx}\"",
+                WorkingDirectory = tempDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            logger.Info($"Running: basisu -unpack \"{tempKtx}\"");
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process == null) {
+                throw new Exception("Failed to start basisu process");
+            }
+
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            logger.Info($"basisu exit code: {process.ExitCode}");
+            if (!string.IsNullOrEmpty(stdout)) logger.Info($"stdout: {stdout}");
+            if (!string.IsNullOrEmpty(stderr)) logger.Warn($"stderr: {stderr}");
+
+            if (process.ExitCode != 0) {
+                throw new Exception($"basisu -unpack failed with exit code {process.ExitCode}");
+            }
+
+            // Find unpacked PNG files (basisu creates: filename_unpacked.png, filename_unpacked_mip1.png, etc.)
+            string baseNameWithoutExt = Path.GetFileNameWithoutExtension(tempKtx);
+            var pngFiles = Directory.GetFiles(tempDir, $"{baseNameWithoutExt}_unpacked*.png")
+                .OrderBy(f => f)
+                .ToList();
+
+            if (pngFiles.Count == 0) {
+                // Sometimes basisu outputs just "_unpacked.png" without original name
+                pngFiles = Directory.GetFiles(tempDir, "*_unpacked*.png")
+                    .OrderBy(f => f)
+                    .ToList();
+            }
+
+            if (pngFiles.Count == 0) {
+                throw new Exception($"No PNG files created by basisu in {tempDir}");
+            }
+
+            logger.Info($"Found {pngFiles.Count} unpacked PNG files");
+
+            // Load PNG files as mips using ImageSharp
+            var mipLevels = new List<MipLevel>();
+            int width = 0, height = 0;
+
+            for (int i = 0; i < pngFiles.Count; i++) {
+                using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(pngFiles[i]);
+
+                if (i == 0) {
+                    width = img.Width;
+                    height = img.Height;
+                }
+
+                byte[] mipData = new byte[img.Width * img.Height * 4];
+                img.ProcessPixelRows(accessor => {
+                    for (int y = 0; y < img.Height; y++) {
+                        var row = accessor.GetRowSpan(y);
+                        int rowOffset = y * img.Width * 4;
+                        for (int x = 0; x < img.Width; x++) {
+                            var pixel = row[x];
+                            int pixelOffset = rowOffset + x * 4;
+                            mipData[pixelOffset] = pixel.R;
+                            mipData[pixelOffset + 1] = pixel.G;
+                            mipData[pixelOffset + 2] = pixel.B;
+                            mipData[pixelOffset + 3] = pixel.A;
+                        }
+                    }
+                });
+
+                mipLevels.Add(new MipLevel {
+                    Level = i,
+                    Width = img.Width,
+                    Height = img.Height,
+                    Data = mipData,
+                    RowPitch = img.Width * 4
+                });
+
+                logger.Info($"Loaded mip {i}: {img.Width}x{img.Height}");
+            }
+
+            // Check for meaningful alpha (sample every 16th pixel)
+            bool hasAlpha = false;
+            var mip0Data = mipLevels[0].Data;
+            for (int i = 3; i < mip0Data.Length; i += 64) { // Every 16th pixel (16 * 4 = 64)
+                if (mip0Data[i] != 255) {
+                    hasAlpha = true;
+                    break;
+                }
+            }
+
+            logger.Info($"KTX2 unpacked via basisu: {width}x{height}, {mipLevels.Count} mips");
+
+            return new TextureData {
+                Width = width,
+                Height = height,
+                MipLevels = mipLevels,
+                IsSRGB = true, // Assume sRGB for Basis textures
+                HasAlpha = hasAlpha,
+                SourceFormat = "KTX2/BasisU (via basisu CLI)",
+                IsHDR = false,
+                IsCompressed = false, // Now uncompressed RGBA8
+                CompressionFormat = null
+            };
+        } finally {
+            // Clean up temp directory
+            try {
+                Directory.Delete(tempDir, true);
+            } catch {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    /// <summary>
+    /// Find basisu.exe executable.
+    /// </summary>
+    private static string? FindBasisuExecutable() {
+        // Try common locations
+        string[] searchPaths = {
+            "basisu",
+            "basisu.exe",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WinGet", "Links", "basisu.exe"),
+            @"C:\Program Files\Basis Universal\basisu.exe",
+            @"C:\tools\basisu\basisu.exe"
+        };
+
+        foreach (var path in searchPaths) {
+            try {
+                var psi = new System.Diagnostics.ProcessStartInfo {
+                    FileName = path,
+                    Arguments = "-version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process != null) {
+                    process.WaitForExit();
+                    if (process.ExitCode == 0 || process.ExitCode == 1) {
+                        logger.Info($"Found basisu: {path}");
+                        return path;
+                    }
+                }
+            } catch (Exception ex) {
+                logger.Debug($"Failed to execute {path}: {ex.Message}");
+                // Continue searching
+            }
+        }
+
+        logger.Warn("basisu.exe not found in any search path");
+        return null;
     }
 }

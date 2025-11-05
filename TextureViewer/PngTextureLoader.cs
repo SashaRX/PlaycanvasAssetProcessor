@@ -34,7 +34,8 @@ public static class PngTextureLoader {
             Level = 0,
             Width = width,
             Height = height,
-            Data = new byte[width * height * 4]
+            Data = new byte[width * height * 4],
+            RowPitch = width * 4
         };
 
         // Copy pixels from ImageSharp to our buffer (row by row)

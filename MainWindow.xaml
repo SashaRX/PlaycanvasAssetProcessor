@@ -5,6 +5,7 @@
     xmlns:local="clr-namespace:AssetProcessor"
     xmlns:controls="clr-namespace:AssetProcessor.Controls"
     xmlns:help ="clr-namespace:AssetProcessor.Helpers"
+    xmlns:viewer="clr-namespace:AssetProcessor.TextureViewer"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
@@ -412,25 +413,20 @@
                                 <Grid Grid.Row="0">
                                     <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
                                         <Grid x:Name="TexturePreviewViewport"
-                                              Background="Transparent"
+                                              Background="#FF333333"
                                               ClipToBounds="True"
-                                              PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel"
                                               SizeChanged="TexturePreviewViewport_SizeChanged">
-                                            <Image x:Name="TexturePreviewImage"
-                                                   RenderOptions.EdgeMode="Aliased"
-                                                   RenderOptions.BitmapScalingMode="HighQuality"
-                                                   Stretch="Uniform"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   SizeChanged="TexturePreviewImage_SizeChanged"
-                                                   MouseDown="TexturePreviewImage_MouseDown"
-                                                   MouseMove="TexturePreviewImage_MouseMove"
-                                                   MouseUp="TexturePreviewImage_MouseUp"
-                                                   MouseLeave="TexturePreviewImage_MouseLeave">
-                                                <Image.RenderTransform>
-                                                    <MatrixTransform x:Name="TexturePreviewTransform" />
-                                                </Image.RenderTransform>
-                                            </Image>
+                                            <!-- D3D11 Texture Viewer -->
+                                            <viewer:D3D11TextureViewerControl x:Name="D3D11TextureViewer" />
+
+                                            <!-- Transparent overlay to capture mouse events -->
+                                            <Border x:Name="TexturePreviewMouseOverlay"
+                                                    Background="#01000000"
+                                                    IsHitTestVisible="True"
+                                                    MouseWheel="TexturePreview_MouseWheel"
+                                                    MouseMove="TexturePreview_MouseMove"
+                                                    MouseDown="TexturePreview_MouseDown"
+                                                    MouseUp="TexturePreview_MouseUp" />
                                         </Grid>
                                     </Border>
 

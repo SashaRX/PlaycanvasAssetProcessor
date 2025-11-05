@@ -322,6 +322,19 @@ namespace AssetProcessor {
             }
         }
 
+        private void TestD3D11Viewer_Click(object sender, RoutedEventArgs e) {
+            try {
+                var testWindow = new TextureViewer.D3D11TestWindow();
+                testWindow.Show();
+            } catch (Exception ex) {
+                MessageBox.Show(
+                    $"Failed to open D3D11 viewer test window:\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         private void Cancel_Click(object sender, RoutedEventArgs e) {
             this.Close();
         }

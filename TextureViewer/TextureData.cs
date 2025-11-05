@@ -51,6 +51,18 @@ public sealed class TextureData : IDisposable {
     /// </summary>
     public bool IsHDR { get; init; }
 
+    /// <summary>
+    /// Whether the texture data is block-compressed (BC1-7, ETC, ASTC, etc.).
+    /// If true, Data is compressed and CompressionFormat specifies the format.
+    /// </summary>
+    public bool IsCompressed { get; init; }
+
+    /// <summary>
+    /// Compression format name (e.g., "BC7_SRGB_BLOCK", "BC1_RGBA_SRGB_BLOCK").
+    /// Only set if IsCompressed is true.
+    /// </summary>
+    public string? CompressionFormat { get; init; }
+
     public void Dispose() {
         foreach (var mip in MipLevels) {
             mip.Dispose();
@@ -79,16 +91,23 @@ public sealed class MipLevel : IDisposable {
     public int Height { get; init; }
 
     /// <summary>
-    /// Raw RGBA8 pixel data. Length = Width * Height * 4.
-    /// Format: R, G, B, A (one byte per channel).
+    /// Raw pixel data. For uncompressed: Length = Width * Height * 4 (RGBA8).
+    /// For block-compressed: Length depends on compression format.
+    /// Format: R, G, B, A (one byte per channel) for uncompressed.
     /// Row-major order (top to bottom, left to right).
     /// </summary>
     public required byte[] Data { get; init; }
 
     /// <summary>
-    /// Row pitch in bytes (Width * 4 for RGBA8).
+    /// Row pitch in bytes. For RGBA8: Width * 4. For BC7: calculated from blocks.
+    /// Can be explicitly set, otherwise auto-calculated.
     /// </summary>
-    public int RowPitch => Width * 4;
+    public int RowPitch { get; init; }
+
+    /// <summary>
+    /// Auto-calculate RowPitch for RGBA8 if not explicitly set.
+    /// </summary>
+    public int GetRowPitch() => RowPitch > 0 ? RowPitch : Width * 4;
 
     public void Dispose() {
         // Data will be GC'd, but we can explicitly clear if needed

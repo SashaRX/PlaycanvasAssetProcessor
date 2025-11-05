@@ -44,10 +44,14 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private float panX = 0.0f;
     private float panY = 0.0f;
 
+    // Lock for thread-safe access to texture resources
+    private readonly object renderLock = new object();
+
     [StructLayout(LayoutKind.Sequential)]
     private struct ShaderConstants {
         public Vector2 UvScale;
         public Vector2 UvOffset;
+        public Vector2 PosScale;
         public float MipLevel;
         public float Exposure;
         public float Gamma;
@@ -151,23 +155,42 @@ public sealed class D3D11TextureRenderer : IDisposable {
         string shaderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TextureViewer", "TextureViewerShader.hlsl");
 
         if (!File.Exists(shaderPath)) {
-            logger.Warn($"Shader file not found: {shaderPath}, using fallback");
-            // For now, we'll skip shader creation and render without shaders
-            // TODO: Embed shaders as resources or generate them at runtime
-            return;
+            logger.Error($"Shader file not found: {shaderPath}");
+            logger.Error($"Current directory: {AppDomain.CurrentDomain.BaseDirectory}");
+            logger.Error($"Working directory: {Directory.GetCurrentDirectory()}");
+
+            // Try alternative path (in case HLSL is in root)
+            shaderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TextureViewerShader.hlsl");
+            if (File.Exists(shaderPath)) {
+                logger.Info($"Found shader at alternative path: {shaderPath}");
+            } else {
+                logger.Error($"Shader not found at alternative path either: {shaderPath}");
+                logger.Warn("Rendering will NOT work without shaders!");
+                return;
+            }
+        } else {
+            logger.Info($"Shader file found: {shaderPath}");
         }
 
         try {
             string shaderCode = File.ReadAllText(shaderPath);
+            logger.Info($"Shader code loaded, size: {shaderCode.Length} chars");
 
             // Compile vertex shader
+            logger.Info("Compiling vertex shader...");
             var vsBlob = Vortice.D3DCompiler.Compiler.Compile(
                 shaderSource: shaderCode,
                 entryPoint: "VSMain",
-                sourceName: null,
+                sourceName: shaderPath,
                 profile: "vs_5_0");
 
+            if (vsBlob.IsEmpty) {
+                logger.Error("Vertex shader compilation failed - empty bytecode");
+                return;
+            }
+
             vertexShader = device!.CreateVertexShader(vsBlob.Span);
+            logger.Info("Vertex shader compiled successfully");
 
             // Create input layout
             var inputElements = new InputElementDescription[] {
@@ -177,13 +200,20 @@ public sealed class D3D11TextureRenderer : IDisposable {
             inputLayout = device!.CreateInputLayout(inputElements, vsBlob.Span);
 
             // Compile pixel shader
+            logger.Info("Compiling pixel shader...");
             var psBlob = Vortice.D3DCompiler.Compiler.Compile(
                 shaderSource: shaderCode,
                 entryPoint: "PSMain",
-                sourceName: null,
+                sourceName: shaderPath,
                 profile: "ps_5_0");
 
+            if (psBlob.IsEmpty) {
+                logger.Error("Pixel shader compilation failed - empty bytecode");
+                return;
+            }
+
             pixelShader = device!.CreatePixelShader(psBlob.Span);
+            logger.Info("Pixel shader compiled successfully");
 
             // Create constant buffer
             var cbDesc = new BufferDescription {
@@ -242,16 +272,39 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Load texture data into GPU.
     /// </summary>
     public void LoadTexture(TextureData textureData) {
-        logger.Info($"Loading texture: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+        logger.Info($"LoadTexture called: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
-        currentTexture = textureData;
+        lock (renderLock) {
+            logger.Info($"LoadTexture acquired lock, loading texture...");
 
-        // Dispose old texture
-        textureSRV?.Dispose();
-        texture?.Dispose();
+            currentTexture = textureData;
 
-        // Determine format
-        Format format = textureData.IsSRGB ? Format.R8G8B8A8_UNorm_SRgb : Format.R8G8B8A8_UNorm;
+            // Dispose old texture
+            logger.Info("Disposing old texture resources...");
+            textureSRV?.Dispose();
+            logger.Info("textureSRV disposed");
+            texture?.Dispose();
+            logger.Info("texture disposed");
+
+        // Determine format based on compression
+        Format format;
+        if (textureData.IsCompressed && textureData.CompressionFormat != null) {
+            // Block-compressed format
+            format = textureData.CompressionFormat switch {
+                "BC7_SRGB_BLOCK" => Format.BC7_UNorm_SRgb,
+                "BC7_UNORM_BLOCK" => Format.BC7_UNorm,
+                "BC3_SRGB_BLOCK" => Format.BC3_UNorm_SRgb,
+                "BC3_UNORM_BLOCK" => Format.BC3_UNorm,
+                "BC1_RGBA_SRGB_BLOCK" => Format.BC1_UNorm_SRgb,
+                "BC1_RGBA_UNORM_BLOCK" => Format.BC1_UNorm,
+                _ => throw new Exception($"Unsupported compression format: {textureData.CompressionFormat}")
+            };
+            logger.Info($"Using compressed D3D11 format: {format} for {textureData.CompressionFormat}");
+        } else {
+            // Uncompressed RGBA8
+            format = textureData.IsSRGB ? Format.R8G8B8A8_UNorm_SRgb : Format.R8G8B8A8_UNorm;
+            logger.Info($"Using uncompressed D3D11 format: {format}");
+        }
 
         // Create texture description
         var texDesc = new Texture2DDescription {
@@ -270,20 +323,36 @@ public sealed class D3D11TextureRenderer : IDisposable {
         var pinnedHandles = new GCHandle[textureData.MipCount];
 
         try {
+            logger.Info("Preparing mip data for GPU upload...");
             for (int i = 0; i < textureData.MipCount; i++) {
                 var mip = textureData.MipLevels[i];
+
+                logger.Info($"Mip {i}: {mip.Width}x{mip.Height}, data length={mip.Data.Length}, rowPitch={mip.RowPitch}");
+
+                if (mip.Data == null || mip.Data.Length == 0) {
+                    throw new Exception($"Mip {i} has no data!");
+                }
+
                 pinnedHandles[i] = GCHandle.Alloc(mip.Data, GCHandleType.Pinned);
+
+                // For 2D textures, SlicePitch is the total size of the mip level
+                // For block-compressed formats, this is crucial
+                uint slicePitch = (uint)mip.Data.Length;
 
                 subresources[i] = new SubresourceData {
                     DataPointer = pinnedHandles[i].AddrOfPinnedObject(),
                     RowPitch = (uint)mip.RowPitch,
-                    SlicePitch = 0
+                    SlicePitch = slicePitch
                 };
+
+                logger.Info($"Mip {i} SubresourceData: RowPitch={mip.RowPitch}, SlicePitch={slicePitch}");
             }
 
+            logger.Info("Creating D3D11 texture...");
             // Create texture
             texture = device!.CreateTexture2D(texDesc, subresources);
 
+            logger.Info("Creating shader resource view...");
             // Create SRV
             textureSRV = device!.CreateShaderResourceView(texture);
 
@@ -297,60 +366,92 @@ public sealed class D3D11TextureRenderer : IDisposable {
             }
         }
 
-        // Reset view state
-        currentMipLevel = 0;
-        zoomLevel = 1.0f;
-        panX = 0.0f;
-        panY = 0.0f;
+            // Reset view state
+            currentMipLevel = 0;
+            zoomLevel = 1.0f;
+            panX = 0.0f;
+            panY = 0.0f;
+
+            logger.Info("LoadTexture completed, releasing lock");
+        } // lock (renderLock)
     }
 
     /// <summary>
     /// Render the current texture.
     /// </summary>
     public void Render() {
-        if (context == null || renderTargetView == null || textureSRV == null) {
+        if (context == null || renderTargetView == null) {
             return;
         }
 
-        // Clear background
+        // Clear background to dark gray
         context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
 
-        // Set render target
-        context.OMSetRenderTargets(renderTargetView);
+        lock (renderLock) {
+            // If no texture loaded, just present the cleared background
+            if (textureSRV == null) {
+                swapChain!.Present(1, PresentFlags.None);
+                return;
+            }
 
-        // Set viewport
-        var viewport = new Viewport(0, 0, viewportWidth, viewportHeight);
-        context.RSSetViewport(viewport);
+            // Set render target
+            context.OMSetRenderTargets(renderTargetView);
 
-        if (vertexShader != null && pixelShader != null && inputLayout != null && constantBuffer != null && vertexBuffer != null) {
-            // Update constant buffer
-            UpdateConstantBuffer();
+            // Set viewport
+            var viewport = new Viewport(0, 0, viewportWidth, viewportHeight);
+            context.RSSetViewport(viewport);
 
-            // Set shaders and resources
-            context.VSSetShader(vertexShader);
-            context.PSSetShader(pixelShader);
-            context.PSSetShaderResource(0, textureSRV);
-            context.PSSetSampler(0, useLinearFilter ? samplerLinear : samplerPoint);
-            context.VSSetConstantBuffer(0, constantBuffer);
-            context.PSSetConstantBuffer(0, constantBuffer);
+            // Check if shaders are available
+            if (vertexShader == null || pixelShader == null || inputLayout == null || constantBuffer == null || vertexBuffer == null) {
+                logger.Error("Cannot render: shaders not initialized");
+                swapChain!.Present(1, PresentFlags.None);
+                return;
+            }
 
-            // Set input layout and vertex buffer
-            context.IASetInputLayout(inputLayout);
-            context.IASetVertexBuffer(0, vertexBuffer, (uint)Marshal.SizeOf<Vertex>(), 0);
-            context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+            if (vertexShader != null && pixelShader != null && inputLayout != null && constantBuffer != null && vertexBuffer != null) {
+                // Update constant buffer
+                UpdateConstantBuffer();
 
-            // Draw
-            context.Draw(6, 0);
-        }
+                // Set shaders and resources
+                context.VSSetShader(vertexShader);
+                context.PSSetShader(pixelShader);
+                context.PSSetShaderResource(0, textureSRV);
+                context.PSSetSampler(0, useLinearFilter ? samplerLinear : samplerPoint);
+                context.VSSetConstantBuffer(0, constantBuffer);
+                context.PSSetConstantBuffer(0, constantBuffer);
 
-        // Present
-        swapChain!.Present(1, PresentFlags.None);
+                // Set input layout and vertex buffer
+                context.IASetInputLayout(inputLayout);
+                context.IASetVertexBuffer(0, vertexBuffer, (uint)Marshal.SizeOf<Vertex>(), 0);
+                context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+
+                // Draw
+                context.Draw(6, 0);
+            }
+
+            // Present
+            swapChain!.Present(1, PresentFlags.None);
+        } // lock (renderLock)
     }
 
     private void UpdateConstantBuffer() {
+        // Calculate aspect ratio correction
+        float viewportAspect = (float)viewportWidth / viewportHeight;
+        float textureAspect = currentTexture != null ? (float)currentTexture.Width / currentTexture.Height : 1.0f;
+
+        Vector2 posScale;
+        if (viewportAspect > textureAspect) {
+            // Viewport is wider than texture - fit by height (pillarbox)
+            posScale = new Vector2(textureAspect / viewportAspect, 1.0f);
+        } else {
+            // Viewport is taller than texture - fit by width (letterbox)
+            posScale = new Vector2(1.0f, viewportAspect / textureAspect);
+        }
+
         var constants = new ShaderConstants {
             UvScale = new Vector2(1.0f / zoomLevel, 1.0f / zoomLevel),
             UvOffset = new Vector2(panX, panY),
+            PosScale = posScale,
             MipLevel = currentMipLevel,
             Exposure = 0.0f,
             Gamma = 2.2f,
@@ -374,10 +475,30 @@ public sealed class D3D11TextureRenderer : IDisposable {
     }
 
     // Public control methods
-    public void SetZoom(float zoom) => zoomLevel = Math.Clamp(zoom, 0.125f, 16.0f);
-    public void SetPan(float x, float y) { panX = x; panY = y; }
-    public void SetMipLevel(int level) => currentMipLevel = Math.Clamp(level, 0, Math.Max(0, MipCount - 1));
-    public void SetFilter(bool linear) => useLinearFilter = linear;
+    public void SetZoom(float zoom) {
+        lock (renderLock) {
+            zoomLevel = Math.Clamp(zoom, 0.125f, 16.0f);
+        }
+    }
+
+    public void SetPan(float x, float y) {
+        lock (renderLock) {
+            panX = x;
+            panY = y;
+        }
+    }
+
+    public void SetMipLevel(int level) {
+        lock (renderLock) {
+            currentMipLevel = Math.Clamp(level, 0, Math.Max(0, MipCount - 1));
+        }
+    }
+
+    public void SetFilter(bool linear) {
+        lock (renderLock) {
+            useLinearFilter = linear;
+        }
+    }
 
     public void Dispose() {
         textureSRV?.Dispose();

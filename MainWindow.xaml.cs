@@ -36,6 +36,7 @@ using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 using System.Linq;
 using AssetProcessor.TextureConversion.Settings;
+using AssetProcessor.TextureViewer;
 
 namespace AssetProcessor {
     public enum ColorChannel {
@@ -181,6 +182,17 @@ namespace AssetProcessor {
         private BitmapSource? originalFileBitmapSource;
         private double previewReferenceWidth;
         private double previewReferenceHeight;
+
+        // D3D11 Texture Viewer state
+        private float d3d11Zoom = 1.0f;
+        private float d3d11PanX = 0.0f;
+        private float d3d11PanY = 0.0f;
+        private bool isD3D11Panning = false;
+        private Point lastD3D11MousePosition;
+        private bool isD3D11RenderLoopEnabled = true;
+
+        // KTX2 preview mode: true = D3D11 native, false = PNG extraction (old method)
+        private bool useD3D11NativeKtx2 = true; // TODO: Add to settings
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private sealed class KtxPreviewCacheEntry {
@@ -219,7 +231,6 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
-            previewTransform = TexturePreviewTransform;
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -266,9 +277,12 @@ namespace AssetProcessor {
             this.Closing += MainWindow_Closing;
             //LoadLastSettings();
 
-            RenderOptions.SetBitmapScalingMode(TexturePreviewImage, BitmapScalingMode.HighQuality);
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
             RenderOptions.SetBitmapScalingMode(UVImage2, BitmapScalingMode.HighQuality);
+
+            // Setup D3D11 render loop
+            this.Loaded += MainWindow_Loaded;
+            CompositionTarget.Rendering += OnD3D11Rendering;
 
             // Примечание: InitializeOnStartup() уже вызывается выше (строка 144)
             // и корректно обрабатывает загрузку локальных файлов без показа MessageBox
@@ -299,6 +313,200 @@ namespace AssetProcessor {
         protected void OnPropertyChanged(string? propertyName) {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        #region D3D11 Texture Viewer
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e) {
+            logger.Info("MainWindow loaded - D3D11 viewer ready");
+        }
+
+        private void OnD3D11Rendering(object? sender, EventArgs e) {
+            if (isD3D11RenderLoopEnabled) {
+                D3D11TextureViewer?.RenderFrame();
+            }
+        }
+
+        private void TexturePreviewViewport_SizeChanged(object sender, SizeChangedEventArgs e) {
+            // D3D11TextureViewerControl will handle resize automatically via OnRenderSizeChanged
+        }
+
+        private void TexturePreview_MouseWheel(object sender, MouseWheelEventArgs e) {
+            if (D3D11TextureViewer?.Renderer == null) return;
+
+            logger.Info($"Mouse wheel: delta={e.Delta}, zoom before={d3d11Zoom}");
+
+            // Zoom with mouse wheel
+            float zoomDelta = e.Delta > 0 ? 1.1f : 0.9f;
+            d3d11Zoom *= zoomDelta;
+            d3d11Zoom = Math.Clamp(d3d11Zoom, 0.125f, 16.0f);
+
+            D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
+
+            logger.Info($"Zoom after={d3d11Zoom}");
+            e.Handled = true;
+        }
+
+        private void TexturePreview_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.MiddleButton == MouseButtonState.Pressed) {
+                Point mousePos = e.GetPosition(TexturePreviewViewport);
+                logger.Info($"Middle button down at {mousePos.X}, {mousePos.Y}");
+
+                isD3D11Panning = true;
+                lastD3D11MousePosition = mousePos;
+                TexturePreviewMouseOverlay.CaptureMouse();
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreview_MouseUp(object sender, MouseButtonEventArgs e) {
+            if (e.MiddleButton == MouseButtonState.Released && isD3D11Panning) {
+                logger.Info("Middle button up - stop panning");
+                isD3D11Panning = false;
+                TexturePreviewMouseOverlay.ReleaseMouseCapture();
+                e.Handled = true;
+            }
+        }
+
+        private void TexturePreview_MouseMove(object sender, MouseEventArgs e) {
+            if (!isD3D11Panning || D3D11TextureViewer?.Renderer == null) return;
+
+            Point currentPosition = e.GetPosition(TexturePreviewViewport);
+            double deltaX = currentPosition.X - lastD3D11MousePosition.X;
+            double deltaY = currentPosition.Y - lastD3D11MousePosition.Y;
+
+            // Convert screen delta to normalized texture space
+            // Account for zoom level
+            float panSpeed = 0.002f / d3d11Zoom;
+            d3d11PanX += (float)deltaX * panSpeed;
+            d3d11PanY -= (float)deltaY * panSpeed; // Invert Y for correct direction
+
+            D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
+
+            lastD3D11MousePosition = currentPosition;
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Loads texture data into the D3D11 viewer.
+        /// </summary>
+        private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
+            logger.Info($"LoadTextureToD3D11Viewer called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}, isSRGB={isSRGB}");
+
+            if (D3D11TextureViewer?.Renderer == null) {
+                logger.Warn("D3D11 viewer or renderer is null");
+                return;
+            }
+
+            logger.Info("D3D11TextureViewer and Renderer are not null, proceeding...");
+
+            // Temporarily disable render loop to avoid deadlock
+            isD3D11RenderLoopEnabled = false;
+            logger.Info("Render loop disabled");
+
+            try {
+                // Convert BitmapSource to TextureData
+                int width = bitmap.PixelWidth;
+                int height = bitmap.PixelHeight;
+                int stride = width * 4; // RGBA8
+                byte[] pixels = new byte[stride * height];
+
+                // Convert to BGRA32 (which is actually RGBA in memory)
+                var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+                convertedBitmap.CopyPixels(pixels, stride, 0);
+
+                var mipLevel = new MipLevel {
+                    Level = 0,
+                    Width = width,
+                    Height = height,
+                    Data = pixels,
+                    RowPitch = stride
+                };
+
+                var textureData = new TextureData {
+                    Width = width,
+                    Height = height,
+                    MipLevels = new List<MipLevel> { mipLevel },
+                    IsSRGB = isSRGB,
+                    HasAlpha = true,
+                    IsHDR = false,
+                    SourceFormat = "PNG/RGBA8"
+                };
+
+                logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
+                logger.Info($"D3D11TextureViewer.Renderer is null: {D3D11TextureViewer.Renderer == null}");
+
+                if (D3D11TextureViewer.Renderer != null) {
+                    logger.Info("Calling LoadTexture on renderer...");
+                    D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                    logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
+                } else {
+                    logger.Error("D3D11TextureViewer.Renderer is null!");
+                }
+
+                // Reset zoom/pan to defaults
+                d3d11Zoom = 1.0f;
+                d3d11PanX = 0.0f;
+                d3d11PanY = 0.0f;
+                D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
+                D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
+            } catch (Exception ex) {
+                logger.Error(ex, "Failed to load texture to D3D11 viewer");
+            } finally {
+                // Re-enable render loop
+                isD3D11RenderLoopEnabled = true;
+                logger.Info("Render loop re-enabled");
+            }
+        }
+
+        /// <summary>
+        /// Loads KTX2 texture directly into D3D11 viewer (for native KTX2 support).
+        /// </summary>
+        private async Task<bool> LoadKtx2ToD3D11ViewerAsync(string ktxPath) {
+            if (D3D11TextureViewer?.Renderer == null) {
+                logger.Warn("D3D11 viewer or renderer is null");
+                return false;
+            }
+
+            try {
+                // Use Ktx2TextureLoader to load the KTX2 file
+                logger.Info($"Loading KTX2 file to D3D11 viewer: {ktxPath}");
+                var textureData = await Task.Run(() => Ktx2TextureLoader.LoadFromFile(ktxPath));
+
+                await Dispatcher.InvokeAsync(() => {
+                    D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                    logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+
+                    // Reset zoom/pan to defaults
+                    d3d11Zoom = 1.0f;
+                    d3d11PanX = 0.0f;
+                    d3d11PanY = 0.0f;
+                    D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
+                    D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
+                });
+
+                return true;
+            } catch (Exception ex) {
+                logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Clears the D3D11 viewer (equivalent to setting Image.Source = null).
+        /// </summary>
+        private void ClearD3D11Viewer() {
+            // D3D11TextureRenderer doesn't have a Clear method, but we can just leave it as-is
+            // or reset zoom/pan
+            if (D3D11TextureViewer?.Renderer != null) {
+                d3d11Zoom = 1.0f;
+                d3d11PanX = 0.0f;
+                d3d11PanY = 0.0f;
+                D3D11TextureViewer.Renderer.SetZoom(d3d11Zoom);
+                D3D11TextureViewer.Renderer.SetPan(d3d11PanX, d3d11PanY);
+            }
+        }
+
+        #endregion
 
         #region UI Viewer
         private async void FilterButton_Click(object sender, RoutedEventArgs e) {
@@ -397,18 +605,32 @@ namespace AssetProcessor {
             return Math.Clamp(value, 0.0, 1.0);
         }
 
-        // LEGACY: Simplified fallback preview - just displays image without transform
+        // Updated: Use D3D11 viewer for texture preview
         private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
-            if (TexturePreviewImage == null) {
+            logger.Info($"UpdatePreviewImage called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}");
+            logger.Info("About to check D3D11TextureViewer");
+
+            if (D3D11TextureViewer == null) {
+                logger.Warn("D3D11TextureViewer is null in UpdatePreviewImage");
                 return;
             }
 
-            // Simple fallback mode: just set the image source
-            TexturePreviewImage.Source = bitmap;
+            logger.Info("D3D11TextureViewer is not null");
+            logger.Info("About to call LoadTextureToD3D11Viewer from UpdatePreviewImage");
 
-            // Reset transform to identity (no zoom/pan)
-            if (previewTransform != null) {
-                previewTransform.Matrix = Matrix.Identity;
+            try {
+                // Determine if texture is sRGB based on context
+                // For now, assume most textures are sRGB unless they are normal maps
+                bool isSRGB = true; // Default to sRGB
+                logger.Info("Getting bitmap dimensions...");
+                int w = bitmap.PixelWidth;
+                int h = bitmap.PixelHeight;
+                logger.Info($"Bitmap dimensions: {w}x{h}");
+                logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB}");
+                LoadTextureToD3D11Viewer(bitmap, isSRGB);
+                logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
+            } catch (Exception ex) {
+                logger.Error(ex, "Exception in UpdatePreviewImage when calling LoadTextureToD3D11Viewer");
             }
         }
 
@@ -465,21 +687,6 @@ namespace AssetProcessor {
                 }
 
                 if (double.IsNaN(height) || height < 0) {
-                    height = 0;
-                }
-
-                return (width, height);
-            }
-
-            if (TexturePreviewImage != null) {
-                double width = TexturePreviewImage.ActualWidth;
-                double height = TexturePreviewImage.ActualHeight;
-
-                if (double.IsNaN(width)) {
-                    width = 0;
-                }
-
-                if (double.IsNaN(height)) {
                     height = 0;
                 }
 
@@ -646,155 +853,41 @@ namespace AssetProcessor {
         }
 
         private void ApplyZoomWithPivot(double newZoom, Point pivot) {
-            if (TexturePreviewImage?.Source is not BitmapSource bitmap) {
-                return;
-            }
-
-            newZoom = Math.Clamp(newZoom, MinZoom, MaxZoom);
-            if (Math.Abs(newZoom - currentZoom) < 0.0001) {
-                return;
-            }
-
-            (double viewportWidth, double viewportHeight) = GetViewportSize();
-            if (viewportWidth <= 0 || viewportHeight <= 0) {
-                return;
-            }
-
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            if (imageWidth <= 0 || imageHeight <= 0) {
-                return;
-            }
-
-            double oldEffective = GetEffectiveZoom(bitmap, currentZoom);
-            double newEffective = GetEffectiveZoom(bitmap, newZoom);
-
-            if (!double.IsFinite(oldEffective) || oldEffective <= 0 ||
-                !double.IsFinite(newEffective) || newEffective <= 0) {
-                return;
-            }
-
-            if (!double.IsFinite(pivot.X) || !double.IsFinite(pivot.Y)) {
-                pivot = new Point(imageWidth / 2.0, imageHeight / 2.0);
-            }
-
-            Matrix currentMatrix = previewTransform?.Matrix ?? Matrix.Identity;
-            Point pivotScreen = currentMatrix.Transform(pivot);
-
-            if (!double.IsFinite(pivotScreen.X) || !double.IsFinite(pivotScreen.Y)) {
-                return;
-            }
-
-            panOffsetX = pivotScreen.X - pivot.X * newEffective;
-            panOffsetY = pivotScreen.Y - pivot.Y * newEffective;
-
-            currentZoom = newZoom;
-            isFitMode = false;
-            UpdateTransform(false);
-            // UpdateZoomUi(); // LEGACY: removed
+            // LEGACY: Now handled by D3D11 viewer
         }
 
         private void SetZoomAndCenter(double zoom) {
-            if (TexturePreviewImage?.Source == null) {
-                return;
-            }
-
-            currentZoom = Math.Clamp(zoom, MinZoom, MaxZoom);
-            centerNormX = 0.5;
-            centerNormY = 0.5;
-            isFitMode = false;
-            UpdateTransform(true);
-            // UpdateZoomUi(); // LEGACY: removed
+            // LEGACY: Now handled by D3D11 viewer
         }
 
         private void ResetPan() {
-            if (TexturePreviewImage?.Source == null) {
-                return;
-            }
-
-            centerNormX = 0.5;
-            centerNormY = 0.5;
-            UpdateTransform(true);
+            // LEGACY: Now handled by D3D11 viewer
         }
 
         private Point ToImageSpace(Point referencePoint, FrameworkElement referenceElement) {
-            if (TexturePreviewImage == null) {
-                return referencePoint;
-            }
-
-            Point pointInImage = referenceElement == TexturePreviewImage
-                ? referencePoint
-                : referenceElement.TranslatePoint(referencePoint, TexturePreviewImage);
-
-            if (previewTransform != null) {
-                Matrix inverse = previewTransform.Matrix;
-                if (inverse.HasInverse) {
-                    inverse.Invert();
-                    pointInImage = inverse.Transform(pointInImage);
-                }
-            }
-
-            return pointInImage;
+            // LEGACY: Now handled by D3D11 viewer
+            return referencePoint;
         }
 
         private Point GetViewportCenterInImageSpace() {
-            if (TexturePreviewImage == null) {
-                return new Point(0, 0);
-            }
-
-            if (TexturePreviewImage.Source is not BitmapSource bitmap) {
-                return new Point(TexturePreviewImage.ActualWidth / 2.0, TexturePreviewImage.ActualHeight / 2.0);
-            }
-
-            (double imageWidth, double imageHeight) = GetImageSizeInDips(bitmap);
-            return new Point(centerNormX * imageWidth, centerNormY * imageHeight);
+            // LEGACY: Now handled by D3D11 viewer
+            return new Point(0, 0);
         }
 
         private FrameworkElement? GetPanReferenceElement() {
-            if (TexturePreviewViewport != null) {
-                return TexturePreviewViewport;
-            }
-
-            return TexturePreviewImage;
+            return TexturePreviewViewport;
         }
 
         private void StartPanning(Point startPosition) {
-            FrameworkElement? reference = GetPanReferenceElement();
-            if (reference == null) {
-                return;
-            }
-
-            lastPanPosition = startPosition;
-            isPanningPreview = true;
-            isFitMode = false;
-            TexturePreviewImage?.CaptureMouse();
-            TexturePreviewImage?.Focus();
-            if (TexturePreviewImage != null) {
-                TexturePreviewImage.Cursor = Cursors.SizeAll;
-            }
+            // LEGACY: Now handled by D3D11 viewer mouse events
         }
 
         private void StopPanning() {
-            if (!isPanningPreview) {
-                return;
-            }
-
-            isPanningPreview = false;
-            TexturePreviewImage?.ReleaseMouseCapture();
-            TexturePreviewImage?.ClearValue(CursorProperty);
+            // LEGACY: Now handled by D3D11 viewer mouse events
         }
 
         private void ApplyPanDelta(Vector delta) {
-            if (TexturePreviewImage?.Source is not BitmapSource) {
-                return;
-            }
-
-            if (!double.IsFinite(delta.X) || !double.IsFinite(delta.Y)) {
-                return;
-            }
-
-            panOffsetX += delta.X;
-            panOffsetY += delta.Y;
-            UpdateTransform(false);
+            // LEGACY: Now handled by D3D11 viewer
         }
 
         private void UpdatePreviewSourceControls() {
@@ -816,19 +909,7 @@ namespace AssetProcessor {
         }
 
         // Removed: PreviewWidthSlider methods (slider was removed from UI)
-
-        private void TexturePreviewViewport_SizeChanged(object sender, SizeChangedEventArgs e) {
-            if (TexturePreviewImage?.Source != null) {
-                UpdateTransform(true);
-                ScheduleFitZoomUpdate(false);
-            }
-        }
-
-        private void TexturePreviewImage_SizeChanged(object sender, SizeChangedEventArgs e) {
-            if (TexturePreviewImage?.Source != null) {
-                UpdateTransform(true);
-            }
-        }
+        // Removed: Old TexturePreviewViewport_SizeChanged and TexturePreviewImage_SizeChanged (now handled by D3D11)
 
         // LEGACY: Mouse wheel zoom removed
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
@@ -871,22 +952,7 @@ namespace AssetProcessor {
         //     ResetPan();
         // }
 
-        // LEGACY: Mouse pan removed - will use D3D11 viewer
-        private void TexturePreviewImage_MouseDown(object sender, MouseButtonEventArgs e) {
-            // Disabled for fallback mode
-        }
-
-        private void TexturePreviewImage_MouseMove(object sender, MouseEventArgs e) {
-            // Disabled for fallback mode
-        }
-
-        private void TexturePreviewImage_MouseUp(object sender, MouseButtonEventArgs e) {
-            // Disabled for fallback mode
-        }
-
-        private void TexturePreviewImage_MouseLeave(object sender, MouseEventArgs e) {
-            // Disabled for fallback mode
-        }
+        // LEGACY: Old mouse event handlers removed - now handled by D3D11 viewer overlay
 
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
             ClampPreviewContentHeight();
@@ -969,12 +1035,24 @@ namespace AssetProcessor {
                     _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
                 } else {
-                    TexturePreviewImage.Source = null;
+                    ClearD3D11Viewer();
                 }
-            } else if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
+            } else if (mode == TexturePreviewSourceMode.Ktx2) {
                 isKtxPreviewActive = true;
-                UpdateMipmapControls(currentKtxMipmaps);
-                SetCurrentMipLevel(currentMipLevel);
+
+                // FIXED: Check if we're using D3D11 native KTX2 (no extracted mipmaps)
+                // or old PNG extraction method
+                if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
+                    // Old method: extracted PNG mipmaps available
+                    UpdateMipmapControls(currentKtxMipmaps);
+                    SetCurrentMipLevel(currentMipLevel);
+                } else if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
+                    // New method: KTX2 loaded natively in D3D11
+                    UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
+                    logger.Info($"KTX2 loaded natively in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
+                } else {
+                    HideMipmapControls();
+                }
             }
 
             UpdatePreviewSourceControls();
@@ -1019,6 +1097,35 @@ namespace AssetProcessor {
             }
         }
 
+        /// <summary>
+        /// Update mipmap controls for D3D11 native KTX2 texture.
+        /// </summary>
+        private void UpdateD3D11MipmapControls(int mipCount) {
+            if (MipmapSliderPanel == null || MipmapLevelSlider == null || MipmapInfoTextBlock == null) {
+                return;
+            }
+
+            if (D3D11TextureViewer?.Renderer == null) {
+                return;
+            }
+
+            isUpdatingMipLevel = true;
+
+            try {
+                MipmapSliderPanel.Visibility = Visibility.Visible;
+                MipmapLevelSlider.Minimum = 0;
+                MipmapLevelSlider.Maximum = Math.Max(0, mipCount - 1);
+                MipmapLevelSlider.Value = 0;
+                MipmapLevelSlider.IsEnabled = mipCount > 1;
+
+                int width = D3D11TextureViewer.Renderer.TextureWidth;
+                int height = D3D11TextureViewer.Renderer.TextureHeight;
+                MipmapInfoTextBlock.Text = $"Мип-уровень 0 из {Math.Max(0, mipCount - 1)} — {width}×{height} (D3D11)";
+            } finally {
+                isUpdatingMipLevel = false;
+            }
+        }
+
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
                 int maxLevel = Math.Max(0, totalLevels - 1);
@@ -1045,9 +1152,7 @@ namespace AssetProcessor {
 
             // Обновляем изображение
             Dispatcher.Invoke(() => {
-                bool hasPrevious = TexturePreviewImage.Source is BitmapSource;
-                bool preserveViewport = hasPrevious && previewTransform != null;
-                UpdatePreviewImage(originalBitmapSource, setReference: clampedLevel == 0, preserveViewport: preserveViewport);
+                UpdatePreviewImage(originalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
                 UpdateHistogram(originalBitmapSource);
             });
 
@@ -1056,8 +1161,7 @@ namespace AssetProcessor {
         }
 
         private async Task FilterChannelAsync(string channel) {
-            if (TexturePreviewImage.Source is BitmapSource bitmapSource) {
-                originalBitmapSource ??= bitmapSource.Clone();
+            if (originalBitmapSource != null) {
                 BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
 
                 // Обновляем UI в основном потоке
@@ -1075,17 +1179,32 @@ namespace AssetProcessor {
 
             int newLevel = (int)Math.Round(e.NewValue);
             if (newLevel != currentMipLevel) {
-                SetCurrentMipLevel(newLevel, updateSlider: false);
+                // Check if we're using D3D11 native mipmaps or extracted PNG mipmaps
+                if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
+                    // Old method: extracted PNG mipmaps
+                    SetCurrentMipLevel(newLevel, updateSlider: false);
+                } else if (D3D11TextureViewer?.Renderer != null) {
+                    // New method: D3D11 native mipmaps
+                    currentMipLevel = newLevel;
+                    D3D11TextureViewer.Renderer.SetMipLevel(newLevel);
+
+                    // Update info text
+                    if (MipmapInfoTextBlock != null) {
+                        int mipCount = D3D11TextureViewer.Renderer.MipCount;
+                        int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
+                        int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
+                        MipmapInfoTextBlock.Text = $"Мип-уровень {newLevel} из {Math.Max(0, mipCount - 1)} — {width}×{height} (D3D11)";
+                    }
+
+                    logger.Info($"D3D11 mip level changed to {newLevel}");
+                }
             }
         }
 
         private async void ShowOriginalImage(bool recalculateFitZoom = false) {
             if (originalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
-                    bool hasPrevious = TexturePreviewImage.Source is BitmapSource;
-                    bool preserveViewport = hasPrevious && !recalculateFitZoom;
-                    bool setReference = !hasPrevious || recalculateFitZoom || previewReferenceWidth <= 0 || !isKtxPreviewActive;
-                    UpdatePreviewImage(originalBitmapSource, setReference, preserveViewport);
+                    UpdatePreviewImage(originalBitmapSource, setReference: true, preserveViewport: !recalculateFitZoom);
                     RChannelButton.IsChecked = false;
                     GChannelButton.IsChecked = false;
                     BChannelButton.IsChecked = false;
@@ -1528,7 +1647,7 @@ namespace AssetProcessor {
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
                 ResetPreviewState();
-                TexturePreviewImage.Source = null;
+                ClearD3D11Viewer();
 
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
                     try {
@@ -1548,11 +1667,27 @@ namespace AssetProcessor {
                         // Check cancellation before starting heavy operations
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
+                        // FIXED: Separate D3D11 native KTX2 loading from PNG extraction
+                        // to prevent conflicts
+                        bool ktxLoaded = false;
 
-                        await LoadSourcePreviewAsync(selectedTexture, cancellationToken);
+                        if (useD3D11NativeKtx2) {
+                            // NEW METHOD: Try D3D11 native KTX2 loading first
+                            ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
 
-                        bool ktxLoaded = await ktxPreviewTask;
+                            if (ktxLoaded) {
+                                // KTX2 loaded successfully to D3D11, still load source for histogram/info
+                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: false);
+                            } else {
+                                // No KTX2 or failed, fallback to source preview
+                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
+                            }
+                        } else {
+                            // OLD METHOD: PNG extraction with parallel loading
+                            Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
+                            await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
+                            ktxLoaded = await ktxPreviewTask;
+                        }
 
                         if (!ktxLoaded) {
                             await Dispatcher.InvokeAsync(() => {
@@ -1578,6 +1713,62 @@ namespace AssetProcessor {
             }
         }
 
+        /// <summary>
+        /// NEW METHOD: Load KTX2 directly to D3D11 viewer (native format, all mipmaps).
+        /// </summary>
+        private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {
+            string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
+            if (ktxPath == null) {
+                logger.Info($"KTX2 file not found for: {selectedTexture.Path}");
+                return false;
+            }
+
+            logger.Info($"Found KTX2 file: {ktxPath}");
+
+            try {
+                // Load KTX2 directly to D3D11 (no PNG extraction)
+                bool loaded = await LoadKtx2ToD3D11ViewerAsync(ktxPath);
+                if (!loaded || cancellationToken.IsCancellationRequested) {
+                    logger.Warn($"Failed to load KTX2 to D3D11 viewer: {ktxPath}");
+                    return false;
+                }
+
+                logger.Info($"Loaded KTX2 directly to D3D11 viewer: {ktxPath}");
+
+                await Dispatcher.InvokeAsync(() => {
+                    if (cancellationToken.IsCancellationRequested) {
+                        return;
+                    }
+
+                    // Mark KTX2 preview as available
+                    isKtxPreviewAvailable = true;
+                    isKtxPreviewActive = true;
+
+                    // Clear old mipmap data (we're using D3D11 native mipmaps now)
+                    currentKtxMipmaps?.Clear();
+                    currentMipLevel = 0;
+
+                    // Update UI to show KTX2 is active
+                    if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
+                    } else {
+                        UpdatePreviewSourceControls();
+                    }
+                });
+
+                return true;
+            } catch (OperationCanceledException) {
+                return false;
+            } catch (Exception ex) {
+                logger.Warn(ex, $"Failed to load KTX2 preview: {ktxPath}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// OLD METHOD: Extract KTX2 mipmaps to PNG files and load them.
+        /// Used when useD3D11NativeKtx2 = false.
+        /// </summary>
         private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
             string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
             if (ktxPath == null) {
@@ -1588,6 +1779,7 @@ namespace AssetProcessor {
             logger.Info($"Found KTX2 file: {ktxPath}");
 
             try {
+                // OLD METHOD: Extract to PNG files
                 List<KtxMipLevel> mipmaps = await LoadKtx2MipmapsAsync(ktxPath, cancellationToken);
                 if (mipmaps.Count == 0 || cancellationToken.IsCancellationRequested) {
                     logger.Warn($"Failed to extract mipmaps from KTX2: {ktxPath}");
@@ -1621,7 +1813,7 @@ namespace AssetProcessor {
             }
         }
 
-        private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
+        private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
             string? texturePath = selectedTexture.Path;
             if (string.IsNullOrEmpty(texturePath)) {
                 return;
@@ -1636,7 +1828,8 @@ namespace AssetProcessor {
                     originalFileBitmapSource = cachedImage;
                     isSourcePreviewAvailable = true;
 
-                    if (currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                    // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
+                    if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                         originalBitmapSource = cachedImage;
                         _ = UpdateHistogramAsync(originalBitmapSource);
                         ShowOriginalImage();
@@ -1662,7 +1855,8 @@ namespace AssetProcessor {
                 originalFileBitmapSource = thumbnailImage;
                 isSourcePreviewAvailable = true;
 
-                if (currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
+                if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                     originalBitmapSource = thumbnailImage;
                     _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
@@ -1704,7 +1898,8 @@ namespace AssetProcessor {
                         originalFileBitmapSource = bitmapImage;
                         isSourcePreviewAvailable = true;
 
-                        if (currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                        // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
+                        if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                             originalBitmapSource = bitmapImage;
                             _ = UpdateHistogramAsync(originalBitmapSource);
                             ShowOriginalImage();

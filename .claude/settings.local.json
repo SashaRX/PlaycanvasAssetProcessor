@@ -14,7 +14,12 @@
       "Bash(taskkill /F /PID 51012)",
       "Bash(cmd.exe /c \"taskkill /F /PID 51012\")",
       "Bash(Out-String -Stream)",
-      "Bash(Select-Object -Last 50)"
+      "Bash(Select-Object -Last 50)",
+      "Bash(Stop-Process -Id 45396 -Force)",
+      "Bash(taskkill:*)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 45396\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 19316\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 3996\")"
     ],
     "deny": [],
     "ask": []

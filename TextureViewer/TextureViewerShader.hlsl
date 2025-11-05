@@ -25,6 +25,7 @@ struct PSInput
 {
     float4 position : SV_POSITION;
     float2 texcoord : TEXCOORD0;
+    float2 originalUV : TEXCOORD1; // Original UV before zoom/pan
 };
 
 // Vertex Shader: Full-screen quad
@@ -35,6 +36,9 @@ PSInput VSMain(VSInput input)
     // Apply aspect ratio correction to position
     float2 pos = input.position * posScale;
     output.position = float4(pos, 0.0, 1.0);
+
+    // Store original UV before transformation (for debug visualization)
+    output.originalUV = input.texcoord;
 
     // Apply zoom/pan to UV
     output.texcoord = input.texcoord * uvScale + uvOffset;
@@ -156,6 +160,48 @@ float4 PSMain(PSInput input) : SV_TARGET
     // For sRGB textures: we decoded earlier, now re-encode
     // For linear textures: encode to sRGB for first time
     color.rgb = pow(max(color.rgb, 0.0), 1.0 / 2.2);
+
+    // ===== DEBUG VISUALIZATION =====
+    float2 screenUV = input.originalUV; // Screen space UV [0,1]
+    float2 texUV = input.texcoord;      // Texture space UV (after zoom/pan)
+
+    // 1. Draw corners of TEXTURE SPACE (0,0), (1,0), (0,1), (1,1) in RED
+    // These show where the texture corners are in screen space
+    float cornerSize = 0.015;
+
+    // Top-left corner of texture (0,0) - RED
+    if (abs(texUV.x - 0.0) < 0.02 && abs(texUV.y - 0.0) < 0.02)
+    {
+        color = float4(1.0, 0.0, 0.0, 1.0); // RED - texture (0,0) - zoom pivot!
+    }
+
+    // Top-right corner of texture (1,0) - GREEN
+    if (abs(texUV.x - 1.0) < 0.02 && abs(texUV.y - 0.0) < 0.02)
+    {
+        color = float4(0.0, 1.0, 0.0, 1.0); // GREEN - texture (1,0)
+    }
+
+    // Bottom-left corner of texture (0,1) - BLUE
+    if (abs(texUV.x - 0.0) < 0.02 && abs(texUV.y - 1.0) < 0.02)
+    {
+        color = float4(0.0, 0.0, 1.0, 1.0); // BLUE - texture (0,1)
+    }
+
+    // Bottom-right corner of texture (1,1) - YELLOW
+    if (abs(texUV.x - 1.0) < 0.02 && abs(texUV.y - 1.0) < 0.02)
+    {
+        color = float4(1.0, 1.0, 0.0, 1.0); // YELLOW - texture (1,1)
+    }
+
+    // 2. Draw crosshair at screen center (0.5, 0.5) - CYAN
+    float crossThick = 0.002;
+    float crossSize = 0.03;
+
+    if ((abs(screenUV.y - 0.5) < crossThick && abs(screenUV.x - 0.5) < crossSize) ||
+        (abs(screenUV.x - 0.5) < crossThick && abs(screenUV.y - 0.5) < crossSize))
+    {
+        color = float4(0.0, 1.0, 1.0, 1.0); // CYAN - viewport center
+    }
 
     return color;
 }

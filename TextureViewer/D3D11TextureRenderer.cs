@@ -70,6 +70,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
     public bool IsInitialized => device != null;
     public int TextureWidth => currentTexture?.Width ?? 0;
     public int TextureHeight => currentTexture?.Height ?? 0;
+    public int ViewportWidth => viewportWidth;
+    public int ViewportHeight => viewportHeight;
     public int MipCount => currentTexture?.MipCount ?? 0;
     public bool IsSRGB => currentTexture?.IsSRGB ?? true; // Default to sRGB if no texture
 

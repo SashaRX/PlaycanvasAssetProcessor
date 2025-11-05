@@ -233,10 +233,22 @@ public class D3D11TextureViewerControl : HwndHost {
 
         logger.Info($"[Native] Mouse wheel: delta={delta}, zoom before={zoom}, mouse at client ({pt.x}, {pt.y})");
 
-        // Get window size
-        int width = (int)ActualWidth;
-        int height = (int)ActualHeight;
-        if (width <= 0 || height <= 0) {
+        // Get ACTUAL client area size from the window (not WPF properties!)
+        // This is critical - mouse coordinates from ScreenToClient are relative to this size
+        RECT clientRect;
+        if (!GetClientRect(hwndHost, out clientRect)) {
+            logger.Error("Failed to get client rect");
+            return;
+        }
+
+        int clientWidth = clientRect.right - clientRect.left;
+        int clientHeight = clientRect.bottom - clientRect.top;
+
+        // Get D3D11 viewport size (this is what the renderer uses for aspect ratio!)
+        int viewportWidth = renderer.ViewportWidth;
+        int viewportHeight = renderer.ViewportHeight;
+
+        if (clientWidth <= 0 || clientHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
             // Fallback to simple zoom if no size
             zoom *= delta > 0 ? 1.1f : 0.9f;
             zoom = Math.Clamp(zoom, 0.125f, 16.0f);
@@ -244,27 +256,80 @@ public class D3D11TextureViewerControl : HwndHost {
             return;
         }
 
-        // Calculate normalized mouse position (0 to 1, top-left is 0,0)
-        // Since texture pivot is at top-left (0,0 UV), we use these coordinates directly
-        float mouseNormX = pt.x / (float)width;
-        float mouseNormY = pt.y / (float)height;
+        // CRITICAL: Scale mouse coordinates from client rect space to viewport space
+        // Mouse coordinates from ScreenToClient are relative to client rect
+        // But aspect ratio is calculated using viewport dimensions
+        float mouseInViewportX = pt.x * (float)viewportWidth / clientWidth;
+        float mouseInViewportY = pt.y * (float)viewportHeight / clientHeight;
 
-        // Apply zoom
+        // Get texture dimensions
+        int texWidth = renderer.TextureWidth;
+        int texHeight = renderer.TextureHeight;
+        if (texWidth <= 0 || texHeight <= 0) {
+            // No texture loaded, fallback to simple zoom
+            zoom *= delta > 0 ? 1.1f : 0.9f;
+            zoom = Math.Clamp(zoom, 0.125f, 16.0f);
+            renderer.SetZoom(zoom);
+            return;
+        }
+
+        // Calculate aspect ratios (MUST match D3D11TextureRenderer.UpdateConstantBuffer!)
+        float viewportAspect = (float)viewportWidth / viewportHeight;
+        float textureAspect = (float)texWidth / texHeight;
+
+        // Calculate posScale (aspect ratio correction)
+        float posScaleX, posScaleY;
+        if (viewportAspect > textureAspect) {
+            // Viewport is wider than texture - fit by height (pillarbox)
+            posScaleX = textureAspect / viewportAspect;
+            posScaleY = 1.0f;
+        } else {
+            // Viewport is taller than texture - fit by width (letterbox)
+            posScaleX = 1.0f;
+            posScaleY = viewportAspect / textureAspect;
+        }
+
+        // Convert mouse position to NDC space [-1, 1]
+        // Viewport coordinates: (0,0) at top-left, (width,height) at bottom-right
+        // NDC coordinates: (-1,-1) at bottom-left, (1,1) at top-right
+        float mouseNDCX = (mouseInViewportX / viewportWidth) * 2.0f - 1.0f;
+        float mouseNDCY = -((mouseInViewportY / viewportHeight) * 2.0f - 1.0f); // Flip Y axis
+
+        // The quad vertices are scaled by posScale in the vertex shader
+        // This scales the NDC coordinates, so we need to invert that scaling
+        // to find which point on the original quad (before scaling) the mouse is over
+        float quadNDCX = mouseNDCX / posScaleX;
+        float quadNDCY = mouseNDCY / posScaleY;
+
+        // Convert from NDC space to UV space [0, 1]
+        // NDC (-1,-1) maps to UV (0,1) and NDC (1,1) maps to UV (1,0)
+        // Note: UV Y is flipped relative to NDC Y
+        float quadLocalX = (quadNDCX + 1.0f) * 0.5f;
+        float quadLocalY = (1.0f - (quadNDCY + 1.0f) * 0.5f);
+
+        // Now we need to find what UV coordinate the mouse is pointing to
+        // The shader transforms: output.texcoord = input.texcoord * (1/zoom) + pan
+        // Where input.texcoord comes from the quad vertices which are [0,1]
+        // So the actual UV under the mouse is:
+        float uvUnderMouseX = quadLocalX * (1.0f / zoom) + panX;
+        float uvUnderMouseY = quadLocalY * (1.0f / zoom) + panY;
+
+        // Apply zoom change
         float oldZoom = zoom;
         float zoomDelta = delta > 0 ? 1.1f : 0.9f;
         zoom *= zoomDelta;
         zoom = Math.Clamp(zoom, 0.125f, 16.0f);
 
-        // Adjust pan to keep point under cursor stationary
-        // Formula: newPan = oldPan + mousePos * (1/oldZoom - 1/newZoom)
-        // Pivot is at top-left (0,0), so we use mouseNorm directly without centering
-        panX += mouseNormX * (1.0f / oldZoom - 1.0f / zoom);
-        panY += mouseNormY * (1.0f / oldZoom - 1.0f / zoom);
+        // Calculate new pan to keep the UV point under the mouse stationary
+        // After zoom, the UV under mouse should remain the same:
+        // uvUnderMouseX = quadLocalX * (1/newZoom) + newPanX
+        // Solving for newPanX:
+        // newPanX = uvUnderMouseX - quadLocalX * (1/newZoom)
+        panX = uvUnderMouseX - quadLocalX * (1.0f / zoom);
+        panY = uvUnderMouseY - quadLocalY * (1.0f / zoom);
 
         renderer.SetZoom(zoom);
         renderer.SetPan(panX, panY);
-
-        logger.Info($"[Native] Zoom after={zoom}, pan=({panX:F3}, {panY:F3})");
     }
 
     private void HandleMiddleButtonDown(IntPtr lParam) {
@@ -312,15 +377,47 @@ public class D3D11TextureViewerControl : HwndHost {
         int deltaX = currentX - lastMouseX;
         int deltaY = currentY - lastMouseY;
 
-        // Get window size for proper pan calculation
-        int width = (int)ActualWidth;
-        int height = (int)ActualHeight;
+        // CRITICAL: Use renderer viewport size, NOT WPF ActualWidth/Height!
+        // This must match the viewport dimensions used in HandleMouseWheel
+        int width = renderer.ViewportWidth;
+        int height = renderer.ViewportHeight;
         if (width <= 0 || height <= 0) return;
 
-        // Convert screen delta to normalized texture space
-        // Account for zoom level and window size to ensure uniform pan speed
-        float panSpeedX = 1.0f / (width * zoom);
-        float panSpeedY = 1.0f / (height * zoom);
+        // Get texture dimensions for aspect ratio calculation
+        int texWidth = renderer.TextureWidth;
+        int texHeight = renderer.TextureHeight;
+        if (texWidth <= 0 || texHeight <= 0) {
+            // No texture, fallback to simple pan
+            float simplePanX = 1.0f / (width * zoom);
+            float simplePanY = 1.0f / (height * zoom);
+            panX -= deltaX * simplePanX;
+            panY -= deltaY * simplePanY;
+            renderer.SetPan(panX, panY);
+            lastMouseX = currentX;
+            lastMouseY = currentY;
+            return;
+        }
+
+        // Calculate aspect ratios (must match HandleMouseWheel logic exactly!)
+        float viewportAspect = (float)width / height;
+        float textureAspect = (float)texWidth / texHeight;
+
+        // Calculate posScale (aspect ratio correction)
+        float posScaleX, posScaleY;
+        if (viewportAspect > textureAspect) {
+            // Viewport is wider than texture - fit by height (pillarbox)
+            posScaleX = textureAspect / viewportAspect;
+            posScaleY = 1.0f;
+        } else {
+            // Viewport is taller than texture - fit by width (letterbox)
+            posScaleX = 1.0f;
+            posScaleY = viewportAspect / textureAspect;
+        }
+
+        // Convert screen delta to texture UV space
+        // Account for aspect ratio correction and zoom level
+        float panSpeedX = 1.0f / (width * posScaleX * zoom);
+        float panSpeedY = 1.0f / (height * posScaleY * zoom);
         panX -= deltaX * panSpeedX;  // X: left/right
         panY -= deltaY * panSpeedY;  // Y: up/down (inverted for correct direction)
 
@@ -366,6 +463,14 @@ public class D3D11TextureViewerControl : HwndHost {
     private struct POINT {
         public int x;
         public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -431,6 +536,9 @@ public class D3D11TextureViewerControl : HwndHost {
 
     [DllImport("user32.dll")]
     private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 
     // Cursor resource IDs
     private const int IDC_ARROW = 32512;

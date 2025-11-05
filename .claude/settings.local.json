@@ -19,7 +19,9 @@
       "Bash(taskkill:*)",
       "Bash(cmd.exe /c \"taskkill /F /PID 45396\")",
       "Bash(cmd.exe /c \"taskkill /F /PID 19316\")",
-      "Bash(cmd.exe /c \"taskkill /F /PID 3996\")"
+      "Bash(cmd.exe /c \"taskkill /F /PID 3996\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -18,9 +18,6 @@ namespace AssetProcessor {
         // Event for preview renderer changes
         public event Action<bool>? OnPreviewRendererChanged;
 
-        // Event for KTX2 preview mode changes
-        public event Action<bool>? OnKtx2PreviewModeChanged;
-
         public string? ProjectsFolder {
             get => AppSettings.Default.ProjectsFolderPath;
             set {
@@ -116,31 +113,16 @@ namespace AssetProcessor {
             ToktxExecutableBox.Text = _textureSettings.ToktxExecutablePath;
             KtxExecutableBox.Text = _textureSettings.KtxExecutablePath;
 
-            // Load preview renderer setting
-            // ВАЖНО: отписываемся от событий перед установкой значений, чтобы не вызвать PreviewRendererChanged
-            UseD3D11PreviewRadioButton.Checked -= PreviewRendererChanged;
-            UseWPFPreviewRadioButton.Checked -= PreviewRendererChanged;
+            // Load D3D11 Preview checkbox
+            UseD3D11PreviewCheckBox.Checked -= D3D11PreviewCheckBox_Changed;
+            UseD3D11PreviewCheckBox.Unchecked -= D3D11PreviewCheckBox_Changed;
 
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
-            UseD3D11PreviewRadioButton.IsChecked = useD3D11;
-            UseWPFPreviewRadioButton.IsChecked = !useD3D11;
+            UseD3D11PreviewCheckBox.IsChecked = useD3D11;
             NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] LoadSettings: UseD3D11Preview = {useD3D11}");
 
-            // Подписываемся обратно после установки значений
-            UseD3D11PreviewRadioButton.Checked += PreviewRendererChanged;
-            UseWPFPreviewRadioButton.Checked += PreviewRendererChanged;
-
-            // Load KTX2 preview mode setting
-            UseD3D11NativeKtx2RadioButton.Checked -= Ktx2PreviewModeChanged;
-            UsePngExtractionKtx2RadioButton.Checked -= Ktx2PreviewModeChanged;
-
-            bool useD3D11NativeKtx2 = AppSettings.Default.UseD3D11NativeKtx2;
-            UseD3D11NativeKtx2RadioButton.IsChecked = useD3D11NativeKtx2;
-            UsePngExtractionKtx2RadioButton.IsChecked = !useD3D11NativeKtx2;
-            NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] LoadSettings: UseD3D11NativeKtx2 = {useD3D11NativeKtx2}");
-
-            UseD3D11NativeKtx2RadioButton.Checked += Ktx2PreviewModeChanged;
-            UsePngExtractionKtx2RadioButton.Checked += Ktx2PreviewModeChanged;
+            UseD3D11PreviewCheckBox.Checked += D3D11PreviewCheckBox_Changed;
+            UseD3D11PreviewCheckBox.Unchecked += D3D11PreviewCheckBox_Changed;
         }
 
         private void CheckAndRemoveWatermarks() {
@@ -192,12 +174,10 @@ namespace AssetProcessor {
             AppSettings.Default.GetTexturesSemaphoreLimit = (int)GetTexturesSemaphoreSlider.Value;
             AppSettings.Default.DownloadSemaphoreLimit = (int)DownloadSemaphoreSlider.Value;
             AppSettings.Default.ProjectsFolderPath = ProjectsFolderBox.Text;
-            bool useD3D11 = UseD3D11PreviewRadioButton.IsChecked ?? true;
+            bool useD3D11 = UseD3D11PreviewCheckBox.IsChecked ?? true;
             AppSettings.Default.UseD3D11Preview = useD3D11;
-            bool useD3D11NativeKtx2 = UseD3D11NativeKtx2RadioButton.IsChecked ?? true;
-            AppSettings.Default.UseD3D11NativeKtx2 = useD3D11NativeKtx2;
 
-            NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] Save_Click: Before Save() UseD3D11Preview = {useD3D11}, UseD3D11NativeKtx2 = {useD3D11NativeKtx2}");
+            NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] Save_Click: Before Save() UseD3D11Preview = {useD3D11}");
             AppSettings.Default.Save();
             NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] Save_Click: After Save() UseD3D11Preview = {AppSettings.Default.UseD3D11Preview}");
 
@@ -360,26 +340,15 @@ namespace AssetProcessor {
             }
         }
 
-        private void PreviewRendererChanged(object sender, RoutedEventArgs e) {
+        private void D3D11PreviewCheckBox_Changed(object sender, RoutedEventArgs e) {
             // Apply preview renderer change immediately (real-time)
-            bool useD3D11 = UseD3D11PreviewRadioButton.IsChecked ?? true;
+            bool useD3D11 = UseD3D11PreviewCheckBox.IsChecked ?? true;
             AppSettings.Default.UseD3D11Preview = useD3D11;
             AppSettings.Default.Save();
-            NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] PreviewRendererChanged: saved UseD3D11Preview = {useD3D11}");
+            NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] D3D11PreviewCheckBox_Changed: saved UseD3D11Preview = {useD3D11}");
 
             // Notify MainWindow about the change
             OnPreviewRendererChanged?.Invoke(useD3D11);
-        }
-
-        private void Ktx2PreviewModeChanged(object sender, RoutedEventArgs e) {
-            // Apply KTX2 preview mode change immediately (real-time)
-            bool useD3D11NativeKtx2 = UseD3D11NativeKtx2RadioButton.IsChecked ?? true;
-            AppSettings.Default.UseD3D11NativeKtx2 = useD3D11NativeKtx2;
-            AppSettings.Default.Save();
-            NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] Ktx2PreviewModeChanged: saved UseD3D11NativeKtx2 = {useD3D11NativeKtx2}");
-
-            // Notify MainWindow about the change
-            OnKtx2PreviewModeChanged?.Invoke(useD3D11NativeKtx2);
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e) {

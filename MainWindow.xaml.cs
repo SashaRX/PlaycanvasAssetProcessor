@@ -175,8 +175,8 @@ namespace AssetProcessor {
         // D3D11 Texture Viewer state (zoom/pan now handled in control itself)
         private bool isD3D11RenderLoopEnabled = true;
 
-        // KTX2 preview mode: true = D3D11 native, false = PNG extraction (old method)
-        private bool useD3D11NativeKtx2;
+        // KTX2 preview mode: always use D3D11 native when D3D11 renderer is active
+        // Legacy PNG extraction removed
         // Track which preview renderer is currently active
         private bool isUsingD3D11Renderer = true;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -309,10 +309,6 @@ namespace AssetProcessor {
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
             SwitchPreviewRenderer(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
-
-            // Apply UseD3D11NativeKtx2 setting on startup
-            useD3D11NativeKtx2 = AppSettings.Default.UseD3D11NativeKtx2;
-            logger.Info($"Applied UseD3D11NativeKtx2 setting on startup: {useD3D11NativeKtx2}");
         }
 
         private void OnD3D11Rendering(object? sender, EventArgs e) {
@@ -471,6 +467,14 @@ namespace AssetProcessor {
         private void ClearD3D11Viewer() {
             // D3D11TextureRenderer doesn't have a Clear method
             // Note: NOT resetting zoom/pan to preserve user's viewport between textures
+
+            // Reset channel masks when clearing viewer (switching textures)
+            currentActiveChannelMask = null;
+            if (D3D11TextureViewer?.Renderer != null) {
+                D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
+                D3D11TextureViewer.Renderer.RestoreOriginalGamma();
+            }
+            UpdateChannelButtonsState();
         }
 
         #endregion
@@ -505,6 +509,7 @@ namespace AssetProcessor {
             GChannelButton.IsChecked = currentActiveChannelMask == "G";
             BChannelButton.IsChecked = currentActiveChannelMask == "B";
             AChannelButton.IsChecked = currentActiveChannelMask == "A";
+            NormalButton.IsChecked = currentActiveChannelMask == "Normal";
         }
 
         private void FitResetButton_Click(object sender, RoutedEventArgs e) {
@@ -960,7 +965,8 @@ namespace AssetProcessor {
                 if (originalFileBitmapSource != null) {
                     originalBitmapSource = originalFileBitmapSource;
                     _ = UpdateHistogramAsync(originalBitmapSource);
-                    ShowOriginalImage(); // This will clear currentActiveChannelMask and reset GUI buttons
+                    // Preserve channel mask when switching from KTX to Source
+                    ShowOriginalImage(preserveMask: true);
 
                     // Update format text for Source mode
                     if (TextureFormatTextBlock != null) {
@@ -973,6 +979,9 @@ namespace AssetProcessor {
                 }
             } else if (mode == TexturePreviewSourceMode.Ktx2) {
                 isKtxPreviewActive = true;
+
+                // Save current mask before switching
+                string? savedMask = currentActiveChannelMask;
 
                 // FIXED: Check if we're using D3D11 native KTX2 (no extracted mipmaps)
                 // or old PNG extraction method
@@ -989,6 +998,13 @@ namespace AssetProcessor {
                                 if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
                                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                                     logger.Info($"Reloaded KTX2 to D3D11 when switching to KTX2 mode - {D3D11TextureViewer.Renderer.MipCount} mip levels");
+
+                                    // Restore channel mask after KTX2 load
+                                    if (savedMask != null) {
+                                        currentActiveChannelMask = savedMask;
+                                        _ = FilterChannelAsync(savedMask);
+                                        logger.Info($"Restored channel mask '{savedMask}' after switching to KTX2 mode");
+                                    }
                                 }
                             });
                         } catch (Exception ex) {
@@ -999,6 +1015,13 @@ namespace AssetProcessor {
                     // KTX2 already loaded in D3D11
                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                     logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
+
+                    // Restore channel mask if already loaded
+                    if (savedMask != null) {
+                        currentActiveChannelMask = savedMask;
+                        _ = FilterChannelAsync(savedMask);
+                        logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
+                    }
                 } else {
                     HideMipmapControls();
                 }
@@ -1130,25 +1153,27 @@ namespace AssetProcessor {
             // Save current active mask
             currentActiveChannelMask = channel;
 
+            // Sync GUI buttons
+            Dispatcher.Invoke(() => UpdateChannelButtonsState());
+
             // Apply channel filter to D3D11 renderer if active
             if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                 // Convert channel to mask
-                // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale
+                // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale, bit 5=normal reconstruction
                 uint mask = channel switch {
                     "R" => 0x11, // R channel + grayscale (0x01 | 0x10)
                     "G" => 0x12, // G channel + grayscale (0x02 | 0x10)
                     "B" => 0x14, // B channel + grayscale (0x04 | 0x10)
                     "A" => 0x18, // A channel + grayscale (0x08 | 0x10)
+                    "Normal" => 0x20, // Normal reconstruction mode (bit 5)
                     _ => 0xFFFFFFFF // All channels
                 };
                 D3D11TextureViewer.Renderer.SetChannelMask(mask);
-
-                // When showing channel mask, always use gamma=1.0 to show raw LINEAR channel values
-                // (no gamma correction - display raw bytes directly)
-                D3D11TextureViewer.Renderer.SetGamma(1.0f);
+                // Note: Gamma correction for masks is now handled automatically in shader
+                // No need to override gamma here - shader will display linear values for masks
                 D3D11TextureViewer.Renderer.Render();
 
-                logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}, forced gamma=1.0 for raw linear display");
+                logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
                 return;
             }
 
@@ -1202,15 +1227,24 @@ namespace AssetProcessor {
             }
         }
 
-        private async void ShowOriginalImage(bool recalculateFitZoom = false) {
-            // Clear current active mask
-            currentActiveChannelMask = null;
+        private async void ShowOriginalImage(bool recalculateFitZoom = false, bool preserveMask = false) {
+            // Only clear mask if explicitly requested (NOT when switching Source<->KTX)
+            if (!preserveMask) {
+                currentActiveChannelMask = null;
 
-            // Reset channel filter in D3D11 mode
-            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
-                D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF); // All channels
-                D3D11TextureViewer.Renderer.RestoreOriginalGamma(); // Restore original gamma (if it was overridden for mask)
-                logger.Info($"Reset D3D11 channel mask to all channels and restored original gamma");
+                // Reset channel filter in D3D11 mode
+                if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                    D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF); // All channels
+                    D3D11TextureViewer.Renderer.RestoreOriginalGamma(); // Restore original gamma (if it was overridden for mask)
+                    logger.Info($"Reset D3D11 channel mask to all channels and restored original gamma");
+                }
+            } else {
+                // Preserve mask - reapply it if active
+                if (currentActiveChannelMask != null && isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                    // Reapply the current mask to the renderer
+                    _ = FilterChannelAsync(currentActiveChannelMask);
+                    logger.Info($"Preserved and reapplied channel mask '{currentActiveChannelMask}' when switching to Source mode");
+                }
             }
 
             if (originalBitmapSource != null) {
@@ -1695,8 +1729,8 @@ namespace AssetProcessor {
                         // to prevent conflicts
                         bool ktxLoaded = false;
 
-                        if (useD3D11NativeKtx2 && isUsingD3D11Renderer) {
-                            // D3D11 MODE: Try D3D11 native KTX2 loading (only if D3D11 renderer is active)
+                        if (isUsingD3D11Renderer) {
+                            // D3D11 MODE: Try D3D11 native KTX2 loading (always use native when D3D11 is active)
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
 
                             if (ktxLoaded) {
@@ -1844,7 +1878,14 @@ namespace AssetProcessor {
         private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
             // Reset channel masks when loading new texture
             currentActiveChannelMask = null;
-            Dispatcher.Invoke(() => UpdateChannelButtonsState());
+            Dispatcher.Invoke(() => {
+                UpdateChannelButtonsState();
+                // Reset D3D11 renderer mask
+                if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                    D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
+                    D3D11TextureViewer.Renderer.RestoreOriginalGamma();
+                }
+            });
 
             // Store currently selected texture for sRGB detection
             currentSelectedTexture = selectedTexture;
@@ -2378,26 +2419,13 @@ namespace AssetProcessor {
             SettingsWindow settingsWindow = new();
             // Subscribe to preview renderer changes
             settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
-            settingsWindow.OnKtx2PreviewModeChanged += HandleKtx2PreviewModeChanged;
             settingsWindow.ShowDialog();
             // Unsubscribe after window closes
             settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
-            settingsWindow.OnKtx2PreviewModeChanged -= HandleKtx2PreviewModeChanged;
         }
 
         private void HandlePreviewRendererChanged(bool useD3D11) {
             SwitchPreviewRenderer(useD3D11);
-        }
-
-        private void HandleKtx2PreviewModeChanged(bool useD3D11Native) {
-            useD3D11NativeKtx2 = useD3D11Native;
-            logger.Info($"KTX2 preview mode changed to: {(useD3D11Native ? "D3D11 Native" : "PNG Extraction")}");
-            // If currently viewing a KTX2 texture, reload it with the new mode
-            if (TexturesDataGrid.SelectedItem is TextureResource texture) {
-                logger.Info($"Reloading current texture with new KTX2 preview mode");
-                // Re-trigger selection to reload preview with new mode
-                TexturesDataGrid_SelectionChanged(TexturesDataGrid, null!);
-            }
         }
 
         private async void SwitchPreviewRenderer(bool useD3D11) {
@@ -2489,11 +2517,9 @@ namespace AssetProcessor {
                 SettingsWindow settingsWindow = new();
                 // Subscribe to preview renderer changes
                 settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
-                settingsWindow.OnKtx2PreviewModeChanged += HandleKtx2PreviewModeChanged;
                 settingsWindow.ShowDialog();
                 // Unsubscribe after window closes
                 settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
-                settingsWindow.OnKtx2PreviewModeChanged -= HandleKtx2PreviewModeChanged;
                 return; // Прерываем выполнение Connect, если данные не заполнены
             } else {
                 try {
@@ -2687,11 +2713,9 @@ namespace AssetProcessor {
             SettingsWindow settingsWindow = new();
             // Subscribe to preview renderer changes
             settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
-            settingsWindow.OnKtx2PreviewModeChanged += HandleKtx2PreviewModeChanged;
             settingsWindow.ShowDialog();
             // Unsubscribe after window closes
             settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
-            settingsWindow.OnKtx2PreviewModeChanged -= HandleKtx2PreviewModeChanged;
         }
 
         private void TextureConversionMenu(object? sender, RoutedEventArgs e) {

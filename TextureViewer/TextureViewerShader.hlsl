@@ -76,29 +76,67 @@ float4 PSMain(PSInput input) : SV_TARGET
         color = sourceTexture.Sample(texSampler, input.texcoord);
     }
 
-    // Apply channel mask (for R/G/B/A channel viewing)
-    // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale
-    if (channelMask != 0xFFFFFFFF)
+    // Check if channel mask is active
+    bool hasMask = (channelMask != 0xFFFFFFFF);
+
+    // STEP 1: Convert texture data to LINEAR space (for both masked and unmasked)
+    // For sRGB textures (gamma==1.0): decode sRGB->linear
+    // For linear textures (gamma==2.2): already linear, no conversion needed
+    if (gamma == 1.0)
+    {
+        // sRGB texture - decode to linear
+        color.rgb = pow(max(color.rgb, 0.0), 2.2);
+    }
+
+    // STEP 2: Apply channel mask in linear space
+    // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale, bit 5=normal reconstruction
+    // IMPORTANT: Masks work in LINEAR space for correct values
+    if (hasMask)
     {
         bool showR = (channelMask & 0x01) != 0;
         bool showG = (channelMask & 0x02) != 0;
         bool showB = (channelMask & 0x04) != 0;
         bool showA = (channelMask & 0x08) != 0;
         bool showGrayscale = (channelMask & 0x10) != 0;
+        bool showNormal = (channelMask & 0x20) != 0;
 
-        if (showGrayscale)
+        if (showNormal)
         {
-            // Show single channel as grayscale
+            // Normal Map Reconstruction Mode
+            // Standard BC5 format: X in Red/Green channel, Y in Green/Alpha channel, Z reconstructed
+            // Load XY from appropriate channels (GA is common for BC5)
+            float2 nml;
+            nml.x = color.r; // X from Red (or could be Green for BC5)
+            nml.y = color.a; // Y from Alpha (or could be Green for BC5)
+
+            // Unpack from [0,1] to [-1,1]
+            nml = nml * 2.0 - 1.0;
+
+            // Reconstruct Z component
+            // Z = sqrt(1 - dot(XY, XY)) = sqrt(1 - X² - Y²)
+            float zSquared = max(0.0, 1.0 - dot(nml, nml));
+            float nmlZ = sqrt(zSquared);
+
+            // Pack back to [0,1] for display (so we can see negative values)
+            float3 normalVis = float3(nml.x, nml.y, nmlZ);
+            normalVis = normalVis * 0.5 + 0.5; // [-1,1] -> [0,1] for visualization
+
+            color.rgb = normalVis;
+            color.a = 1.0;
+        }
+        else if (showGrayscale)
+        {
+            // Show single channel as grayscale (already in linear)
             float value = 0.0;
             if (showR) value = color.r;
             else if (showG) value = color.g;
             else if (showB) value = color.b;
             else if (showA) value = color.a;
-            return float4(value, value, value, 1.0);
+            color.rgb = float3(value, value, value);
         }
         else
         {
-            // Apply channel mask (show channels as-is)
+            // Apply channel mask (show selected channels, zero others)
             color.r = showR ? color.r : 0.0;
             color.g = showG ? color.g : 0.0;
             color.b = showB ? color.b : 0.0;
@@ -106,21 +144,18 @@ float4 PSMain(PSInput input) : SV_TARGET
         }
     }
 
-    // Apply HDR exposure (if enabled, exposure != 0)
+    // STEP 3: Apply HDR exposure in linear space
     if (exposure != 0.0)
     {
         float exposureMul = exp2(exposure);
         color.rgb *= exposureMul;
     }
 
-    // Apply gamma correction for monitor display
-    // Gamma is always applied, even with channel masks, to ensure correct display
-    // If gamma == 1.0, no correction (for sRGB textures - already encoded)
-    // If gamma == 2.2, apply sRGB encoding (for Linear textures)
-    if (gamma != 1.0)
-    {
-        color.rgb = pow(max(color.rgb, 0.0), 1.0 / gamma);
-    }
+    // STEP 4: Encode to sRGB for monitor display
+    // Monitors expect sRGB-encoded data, so we always need to encode linear->sRGB
+    // For sRGB textures: we decoded earlier, now re-encode
+    // For linear textures: encode to sRGB for first time
+    color.rgb = pow(max(color.rgb, 0.0), 1.0 / 2.2);
 
     return color;
 }

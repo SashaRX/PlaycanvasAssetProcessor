@@ -16,14 +16,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
     public class TextureConversionPipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly MipGenerator _mipGenerator;
-        private readonly ToktxWrapper _toktxWrapper;
+        private readonly LibKtxConverter _libKtxConverter;
         private readonly ToksvigProcessor _toksvigProcessor;
         private readonly NormalMapMatcher _normalMapMatcher;
         private readonly HistogramAnalyzer _histogramAnalyzer;
 
-        public TextureConversionPipeline(string? toktxExecutablePath = null) {
+        public TextureConversionPipeline(string? ktxDllDirectory = null) {
             _mipGenerator = new MipGenerator();
-            _toktxWrapper = new ToktxWrapper(toktxExecutablePath ?? "toktx");
+            _libKtxConverter = new LibKtxConverter(ktxDllDirectory);
             _toksvigProcessor = new ToksvigProcessor();
             _normalMapMatcher = new NormalMapMatcher();
             _histogramAnalyzer = new HistogramAnalyzer();
@@ -56,11 +56,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
             try {
                 Logger.Info($"Starting conversion: {inputPath}");
-
-                // Проверяем доступность toktx
-                if (!await _toktxWrapper.IsAvailableAsync()) {
-                    throw new Exception("toktx executable not found. Please install KTX-Software: winget install KhronosGroup.KTX-Software");
-                }
+                Logger.Info("Using libktx API for KTX2 conversion (no CLI dependencies)");
 
                 // Загружаем изображение
                 using var sourceImage = await Image.LoadAsync<Rgba32>(inputPath);
@@ -360,52 +356,25 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
                     }
 
-                    var toktxResult = await _toktxWrapper.PackMipmapsAsync(
+                    // LibKtxConverter сам добавляет метаданные в процессе создания текстуры
+                    var conversionResult = await _libKtxConverter.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
                         compressionSettings,
                         kvdBinaryFiles
                     );
 
-                    if (!toktxResult.Success) {
-                        throw new Exception($"toktx packing failed: {toktxResult.Error}");
-                    }
-
-                    // POST-PROCESSING: Inject TLV metadata if available
-                    if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
-                        Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
-
-                        // Получаем директорию toktx для загрузки ktx.dll
-                        var ktxDllDirectory = _toktxWrapper.ToktxDirectory;
-                        if (!string.IsNullOrEmpty(ktxDllDirectory)) {
-                            Logger.Info($"toktx directory: {ktxDllDirectory}");
-                        } else {
-                            Logger.Warn("toktx directory not found (toktx might be in PATH)");
-                        }
-
-                        foreach (var kvPair in kvdBinaryFiles) {
-                            Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
-                            bool injected = Ktx2MetadataInjector.InjectMetadata(
-                                outputPath,
-                                kvPair.Value,
-                                kvPair.Key,
-                                ktxDllDirectory
-                            );
-                            if (injected) {
-                                Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
-                            } else {
-                                Logger.Warn($"✗ Failed to inject metadata '{kvPair.Key}'");
-                            }
-                        }
+                    if (!conversionResult.Success) {
+                        throw new Exception($"LibKTX conversion failed: {conversionResult.Error}");
                     }
 
                     result.Success = true;
-                    result.BasisOutput = toktxResult.Output;
+                    result.BasisOutput = conversionResult.Output;
                     result.MipLevels = mipmaps.Count;
 
                     Logger.Info($"=== KTX2 PACKING SUCCESS ===");
                     Logger.Info($"  Output: {outputPath}");
-                    Logger.Info($"  File size: {toktxResult.OutputFileSize} bytes");
+                    Logger.Info($"  File size: {conversionResult.OutputFileSize} bytes");
                     Logger.Info($"  Mip levels: {mipmaps.Count}");
 
                 } finally {

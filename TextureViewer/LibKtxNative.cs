@@ -119,9 +119,77 @@ internal static class LibKtxNative {
         KHR_DF_TRANSFER_ADOBERGB = 18
     }
 
+    /// <summary>
+    /// Storage allocation options for texture creation
+    /// </summary>
+    public enum KtxTextureCreateStorage : uint {
+        KTX_TEXTURE_CREATE_NO_STORAGE = 0,
+        KTX_TEXTURE_CREATE_ALLOC_STORAGE = 1
+    }
+
     #endregion
 
     #region Structs
+
+    /// <summary>
+    /// Structure for passing texture information to ktxTexture2_Create()
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KtxTextureCreateInfo {
+        public uint glInternalformat;  // Ignored for KTX2
+        public uint vkFormat;          // VkFormat (e.g., VK_FORMAT_R8G8B8A8_UNORM = 37)
+        public IntPtr pDfd;            // Optional DFD, can be IntPtr.Zero
+
+        public uint baseWidth;
+        public uint baseHeight;
+        public uint baseDepth;
+
+        public uint numDimensions;
+        public uint numLevels;
+        public uint numLayers;
+        public uint numFaces;
+
+        public byte isArray;           // KTX_TRUE or KTX_FALSE
+        public byte generateMipmaps;   // KTX_TRUE or KTX_FALSE
+    }
+
+    /// <summary>
+    /// Extended parameters for Basis Universal compression
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KtxBasisParams {
+        // Размер структуры (ОБЯЗАТЕЛЬНО!)
+        public uint structSize;
+
+        // Общие параметры
+        public byte uastc;              // 1 = UASTC, 0 = ETC1S
+        public byte verbose;            // Вывод отладочной информации
+        public byte noSSE;              // Запретить SSE
+        public uint threadCount;        // Количество потоков (0 = auto)
+
+        // ETC1S параметры
+        public uint compressionLevel;   // 0-6, default = 2
+        public uint qualityLevel;       // 1-255, default = 128
+        public uint maxEndpoints;       // Максимум endpoint палитры
+        public float endpointRDOThreshold;
+        public uint maxSelectors;       // Максимум selector палитры
+        public float selectorRDOThreshold;
+
+        // Padding для выравнивания (struct довольно большой)
+        // Полная структура содержит много других полей, но для базового использования достаточно этих
+        // Остальное можно оставить нулевым
+    }
+
+    /// <summary>
+    /// VkFormat значения для KTX2
+    /// </summary>
+    public enum VkFormat : uint {
+        VK_FORMAT_UNDEFINED = 0,
+        VK_FORMAT_R8G8B8A8_UNORM = 37,
+        VK_FORMAT_R8G8B8A8_SRGB = 43,
+        VK_FORMAT_R8G8B8_UNORM = 23,
+        VK_FORMAT_R8G8B8_SRGB = 29
+    }
 
     /// <summary>
     /// Simplified KTX texture structure - only read fields we actually need.
@@ -325,6 +393,43 @@ internal static class LibKtxNative {
     public static extern KtxErrorCode ktxTexture2_WriteToNamedFile(
         IntPtr texture,
         [MarshalAs(UnmanagedType.LPStr)] string dstname);
+
+    /// <summary>
+    /// Create a new empty KTX2 texture.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_Create(
+        ref KtxTextureCreateInfo createInfo,
+        KtxTextureCreateStorage storageAllocation,
+        out IntPtr newTex);
+
+    /// <summary>
+    /// Set image data for a specific mip level, layer, and face from memory.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture_SetImageFromMemory(
+        IntPtr texture,
+        uint level,
+        uint layer,
+        uint faceSlice,
+        IntPtr src,
+        UIntPtr srcSize);
+
+    /// <summary>
+    /// Compress texture using Basis Universal with extended parameters.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_CompressBasisEx(
+        IntPtr texture,
+        ref KtxBasisParams params_);
+
+    /// <summary>
+    /// Compress texture using Basis Universal with simple quality parameter.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_CompressBasis(
+        IntPtr texture,
+        uint quality);
 
     #endregion
 

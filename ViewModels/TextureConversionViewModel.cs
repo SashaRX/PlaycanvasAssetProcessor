@@ -118,7 +118,13 @@ namespace AssetProcessor.ViewModels {
             ProcessingProgress = 0;
 
             try {
-                var pipeline = new TextureConversionPipeline(ToktxPath);
+                // Извлекаем директорию из пути к toktx.exe для загрузки ktx.dll
+                string? ktxDllDirectory = null;
+                if (!string.IsNullOrWhiteSpace(ToktxPath) && Path.IsPathRooted(ToktxPath)) {
+                    ktxDllDirectory = Path.GetDirectoryName(ToktxPath);
+                }
+
+                var pipeline = new TextureConversionPipeline(ktxDllDirectory);
 
                 Directory.CreateDirectory(OutputDirectory);
 
@@ -192,7 +198,13 @@ namespace AssetProcessor.ViewModels {
             ProcessingStatus = $"Processing {Path.GetFileName(SelectedTexture.TexturePath)}...";
 
             try {
-                var pipeline = new TextureConversionPipeline(ToktxPath);
+                // Извлекаем директорию из пути к toktx.exe для загрузки ktx.dll
+                string? ktxDllDirectory = null;
+                if (!string.IsNullOrWhiteSpace(ToktxPath) && Path.IsPathRooted(ToktxPath)) {
+                    ktxDllDirectory = Path.GetDirectoryName(ToktxPath);
+                }
+
+                var pipeline = new TextureConversionPipeline(ktxDllDirectory);
                 Directory.CreateDirectory(OutputDirectory);
 
                 var mipProfile = SelectedTexture.MipProfile.ToMipGenerationProfile(SelectedTexture.TextureType);

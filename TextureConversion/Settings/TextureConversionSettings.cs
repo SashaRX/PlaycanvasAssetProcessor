@@ -119,6 +119,9 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool KeepRGBLayout { get; set; } = false;
         public bool RemoveTemporaryMipmaps { get; set; } = true;
 
+        // Histogram Analysis
+        public HistogramSettings? HistogramAnalysis { get; set; } = null;
+
         /// <summary>
         /// Создает CompressionSettings из настроек с применением глобальных настроек
         /// </summary>
@@ -158,7 +161,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ConvertToNormalMap = ConvertToNormalMap,
                 NormalizeVectors = NormalizeVectors,
                 KeepRGBLayout = KeepRGBLayout,
-                RemoveTemporaryMipmaps = RemoveTemporaryMipmaps
+                RemoveTemporaryMipmaps = RemoveTemporaryMipmaps,
+                HistogramAnalysis = HistogramAnalysis
             };
         }
 
@@ -191,7 +195,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ConvertToNormalMap = settings.ConvertToNormalMap,
                 NormalizeVectors = settings.NormalizeVectors,
                 KeepRGBLayout = settings.KeepRGBLayout,
-                RemoveTemporaryMipmaps = settings.RemoveTemporaryMipmaps
+                RemoveTemporaryMipmaps = settings.RemoveTemporaryMipmaps,
+                HistogramAnalysis = settings.HistogramAnalysis
             };
         }
     }

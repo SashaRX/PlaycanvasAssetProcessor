@@ -4633,8 +4633,13 @@ namespace AssetProcessor {
                             MapTextureTypeToCore(textureType));
 
                         // Используем глобальные настройки из TextureConversionSettingsPanel
-                        var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
-                            .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
+                        var compressionSettingsData = ConversionSettingsPanel.GetCompressionSettings();
+
+                        // Получаем настройки histogram analysis из UI
+                        var histogramSettings = ConversionSettingsPanel.GetHistogramSettings();
+                        compressionSettingsData.HistogramAnalysis = histogramSettings;
+
+                        var compressionSettings = compressionSettingsData.ToCompressionSettings(globalTextureSettings!); // Already checked for null above
 
                         // Save converted file in the same directory as source file
                         var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;

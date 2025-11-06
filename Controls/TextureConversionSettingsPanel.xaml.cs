@@ -442,6 +442,40 @@ namespace AssetProcessor.Controls {
             };
         }
 
+        public HistogramSettings? GetHistogramSettings() {
+            // Если histogram analysis отключен, возвращаем null
+            if (EnableHistogramCheckBox.IsChecked != true) {
+                return null;
+            }
+
+            var mode = HistogramModeComboBox.SelectedItem != null
+                ? (HistogramMode)HistogramModeComboBox.SelectedItem
+                : HistogramMode.PercentileWithKnee;
+
+            var processingMode = HistogramProcessingModeComboBox.SelectedItem != null
+                ? (HistogramProcessingMode)HistogramProcessingModeComboBox.SelectedItem
+                : HistogramProcessingMode.MetadataOnly;
+
+            var channelMode = HistogramChannelModeComboBox.SelectedItem != null
+                ? (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem
+                : HistogramChannelMode.AverageLuminance;
+
+            var quantization = HistogramQuantizationComboBox.SelectedItem != null
+                ? (HistogramQuantization)HistogramQuantizationComboBox.SelectedItem
+                : HistogramQuantization.Half16;
+
+            return new HistogramSettings {
+                Mode = mode,
+                ProcessingMode = processingMode,
+                ChannelMode = channelMode,
+                Quantization = quantization,
+                PercentileLow = (float)HistogramPercentileLowSlider.Value,
+                PercentileHigh = (float)HistogramPercentileHighSlider.Value,
+                KneeWidth = (float)HistogramKneeWidthSlider.Value,
+                MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value
+            };
+        }
+
         /// <summary>
         /// Устанавливает путь текущей текстуры (для auto-detect normal map)
         /// </summary>

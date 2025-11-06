@@ -394,9 +394,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // --normalize: Нормализует входные нормали к единичной длине
             // Документация: "normalizes input normals to unit length" для linear текстур с 2+ компонентами
             // ВАЖНО: НЕ совместим с --mipmap (pre-generated mipmaps)!
+            // ТАКЖЕ НЕ совместим с --normal_mode когда используется --genmipmap!
+            // Из документации: "Do not use these 2D unit normals to generate X+Y normals for --normal_mode"
             // --normalize работает с ВХОДНЫМ изображением перед генерацией мипмапов
-            // Поэтому добавляем его ТОЛЬКО если передаем одно изображение
-            if (settings.NormalizeVectors && !usePreGeneratedMipmaps) {
+            // Поэтому добавляем его ТОЛЬКО если передаем одно изображение И не используем --normal_mode
+            bool isNormalModeActive = settings.ConvertToNormalMap && !usePreGeneratedMipmaps;
+            if (settings.NormalizeVectors && !usePreGeneratedMipmaps && !isNormalModeActive) {
                 args.Add("--normalize");
             }
 

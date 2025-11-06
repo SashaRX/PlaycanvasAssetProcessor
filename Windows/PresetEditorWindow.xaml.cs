@@ -55,15 +55,12 @@ namespace AssetProcessor.Windows {
                 // Alpha
                 ForceAlphaCheckBox.IsChecked = _originalPreset.ForceAlphaChannel;
                 RemoveAlphaCheckBox.IsChecked = _originalPreset.RemoveAlphaChannel;
-                SeparateAlphaCheckBox.IsChecked = _originalPreset.SeparateAlpha;
 
                 // Normal Maps
                 ConvertToNormalMapCheckBox.IsChecked = _originalPreset.ConvertToNormalMap;
                 NormalizeVectorsCheckBox.IsChecked = _originalPreset.NormalizeVectors;
-                KeepRGBLayoutCheckBox.IsChecked = _originalPreset.KeepRGBLayout;
 
                 // Advanced
-                ClampMipmapsCheckBox.IsChecked = _originalPreset.ClampMipmaps;
                 LinearMipFilterCheckBox.IsChecked = _originalPreset.UseLinearMipFiltering;
                 RemoveTemporaryMipmapsCheckBox.IsChecked = _originalPreset.RemoveTemporaryMipmaps;
 
@@ -305,17 +302,14 @@ namespace AssetProcessor.Windows {
                 WrapMode = (WrapMode)WrapModeComboBox.SelectedItem,
 
                 // Alpha
-                SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
 
                 // Normal Maps
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
-                KeepRGBLayout = KeepRGBLayoutCheckBox.IsChecked ?? false,
 
                 // Advanced
-                ClampMipmaps = ClampMipmapsCheckBox.IsChecked ?? false,
                 UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
                 RemoveTemporaryMipmaps = RemoveTemporaryMipmapsCheckBox.IsChecked ?? true,
 

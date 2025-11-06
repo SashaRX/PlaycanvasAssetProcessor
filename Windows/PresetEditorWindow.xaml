@@ -289,8 +289,6 @@
                     <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
                               Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"
                               ToolTip="Remove alpha channel (--target_type RGB)"/>
-                    <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,3"
-                              ToolTip="For 2-channel normal maps: separate RG into color and alpha"/>
                 </StackPanel>
             </GroupBox>
 
@@ -301,8 +299,6 @@
                               ToolTip="Converts 3-component (R=X,G=Y,B=Z) to 2-channel (RGB=X,A=Y). Only works with automatic mipmaps (--genmipmap)."/>
                     <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,3"
                               ToolTip="Normalize input normal vectors to unit length. Only works with automatic mipmaps (--genmipmap)."/>
-                    <CheckBox x:Name="KeepRGBLayoutCheckBox" Content="Keep RGB Layout (rgb1)" Margin="0,0,0,3"
-                              ToolTip="Keep RGB channels, set alpha to 1 (--input_swizzle rgb1)"/>
                 </StackPanel>
             </GroupBox>
 
@@ -392,8 +388,6 @@
             <!-- Advanced Options -->
             <GroupBox Header="Advanced" Margin="0,0,0,10">
                 <StackPanel>
-                    <CheckBox x:Name="ClampMipmapsCheckBox" Content="Clamp Mipmaps (deprecated)" Margin="0,0,0,3"
-                              ToolTip="Legacy option - use WrapMode instead"/>
                     <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu only)" Margin="0,0,0,3"
                               ToolTip="Use linear filtering for basisu compression"/>
                     <CheckBox x:Name="RemoveTemporaryMipmapsCheckBox" Content="Remove Temporary Mipmaps" IsChecked="True" Margin="0,0,0,3"

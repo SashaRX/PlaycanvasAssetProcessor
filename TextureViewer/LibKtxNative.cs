@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace AssetProcessor.TextureViewer;
@@ -10,6 +11,38 @@ namespace AssetProcessor.TextureViewer;
 internal static class LibKtxNative {
     // Try different DLL names (ktx.dll from vcpkg, libktx.dll from official builds)
     private const string DllName = "ktx";
+
+    private static bool _dllLoaded = false;
+    private static IntPtr _ktxHandle = IntPtr.Zero;
+
+    /// <summary>
+    /// Загружает ktx.dll из указанной директории
+    /// </summary>
+    public static bool LoadKtxDll(string ktxDirectory) {
+        if (_dllLoaded) {
+            return true;
+        }
+
+        var ktxDllPath = Path.Combine(ktxDirectory, "ktx.dll");
+        if (!File.Exists(ktxDllPath)) {
+            return false;
+        }
+
+        _ktxHandle = LoadLibrary(ktxDllPath);
+        if (_ktxHandle == IntPtr.Zero) {
+            return false;
+        }
+
+        _dllLoaded = true;
+        return true;
+    }
+
+    // Kernel32 LoadLibrary для динамической загрузки DLL
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibrary(string lpFileName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool FreeLibrary(IntPtr hModule);
 
     #region Enums
 

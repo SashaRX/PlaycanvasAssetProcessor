@@ -17,7 +17,8 @@ namespace AssetProcessor.TextureConversion.KVD {
         /// <param name="ktx2FilePath">Путь к существующему KTX2 файлу</param>
         /// <param name="tlvFilePath">Путь к TLV binary файлу с метаданными</param>
         /// <param name="key">Ключ для метаданных (по умолчанию "pc.meta")</param>
-        public static bool InjectMetadata(string ktx2FilePath, string tlvFilePath, string key = "pc.meta") {
+        /// <param name="ktxDllDirectory">Директория с ktx.dll (обычно та же, что и toktx.exe)</param>
+        public static bool InjectMetadata(string ktx2FilePath, string tlvFilePath, string key = "pc.meta", string? ktxDllDirectory = null) {
             if (!File.Exists(ktx2FilePath)) {
                 Logger.Error($"KTX2 file not found: {ktx2FilePath}");
                 return false;
@@ -26,6 +27,17 @@ namespace AssetProcessor.TextureConversion.KVD {
             if (!File.Exists(tlvFilePath)) {
                 Logger.Error($"TLV metadata file not found: {tlvFilePath}");
                 return false;
+            }
+
+            // Загружаем ktx.dll если указана директория
+            if (!string.IsNullOrEmpty(ktxDllDirectory)) {
+                Logger.Info($"Loading ktx.dll from directory: {ktxDllDirectory}");
+                if (!LibKtxNative.LoadKtxDll(ktxDllDirectory)) {
+                    Logger.Error($"Failed to load ktx.dll from: {ktxDllDirectory}");
+                    Logger.Error("Make sure ktx.dll exists in the same directory as toktx.exe");
+                    return false;
+                }
+                Logger.Info("✓ ktx.dll loaded successfully");
             }
 
             Logger.Info($"=== KTX2 METADATA INJECTION START ===");

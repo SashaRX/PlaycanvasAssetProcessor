@@ -374,9 +374,23 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     // POST-PROCESSING: Inject TLV metadata if available
                     if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
                         Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
+
+                        // Получаем директорию toktx для загрузки ktx.dll
+                        var ktxDllDirectory = _toktxWrapper.ToktxDirectory;
+                        if (!string.IsNullOrEmpty(ktxDllDirectory)) {
+                            Logger.Info($"toktx directory: {ktxDllDirectory}");
+                        } else {
+                            Logger.Warn("toktx directory not found (toktx might be in PATH)");
+                        }
+
                         foreach (var kvPair in kvdBinaryFiles) {
                             Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
-                            bool injected = Ktx2MetadataInjector.InjectMetadata(outputPath, kvPair.Value, kvPair.Key);
+                            bool injected = Ktx2MetadataInjector.InjectMetadata(
+                                outputPath,
+                                kvPair.Value,
+                                kvPair.Key,
+                                ktxDllDirectory
+                            );
                             if (injected) {
                                 Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
                             } else {

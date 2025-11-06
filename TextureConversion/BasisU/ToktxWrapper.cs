@@ -12,6 +12,24 @@ namespace AssetProcessor.TextureConversion.BasisU {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly string _toktxExecutablePath;
 
+        /// <summary>
+        /// Директория с toktx.exe (для загрузки ktx.dll)
+        /// </summary>
+        public string? ToktxDirectory {
+            get {
+                try {
+                    // Если путь абсолютный - возвращаем директорию
+                    if (Path.IsPathRooted(_toktxExecutablePath)) {
+                        return Path.GetDirectoryName(_toktxExecutablePath);
+                    }
+                    // Если относительный (например "toktx") - пытаемся найти в PATH
+                    return null;
+                } catch {
+                    return null;
+                }
+            }
+        }
+
         public ToktxWrapper(string toktxExecutablePath = "toktx") {
             _toktxExecutablePath = toktxExecutablePath;
         }

@@ -292,28 +292,23 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // КРИТИЧНО: --assign_oetf/--convert_oetf ДОЛЖНЫ быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
             //
-            // ВАЖНО: --normal_mode требует linear входные данные!
-            // Поэтому для нормал мапов используем --convert_oetf linear вместо --assign_oetf,
-            // чтобы toktx конвертировал sRGB PNG в linear перед применением --normal_mode
+            // ВАЖНО: --normal_mode требует linear входные данные, НО конфликтует с флагами --assign_oetf/--convert_oetf!
+            // Решение: для нормал мапов НЕ указываем флаги colorspace, позволяем toktx автоматически определить их
             bool willUseNormalMode = settings.ConvertToNormalMap && mipmapPaths.Count == 1;
 
-            switch (settings.ColorSpace) {
-                case ColorSpace.Linear:
-                    if (willUseNormalMode) {
-                        // Для --normal_mode используем --convert_oetf чтобы конвертировать sRGB PNG в linear
-                        args.Add("--convert_oetf");
-                        args.Add("linear");
-                    } else {
-                        // Для обычных текстур используем --assign_oetf
+            // Для нормал мапов не добавляем НИКАКИХ флагов colorspace - toktx сам определит
+            if (!willUseNormalMode) {
+                switch (settings.ColorSpace) {
+                    case ColorSpace.Linear:
                         args.Add("--assign_oetf");
                         args.Add("linear");
-                    }
-                    break;
-                case ColorSpace.SRGB:
-                    args.Add("--assign_oetf");
-                    args.Add("srgb");
-                    break;
-                // ColorSpace.Auto - не добавляем флаг
+                        break;
+                    case ColorSpace.SRGB:
+                        args.Add("--assign_oetf");
+                        args.Add("srgb");
+                        break;
+                    // ColorSpace.Auto - не добавляем флаг
+                }
             }
 
             // ============================================

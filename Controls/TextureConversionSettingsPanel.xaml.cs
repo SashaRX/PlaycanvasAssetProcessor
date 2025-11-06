@@ -384,6 +384,7 @@ namespace AssetProcessor.Controls {
                 ClampMipmaps = false, // Deprecated - теперь используем WrapMode
                 UseLinearMipFiltering = false, // Removed from UI
                 GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
+                UseCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false,
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
                 KeepRGBLayout = false, // Removed from UI

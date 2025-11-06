@@ -308,7 +308,7 @@
                               ToolTip="Filter for manual mipmap generation (app-side). Use Max for anti-aliasing, Min for valleys. Only for Toksvig."/>
                     <TextBlock Text="⚙ Max = take max of 4 pixels; Min = take min" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
 
-                    <!-- Toktx Mipmap Filter (for toktx --genmipmap) -->
+                    <!-- Toktx Mipmap Filter (for toktx genmipmap option) -->
                     <TextBlock Text="Toktx Mip Filter (--filter):" Style="{StaticResource LabelStyle}"/>
                     <ComboBox x:Name="ToktxFilterComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"

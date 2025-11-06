@@ -1,3 +1,5 @@
+using System.IO;
+using System.Linq;
 using AssetProcessor.TextureConversion.Core;
 
 namespace AssetProcessor.TextureConversion.KVD {

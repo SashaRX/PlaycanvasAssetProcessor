@@ -30,6 +30,23 @@ namespace AssetProcessor.TextureConversion.BasisU {
         }
 
         public KtxCreateWrapper(string ktxExecutablePath = "ktx") {
+            // Если передан путь к toktx.exe, попробуем найти ktx.exe в той же директории
+            if (ktxExecutablePath.EndsWith("toktx.exe", StringComparison.OrdinalIgnoreCase) ||
+                ktxExecutablePath.EndsWith("toktx", StringComparison.OrdinalIgnoreCase)) {
+                var directory = Path.GetDirectoryName(ktxExecutablePath);
+                if (!string.IsNullOrEmpty(directory)) {
+                    var ktxPath = Path.Combine(directory, "ktx.exe");
+                    if (File.Exists(ktxPath)) {
+                        Logger.Info($"Auto-detected ktx.exe from toktx.exe path: {ktxPath}");
+                        _ktxExecutablePath = ktxPath;
+                        return;
+                    } else {
+                        Logger.Warn($"toktx.exe path provided, but ktx.exe not found at: {ktxPath}");
+                        Logger.Warn("ktx create requires ktx.exe, not toktx.exe");
+                    }
+                }
+            }
+
             _ktxExecutablePath = ktxExecutablePath;
         }
 

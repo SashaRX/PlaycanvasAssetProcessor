@@ -59,7 +59,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                 // Проверяем доступность ktx
                 if (!await _ktxCreateWrapper.IsAvailableAsync()) {
-                    throw new Exception("ktx executable not found. Please specify path to ktx.exe in settings (e.g., KTX-Software/build_ktx/Release/ktx.exe)");
+                    throw new Exception(
+                        "ktx.exe executable not found.\n\n" +
+                        "KtxCreateWrapper requires ktx.exe (not toktx.exe).\n" +
+                        "Please check your KTX-Software build directory:\n" +
+                        "  Expected: KTX-Software/build_ktx/Release/ktx.exe\n\n" +
+                        "If ktx.exe is not available in your build, you may need to:\n" +
+                        "  1. Rebuild KTX-Software with the latest version, OR\n" +
+                        "  2. Revert to using ToktxWrapper (contact developer)");
                 }
 
                 // Загружаем изображение

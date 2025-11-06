@@ -271,15 +271,102 @@ namespace AssetProcessor.Helpers {
 
         public static void ProcessImage(BitmapSource bitmapSource, int[] redHistogram, int[] greenHistogram, int[] blueHistogram) {
             using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
-            Parallel.For(0, image.Height, y => {
+
+            // Create thread-local histograms to avoid race conditions
+            object lockObject = new();
+
+            Parallel.For(0, image.Height, () => {
+                // Thread-local initialization
+                return (Red: new int[256], Green: new int[256], Blue: new int[256]);
+            },
+            (y, loopState, localHistograms) => {
+                // Process each row with thread-local histograms
                 Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
                     Rgba32 pixel = pixelRow[x];
-                    redHistogram[pixel.R]++;
-                    greenHistogram[pixel.G]++;
-                    blueHistogram[pixel.B]++;
+                    localHistograms.Red[pixel.R]++;
+                    localHistograms.Green[pixel.G]++;
+                    localHistograms.Blue[pixel.B]++;
+                }
+                return localHistograms;
+            },
+            localHistograms => {
+                // Merge thread-local histograms into global histograms
+                lock (lockObject) {
+                    for (int i = 0; i < 256; i++) {
+                        redHistogram[i] += localHistograms.Red[i];
+                        greenHistogram[i] += localHistograms.Green[i];
+                        blueHistogram[i] += localHistograms.Blue[i];
+                    }
                 }
             });
+        }
+
+        public static class HistogramStatistics {
+            public double Min { get; set; }
+            public double Max { get; set; }
+            public double Mean { get; set; }
+            public double Median { get; set; }
+            public double StdDev { get; set; }
+            public long TotalPixels { get; set; }
+        }
+
+        public static HistogramStatistics CalculateHistogramStatistics(int[] histogram) {
+            long totalPixels = 0;
+            double weightedSum = 0;
+            int min = -1;
+            int max = -1;
+
+            // Calculate total pixels, weighted sum, min, and max
+            for (int i = 0; i < histogram.Length; i++) {
+                long count = histogram[i];
+                if (count > 0) {
+                    if (min == -1) min = i;
+                    max = i;
+                    totalPixels += count;
+                    weightedSum += i * count;
+                }
+            }
+
+            if (totalPixels == 0) {
+                return new HistogramStatistics {
+                    Min = 0, Max = 0, Mean = 0, Median = 0, StdDev = 0, TotalPixels = 0
+                };
+            }
+
+            // Calculate mean
+            double mean = weightedSum / totalPixels;
+
+            // Calculate median
+            long halfPixels = totalPixels / 2;
+            long accumulatedPixels = 0;
+            int median = 0;
+            for (int i = 0; i < histogram.Length; i++) {
+                accumulatedPixels += histogram[i];
+                if (accumulatedPixels >= halfPixels) {
+                    median = i;
+                    break;
+                }
+            }
+
+            // Calculate standard deviation
+            double varianceSum = 0;
+            for (int i = 0; i < histogram.Length; i++) {
+                if (histogram[i] > 0) {
+                    double diff = i - mean;
+                    varianceSum += diff * diff * histogram[i];
+                }
+            }
+            double stdDev = Math.Sqrt(varianceSum / totalPixels);
+
+            return new HistogramStatistics {
+                Min = min,
+                Max = max,
+                Mean = mean,
+                Median = median,
+                StdDev = stdDev,
+                TotalPixels = totalPixels
+            };
         }
 
         public static (int width, int height)? GetLocalImageResolution(string imagePath) {

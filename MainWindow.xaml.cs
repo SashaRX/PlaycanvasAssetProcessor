@@ -1277,6 +1277,16 @@ namespace AssetProcessor {
             // Обработка изображения и заполнение гистограммы
             MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
 
+            // Calculate combined histogram for statistics (luminance)
+            int[] combinedHistogram = new int[256];
+            for (int i = 0; i < 256; i++) {
+                // Use luminance formula: 0.299*R + 0.587*G + 0.114*B
+                combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
+            }
+
+            // Calculate statistics
+            var stats = MainWindowHelpers.CalculateHistogramStatistics(combinedHistogram);
+
             if (!isGray) {
                 MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
                 MainWindowHelpers.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
@@ -1300,7 +1310,10 @@ namespace AssetProcessor {
                 MinorGridlineThickness = 0.5
             });
 
-            Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+            Dispatcher.Invoke(() => {
+                HistogramPlotView.Model = histogramModel;
+                UpdateHistogramStatisticsUI(stats);
+            });
         }
 
         private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
@@ -1315,6 +1328,15 @@ namespace AssetProcessor {
 
                 // Обработка изображения и заполнение гистограммы
                 MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
+
+                // Calculate combined histogram for statistics
+                int[] combinedHistogram = new int[256];
+                for (int i = 0; i < 256; i++) {
+                    combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
+                }
+
+                // Calculate statistics
+                var stats = MainWindowHelpers.CalculateHistogramStatistics(combinedHistogram);
 
                 if (!isGray) {
                     MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
@@ -1339,8 +1361,20 @@ namespace AssetProcessor {
                     MinorGridlineThickness = 0.5
                 });
 
-                Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+                Dispatcher.Invoke(() => {
+                    HistogramPlotView.Model = histogramModel;
+                    UpdateHistogramStatisticsUI(stats);
+                });
             });
+        }
+
+        private void UpdateHistogramStatisticsUI(MainWindowHelpers.HistogramStatistics stats) {
+            HistogramMinTextBlock.Text = $"{stats.Min:F0}";
+            HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
+            HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
+            HistogramMedianTextBlock.Text = $"{stats.Median:F0}";
+            HistogramStdDevTextBlock.Text = $"{stats.StdDev:F2}";
+            HistogramPixelsTextBlock.Text = $"{stats.TotalPixels:N0}";
         }
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {

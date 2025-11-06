@@ -541,9 +541,50 @@
 
                         <!-- Histogram Section -->
                         <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
-                            <Border BorderBrush="Black" BorderThickness="1" Margin="0" Height="128">
-                                <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
-                            </Border>
+                            <StackPanel Orientation="Vertical">
+                                <!-- Histogram Plot -->
+                                <Border BorderBrush="Black" BorderThickness="1" Margin="0,0,0,4" Height="128">
+                                    <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
+                                </Border>
+
+                                <!-- Histogram Statistics -->
+                                <Border BorderBrush="#CCCCCC" BorderThickness="1" Background="#F5F5F5" Padding="6,4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Row 1 -->
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Min:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
+                                        <TextBlock x:Name="HistogramMinTextBlock" Grid.Row="0" Grid.Column="1" Text="0" FontSize="9" Margin="0,0,8,2"/>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Max:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
+                                        <TextBlock x:Name="HistogramMaxTextBlock" Grid.Row="0" Grid.Column="3" Text="255" FontSize="9" Margin="0,0,0,2"/>
+
+                                        <!-- Row 2 -->
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Mean:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
+                                        <TextBlock x:Name="HistogramMeanTextBlock" Grid.Row="1" Grid.Column="1" Text="127.5" FontSize="9" Margin="0,0,8,2"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Median:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
+                                        <TextBlock x:Name="HistogramMedianTextBlock" Grid.Row="1" Grid.Column="3" Text="128" FontSize="9" Margin="0,0,0,2"/>
+
+                                        <!-- Row 3 -->
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="StdDev:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,0"/>
+                                        <TextBlock x:Name="HistogramStdDevTextBlock" Grid.Row="2" Grid.Column="1" Text="45.2" FontSize="9" Margin="0,0,8,0"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Pixels:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,0"/>
+                                        <TextBlock x:Name="HistogramPixelsTextBlock" Grid.Row="2" Grid.Column="3" Text="0" FontSize="9" Margin="0,0,0,0"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
                         </Expander>
 
                         <!-- Conversion Settings Panel -->

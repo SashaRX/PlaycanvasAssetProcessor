@@ -321,10 +321,18 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // Клампируем каждый канал
-                    byte r = (byte)Math.Clamp((int)(pixel.R * Math.Clamp(1.0f, lo, hi)), 0, 255);
-                    byte g = (byte)Math.Clamp((int)(pixel.G * Math.Clamp(1.0f, lo, hi)), 0, 255);
-                    byte b = (byte)Math.Clamp((int)(pixel.B * Math.Clamp(1.0f, lo, hi)), 0, 255);
+                    // Нормализуем к [0,1], клампируем к [lo, hi], возвращаем к [0,255]
+                    float r_norm = pixel.R / 255.0f;
+                    float g_norm = pixel.G / 255.0f;
+                    float b_norm = pixel.B / 255.0f;
+
+                    float r_clamped = Math.Clamp(r_norm, lo, hi);
+                    float g_clamped = Math.Clamp(g_norm, lo, hi);
+                    float b_clamped = Math.Clamp(b_norm, lo, hi);
+
+                    byte r = (byte)(r_clamped * 255);
+                    byte g = (byte)(g_clamped * 255);
+                    byte b = (byte)(b_clamped * 255);
 
                     pixelRow[x] = new Rgba32(r, g, b, pixel.A);
                 }

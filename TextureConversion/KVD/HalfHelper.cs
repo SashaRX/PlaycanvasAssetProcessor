@@ -1,10 +1,12 @@
 using System.Runtime.InteropServices;
+using NLog;
 
 namespace AssetProcessor.TextureConversion.KVD {
     /// <summary>
     /// Вспомогательный класс для работы с Half float (16-bit)
     /// </summary>
     public static class HalfHelper {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// Конвертирует float в half (16-bit)
         /// </summary>
@@ -116,9 +118,17 @@ namespace AssetProcessor.TextureConversion.KVD {
 
         /// <summary>
         /// Упаковывает scale и offset в uint32 (2×16-bit unsigned normalized)
-        /// scale и offset должны быть в диапазоне [0, 1]
+        /// ВАЖНО: scale и offset должны быть в диапазоне [0, 1]
+        /// Для отрицательных offset используйте Half16 или Float32 квантование!
         /// </summary>
         public static byte[] PackScaleOffsetToUInt32(float scale, float offset) {
+            // Валидация: PackedUInt32 не поддерживает отрицательные значения
+            if (offset < 0.0f || offset > 1.0f || scale < 0.0f || scale > 1.0f) {
+                Logger.Warn($"PackScaleOffsetToUInt32: значения вне диапазона [0,1]! scale={scale:F4}, offset={offset:F4}");
+                Logger.Warn("PackedUInt32 формат не поддерживает отрицательные offset. Используйте Half16 или Float32 квантование.");
+                Logger.Warn("Значения будут клампированы к [0,1], что может привести к неправильной денормализации на GPU!");
+            }
+
             // Клампим к [0, 1]
             scale = Math.Clamp(scale, 0.0f, 1.0f);
             offset = Math.Clamp(offset, 0.0f, 1.0f);

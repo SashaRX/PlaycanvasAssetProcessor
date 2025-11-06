@@ -229,8 +229,8 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Color Space & Advanced Options -->
-            <GroupBox Header="Color Space & Advanced" Margin="0,0,0,10">
+            <!-- Color Space &amp; Advanced Options -->
+            <GroupBox Header="Color Space &amp; Advanced" Margin="0,0,0,10">
                 <StackPanel>
                     <!-- Color Space -->
                     <Grid Margin="0,0,0,5">

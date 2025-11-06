@@ -390,8 +390,8 @@ namespace AssetProcessor.TextureConversion.Analysis {
                     return 0.0f;
                 }
                 // Сглаженный переход к 0
-                float smoothedValue = lo - knee * SmoothStep(t);
-                return (smoothedValue - lo) / (hi - lo);
+                float smoothedLow = lo - knee * SmoothStep(t);
+                return (smoothedLow - lo) / (hi - lo);
             }
 
             // Если выше hi - применяем сглаживание и затем нормализуем
@@ -401,8 +401,8 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 return 1.0f;
             }
             // Сглаженный переход к 1
-            float smoothedValue = hi + knee * SmoothStep(tHigh);
-            return (smoothedValue - lo) / (hi - lo);
+            float smoothedHigh = hi + knee * SmoothStep(tHigh);
+            return (smoothedHigh - lo) / (hi - lo);
         }
     }
 }

@@ -458,8 +458,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                 SeparateAlpha = this.SeparateAlpha,
                 ForceAlphaChannel = this.ForceAlphaChannel,
                 RemoveAlphaChannel = this.RemoveAlphaChannel,
-                TreatAsLinear = this.TreatAsLinear,
-                TreatAsSRGB = this.TreatAsSRGB,
+                // Конвертируем старые свойства в новое ColorSpace для обратной совместимости
+                ColorSpace = this.TreatAsLinear ? ColorSpace.Linear :
+                             this.TreatAsSRGB ? ColorSpace.SRGB :
+                             ColorSpace.Auto,
                 ClampMipmaps = this.ClampMipmaps,
                 UseLinearMipFiltering = this.UseLinearMipFiltering,
                 ConvertToNormalMap = this.ConvertToNormalMap,

@@ -99,8 +99,18 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool ForceAlphaChannel { get; set; } = false;
         public bool RemoveAlphaChannel { get; set; } = false;
         public bool ClampMipmaps { get; set; } = false;
+
+        // Новая система Color Space
+        public ColorSpace ColorSpace { get; set; } = ColorSpace.Auto;
+
+        // Старые поля для обратной совместимости (deprecated)
         public bool TreatAsLinear { get; set; } = false;
         public bool TreatAsSRGB { get; set; } = false;
+
+        // Новые настройки toktx
+        public ToktxFilterType ToktxMipFilter { get; set; } = ToktxFilterType.Kaiser;
+        public WrapMode WrapMode { get; set; } = WrapMode.Clamp;
+
         public bool UseLinearMipFiltering { get; set; } = false;
         public bool GenerateMipmaps { get; set; } = true;
         public bool ConvertToNormalMap { get; set; } = false;
@@ -112,6 +122,13 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// Создает CompressionSettings из настроек с применением глобальных настроек
         /// </summary>
         public CompressionSettings ToCompressionSettings(GlobalTextureConversionSettings globalSettings) {
+            // Определяем ColorSpace: новая система имеет приоритет, затем старые флаги для обратной совместимости
+            var colorSpace = ColorSpace;
+            if (colorSpace == ColorSpace.Auto) {
+                if (TreatAsLinear) colorSpace = ColorSpace.Linear;
+                else if (TreatAsSRGB) colorSpace = ColorSpace.SRGB;
+            }
+
             return new CompressionSettings {
                 CompressionFormat = CompressionFormat,
                 OutputFormat = OutputFormat,
@@ -125,7 +142,6 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ThreadCount = globalSettings.ThreadCount,
                 PerceptualMode = PerceptualMode,
                 UseSSE41 = globalSettings.UseSSE41,
-                UseOpenCL = globalSettings.UseOpenCL,
                 KTX2Supercompression = KTX2Supercompression,
                 KTX2ZstdLevel = KTX2ZstdLevel,
                 UseETC1SRDO = UseETC1SRDO,
@@ -133,8 +149,9 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ForceAlphaChannel = ForceAlphaChannel,
                 RemoveAlphaChannel = RemoveAlphaChannel,
                 ClampMipmaps = ClampMipmaps,
-                TreatAsLinear = TreatAsLinear,
-                TreatAsSRGB = TreatAsSRGB,
+                ColorSpace = colorSpace,
+                ToktxMipFilter = ToktxMipFilter,
+                WrapMode = WrapMode,
                 UseLinearMipFiltering = UseLinearMipFiltering,
                 ConvertToNormalMap = ConvertToNormalMap,
                 NormalizeVectors = NormalizeVectors,
@@ -163,8 +180,9 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ForceAlphaChannel = settings.ForceAlphaChannel,
                 RemoveAlphaChannel = settings.RemoveAlphaChannel,
                 ClampMipmaps = settings.ClampMipmaps,
-                TreatAsLinear = settings.TreatAsLinear,
-                TreatAsSRGB = settings.TreatAsSRGB,
+                ColorSpace = settings.ColorSpace,
+                ToktxMipFilter = settings.ToktxMipFilter,
+                WrapMode = settings.WrapMode,
                 UseLinearMipFiltering = settings.UseLinearMipFiltering,
                 GenerateMipmaps = settings.GenerateMipmaps,
                 ConvertToNormalMap = settings.ConvertToNormalMap,
@@ -209,16 +227,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// </summary>
         public int MaxParallelTasks { get; set; } = 4;
 
-        // Глобальные настройки производительности basisu
+        // Глобальные настройки производительности basisu/toktx
         /// <summary>
         /// Использовать SSE4.1 инструкции (глобально)
         /// </summary>
         public bool UseSSE41 { get; set; } = true;
-
-        /// <summary>
-        /// Использовать OpenCL для GPU ускорения (глобально)
-        /// </summary>
-        public bool UseOpenCL { get; set; } = false;
 
         /// <summary>
         /// Использовать многопоточность (глобально)

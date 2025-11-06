@@ -179,7 +179,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // Перцептивный режим
             // basisu по умолчанию использует perceptual режим для фотографического контента
             // Опция -linear отключает perceptual режим для не-фотографического контента
-            if (settings.TreatAsLinear || (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S)) {
+            if (settings.ColorSpace == ColorSpace.Linear || (!settings.PerceptualMode && settings.CompressionFormat == CompressionFormat.ETC1S)) {
                 args.Add("-linear");
             }
 
@@ -213,11 +213,6 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // SSE4.1 - это опция компиляции, а не runtime флаг
             // basisu автоматически использует SSE4.1 если был скомпилирован с поддержкой
             // Нет runtime флага для отключения SSE
-
-            // OpenCL
-            if (settings.UseOpenCL) {
-                args.Add("-opencl");
-            }
 
             // KTX2 Supercompression
             if (settings.OutputFormat == OutputFormat.KTX2) {

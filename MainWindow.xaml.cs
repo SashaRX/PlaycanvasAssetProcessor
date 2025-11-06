@@ -980,6 +980,11 @@ namespace AssetProcessor {
             } else if (mode == TexturePreviewSourceMode.Ktx2) {
                 isKtxPreviewActive = true;
 
+                // Update histogram from source image (KTX2 is compressed, use source for histogram)
+                if (originalFileBitmapSource != null) {
+                    _ = UpdateHistogramAsync(originalFileBitmapSource);
+                }
+
                 // Save current mask before switching
                 string? savedMask = currentActiveChannelMask;
 
@@ -1961,9 +1966,12 @@ namespace AssetProcessor {
                     // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
                     if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                         originalBitmapSource = cachedImage;
-                        _ = UpdateHistogramAsync(originalBitmapSource);
                         ShowOriginalImage();
                     }
+
+                    // Always update histogram when source image is loaded (even if showing KTX2)
+                    // Use the source bitmap for histogram calculation
+                    _ = UpdateHistogramAsync(cachedImage);
 
                     UpdatePreviewSourceControls();
                 });
@@ -1991,9 +1999,12 @@ namespace AssetProcessor {
                 // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
                 if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                     originalBitmapSource = thumbnailImage;
-                    _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
                 }
+
+                // Always update histogram when source image is loaded (even if showing KTX2)
+                // Use the source bitmap for histogram calculation
+                _ = UpdateHistogramAsync(thumbnailImage);
 
                 UpdatePreviewSourceControls();
             });

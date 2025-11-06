@@ -6,7 +6,7 @@ namespace AssetProcessor.TextureConversion.KVD {
     /// <summary>
     /// Writer для TLV (Type-Length-Value) формата KTX2 Key-Value Data
     /// </summary>
-    public class TLVWriter {
+    public class TLVWriter : IDisposable {
         private readonly MemoryStream _stream;
         private readonly BinaryWriter _writer;
 
@@ -177,7 +177,7 @@ namespace AssetProcessor.TextureConversion.KVD {
     /// <summary>
     /// Reader для TLV формата (для отладки и верификации)
     /// </summary>
-    public class TLVReader {
+    public class TLVReader : IDisposable {
         private readonly BinaryReader _reader;
 
         public TLVReader(byte[] data) {

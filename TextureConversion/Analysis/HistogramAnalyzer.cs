@@ -1,6 +1,7 @@
 using AssetProcessor.TextureConversion.Core;
 using NLog;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace AssetProcessor.TextureConversion.Analysis {

@@ -28,7 +28,7 @@ namespace AssetProcessor.TextureConversion.Examples {
                 WriteHistogramParams = true
             };
 
-            var mipProfile = MipGenerationProfile.CreateForAlbedo();
+            var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
 
             var result = await pipeline.ConvertTextureAsync(
                 inputPath: "input_albedo.png",
@@ -66,7 +66,7 @@ namespace AssetProcessor.TextureConversion.Examples {
                 WriteHistogramParams = true
             };
 
-            var mipProfile = MipGenerationProfile.CreateForAlbedo();
+            var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
 
             await pipeline.ConvertTextureAsync(
                 inputPath: "hdr_texture.png",
@@ -98,7 +98,7 @@ namespace AssetProcessor.TextureConversion.Examples {
                 WriteHistogramParams = true
             };
 
-            var mipProfile = MipGenerationProfile.CreateForAlbedo();
+            var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
 
             var result = await pipeline.ConvertTextureAsync(
                 inputPath: "colored_texture.png",
@@ -147,7 +147,7 @@ namespace AssetProcessor.TextureConversion.Examples {
                 WriteHistogramParams = true
             };
 
-            var mipProfile = MipGenerationProfile.CreateForAlbedo();
+            var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
 
             await pipeline.ConvertTextureAsync(
                 inputPath: "noisy_texture.png",
@@ -171,7 +171,7 @@ namespace AssetProcessor.TextureConversion.Examples {
                 HistogramAnalysis = null  // или HistogramSettings.CreateDefault()
             };
 
-            var mipProfile = MipGenerationProfile.CreateForNormal();
+            var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
 
             await pipeline.ConvertTextureAsync(
                 inputPath: "normal_map.png",

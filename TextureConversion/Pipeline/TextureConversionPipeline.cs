@@ -59,7 +59,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                 // Проверяем доступность ktx
                 if (!await _ktxCreateWrapper.IsAvailableAsync()) {
-                    throw new Exception("ktx executable not found. Please install KTX-Software: winget install KhronosGroup.KTX-Software");
+                    throw new Exception("ktx executable not found. Please specify path to ktx.exe in settings (e.g., KTX-Software/build_ktx/Release/ktx.exe)");
                 }
 
                 // Загружаем изображение

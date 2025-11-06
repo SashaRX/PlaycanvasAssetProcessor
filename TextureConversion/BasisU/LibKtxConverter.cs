@@ -38,15 +38,32 @@ namespace AssetProcessor.TextureConversion.BasisU {
             var result = new ToktxResult();
 
             try {
-                // Загружаем ktx.dll если указана директория
+                // Загружаем ktx.dll
+                Logger.Info("=== KTX.DLL LOADING ===");
+
                 if (!string.IsNullOrEmpty(_ktxDllDirectory)) {
-                    Logger.Info($"Loading ktx.dll from: {_ktxDllDirectory}");
-                    if (!LibKtxNative.LoadKtxDll(_ktxDllDirectory)) {
-                        result.Error = $"Failed to load ktx.dll from {_ktxDllDirectory}";
-                        return result;
-                    }
-                    Logger.Info("✓ ktx.dll loaded successfully");
+                    Logger.Info($"Trying to load ktx.dll from toktx directory: {_ktxDllDirectory}");
+                } else {
+                    Logger.Info("No toktx directory specified, will search in exe directory");
                 }
+
+                var exeDir = AppDomain.CurrentDomain.BaseDirectory;
+                Logger.Info($"Exe directory: {exeDir}");
+                Logger.Info($"Looking for ktx.dll in:");
+                Logger.Info($"  1. {Path.Combine(exeDir, "ktx.dll")} (next to AssetProcessor.exe)");
+
+                if (!string.IsNullOrEmpty(_ktxDllDirectory)) {
+                    Logger.Info($"  2. {Path.Combine(_ktxDllDirectory, "ktx.dll")} (toktx directory)");
+                }
+
+                if (!LibKtxNative.LoadKtxDll(_ktxDllDirectory)) {
+                    result.Error = "Failed to load ktx.dll. Please place ktx.dll next to AssetProcessor.exe or specify correct toktx directory.";
+                    Logger.Error(result.Error);
+                    Logger.Error($"DLL status: {LibKtxNative.GetLoadStatus()}");
+                    return result;
+                }
+
+                Logger.Info($"✓ {LibKtxNative.GetLoadStatus()}");
 
                 Logger.Info($"=== LIBKTX TEXTURE CONVERSION START ===");
                 Logger.Info($"  Mipmaps: {mipmapPaths.Count}");

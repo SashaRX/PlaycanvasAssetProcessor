@@ -16,25 +16,62 @@ internal static class LibKtxNative {
     private static IntPtr _ktxHandle = IntPtr.Zero;
 
     /// <summary>
-    /// Загружает ktx.dll из указанной директории
+    /// Загружает ktx.dll из указанной директории или рядом с exe
     /// </summary>
-    public static bool LoadKtxDll(string ktxDirectory) {
+    public static bool LoadKtxDll(string? ktxDirectory = null) {
         if (_dllLoaded) {
             return true;
         }
 
-        var ktxDllPath = Path.Combine(ktxDirectory, "ktx.dll");
-        if (!File.Exists(ktxDllPath)) {
-            return false;
+        // Список мест для поиска ktx.dll (в порядке приоритета)
+        var searchPaths = new List<string>();
+
+        // 1. Рядом с AssetProcessor.exe (highest priority)
+        var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        searchPaths.Add(Path.Combine(exeDirectory, "ktx.dll"));
+
+        // 2. В указанной директории (если задана)
+        if (!string.IsNullOrEmpty(ktxDirectory)) {
+            searchPaths.Add(Path.Combine(ktxDirectory, "ktx.dll"));
         }
 
-        _ktxHandle = LoadLibrary(ktxDllPath);
-        if (_ktxHandle == IntPtr.Zero) {
-            return false;
+        // 3. Пробуем загрузить из каждого места
+        foreach (var ktxDllPath in searchPaths) {
+            Console.WriteLine($"[LibKtxNative] Checking: {ktxDllPath}");
+
+            if (!File.Exists(ktxDllPath)) {
+                Console.WriteLine($"[LibKtxNative]   File not found");
+                continue;
+            }
+
+            Console.WriteLine($"[LibKtxNative]   File exists, attempting LoadLibrary...");
+            _ktxHandle = LoadLibrary(ktxDllPath);
+
+            if (_ktxHandle != IntPtr.Zero) {
+                Console.WriteLine($"[LibKtxNative]   ✓ Loaded successfully (handle: 0x{_ktxHandle:X})");
+                _dllLoaded = true;
+                _loadedFrom = ktxDllPath;
+                return true;
+            } else {
+                var error = Marshal.GetLastWin32Error();
+                Console.WriteLine($"[LibKtxNative]   ✗ LoadLibrary failed (Win32 error: {error})");
+            }
         }
 
-        _dllLoaded = true;
-        return true;
+        Console.WriteLine($"[LibKtxNative] Failed to load ktx.dll from any location");
+        return false;
+    }
+
+    private static string? _loadedFrom = null;
+
+    /// <summary>
+    /// Возвращает статус загрузки ktx.dll для отладки
+    /// </summary>
+    public static string GetLoadStatus() {
+        if (_dllLoaded) {
+            return $"ktx.dll loaded from: {_loadedFrom ?? "unknown"} (handle: 0x{_ktxHandle:X})";
+        }
+        return "ktx.dll not loaded";
     }
 
     // Kernel32 LoadLibrary для динамической загрузки DLL

@@ -176,7 +176,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
                             0, // layer
                             0, // faceSlice
                             dataPtr,
-                            (UIntPtr)dataSize
+                            (nuint)dataSize
                         );
 
                         if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {

@@ -442,6 +442,7 @@ internal static class LibKtxNative {
 
     /// <summary>
     /// Set image data for a specific mip level, layer, and face from memory (KTX2 specific).
+    /// Signature: KTX_error_code ktxTexture2_SetImageFromMemory(ktxTexture2 *This, ktx_uint32_t level, ktx_uint32_t layer, ktx_uint32_t faceSlice, const ktx_uint8_t *src, ktx_size_t srcSize)
     /// </summary>
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern KtxErrorCode ktxTexture2_SetImageFromMemory(
@@ -450,7 +451,7 @@ internal static class LibKtxNative {
         uint layer,
         uint faceSlice,
         IntPtr src,
-        UIntPtr srcSize);
+        nuint srcSize);
 
     /// <summary>
     /// Compress texture using Basis Universal with extended parameters.

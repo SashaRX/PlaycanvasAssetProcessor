@@ -90,10 +90,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// <param name="mipmapPaths">Пути к мипмапам (от mip0 до mipN)</param>
         /// <param name="outputPath">Путь к выходному .ktx2 файлу</param>
         /// <param name="settings">Настройки сжатия</param>
+        /// <param name="kvdBinaryFiles">Дополнительные бинарные Key-Value файлы для встраивания</param>
         public async Task<ToktxResult> PackMipmapsAsync(
             List<string> mipmapPaths,
             string outputPath,
-            CompressionSettings settings) {
+            CompressionSettings settings,
+            Dictionary<string, string>? kvdBinaryFiles = null) {
 
             var result = new ToktxResult {
                 OutputPath = outputPath
@@ -143,7 +145,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 }
 
                 // Собираем аргументы командной строки
-                var args = BuildArguments(mipmapPaths, outputPath, settings);
+                var args = BuildArguments(mipmapPaths, outputPath, settings, kvdBinaryFiles);
 
                 Logger.Info($"=== TOKTX COMMAND ===");
                 Logger.Info($"  Executable: {_toktxExecutablePath}");
@@ -275,7 +277,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
         private List<string> BuildArguments(
             List<string> mipmapPaths,
             string outputPath,
-            CompressionSettings settings) {
+            CompressionSettings settings,
+            Dictionary<string, string>? kvdBinaryFiles = null) {
 
             var args = new List<string>();
 
@@ -454,6 +457,16 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // --no_sse - отключить SSE оптимизации (если UseSSE41 = false)
             if (!settings.UseSSE41) {
                 args.Add("--no_sse");
+            }
+
+            // ============================================
+            // KEY-VALUE DATA (KVD) - binary metadata
+            // ============================================
+            if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
+                foreach (var kvPair in kvdBinaryFiles) {
+                    args.Add("--kv-binary");
+                    args.Add($"{kvPair.Key}={kvPair.Value}");
+                }
             }
 
             // ============================================

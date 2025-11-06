@@ -1,6 +1,8 @@
 using System.IO;
+using AssetProcessor.TextureConversion.Analysis;
 using AssetProcessor.TextureConversion.BasisU;
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.TextureConversion.KVD;
 using AssetProcessor.TextureConversion.MipGeneration;
 using NLog;
 using SixLabors.ImageSharp;
@@ -17,12 +19,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         private readonly ToktxWrapper _toktxWrapper;
         private readonly ToksvigProcessor _toksvigProcessor;
         private readonly NormalMapMatcher _normalMapMatcher;
+        private readonly HistogramAnalyzer _histogramAnalyzer;
 
         public TextureConversionPipeline(string? toktxExecutablePath = null) {
             _mipGenerator = new MipGenerator();
             _toktxWrapper = new ToktxWrapper(toktxExecutablePath ?? "toktx");
             _toksvigProcessor = new ToksvigProcessor();
             _normalMapMatcher = new NormalMapMatcher();
+            _histogramAnalyzer = new HistogramAnalyzer();
         }
 
         /// <summary>
@@ -245,16 +249,73 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info($"Мипмапы сохранены в {mipmapOutputDir}");
                     }
 
+                    // HISTOGRAM ANALYSIS - анализ перед упаковкой
+                    HistogramResult? histogramResult = null;
+                    Dictionary<string, string>? kvdBinaryFiles = null;
+
+                    if (compressionSettings.HistogramAnalysis != null &&
+                        compressionSettings.HistogramAnalysis.Mode != HistogramMode.Off) {
+
+                        Logger.Info("=== HISTOGRAM ANALYSIS ===");
+
+                        // Анализируем первый мипмап (mip0)
+                        using var mip0 = await Image.LoadAsync<Rgba32>(tempMipmapPaths[0]);
+                        histogramResult = _histogramAnalyzer.Analyze(mip0, compressionSettings.HistogramAnalysis);
+
+                        if (histogramResult.Success) {
+                            Logger.Info($"Histogram analysis successful");
+                            Logger.Info($"  Scale: [{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}]");
+                            Logger.Info($"  Offset: [{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
+
+                            // Создаём TLV метаданные
+                            using var tlvWriter = new TLVWriter();
+
+                            // Записываем результат анализа
+                            tlvWriter.WriteHistogramResult(histogramResult);
+
+                            // Опционально записываем параметры анализа
+                            if (compressionSettings.WriteHistogramParams) {
+                                tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
+                            }
+
+                            // Сохраняем TLV в временный файл
+                            var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
+                            tlvWriter.SaveToFile(tlvPath);
+                            Logger.Info($"TLV metadata saved to: {tlvPath}");
+
+                            // Проверяем создание файла
+                            if (File.Exists(tlvPath)) {
+                                var fileInfo = new FileInfo(tlvPath);
+                                Logger.Info($"TLV file size: {fileInfo.Length} bytes");
+
+                                // Добавляем в словарь KVD файлов для toktx
+                                kvdBinaryFiles = new Dictionary<string, string> {
+                                    { "pc.meta", tlvPath }
+                                };
+                            } else {
+                                Logger.Warn("TLV file not created, skipping KVD metadata");
+                            }
+
+                            result.HistogramAnalysisResult = histogramResult;
+                        } else {
+                            Logger.Warn($"Histogram analysis failed: {histogramResult.Error}");
+                        }
+                    }
+
                     // Упаковываем мипмапы в KTX2 используя toktx
                     Logger.Info("=== PACKING TO KTX2 WITH TOKTX ===");
                     Logger.Info($"  Mipmaps: {tempMipmapPaths.Count}");
                     Logger.Info($"  Output: {outputPath}");
                     Logger.Info($"  Compression: {compressionSettings.CompressionFormat}");
+                    if (kvdBinaryFiles != null) {
+                        Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
+                    }
 
                     var toktxResult = await _toktxWrapper.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
-                        compressionSettings
+                        compressionSettings,
+                        kvdBinaryFiles
                     );
 
                     if (!toktxResult.Success) {
@@ -591,5 +652,10 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// ВНУТРЕННЕЕ: Старые мипмапы для освобождения после завершения
         /// </summary>
         internal List<Image<Rgba32>>? OldMipmapsToDispose { get; set; }
+
+        /// <summary>
+        /// Результат анализа гистограммы (если применимо)
+        /// </summary>
+        public HistogramResult? HistogramAnalysisResult { get; set; }
     }
 }

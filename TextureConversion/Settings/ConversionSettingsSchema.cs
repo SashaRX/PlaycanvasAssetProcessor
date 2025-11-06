@@ -17,6 +17,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GetMipmapsGroup(),
                 GetNormalMapsGroup(),
                 GetToksvigGroup(),
+                HistogramGroupExtension.GetHistogramGroup(),
                 GetActionsGroup()
             };
         }

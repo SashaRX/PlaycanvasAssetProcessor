@@ -46,6 +46,16 @@ namespace AssetProcessor.TextureConversion.Core {
         public float MinRangeThreshold { get; set; } = 0.01f;
 
         /// <summary>
+        /// Режим обработки: MetadataOnly (lossless) или Preprocessing (lossy)
+        /// </summary>
+        public HistogramProcessingMode ProcessingMode { get; set; } = HistogramProcessingMode.MetadataOnly;
+
+        /// <summary>
+        /// Формат квантования метаданных (Half16, PackedUInt32, Float32)
+        /// </summary>
+        public HistogramQuantization Quantization { get; set; } = HistogramQuantization.Half16;
+
+        /// <summary>
         /// Создаёт настройки по умолчанию (анализ отключён)
         /// </summary>
         public static HistogramSettings CreateDefault() {

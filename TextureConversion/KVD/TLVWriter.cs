@@ -43,7 +43,7 @@ namespace AssetProcessor.TextureConversion.KVD {
         /// <summary>
         /// Записывает результат анализа гистограммы
         /// </summary>
-        public void WriteHistogramResult(HistogramResult result) {
+        public void WriteHistogramResult(HistogramResult result, HistogramQuantization quantization = HistogramQuantization.Half16) {
             if (result.Mode == HistogramMode.Off || !result.Success) {
                 // Не записываем ничего если анализ отключён или не успешен
                 return;
@@ -56,33 +56,64 @@ namespace AssetProcessor.TextureConversion.KVD {
             if (result.ChannelMode == HistogramChannelMode.AverageLuminance) {
                 // HIST_SCALAR: один scale/offset для всех каналов
                 tlvType = TLVType.HIST_SCALAR;
-                payload = HalfHelper.FloatsToHalfBytes(result.Scale[0], result.Offset[0]);
+                payload = QuantizeScaleOffset(result.Scale[0], result.Offset[0], quantization);
             } else if (result.ChannelMode == HistogramChannelMode.RGBOnly) {
                 // HIST_RGB: общий scale/offset для RGB
                 tlvType = TLVType.HIST_RGB;
-                payload = HalfHelper.FloatsToHalfBytes(result.Scale[0], result.Offset[0]);
+                payload = QuantizeScaleOffset(result.Scale[0], result.Offset[0], quantization);
             } else if (result.ChannelMode == HistogramChannelMode.PerChannel) {
                 // HIST_PER_CHANNEL_3: поканально для RGB
                 tlvType = TLVType.HIST_PER_CHANNEL_3;
-                payload = HalfHelper.FloatsToHalfBytes(
-                    result.Scale[0], result.Scale[1], result.Scale[2],
-                    result.Offset[0], result.Offset[1], result.Offset[2]
-                );
+                payload = QuantizeScaleOffsetArray(result.Scale, result.Offset, 3, quantization);
             } else if (result.ChannelMode == HistogramChannelMode.PerChannelRGBA) {
                 // HIST_PER_CHANNEL_4: поканально для RGBA
                 tlvType = TLVType.HIST_PER_CHANNEL_4;
-                payload = HalfHelper.FloatsToHalfBytes(
-                    result.Scale[0], result.Scale[1], result.Scale[2], result.Scale[3],
-                    result.Offset[0], result.Offset[1], result.Offset[2], result.Offset[3]
-                );
+                payload = QuantizeScaleOffsetArray(result.Scale, result.Offset, 4, quantization);
             } else {
                 return; // Unknown channel mode
             }
 
-            // Flags: версия в битах [7:4], резерв в [3:0]
-            byte flags = 0x10; // версия 1
+            // Flags: версия в битах [7:4], квантование в [3:2], резерв в [1:0]
+            byte flags = (byte)(0x10 | ((byte)quantization << 2)); // версия 1 + квантование
 
             WriteTLV(tlvType, flags, payload);
+        }
+
+        /// <summary>
+        /// Квантует scale и offset в выбранный формат
+        /// </summary>
+        private byte[] QuantizeScaleOffset(float scale, float offset, HistogramQuantization quantization) {
+            return quantization switch {
+                HistogramQuantization.Half16 => HalfHelper.FloatsToHalfBytes(scale, offset),
+                HistogramQuantization.PackedUInt32 => HalfHelper.PackScaleOffsetToUInt32(scale, offset),
+                HistogramQuantization.Float32 => HalfHelper.FloatsToFloat32Bytes(scale, offset),
+                _ => HalfHelper.FloatsToHalfBytes(scale, offset)
+            };
+        }
+
+        /// <summary>
+        /// Квантует массивы scale/offset в выбранный формат
+        /// </summary>
+        private byte[] QuantizeScaleOffsetArray(float[] scale, float[] offset, int count, HistogramQuantization quantization) {
+            if (quantization == HistogramQuantization.PackedUInt32) {
+                // Для packed uint32 упаковываем каждую пару отдельно
+                var result = new byte[count * 4];
+                for (int i = 0; i < count; i++) {
+                    var packed = HalfHelper.PackScaleOffsetToUInt32(scale[i], offset[i]);
+                    Array.Copy(packed, 0, result, i * 4, 4);
+                }
+                return result;
+            } else if (quantization == HistogramQuantization.Float32) {
+                // Float32: сначала все scale, потом все offset
+                var scaleBytes = HalfHelper.FloatsToFloat32Bytes(scale.Take(count).ToArray());
+                var offsetBytes = HalfHelper.FloatsToFloat32Bytes(offset.Take(count).ToArray());
+                return scaleBytes.Concat(offsetBytes).ToArray();
+            } else {
+                // Half16: сначала все scale, потом все offset
+                var scaleBytes = HalfHelper.FloatsToHalfBytes(scale.Take(count).ToArray());
+                var offsetBytes = HalfHelper.FloatsToHalfBytes(offset.Take(count).ToArray());
+                return scaleBytes.Concat(offsetBytes).ToArray();
+            }
         }
 
         /// <summary>

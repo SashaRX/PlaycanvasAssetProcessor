@@ -266,12 +266,61 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             Logger.Info($"Histogram analysis successful");
                             Logger.Info($"  Scale: [{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}]");
                             Logger.Info($"  Offset: [{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
+                            Logger.Info($"  Processing mode: {compressionSettings.HistogramAnalysis.ProcessingMode}");
+                            Logger.Info($"  Quantization: {compressionSettings.HistogramAnalysis.Quantization}");
+
+                            // Применяем Preprocessing если включен
+                            if (compressionSettings.HistogramAnalysis.ProcessingMode == HistogramProcessingMode.Preprocessing) {
+                                Logger.Info("=== HISTOGRAM PREPROCESSING (LOSSY) ===");
+                                Logger.Info("Applying transformation to texture pixels before compression");
+
+                                // Применяем трансформацию к ВСЕМ мипмапам
+                                for (int i = 0; i < mipmaps.Count; i++) {
+                                    Image<Rgba32> transformedMip;
+
+                                    if (compressionSettings.HistogramAnalysis.Mode == HistogramMode.PercentileWithKnee) {
+                                        // Soft-knee
+                                        float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth * (histogramResult.RangeHigh - histogramResult.RangeLow);
+                                        Logger.Info($"Applying soft-knee (width={kneeWidth:F4}) to mip {i}");
+                                        transformedMip = _histogramAnalyzer.ApplySoftKnee(
+                                            mipmaps[i],
+                                            histogramResult.RangeLow,
+                                            histogramResult.RangeHigh,
+                                            kneeWidth
+                                        );
+                                    } else {
+                                        // Winsorization (жёсткое клампирование)
+                                        Logger.Info($"Applying winsorization to mip {i}");
+                                        transformedMip = _histogramAnalyzer.ApplyWinsorization(
+                                            mipmaps[i],
+                                            histogramResult.RangeLow,
+                                            histogramResult.RangeHigh
+                                        );
+                                    }
+
+                                    // Заменяем мипмап
+                                    mipmaps[i].Dispose();
+                                    mipmaps[i] = transformedMip;
+                                }
+
+                                Logger.Info($"Preprocessing applied to {mipmaps.Count} mipmaps");
+
+                                // Пересохраняем трансформированные мипмапы
+                                for (int i = 0; i < mipmaps.Count; i++) {
+                                    var mipPath = tempMipmapPaths[i];
+                                    await mipmaps[i].SaveAsPngAsync(mipPath);
+                                    Logger.Info($"✓ Preprocessed mip {i} saved to {mipPath}");
+                                }
+                            } else {
+                                Logger.Info("=== METADATA-ONLY MODE (LOSSLESS) ===");
+                                Logger.Info("scale/offset will be applied on GPU, no preprocessing");
+                            }
 
                             // Создаём TLV метаданные
                             using var tlvWriter = new TLVWriter();
 
-                            // Записываем результат анализа
-                            tlvWriter.WriteHistogramResult(histogramResult);
+                            // Записываем результат анализа с выбранным квантованием
+                            tlvWriter.WriteHistogramResult(histogramResult, compressionSettings.HistogramAnalysis.Quantization);
 
                             // Опционально записываем параметры анализа
                             if (compressionSettings.WriteHistogramParams) {

@@ -101,5 +101,49 @@ namespace AssetProcessor.TextureConversion.KVD {
             }
             return result;
         }
+
+        /// <summary>
+        /// Конвертирует массив float в массив float32 bytes
+        /// </summary>
+        public static byte[] FloatsToFloat32Bytes(params float[] values) {
+            var result = new byte[values.Length * 4];
+            for (int i = 0; i < values.Length; i++) {
+                byte[] floatBytes = BitConverter.GetBytes(values[i]);
+                Array.Copy(floatBytes, 0, result, i * 4, 4);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Упаковывает scale и offset в uint32 (2×16-bit unsigned normalized)
+        /// scale и offset должны быть в диапазоне [0, 1]
+        /// </summary>
+        public static byte[] PackScaleOffsetToUInt32(float scale, float offset) {
+            // Клампим к [0, 1]
+            scale = Math.Clamp(scale, 0.0f, 1.0f);
+            offset = Math.Clamp(offset, 0.0f, 1.0f);
+
+            // Квантуем к uint16
+            ushort scaleU16 = (ushort)(scale * 65535.0f);
+            ushort offsetU16 = (ushort)(offset * 65535.0f);
+
+            // Упаковываем в uint32: [offset:16][scale:16]
+            uint packed = ((uint)offsetU16 << 16) | scaleU16;
+
+            return BitConverter.GetBytes(packed);
+        }
+
+        /// <summary>
+        /// Распаковывает uint32 в scale и offset
+        /// </summary>
+        public static (float scale, float offset) UnpackUInt32ToScaleOffset(uint packed) {
+            ushort scaleU16 = (ushort)(packed & 0xFFFF);
+            ushort offsetU16 = (ushort)((packed >> 16) & 0xFFFF);
+
+            float scale = scaleU16 / 65535.0f;
+            float offset = offsetU16 / 65535.0f;
+
+            return (scale, offset);
+        }
     }
 }

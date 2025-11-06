@@ -401,6 +401,17 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 // Добавляем фильтр для генерации мипмапов
                 args.Add("--filter");
                 args.Add(ToktxFilterTypeToString(settings.ToktxMipFilter));
+
+                // WrapMode - режим сэмплирования на границах изображения
+                // ВАЖНО: --wmode работает ТОЛЬКО с --genmipmap!
+                if (settings.WrapMode == WrapMode.Wrap) {
+                    args.Add("--wmode");
+                    args.Add("wrap");
+                } else if (settings.WrapMode == WrapMode.Clamp || settings.ClampMipmaps) {
+                    // По умолчанию toktx использует clamp, но можем явно указать
+                    args.Add("--wmode");
+                    args.Add("clamp");
+                }
             } else if (usePreGeneratedMipmaps) {
                 // КРИТИЧНО: Флаг --mipmap ОБЯЗАТЕЛЕН когда передаём готовые мипмапы!
                 // Без него toktx игнорирует все файлы кроме первого ("Ignoring excess input images")
@@ -410,16 +421,10 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 // НО в комбинации с --mipmap он ОБЯЗАТЕЛЕН!
                 args.Add("--levels");
                 args.Add(mipmapPaths.Count.ToString());
-            }
 
-            // WrapMode - режим сэмплирования на границах изображения
-            if (settings.WrapMode == WrapMode.Wrap) {
-                args.Add("--wmode");
-                args.Add("wrap");
-            } else if (settings.WrapMode == WrapMode.Clamp || settings.ClampMipmaps) {
-                // По умолчанию toktx использует clamp, но можем явно указать
-                args.Add("--wmode");
-                args.Add("clamp");
+                // ВАЖНО: --wmode НЕ применяется с --mipmap!
+                // --wmode является подопцией --genmipmap и игнорируется/вызывает ошибку с --mipmap
+                // Режим wrap/clamp должен быть настроен на этапе генерации мипмапов в MipGenerator
             }
 
             // ============================================

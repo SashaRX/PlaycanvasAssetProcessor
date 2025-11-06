@@ -41,6 +41,50 @@ namespace AssetProcessor.TextureConversion.BasisU {
         }
 
         /// <summary>
+        /// Получает версию toktx и логирует её
+        /// </summary>
+        public async Task<string> GetVersionAsync() {
+            try {
+                var psi = new ProcessStartInfo {
+                    FileName = _toktxExecutablePath,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process == null) return "Unknown (process failed to start)";
+
+                var output = new StringBuilder();
+                var error = new StringBuilder();
+
+                process.OutputDataReceived += (s, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)) output.AppendLine(e.Data);
+                };
+
+                process.ErrorDataReceived += (s, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)) error.AppendLine(e.Data);
+                };
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                var versionText = output.ToString().Trim();
+                if (string.IsNullOrEmpty(versionText)) {
+                    versionText = error.ToString().Trim();
+                }
+
+                return string.IsNullOrEmpty(versionText) ? "Unknown" : versionText;
+            } catch (Exception ex) {
+                return $"Error: {ex.Message}";
+            }
+        }
+
+        /// <summary>
         /// Упаковывает набор мипмапов в KTX2 файл с Basis Universal сжатием
         /// </summary>
         /// <param name="mipmapPaths">Пути к мипмапам (от mip0 до mipN)</param>
@@ -68,6 +112,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 }
 
                 Logger.Info($"=== TOKTX PACKING START ===");
+
+                // Логируем версию toktx
+                var version = await GetVersionAsync();
+                Logger.Info($"  toktx version: {version}");
+
                 Logger.Info($"  Mipmaps count: {mipmapPaths.Count}");
                 Logger.Info($"  Output: {outputPath}");
                 Logger.Info($"  Compression format: {settings.CompressionFormat}");
@@ -99,8 +148,21 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 Logger.Info($"=== TOKTX COMMAND ===");
                 Logger.Info($"  Executable: {_toktxExecutablePath}");
                 Logger.Info($"  Arguments count: {args.Count}");
+                Logger.Info($"  Full command line:");
+                var commandLine = new StringBuilder();
+                commandLine.Append(_toktxExecutablePath);
                 foreach (var arg in args) {
-                    Logger.Info($"    {arg}");
+                    // Экранируем аргументы с пробелами
+                    if (arg.Contains(' ')) {
+                        commandLine.Append($" \"{arg}\"");
+                    } else {
+                        commandLine.Append($" {arg}");
+                    }
+                }
+                Logger.Info($"  {commandLine}");
+                Logger.Info($"  Individual arguments:");
+                for (int i = 0; i < args.Count; i++) {
+                    Logger.Info($"    [{i}] = {args[i]}");
                 }
 
                 // Запускаем toktx с ArgumentList для правильной обработки путей с пробелами

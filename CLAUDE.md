@@ -37,13 +37,14 @@ dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 -
 
 ### Build Optimizations
 
-Release сборка оптимизирована для уменьшения размера и количества DLL:
+Release сборка оптимизирована для уменьшения размера дистрибутива:
 
 - **RuntimeIdentifier=win-x64**: Включаются только Windows x64 библиотеки (удалены linux-x64, osx-x64, win-x86)
-- **PublishTrimmed=true**: Удаление неиспользуемого кода из всех сборок
-- **TrimMode=partial**: Безопасный режим trimming для WPF приложений
 - **DebuggerSupport=false**: Удаление отладочных метаданных из Release
-- **Защита WPF-зависимостей**: TrimmerRootAssembly для критичных библиотек
+- **Optimize=true**: Оптимизации компилятора для производительности
+- **StripSymbols=true**: Удаление debug символов
+
+**Важно:** Trimming (PublishTrimmed) **не используется**, так как WPF официально не поддерживает его в .NET 9 (ошибка NETSDK1168).
 
 Подробная информация: [Docs/BuildOptimizations.md](Docs/BuildOptimizations.md)
 

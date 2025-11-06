@@ -15,13 +15,25 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Указываем конкретную платформу для уменьшения количества DLL -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile Condition="'$(SelfContained)' == 'true'">true</EnableCompressionInSingleFile>
+
+    <!-- Убираем отладочную информацию -->
     <StripSymbols>true</StripSymbols>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <DebuggerSupport>false</DebuggerSupport>
+
+    <!-- Оптимизация размера и производительности -->
+    <Optimize>true</Optimize>
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+
+    <!-- ПРИМЕЧАНИЕ: PublishTrimmed не используется, так как WPF официально не поддерживает trimming в .NET 9 -->
+    <!-- См. https://aka.ms/dotnet-illink/wpf -->
   </PropertyGroup>
 
   <!-- Автоматическое получение Git информации при сборке -->

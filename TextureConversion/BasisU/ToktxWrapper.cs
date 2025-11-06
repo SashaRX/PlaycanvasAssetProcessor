@@ -292,12 +292,18 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // КРИТИЧНО: --assign_oetf/--convert_oetf ДОЛЖНЫ быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
             //
-            // ВАЖНО: --normal_mode требует linear входные данные, НО конфликтует с флагами --assign_oetf/--convert_oetf!
-            // Решение: для нормал мапов НЕ указываем флаги colorspace, позволяем toktx автоматически определить их
+            // ВАЖНО: --normal_mode требует linear входные данные!
+            // PNG файлы нормал мапов имеют sRGB метаданные, но содержат linear данные (векторы направлений).
+            // Решение: для нормал мапов ВСЕГДА используем --assign_oetf linear, чтобы toktx игнорировал метаданные PNG
             bool willUseNormalMode = settings.ConvertToNormalMap && mipmapPaths.Count == 1;
 
-            // Для нормал мапов не добавляем НИКАКИХ флагов colorspace - toktx сам определит
-            if (!willUseNormalMode) {
+            if (willUseNormalMode) {
+                // Для нормал мапов ОБЯЗАТЕЛЬНО указываем --assign_oetf linear
+                // Это говорит toktx "данные УЖЕ linear, игнорируй sRGB метаданные PNG"
+                args.Add("--assign_oetf");
+                args.Add("linear");
+            } else {
+                // Для обычных текстур используем настройку ColorSpace
                 switch (settings.ColorSpace) {
                     case ColorSpace.Linear:
                         args.Add("--assign_oetf");

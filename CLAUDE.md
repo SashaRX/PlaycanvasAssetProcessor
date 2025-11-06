@@ -34,10 +34,11 @@ dotnet clean
 
 ### External Dependencies
 
-The texture conversion pipeline requires the **basisu** CLI tool:
-- Installation: `winget install basisu` (Windows)
-- Verify: `basisu -version`
-- Used by TextureConversion pipeline for Basis Universal compression
+The texture conversion pipeline requires the **toktx** CLI tool from KTX-Software:
+- Installation: `winget install KhronosGroup.KTX-Software` (Windows)
+- Verify: `toktx --version`
+- Used by TextureConversion pipeline for Basis Universal compression and KTX2 packing
+- Required version: 4.3.0 or higher
 
 ## Architecture Overview
 
@@ -73,16 +74,19 @@ The texture conversion pipeline requires the **basisu** CLI tool:
 A sophisticated system for texture processing and compression located in `TextureConversion/`:
 
 **Pipeline Components**:
-- **Core/**: Base types (TextureType, FilterType, CompressionFormat, CompressionSettings)
-- **MipGeneration/**: Mipmap generation with multiple filter types and gamma correction
-- **BasisU/**: Wrapper for basisu CLI tool (Basis Universal encoder)
+- **Core/**: Base types (TextureType, FilterType, CompressionFormat, CompressionSettings, ToksvigSettings)
+- **MipGeneration/**: Mipmap generation with multiple filter types, gamma correction, and Toksvig processor
+- **BasisU/**: Wrapper for toktx CLI tool (KTX2 packing with Basis Universal encoder)
 - **Pipeline/**: Main conversion pipeline and batch processor
+- **Settings/**: Advanced conversion settings system with presets and parameter schema
 
 **Key Classes**:
-- `TextureConversionPipeline`: Main orchestrator combining mipmap generation and Basis Universal compression
+- `TextureConversionPipeline`: Main orchestrator combining mipmap generation and KTX2 packing
 - `MipGenerator`: Generates mipmaps with filter types (Box, Bilinear, Bicubic, Lanczos3, Mitchell, Kaiser)
-- `BasisUWrapper`: CLI wrapper for basisu executable
+- `ToksvigProcessor`: Applies Toksvig correction for gloss/roughness anti-aliasing
+- `ToktxWrapper`: CLI wrapper for toktx executable (KTX2 packing)
 - `BatchProcessor`: Parallel texture processing with progress reporting
+- `ConversionSettingsManager`: Manages conversion parameters and generates toktx arguments
 
 **Texture Type Profiles**:
 - Albedo: Kaiser filter with gamma correction (sRGB)
@@ -108,12 +112,15 @@ Adjust based on connection speed (higher for fast connections, lower for slow/un
 ## Important File Locations
 
 - `MainWindow.xaml.cs`: Main UI window with PlayCanvas connection logic
-- `TextureConversionWindow.xaml.cs`: Texture conversion UI
+- `Windows/PresetEditorWindow.xaml.cs`: Texture conversion preset editor
+- `Windows/PresetManagementWindow.xaml.cs`: Preset management interface
 - `App.xaml.cs`: DI container setup
 - `Services/PlayCanvasService.cs`: PlayCanvas API client implementation
 - `TextureConversion/Pipeline/TextureConversionPipeline.cs`: Main texture processing pipeline
-- `TextureConversion/Examples/BasicUsageExample.cs`: Usage examples for conversion pipeline
-- `Helpers/`: Utility classes for images, conversions, version info
+- `TextureConversion/MipGeneration/ToksvigProcessor.cs`: Toksvig correction implementation
+- `TextureConversion/Settings/ConversionSettingsManager.cs`: Advanced settings management
+- `TextureViewer/`: GPU-based texture viewer with D3D11 rendering
+- `Helpers/MainWindowHelpers.cs`: Histogram calculation with statistics (Min/Max/Mean/Median/StdDev)
 - `Exceptions/`: Custom exception types for API, network, file integrity errors
 
 ## Key Development Notes
@@ -149,6 +156,26 @@ Requires API key from playcanvas.com/account → API Tokens. Settings stored in 
 
 Heavy use of async/await throughout codebase. Semaphore limits in App.config control concurrent operations. PlayCanvasService uses SemaphoreSlim for throttling API requests.
 
+### TextureViewer
+
+GPU-based texture viewer using Direct3D11 (Vortice.Windows):
+- Supports PNG and KTX2 formats with full mipmap chains
+- Real-time mipmap level selection (Auto/Fixed modes)
+- Multiple filtering modes (Point/Linear/Anisotropic)
+- sRGB/Linear color space switching
+- Zoom, pan, and pixel inspection capabilities
+- Uses `libktx` P/Invoke for KTX2 loading with Basis Universal transcoding
+
+Located in `TextureViewer/` directory. See `Docs/TextureViewerSpec.md` for detailed specifications.
+
+### Histogram Statistics
+
+Histogram calculation in `MainWindowHelpers.cs` uses thread-local strategy to avoid race conditions:
+- Each thread maintains local histograms during parallel processing
+- Results merged with locking for thread-safety
+- Calculates Min, Max, Mean, Median, StdDev, and pixel count
+- Deterministic results (same texture always produces identical statistics)
+
 ## Common Workflows
 
 ### Adding New Texture Conversion Features
@@ -156,7 +183,17 @@ Heavy use of async/await throughout codebase. Semaphore limits in App.config con
 1. Define new types/enums in `TextureConversion/Core/`
 2. Implement processing logic in `TextureConversion/Pipeline/` or `TextureConversion/MipGeneration/`
 3. Update `MipGenerationProfile` or `CompressionSettings` if needed
-4. Add usage examples to `TextureConversion/Examples/BasicUsageExample.cs`
+4. Add parameters to `ConversionSettingsSchema.cs` if UI configuration needed
+5. Update preset definitions in `ConversionSettingsSchema.GetPredefinedPresets()`
+6. Add usage examples to `TextureConversion/Examples/BasicUsageExample.cs`
+
+### Working with Texture Conversion Presets
+
+1. Presets defined in `TextureConversion/Settings/ConversionSettingsSchema.cs`
+2. UI editing in `Windows/PresetEditorWindow.xaml.cs`
+3. Parameter visibility controlled by `VisibilityCondition` (e.g., UASTC options only visible when UASTC format selected)
+4. CLI argument generation in `ConversionSettingsManager.GenerateToktxArguments()`
+5. Internal preprocessing parameters (Toksvig, mipmap generation) handled before toktx invocation
 
 ### Working with PlayCanvas API
 

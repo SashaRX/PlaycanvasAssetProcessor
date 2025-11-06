@@ -170,7 +170,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
                     try {
                         Marshal.Copy(pixelData, 0, dataPtr, dataSize);
 
-                        result = LibKtxNative.ktxTexture_SetImageFromMemory(
+                        result = LibKtxNative.ktxTexture2_SetImageFromMemory(
                             texturePtr,
                             (uint)level,
                             0, // layer

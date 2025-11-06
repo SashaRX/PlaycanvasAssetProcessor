@@ -441,10 +441,10 @@ internal static class LibKtxNative {
         out IntPtr newTex);
 
     /// <summary>
-    /// Set image data for a specific mip level, layer, and face from memory.
+    /// Set image data for a specific mip level, layer, and face from memory (KTX2 specific).
     /// </summary>
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern KtxErrorCode ktxTexture_SetImageFromMemory(
+    public static extern KtxErrorCode ktxTexture2_SetImageFromMemory(
         IntPtr texture,
         uint level,
         uint layer,

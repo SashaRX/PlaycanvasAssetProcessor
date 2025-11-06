@@ -1174,6 +1174,23 @@ namespace AssetProcessor {
                 D3D11TextureViewer.Renderer.Render();
 
                 logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
+
+                // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
+                if (originalBitmapSource != null) {
+                    if (channel == "Normal") {
+                        // For normal map mode, show RGB histogram (no grayscale)
+                        Dispatcher.Invoke(() => {
+                            UpdateHistogram(originalBitmapSource, false);
+                        });
+                    } else {
+                        // For R/G/B/A channels, show grayscale histogram
+                        BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
+                        Dispatcher.Invoke(() => {
+                            UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
+                        });
+                    }
+                }
+
                 return;
             }
 

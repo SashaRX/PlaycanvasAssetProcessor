@@ -465,7 +465,13 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
                 foreach (var kvPair in kvdBinaryFiles) {
                     args.Add("--kv-binary");
-                    args.Add($"{kvPair.Key}={kvPair.Value}");
+                    // Quote the value if it contains spaces or tabs
+                    var value = kvPair.Value;
+                    if (value.Contains(' ') || value.Contains('\t')) {
+                        args.Add($"{kvPair.Key}=\"{value}\"");
+                    } else {
+                        args.Add($"{kvPair.Key}={value}");
+                    }
                 }
             }
 

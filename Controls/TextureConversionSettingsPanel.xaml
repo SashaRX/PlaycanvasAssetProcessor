@@ -228,6 +228,16 @@
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                               ToolTip="Visual quality improvement (ETC1S/ASTC only)"/>
 
+                    <!-- Color Space (OETF) -->
+                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="ColorSpaceComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"
+                              SelectionChanged="ComboBoxSettingChanged"
+                              Margin="0,0,0,2"
+                              ToolTip="--assign_oetf: Auto (from file), Linear (normals, roughness), or sRGB (albedo)"/>
+                    <TextBlock Text="⚙ Auto-detect from file metadata" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+
                     <!-- Output Format -->
                     <TextBlock Text="Output Format:" Style="{StaticResource LabelStyle}"/>
                     <ComboBox x:Name="OutputFormatComboBox"
@@ -277,48 +287,46 @@
                 </StackPanel>
             </Expander>
 
-            <!-- 4. COLOR SPACE SECTION -->
-            <Expander Header="Color Space" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
-                <StackPanel Margin="5,2,0,0">
-                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="ColorSpaceComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"
-                              SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,5"
-                              ToolTip="--assign_oetf: Auto (from file), Linear (normals, roughness), or sRGB (albedo)"/>
-                    <TextBlock Text="⚙ Auto-detect from file metadata" FontSize="9" Foreground="Gray" Margin="0,0,0,3"/>
-                </StackPanel>
-            </Expander>
-
-            <!-- 5. MIPMAPS SECTION -->
+            <!-- 4. MIPMAPS SECTION -->
             <Expander Header="Mipmaps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
                 <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,5"
+                    <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--genmipmap (by toktx) or manual generation (by app)"/>
+                              ToolTip="Enable mipmap generation"/>
 
-                    <!-- Manual Mipmap Filter (for app-generated mipmaps) -->
-                    <TextBlock Text="Manual Mip Filter (app):" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="MipFilterComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
-                              SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,2"
-                              ToolTip="Filter for manual mipmap generation (app-side). Use Max for anti-aliasing, Min for valleys. Only for Toksvig."/>
-                    <TextBlock Text="⚙ Max = take max of 4 pixels; Min = take min" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                    <CheckBox x:Name="CustomMipmapsCheckBox" Content="Custom Mipmaps (Manual)" IsChecked="False" Margin="0,0,0,5"
+                              Checked="CustomMipmapsCheckBox_Changed" Unchecked="CustomMipmapsCheckBox_Changed"
+                              ToolTip="Use manual mipmap generation (app-side) instead of automatic (toktx --genmipmap)"/>
 
-                    <!-- Toktx Mipmap Filter (for toktx genmipmap option) -->
-                    <TextBlock Text="Toktx Mip Filter (--filter):" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="ToktxFilterComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
-                              SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,2"
-                              ToolTip="--filter: toktx filter for automatic mipmap generation. Kaiser recommended."/>
-                    <TextBlock Text="⚙ Used when toktx generates mipmaps" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                    <!-- MANUAL MIPMAPS SETTINGS (when CustomMipmapsCheckBox is checked) -->
+                    <StackPanel x:Name="ManualMipmapsPanel" Visibility="Collapsed">
+                        <TextBlock Text="Manual Mip Filter:" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="MipFilterComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
+                                  SelectionChanged="ComboBoxSettingChanged"
+                                  Margin="0,0,0,2"
+                                  ToolTip="Filter for manual mipmap generation. Use Max for peaks, Min for valleys."/>
+                        <TextBlock Text="⚙ Max/Min useful for special cases (Toksvig)" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
 
-                    <!-- Wrap Mode -->
+                        <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,5"
+                                  Checked="ApplyGammaCorrectionCheckBox_Checked" Unchecked="CheckboxSettingChanged"
+                                  ToolTip="Apply gamma 2.2 for sRGB textures (albedo). Disable for linear (normals, roughness)"/>
+                    </StackPanel>
+
+                    <!-- AUTOMATIC MIPMAPS SETTINGS (when CustomMipmapsCheckBox is NOT checked) -->
+                    <StackPanel x:Name="AutomaticMipmapsPanel" Visibility="Visible">
+                        <TextBlock Text="Toktx Mip Filter (--filter):" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="ToktxFilterComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
+                                  SelectionChanged="ComboBoxSettingChanged"
+                                  Margin="0,0,0,2"
+                                  ToolTip="--filter: toktx filter for automatic mipmap generation. Kaiser recommended."/>
+                        <TextBlock Text="⚙ Used when toktx generates mipmaps" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                    </StackPanel>
+
+                    <!-- COMMON SETTINGS -->
                     <TextBlock Text="Wrap Mode (--wmode):" Style="{StaticResource LabelStyle}"/>
                     <ComboBox x:Name="WrapModeComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
@@ -328,16 +336,13 @@
                               ToolTip="--wmode: Clamp (repeat edge pixels) or Wrap (tile image)"/>
                     <TextBlock Text="⚙ Clamp for most textures, Wrap for tiling" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
 
-                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,3"
-                              Checked="ApplyGammaCorrectionCheckBox_Checked" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Apply gamma 2.2 for sRGB textures. Disable for linear textures (normals, roughness, etc)"/>
                     <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps (Debug)" Margin="0,0,0,3"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                               ToolTip="Save each mipmap level as separate file for debugging"/>
                 </StackPanel>
             </Expander>
 
-            <!-- 6. NORMAL MAPS SECTION -->
+            <!-- 5. NORMAL MAPS SECTION -->
             <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
                     <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to XY(RGB/A) Normal Map" Margin="0,0,0,3"
@@ -352,9 +357,11 @@
                 </StackPanel>
             </Expander>
 
-            <!-- 7. TOKSVIG SECTION (For Gloss Maps) -->
-            <Expander Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+            <!-- 6. TOKSVIG SECTION (For Gloss Maps - requires Custom Mipmaps) -->
+            <Expander x:Name="ToksvigExpander" Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False"
+                      IsEnabled="{Binding ElementName=CustomMipmapsCheckBox, Path=IsChecked}">
                 <StackPanel Margin="5,2,0,0">
+                    <TextBlock Text="⚠ Requires Custom Mipmaps enabled" FontSize="9" Foreground="Orange" Margin="0,0,0,3"/>
                     <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
                               ToolTip="Apply Toksvig variance-based gloss adjustment for specular anti-aliasing"
                               Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"/>

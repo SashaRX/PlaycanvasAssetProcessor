@@ -100,12 +100,16 @@ namespace AssetProcessor.Controls {
 
             // Mipmaps
             GenerateMipmapsCheckBox.IsChecked = true;
+            CustomMipmapsCheckBox.IsChecked = false; // По умолчанию автоматическая генерация
             MipFilterComboBox.SelectedIndex = 5; // Kaiser (FilterType)
             ToktxFilterComboBox.SelectedItem = ToktxFilterType.Kaiser;
             WrapModeComboBox.SelectedItem = WrapMode.Clamp;
             RemoveTemporalMipmapsCheckBox.IsChecked = true;
             ApplyGammaCorrectionCheckBox.IsChecked = true;
             SaveSeparateMipmapsCheckBox.IsChecked = false;
+
+            // Обновляем видимость панелей мипмапов
+            UpdateMipmapPanelsVisibility();
 
             // Normal Maps
             ConvertToNormalMapCheckBox.IsChecked = false;
@@ -230,6 +234,26 @@ namespace AssetProcessor.Controls {
 
         private void ApplyGammaCorrectionCheckBox_Checked(object sender, RoutedEventArgs e) {
             CheckboxSettingChanged(sender, e);
+        }
+
+        private void CustomMipmapsCheckBox_Changed(object sender, RoutedEventArgs e) {
+            if (!_isLoading) {
+                UpdateMipmapPanelsVisibility();
+                OnSettingsChanged();
+            }
+        }
+
+        /// <summary>
+        /// Обновляет видимость панелей в зависимости от режима генерации мипмапов
+        /// </summary>
+        private void UpdateMipmapPanelsVisibility() {
+            bool useCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false;
+
+            // Показываем/скрываем панели
+            ManualMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
+            AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
+
+            // Toksvig доступен только для кастомных мипмапов (биндинг в XAML уже настроен)
         }
 
         private void ToksvigEnabledCheckBox_Changed(object sender, RoutedEventArgs e) {
@@ -561,6 +585,10 @@ namespace AssetProcessor.Controls {
             GenerateMipmapsCheckBox.IsChecked = generateMips;
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
 
+            // Custom Mipmaps определяется по использованию специальных фильтров или Toksvig
+            // По умолчанию false (автоматическая генерация через toktx)
+            CustomMipmapsCheckBox.IsChecked = false;
+
             // Normal Maps
             NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
             ConvertToNormalMapCheckBox.IsChecked = compression.ConvertToNormalMap;
@@ -571,6 +599,7 @@ namespace AssetProcessor.Controls {
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
+            UpdateMipmapPanelsVisibility();
 
             _isLoading = false;
         }
@@ -585,6 +614,11 @@ namespace AssetProcessor.Controls {
             ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
             ToksvigVarianceThresholdSlider.Value = settings.VarianceThreshold;
 
+            // Если Toksvig включен, автоматически включаем Custom Mipmaps
+            if (settings.Enabled) {
+                CustomMipmapsCheckBox.IsChecked = true;
+            }
+
             // КРИТИЧНО: НЕ загружаем NormalMapPath по умолчанию!
             // Это позволяет auto-detect работать для каждой новой текстуры
             // Загружаем только если явно указано (например, при загрузке сохраненных настроек)
@@ -593,6 +627,7 @@ namespace AssetProcessor.Controls {
             }
 
             UpdateToksvigCalculationModePanels();
+            UpdateMipmapPanelsVisibility();
 
             _isLoading = false;
         }

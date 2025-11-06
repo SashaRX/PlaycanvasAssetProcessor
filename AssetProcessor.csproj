@@ -15,13 +15,28 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Указываем конкретную платформу для уменьшения количества DLL -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile Condition="'$(SelfContained)' == 'true'">true</EnableCompressionInSingleFile>
+
+    <!-- Оптимизация размера сборки -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+
+    <!-- Убираем отладочную информацию -->
     <StripSymbols>true</StripSymbols>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <DebuggerSupport>false</DebuggerSupport>
+
+    <!-- Оптимизация размера -->
+    <Optimize>true</Optimize>
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
   </PropertyGroup>
 
   <!-- Автоматическое получение Git информации при сборке -->
@@ -96,6 +111,19 @@
 
   <ItemGroup>
     <TrimmerRootDescriptor Include="Trimming/TrimmerRoots.xml" />
+  </ItemGroup>
+
+  <!-- Исключаем WPF-зависимости из trimming для безопасности -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <TrimmerRootAssembly Include="PresentationCore" />
+    <TrimmerRootAssembly Include="PresentationFramework" />
+    <TrimmerRootAssembly Include="WindowsBase" />
+    <TrimmerRootAssembly Include="System.Xaml" />
+    <TrimmerRootAssembly Include="Extended.Wpf.Toolkit" />
+    <TrimmerRootAssembly Include="Xceed.Wpf.Toolkit" />
+    <TrimmerRootAssembly Include="Microsoft.Xaml.Behaviors" />
+    <TrimmerRootAssembly Include="HelixToolkit.Wpf" />
+    <TrimmerRootAssembly Include="OxyPlot.Wpf" />
   </ItemGroup>
 
   <!-- Оставляем только английские и русские ресурсы после публикации -->

@@ -22,6 +22,9 @@ dotnet restore
 
 # Clean build artifacts
 dotnet clean
+
+# Publish optimized Release build (single-file, win-x64 only, with trimming)
+dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false
 ```
 
 ### Running the Application
@@ -29,8 +32,20 @@ dotnet clean
 ```bash
 # Run from Visual Studio: F5 or Ctrl+F5
 # Or build and run the executable from:
-# bin/Release/net9.0-windows10.0.26100.0/TexTool.exe
+# bin/Release/net9.0-windows10.0.26100.0/win-x64/TexTool.exe
 ```
+
+### Build Optimizations
+
+Release сборка оптимизирована для уменьшения размера и количества DLL:
+
+- **RuntimeIdentifier=win-x64**: Включаются только Windows x64 библиотеки (удалены linux-x64, osx-x64, win-x86)
+- **PublishTrimmed=true**: Удаление неиспользуемого кода из всех сборок
+- **TrimMode=partial**: Безопасный режим trimming для WPF приложений
+- **DebuggerSupport=false**: Удаление отладочных метаданных из Release
+- **Защита WPF-зависимостей**: TrimmerRootAssembly для критичных библиотек
+
+Подробная информация: [Docs/BuildOptimizations.md](Docs/BuildOptimizations.md)
 
 ### External Dependencies
 

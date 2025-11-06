@@ -302,7 +302,7 @@ namespace AssetProcessor.Helpers {
             });
         }
 
-        public static class HistogramStatistics {
+        public class HistogramStatistics {
             public double Min { get; set; }
             public double Max { get; set; }
             public double Mean { get; set; }

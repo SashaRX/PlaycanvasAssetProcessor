@@ -373,22 +373,36 @@ namespace AssetProcessor.TextureConversion.Analysis {
         /// Применяет soft-knee к одному значению
         /// </summary>
         private float ApplySoftKneeToValue(float v, float lo, float hi, float knee) {
-            // Если значение в основном диапазоне - не трогаем
+            // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: нормализуем основной диапазон [lo, hi] → [0, 1]
+            // Это растягивает динамический диапазон, делая текстуру ярче
+
+            // Если значение в основном диапазоне - нормализуем (растягиваем)
             if (v >= lo && v <= hi) {
-                return v;
+                // Линейное масштабирование: [lo, hi] → [0, 1]
+                return (v - lo) / (hi - lo);
             }
 
-            // Если ниже lo - применяем сглаживание
+            // Если ниже lo - применяем сглаживание и затем нормализуем
             if (v < lo) {
                 float t = (lo - v) / knee;
-                if (t >= 1.0f) return lo - knee; // За пределами колена - клампим
-                return lo - knee * SmoothStep(t);
+                if (t >= 1.0f) {
+                    // За пределами колена - клампим к 0
+                    return 0.0f;
+                }
+                // Сглаженный переход к 0
+                float smoothedValue = lo - knee * SmoothStep(t);
+                return (smoothedValue - lo) / (hi - lo);
             }
 
-            // Если выше hi - применяем сглаживание
+            // Если выше hi - применяем сглаживание и затем нормализуем
             float tHigh = (v - hi) / knee;
-            if (tHigh >= 1.0f) return hi + knee;
-            return hi + knee * SmoothStep(tHigh);
+            if (tHigh >= 1.0f) {
+                // За пределами колена - клампим к 1
+                return 1.0f;
+            }
+            // Сглаженный переход к 1
+            float smoothedValue = hi + knee * SmoothStep(tHigh);
+            return (smoothedValue - lo) / (hi - lo);
         }
     }
 }

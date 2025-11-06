@@ -290,11 +290,24 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // COLOR SPACE
             // ============================================
-            // КРИТИЧНО: --assign_oetf ДОЛЖЕН быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
+            // КРИТИЧНО: --assign_oetf/--convert_oetf ДОЛЖНЫ быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
+            //
+            // ВАЖНО: --normal_mode требует linear входные данные!
+            // Поэтому для нормал мапов используем --convert_oetf linear вместо --assign_oetf,
+            // чтобы toktx конвертировал sRGB PNG в linear перед применением --normal_mode
+            bool willUseNormalMode = settings.ConvertToNormalMap && mipmapPaths.Count == 1;
+
             switch (settings.ColorSpace) {
                 case ColorSpace.Linear:
-                    args.Add("--assign_oetf");
-                    args.Add("linear");
+                    if (willUseNormalMode) {
+                        // Для --normal_mode используем --convert_oetf чтобы конвертировать sRGB PNG в linear
+                        args.Add("--convert_oetf");
+                        args.Add("linear");
+                    } else {
+                        // Для обычных текстур используем --assign_oetf
+                        args.Add("--assign_oetf");
+                        args.Add("linear");
+                    }
                     break;
                 case ColorSpace.SRGB:
                     args.Add("--assign_oetf");

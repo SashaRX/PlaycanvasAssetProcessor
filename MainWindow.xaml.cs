@@ -980,6 +980,11 @@ namespace AssetProcessor {
             } else if (mode == TexturePreviewSourceMode.Ktx2) {
                 isKtxPreviewActive = true;
 
+                // Update histogram from source image (KTX2 is compressed, use source for histogram)
+                if (originalFileBitmapSource != null) {
+                    _ = UpdateHistogramAsync(originalFileBitmapSource);
+                }
+
                 // Save current mask before switching
                 string? savedMask = currentActiveChannelMask;
 
@@ -1174,6 +1179,23 @@ namespace AssetProcessor {
                 D3D11TextureViewer.Renderer.Render();
 
                 logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
+
+                // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
+                if (originalBitmapSource != null) {
+                    if (channel == "Normal") {
+                        // For normal map mode, show RGB histogram (no grayscale)
+                        Dispatcher.Invoke(() => {
+                            UpdateHistogram(originalBitmapSource, false);
+                        });
+                    } else {
+                        // For R/G/B/A channels, show grayscale histogram
+                        BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
+                        Dispatcher.Invoke(() => {
+                            UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
+                        });
+                    }
+                }
+
                 return;
             }
 
@@ -1277,6 +1299,16 @@ namespace AssetProcessor {
             // Обработка изображения и заполнение гистограммы
             MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
 
+            // Calculate combined histogram for statistics (luminance)
+            int[] combinedHistogram = new int[256];
+            for (int i = 0; i < 256; i++) {
+                // Use luminance formula: 0.299*R + 0.587*G + 0.114*B
+                combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
+            }
+
+            // Calculate statistics
+            var stats = MainWindowHelpers.CalculateHistogramStatistics(combinedHistogram);
+
             if (!isGray) {
                 MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
                 MainWindowHelpers.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
@@ -1300,7 +1332,10 @@ namespace AssetProcessor {
                 MinorGridlineThickness = 0.5
             });
 
-            Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+            Dispatcher.Invoke(() => {
+                HistogramPlotView.Model = histogramModel;
+                UpdateHistogramStatisticsUI(stats);
+            });
         }
 
         private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
@@ -1315,6 +1350,15 @@ namespace AssetProcessor {
 
                 // Обработка изображения и заполнение гистограммы
                 MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
+
+                // Calculate combined histogram for statistics
+                int[] combinedHistogram = new int[256];
+                for (int i = 0; i < 256; i++) {
+                    combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
+                }
+
+                // Calculate statistics
+                var stats = MainWindowHelpers.CalculateHistogramStatistics(combinedHistogram);
 
                 if (!isGray) {
                     MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
@@ -1339,8 +1383,20 @@ namespace AssetProcessor {
                     MinorGridlineThickness = 0.5
                 });
 
-                Dispatcher.Invoke(() => HistogramPlotView.Model = histogramModel);
+                Dispatcher.Invoke(() => {
+                    HistogramPlotView.Model = histogramModel;
+                    UpdateHistogramStatisticsUI(stats);
+                });
             });
+        }
+
+        private void UpdateHistogramStatisticsUI(MainWindowHelpers.HistogramStatistics stats) {
+            HistogramMinTextBlock.Text = $"{stats.Min:F0}";
+            HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
+            HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
+            HistogramMedianTextBlock.Text = $"{stats.Median:F0}";
+            HistogramStdDevTextBlock.Text = $"{stats.StdDev:F2}";
+            HistogramPixelsTextBlock.Text = $"{stats.TotalPixels:N0}";
         }
 
         private static void PopulateComboBox<T>(ComboBox comboBox) {
@@ -1910,9 +1966,12 @@ namespace AssetProcessor {
                     // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
                     if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                         originalBitmapSource = cachedImage;
-                        _ = UpdateHistogramAsync(originalBitmapSource);
                         ShowOriginalImage();
                     }
+
+                    // Always update histogram when source image is loaded (even if showing KTX2)
+                    // Use the source bitmap for histogram calculation
+                    _ = UpdateHistogramAsync(cachedImage);
 
                     UpdatePreviewSourceControls();
                 });
@@ -1940,9 +1999,12 @@ namespace AssetProcessor {
                 // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
                 if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                     originalBitmapSource = thumbnailImage;
-                    _ = UpdateHistogramAsync(originalBitmapSource);
                     ShowOriginalImage();
                 }
+
+                // Always update histogram when source image is loaded (even if showing KTX2)
+                // Use the source bitmap for histogram calculation
+                _ = UpdateHistogramAsync(thumbnailImage);
 
                 UpdatePreviewSourceControls();
             });
@@ -1983,10 +2045,13 @@ namespace AssetProcessor {
                         // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
                         if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                             originalBitmapSource = bitmapImage;
-                            _ = UpdateHistogramAsync(originalBitmapSource);
                             ShowOriginalImage();
                             // НЕ применяем fitZoom для full resolution - это обновление кэша, зум уже установлен
                         }
+
+                        // Always update histogram when full-resolution image is loaded (even if showing KTX2)
+                        // This replaces the thumbnail-based histogram with accurate full-image data
+                        _ = UpdateHistogramAsync(bitmapImage);
 
                         UpdatePreviewSourceControls();
                     });

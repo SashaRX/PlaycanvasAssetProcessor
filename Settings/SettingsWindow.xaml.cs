@@ -58,16 +58,6 @@ namespace AssetProcessor {
             }
         }
 
-        public bool UseOpenCL {
-            get => _textureSettings.UseOpenCL;
-            set {
-                if (_textureSettings.UseOpenCL != value) {
-                    _textureSettings.UseOpenCL = value;
-                    OnPropertyChanged(nameof(UseOpenCL));
-                }
-            }
-        }
-
         public bool UseMultithreading {
             get => _textureSettings.UseMultithreading;
             set {

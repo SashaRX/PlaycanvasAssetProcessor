@@ -741,7 +741,7 @@ namespace AssetProcessor.Controls {
             // Mipmap settings
             GenerateMipmapsCheckBox.IsChecked = preset.GenerateMipmaps;
             MipFilterComboBox.SelectedItem = preset.MipFilter;
-            MipClampCheckBox.IsChecked = preset.ClampMipmaps;
+            // MipClampCheckBox удален - теперь используется WrapModeComboBox
             ApplyGammaCorrectionCheckBox.IsChecked = preset.ApplyGammaCorrection;
 
             // Advanced settings

@@ -231,7 +231,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // ktx create требует явного указания формата
             args.Add("--format");
-            args.Add(settings.UseGammaCorrectionForSRGB ? "R8G8B8A8_SRGB" : "R8G8B8A8_UNORM");
+            args.Add(settings.ColorSpace == ColorSpace.SRGB ? "R8G8B8A8_SRGB" : "R8G8B8A8_UNORM");
 
             // ============================================
             // КОДИРОВАНИЕ (обязательный если хотим Basis)
@@ -277,9 +277,9 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // СУПЕРКОМПРЕССИЯ (Zstandard)
             // ============================================
-            if (settings.UseZstd) {
+            if (settings.KTX2Supercompression == KTX2SupercompressionType.Zstandard) {
                 args.Add("--zstd");
-                args.Add("15"); // Хороший баланс скорость/качество
+                args.Add(settings.KTX2ZstdLevel.ToString()); // Используем уровень из настроек
             }
 
             // ============================================
@@ -293,14 +293,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // NORMAL MAP MODE
             // ============================================
-            if (settings.NormalMode) {
+            if (settings.ConvertToNormalMap) {
                 args.Add("--normal-mode");
             }
 
             // ============================================
             // NORMALIZE
             // ============================================
-            if (settings.Normalize) {
+            if (settings.NormalizeVectors) {
                 args.Add("--normalize");
             }
 

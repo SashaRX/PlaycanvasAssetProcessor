@@ -50,7 +50,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
                 Logger.Info($"=== LIBKTX TEXTURE CONVERSION START ===");
                 Logger.Info($"  Mipmaps: {mipmapPaths.Count}");
-                Logger.Info($"  Format: {settings.Format}");
+                Logger.Info($"  Format: {settings.CompressionFormat}");
                 Logger.Info($"  Output: {outputPath}");
 
                 // Загружаем все мипмапы в память
@@ -204,10 +204,10 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// Сжимает текстуру в Basis Universal
         /// </summary>
         private void CompressTexture(IntPtr texturePtr, CompressionSettings settings) {
-            bool isUASTC = settings.Format == CompressionFormat.UASTC;
+            bool isUASTC = settings.CompressionFormat == CompressionFormat.UASTC;
 
             Logger.Info($"  Format: {(isUASTC ? "UASTC" : "ETC1S")}");
-            Logger.Info($"  Quality: {settings.Quality}");
+            Logger.Info($"  Quality Level: {settings.QualityLevel}");
             Logger.Info($"  Compression Level: {settings.CompressionLevel}");
 
             // Создаём параметры сжатия
@@ -220,7 +220,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
                 // ETC1S параметры
                 compressionLevel = (uint)settings.CompressionLevel,
-                qualityLevel = (uint)settings.Quality,
+                qualityLevel = (uint)settings.QualityLevel,
                 maxEndpoints = 0,
                 endpointRDOThreshold = 0,
                 maxSelectors = 0,

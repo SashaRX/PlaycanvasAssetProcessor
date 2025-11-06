@@ -16,14 +16,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
     public class TextureConversionPipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly MipGenerator _mipGenerator;
-        private readonly KtxCreateWrapper _ktxCreateWrapper;
+        private readonly ToktxWrapper _toktxWrapper;
         private readonly ToksvigProcessor _toksvigProcessor;
         private readonly NormalMapMatcher _normalMapMatcher;
         private readonly HistogramAnalyzer _histogramAnalyzer;
 
-        public TextureConversionPipeline(string? ktxExecutablePath = null) {
+        public TextureConversionPipeline(string? toktxExecutablePath = null) {
             _mipGenerator = new MipGenerator();
-            _ktxCreateWrapper = new KtxCreateWrapper(ktxExecutablePath ?? "ktx");
+            _toktxWrapper = new ToktxWrapper(toktxExecutablePath ?? "toktx");
             _toksvigProcessor = new ToksvigProcessor();
             _normalMapMatcher = new NormalMapMatcher();
             _histogramAnalyzer = new HistogramAnalyzer();
@@ -57,16 +57,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             try {
                 Logger.Info($"Starting conversion: {inputPath}");
 
-                // Проверяем доступность ktx
-                if (!await _ktxCreateWrapper.IsAvailableAsync()) {
-                    throw new Exception(
-                        "ktx.exe executable not found.\n\n" +
-                        "KtxCreateWrapper requires ktx.exe (not toktx.exe).\n" +
-                        "Please check your KTX-Software build directory:\n" +
-                        "  Expected: KTX-Software/build_ktx/Release/ktx.exe\n\n" +
-                        "If ktx.exe is not available in your build, you may need to:\n" +
-                        "  1. Rebuild KTX-Software with the latest version, OR\n" +
-                        "  2. Revert to using ToktxWrapper (contact developer)");
+                // Проверяем доступность toktx
+                if (!await _toktxWrapper.IsAvailableAsync()) {
+                    throw new Exception("toktx executable not found. Please specify path to toktx.exe in settings or install KTX-Software");
                 }
 
                 // Загружаем изображение
@@ -367,7 +360,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
                     }
 
-                    var ktxResult = await _ktxCreateWrapper.PackMipmapsAsync(
+                    var ktxResult = await _toktxWrapper.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
                         compressionSettings,
@@ -375,19 +368,19 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     );
 
                     if (!ktxResult.Success) {
-                        throw new Exception($"ktx create failed: {ktxResult.Error}");
+                        throw new Exception($"toktx failed: {ktxResult.Error}");
                     }
 
                     // POST-PROCESSING: Inject TLV metadata if available
                     if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
                         Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
 
-                        // Получаем директорию ktx для загрузки ktx.dll
-                        var ktxDllDirectory = _ktxCreateWrapper.KtxDirectory;
+                        // Получаем директорию toktx для загрузки ktx.dll
+                        var ktxDllDirectory = _toktxWrapper.ToktxDirectory;
                         if (!string.IsNullOrEmpty(ktxDllDirectory)) {
-                            Logger.Info($"ktx directory: {ktxDllDirectory}");
+                            Logger.Info($"toktx directory: {ktxDllDirectory}");
                         } else {
-                            Logger.Warn("ktx directory not found (ktx might be in PATH)");
+                            Logger.Warn("toktx directory not found (toktx might be in PATH)");
                         }
 
                         foreach (var kvPair in kvdBinaryFiles) {

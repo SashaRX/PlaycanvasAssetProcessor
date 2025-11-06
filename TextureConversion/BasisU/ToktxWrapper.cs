@@ -462,23 +462,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // KEY-VALUE DATA (KVD) - binary metadata
             // ============================================
-            // ВАЖНО: --kv-binary НЕ СУЩЕСТВУЕТ в toktx (проверено до v4.4.2)
-            // Для добавления KVD нужно использовать libktx API после создания файла
-            // TODO: Реализовать post-processing через ktxHashList_AddKVPair после toktx
+            // ПРИМЕЧАНИЕ: toktx НЕ поддерживает --kv-binary (флаг не существует)
+            // KVD metadata добавляется через libktx post-processing в pipeline
+            // kvdBinaryFiles передаются в pipeline для injection после создания KTX2
             if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
-                Logger.Warn($"⚠️  KVD metadata injection is NOT SUPPORTED in toktx!");
-                Logger.Warn($"⚠️  The --kv-binary flag does not exist in KTX-Software releases.");
-                Logger.Warn($"⚠️  Skipping {kvdBinaryFiles.Count} metadata file(s):");
-                foreach (var kvPair in kvdBinaryFiles) {
-                    Logger.Warn($"     - {kvPair.Key} = {kvPair.Value}");
-                }
-                Logger.Warn($"⚠️  Histogram metadata will NOT be embedded in KTX2 file.");
-                Logger.Warn($"⚠️  However, preprocessing (pixel modification) was applied if enabled.");
-                Logger.Warn($"⚠️  To implement metadata injection, we need to add libktx post-processing.");
-
-                // НЕ добавляем --kv-binary, так как эта опция не существует
-                // args.Add("--kv-binary");
-                // args.Add($"{kvPair.Key}={kvPair.Value}");
+                Logger.Info($"KVD metadata will be injected via libktx post-processing ({kvdBinaryFiles.Count} file(s))");
             }
 
             // ============================================

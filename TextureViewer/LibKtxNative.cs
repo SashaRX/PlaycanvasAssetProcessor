@@ -254,6 +254,45 @@ internal static class LibKtxNative {
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern KtxErrorCode ktxTexture_IterateLevelFaces(IntPtr texture, KtxIterCallback iterCb, IntPtr userdata);
 
+    /// <summary>
+    /// Create a new hash list for key-value data.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr ktxHashList_Create();
+
+    /// <summary>
+    /// Destroy a hash list.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void ktxHashList_Destroy(IntPtr hashList);
+
+    /// <summary>
+    /// Add a key-value pair (binary data) to the hash list.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxHashList_AddKVPair(
+        IntPtr hashList,
+        [MarshalAs(UnmanagedType.LPStr)] string key,
+        uint valueLen,
+        IntPtr value);
+
+    /// <summary>
+    /// Serialize hash list to byte array (allocates memory).
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxHashList_Serialize(
+        IntPtr hashList,
+        out uint kvdLen,
+        out IntPtr kvd);
+
+    /// <summary>
+    /// Write KTX2 texture to file.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    public static extern KtxErrorCode ktxTexture2_WriteToNamedFile(
+        IntPtr texture,
+        [MarshalAs(UnmanagedType.LPStr)] string dstname);
+
     #endregion
 
     #region Helper Methods

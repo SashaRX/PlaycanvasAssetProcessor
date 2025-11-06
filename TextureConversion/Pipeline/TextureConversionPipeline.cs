@@ -371,6 +371,20 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         throw new Exception($"toktx packing failed: {toktxResult.Error}");
                     }
 
+                    // POST-PROCESSING: Inject TLV metadata if available
+                    if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
+                        Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
+                        foreach (var kvPair in kvdBinaryFiles) {
+                            Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
+                            bool injected = Ktx2MetadataInjector.InjectMetadata(outputPath, kvPair.Value, kvPair.Key);
+                            if (injected) {
+                                Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
+                            } else {
+                                Logger.Warn($"✗ Failed to inject metadata '{kvPair.Key}'");
+                            }
+                        }
+                    }
+
                     result.Success = true;
                     result.BasisOutput = toktxResult.Output;
                     result.MipLevels = mipmaps.Count;

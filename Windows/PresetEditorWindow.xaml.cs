@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 
@@ -19,34 +20,61 @@ namespace AssetProcessor.Windows {
                 // Editing existing preset
                 NameTextBox.Text = _originalPreset.Name;
                 DescriptionTextBox.Text = _originalPreset.Description ?? "";
+
+                // Compression
                 CompressionFormatComboBox.SelectedItem = _originalPreset.CompressionFormat;
                 OutputFormatComboBox.SelectedItem = _originalPreset.OutputFormat;
+                ColorSpaceComboBox.SelectedItem = _originalPreset.ColorSpace;
                 KTX2SupercompressionComboBox.SelectedItem = _originalPreset.KTX2Supercompression;
                 KTX2ZstdLevelSlider.Value = _originalPreset.KTX2ZstdLevel;
+
+                // ETC1S
                 ETC1SQualitySlider.Value = _originalPreset.QualityLevel;
+                UseETC1SRDOCheckBox.IsChecked = _originalPreset.UseETC1SRDO;
+                ETC1SRDOLambdaSlider.Value = _originalPreset.ETC1SRDOLambda;
+
+                // UASTC
                 UASTCQualitySlider.Value = _originalPreset.UASTCQuality;
                 UseUASTCRDOCheckBox.IsChecked = _originalPreset.UseUASTCRDO;
                 UASTCRDOLambdaSlider.Value = _originalPreset.UASTCRDOQuality;
-                UseETC1SRDOCheckBox.IsChecked = _originalPreset.UseETC1SRDO;
-                ETC1SRDOLambdaSlider.Value = _originalPreset.ETC1SRDOLambda;
+
+                // Basic settings
                 GenerateMipmapsCheckBox.IsChecked = _originalPreset.GenerateMipmaps;
+                UseMultithreadingCheckBox.IsChecked = _originalPreset.UseMultithreading;
+                PerceptualModeCheckBox.IsChecked = _originalPreset.PerceptualMode;
+
+                // Mipmaps - Manual
                 MipFilterComboBox.SelectedItem = _originalPreset.MipFilter;
                 ApplyGammaCorrectionCheckBox.IsChecked = _originalPreset.ApplyGammaCorrection;
                 NormalizeNormalsCheckBox.IsChecked = _originalPreset.NormalizeNormals;
-                UseMultithreadingCheckBox.IsChecked = _originalPreset.UseMultithreading;
-                PerceptualModeCheckBox.IsChecked = _originalPreset.PerceptualMode;
-                SeparateAlphaCheckBox.IsChecked = _originalPreset.SeparateAlpha;
-                ForceAlphaCheckBox.IsChecked = _originalPreset.ForceAlphaChannel;
-                RemoveAlphaCheckBox.IsChecked = _originalPreset.RemoveAlphaChannel;
-                ColorSpaceComboBox.SelectedItem = _originalPreset.ColorSpace;
+
+                // Mipmaps - Automatic
                 ToktxFilterComboBox.SelectedItem = _originalPreset.ToktxMipFilter;
                 WrapModeComboBox.SelectedItem = _originalPreset.WrapMode;
-                ClampMipmapsCheckBox.IsChecked = _originalPreset.ClampMipmaps;
-                LinearMipFilterCheckBox.IsChecked = _originalPreset.UseLinearMipFiltering;
+
+                // Alpha
+                ForceAlphaCheckBox.IsChecked = _originalPreset.ForceAlphaChannel;
+                RemoveAlphaCheckBox.IsChecked = _originalPreset.RemoveAlphaChannel;
+                SeparateAlphaCheckBox.IsChecked = _originalPreset.SeparateAlpha;
+
+                // Normal Maps
                 ConvertToNormalMapCheckBox.IsChecked = _originalPreset.ConvertToNormalMap;
                 NormalizeVectorsCheckBox.IsChecked = _originalPreset.NormalizeVectors;
                 KeepRGBLayoutCheckBox.IsChecked = _originalPreset.KeepRGBLayout;
+
+                // Advanced
+                ClampMipmapsCheckBox.IsChecked = _originalPreset.ClampMipmaps;
+                LinearMipFilterCheckBox.IsChecked = _originalPreset.UseLinearMipFiltering;
                 RemoveTemporaryMipmapsCheckBox.IsChecked = _originalPreset.RemoveTemporaryMipmaps;
+
+                // Toksvig Settings
+                ToksvigEnabledCheckBox.IsChecked = _originalPreset.ToksvigSettings.Enabled;
+                ToksvigCalculationModeComboBox.SelectedItem = _originalPreset.ToksvigSettings.CalculationMode;
+                ToksvigCompositePowerSlider.Value = _originalPreset.ToksvigSettings.CompositePower;
+                ToksvigMinMipLevelSlider.Value = _originalPreset.ToksvigSettings.MinToksvigMipLevel;
+                ToksvigSmoothVarianceCheckBox.IsChecked = _originalPreset.ToksvigSettings.SmoothVariance;
+                ToksvigVarianceThresholdSlider.Value = _originalPreset.ToksvigSettings.VarianceThreshold;
+                ToksvigNormalMapPathTextBox.Text = _originalPreset.ToksvigSettings.NormalMapPath ?? "";
 
                 // Load suffixes
                 SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>(_originalPreset.Suffixes);
@@ -59,12 +87,15 @@ namespace AssetProcessor.Windows {
                 ColorSpaceComboBox.SelectedItem = ColorSpace.Auto;
                 ToktxFilterComboBox.SelectedItem = ToktxFilterType.Kaiser;
                 WrapModeComboBox.SelectedItem = WrapMode.Clamp;
+                ToksvigCalculationModeComboBox.SelectedItem = ToksvigCalculationMode.Classic;
 
                 // Empty suffixes list for new preset
                 SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>();
             }
 
             UpdatePanelVisibility();
+            UpdateMipmapPanelsVisibility();
+            UpdateToksvigPanelsVisibility();
         }
 
         private void AddSuffix_Click(object sender, RoutedEventArgs e) {
@@ -133,6 +164,63 @@ namespace AssetProcessor.Windows {
             }
         }
 
+        private void CustomMipmapsCheckBox_Changed(object sender, RoutedEventArgs e) {
+            UpdateMipmapPanelsVisibility();
+        }
+
+        private void UpdateMipmapPanelsVisibility() {
+            bool useCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false;
+
+            // Show/hide panels based on mode
+            ManualMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
+            AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
+
+            // ВАЖНО: --normal_mode и --normalize работают ТОЛЬКО с автоматическими mipmaps (--genmipmap)!
+            if (useCustomMipmaps) {
+                // Disable options that only work with automatic mode
+                ConvertToNormalMapCheckBox.IsChecked = false;
+                ConvertToNormalMapCheckBox.IsEnabled = false;
+
+                NormalizeVectorsCheckBox.IsChecked = false;
+                NormalizeVectorsCheckBox.IsEnabled = false;
+            } else {
+                // Enable options for automatic mode
+                ConvertToNormalMapCheckBox.IsEnabled = true;
+                NormalizeVectorsCheckBox.IsEnabled = true;
+            }
+        }
+
+        private void ToksvigEnabledCheckBox_Changed(object sender, RoutedEventArgs e) {
+            UpdateToksvigPanelsVisibility();
+        }
+
+        private void ToksvigCalculationModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            UpdateToksvigPanelsVisibility();
+        }
+
+        private void UpdateToksvigPanelsVisibility() {
+            if (ToksvigCalculationModeComboBox.SelectedItem == null)
+                return;
+
+            var mode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem;
+
+            // Show Simplified settings only in Simplified mode
+            ToksvigSimplifiedSettingsPanel.Visibility = mode == ToksvigCalculationMode.Simplified
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void BrowseToksvigNormalMap_Click(object sender, RoutedEventArgs e) {
+            var dialog = new OpenFileDialog {
+                Title = "Select Normal Map",
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.tga;*.bmp)|*.png;*.jpg;*.jpeg;*.tga;*.bmp|All Files (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == true) {
+                ToksvigNormalMapPathTextBox.Text = dialog.FileName;
+            }
+        }
+
         private void UseUASTCRDOCheckBox_Changed(object sender, RoutedEventArgs e) {
             // Binding handles this automatically
         }
@@ -168,39 +256,72 @@ namespace AssetProcessor.Windows {
                 suffixesList = suffixes.ToList();
             }
 
+            // Create Toksvig settings
+            var toksvigSettings = new ToksvigSettings {
+                Enabled = ToksvigEnabledCheckBox.IsChecked ?? false,
+                CalculationMode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem,
+                CompositePower = (float)ToksvigCompositePowerSlider.Value,
+                MinToksvigMipLevel = (int)Math.Round(ToksvigMinMipLevelSlider.Value),
+                SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
+                NormalMapPath = string.IsNullOrWhiteSpace(ToksvigNormalMapPathTextBox.Text)
+                    ? null
+                    : ToksvigNormalMapPathTextBox.Text.Trim()
+            };
+
+            // Validate Toksvig settings
+            if (toksvigSettings.Enabled && !toksvigSettings.Validate(out string? error)) {
+                MessageBox.Show($"Invalid Toksvig settings: {error}", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             // Create preset from UI
             EditedPreset = new TextureConversionPreset {
                 Name = name,
                 Description = DescriptionTextBox.Text.Trim(),
                 Suffixes = suffixesList,
+
+                // Compression
                 CompressionFormat = (CompressionFormat)CompressionFormatComboBox.SelectedItem,
                 OutputFormat = (OutputFormat)OutputFormatComboBox.SelectedItem,
+                ColorSpace = (ColorSpace)ColorSpaceComboBox.SelectedItem,
                 QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
                 UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? false,
                 UASTCRDOQuality = (float)UASTCRDOLambdaSlider.Value,
                 UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
                 ETC1SRDOLambda = (float)ETC1SRDOLambdaSlider.Value,
-                GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
-                MipFilter = (FilterType)MipFilterComboBox.SelectedItem,
-                ApplyGammaCorrection = ApplyGammaCorrectionCheckBox.IsChecked ?? true,
-                NormalizeNormals = NormalizeNormalsCheckBox.IsChecked ?? false,
                 UseMultithreading = UseMultithreadingCheckBox.IsChecked ?? true,
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem,
                 KTX2ZstdLevel = (int)Math.Round(KTX2ZstdLevelSlider.Value),
+
+                // Mipmaps
+                GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
+                MipFilter = (FilterType)MipFilterComboBox.SelectedItem,
+                ApplyGammaCorrection = ApplyGammaCorrectionCheckBox.IsChecked ?? true,
+                NormalizeNormals = NormalizeNormalsCheckBox.IsChecked ?? false,
+                ToktxMipFilter = (ToktxFilterType)ToktxFilterComboBox.SelectedItem,
+                WrapMode = (WrapMode)WrapModeComboBox.SelectedItem,
+
+                // Alpha
                 SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
-                ColorSpace = (ColorSpace)ColorSpaceComboBox.SelectedItem,
-                ToktxMipFilter = (ToktxFilterType)ToktxFilterComboBox.SelectedItem,
-                WrapMode = (WrapMode)WrapModeComboBox.SelectedItem,
-                ClampMipmaps = ClampMipmapsCheckBox.IsChecked ?? false,
-                UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
+
+                // Normal Maps
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
                 KeepRGBLayout = KeepRGBLayoutCheckBox.IsChecked ?? false,
+
+                // Advanced
+                ClampMipmaps = ClampMipmapsCheckBox.IsChecked ?? false,
+                UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
                 RemoveTemporaryMipmaps = RemoveTemporaryMipmapsCheckBox.IsChecked ?? true,
+
+                // Toksvig
+                ToksvigSettings = toksvigSettings,
+
                 IsBuiltIn = false
             };
 

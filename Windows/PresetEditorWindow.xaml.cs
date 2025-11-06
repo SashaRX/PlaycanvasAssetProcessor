@@ -173,17 +173,15 @@ namespace AssetProcessor.Windows {
             AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
 
             // ВАЖНО: --normal_mode и --normalize работают ТОЛЬКО с автоматическими mipmaps (--genmipmap)!
+            // При manual mipmaps - СКРЫВАЕМ эти опции чтобы не вызывать конфликта
             if (useCustomMipmaps) {
-                // Disable options that only work with automatic mode
-                ConvertToNormalMapCheckBox.IsChecked = false;
-                ConvertToNormalMapCheckBox.IsEnabled = false;
-
-                NormalizeVectorsCheckBox.IsChecked = false;
-                NormalizeVectorsCheckBox.IsEnabled = false;
+                // СКРЫВАЕМ опции которые не работают с manual mipmaps
+                ConvertToNormalMapCheckBox.Visibility = Visibility.Collapsed;
+                NormalizeVectorsCheckBox.Visibility = Visibility.Collapsed;
             } else {
-                // Enable options for automatic mode
-                ConvertToNormalMapCheckBox.IsEnabled = true;
-                NormalizeVectorsCheckBox.IsEnabled = true;
+                // ПОКАЗЫВАЕМ опции для автоматического режима
+                ConvertToNormalMapCheckBox.Visibility = Visibility.Visible;
+                NormalizeVectorsCheckBox.Visibility = Visibility.Visible;
             }
         }
 

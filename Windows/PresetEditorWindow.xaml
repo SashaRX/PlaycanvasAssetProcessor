@@ -57,6 +57,30 @@
                 <x:Type TypeName="core:ToksvigCalculationMode"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramChannelModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramChannelMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramChannelMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramProcessingModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramProcessingMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramProcessingMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramQuantizationValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramQuantization}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramQuantization"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -381,6 +405,120 @@
                                     Click="BrowseToksvigNormalMap_Click"
                                     ToolTip="Browse for normal map"/>
                         </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Histogram Analysis -->
+            <GroupBox Header="Histogram Analysis (Metadata Optimization)" Margin="0,0,0,10">
+                <StackPanel>
+                    <CheckBox x:Name="EnableHistogramCheckBox" Content="Enable Histogram Analysis" Margin="0,0,0,5"
+                              Checked="EnableHistogramCheckBox_Changed" Unchecked="EnableHistogramCheckBox_Changed"
+                              ToolTip="Analyze texture histogram to optimize compression by computing scale/offset normalization parameters"/>
+
+                    <StackPanel x:Name="HistogramSettingsPanel" IsEnabled="{Binding ElementName=EnableHistogramCheckBox, Path=IsChecked}">
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Analysis Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="Off: disabled, Percentile: hard clamp outliers, PercentileWithKnee: soft-knee smoothing (recommended)"/>
+                            <ComboBox Grid.Column="1" x:Name="HistogramModeComboBox"
+                                      ItemsSource="{Binding Source={StaticResource HistogramModeValues}}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Processing Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="MetadataOnly: lossless (GPU applies FMA), Preprocessing: lossy (modify pixels before compression)"/>
+                            <ComboBox Grid.Column="1" x:Name="HistogramProcessingModeComboBox"
+                                      ItemsSource="{Binding Source={StaticResource HistogramProcessingModeValues}}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Channel Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="AverageLuminance: one scale/offset, PerChannel: RGB separate, PerChannelRGBA: RGBA separate"/>
+                            <ComboBox Grid.Column="1" x:Name="HistogramChannelModeComboBox"
+                                      ItemsSource="{Binding Source={StaticResource HistogramChannelModeValues}}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Quantization:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="Half16: 4 bytes (recommended), PackedUInt32: 4 bytes [0-1], Float32: 8 bytes (max precision)"/>
+                            <ComboBox Grid.Column="1" x:Name="HistogramQuantizationComboBox"
+                                      ItemsSource="{Binding Source={StaticResource HistogramQuantizationValues}}"/>
+                        </Grid>
+
+                        <TextBlock Text="Percentile Low (%) [0.0-100.0]:" Margin="0,5,0,3"
+                                   ToolTip="Lower percentile to ignore outliers (e.g., 0.5% darkest pixels)"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramPercentileLowSlider" Grid.Column="0"
+                                    Minimum="0.0" Maximum="10.0" Value="0.5"
+                                    TickFrequency="0.1" SmallChange="0.1" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileLowSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                       Width="50" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Percentile High (%) [0.0-100.0]:" Margin="0,0,0,3"
+                                   ToolTip="Upper percentile to ignore outliers (e.g., 99.5% brightest pixels)"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramPercentileHighSlider" Grid.Column="0"
+                                    Minimum="90.0" Maximum="100.0" Value="99.5"
+                                    TickFrequency="0.1" SmallChange="0.1" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileHighSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                       Width="50" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Knee Width (soft-knee smoothing) [0.0-1.0]:" Margin="0,0,0,3"
+                                   ToolTip="Width of soft-knee region for smoothstep smoothing (0.02 = 2% recommended)"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramKneeWidthSlider" Grid.Column="0"
+                                    Minimum="0.0" Maximum="0.1" Value="0.02"
+                                    TickFrequency="0.001" SmallChange="0.001" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramKneeWidthSlider, Path=Value, StringFormat={}{0:F3}}"
+                                       Width="50" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Min Range Threshold [0.0-1.0]:" Margin="0,0,0,3"
+                                   ToolTip="Skip normalization if range is too narrow (avoids noise amplification for nearly constant textures)"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramMinRangeThresholdSlider" Grid.Column="0"
+                                    Minimum="0.0" Maximum="0.1" Value="0.01"
+                                    TickFrequency="0.001" SmallChange="0.001" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramMinRangeThresholdSlider, Path=Value, StringFormat={}{0:F3}}"
+                                       Width="50" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="WriteHistogramParamsCheckBox" Content="Write Analysis Parameters to KTX2 Metadata" IsChecked="True" Margin="0,5,0,0"
+                                  ToolTip="Store histogram analysis parameters (percentiles, knee) in KTX2 Key-Value Data for debugging"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>

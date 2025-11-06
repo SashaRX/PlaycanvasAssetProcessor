@@ -16,14 +16,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
     public class TextureConversionPipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly MipGenerator _mipGenerator;
-        private readonly LibKtxConverter _libKtxConverter;
+        private readonly KtxCreateWrapper _ktxCreateWrapper;
         private readonly ToksvigProcessor _toksvigProcessor;
         private readonly NormalMapMatcher _normalMapMatcher;
         private readonly HistogramAnalyzer _histogramAnalyzer;
 
-        public TextureConversionPipeline(string? ktxDllDirectory = null) {
+        public TextureConversionPipeline(string? ktxExecutablePath = null) {
             _mipGenerator = new MipGenerator();
-            _libKtxConverter = new LibKtxConverter(ktxDllDirectory);
+            _ktxCreateWrapper = new KtxCreateWrapper(ktxExecutablePath ?? "ktx");
             _toksvigProcessor = new ToksvigProcessor();
             _normalMapMatcher = new NormalMapMatcher();
             _histogramAnalyzer = new HistogramAnalyzer();
@@ -56,7 +56,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
             try {
                 Logger.Info($"Starting conversion: {inputPath}");
-                Logger.Info("Using libktx API for KTX2 conversion (no CLI dependencies)");
+
+                // Проверяем доступность ktx
+                if (!await _ktxCreateWrapper.IsAvailableAsync()) {
+                    throw new Exception("ktx executable not found. Please install KTX-Software: winget install KhronosGroup.KTX-Software");
+                }
 
                 // Загружаем изображение
                 using var sourceImage = await Image.LoadAsync<Rgba32>(inputPath);
@@ -356,25 +360,52 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
                     }
 
-                    // LibKtxConverter сам добавляет метаданные в процессе создания текстуры
-                    var conversionResult = await _libKtxConverter.PackMipmapsAsync(
+                    var ktxResult = await _ktxCreateWrapper.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
                         compressionSettings,
                         kvdBinaryFiles
                     );
 
-                    if (!conversionResult.Success) {
-                        throw new Exception($"LibKTX conversion failed: {conversionResult.Error}");
+                    if (!ktxResult.Success) {
+                        throw new Exception($"ktx create failed: {ktxResult.Error}");
+                    }
+
+                    // POST-PROCESSING: Inject TLV metadata if available
+                    if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
+                        Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
+
+                        // Получаем директорию ktx для загрузки ktx.dll
+                        var ktxDllDirectory = _ktxCreateWrapper.KtxDirectory;
+                        if (!string.IsNullOrEmpty(ktxDllDirectory)) {
+                            Logger.Info($"ktx directory: {ktxDllDirectory}");
+                        } else {
+                            Logger.Warn("ktx directory not found (ktx might be in PATH)");
+                        }
+
+                        foreach (var kvPair in kvdBinaryFiles) {
+                            Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
+                            bool injected = Ktx2MetadataInjector.InjectMetadata(
+                                outputPath,
+                                kvPair.Value,
+                                kvPair.Key,
+                                ktxDllDirectory
+                            );
+                            if (injected) {
+                                Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
+                            } else {
+                                Logger.Warn($"✗ Failed to inject metadata '{kvPair.Key}'");
+                            }
+                        }
                     }
 
                     result.Success = true;
-                    result.BasisOutput = conversionResult.Output;
+                    result.BasisOutput = ktxResult.Output;
                     result.MipLevels = mipmaps.Count;
 
                     Logger.Info($"=== KTX2 PACKING SUCCESS ===");
                     Logger.Info($"  Output: {outputPath}");
-                    Logger.Info($"  File size: {conversionResult.OutputFileSize} bytes");
+                    Logger.Info($"  File size: {ktxResult.OutputFileSize} bytes");
                     Logger.Info($"  Mip levels: {mipmaps.Count}");
 
                 } finally {

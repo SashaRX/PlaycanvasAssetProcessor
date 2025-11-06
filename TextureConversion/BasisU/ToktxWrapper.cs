@@ -304,14 +304,22 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // NORMAL MAPS
             // ============================================
-            if (settings.ConvertToNormalMap) {
+            // Определяем: используются ли pre-generated mipmaps или toktx будет генерировать их сам
+            bool usePreGeneratedMipmaps = mipmapPaths.Count > 1;
+
+            // --normal_mode: Конвертирует 3-4 компонентные XYZ нормали в 2-компонентный X+Y формат (RGB=X, A=Y)
+            // Документация: "only valid for linear textures with two or more components"
+            // ВАЖНО: Имеет смысл ТОЛЬКО когда toktx обрабатывает оригинальное изображение (single input)
+            // С pre-generated mipmaps эта конвертация должна быть сделана на этапе генерации мипмапов
+            if (settings.ConvertToNormalMap && !usePreGeneratedMipmaps) {
                 args.Add("--normal_mode");
             }
 
-            // КРИТИЧНО: --normalize НЕ совместим с --levels!
-            // --normalize заставляет toktx обрабатывать ОДНО изображение и генерировать мипмапы сам
+            // --normalize: Нормализует входные нормали к единичной длине
+            // Документация: "normalizes input normals to unit length" для linear текстур с 2+ компонентами
+            // ВАЖНО: НЕ совместим с --mipmap (pre-generated mipmaps)!
+            // --normalize работает с ВХОДНЫМ изображением перед генерацией мипмапов
             // Поэтому добавляем его ТОЛЬКО если передаем одно изображение
-            bool usePreGeneratedMipmaps = mipmapPaths.Count > 1;
             if (settings.NormalizeVectors && !usePreGeneratedMipmaps) {
                 args.Add("--normalize");
             }

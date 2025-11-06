@@ -308,8 +308,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ApplyGammaCorrection = false,
                 ColorSpace = ColorSpace.Linear,
                 NormalizeNormals = true,
-                NormalizeVectors = true,
-                ConvertToNormalMap = true, // --normal_mode
+                NormalizeVectors = false, // ОТКЛЮЧЕНО: --normalize конфликтует с --mipmap
+                ConvertToNormalMap = false, // ОТКЛЮЧЕНО: --normal_mode может конфликтовать с pre-generated mipmaps
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,

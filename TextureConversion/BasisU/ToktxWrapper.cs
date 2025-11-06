@@ -421,14 +421,13 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
                 // WrapMode - режим сэмплирования на границах изображения
                 // ВАЖНО: --wmode работает ТОЛЬКО с --genmipmap!
+                // ВАЖНО: clamp это DEFAULT в toktx, поэтому НЕ добавляем --wmode clamp
+                // (есть баг/ограничение в toktx где --wmode clamp конфликтует с --normal_mode)
                 if (settings.WrapMode == WrapMode.Wrap) {
                     args.Add("--wmode");
                     args.Add("wrap");
-                } else if (settings.WrapMode == WrapMode.Clamp || settings.ClampMipmaps) {
-                    // По умолчанию toktx использует clamp, но можем явно указать
-                    args.Add("--wmode");
-                    args.Add("clamp");
                 }
+                // Clamp - это default, не добавляем флаг
             } else if (usePreGeneratedMipmaps) {
                 // КРИТИЧНО: Флаг --mipmap ОБЯЗАТЕЛЕН когда передаём готовые мипмапы!
                 // Без него toktx игнорирует все файлы кроме первого ("Ignoring excess input images")

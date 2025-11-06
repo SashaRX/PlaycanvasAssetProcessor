@@ -205,10 +205,11 @@
                                        Width="30" TextAlignment="Right"/>
                         </Grid>
                         <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,0,0,2" IsChecked="True"
-                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                                  ToolTip="Use Rate-Distortion Optimization for better quality/size ratio"/>
                         <TextBlock Text="RDO Lambda (0.001-10):" Style="{StaticResource LabelStyle}"
-                                   IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
-                        <TextBlock Text="⚙ Recommended: [0.25-10] general, [0.25-0.75] normals" FontSize="9" Foreground="Gray" Margin="0,0,0,2"/>
+                                   IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"
+                                   ToolTip="Recommended: 0.25-10 for general textures, 0.25-0.75 for normal maps"/>
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -234,9 +235,8 @@
                               Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"
                               SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,2"
-                              ToolTip="--assign_oetf: Auto (from file), Linear (normals, roughness), or sRGB (albedo)"/>
-                    <TextBlock Text="⚙ Auto-detect from file metadata" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                              Margin="0,0,0,5"
+                              ToolTip="Color space (--assign_oetf): Auto (detect from file metadata), Linear (normals, roughness, metallic), or sRGB (albedo, emissive)"/>
 
                     <!-- Output Format -->
                     <TextBlock Text="Output Format:" Style="{StaticResource LabelStyle}"/>
@@ -244,7 +244,8 @@
                               Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
                               SelectionChanged="OutputFormatComboBox_SelectionChanged"
-                              Margin="0,0,0,5"/>
+                              Margin="0,0,0,5"
+                              ToolTip="KTX2 (recommended, GPU compressed), Basis (legacy), or PNG (uncompressed)"/>
 
                     <!-- KTX2 Supercompression -->
                     <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed">
@@ -253,10 +254,11 @@
                                   Style="{StaticResource ReadableComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
                                   SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"
-                                  Margin="0,0,0,5"/>
+                                  Margin="0,0,0,5"
+                                  ToolTip="Additional compression for KTX2: Zstandard (best), ZLIB (compatible), or None"/>
 
-                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"/>
-                        <TextBlock Text="⚠ Note: Not available for ETC1S" FontSize="9" Foreground="Orange" Margin="0,0,0,2"/>
+                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Zstandard compression level. Only for UASTC format. Higher = smaller files but slower. Not available for ETC1S."/>
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -305,13 +307,16 @@
                                   Style="{StaticResource ReadableComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
-                                  Margin="0,0,0,2"
-                                  ToolTip="Filter for manual mipmap generation. Use Max for peaks, Min for valleys."/>
-                        <TextBlock Text="⚙ Max/Min useful for special cases (Toksvig)" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                                  Margin="0,0,0,5"
+                                  ToolTip="Filter for manual mipmap generation: Kaiser (best quality), Lanczos3 (sharp), Box (fast), Max/Min (special cases for Toksvig)"/>
 
-                        <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,5"
+                        <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,3"
                                   Checked="ApplyGammaCorrectionCheckBox_Checked" Unchecked="CheckboxSettingChanged"
-                                  ToolTip="Apply gamma 2.2 for sRGB textures (albedo). Disable for linear (normals, roughness)"/>
+                                  ToolTip="Apply gamma 2.2 correction for sRGB textures (albedo, emissive). Disable for linear space (normals, roughness, metallic, AO)"/>
+
+                        <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level" Margin="0,0,0,5"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                                  ToolTip="Renormalize normal vectors on each mipmap level during manual generation. Prevents normal vectors from becoming non-unit length after filtering."/>
                     </StackPanel>
 
                     <!-- AUTOMATIC MIPMAPS SETTINGS (when CustomMipmapsCheckBox is NOT checked) -->
@@ -321,68 +326,56 @@
                                   Style="{StaticResource ReadableComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
-                                  Margin="0,0,0,2"
-                                  ToolTip="--filter: toktx filter for automatic mipmap generation. Kaiser recommended."/>
-                        <TextBlock Text="⚙ Used when toktx generates mipmaps" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                                  Margin="0,0,0,5"
+                                  ToolTip="Filter for automatic mipmap generation by toktx (--genmipmap --filter): Kaiser (recommended), Lanczos4 (sharp), Box (fast), Mitchell (balanced)"/>
+
+                        <TextBlock Text="Wrap Mode (--wmode):" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="WrapModeComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource WrapModeValues}}"
+                                  SelectionChanged="ComboBoxSettingChanged"
+                                  Margin="0,0,0,5"
+                                  ToolTip="Texture sampling mode at edges (--wmode): Clamp (repeat edge pixels, use for most textures) or Wrap (tile/repeat image, use for seamless tiling textures)"/>
                     </StackPanel>
 
-                    <!-- COMMON SETTINGS -->
-                    <TextBlock Text="Wrap Mode (--wmode):" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="WrapModeComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource WrapModeValues}}"
-                              SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,2"
-                              ToolTip="--wmode: Clamp (repeat edge pixels) or Wrap (tile image)"/>
-                    <TextBlock Text="⚙ Clamp for most textures, Wrap for tiling" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
-
-                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps (Debug)" Margin="0,0,0,3"
+                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps (Debug)" Margin="0,0,0,5"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Save each mipmap level as separate file for debugging"/>
+                              ToolTip="Save each mipmap level as separate PNG file for debugging and inspection"/>
                 </StackPanel>
             </Expander>
 
             <!-- 5. NORMAL MAPS SECTION -->
             <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert: RGB-XYZ → RGBA-XY (2-channel)" Margin="0,0,0,2"
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert: RGB-XYZ → RGBA-XY (2-channel)" Margin="0,0,0,5"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normal_mode: Converts 3-component (R=X,G=Y,B=Z) to 2-channel (RGB=X,A=Y) format. Only works with --genmipmap (automatic mode)."/>
-                    <TextBlock Text="⚙ 3/4ch (RGB/RGBA) → 2ch (RGBA), 2ch → optimized" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                              ToolTip="Convert 3-component normal maps (R=X, G=Y, B=Z) to optimized 2-channel format (RGB=X, A=Y). For 4-channel input, 4th component is ignored. For 2-channel input, optimizes encoding. Only works with automatic mipmaps (toktx --genmipmap --normal_mode)."/>
 
-                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,2"
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Input Vectors (--normalize)" Margin="0,0,0,5"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normalize: Normalize input normal vectors to unit length before processing. Only works with --genmipmap (automatic mode)."/>
-                    <TextBlock Text="⚠ Only for automatic mipmaps (toktx --genmipmap)" FontSize="9" Foreground="Orange" Margin="0,0,0,5"/>
-
-                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level (Manual)" Margin="0,0,0,2"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Renormalize normal vectors on each mipmap level during manual generation. Works with both manual and automatic modes."/>
-                    <TextBlock Text="⚙ Works with all modes (manual/automatic)" FontSize="9" Foreground="Gray" Margin="0,0,0,3"/>
+                              ToolTip="Normalize input normal vectors to unit length before mipmap generation. Use if source normals are not unit length. Only works with automatic mipmaps (toktx --genmipmap --normalize)."/>
                 </StackPanel>
             </Expander>
 
             <!-- 6. TOKSVIG SECTION (For Gloss Maps - requires Custom Mipmaps) -->
-            <Expander x:Name="ToksvigExpander" Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False"
-                      IsEnabled="{Binding ElementName=CustomMipmapsCheckBox, Path=IsChecked}">
+            <Expander x:Name="ToksvigExpander" Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <TextBlock Text="⚠ Requires Custom Mipmaps enabled" FontSize="9" Foreground="Orange" Margin="0,0,0,3"/>
                     <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
-                              ToolTip="Apply Toksvig variance-based gloss adjustment for specular anti-aliasing"
+                              ToolTip="Apply Toksvig variance-based gloss/roughness adjustment to reduce specular aliasing ('sparkling' artifacts). Requires Custom Mipmaps enabled. Analyzes normal map variance to adjust gloss values."
                               Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"/>
 
                     <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Calculation Mode:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Classic (3x3, k^1.5) or Simplified (Box 2x2, linear k, threshold)"/>
+                        <TextBlock Text="Calculation Mode:" Style="{StaticResource LabelStyle}"/>
                         <ComboBox x:Name="ToksvigCalculationModeComboBox"
                                   Style="{StaticResource ReadableComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"
                                   SelectionChanged="ToksvigCalculationModeComboBox_SelectionChanged"
-                                  Margin="0,0,0,5"/>
+                                  Margin="0,0,0,5"
+                                  ToolTip="Classic (3x3 window, GaussianBlur, k^1.5 power) or Simplified (2x2 Box filter, linear k, variance threshold)"/>
 
-                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Weight of variance influence on gloss"/>
-                        <Grid Margin="0,0,0,5">
+                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5"
+                              ToolTip="Weight of variance influence on gloss/roughness adjustment. Higher values = stronger correction. Recommended: 1.0-2.0 for most cases.">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -396,9 +389,9 @@
                                        Width="30" TextAlignment="Right"/>
                         </Grid>
 
-                        <TextBlock Text="Min Mip Level:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Minimum mipmap level to apply Toksvig (0 = apply to base level with max detail)"/>
-                        <Grid Margin="0,0,0,5">
+                        <TextBlock Text="Min Mip Level:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5"
+                              ToolTip="Minimum mipmap level to start applying Toksvig. 0 = apply to base level (full detail). Higher values = apply only to smaller mipmaps.">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -414,13 +407,13 @@
 
                         <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance (Classic only)" IsChecked="True"
                                   Margin="0,0,0,5"
-                                  ToolTip="Apply 3x3 blur to variance map (only in Classic mode)"
+                                  ToolTip="Apply 3x3 Gaussian blur to variance map for smoother results. Only available in Classic mode. Reduces noise but may slightly blur the correction."
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
                         <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
-                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"
-                                       ToolTip="Variance below this value is set to 0 (reduces noise)"/>
-                            <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"/>
+                            <Grid Margin="0,0,0,5"
+                                  ToolTip="Variance below this threshold is set to 0 (dead zone). Reduces noise from low-variance areas. Only for Simplified mode. Recommended: 0.001-0.005">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -437,26 +430,22 @@
 
                         <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Keep Temporal Mipmaps (Debug)" Margin="0,0,0,5"
                                   IsChecked="False"
-                                  ToolTip="Keep temporary mipmap files to see Toksvig effect"
+                                  ToolTip="Keep temporary mipmap PNG files after processing for debugging. Useful to visually inspect Toksvig effect on each mip level."
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
-                        <TextBlock Text="Normal Map:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Auto-detected or manually specified"/>
-                        <TextBlock x:Name="NormalMapStatusTextBlock" Text="(auto-detect from filename)"
-                                   FontSize="9" Foreground="Gray" Margin="0,0,0,2"
-                                   TextWrapping="Wrap"/>
-                        <Grid Margin="0,0,0,0">
+                        <TextBlock Text="Normal Map Path:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="NormalMapPathTextBox" Grid.Column="0"
                                      Margin="0,0,2,0" Height="22"
-                                     ToolTip="Path to normal map (empty = auto-detect)"
+                                     ToolTip="Path to corresponding normal map. Leave empty for auto-detection from filename patterns (_normal, _nrm, etc.)"
                                      TextChanged="NormalMapPathTextBox_TextChanged"/>
                             <Button Content="..." Grid.Column="1" Width="25" Height="22"
                                     Click="BrowseNormalMap_Click"
-                                    ToolTip="Browse for normal map"/>
+                                    ToolTip="Browse and select normal map file"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>
@@ -465,7 +454,7 @@
             <!-- 8. ACTIONS SECTION -->
             <GroupBox Header="Actions" Style="{StaticResource CompactGroupBoxStyle}">
                 <StackPanel>
-                    <Button Content="⚙ Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
+                    <Button Content="Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
                             Click="Convert_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"
                             ToolTip="Convert selected texture(s) with current settings"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">

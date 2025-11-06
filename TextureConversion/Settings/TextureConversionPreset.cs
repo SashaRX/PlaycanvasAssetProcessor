@@ -128,12 +128,19 @@ namespace AssetProcessor.TextureConversion.Settings {
         public bool RemoveAlphaChannel { get; set; } = false;
 
         /// <summary>
-        /// Трактовать как линейное цветовое пространство
+        /// Цветовое пространство (новая система)
+        /// </summary>
+        public ColorSpace ColorSpace { get; set; } = ColorSpace.Auto;
+
+        /// <summary>
+        /// [DEPRECATED] Трактовать как линейное цветовое пространство
+        /// Используйте ColorSpace вместо этого
         /// </summary>
         public bool TreatAsLinear { get; set; } = false;
 
         /// <summary>
-        /// Трактовать как sRGB цветовое пространство
+        /// [DEPRECATED] Трактовать как sRGB цветовое пространство
+        /// Используйте ColorSpace вместо этого
         /// </summary>
         public bool TreatAsSRGB { get; set; } = false;
 
@@ -141,6 +148,16 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// Клампить края мипмапов
         /// </summary>
         public bool ClampMipmaps { get; set; } = false;
+
+        /// <summary>
+        /// Фильтр toktx для автогенерации мипмапов
+        /// </summary>
+        public ToktxFilterType ToktxMipFilter { get; set; } = ToktxFilterType.Kaiser;
+
+        /// <summary>
+        /// Режим сэмплирования на границах (Clamp/Wrap)
+        /// </summary>
+        public WrapMode WrapMode { get; set; } = WrapMode.Clamp;
 
         /// <summary>
         /// Использовать линейный фильтр для мипов
@@ -191,7 +208,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 3
+                KTX2ZstdLevel = 3,
+                ColorSpace = ColorSpace.Auto,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -213,7 +233,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ApplyGammaCorrection = true,
                 UseMultithreading = true,
                 PerceptualMode = true,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                ColorSpace = ColorSpace.Auto,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -235,7 +258,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ApplyGammaCorrection = true,
                 UseMultithreading = true,
                 PerceptualMode = true,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                ColorSpace = ColorSpace.Auto,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -256,7 +282,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ApplyGammaCorrection = false,
                 UseMultithreading = true,
                 PerceptualMode = false,
-                KTX2Supercompression = KTX2SupercompressionType.Zstandard
+                KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+                ColorSpace = ColorSpace.Auto,
+                ToktxMipFilter = ToktxFilterType.Box,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -277,14 +306,16 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = false,
-                TreatAsLinear = true,
+                ColorSpace = ColorSpace.Linear,
                 NormalizeNormals = true,
-                NormalizeVectors = true,
-                ConvertToNormalMap = true, // --normal_mode
+                NormalizeVectors = false, // ОТКЛЮЧЕНО: --normalize конфликтует с --mipmap
+                ConvertToNormalMap = false, // ОТКЛЮЧЕНО: --normal_mode может конфликтовать с pre-generated mipmaps
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 3
+                KTX2ZstdLevel = 3,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -305,11 +336,13 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = true,
-                TreatAsSRGB = true,
+                ColorSpace = ColorSpace.SRGB,
                 UseMultithreading = true,
                 PerceptualMode = true,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 3
+                KTX2ZstdLevel = 3,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -330,11 +363,13 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = false,
-                TreatAsLinear = true,
+                ColorSpace = ColorSpace.Linear,
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 3
+                KTX2ZstdLevel = 3,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -355,11 +390,13 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = false,
-                TreatAsLinear = true,
+                ColorSpace = ColorSpace.Linear,
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
                 KTX2ZstdLevel = 3,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp,
                 ToksvigSettings = new ToksvigSettings {
                     Enabled = true,
                     CompositePower = 1.0f,
@@ -387,12 +424,14 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GenerateMipmaps = true,
                 MipFilter = FilterType.Kaiser,
                 ApplyGammaCorrection = false,
-                TreatAsLinear = true,
+                ColorSpace = ColorSpace.Linear,
                 ClampMipmaps = true,
                 UseMultithreading = true,
                 PerceptualMode = false,
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
-                KTX2ZstdLevel = 3
+                KTX2ZstdLevel = 3,
+                ToktxMipFilter = ToktxFilterType.Kaiser,
+                WrapMode = WrapMode.Clamp
             };
         }
 
@@ -440,6 +479,13 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// Конвертирует пресет в CompressionSettings
         /// </summary>
         public CompressionSettings ToCompressionSettings() {
+            // Определяем ColorSpace: новая система имеет приоритет, затем старые флаги для обратной совместимости
+            var colorSpace = ColorSpace;
+            if (colorSpace == ColorSpace.Auto) {
+                if (TreatAsLinear) colorSpace = ColorSpace.Linear;
+                else if (TreatAsSRGB) colorSpace = ColorSpace.SRGB;
+            }
+
             return new CompressionSettings {
                 CompressionFormat = this.CompressionFormat,
                 OutputFormat = this.OutputFormat,
@@ -458,11 +504,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                 SeparateAlpha = this.SeparateAlpha,
                 ForceAlphaChannel = this.ForceAlphaChannel,
                 RemoveAlphaChannel = this.RemoveAlphaChannel,
-                // Конвертируем старые свойства в новое ColorSpace для обратной совместимости
-                ColorSpace = this.TreatAsLinear ? ColorSpace.Linear :
-                             this.TreatAsSRGB ? ColorSpace.SRGB :
-                             ColorSpace.Auto,
+                ColorSpace = colorSpace,
                 ClampMipmaps = this.ClampMipmaps,
+                ToktxMipFilter = this.ToktxMipFilter,
+                WrapMode = this.WrapMode,
                 UseLinearMipFiltering = this.UseLinearMipFiltering,
                 ConvertToNormalMap = this.ConvertToNormalMap,
                 NormalizeVectors = this.NormalizeVectors,

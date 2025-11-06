@@ -59,14 +59,14 @@
 
         <!-- Compact Expander Style -->
         <Style x:Key="CompactExpanderStyle" TargetType="Expander">
-            <Setter Property="Margin" Value="0,0,0,3"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
             <Setter Property="BorderBrush" Value="#BDC3C7"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="HeaderTemplate">
                 <Setter.Value>
                     <DataTemplate>
-                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="11" Margin="0,2"/>
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="9" Margin="0,1"/>
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
@@ -74,10 +74,11 @@
 
         <!-- Compact GroupBox Style -->
         <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,2"/>
-            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="1"/>
             <Setter Property="BorderBrush" Value="#BDC3C7"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="9"/>
         </Style>
 
         <!-- ComboBox Style -->
@@ -86,14 +87,15 @@
             <Setter Property="Foreground" Value="#2C3E50"/>
             <Setter Property="BorderBrush" Value="#BDC3C7"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="5,3"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="9"/>
         </Style>
 
         <Style TargetType="ComboBoxItem">
             <Setter Property="Background" Value="White"/>
             <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="9"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#E3F2FD"/>
@@ -108,13 +110,24 @@
 
         <!-- Label Style -->
         <Style x:Key="LabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+        </Style>
+
+        <!-- Checkbox Style -->
+        <Style TargetType="CheckBox">
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Padding" Value="3,1"/>
         </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="2">
+        <StackPanel Margin="1">
 
             <!-- 1. PRESET SECTION -->
             <GroupBox Header="Preset" Style="{StaticResource CompactGroupBoxStyle}">
@@ -139,19 +152,35 @@
 
             <!-- 2. COMPRESSION SETTINGS SECTION -->
             <Expander Header="Compression Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
-                <StackPanel Margin="5,2,0,0">
-                    <!-- Compression Format -->
-                    <TextBlock Text="Compression Format:" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="CompressionFormatComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
-                              SelectionChanged="CompressionFormatComboBox_SelectionChanged"
-                              Margin="0,0,0,5"/>
+                <StackPanel Margin="2,1,0,0">
+                    <!-- Compression Format + Output Format (on one row) -->
+                    <Grid Margin="0,0,0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="2"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Compression:" Style="{StaticResource LabelStyle}"/>
+                            <ComboBox x:Name="CompressionFormatComboBox"
+                                      Style="{StaticResource ReadableComboBoxStyle}"
+                                      ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
+                                      SelectionChanged="CompressionFormatComboBox_SelectionChanged"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Output:" Style="{StaticResource LabelStyle}"/>
+                            <ComboBox x:Name="OutputFormatComboBox"
+                                      Style="{StaticResource ReadableComboBoxStyle}"
+                                      ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
+                                      SelectionChanged="OutputFormatComboBox_SelectionChanged"
+                                      ToolTip="KTX2 (recommended, GPU compressed), Basis (legacy), or PNG (uncompressed)"/>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Compression Level (ETC1S only) -->
                     <StackPanel x:Name="CompressionLevelPanel" Visibility="Collapsed">
                         <TextBlock Text="Compression Level (0-5):" Style="{StaticResource LabelStyle}"/>
-                        <Grid Margin="0,0,0,5">
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -159,18 +188,18 @@
                             <Slider x:Name="CompressionLevelSlider" Grid.Column="0"
                                     Minimum="0" Maximum="5" Value="1"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"
                                     ToolTip="0=fastest, 5=slowest/best"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=CompressionLevelSlider, Path=Value}"
-                                       Width="30" TextAlignment="Right"/>
+                                       Width="25" TextAlignment="Right"/>
                         </Grid>
                     </StackPanel>
 
                     <!-- Quality (ETC1S) -->
                     <StackPanel x:Name="ETC1SQualityPanel" Visibility="Collapsed">
                         <TextBlock Text="Quality (1-255):" Style="{StaticResource LabelStyle}"/>
-                        <Grid Margin="0,0,0,5">
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -178,12 +207,12 @@
                             <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
                                     Minimum="1" Maximum="255" Value="128"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
-                                       Width="30" TextAlignment="Right"/>
+                                       Width="25" TextAlignment="Right"/>
                         </Grid>
-                        <CheckBox x:Name="UseETC1SRDOCheckBox" Content="RDO Optimizer" Margin="0,0,0,5"
+                        <CheckBox x:Name="UseETC1SRDOCheckBox" Content="RDO Optimizer" Margin="0,0,0,2"
                                   IsChecked="True"
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
                     </StackPanel>
@@ -191,7 +220,7 @@
                     <!-- Quality (UASTC) -->
                     <StackPanel x:Name="UASTCQualityPanel" Visibility="Collapsed">
                         <TextBlock Text="UASTC Quality (0-4):" Style="{StaticResource LabelStyle}"/>
-                        <Grid Margin="0,0,0,5">
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -199,32 +228,33 @@
                             <Slider x:Name="UASTCQualitySlider" Grid.Column="0"
                                     Minimum="0" Maximum="4" Value="2"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value}"
-                                       Width="30" TextAlignment="Right"/>
+                                       Width="25" TextAlignment="Right"/>
                         </Grid>
-                        <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,0,0,2" IsChecked="True"
-                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+                        <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,0,0,1" IsChecked="True"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                                  ToolTip="Use Rate-Distortion Optimization for better quality/size ratio"/>
                         <TextBlock Text="RDO Lambda (0.001-10):" Style="{StaticResource LabelStyle}"
-                                   IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
-                        <TextBlock Text="⚙ Recommended: [0.25-10] general, [0.25-0.75] normals" FontSize="9" Foreground="Gray" Margin="0,0,0,2"/>
-                        <Grid Margin="0,0,0,5">
+                                   IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"
+                                   ToolTip="Recommended: 0.25-10 for general textures, 0.25-0.75 for normal maps"/>
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.001" Maximum="10" Value="1"
-                                    TickFrequency="0.001" IsSnapToTickEnabled="False" Margin="0,0,5,0"
+                                    TickFrequency="0.001" IsSnapToTickEnabled="False" Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"
                                     IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"
                                     ToolTip="Lower = higher quality/larger files. Higher = lower quality/smaller files."/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F3}}"
-                                       Width="50" TextAlignment="Right"/>
+                                       Width="40" TextAlignment="Right"/>
                         </Grid>
                     </StackPanel>
 
-                    <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,0,0,5" IsChecked="True"
+                    <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,0,0,2" IsChecked="True"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                               ToolTip="Visual quality improvement (ETC1S/ASTC only)"/>
 
@@ -235,16 +265,7 @@
                               ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"
                               SelectionChanged="ComboBoxSettingChanged"
                               Margin="0,0,0,2"
-                              ToolTip="--assign_oetf: Auto (from file), Linear (normals, roughness), or sRGB (albedo)"/>
-                    <TextBlock Text="⚙ Auto-detect from file metadata" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
-
-                    <!-- Output Format -->
-                    <TextBlock Text="Output Format:" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="OutputFormatComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
-                              SelectionChanged="OutputFormatComboBox_SelectionChanged"
-                              Margin="0,0,0,5"/>
+                              ToolTip="Color space (--assign_oetf): Auto (detect from file metadata), Linear (normals, roughness, metallic), or sRGB (albedo, emissive)"/>
 
                     <!-- KTX2 Supercompression -->
                     <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed">
@@ -253,11 +274,12 @@
                                   Style="{StaticResource ReadableComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
                                   SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"
-                                  Margin="0,0,0,5"/>
+                                  Margin="0,0,0,2"
+                                  ToolTip="Additional compression for KTX2: Zstandard (best), ZLIB (compatible), or None"/>
 
-                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"/>
-                        <TextBlock Text="⚠ Note: Not available for ETC1S" FontSize="9" Foreground="Orange" Margin="0,0,0,2"/>
-                        <Grid Margin="0,0,0,5">
+                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"
+                                   ToolTip="Zstandard compression level. Only for UASTC format. Higher = smaller files but slower. Not available for ETC1S."/>
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -265,11 +287,11 @@
                             <Slider x:Name="ZstdLevelSlider" Grid.Column="0"
                                     Minimum="1" Maximum="22" Value="3"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"
                                     ToolTip="Zstandard level (default 3). Only for UASTC! Values >20 require more memory."/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=ZstdLevelSlider, Path=Value}"
-                                       Width="30" TextAlignment="Right"/>
+                                       Width="25" TextAlignment="Right"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>
@@ -277,11 +299,11 @@
 
             <!-- 3. ALPHA OPTIONS SECTION -->
             <Expander Header="Alpha Options" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
-                <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,3"
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,1"
                               Checked="ForceAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"
                               ToolTip="Add alpha channel (--target_type RGBA)"/>
-                    <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
+                    <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,1"
                               Checked="RemoveAlphaCheckBox_Checked" Unchecked="CheckboxSettingChanged"
                               ToolTip="Remove alpha channel (--target_type RGB)"/>
                 </StackPanel>
@@ -289,12 +311,12 @@
 
             <!-- 4. MIPMAPS SECTION -->
             <Expander Header="Mipmaps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
-                <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,3"
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,1"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                               ToolTip="Enable mipmap generation"/>
 
-                    <CheckBox x:Name="CustomMipmapsCheckBox" Content="Custom Mipmaps (Manual)" IsChecked="False" Margin="0,0,0,5"
+                    <CheckBox x:Name="CustomMipmapsCheckBox" Content="Custom Mipmaps (Manual)" IsChecked="False" Margin="0,0,0,2"
                               Checked="CustomMipmapsCheckBox_Changed" Unchecked="CustomMipmapsCheckBox_Changed"
                               ToolTip="Use manual mipmap generation (app-side) instead of automatic (toktx --genmipmap)"/>
 
@@ -306,78 +328,83 @@
                                   ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
                                   Margin="0,0,0,2"
-                                  ToolTip="Filter for manual mipmap generation. Use Max for peaks, Min for valleys."/>
-                        <TextBlock Text="⚙ Max/Min useful for special cases (Toksvig)" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                                  ToolTip="Filter for manual mipmap generation: Kaiser (best quality), Lanczos3 (sharp), Box (fast), Max/Min (special cases for Toksvig)"/>
 
-                        <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,5"
+                        <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,1"
                                   Checked="ApplyGammaCorrectionCheckBox_Checked" Unchecked="CheckboxSettingChanged"
-                                  ToolTip="Apply gamma 2.2 for sRGB textures (albedo). Disable for linear (normals, roughness)"/>
+                                  ToolTip="Apply gamma 2.2 correction for sRGB textures (albedo, emissive). Disable for linear space (normals, roughness, metallic, AO)"/>
+
+                        <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level" Margin="0,0,0,2"
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
+                                  ToolTip="Renormalize normal vectors on each mipmap level during manual generation. Prevents normal vectors from becoming non-unit length after filtering."/>
                     </StackPanel>
 
                     <!-- AUTOMATIC MIPMAPS SETTINGS (when CustomMipmapsCheckBox is NOT checked) -->
                     <StackPanel x:Name="AutomaticMipmapsPanel" Visibility="Visible">
-                        <TextBlock Text="Toktx Mip Filter (--filter):" Style="{StaticResource LabelStyle}"/>
-                        <ComboBox x:Name="ToktxFilterComboBox"
-                                  Style="{StaticResource ReadableComboBoxStyle}"
-                                  ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
-                                  SelectionChanged="ComboBoxSettingChanged"
-                                  Margin="0,0,0,2"
-                                  ToolTip="--filter: toktx filter for automatic mipmap generation. Kaiser recommended."/>
-                        <TextBlock Text="⚙ Used when toktx generates mipmaps" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+                        <!-- Mipmap Filter + Wrap Mode (on one row) -->
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="2"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Mip Filter:" Style="{StaticResource LabelStyle}"/>
+                                <ComboBox x:Name="ToktxFilterComboBox"
+                                          Style="{StaticResource ReadableComboBoxStyle}"
+                                          ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
+                                          SelectionChanged="ComboBoxSettingChanged"
+                                          ToolTip="Filter for automatic mipmap generation by toktx (--genmipmap --filter): Kaiser (recommended), Lanczos4 (sharp), Box (fast), Mitchell (balanced)"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Wrap Mode:" Style="{StaticResource LabelStyle}"/>
+                                <ComboBox x:Name="WrapModeComboBox"
+                                          Style="{StaticResource ReadableComboBoxStyle}"
+                                          ItemsSource="{Binding Source={StaticResource WrapModeValues}}"
+                                          SelectionChanged="ComboBoxSettingChanged"
+                                          ToolTip="Texture sampling mode at edges (--wmode): Clamp (repeat edge pixels, use for most textures) or Wrap (tile/repeat image, use for seamless tiling textures)"/>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
 
-                    <!-- COMMON SETTINGS -->
-                    <TextBlock Text="Wrap Mode (--wmode):" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="WrapModeComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource WrapModeValues}}"
-                              SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,2"
-                              ToolTip="--wmode: Clamp (repeat edge pixels) or Wrap (tile image)"/>
-                    <TextBlock Text="⚙ Clamp for most textures, Wrap for tiling" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
-
-                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps (Debug)" Margin="0,0,0,3"
+                    <CheckBox x:Name="SaveSeparateMipmapsCheckBox" Content="Save Separate Mipmaps (Debug)" Margin="0,0,0,2"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Save each mipmap level as separate file for debugging"/>
+                              ToolTip="Save each mipmap level as separate PNG file for debugging and inspection"/>
                 </StackPanel>
             </Expander>
 
             <!-- 5. NORMAL MAPS SECTION -->
             <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
-                <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to XY(RGB/A) Normal Map" Margin="0,0,0,3"
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert: RGB-XYZ → RGBA-XY (2-channel)" Margin="0,0,0,1"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normal_mode: 2-channel optimization (RGB=X, A=Y). For 3/4-channel inputs: converts to 2-channel. For 2-channel: optimizes encoding."/>
-                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors" Margin="0,0,0,3"
+                              ToolTip="Convert 3-component normal maps (R=X, G=Y, B=Z) to optimized 2-channel format (RGB=X, A=Y). For 4-channel input, 4th component is ignored. For 2-channel input, optimizes encoding. Only works with automatic mipmaps (toktx --genmipmap --normal_mode)."/>
+
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Input Vectors (--normalize)" Margin="0,0,0,1"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normalize: Force normalize normal vectors to unit length"/>
-                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Renormalize normal vectors on each mipmap level during generation"/>
+                              ToolTip="Normalize input normal vectors to unit length before mipmap generation. Use if source normals are not unit length. Only works with automatic mipmaps (toktx --genmipmap --normalize)."/>
                 </StackPanel>
             </Expander>
 
             <!-- 6. TOKSVIG SECTION (For Gloss Maps - requires Custom Mipmaps) -->
-            <Expander x:Name="ToksvigExpander" Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False"
-                      IsEnabled="{Binding ElementName=CustomMipmapsCheckBox, Path=IsChecked}">
-                <StackPanel Margin="5,2,0,0">
-                    <TextBlock Text="⚠ Requires Custom Mipmaps enabled" FontSize="9" Foreground="Orange" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
-                              ToolTip="Apply Toksvig variance-based gloss adjustment for specular anti-aliasing"
+            <Expander x:Name="ToksvigExpander" Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,2"
+                              ToolTip="Apply Toksvig variance-based gloss/roughness adjustment to reduce specular aliasing ('sparkling' artifacts). Requires Custom Mipmaps enabled. Analyzes normal map variance to adjust gloss values."
                               Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"/>
 
                     <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Calculation Mode:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Classic (3x3, k^1.5) or Simplified (Box 2x2, linear k, threshold)"/>
+                        <TextBlock Text="Calculation Mode:" Style="{StaticResource LabelStyle}"/>
                         <ComboBox x:Name="ToksvigCalculationModeComboBox"
                                   Style="{StaticResource ReadableComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"
                                   SelectionChanged="ToksvigCalculationModeComboBox_SelectionChanged"
-                                  Margin="0,0,0,5"/>
+                                  Margin="0,0,0,2"
+                                  ToolTip="Classic (3x3 window, GaussianBlur, k^1.5 power) or Simplified (2x2 Box filter, linear k, variance threshold)"/>
 
-                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Weight of variance influence on gloss"/>
-                        <Grid Margin="0,0,0,5">
+                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2"
+                              ToolTip="Weight of variance influence on gloss/roughness adjustment. Higher values = stronger correction. Recommended: 1.0-2.0 for most cases.">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -385,15 +412,15 @@
                             <Slider x:Name="ToksvigCompositePowerSlider" Grid.Column="0"
                                     Minimum="0.5" Maximum="8.0" Value="1.0"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigCompositePowerSlider, Path=Value, StringFormat={}{0:F1}}"
-                                       Width="30" TextAlignment="Right"/>
+                                       Width="25" TextAlignment="Right"/>
                         </Grid>
 
-                        <TextBlock Text="Min Mip Level:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Minimum mipmap level to apply Toksvig (0 = apply to base level with max detail)"/>
-                        <Grid Margin="0,0,0,5">
+                        <TextBlock Text="Min Mip Level:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2"
+                              ToolTip="Minimum mipmap level to start applying Toksvig. 0 = apply to base level (full detail). Higher values = apply only to smaller mipmaps.">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -401,21 +428,21 @@
                             <Slider x:Name="ToksvigMinMipLevelSlider" Grid.Column="0"
                                     Minimum="0" Maximum="5" Value="0"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,2,0"
                                     ValueChanged="Slider_ValueChanged"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigMinMipLevelSlider, Path=Value}"
-                                       Width="30" TextAlignment="Right"/>
+                                       Width="25" TextAlignment="Right"/>
                         </Grid>
 
                         <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance (Classic only)" IsChecked="True"
-                                  Margin="0,0,0,5"
-                                  ToolTip="Apply 3x3 blur to variance map (only in Classic mode)"
+                                  Margin="0,0,0,2"
+                                  ToolTip="Apply 3x3 Gaussian blur to variance map for smoother results. Only available in Classic mode. Reduces noise but may slightly blur the correction."
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
                         <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
-                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"
-                                       ToolTip="Variance below this value is set to 0 (reduces noise)"/>
-                            <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"/>
+                            <Grid Margin="0,0,0,2"
+                                  ToolTip="Variance below this threshold is set to 0 (dead zone). Reduces noise from low-variance areas. Only for Simplified mode. Recommended: 0.001-0.005">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -423,35 +450,34 @@
                                 <Slider x:Name="ToksvigVarianceThresholdSlider" Grid.Column="0"
                                         Minimum="0" Maximum="0.01" Value="0.002"
                                         TickFrequency="0.0001" SmallChange="0.0001"
-                                        Margin="0,0,5,0"
+                                        Margin="0,0,2,0"
                                         ValueChanged="Slider_ValueChanged"/>
                                 <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigVarianceThresholdSlider, Path=Value, StringFormat={}{0:F4}}"
-                                           Width="50" TextAlignment="Right"/>
+                                           Width="40" TextAlignment="Right"/>
                             </Grid>
                         </StackPanel>
 
-                        <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Keep Temporal Mipmaps (Debug)" Margin="0,0,0,5"
+                        <CheckBox x:Name="RemoveTemporalMipmapsCheckBox" Content="Keep Temporal Mipmaps (Debug)" Margin="0,0,0,2"
                                   IsChecked="False"
-                                  ToolTip="Keep temporary mipmap files to see Toksvig effect"
+                                  ToolTip="Keep temporary mipmap PNG files after processing for debugging. Useful to visually inspect Toksvig effect on each mip level."
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
-                        <TextBlock Text="Normal Map:" Style="{StaticResource LabelStyle}"
-                                   ToolTip="Auto-detected or manually specified"/>
+                        <TextBlock Text="Normal Map Path:" Style="{StaticResource LabelStyle}"/>
                         <TextBlock x:Name="NormalMapStatusTextBlock" Text="(auto-detect from filename)"
-                                   FontSize="9" Foreground="Gray" Margin="0,0,0,2"
-                                   TextWrapping="Wrap"/>
-                        <Grid Margin="0,0,0,0">
+                                   Foreground="Gray" Margin="0,0,0,1" TextWrapping="Wrap"
+                                   ToolTip="Status of normal map auto-detection"/>
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="NormalMapPathTextBox" Grid.Column="0"
-                                     Margin="0,0,2,0" Height="22"
-                                     ToolTip="Path to normal map (empty = auto-detect)"
+                                     Margin="0,0,1,0" Height="20"
+                                     ToolTip="Path to corresponding normal map. Leave empty for auto-detection from filename patterns (_normal, _nrm, etc.)"
                                      TextChanged="NormalMapPathTextBox_TextChanged"/>
-                            <Button Content="..." Grid.Column="1" Width="25" Height="22"
+                            <Button Content="..." Grid.Column="1" Width="22" Height="20"
                                     Click="BrowseNormalMap_Click"
-                                    ToolTip="Browse for normal map"/>
+                                    ToolTip="Browse and select normal map file"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>
@@ -460,12 +486,12 @@
             <!-- 8. ACTIONS SECTION -->
             <GroupBox Header="Actions" Style="{StaticResource CompactGroupBoxStyle}">
                 <StackPanel>
-                    <Button Content="⚙ Convert Selected" x:Name="ConvertButton" Height="32" Margin="0,0,0,3"
+                    <Button Content="Convert Selected" x:Name="ConvertButton" Height="26" Margin="0,0,0,1"
                             Click="Convert_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"
                             ToolTip="Convert selected texture(s) with current settings"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Content="Apply" x:Name="ApplyButton" Width="60" Margin="0,0,5,0" Click="Apply_Click"/>
-                        <Button Content="Reset" x:Name="ResetButton" Width="60" Click="Reset_Click"/>
+                        <Button Content="Apply" x:Name="ApplyButton" Width="50" Margin="0,0,2,0" Click="Apply_Click"/>
+                        <Button Content="Reset" x:Name="ResetButton" Width="50" Click="Reset_Click"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>

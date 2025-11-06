@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
         mc:Ignorable="d"
-        Title="Preset Editor" Height="650" Width="450"
+        Title="Preset Editor" Height="750" Width="500"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
+        ResizeMode="CanResize">
 
     <Window.Resources>
         <ObjectDataProvider x:Key="CompressionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionFormat}">
@@ -31,6 +31,30 @@
         <ObjectDataProvider x:Key="KTX2SupercompressionValues" MethodName="GetValues" ObjectType="{x:Type core:KTX2SupercompressionType}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="core:KTX2SupercompressionType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ColorSpaceValues" MethodName="GetValues" ObjectType="{x:Type core:ColorSpace}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ColorSpace"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ToktxFilterTypeValues" MethodName="GetValues" ObjectType="{x:Type core:ToktxFilterType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ToktxFilterType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="WrapModeValues" MethodName="GetValues" ObjectType="{x:Type core:WrapMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:WrapMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ToksvigCalculationModeValues" MethodName="GetValues" ObjectType="{x:Type core:ToksvigCalculationMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ToksvigCalculationMode"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
     </Window.Resources>
@@ -104,6 +128,16 @@
                                   SelectionChanged="OutputFormatComboBox_SelectionChanged"/>
                     </Grid>
 
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Color Space:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="ColorSpaceComboBox"
+                                  ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"/>
+                    </Grid>
+
                     <!-- KTX2 Supercompression -->
                     <StackPanel x:Name="KTX2Panel" Visibility="Collapsed" Margin="0,5,0,0">
                         <TextBlock Text="KTX2 Supercompression:" Margin="0,0,0,3"/>
@@ -116,7 +150,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="KTX2ZstdLevelSlider" Grid.Column="0"
-                                    Minimum="1" Maximum="22" Value="6"
+                                    Minimum="1" Maximum="22" Value="3"
                                     TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=KTX2ZstdLevelSlider, Path=Value}"
                                        Width="40" TextAlignment="Right"/>
@@ -188,6 +222,7 @@
                     </StackPanel>
 
                     <CheckBox x:Name="PerceptualModeCheckBox" Content="Perceptual Mode" Margin="0,10,0,0" IsChecked="True"/>
+                    <CheckBox x:Name="UseMultithreadingCheckBox" Content="Use Multithreading" IsChecked="True" Margin="0,5,0,0"/>
                 </StackPanel>
             </GroupBox>
 
@@ -196,33 +231,167 @@
                 <StackPanel>
                     <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,5"/>
 
-                    <Grid Margin="0,0,0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <ComboBox Grid.Column="1" x:Name="MipFilterComboBox"
-                                  ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
-                    </Grid>
+                    <CheckBox x:Name="CustomMipmapsCheckBox" Content="Custom Mipmaps (Manual)" IsChecked="False" Margin="0,0,0,5"
+                              Checked="CustomMipmapsCheckBox_Changed" Unchecked="CustomMipmapsCheckBox_Changed"
+                              ToolTip="Use manual mipmap generation (app-side) instead of automatic (toktx --genmipmap)"/>
 
-                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Normals (for normal maps)" Margin="0,0,0,3"/>
+                    <!-- MANUAL MIPMAPS SETTINGS -->
+                    <StackPanel x:Name="ManualMipmapsPanel" Visibility="Collapsed">
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Manual Filter:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="1" x:Name="MipFilterComboBox"
+                                      ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
+                        </Grid>
+
+                        <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,3"
+                                  ToolTip="Apply gamma 2.2 correction during mipmap generation (for sRGB textures like albedo)"/>
+                        <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Normals Each Mip Level" Margin="0,0,0,3"
+                                  ToolTip="Renormalize normal vectors during manual mipmap generation (works with all modes)"/>
+                    </StackPanel>
+
+                    <!-- AUTOMATIC MIPMAPS SETTINGS -->
+                    <StackPanel x:Name="AutomaticMipmapsPanel" Visibility="Visible">
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Toktx Filter:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="Filter for toktx auto-mipmap generation (--genmipmap --filter)"/>
+                            <ComboBox Grid.Column="1" x:Name="ToktxFilterComboBox"
+                                      ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Wrap Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="Texture sampling mode at edges (--wmode)"/>
+                            <ComboBox Grid.Column="1" x:Name="WrapModeComboBox"
+                                      ItemsSource="{Binding Source={StaticResource WrapModeValues}}"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Alpha Options -->
+            <GroupBox Header="Alpha Channel" Margin="0,0,0,10">
+                <StackPanel>
+                    <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,3"
+                              Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"
+                              ToolTip="Add alpha channel (--target_type RGBA)"/>
+                    <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
+                              Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"
+                              ToolTip="Remove alpha channel (--target_type RGB)"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Normal Maps -->
+            <GroupBox Header="Normal Maps" Margin="0,0,0,10">
+                <StackPanel>
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert: RGB-XYZ → RGBA-XY (--normal_mode)" Margin="0,0,0,3"
+                              ToolTip="Converts 3-component (R=X,G=Y,B=Z) to 2-channel (RGB=X,A=Y). Only works with automatic mipmaps (--genmipmap)."/>
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,3"
+                              ToolTip="Normalize input normal vectors to unit length. Only works with automatic mipmaps (--genmipmap)."/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Toksvig Settings -->
+            <GroupBox Header="Toksvig (Gloss Anti-Aliasing)" Margin="0,0,0,10">
+                <StackPanel>
+                    <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,0,0,5"
+                              Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"
+                              ToolTip="Apply Toksvig variance-based gloss adjustment for specular anti-aliasing. Requires Custom Mipmaps enabled."/>
+
+                    <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Calculation Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="Classic (3x3, k^1.5) or Simplified (Box 2x2, linear k, threshold)"/>
+                            <ComboBox Grid.Column="1" x:Name="ToksvigCalculationModeComboBox"
+                                      ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"
+                                      SelectionChanged="ToksvigCalculationModeComboBox_SelectionChanged"/>
+                        </Grid>
+
+                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Margin="0,0,0,3"
+                                   ToolTip="Weight of variance influence on gloss"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigCompositePowerSlider" Grid.Column="0"
+                                    Minimum="0.5" Maximum="8.0" Value="1.0"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigCompositePowerSlider, Path=Value, StringFormat={}{0:F1}}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Min Mip Level:" Margin="0,0,0,3"
+                                   ToolTip="Minimum mipmap level to apply Toksvig (0 = apply to base level)"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigMinMipLevelSlider" Grid.Column="0"
+                                    Minimum="0" Maximum="10" Value="0"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigMinMipLevelSlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance (Classic only)" IsChecked="True" Margin="0,0,0,5"
+                                  ToolTip="Apply 3x3 blur to variance map (only in Classic mode)"/>
+
+                        <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
+                            <TextBlock Text="Variance Threshold (Dead Zone):" Margin="0,0,0,3"
+                                       ToolTip="Variance below this value is set to 0 (reduces noise)"/>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="ToksvigVarianceThresholdSlider" Grid.Column="0"
+                                        Minimum="0" Maximum="0.01" Value="0.002"
+                                        TickFrequency="0.0001" SmallChange="0.0001" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigVarianceThresholdSlider, Path=Value, StringFormat={}{0:F4}}"
+                                           Width="50" TextAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <TextBlock Text="Normal Map Path (leave empty for auto-detect):" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="ToksvigNormalMapPathTextBox" Grid.Column="0" Margin="0,0,5,0"
+                                     ToolTip="Path to normal map (empty = auto-detect)"/>
+                            <Button Content="..." Grid.Column="1" Width="30"
+                                    Click="BrowseToksvigNormalMap_Click"
+                                    ToolTip="Browse for normal map"/>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
 
             <!-- Advanced Options -->
             <GroupBox Header="Advanced" Margin="0,0,0,10">
                 <StackPanel>
-                    <CheckBox x:Name="UseMultithreadingCheckBox" Content="Use Multithreading" IsChecked="True" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,3"
-                              Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"/>
-                    <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
-                              Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"/>
-                    <CheckBox x:Name="ForceLinearCheckBox" Content="Force Linear Color Space" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="ClampMipmapsCheckBox" Content="Clamp Mipmaps" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu)"/>
+                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu only)" Margin="0,0,0,3"
+                              ToolTip="Use linear filtering for basisu compression"/>
+                    <CheckBox x:Name="RemoveTemporaryMipmapsCheckBox" Content="Remove Temporary Mipmaps" IsChecked="True" Margin="0,0,0,3"
+                              ToolTip="Delete temporary mipmap files after processing"/>
                 </StackPanel>
             </GroupBox>
 

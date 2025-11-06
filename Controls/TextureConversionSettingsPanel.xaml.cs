@@ -253,7 +253,20 @@ namespace AssetProcessor.Controls {
             ManualMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
             AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
 
-            // Toksvig доступен только для кастомных мипмапов (биндинг в XAML уже настроен)
+            // Toksvig доступен только для кастомных мипмапов - СКРЫВАЕМ весь раздел если disabled
+            ToksvigExpander.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
+
+            // ВАЖНО: --normal_mode и --normalize работают ТОЛЬКО с автоматическими mipmaps (--genmipmap)!
+            // При manual mipmaps - СКРЫВАЕМ эти опции чтобы не вызывать конфликта
+            if (useCustomMipmaps) {
+                // СКРЫВАЕМ опции которые не работают с manual mipmaps
+                ConvertToNormalMapCheckBox.Visibility = Visibility.Collapsed;
+                NormalizeVectorsCheckBox.Visibility = Visibility.Collapsed;
+            } else {
+                // ПОКАЗЫВАЕМ опции для автоматического режима
+                ConvertToNormalMapCheckBox.Visibility = Visibility.Visible;
+                NormalizeVectorsCheckBox.Visibility = Visibility.Visible;
+            }
         }
 
         private void ToksvigEnabledCheckBox_Changed(object sender, RoutedEventArgs e) {
@@ -371,6 +384,7 @@ namespace AssetProcessor.Controls {
                 ClampMipmaps = false, // Deprecated - теперь используем WrapMode
                 UseLinearMipFiltering = false, // Removed from UI
                 GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
+                UseCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false,
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
                 NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
                 KeepRGBLayout = false, // Removed from UI

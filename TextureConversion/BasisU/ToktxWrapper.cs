@@ -41,6 +41,50 @@ namespace AssetProcessor.TextureConversion.BasisU {
         }
 
         /// <summary>
+        /// Получает версию toktx и логирует её
+        /// </summary>
+        public async Task<string> GetVersionAsync() {
+            try {
+                var psi = new ProcessStartInfo {
+                    FileName = _toktxExecutablePath,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process == null) return "Unknown (process failed to start)";
+
+                var output = new StringBuilder();
+                var error = new StringBuilder();
+
+                process.OutputDataReceived += (s, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)) output.AppendLine(e.Data);
+                };
+
+                process.ErrorDataReceived += (s, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)) error.AppendLine(e.Data);
+                };
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                var versionText = output.ToString().Trim();
+                if (string.IsNullOrEmpty(versionText)) {
+                    versionText = error.ToString().Trim();
+                }
+
+                return string.IsNullOrEmpty(versionText) ? "Unknown" : versionText;
+            } catch (Exception ex) {
+                return $"Error: {ex.Message}";
+            }
+        }
+
+        /// <summary>
         /// Упаковывает набор мипмапов в KTX2 файл с Basis Universal сжатием
         /// </summary>
         /// <param name="mipmapPaths">Пути к мипмапам (от mip0 до mipN)</param>
@@ -68,6 +112,11 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 }
 
                 Logger.Info($"=== TOKTX PACKING START ===");
+
+                // Логируем версию toktx
+                var version = await GetVersionAsync();
+                Logger.Info($"  toktx version: {version}");
+
                 Logger.Info($"  Mipmaps count: {mipmapPaths.Count}");
                 Logger.Info($"  Output: {outputPath}");
                 Logger.Info($"  Compression format: {settings.CompressionFormat}");
@@ -99,8 +148,21 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 Logger.Info($"=== TOKTX COMMAND ===");
                 Logger.Info($"  Executable: {_toktxExecutablePath}");
                 Logger.Info($"  Arguments count: {args.Count}");
+                Logger.Info($"  Full command line:");
+                var commandLine = new StringBuilder();
+                commandLine.Append(_toktxExecutablePath);
                 foreach (var arg in args) {
-                    Logger.Info($"    {arg}");
+                    // Экранируем аргументы с пробелами
+                    if (arg.Contains(' ')) {
+                        commandLine.Append($" \"{arg}\"");
+                    } else {
+                        commandLine.Append($" {arg}");
+                    }
+                }
+                Logger.Info($"  {commandLine}");
+                Logger.Info($"  Individual arguments:");
+                for (int i = 0; i < args.Count; i++) {
+                    Logger.Info($"    [{i}] = {args[i]}");
                 }
 
                 // Запускаем toktx с ArgumentList для правильной обработки путей с пробелами
@@ -228,17 +290,31 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // COLOR SPACE
             // ============================================
-            // КРИТИЧНО: --assign_oetf ДОЛЖЕН быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
-            switch (settings.ColorSpace) {
-                case ColorSpace.Linear:
-                    args.Add("--assign_oetf");
-                    args.Add("linear");
-                    break;
-                case ColorSpace.SRGB:
-                    args.Add("--assign_oetf");
-                    args.Add("srgb");
-                    break;
-                // ColorSpace.Auto - не добавляем флаг
+            // КРИТИЧНО: --assign_oetf/--convert_oetf ДОЛЖНЫ быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
+            //
+            // ВАЖНО: --normal_mode требует linear входные данные!
+            // PNG файлы нормал мапов имеют sRGB метаданные, но содержат linear данные (векторы направлений).
+            // Решение: для нормал мапов ВСЕГДА используем --assign_oetf linear, чтобы toktx игнорировал метаданные PNG
+            bool willUseNormalMode = settings.ConvertToNormalMap && mipmapPaths.Count == 1;
+
+            if (willUseNormalMode) {
+                // Для нормал мапов ОБЯЗАТЕЛЬНО указываем --assign_oetf linear
+                // Это говорит toktx "данные УЖЕ linear, игнорируй sRGB метаданные PNG"
+                args.Add("--assign_oetf");
+                args.Add("linear");
+            } else {
+                // Для обычных текстур используем настройку ColorSpace
+                switch (settings.ColorSpace) {
+                    case ColorSpace.Linear:
+                        args.Add("--assign_oetf");
+                        args.Add("linear");
+                        break;
+                    case ColorSpace.SRGB:
+                        args.Add("--assign_oetf");
+                        args.Add("srgb");
+                        break;
+                    // ColorSpace.Auto - не добавляем флаг
+                }
             }
 
             // ============================================
@@ -304,15 +380,26 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // NORMAL MAPS
             // ============================================
-            if (settings.ConvertToNormalMap) {
+            // Определяем: используются ли pre-generated mipmaps или toktx будет генерировать их сам
+            bool usePreGeneratedMipmaps = mipmapPaths.Count > 1;
+
+            // --normal_mode: Конвертирует 3-4 компонентные XYZ нормали в 2-компонентный X+Y формат (RGB=X, A=Y)
+            // Документация: "only valid for linear textures with two or more components"
+            // ВАЖНО: Имеет смысл ТОЛЬКО когда toktx обрабатывает оригинальное изображение (single input)
+            // С pre-generated mipmaps эта конвертация должна быть сделана на этапе генерации мипмапов
+            if (settings.ConvertToNormalMap && !usePreGeneratedMipmaps) {
                 args.Add("--normal_mode");
             }
 
-            // КРИТИЧНО: --normalize НЕ совместим с --levels!
-            // --normalize заставляет toktx обрабатывать ОДНО изображение и генерировать мипмапы сам
-            // Поэтому добавляем его ТОЛЬКО если передаем одно изображение
-            bool usePreGeneratedMipmaps = mipmapPaths.Count > 1;
-            if (settings.NormalizeVectors && !usePreGeneratedMipmaps) {
+            // --normalize: Нормализует входные нормали к единичной длине
+            // Документация: "normalizes input normals to unit length" для linear текстур с 2+ компонентами
+            // ВАЖНО: НЕ совместим с --mipmap (pre-generated mipmaps)!
+            // ТАКЖЕ НЕ совместим с --normal_mode когда используется --genmipmap!
+            // Из документации: "Do not use these 2D unit normals to generate X+Y normals for --normal_mode"
+            // --normalize работает с ВХОДНЫМ изображением перед генерацией мипмапов
+            // Поэтому добавляем его ТОЛЬКО если передаем одно изображение И не используем --normal_mode
+            bool isNormalModeActive = settings.ConvertToNormalMap && !usePreGeneratedMipmaps;
+            if (settings.NormalizeVectors && !usePreGeneratedMipmaps && !isNormalModeActive) {
                 args.Add("--normalize");
             }
 
@@ -331,6 +418,16 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 // Добавляем фильтр для генерации мипмапов
                 args.Add("--filter");
                 args.Add(ToktxFilterTypeToString(settings.ToktxMipFilter));
+
+                // WrapMode - режим сэмплирования на границах изображения
+                // ВАЖНО: --wmode работает ТОЛЬКО с --genmipmap!
+                // ВАЖНО: clamp это DEFAULT в toktx, поэтому НЕ добавляем --wmode clamp
+                // (есть баг/ограничение в toktx где --wmode clamp конфликтует с --normal_mode)
+                if (settings.WrapMode == WrapMode.Wrap) {
+                    args.Add("--wmode");
+                    args.Add("wrap");
+                }
+                // Clamp - это default, не добавляем флаг
             } else if (usePreGeneratedMipmaps) {
                 // КРИТИЧНО: Флаг --mipmap ОБЯЗАТЕЛЕН когда передаём готовые мипмапы!
                 // Без него toktx игнорирует все файлы кроме первого ("Ignoring excess input images")
@@ -340,16 +437,10 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 // НО в комбинации с --mipmap он ОБЯЗАТЕЛЕН!
                 args.Add("--levels");
                 args.Add(mipmapPaths.Count.ToString());
-            }
 
-            // WrapMode - режим сэмплирования на границах изображения
-            if (settings.WrapMode == WrapMode.Wrap) {
-                args.Add("--wmode");
-                args.Add("wrap");
-            } else if (settings.WrapMode == WrapMode.Clamp || settings.ClampMipmaps) {
-                // По умолчанию toktx использует clamp, но можем явно указать
-                args.Add("--wmode");
-                args.Add("clamp");
+                // ВАЖНО: --wmode НЕ применяется с --mipmap!
+                // --wmode является подопцией --genmipmap и игнорируется/вызывает ошибку с --mipmap
+                // Режим wrap/clamp должен быть настроен на этапе генерации мипмапов в MipGenerator
             }
 
             // ============================================

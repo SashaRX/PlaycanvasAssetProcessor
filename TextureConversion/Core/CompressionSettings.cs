@@ -70,6 +70,12 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool GenerateMipmaps { get; set; } = true;
 
         /// <summary>
+        /// Использовать ручную генерацию мипмапов (через MipGenerator) вместо автоматической (toktx --genmipmap)
+        /// Когда false, toktx сам генерирует мипмапы, что необходимо для работы --normal_mode и --normalize
+        /// </summary>
+        public bool UseCustomMipmaps { get; set; } = false;
+
+        /// <summary>
         /// Использовать многопоточное сжатие
         /// </summary>
         public bool UseMultithreading { get; set; } = true;

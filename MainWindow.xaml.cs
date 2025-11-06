@@ -140,8 +140,8 @@ namespace AssetProcessor {
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
         private ConversionSettingsManager? conversionSettingsManager; // Менеджер параметров конвертации
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
-        private const int MaxPreviewSize = 512; // Максимальный размер изображения для превью (оптимизировано для скорости)
-        private const int ThumbnailSize = 256; // Размер для быстрого превью
+        private const int MaxPreviewSize = 2048; // Максимальный размер изображения для превью (высокое качество для детального просмотра)
+        private const int ThumbnailSize = 512; // Размер для быстрого превью (увеличено для лучшей читаемости)
         private const double MinPreviewColumnWidth = 256.0;
         private const double MaxPreviewColumnWidth = 512.0;
         private const double MinPreviewContentHeight = 128.0;

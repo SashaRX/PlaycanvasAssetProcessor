@@ -62,14 +62,29 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 using var sourceImage = await Image.LoadAsync<Rgba32>(inputPath);
                 Logger.Info($"Loaded image: {sourceImage.Width}x{sourceImage.Height}");
 
-                // Генерируем мипмапы (для подсчета уровней и опционального сохранения)
-                Logger.Info("Generating mipmaps...");
-                var mipmaps = _mipGenerator.GenerateMipmaps(sourceImage, mipProfile);
-                Logger.Info($"Generated {mipmaps.Count} mipmap levels");
+                // Определяем нужно ли генерировать мипмапы вручную
+                List<Image<Rgba32>> mipmaps;
 
-                // Выводим информацию о каждом мипмапе
-                for (int i = 0; i < mipmaps.Count; i++) {
-                    Logger.Info($"Mipmap level {i}: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                if (compressionSettings.UseCustomMipmaps) {
+                    // РУЧНАЯ ГЕНЕРАЦИЯ МИПМАПОВ: используем MipGenerator
+                    Logger.Info("=== MANUAL MIPMAP GENERATION (UseCustomMipmaps=true) ===");
+                    Logger.Info("Generating mipmaps manually with MipGenerator...");
+                    mipmaps = _mipGenerator.GenerateMipmaps(sourceImage, mipProfile);
+                    Logger.Info($"Generated {mipmaps.Count} mipmap levels");
+
+                    // Выводим информацию о каждом мипмапе
+                    for (int i = 0; i < mipmaps.Count; i++) {
+                        Logger.Info($"Mipmap level {i}: {mipmaps[i].Width}x{mipmaps[i].Height}");
+                    }
+                } else {
+                    // АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ: toktx сам сгенерирует мипмапы с --genmipmap
+                    Logger.Info("=== AUTOMATIC MIPMAP GENERATION (UseCustomMipmaps=false) ===");
+                    Logger.Info("Will pass only source image to toktx, it will generate mipmaps automatically with --genmipmap");
+                    Logger.Info("This allows --normal_mode and --normalize flags to work correctly");
+
+                    // Создаем список с ОДНИМ изображением (клон оригинала)
+                    mipmaps = new List<Image<Rgba32>> { sourceImage.Clone() };
+                    Logger.Info($"Created single-image list for toktx: {mipmaps[0].Width}x{mipmaps[0].Height}");
                 }
 
                 // Применяем Toksvig коррекцию если включена (для gloss/roughness текстур)
@@ -82,11 +97,21 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 }
                 Logger.Info($"  mipProfile.TextureType: {mipProfile.TextureType}");
                 Logger.Info($"  Is Gloss or Roughness: {mipProfile.TextureType == TextureType.Gloss || mipProfile.TextureType == TextureType.Roughness}");
+                Logger.Info($"  UseCustomMipmaps: {compressionSettings.UseCustomMipmaps}");
 
                 if (toksvigSettings != null && toksvigSettings.Enabled &&
                     (mipProfile.TextureType == TextureType.Gloss || mipProfile.TextureType == TextureType.Roughness)) {
 
-                    Logger.Info("=== ПРИМЕНЯЕМ TOKSVIG КОРРЕКЦИЮ ===");
+                    // КРИТИЧНО: Toksvig требует ручную генерацию мипмапов!
+                    if (!compressionSettings.UseCustomMipmaps) {
+                        Logger.Error("=== TOKSVIG ERROR ===");
+                        Logger.Error("  Toksvig correction requires Custom Mipmaps (Manual) to be enabled!");
+                        Logger.Error("  Toksvig works by analyzing and modifying each mipmap level individually.");
+                        Logger.Error("  Automatic mipmaps (toktx --genmipmap) generate mipmaps AFTER Toksvig cannot be applied.");
+                        Logger.Error("  Skipping Toksvig correction.");
+                        result.ToksvigApplied = false;
+                    } else {
+                        Logger.Info("=== ПРИМЕНЯЕМ TOKSVIG КОРРЕКЦИЮ ===");
 
                     try {
                         // Ищем normal map если путь не указан
@@ -162,6 +187,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Error(ex, "Ошибка при применении Toksvig коррекции");
                         result.ToksvigApplied = false;
                         // Продолжаем с оригинальными мипмапами
+                    }
                     }
                 }
 

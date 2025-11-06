@@ -254,6 +254,21 @@ namespace AssetProcessor.Controls {
             AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
 
             // Toksvig доступен только для кастомных мипмапов (биндинг в XAML уже настроен)
+
+            // ВАЖНО: --normal_mode и --normalize работают ТОЛЬКО с автоматическими mipmaps (--genmipmap)!
+            // Когда используются manual mipmaps (pre-generated), эти флаги нужно отключать
+            if (useCustomMipmaps) {
+                // Отключаем и снимаем галочки, если включены manual mipmaps
+                ConvertToNormalMapCheckBox.IsChecked = false;
+                ConvertToNormalMapCheckBox.IsEnabled = false;
+
+                NormalizeVectorsCheckBox.IsChecked = false;
+                NormalizeVectorsCheckBox.IsEnabled = false;
+            } else {
+                // Включаем обратно для автоматического режима
+                ConvertToNormalMapCheckBox.IsEnabled = true;
+                NormalizeVectorsCheckBox.IsEnabled = true;
+            }
         }
 
         private void ToksvigEnabledCheckBox_Changed(object sender, RoutedEventArgs e) {

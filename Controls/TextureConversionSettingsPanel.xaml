@@ -345,15 +345,20 @@
             <!-- 5. NORMAL MAPS SECTION -->
             <Expander Header="Normal Maps" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to XY(RGB/A) Normal Map" Margin="0,0,0,3"
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert: RGB-XYZ → RGBA-XY (2-channel)" Margin="0,0,0,2"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normal_mode: 2-channel optimization (RGB=X, A=Y). For 3/4-channel inputs: converts to 2-channel. For 2-channel: optimizes encoding."/>
-                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors" Margin="0,0,0,3"
+                              ToolTip="--normal_mode: Converts 3-component (R=X,G=Y,B=Z) to 2-channel (RGB=X,A=Y) format. Only works with --genmipmap (automatic mode)."/>
+                    <TextBlock Text="⚙ 3/4ch (RGB/RGBA) → 2ch (RGBA), 2ch → optimized" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,2"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--normalize: Force normalize normal vectors to unit length"/>
-                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level" Margin="0,0,0,3"
+                              ToolTip="--normalize: Normalize input normal vectors to unit length before processing. Only works with --genmipmap (automatic mode)."/>
+                    <TextBlock Text="⚠ Only for automatic mipmaps (toktx --genmipmap)" FontSize="9" Foreground="Orange" Margin="0,0,0,5"/>
+
+                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Each Mip Level (Manual)" Margin="0,0,0,2"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="Renormalize normal vectors on each mipmap level during generation"/>
+                              ToolTip="Renormalize normal vectors on each mipmap level during manual generation. Works with both manual and automatic modes."/>
+                    <TextBlock Text="⚙ Works with all modes (manual/automatic)" FontSize="9" Foreground="Gray" Margin="0,0,0,3"/>
                 </StackPanel>
             </Expander>
 

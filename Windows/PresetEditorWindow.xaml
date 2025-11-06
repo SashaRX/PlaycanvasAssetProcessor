@@ -224,8 +224,10 @@
                                   ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
                     </Grid>
 
-                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Normals (for normal maps)" Margin="0,0,0,3"/>
+                    <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction" IsChecked="True" Margin="0,0,0,3"
+                              ToolTip="Apply gamma 2.2 correction during mipmap generation (for sRGB textures like albedo)"/>
+                    <CheckBox x:Name="NormalizeNormalsCheckBox" Content="Normalize Normals Each Mip Level" Margin="0,0,0,3"
+                              ToolTip="Renormalize normal vectors during manual mipmap generation (works with all modes)"/>
                 </StackPanel>
             </GroupBox>
 
@@ -273,12 +275,18 @@
                               Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"/>
                     <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
                               Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"/>
-                    <CheckBox x:Name="ClampMipmapsCheckBox" Content="Clamp Mipmaps" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu)" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to Normal Map (--normal_mode)" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="KeepRGBLayoutCheckBox" Content="Keep RGB Layout" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="RemoveTemporaryMipmapsCheckBox" Content="Remove Temporary Mipmaps" IsChecked="True"/>
+                    <CheckBox x:Name="ClampMipmapsCheckBox" Content="Clamp Mipmaps" Margin="0,0,0,3"
+                              ToolTip="Clamp texture coordinates at edges (prevent wrapping)"/>
+                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu)" Margin="0,0,0,3"
+                              ToolTip="Use linear filtering for basisu compression"/>
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert: RGB-XYZ → RGBA-XY (--normal_mode)" Margin="0,0,0,3"
+                              ToolTip="Converts 3-component (R=X,G=Y,B=Z) to 2-channel (RGB=X,A=Y). Only works with automatic mipmaps (--genmipmap)."/>
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,3"
+                              ToolTip="Normalize input normal vectors to unit length. Only works with automatic mipmaps (--genmipmap)."/>
+                    <CheckBox x:Name="KeepRGBLayoutCheckBox" Content="Keep RGB Layout" Margin="0,0,0,3"
+                              ToolTip="Keep RGB channels, set alpha to 1 (--input_swizzle rgb1)"/>
+                    <CheckBox x:Name="RemoveTemporaryMipmapsCheckBox" Content="Remove Temporary Mipmaps" IsChecked="True"
+                              ToolTip="Delete temporary mipmap files after processing"/>
                 </StackPanel>
             </GroupBox>
 

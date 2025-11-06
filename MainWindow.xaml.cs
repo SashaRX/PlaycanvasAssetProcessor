@@ -2045,10 +2045,13 @@ namespace AssetProcessor {
                         // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
                         if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                             originalBitmapSource = bitmapImage;
-                            _ = UpdateHistogramAsync(originalBitmapSource);
                             ShowOriginalImage();
                             // НЕ применяем fitZoom для full resolution - это обновление кэша, зум уже установлен
                         }
+
+                        // Always update histogram when full-resolution image is loaded (even if showing KTX2)
+                        // This replaces the thumbnail-based histogram with accurate full-image data
+                        _ = UpdateHistogramAsync(bitmapImage);
 
                         UpdatePreviewSourceControls();
                     });

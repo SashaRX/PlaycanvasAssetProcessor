@@ -82,8 +82,8 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     Logger.Info("Will pass only source image to toktx, it will generate mipmaps automatically with --genmipmap");
                     Logger.Info("This allows --normal_mode and --normalize flags to work correctly");
 
-                    // Создаем список с ОДНИМ изображением (оригинал)
-                    mipmaps = new List<Image<Rgba32>> { sourceImage.Clone(ctx => {}) };
+                    // Создаем список с ОДНИМ изображением (клон оригинала)
+                    mipmaps = new List<Image<Rgba32>> { sourceImage.Clone() };
                     Logger.Info($"Created single-image list for toktx: {mipmaps[0].Width}x{mipmaps[0].Height}");
                 }
 

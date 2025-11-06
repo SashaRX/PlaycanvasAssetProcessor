@@ -113,6 +113,7 @@ namespace AssetProcessor.TextureConversion.Settings {
 
         public bool UseLinearMipFiltering { get; set; } = false;
         public bool GenerateMipmaps { get; set; } = true;
+        public bool UseCustomMipmaps { get; set; } = false;
         public bool ConvertToNormalMap { get; set; } = false;
         public bool NormalizeVectors { get; set; } = false;
         public bool KeepRGBLayout { get; set; } = false;
@@ -153,6 +154,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ToktxMipFilter = ToktxMipFilter,
                 WrapMode = WrapMode,
                 UseLinearMipFiltering = UseLinearMipFiltering,
+                UseCustomMipmaps = UseCustomMipmaps,
                 ConvertToNormalMap = ConvertToNormalMap,
                 NormalizeVectors = NormalizeVectors,
                 KeepRGBLayout = KeepRGBLayout,
@@ -185,6 +187,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 WrapMode = settings.WrapMode,
                 UseLinearMipFiltering = settings.UseLinearMipFiltering,
                 GenerateMipmaps = settings.GenerateMipmaps,
+                UseCustomMipmaps = settings.UseCustomMipmaps,
                 ConvertToNormalMap = settings.ConvertToNormalMap,
                 NormalizeVectors = settings.NormalizeVectors,
                 KeepRGBLayout = settings.KeepRGBLayout,

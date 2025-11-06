@@ -95,14 +95,14 @@ namespace AssetProcessor.Controls {
             ForceAlphaCheckBox.IsChecked = false;
             RemoveAlphaCheckBox.IsChecked = false;
 
-            // Color & Space (OETF)
-            OETFAutoRadioButton.IsChecked = true;
+            // Color Space
+            ColorSpaceComboBox.SelectedItem = ColorSpace.Auto;
 
             // Mipmaps
             GenerateMipmapsCheckBox.IsChecked = true;
-            MipFilterComboBox.SelectedIndex = 5; // Kaiser
-            // Removed - conflicted with Gamma Correction
-            MipClampCheckBox.IsChecked = false;
+            MipFilterComboBox.SelectedIndex = 5; // Kaiser (FilterType)
+            ToktxFilterComboBox.SelectedItem = ToktxFilterType.Kaiser;
+            WrapModeComboBox.SelectedItem = WrapMode.Clamp;
             RemoveTemporalMipmapsCheckBox.IsChecked = true;
             ApplyGammaCorrectionCheckBox.IsChecked = true;
             SaveSeparateMipmapsCheckBox.IsChecked = false;
@@ -226,11 +226,7 @@ namespace AssetProcessor.Controls {
             CheckboxSettingChanged(sender, e);
         }
 
-        private void OETFRadioButton_Changed(object sender, RoutedEventArgs e) {
-            if (!_isLoading) {
-                OnSettingsChanged();
-            }
-        }
+        // OETFRadioButton_Changed removed - теперь используем ColorSpaceComboBox
 
         private void ApplyGammaCorrectionCheckBox_Checked(object sender, RoutedEventArgs e) {
             CheckboxSettingChanged(sender, e);
@@ -316,6 +312,18 @@ namespace AssetProcessor.Controls {
                 ? (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem
                 : KTX2SupercompressionType.Zstandard;
 
+            var colorSpace = ColorSpaceComboBox.SelectedItem != null
+                ? (ColorSpace)ColorSpaceComboBox.SelectedItem
+                : ColorSpace.Auto;
+
+            var toktxFilter = ToktxFilterComboBox.SelectedItem != null
+                ? (ToktxFilterType)ToktxFilterComboBox.SelectedItem
+                : ToktxFilterType.Kaiser;
+
+            var wrapMode = WrapModeComboBox.SelectedItem != null
+                ? (WrapMode)WrapModeComboBox.SelectedItem
+                : WrapMode.Clamp;
+
             return new CompressionSettingsData {
                 CompressionFormat = format,
                 OutputFormat = outputFormat,
@@ -323,7 +331,7 @@ namespace AssetProcessor.Controls {
                 QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
                 UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? true,
-                UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 2),
+                UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 3), // 3 digits for 0.001 precision
                 PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
                 KTX2Supercompression = supercompression,
                 KTX2ZstdLevel = (int)Math.Round(ZstdLevelSlider.Value),
@@ -331,11 +339,12 @@ namespace AssetProcessor.Controls {
                 // Alpha options
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
-                // OETF (Color Space)
-                TreatAsLinear = OETFLinearRadioButton.IsChecked ?? false,
-                TreatAsSRGB = OETFSRGBRadioButton.IsChecked ?? false,
+                // Color Space
+                ColorSpace = colorSpace,
                 // Mipmaps
-                ClampMipmaps = MipClampCheckBox.IsChecked ?? false,
+                ToktxMipFilter = toktxFilter,
+                WrapMode = wrapMode,
+                ClampMipmaps = false, // Deprecated - теперь используем WrapMode
                 UseLinearMipFiltering = false, // Removed from UI
                 GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
                 ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
@@ -541,21 +550,16 @@ namespace AssetProcessor.Controls {
             ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;
 
-            // Color & Space (OETF) - RadioButtons
-            if (compression.TreatAsLinear) {
-                OETFLinearRadioButton.IsChecked = true;
-            } else if (compression.TreatAsSRGB) {
-                OETFSRGBRadioButton.IsChecked = true;
-            } else {
-                OETFAutoRadioButton.IsChecked = true;
-            }
+            // Color Space
+            ColorSpaceComboBox.SelectedItem = compression.ColorSpace;
 
             // Mipmaps
             MipFilterComboBox.SelectedItem = mipProfile.Filter;
+            ToktxFilterComboBox.SelectedItem = compression.ToktxMipFilter;
+            WrapModeComboBox.SelectedItem = compression.WrapMode;
             ApplyGammaCorrectionCheckBox.IsChecked = mipProfile.ApplyGammaCorrection;
             GenerateMipmapsCheckBox.IsChecked = generateMips;
             SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
-            MipClampCheckBox.IsChecked = compression.ClampMipmaps;
 
             // Normal Maps
             NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
@@ -661,13 +665,19 @@ namespace AssetProcessor.Controls {
 
                         case "treatAsSRGB":
                             if (param.Value is bool srgb && srgb) {
-                                OETFSRGBRadioButton.IsChecked = true;
+                                ColorSpaceComboBox.SelectedItem = ColorSpace.SRGB;
                             }
                             break;
 
                         case "treatAsLinear":
                             if (param.Value is bool linear && linear) {
-                                OETFLinearRadioButton.IsChecked = true;
+                                ColorSpaceComboBox.SelectedItem = ColorSpace.Linear;
+                            }
+                            break;
+
+                        case "colorSpace":
+                            if (Enum.TryParse<ColorSpace>(param.Value?.ToString(), true, out var colorSpace)) {
+                                ColorSpaceComboBox.SelectedItem = colorSpace;
                             }
                             break;
 
@@ -739,13 +749,14 @@ namespace AssetProcessor.Controls {
             ForceAlphaCheckBox.IsChecked = preset.ForceAlphaChannel;
             RemoveAlphaCheckBox.IsChecked = preset.RemoveAlphaChannel;
 
-            // Color Space (OETF) - RadioButtons
+            // Color Space
+            // Старые пресеты могут иметь TreatAsLinear/TreatAsSRGB
             if (preset.TreatAsLinear) {
-                OETFLinearRadioButton.IsChecked = true;
+                ColorSpaceComboBox.SelectedItem = ColorSpace.Linear;
             } else if (preset.TreatAsSRGB) {
-                OETFSRGBRadioButton.IsChecked = true;
+                ColorSpaceComboBox.SelectedItem = ColorSpace.SRGB;
             } else {
-                OETFAutoRadioButton.IsChecked = true;
+                ColorSpaceComboBox.SelectedItem = ColorSpace.Auto;
             }
 
             // Normal Maps

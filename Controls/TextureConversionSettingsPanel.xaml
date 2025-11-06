@@ -39,6 +39,24 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
+        <ObjectDataProvider x:Key="ColorSpaceValues" MethodName="GetValues" ObjectType="{x:Type core:ColorSpace}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ColorSpace"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ToktxFilterTypeValues" MethodName="GetValues" ObjectType="{x:Type core:ToktxFilterType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ToktxFilterType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="WrapModeValues" MethodName="GetValues" ObjectType="{x:Type core:WrapMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:WrapMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
         <!-- Compact Expander Style -->
         <Style x:Key="CompactExpanderStyle" TargetType="Expander">
             <Setter Property="Margin" Value="0,0,0,3"/>
@@ -188,19 +206,21 @@
                         </Grid>
                         <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,0,0,2" IsChecked="True"
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
-                        <TextBlock Text="RDO Lambda:" Style="{StaticResource LabelStyle}"
+                        <TextBlock Text="RDO Lambda (0.001-10):" Style="{StaticResource LabelStyle}"
                                    IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
+                        <TextBlock Text="⚙ Recommended: [0.25-10] general, [0.25-0.75] normals" FontSize="9" Foreground="Gray" Margin="0,0,0,2"/>
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.1" Maximum="10" Value="1"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,5,0"
+                            <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0" Minimum="0.001" Maximum="10" Value="1"
+                                    TickFrequency="0.001" IsSnapToTickEnabled="False" Margin="0,0,5,0"
                                     ValueChanged="Slider_ValueChanged"
-                                    IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F1}}"
-                                       Width="40" TextAlignment="Right"/>
+                                    IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"
+                                    ToolTip="Lower = higher quality/larger files. Higher = lower quality/smaller files."/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F3}}"
+                                       Width="50" TextAlignment="Right"/>
                         </Grid>
                     </StackPanel>
 
@@ -257,22 +277,17 @@
                 </StackPanel>
             </Expander>
 
-            <!-- 4. COLOR & SPACE SECTION -->
-            <Expander Header="Color &amp; Space" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+            <!-- 4. COLOR SPACE SECTION -->
+            <Expander Header="Color Space" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="5,2,0,0">
-                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource LabelStyle}" Margin="0,0,0,2"/>
-                    <RadioButton x:Name="OETFAutoRadioButton" Content="Auto (from file)" GroupName="OETF"
-                                 IsChecked="True" Margin="0,0,0,2"
-                                 Checked="OETFRadioButton_Changed"
-                                 ToolTip="Let toktx auto-detect from input file metadata"/>
-                    <RadioButton x:Name="OETFLinearRadioButton" Content="Force Linear" GroupName="OETF"
-                                 Margin="0,0,0,2"
-                                 Checked="OETFRadioButton_Changed"
-                                 ToolTip="--assign_oetf linear (for normal maps, roughness, etc.)"/>
-                    <RadioButton x:Name="OETFSRGBRadioButton" Content="Force sRGB" GroupName="OETF"
-                                 Margin="0,0,0,3"
-                                 Checked="OETFRadioButton_Changed"
-                                 ToolTip="--assign_oetf srgb (for albedo/color maps)"/>
+                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="ColorSpaceComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"
+                              SelectionChanged="ComboBoxSettingChanged"
+                              Margin="0,0,0,5"
+                              ToolTip="--assign_oetf: Auto (from file), Linear (normals, roughness), or sRGB (albedo)"/>
+                    <TextBlock Text="⚙ Auto-detect from file metadata" FontSize="9" Foreground="Gray" Margin="0,0,0,3"/>
                 </StackPanel>
             </Expander>
 
@@ -281,19 +296,38 @@
                 <StackPanel Margin="5,2,0,0">
                     <CheckBox x:Name="GenerateMipmapsCheckBox" Content="Generate Mipmaps" IsChecked="True" Margin="0,0,0,5"
                               Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--genmipmap"/>
+                              ToolTip="--genmipmap (by toktx) or manual generation (by app)"/>
 
-                    <TextBlock Text="Filter:" Style="{StaticResource LabelStyle}"/>
+                    <!-- Manual Mipmap Filter (for app-generated mipmaps) -->
+                    <TextBlock Text="Manual Mip Filter (app):" Style="{StaticResource LabelStyle}"/>
                     <ComboBox x:Name="MipFilterComboBox"
                               Style="{StaticResource ReadableComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
                               SelectionChanged="ComboBoxSettingChanged"
-                              Margin="0,0,0,5"
-                              ToolTip="--filter"/>
+                              Margin="0,0,0,2"
+                              ToolTip="Filter for manual mipmap generation (app-side). Use Max for anti-aliasing, Min for valleys. Only for Toksvig."/>
+                    <TextBlock Text="⚙ Max = take max of 4 pixels; Min = take min" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
 
-                    <CheckBox x:Name="MipClampCheckBox" Content="Clamp Mip Edges" Margin="0,0,0,3"
-                              Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
-                              ToolTip="--wmode clamp"/>
+                    <!-- Toktx Mipmap Filter (for toktx --genmipmap) -->
+                    <TextBlock Text="Toktx Mip Filter (--filter):" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="ToktxFilterComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
+                              SelectionChanged="ComboBoxSettingChanged"
+                              Margin="0,0,0,2"
+                              ToolTip="--filter: toktx filter for automatic mipmap generation. Kaiser recommended."/>
+                    <TextBlock Text="⚙ Used when toktx generates mipmaps" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+
+                    <!-- Wrap Mode -->
+                    <TextBlock Text="Wrap Mode (--wmode):" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="WrapModeComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource WrapModeValues}}"
+                              SelectionChanged="ComboBoxSettingChanged"
+                              Margin="0,0,0,2"
+                              ToolTip="--wmode: Clamp (repeat edge pixels) or Wrap (tile image)"/>
+                    <TextBlock Text="⚙ Clamp for most textures, Wrap for tiling" FontSize="9" Foreground="Gray" Margin="0,0,0,5"/>
+
                     <CheckBox x:Name="ApplyGammaCorrectionCheckBox" Content="Apply Gamma Correction (sRGB)" IsChecked="True" Margin="0,0,0,3"
                               Checked="ApplyGammaCorrectionCheckBox_Checked" Unchecked="CheckboxSettingChanged"
                               ToolTip="Apply gamma 2.2 for sRGB textures. Disable for linear textures (normals, roughness, etc)"/>

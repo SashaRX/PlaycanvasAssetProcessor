@@ -183,6 +183,31 @@ namespace AssetProcessor.TextureConversion.BasisU {
         }
 
         /// <summary>
+        /// Конвертирует ToktxFilterType в строку для toktx --filter
+        /// </summary>
+        private static string ToktxFilterTypeToString(ToktxFilterType filter) {
+            return filter switch {
+                ToktxFilterType.Box => "box",
+                ToktxFilterType.Tent => "tent",
+                ToktxFilterType.Bell => "bell",
+                ToktxFilterType.BSpline => "b-spline",
+                ToktxFilterType.Mitchell => "mitchell",
+                ToktxFilterType.Lanczos3 => "lanczos3",
+                ToktxFilterType.Lanczos4 => "lanczos4",
+                ToktxFilterType.Lanczos6 => "lanczos6",
+                ToktxFilterType.Lanczos12 => "lanczos12",
+                ToktxFilterType.Blackman => "blackman",
+                ToktxFilterType.Kaiser => "kaiser",
+                ToktxFilterType.Gaussian => "gaussian",
+                ToktxFilterType.CatmullRom => "catmullrom",
+                ToktxFilterType.QuadraticInterp => "quadratic_interp",
+                ToktxFilterType.QuadraticApprox => "quadratic_approx",
+                ToktxFilterType.QuadraticMix => "quadratic_mix",
+                _ => "kaiser" // default
+            };
+        }
+
+        /// <summary>
         /// Собирает аргументы командной строки для toktx
         /// </summary>
         private List<string> BuildArguments(
@@ -204,12 +229,16 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // COLOR SPACE
             // ============================================
             // КРИТИЧНО: --assign_oetf ДОЛЖЕН быть ПЕРЕД флагами сжатия (--clevel, --bcmp)!
-            if (settings.TreatAsLinear) {
-                args.Add("--assign_oetf");
-                args.Add("linear");
-            } else if (settings.TreatAsSRGB) {
-                args.Add("--assign_oetf");
-                args.Add("srgb");
+            switch (settings.ColorSpace) {
+                case ColorSpace.Linear:
+                    args.Add("--assign_oetf");
+                    args.Add("linear");
+                    break;
+                case ColorSpace.SRGB:
+                    args.Add("--assign_oetf");
+                    args.Add("srgb");
+                    break;
+                // ColorSpace.Auto - не добавляем флаг
             }
 
             // ============================================
@@ -298,6 +327,10 @@ namespace AssetProcessor.TextureConversion.BasisU {
             if (settings.GenerateMipmaps && mipmapPaths.Count == 1) {
                 // Если toktx должен сгенерировать мипмапы сам
                 args.Add("--genmipmap");
+
+                // Добавляем фильтр для генерации мипмапов
+                args.Add("--filter");
+                args.Add(ToktxFilterTypeToString(settings.ToktxMipFilter));
             } else if (usePreGeneratedMipmaps) {
                 // КРИТИЧНО: Флаг --mipmap ОБЯЗАТЕЛЕН когда передаём готовые мипмапы!
                 // Без него toktx игнорирует все файлы кроме первого ("Ignoring excess input images")
@@ -309,17 +342,27 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 args.Add(mipmapPaths.Count.ToString());
             }
 
-            if (settings.ClampMipmaps) {
+            // WrapMode - режим сэмплирования на границах изображения
+            if (settings.WrapMode == WrapMode.Wrap) {
+                args.Add("--wmode");
+                args.Add("wrap");
+            } else if (settings.WrapMode == WrapMode.Clamp || settings.ClampMipmaps) {
+                // По умолчанию toktx использует clamp, но можем явно указать
                 args.Add("--wmode");
                 args.Add("clamp");
             }
 
             // ============================================
-            // MULTITHREADING
+            // MULTITHREADING & PERFORMANCE
             // ============================================
             if (settings.UseMultithreading && settings.ThreadCount > 0) {
                 args.Add("--threads");
                 args.Add(settings.ThreadCount.ToString());
+            }
+
+            // --no_sse - отключить SSE оптимизации (если UseSSE41 = false)
+            if (!settings.UseSSE41) {
+                args.Add("--no_sse");
             }
 
             // ============================================

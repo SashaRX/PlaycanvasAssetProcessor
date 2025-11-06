@@ -33,6 +33,24 @@
                 <x:Type TypeName="core:KTX2SupercompressionType"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ColorSpaceValues" MethodName="GetValues" ObjectType="{x:Type core:ColorSpace}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ColorSpace"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ToktxFilterTypeValues" MethodName="GetValues" ObjectType="{x:Type core:ToktxFilterType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ToktxFilterType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="WrapModeValues" MethodName="GetValues" ObjectType="{x:Type core:WrapMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:WrapMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -211,18 +229,56 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Advanced Options -->
-            <GroupBox Header="Advanced" Margin="0,0,0,10">
+            <!-- Color Space & Advanced Options -->
+            <GroupBox Header="Color Space & Advanced" Margin="0,0,0,10">
                 <StackPanel>
+                    <!-- Color Space -->
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Color Space:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="ColorSpaceComboBox"
+                                  ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"/>
+                    </Grid>
+
+                    <!-- Toktx Filter -->
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Toktx Filter:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                   ToolTip="Filter for toktx auto-mipmap generation"/>
+                        <ComboBox Grid.Column="1" x:Name="ToktxFilterComboBox"
+                                  ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"/>
+                    </Grid>
+
+                    <!-- Wrap Mode -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Wrap Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                   ToolTip="Texture sampling mode at edges"/>
+                        <ComboBox Grid.Column="1" x:Name="WrapModeComboBox"
+                                  ItemsSource="{Binding Source={StaticResource WrapModeValues}}"/>
+                    </Grid>
+
                     <CheckBox x:Name="UseMultithreadingCheckBox" Content="Use Multithreading" IsChecked="True" Margin="0,0,0,3"/>
                     <CheckBox x:Name="SeparateAlphaCheckBox" Content="Separate RG to Color/Alpha" Margin="0,0,0,3"/>
                     <CheckBox x:Name="ForceAlphaCheckBox" Content="Force Alpha Channel" Margin="0,0,0,3"
                               Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"/>
                     <CheckBox x:Name="RemoveAlphaCheckBox" Content="Remove Alpha Channel" Margin="0,0,0,3"
                               Checked="AlphaCheckBox_Checked" Unchecked="AlphaCheckBox_Unchecked"/>
-                    <CheckBox x:Name="ForceLinearCheckBox" Content="Force Linear Color Space" Margin="0,0,0,3"/>
                     <CheckBox x:Name="ClampMipmapsCheckBox" Content="Clamp Mipmaps" Margin="0,0,0,3"/>
-                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu)"/>
+                    <CheckBox x:Name="LinearMipFilterCheckBox" Content="Linear Mip Filtering (basisu)" Margin="0,0,0,3"/>
+                    <CheckBox x:Name="ConvertToNormalMapCheckBox" Content="Convert to Normal Map (--normal_mode)" Margin="0,0,0,3"/>
+                    <CheckBox x:Name="NormalizeVectorsCheckBox" Content="Normalize Vectors (--normalize)" Margin="0,0,0,3"/>
+                    <CheckBox x:Name="KeepRGBLayoutCheckBox" Content="Keep RGB Layout" Margin="0,0,0,3"/>
+                    <CheckBox x:Name="RemoveTemporaryMipmapsCheckBox" Content="Remove Temporary Mipmaps" IsChecked="True"/>
                 </StackPanel>
             </GroupBox>
 

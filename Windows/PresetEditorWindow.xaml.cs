@@ -38,9 +38,15 @@ namespace AssetProcessor.Windows {
                 SeparateAlphaCheckBox.IsChecked = _originalPreset.SeparateAlpha;
                 ForceAlphaCheckBox.IsChecked = _originalPreset.ForceAlphaChannel;
                 RemoveAlphaCheckBox.IsChecked = _originalPreset.RemoveAlphaChannel;
-                ForceLinearCheckBox.IsChecked = _originalPreset.TreatAsLinear;
+                ColorSpaceComboBox.SelectedItem = _originalPreset.ColorSpace;
+                ToktxFilterComboBox.SelectedItem = _originalPreset.ToktxMipFilter;
+                WrapModeComboBox.SelectedItem = _originalPreset.WrapMode;
                 ClampMipmapsCheckBox.IsChecked = _originalPreset.ClampMipmaps;
                 LinearMipFilterCheckBox.IsChecked = _originalPreset.UseLinearMipFiltering;
+                ConvertToNormalMapCheckBox.IsChecked = _originalPreset.ConvertToNormalMap;
+                NormalizeVectorsCheckBox.IsChecked = _originalPreset.NormalizeVectors;
+                KeepRGBLayoutCheckBox.IsChecked = _originalPreset.KeepRGBLayout;
+                RemoveTemporaryMipmapsCheckBox.IsChecked = _originalPreset.RemoveTemporaryMipmaps;
 
                 // Load suffixes
                 SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>(_originalPreset.Suffixes);
@@ -50,6 +56,9 @@ namespace AssetProcessor.Windows {
                 OutputFormatComboBox.SelectedItem = OutputFormat.KTX2;
                 MipFilterComboBox.SelectedItem = FilterType.Kaiser;
                 KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
+                ColorSpaceComboBox.SelectedItem = ColorSpace.Auto;
+                ToktxFilterComboBox.SelectedItem = ToktxFilterType.Kaiser;
+                WrapModeComboBox.SelectedItem = WrapMode.Clamp;
 
                 // Empty suffixes list for new preset
                 SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>();
@@ -183,9 +192,15 @@ namespace AssetProcessor.Windows {
                 SeparateAlpha = SeparateAlphaCheckBox.IsChecked ?? false,
                 ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
                 RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
-                TreatAsLinear = ForceLinearCheckBox.IsChecked ?? false,
+                ColorSpace = (ColorSpace)ColorSpaceComboBox.SelectedItem,
+                ToktxMipFilter = (ToktxFilterType)ToktxFilterComboBox.SelectedItem,
+                WrapMode = (WrapMode)WrapModeComboBox.SelectedItem,
                 ClampMipmaps = ClampMipmapsCheckBox.IsChecked ?? false,
                 UseLinearMipFiltering = LinearMipFilterCheckBox.IsChecked ?? false,
+                ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
+                NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
+                KeepRGBLayout = KeepRGBLayoutCheckBox.IsChecked ?? false,
+                RemoveTemporaryMipmaps = RemoveTemporaryMipmapsCheckBox.IsChecked ?? true,
                 IsBuiltIn = false
             };
 

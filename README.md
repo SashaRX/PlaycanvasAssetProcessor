@@ -11,9 +11,17 @@
 - Скачивание текстур, моделей и материалов
 
 ### Визуализация ресурсов
-- **Текстуры**: превью изображений, RGB гистограммы, фильтрация по каналам (R, G, B, A)
+- **Текстуры**: превью изображений, RGB гистограммы с статистикой (Min/Max/Mean/Median/StdDev), фильтрация по каналам (R, G, B, A)
+- **TextureViewer**: GPU-ориентированный просмотрщик с поддержкой PNG/KTX2, уровней мипмапов, sRGB/Linear режимов
 - **3D Модели**: интерактивный 3D viewport, отображение UV каналов, статистика полигонов
 - **Материалы**: просмотр параметров шейдеров, текстурных карт и свойств освещения
+
+### Конвертация текстур
+- **Генерация мипмапов**: Kaiser, Lanczos3, Mitchell, Bilinear, Bicubic фильтры с гамма-коррекцией
+- **Сжатие**: Basis Universal (ETC1S, UASTC) через toktx с поддержкой KTX2
+- **Пресеты**: Albedo, Normal, Roughness, Metallic, AO, Emissive с оптимальными настройками
+- **Toksvig коррекция**: анти-алиасинг для gloss/roughness текстур на основе дисперсии нормалей
+- **Пакетная обработка**: параллельная конвертация с отслеживанием прогресса
 
 ### Дополнительные функции
 - Проверка целостности файлов через MD5 хэширование
@@ -34,6 +42,11 @@
 ### Инструменты разработки
 - Visual Studio 2022 Preview с компонентом "Разработка классических приложений .NET"
 - Git для контроля версий
+
+### Внешние зависимости
+- **toktx** v4.3.0+ из KTX-Software для конвертации текстур в KTX2
+  - Установка Windows: `winget install KhronosGroup.KTX-Software`
+  - Проверка: `toktx --version`
 
 ---
 
@@ -98,6 +111,19 @@ PlaycanvasAssetProcessor/
 │   └── MaterialResource.cs
 ├── ViewModels/          # MVVM ViewModels
 │   └── MainViewModel.cs
+├── Windows/             # Дополнительные окна
+│   ├── PresetEditorWindow.xaml.cs
+│   └── PresetManagementWindow.xaml.cs
+├── TextureConversion/   # Пайплайн конвертации текстур
+│   ├── Core/            # Базовые типы и настройки
+│   ├── MipGeneration/   # Генерация мипмапов и Toksvig
+│   ├── BasisU/          # Обертки для toktx
+│   ├── Pipeline/        # Основной пайплайн
+│   └── Settings/        # Система настроек конвертации
+├── TextureViewer/       # GPU просмотрщик текстур
+│   ├── D3D11TextureRenderer.cs
+│   ├── Ktx2TextureLoader.cs
+│   └── TextureViewerShader.hlsl
 ├── Helpers/             # Вспомогательные классы
 │   ├── Helpers.cs
 │   ├── MainWindowHelpers.cs
@@ -124,8 +150,8 @@ PlaycanvasAssetProcessor/
 - C# 12 с nullable reference types
 
 #### NuGet пакеты
-- **3D и графика**: AssimpNet 5.0.0-beta1, HelixToolkit.Wpf 2.25.0
-- **Обработка изображений**: SixLabors.ImageSharp 3.1.7, System.Drawing.Common 9.0.0
+- **3D и графика**: AssimpNet 5.0.0-beta1, HelixToolkit.Wpf 2.27.3, Vortice.Direct3D11 3.6.2, Vortice.D3DCompiler 3.6.2
+- **Обработка изображений**: SixLabors.ImageSharp 3.1.11
 - **UI компоненты**: Extended.Wpf.Toolkit 4.6.1, OxyPlot.Wpf 2.2.0, Ookii.Dialogs.Wpf 5.0.1
 - **MVVM**: CommunityToolkit.Mvvm 8.2.2
 - **Сериализация и логирование**: Newtonsoft.Json 13.0.3, NLog 5.3.4
@@ -155,6 +181,13 @@ PlaycanvasAssetProcessor/
    - Выберите нужные ресурсы
    - Нажмите "Download Selected"
    - Файлы сохранятся в папку проекта
+
+5. **Конвертация текстур**
+   - Откройте Texture Conversion Window
+   - Выберите текстуры для конвертации
+   - Выберите пресет (Albedo, Normal, Roughness и т.д.)
+   - Настройте параметры компрессии
+   - Нажмите "Convert Selected"
 
 ### Конфигурация производительности
 
@@ -356,13 +389,21 @@ dotnet add package PackageName --version X.Y.Z
 
 ## Roadmap
 
+### Реализованные возможности
+
+- [x] Поддержка batch операций (массовая обработка текстур)
+- [x] Автоматическая оптимизация текстур (сжатие KTX2, генерация мипмапов)
+- [x] Система пресетов для разных типов текстур
+- [x] Toksvig коррекция для анти-алиасинга бликов
+- [x] GPU-ориентированный TextureViewer с поддержкой мипмапов
+- [x] Статистика гистограмм (Min/Max/Mean/Median/StdDev)
+
 ### Планируемые улучшения
 
-- [ ] Поддержка batch операций (массовая обработка)
-- [ ] Автоматическая оптимизация текстур (сжатие, ресайз)
 - [ ] Экспорт в Unreal Engine и Godot
 - [ ] Кэширование превью для ускорения загрузки
 - [ ] Поиск и фильтрация ресурсов по параметрам
+- [ ] Поддержка HDR форматов (.hdr, .exr) в TextureViewer
 - [ ] Система плагинов для кастомных обработчиков
 - [ ] CI/CD pipeline через GitHub Actions
 - [ ] Unit и integration тесты
@@ -403,3 +444,18 @@ dotnet add package PackageName --version X.Y.Z
 - **Community Toolkit** за MVVM helpers
 - **HelixToolkit** за 3D визуализацию в WPF
 - **AssimpNet** за импорт 3D моделей
+- **Khronos Group** за KTX-Software и toktx
+
+---
+
+## Дополнительная документация
+
+Техническая документация по отдельным модулям:
+
+- **Конвертация текстур**: [TextureConversion/README.md](TextureConversion/README.md)
+- **Normal Maps**: [TextureConversion/NORMAL_MAPS_GUIDE.md](TextureConversion/NORMAL_MAPS_GUIDE.md)
+- **Toksvig коррекция**: [TextureConversion/TOKSVIG_README.md](TextureConversion/TOKSVIG_README.md)
+- **Система настроек**: [TextureConversion/Settings/CONVERSION_SETTINGS_USAGE.md](TextureConversion/Settings/CONVERSION_SETTINGS_USAGE.md)
+- **TextureViewer**: [Docs/TextureViewerSpec.md](Docs/TextureViewerSpec.md)
+- **Устранение проблем с toktx**: [TROUBLESHOOTING_TOKTX.md](TROUBLESHOOTING_TOKTX.md)
+- **Улучшения гистограмм**: [HISTOGRAM_IMPROVEMENTS.md](HISTOGRAM_IMPROVEMENTS.md)

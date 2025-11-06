@@ -57,6 +57,30 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
+        <ObjectDataProvider x:Key="HistogramModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramChannelModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramChannelMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramChannelMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramProcessingModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramProcessingMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramProcessingMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="HistogramQuantizationValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramQuantization}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:HistogramQuantization"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
         <!-- Compact Expander Style -->
         <Style x:Key="CompactExpanderStyle" TargetType="Expander">
             <Setter Property="Margin" Value="0,0,0,1"/>
@@ -478,6 +502,122 @@
                             <Button Content="..." Grid.Column="1" Width="22" Height="20"
                                     Click="BrowseNormalMap_Click"
                                     ToolTip="Browse and select normal map file"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Expander>
+
+            <!-- 7. HISTOGRAM ANALYSIS SECTION -->
+            <Expander Header="Histogram Analysis (Metadata)" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="EnableHistogramCheckBox" Content="Enable Histogram Analysis" Margin="0,0,0,2"
+                              ToolTip="Analyze texture histogram to compute optimal scale/offset normalization and write metadata to KTX2 for GPU denormalization"
+                              Checked="EnableHistogramCheckBox_Changed" Unchecked="EnableHistogramCheckBox_Changed"/>
+
+                    <StackPanel x:Name="HistogramSettingsPanel" IsEnabled="{Binding ElementName=EnableHistogramCheckBox, Path=IsChecked}">
+                        <TextBlock Text="Analysis Mode:" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="HistogramModeComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource HistogramModeValues}}"
+                                  SelectionChanged="ComboBoxSettingChanged"
+                                  Margin="0,0,0,2"
+                                  ToolTip="Off: disabled, Percentile: robust outlier handling, PercentileWithKnee: smooth outliers (recommended)"/>
+
+                        <TextBlock Text="Processing Mode:" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="HistogramProcessingModeComboBox"
+                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  ItemsSource="{Binding Source={StaticResource HistogramProcessingModeValues}}"
+                                  SelectionChanged="ComboBoxSettingChanged"
+                                  Margin="0,0,0,2"
+                                  ToolTip="MetadataOnly: lossless (GPU applies FMA), Preprocessing: lossy (modify pixels before compression for better histogram distribution)"/>
+
+                        <!-- Channel Mode + Quantization (on one row) -->
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="2"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Channel:" Style="{StaticResource LabelStyle}"/>
+                                <ComboBox x:Name="HistogramChannelModeComboBox"
+                                          Style="{StaticResource ReadableComboBoxStyle}"
+                                          ItemsSource="{Binding Source={StaticResource HistogramChannelModeValues}}"
+                                          SelectionChanged="ComboBoxSettingChanged"
+                                          ToolTip="AverageLuminance: single scale/offset, PerChannel: separate RGB, PerChannelRGBA: RGBA"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Quantize:" Style="{StaticResource LabelStyle}"/>
+                                <ComboBox x:Name="HistogramQuantizationComboBox"
+                                          Style="{StaticResource ReadableComboBoxStyle}"
+                                          ItemsSource="{Binding Source={StaticResource HistogramQuantizationValues}}"
+                                          SelectionChanged="ComboBoxSettingChanged"
+                                          ToolTip="Half16: 4B (recommended), PackedUInt32: 4B [0-1], Float32: 8B (max precision)"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Percentile Low (%) [0-10]:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2"
+                              ToolTip="Lower percentile to ignore dark outliers (e.g., 0.5% = ignore darkest 0.5% pixels)">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramPercentileLowSlider" Grid.Column="0"
+                                    Minimum="0.0" Maximum="10.0" Value="0.5"
+                                    TickFrequency="0.1" SmallChange="0.1"
+                                    Margin="0,0,2,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileLowSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                       Width="35" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Percentile High (%) [90-100]:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2"
+                              ToolTip="Upper percentile to ignore bright outliers (e.g., 99.5% = ignore brightest 0.5% pixels)">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramPercentileHighSlider" Grid.Column="0"
+                                    Minimum="90.0" Maximum="100.0" Value="99.5"
+                                    TickFrequency="0.1" SmallChange="0.1"
+                                    Margin="0,0,2,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileHighSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                       Width="35" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Knee Width (soft-knee) [0-0.1]:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2"
+                              ToolTip="Width of smooth transition region for outliers (0.02 = 2% recommended). Only for PercentileWithKnee mode.">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramKneeWidthSlider" Grid.Column="0"
+                                    Minimum="0.0" Maximum="0.1" Value="0.02"
+                                    TickFrequency="0.001" SmallChange="0.001"
+                                    Margin="0,0,2,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramKneeWidthSlider, Path=Value, StringFormat={}{0:F3}}"
+                                       Width="35" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Min Range Threshold [0-0.1]:" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2"
+                              ToolTip="Skip normalization if range too narrow (prevents noise amplification on flat/constant textures)">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="HistogramMinRangeThresholdSlider" Grid.Column="0"
+                                    Minimum="0.0" Maximum="0.1" Value="0.01"
+                                    TickFrequency="0.001" SmallChange="0.001"
+                                    Margin="0,0,2,0"
+                                    ValueChanged="Slider_ValueChanged"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramMinRangeThresholdSlider, Path=Value, StringFormat={}{0:F3}}"
+                                       Width="35" TextAlignment="Right"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>

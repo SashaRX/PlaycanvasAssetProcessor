@@ -126,6 +126,17 @@ namespace AssetProcessor.Controls {
             ToksvigVarianceThresholdSlider.Value = 0.002;
             NormalMapPathTextBox.Text = string.Empty;
 
+            // Histogram Analysis
+            EnableHistogramCheckBox.IsChecked = false;
+            HistogramModeComboBox.SelectedItem = HistogramMode.PercentileWithKnee;
+            HistogramProcessingModeComboBox.SelectedItem = HistogramProcessingMode.MetadataOnly;
+            HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
+            HistogramQuantizationComboBox.SelectedItem = HistogramQuantization.Half16;
+            HistogramPercentileLowSlider.Value = 0.5;
+            HistogramPercentileHighSlider.Value = 99.5;
+            HistogramKneeWidthSlider.Value = 0.02;
+            HistogramMinRangeThresholdSlider.Value = 0.01;
+
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
             UpdateToksvigCalculationModePanels();
@@ -272,6 +283,12 @@ namespace AssetProcessor.Controls {
         private void ToksvigEnabledCheckBox_Changed(object sender, RoutedEventArgs e) {
             if (!_isLoading) {
                 UpdateNormalMapAutoDetect();
+                CheckboxSettingChanged(sender, e);
+            }
+        }
+
+        private void EnableHistogramCheckBox_Changed(object sender, RoutedEventArgs e) {
+            if (!_isLoading) {
                 CheckboxSettingChanged(sender, e);
             }
         }
@@ -646,6 +663,26 @@ namespace AssetProcessor.Controls {
             _isLoading = false;
         }
 
+        public void LoadHistogramSettings(HistogramSettings? settings) {
+            _isLoading = true;
+
+            if (settings != null && settings.Mode != HistogramMode.Off) {
+                EnableHistogramCheckBox.IsChecked = true;
+                HistogramModeComboBox.SelectedItem = settings.Mode;
+                HistogramProcessingModeComboBox.SelectedItem = settings.ProcessingMode;
+                HistogramChannelModeComboBox.SelectedItem = settings.ChannelMode;
+                HistogramQuantizationComboBox.SelectedItem = settings.Quantization;
+                HistogramPercentileLowSlider.Value = settings.PercentileLow;
+                HistogramPercentileHighSlider.Value = settings.PercentileHigh;
+                HistogramKneeWidthSlider.Value = settings.KneeWidth;
+                HistogramMinRangeThresholdSlider.Value = settings.MinRangeThreshold;
+            } else {
+                EnableHistogramCheckBox.IsChecked = false;
+            }
+
+            _isLoading = false;
+        }
+
         // ============================================
         // PRESET HANDLING
         // ============================================
@@ -759,6 +796,61 @@ namespace AssetProcessor.Controls {
                                 ToksvigCompositePowerSlider.Value = compositePower;
                             }
                             break;
+
+                        // Histogram Analysis
+                        case "enableHistogram":
+                            if (param.Value is bool enableHistogram) {
+                                EnableHistogramCheckBox.IsChecked = enableHistogram;
+                            }
+                            break;
+
+                        case "histogramMode":
+                            if (Enum.TryParse<HistogramMode>(param.Value?.ToString(), true, out var histMode)) {
+                                HistogramModeComboBox.SelectedItem = histMode;
+                            }
+                            break;
+
+                        case "histogramProcessingMode":
+                            if (Enum.TryParse<HistogramProcessingMode>(param.Value?.ToString(), true, out var histProcessing)) {
+                                HistogramProcessingModeComboBox.SelectedItem = histProcessing;
+                            }
+                            break;
+
+                        case "histogramChannelMode":
+                            if (Enum.TryParse<HistogramChannelMode>(param.Value?.ToString(), true, out var histChannel)) {
+                                HistogramChannelModeComboBox.SelectedItem = histChannel;
+                            }
+                            break;
+
+                        case "histogramQuantization":
+                            if (Enum.TryParse<HistogramQuantization>(param.Value?.ToString(), true, out var histQuant)) {
+                                HistogramQuantizationComboBox.SelectedItem = histQuant;
+                            }
+                            break;
+
+                        case "histogramPercentileLow":
+                            if (param.Value is double percLow) {
+                                HistogramPercentileLowSlider.Value = percLow;
+                            }
+                            break;
+
+                        case "histogramPercentileHigh":
+                            if (param.Value is double percHigh) {
+                                HistogramPercentileHighSlider.Value = percHigh;
+                            }
+                            break;
+
+                        case "histogramKneeWidth":
+                            if (param.Value is double kneeWidth) {
+                                HistogramKneeWidthSlider.Value = kneeWidth;
+                            }
+                            break;
+
+                        case "histogramMinRangeThreshold":
+                            if (param.Value is double minRange) {
+                                HistogramMinRangeThresholdSlider.Value = minRange;
+                            }
+                            break;
                     }
                 }
 
@@ -815,6 +907,9 @@ namespace AssetProcessor.Controls {
 
             // Toksvig
             LoadToksvigSettings(preset.ToksvigSettings);
+
+            // Histogram Analysis
+            LoadHistogramSettings(preset.HistogramSettings);
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();

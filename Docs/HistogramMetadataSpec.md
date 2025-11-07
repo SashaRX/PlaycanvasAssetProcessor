@@ -85,12 +85,17 @@ v_original = v_normalized * (hi - lo) + lo
 
 **НОВЫЙ ФОРМАТ (правильный):**
 ```
-scale[0] < 1.0   →   Инвертированные значения (готовы для GPU)
+scale[0] < 1.0   →   GPU recovery values (hi - lo), готовы для использования
 ```
 
 **СТАРЫЙ ФОРМАТ (устаревший, требует инверсии):**
 ```
-scale[0] > 1.0   →   Прямые значения (нужна инверсия!)
+scale[0] > 1.0   →   Normalization values 1/(hi - lo), нужна инверсия!
+```
+
+**Логика детекции:**
+```csharp
+bool needsInversion = metadata.Scale[0] > 1.0f;  // Если scale > 1.0 → старый формат
 ```
 
 ### Структура TLV блока
@@ -247,10 +252,12 @@ public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
     var metadata = ParseKeyValueData(kvdData);
 
     // СОВМЕСТИМОСТЬ: Автодетект старого формата
-    bool needsInversion = metadata.Scale[0] < 1.0f;
+    // NEW format: scale < 1.0 → GPU recovery values
+    // OLD format: scale > 1.0 → normalization values (need inversion!)
+    bool needsInversion = metadata.Scale[0] > 1.0f;
 
     if (needsInversion) {
-        Logger.Warn("Detected OLD format (direct values), inverting for GPU");
+        Logger.Warn("Detected OLD format (normalization values), inverting for GPU");
 
         // Инвертируем: scale_inv = 1/scale, offset_inv = -offset/scale
         for (int i = 0; i < metadata.Scale.Length; i++) {
@@ -259,6 +266,8 @@ public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
             metadata.Scale[i] = 1.0f / s;
             metadata.Offset[i] = -o / s;
         }
+    } else {
+        Logger.Info("NEW format detected (scale < 1.0), using values directly");
     }
 
     return metadata;
@@ -397,17 +406,21 @@ v_restored = 0.5 * 0.2 + 0.4 = 0.5 ✅
 
 ## Диагностика проблем
 
-### Симптом: Текстура слишком яркая
+### Симптом: Текстура слишком темная или неправильные цвета
 
-**Возможная причина:** Старый формат (scale > 1.0) без инверсии
+**Возможная причина:** Двойная инверсия - новый формат (scale < 1.0) был ошибочно инвертирован
 
 **Решение:**
-1. Проверить `scale[0] < 1.0` при чтении
-2. Если `scale[0] > 1.0` → применить инверсию
+1. Проверить правило детекции: `needsInversion = metadata.Scale[0] > 1.0f` (НЕ `< 1.0f`!)
+2. Новый формат (scale < 1.0) использовать напрямую
+3. Старый формат (scale > 1.0) требует инверсии
 
-**Код проверки:**
+**Правильный код проверки:**
 ```csharp
-if (metadata.Scale[0] > 1.0f) {
+// ПРАВИЛЬНАЯ логика детекции
+bool needsInversion = metadata.Scale[0] > 1.0f;
+
+if (needsInversion) {
     Logger.Warn("OLD format detected, inverting...");
     for (int i = 0; i < metadata.Scale.Length; i++) {
         float s = metadata.Scale[i];
@@ -415,24 +428,27 @@ if (metadata.Scale[0] > 1.0f) {
         metadata.Scale[i] = 1.0f / s;
         metadata.Offset[i] = -o / s;
     }
+} else {
+    Logger.Info("NEW format, using directly");
 }
 ```
 
-### Симптом: Текстура слишком темная
+### Симптом: Текстура слишком яркая
 
-**Возможная причина:** Двойная инверсия (инвертировали уже инвертированные)
-
-**Решение:**
-1. Убедиться что инверсия применяется ТОЛЬКО один раз при записи
-2. При чтении проверять формат через `scale[0] < 1.0`
-
-### Симптом: Неправильные цвета (розовый/фиолетовый)
-
-**Возможная причина:** Используются прямые значения вместо инвертированных
+**Возможная причина:** Старый формат (scale > 1.0) не был инвертирован
 
 **Решение:**
-1. Проверить что в `TextureConversionPipeline.cs` применяется инверсия
-2. Убедиться что `histogramForTLV` содержит инвертированные значения
+1. Убедиться что правило детекции: `needsInversion = metadata.Scale[0] > 1.0f`
+2. Применить инверсию для старого формата
+
+### Симптом: Текстура красная/розовая
+
+**Возможная причина:** Shader применяет неправильное преобразование или metadata не читается
+
+**Решение:**
+1. Проверить что metadata загружается корректно (логи)
+2. Убедиться что shader применяет: `v_original = v_normalized * scale + offset`
+3. Проверить что histogram correction включена в UI
 
 ---
 

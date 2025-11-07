@@ -83,13 +83,13 @@ public static class Ktx2MetadataReader {
                 logger.Info("[SUCCESS] Found histogram metadata in KTX2 file");
 
                 // COMPATIBILITY: Check if metadata contains direct or inverse values
-                // After histogram preprocessing refactor, we ALWAYS store inverse values in file
-                // But old files may contain direct values (scale < 1.0 for normalization)
-                // If scale[0] < 1.0, it's a direct value, need to invert for GPU
-                bool needsInversion = metadata.Scale[0] < 1.0f;
+                // NEW format (correct): scale < 1.0 → GPU recovery values (hi - lo)
+                // OLD format (broken): scale > 1.0 → normalization values 1/(hi - lo)
+                // CRITICAL: Inverted logic compared to previous implementation!
+                bool needsInversion = metadata.Scale[0] > 1.0f;
 
                 if (needsInversion) {
-                    logger.Warn("Detected OLD format histogram metadata (direct values), inverting for GPU compatibility");
+                    logger.Warn("Detected OLD format histogram metadata (normalization values), inverting for GPU compatibility");
                     logger.Info($"Before inversion: scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
 
                     // Invert: scale_inv = 1/scale, offset_inv = -offset/scale
@@ -108,6 +108,9 @@ public static class Ktx2MetadataReader {
 
                     logger.Info($"After inversion: scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
                     logger.Info("GPU will now correctly apply: v_original = v_normalized * scale + offset");
+                } else {
+                    logger.Info("NEW format detected (scale < 1.0), using values directly for GPU");
+                    logger.Info($"Scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], Offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
                 }
             } else {
                 logger.Info("No 'pc.meta' key found in KVD section");

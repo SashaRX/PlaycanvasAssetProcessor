@@ -27,39 +27,68 @@ public static class Ktx2MetadataReader {
 
             for (int offset = 0; offset < 512; offset += 4) {
                 try {
+                    // APPROACH 1: Try using ktxHashList_FindValue with this offset
+                    // This is the PROPER way - using libktx API instead of manual parsing
+                    IntPtr pHashListHead = IntPtr.Add(textureHandle, offset);
+
+                    try {
+                        var result = LibKtxNative.ktxHashList_FindValue(
+                            pHashListHead,
+                            "pc.meta",
+                            out uint valueLen,
+                            out IntPtr pValue);
+
+                        if (result == LibKtxNative.KtxErrorCode.KTX_SUCCESS && pValue != IntPtr.Zero && valueLen > 0) {
+                            logger.Info($"[SUCCESS via API] Found 'pc.meta' using ktxHashList_FindValue at offset {offset}!");
+                            logger.Info($"  valueLen={valueLen}, pValue=0x{pValue:X}");
+
+                            // Copy TLV data from native memory
+                            byte[] tlvData = new byte[valueLen];
+                            Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
+
+                            logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
+
+                            // Parse TLV data
+                            var metadata = ParseTLVHistogramData(tlvData);
+                            if (metadata != null) {
+                                logger.Info($"[FINAL SUCCESS] kvDataHead offset = {offset}");
+                                return metadata;
+                            }
+                        }
+                    } catch {
+                        // ktxHashList_FindValue failed at this offset, continue scanning
+                    }
+
+                    // APPROACH 2: Fallback - manual memory scan (if API approach fails)
                     // Try reading IntPtr at this offset
                     IntPtr ptrValue = Marshal.ReadIntPtr(textureHandle, offset);
 
                     // Skip NULL pointers
                     if (ptrValue == IntPtr.Zero) continue;
 
-                    // Try reading uint at offset+8 (assuming pointer is 8 bytes on x64)
-                    uint lenValue = (uint)Marshal.ReadInt32(textureHandle, offset + 8);
+                    // Try reading uint at offset+8 (assuming kvDataHead structure layout)
+                    if (offset + 12 < 512) {
+                        uint lenValue = (uint)Marshal.ReadInt32(textureHandle, offset + 8);
 
-                    // Check if this looks like kvData/kvDataLen pair
-                    // kvDataLen should be reasonable (10-200 bytes for our metadata)
-                    if (lenValue > 0 && lenValue < 500) {
-                        logger.Info($"[SCAN] Offset {offset}: ptr=0x{ptrValue:X}, len={lenValue}");
+                        // Check if this looks like kvData/kvDataLen pair
+                        // kvDataLen should be reasonable (10-200 bytes for our metadata)
+                        if (lenValue > 0 && lenValue < 500) {
+                            logger.Debug($"[SCAN fallback] Offset {offset}: ptr=0x{ptrValue:X}, len={lenValue}");
 
-                        // Try to read and parse as KVD
-                        try {
-                            byte[] testData = new byte[lenValue];
-                            Marshal.Copy(ptrValue, testData, 0, (int)lenValue);
-
-                            // Check if first 4 bytes look like keyAndValueByteSize
-                            if (testData.Length >= 4) {
-                                uint keyAndValueByteSize = BitConverter.ToUInt32(testData, 0);
-                                logger.Info($"[SCAN] Offset {offset}: First 4 bytes = {keyAndValueByteSize}, raw: {BitConverter.ToString(testData.Take(Math.Min(32, testData.Length)).ToArray())}");
+                            // Try to read and parse as KVD
+                            try {
+                                byte[] testData = new byte[lenValue];
+                                Marshal.Copy(ptrValue, testData, 0, (int)lenValue);
 
                                 // Try parsing
                                 var result = ParseKeyValueData(testData);
                                 if (result != null) {
-                                    logger.Info($"[SUCCESS] Found KVD at offset {offset}!");
+                                    logger.Info($"[SUCCESS via manual] Found KVD at offset {offset} (kvData pointer offset)");
                                     return result;
                                 }
+                            } catch {
+                                // Not valid memory, continue scanning
                             }
-                        } catch {
-                            // Not valid memory, continue scanning
                         }
                     }
                 } catch {

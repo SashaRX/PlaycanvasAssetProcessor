@@ -2818,6 +2818,11 @@ namespace AssetProcessor {
             textureConversionWindow.ShowDialog();
         }
 
+        private void ModelConversionMenu(object? sender, RoutedEventArgs e) {
+            ModelConversionWindow modelConversionWindow = new();
+            modelConversionWindow.ShowDialog();
+        }
+
         private void ExitMenu(object? sender, RoutedEventArgs e) {
             Close();
         }

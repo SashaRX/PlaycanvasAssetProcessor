@@ -1031,8 +1031,19 @@ namespace AssetProcessor {
                     // Old method: extracted PNG mipmaps available (WPF mode)
                     UpdateMipmapControls(currentKtxMipmaps);
                     SetCurrentMipLevel(currentMipLevel);
+                } else if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
+                    // CRITICAL: Check if KTX2 is ALREADY loaded in D3D11 FIRST to prevent infinite reload loop
+                    UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
+                    logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
+
+                    // Restore channel mask if already loaded
+                    if (savedMask != null) {
+                        currentActiveChannelMask = savedMask;
+                        _ = FilterChannelAsync(savedMask);
+                        logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
+                    }
                 } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
-                    // New method: Reload KTX2 natively to D3D11
+                    // New method: Reload KTX2 natively to D3D11 (only if not already loaded)
                     _ = Task.Run(async () => {
                         try {
                             await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
@@ -1053,17 +1064,6 @@ namespace AssetProcessor {
                             logger.Error(ex, "Failed to reload KTX2 when switching to KTX2 mode");
                         }
                     });
-                } else if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
-                    // KTX2 already loaded in D3D11
-                    UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
-                    logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
-
-                    // Restore channel mask if already loaded
-                    if (savedMask != null) {
-                        currentActiveChannelMask = savedMask;
-                        _ = FilterChannelAsync(savedMask);
-                        logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
-                    }
                 } else {
                     HideMipmapControls();
                 }

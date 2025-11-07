@@ -85,22 +85,35 @@ float4 PSMain(PSInput input) : SV_TARGET
     }
 
     // STEP 0: Apply histogram denormalization if enabled
-    // This must happen FIRST, on the raw sampled data (normalized to [0,1])
+    // CRITICAL: Histogram metadata is in sRGB space, but BC-compressed sRGB textures
+    // are auto-decoded to linear by GPU. We must convert back to sRGB, apply denormalization,
+    // then convert to linear again for the rest of the pipeline.
     // Formula: v_original = v_normalized * scale + offset
     if (enableHistogramCorrection != 0)
     {
-        color.rgb = color.rgb * histogramScale + histogramOffset;
+        // For BC*_SRGB_BLOCK formats, GPU auto-decodes to linear before shader
+        // Convert linear -> sRGB to match histogram metadata space
+        float3 srgbColor = pow(max(color.rgb, 0.0), 1.0 / 2.2);
+
+        // Apply denormalization in sRGB space
+        srgbColor = srgbColor * histogramScale + histogramOffset;
+
+        // Convert back to linear for rest of pipeline
+        color.rgb = pow(max(srgbColor, 0.0), 2.2);
     }
 
     // Check if channel mask is active
     bool hasMask = (channelMask != 0xFFFFFFFF);
 
-    // STEP 1: Convert texture data to LINEAR space (for both masked and unmasked)
-    // For sRGB textures (gamma==1.0): decode sRGB->linear
-    // For linear textures (gamma==2.2): already linear, no conversion needed
-    if (gamma == 1.0)
+    // STEP 1: Data is now in LINEAR space
+    // For BC-compressed sRGB textures: already converted above
+    // For uncompressed PNG textures loaded as R8G8B8A8_UNorm:
+    //   - gamma==1.0 (sRGB): decode sRGB->linear
+    //   - gamma==2.2 (linear): already linear, no conversion
+    if (gamma == 1.0 && enableHistogramCorrection == 0)
     {
-        // sRGB texture - decode to linear
+        // sRGB texture without histogram - decode to linear
+        // (if histogram enabled, we already did this conversion above)
         color.rgb = pow(max(color.rgb, 0.0), 2.2);
     }
 

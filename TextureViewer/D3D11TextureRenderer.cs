@@ -601,7 +601,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
         lock (renderLock) {
             enableHistogramCorrection = enabled;
             if (histogramMetadata != null) {
-                logger.Debug($"Histogram correction {(enabled ? "enabled" : "disabled")}");
+                logger.Info($"[D3D11TextureRenderer] Histogram correction {(enabled ? "ENABLED" : "DISABLED")}");
+                if (enabled) {
+                    logger.Info($"[D3D11TextureRenderer] Will apply: v_original = v_normalized * {histogramMetadata.Scale[0]:F4} + {histogramMetadata.Offset[0]:F4}");
+                }
+            } else {
+                logger.Info($"[D3D11TextureRenderer] SetHistogramCorrection called but NO metadata (enabled={enabled})");
             }
         }
     }

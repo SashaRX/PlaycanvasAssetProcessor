@@ -18,26 +18,57 @@ public static class Ktx2MetadataReader {
     /// </summary>
     public static HistogramMetadata? ReadHistogramMetadata(IntPtr textureHandle) {
         try {
-            logger.Info("[Ktx2MetadataReader] Starting histogram metadata read (using ktxTexture_GetKvData)...");
+            logger.Info("[Ktx2MetadataReader] Starting histogram metadata read (experimental offset scan)...");
 
-            // Try using ktxTexture_GetKvData accessor function to avoid structure marshaling issues
-            IntPtr kvDataPtr = LibKtxNative.ktxTexture_GetKvData(textureHandle, out uint kvDataLen);
+            // EXPERIMENTAL: Scan structure memory to find kvData and kvDataLen fields
+            // We'll look for pairs of (IntPtr, uint) where IntPtr is non-zero and uint is reasonable (10-200 bytes)
 
-            logger.Info($"ktxTexture_GetKvData returned: ptr=0x{kvDataPtr:X}, len={kvDataLen}");
+            logger.Info("Scanning structure memory for KVD fields...");
 
-            if (kvDataPtr == IntPtr.Zero || kvDataLen == 0) {
-                logger.Info("No Key-Value Data in KTX2 texture (accessor returned null or zero length)");
-                return null;
+            for (int offset = 0; offset < 512; offset += 4) {
+                try {
+                    // Try reading IntPtr at this offset
+                    IntPtr ptrValue = Marshal.ReadIntPtr(textureHandle, offset);
+
+                    // Skip NULL pointers
+                    if (ptrValue == IntPtr.Zero) continue;
+
+                    // Try reading uint at offset+8 (assuming pointer is 8 bytes on x64)
+                    uint lenValue = (uint)Marshal.ReadInt32(textureHandle, offset + 8);
+
+                    // Check if this looks like kvData/kvDataLen pair
+                    // kvDataLen should be reasonable (10-200 bytes for our metadata)
+                    if (lenValue > 0 && lenValue < 500) {
+                        logger.Info($"[SCAN] Offset {offset}: ptr=0x{ptrValue:X}, len={lenValue}");
+
+                        // Try to read and parse as KVD
+                        try {
+                            byte[] testData = new byte[lenValue];
+                            Marshal.Copy(ptrValue, testData, 0, (int)lenValue);
+
+                            // Check if first 4 bytes look like keyAndValueByteSize
+                            if (testData.Length >= 4) {
+                                uint keyAndValueByteSize = BitConverter.ToUInt32(testData, 0);
+                                logger.Info($"[SCAN] Offset {offset}: First 4 bytes = {keyAndValueByteSize}, raw: {BitConverter.ToString(testData.Take(Math.Min(32, testData.Length)).ToArray())}");
+
+                                // Try parsing
+                                var result = ParseKeyValueData(testData);
+                                if (result != null) {
+                                    logger.Info($"[SUCCESS] Found KVD at offset {offset}!");
+                                    return result;
+                                }
+                            }
+                        } catch {
+                            // Not valid memory, continue scanning
+                        }
+                    }
+                } catch {
+                    // Invalid offset, continue
+                }
             }
 
-            // Copy KVD buffer from native memory
-            byte[] kvdData = new byte[kvDataLen];
-            Marshal.Copy(kvDataPtr, kvdData, 0, (int)kvDataLen);
-
-            logger.Debug($"KVD raw bytes (first 64): {BitConverter.ToString(kvdData.Take(Math.Min(64, kvdData.Length)).ToArray())}");
-
-            // Parse Key-Value Data to find "pc.meta"
-            return ParseKeyValueData(kvdData);
+            logger.Warn("Failed to find KVD fields in structure memory scan");
+            return null;
         } catch (Exception ex) {
             logger.Error(ex, "Failed to read histogram metadata from KTX2");
             return null;

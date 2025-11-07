@@ -471,6 +471,28 @@ internal static class LibKtxNative {
 
     #endregion
 
+    #region Key-Value Data (Hash List) API
+
+    /// <summary>
+    /// Find a value in the hash list by key.
+    /// Returns KTX_SUCCESS if found, KTX_NOT_FOUND if not found.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    public static extern KtxErrorCode ktxHashList_FindValue(
+        IntPtr pHead,
+        [MarshalAs(UnmanagedType.LPStr)] string key,
+        out uint pValueLen,
+        out IntPtr pValue);
+
+    /// <summary>
+    /// Get the key-value data hash list from a texture.
+    /// Returns pointer to ktxHashList (which is kvDataHead in KtxTexture2).
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr ktxTexture_GetKvDataHead(IntPtr texture);
+
+    #endregion
+
     #region Helper Methods
 
     public static string GetErrorString(KtxErrorCode error) {

@@ -6,7 +6,6 @@ using Assimp;
 using HelixToolkit.Wpf;
 using AssetProcessor.ModelConversion.Core;
 using NLog;
-using AssimpVector3D = Assimp.Vector3D;
 
 namespace AssetProcessor.ModelConversion.Viewer {
     /// <summary>
@@ -35,8 +34,8 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)),
                 Camera = new PerspectiveCamera {
                     Position = new Point3D(5, 5, 5),
-                    LookDirection = new Vector3D(-5, -5, -5),
-                    UpDirection = new Vector3D(0, 1, 0),
+                    LookDirection = new Media3D.Vector3D(-5, -5, -5),
+                    UpDirection = new Media3D.Vector3D(0, 1, 0),
                     FieldOfView = 60
                 }
             };
@@ -44,13 +43,13 @@ namespace AssetProcessor.ModelConversion.Viewer {
             // Освещение
             _light1 = new DirectionalLight {
                 Color = Colors.White,
-                Direction = new Vector3D(-1, -1, -1)
+                Direction = new Media3D.Vector3D(-1, -1, -1)
             };
             _viewport.Children.Add(new ModelVisual3D { Content = _light1 });
 
             _light2 = new DirectionalLight {
                 Color = Colors.White,
-                Direction = new Vector3D(1, -1, 1)
+                Direction = new Media3D.Vector3D(1, -1, 1)
             };
             _viewport.Children.Add(new ModelVisual3D { Content = _light2 });
 
@@ -184,7 +183,7 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 // Нормали
                 if (mesh.HasNormals) {
                     foreach (var normal in mesh.Normals) {
-                        geometry.Normals.Add(new Vector3D(normal.X, normal.Y, normal.Z));
+                        geometry.Normals.Add(new Media3D.Vector3D(normal.X, normal.Y, normal.Z));
                     }
                 }
 

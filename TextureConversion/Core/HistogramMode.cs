@@ -71,4 +71,32 @@ namespace AssetProcessor.TextureConversion.Core {
         /// </summary>
         Fast = 1
     }
+
+    /// <summary>
+    /// Формат квантования метаданных (внутренний, не показывается в UI)
+    /// Всегда используется Half16 для упрощения API
+    /// </summary>
+    public enum HistogramQuantization {
+        /// <summary>
+        /// Half float (16-bit IEEE 754) - используется по умолчанию
+        /// Диапазон: ±65504, точность: ~3 десятичных знака
+        /// Размер: 4 байта (scale + offset)
+        /// </summary>
+        Half16 = 0,
+
+        /// <summary>
+        /// Packed uint32 (2×16-bit unsigned normalized)
+        /// scale и offset упакованы в один uint32
+        /// Диапазон: [0.0, 1.0], точность: 1/65535
+        /// Размер: 4 байта (более компактно для позитивных значений)
+        /// </summary>
+        PackedUInt32 = 1,
+
+        /// <summary>
+        /// Float32 (32-bit IEEE 754) - максимальная точность
+        /// Диапазон: ±3.4e38, точность: ~7 десятичных знаков
+        /// Размер: 8 байт (scale + offset)
+        /// </summary>
+        Float32 = 2
+    }
 }

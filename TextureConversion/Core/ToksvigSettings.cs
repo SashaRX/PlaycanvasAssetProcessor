@@ -64,6 +64,14 @@ namespace AssetProcessor.TextureConversion.Core {
         public float VarianceThreshold { get; set; } = 0.002f;
 
         /// <summary>
+        /// Использовать ли energy-preserving фильтрацию для roughness/gloss
+        /// При включении после Toksvig коррекции применяется дополнительное усреднение alpha²
+        /// Это сохраняет энергию материала и предотвращает потерю бликов на дальних мипмапах
+        /// По умолчанию: true
+        /// </summary>
+        public bool UseEnergyPreserving { get; set; } = true;
+
+        /// <summary>
         /// Создаёт настройки Toksvig по умолчанию
         /// </summary>
         public static ToksvigSettings CreateDefault() {
@@ -74,7 +82,8 @@ namespace AssetProcessor.TextureConversion.Core {
                 SmoothVariance = true,
                 NormalMapPath = null,
                 CalculationMode = ToksvigCalculationMode.Classic,
-                VarianceThreshold = 0.002f
+                VarianceThreshold = 0.002f,
+                UseEnergyPreserving = true
             };
         }
 
@@ -89,7 +98,8 @@ namespace AssetProcessor.TextureConversion.Core {
                 SmoothVariance = SmoothVariance,
                 NormalMapPath = NormalMapPath,
                 CalculationMode = CalculationMode,
-                VarianceThreshold = VarianceThreshold
+                VarianceThreshold = VarianceThreshold,
+                UseEnergyPreserving = UseEnergyPreserving
             };
         }
 

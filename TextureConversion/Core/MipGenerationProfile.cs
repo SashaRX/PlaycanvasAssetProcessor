@@ -50,6 +50,19 @@ namespace AssetProcessor.TextureConversion.Core {
         public List<IMipModifier> Modifiers { get; set; } = new();
 
         /// <summary>
+        /// Использовать ли energy-preserving фильтрацию для roughness/gloss
+        /// При включении усредняется alpha² вместо прямого усреднения roughness
+        /// Применимо только для Roughness и Gloss типов
+        /// </summary>
+        public bool UseEnergyPreserving { get; set; } = false;
+
+        /// <summary>
+        /// Это gloss карта (true) или roughness (false)
+        /// Используется для energy-preserving фильтрации
+        /// </summary>
+        public bool IsGloss { get; set; } = false;
+
+        /// <summary>
         /// Создает профиль по умолчанию для типа текстуры
         /// </summary>
         public static MipGenerationProfile CreateDefault(TextureType textureType) {
@@ -136,7 +149,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 IncludeLastLevel = IncludeLastLevel,
                 MinMipSize = MinMipSize,
                 NormalizeNormals = NormalizeNormals,
-                Modifiers = new List<IMipModifier>(Modifiers)
+                Modifiers = new List<IMipModifier>(Modifiers),
+                UseEnergyPreserving = UseEnergyPreserving,
+                IsGloss = IsGloss
             };
         }
     }

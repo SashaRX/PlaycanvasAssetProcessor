@@ -59,6 +59,11 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// Генерирует один мипмап из исходного изображения
         /// </summary>
         private Image<Rgba32> GenerateSingleMipmap(Image<Rgba32> source, int targetWidth, int targetHeight, MipGenerationProfile profile) {
+            // Если включен energy-preserving режим для roughness/gloss
+            if (profile.UseEnergyPreserving && (profile.TextureType == TextureType.Roughness || profile.TextureType == TextureType.Gloss)) {
+                return GenerateSingleMipmapEnergyPreserving(source, targetWidth, targetHeight, profile.IsGloss);
+            }
+
             var mipImage = source.Clone(ctx => {
                 // Применяем гамма-коррекцию перед ресайзом (если нужно)
                 if (profile.ApplyGammaCorrection && profile.Filter != FilterType.Min && profile.Filter != FilterType.Max) {
@@ -92,6 +97,71 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                     NormalizeNormalMap(ctx);
                 }
             });
+
+            return mipImage;
+        }
+
+        /// <summary>
+        /// Генерирует мипмап с energy-preserving фильтрацией для roughness/gloss
+        /// Усредняет alpha² вместо прямого усреднения roughness
+        /// </summary>
+        private Image<Rgba32> GenerateSingleMipmapEnergyPreserving(Image<Rgba32> source, int targetWidth, int targetHeight, bool isGloss) {
+            var mipImage = new Image<Rgba32>(targetWidth, targetHeight);
+            const float Epsilon = 1e-6f;
+
+            float scaleX = (float)source.Width / targetWidth;
+            float scaleY = (float)source.Height / targetHeight;
+
+            for (int y = 0; y < targetHeight; y++) {
+                for (int x = 0; x < targetWidth; x++) {
+                    // Находим соответствующую область в источнике
+                    int srcX0 = (int)(x * scaleX);
+                    int srcY0 = (int)(y * scaleY);
+                    int srcX1 = Math.Min((int)((x + 1) * scaleX), source.Width);
+                    int srcY1 = Math.Min((int)((y + 1) * scaleY), source.Height);
+
+                    // Собираем alpha² значения из области
+                    float alphaSquaredSum = 0f;
+                    int sampleCount = 0;
+
+                    for (int sy = srcY0; sy < srcY1; sy++) {
+                        for (int sx = srcX0; sx < srcX1; sx++) {
+                            var pixel = source[sx, sy];
+                            float value = pixel.R / 255.0f;
+
+                            // Конвертируем в roughness если на входе gloss
+                            float roughness = isGloss ? (1.0f - value) : value;
+
+                            // Конвертируем roughness в alpha (GGX)
+                            float alpha = roughness * roughness;
+
+                            // Накапливаем alpha²
+                            alphaSquaredSum += alpha * alpha;
+                            sampleCount++;
+                        }
+                    }
+
+                    // Усредняем alpha²
+                    float avgAlphaSquared = alphaSquaredSum / Math.Max(1, sampleCount);
+
+                    // Берём sqrt для получения alpha
+                    float correctedAlpha = MathF.Sqrt(Math.Max(Epsilon, avgAlphaSquared));
+
+                    // Конвертируем обратно: roughness = sqrt(alpha)
+                    float correctedRoughness = MathF.Sqrt(Math.Max(Epsilon, correctedAlpha));
+
+                    // Clamp на всякий случай
+                    correctedRoughness = Math.Clamp(correctedRoughness, 0f, 1f);
+
+                    // Конвертируем обратно в gloss если нужно
+                    float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
+
+                    // Записываем значение
+                    byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
+                    var sourcePixel = source[srcX0, srcY0];
+                    mipImage[x, y] = new Rgba32(outputByte, outputByte, outputByte, sourcePixel.A);
+                }
+            }
 
             return mipImage;
         }

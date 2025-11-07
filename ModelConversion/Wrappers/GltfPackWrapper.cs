@@ -137,18 +137,28 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 result.StdErr = errorBuilder.ToString();
                 result.ExitCode = process.ExitCode;
 
+                // Логируем полный вывод для диагностики
+                if (!string.IsNullOrWhiteSpace(result.Output)) {
+                    Logger.Info($"gltfpack stdout:\n{result.Output}");
+                }
+                if (!string.IsNullOrWhiteSpace(result.StdErr)) {
+                    Logger.Info($"gltfpack stderr:\n{result.StdErr}");
+                }
+
                 if (process.ExitCode == 0) {
                     if (File.Exists(outputPath)) {
                         result.Success = true;
                         result.OutputFilePath = outputPath;
                         result.OutputFileSize = new FileInfo(outputPath).Length;
 
-                        // Парсим метрики из вывода gltfpack
-                        ParseMetrics(result, outputBuilder.ToString());
+                        // Парсим метрики из вывода gltfpack (проверяем и stdout, и stderr)
+                        ParseMetrics(result, result.Output ?? "", result.StdErr ?? "");
 
                         Logger.Info($"gltfpack: Success, output size: {result.OutputFileSize} bytes");
                         if (result.TriangleCount > 0) {
                             Logger.Info($"  Triangles: {result.TriangleCount}, Vertices: {result.VertexCount}");
+                        } else {
+                            Logger.Warn("  Unable to parse triangle/vertex counts from gltfpack output");
                         }
                     } else {
                         result.Success = false;
@@ -240,29 +250,47 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         }
 
         /// <summary>
-        /// Парсит метрики из вывода gltfpack
+        /// Парсит метрики из вывода gltfpack (stdout и stderr)
         /// </summary>
-        private void ParseMetrics(GltfPackResult result, string output) {
+        private void ParseMetrics(GltfPackResult result, string stdout, string stderr) {
             try {
-                // Пример вывода gltfpack:
-                // "Simplified to 1234 triangles, 567 vertices"
-                // "Vertex cache: 89.5%"
-                // "Overdraw: 1.23x"
+                // gltfpack может выводить статистику в stdout или stderr
+                var allOutput = stdout + "\n" + stderr;
 
-                var lines = output.Split('\n');
+                // Возможные форматы:
+                // "Simplified to 1234 triangles, 567 vertices"
+                // "1234 triangles, 567 vertices"
+                // "triangles: 1234, vertices: 567"
+                // "Output: 1234 triangles 567 vertices"
+
+                var lines = allOutput.Split('\n');
                 foreach (var line in lines) {
-                    if (line.Contains("triangles") && line.Contains("vertices")) {
+                    Logger.Debug($"Parsing line: {line}");
+
+                    if (line.Contains("triangle", StringComparison.OrdinalIgnoreCase) &&
+                        line.Contains("vert", StringComparison.OrdinalIgnoreCase)) {
                         // Парсим количество треугольников и вершин
-                        var parts = line.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
-                        for (int i = 0; i < parts.Length - 1; i++) {
-                            if (parts[i + 1] == "triangles" && int.TryParse(parts[i], out int triangles)) {
-                                result.TriangleCount = triangles;
-                            }
-                            if (parts[i + 1] == "vertices" && int.TryParse(parts[i], out int vertices)) {
-                                result.VertexCount = vertices;
+                        var parts = line.Split(new[] { ' ', ',', ':', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        for (int i = 0; i < parts.Length; i++) {
+                            // Ищем числа перед словами "triangle" или "vert"
+                            if (int.TryParse(parts[i], out int value)) {
+                                if (i + 1 < parts.Length) {
+                                    var nextWord = parts[i + 1].ToLower();
+                                    if (nextWord.Contains("triangle")) {
+                                        result.TriangleCount = value;
+                                        Logger.Debug($"Found triangles: {value}");
+                                    } else if (nextWord.Contains("vert")) {
+                                        result.VertexCount = value;
+                                        Logger.Debug($"Found vertices: {value}");
+                                    }
+                                }
                             }
                         }
                     }
+                }
+
+                if (result.TriangleCount == 0 && result.VertexCount == 0) {
+                    Logger.Warn("ParseMetrics: No triangle/vertex counts found in gltfpack output");
                 }
             } catch (Exception ex) {
                 Logger.Warn(ex, "Failed to parse gltfpack metrics");

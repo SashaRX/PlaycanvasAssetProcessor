@@ -265,6 +265,29 @@ namespace AssetProcessor.Windows {
             // Binding handles IsEnabled state automatically
         }
 
+        /// <summary>
+        /// Обработчик изменения Quality Mode - автоматически обновляет слайдеры
+        /// </summary>
+        private void HistogramQualityComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (HistogramQualityComboBox.SelectedItem == null) return;
+
+            // Получаем выбранное качество
+            var quality = (HistogramQuality)HistogramQualityComboBox.SelectedItem;
+
+            // Автоматически обновляем слайдеры согласно выбранному качеству
+            if (quality == HistogramQuality.HighQuality) {
+                // HighQuality: PercentileWithKnee (0.5%, 99.5%), knee=2%
+                HistogramPercentileLowSlider.Value = 0.5;
+                HistogramPercentileHighSlider.Value = 99.5;
+                HistogramKneeWidthSlider.Value = 0.02;
+            } else {
+                // Fast: Percentile (1%, 99%), no knee
+                HistogramPercentileLowSlider.Value = 1.0;
+                HistogramPercentileHighSlider.Value = 99.0;
+                HistogramKneeWidthSlider.Value = 0.0;
+            }
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e) {
             // Validate name
             string name = NameTextBox.Text.Trim();

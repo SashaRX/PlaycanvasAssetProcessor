@@ -1025,6 +1025,40 @@ namespace AssetProcessor.Controls {
             }
         }
 
+        /// <summary>
+        /// Обработчик изменения Quality Mode - автоматически обновляет слайдеры
+        /// </summary>
+        private void HistogramQualityComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (_isLoading) return;
+
+            // Получаем выбранное качество
+            var quality = HistogramQualityComboBox.SelectedItem != null
+                ? (HistogramQuality)HistogramQualityComboBox.SelectedItem
+                : HistogramQuality.HighQuality;
+
+            // Автоматически обновляем слайдеры согласно выбранному качеству
+            _isLoading = true;
+            try {
+                if (quality == HistogramQuality.HighQuality) {
+                    // HighQuality: PercentileWithKnee (0.5%, 99.5%), knee=2%
+                    HistogramPercentileLowSlider.Value = 0.5;
+                    HistogramPercentileHighSlider.Value = 99.5;
+                    HistogramKneeWidthSlider.Value = 0.02;
+                    Logger.Info("Histogram Quality Mode changed to HighQuality: percentiles=[0.5%, 99.5%], knee=0.02");
+                } else {
+                    // Fast: Percentile (1%, 99%), no knee
+                    HistogramPercentileLowSlider.Value = 1.0;
+                    HistogramPercentileHighSlider.Value = 99.0;
+                    HistogramKneeWidthSlider.Value = 0.0;
+                    Logger.Info("Histogram Quality Mode changed to Fast: percentiles=[1%, 99%], knee=0");
+                }
+            } finally {
+                _isLoading = false;
+            }
+
+            OnSettingsChanged();
+        }
+
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             if (!_isLoading) {
                 OnSettingsChanged();

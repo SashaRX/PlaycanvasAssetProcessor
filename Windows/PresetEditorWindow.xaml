@@ -411,20 +411,45 @@
                               ToolTip="Analyze texture histogram to optimize compression by computing scale/offset normalization parameters"/>
 
                     <StackPanel x:Name="HistogramSettingsPanel" IsEnabled="{Binding ElementName=EnableHistogramCheckBox, Path=IsChecked}">
+                        <!-- ОСНОВНЫЕ НАСТРОЙКИ (ВСЕГДА ВИДИМЫ) -->
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Quality Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
-                                       ToolTip="HighQuality (recommended): PercentileWithKnee (0.5%, 99.5%), soft-knee smoothing. Fast: Percentile (1%, 99%), hard clamping"/>
+                            <TextBlock Grid.Column="0" Text="Quality Mode:" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <ComboBox Grid.Column="1" x:Name="HistogramQualityComboBox"
-                                      ItemsSource="{Binding Source={StaticResource HistogramQualityValues}}"/>
+                                      ItemsSource="{Binding Source={StaticResource HistogramQualityValues}}"
+                                      SelectionChanged="HistogramQualityComboBox_SelectionChanged">
+                                <ComboBox.ToolTip>
+                                    <TextBlock>
+                                        <Run Text="HighQuality (recommended):" FontWeight="Bold"/>
+                                        <LineBreak/>
+                                        <Run Text="• Robust percentile range: 0.5% - 99.5%"/>
+                                        <LineBreak/>
+                                        <Run Text="• Soft-knee smoothing for outliers (knee=2%)"/>
+                                        <LineBreak/>
+                                        <Run Text="• Smooth gradients, no banding"/>
+                                        <LineBreak/>
+                                        <LineBreak/>
+                                        <Run Text="Fast:" FontWeight="Bold"/>
+                                        <LineBreak/>
+                                        <Run Text="• Percentile range: 1% - 99%"/>
+                                        <LineBreak/>
+                                        <Run Text="• Hard winsorization (sharp clamping)"/>
+                                        <LineBreak/>
+                                        <Run Text="• Faster, but may cause slight banding"/>
+                                        <LineBreak/>
+                                        <LineBreak/>
+                                        <Run Text="ВАЖНО: Both modes ALWAYS normalize (stretch) histogram!" FontWeight="Bold" Foreground="Red"/>
+                                    </TextBlock>
+                                </ComboBox.ToolTip>
+                            </ComboBox>
                         </Grid>
 
                         <!-- Processing Mode удалён (всегда Preprocessing) -->
 
-                        <Grid Margin="0,0,0,5">
+                        <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -437,63 +462,72 @@
 
                         <!-- Quantization удалён (всегда Half16) -->
 
-                        <TextBlock Text="Percentile Low (%) [0.0-100.0]:" Margin="0,5,0,3"
-                                   ToolTip="Lower percentile to ignore outliers (e.g., 0.5% darkest pixels)"/>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="HistogramPercentileLowSlider" Grid.Column="0"
-                                    Minimum="0.0" Maximum="10.0" Value="0.5"
-                                    TickFrequency="0.1" SmallChange="0.1" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileLowSlider, Path=Value, StringFormat={}{0:F1}%}"
-                                       Width="50" TextAlignment="Right"/>
-                        </Grid>
+                        <!-- ADVANCED SETTINGS (СКРЫТЫ ПО УМОЛЧАНИЮ) -->
+                        <Expander Header="Advanced Settings (для экспертов)" IsExpanded="False" Margin="0,5,0,0">
+                            <StackPanel Margin="0,5,0,0">
+                                <TextBlock Text="⚠️ Внимание: изменение этих параметров переопределяет Quality Mode!"
+                                           FontStyle="Italic" FontSize="11" Foreground="OrangeRed"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
 
-                        <TextBlock Text="Percentile High (%) [0.0-100.0]:" Margin="0,0,0,3"
-                                   ToolTip="Upper percentile to ignore outliers (e.g., 99.5% brightest pixels)"/>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="HistogramPercentileHighSlider" Grid.Column="0"
-                                    Minimum="90.0" Maximum="100.0" Value="99.5"
-                                    TickFrequency="0.1" SmallChange="0.1" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileHighSlider, Path=Value, StringFormat={}{0:F1}%}"
-                                       Width="50" TextAlignment="Right"/>
-                        </Grid>
+                                <TextBlock Text="Percentile Low (%) [0.0-10.0]:" Margin="0,0,0,3"
+                                           ToolTip="Lower percentile to ignore outliers (e.g., 0.5% darkest pixels)"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="HistogramPercentileLowSlider" Grid.Column="0"
+                                            Minimum="0.0" Maximum="10.0" Value="0.5"
+                                            TickFrequency="0.1" SmallChange="0.1" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileLowSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                               Width="50" TextAlignment="Right"/>
+                                </Grid>
 
-                        <TextBlock Text="Knee Width (soft-knee smoothing) [0.0-1.0]:" Margin="0,0,0,3"
-                                   ToolTip="Width of soft-knee region for smoothstep smoothing (0.02 = 2% recommended)"/>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="HistogramKneeWidthSlider" Grid.Column="0"
-                                    Minimum="0.0" Maximum="0.1" Value="0.02"
-                                    TickFrequency="0.001" SmallChange="0.001" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramKneeWidthSlider, Path=Value, StringFormat={}{0:F3}}"
-                                       Width="50" TextAlignment="Right"/>
-                        </Grid>
+                                <TextBlock Text="Percentile High (%) [90.0-100.0]:" Margin="0,0,0,3"
+                                           ToolTip="Upper percentile to ignore outliers (e.g., 99.5% brightest pixels)"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="HistogramPercentileHighSlider" Grid.Column="0"
+                                            Minimum="90.0" Maximum="100.0" Value="99.5"
+                                            TickFrequency="0.1" SmallChange="0.1" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramPercentileHighSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                               Width="50" TextAlignment="Right"/>
+                                </Grid>
 
-                        <TextBlock Text="Min Range Threshold [0.0-1.0]:" Margin="0,0,0,3"
-                                   ToolTip="Skip normalization if range is too narrow (avoids noise amplification for nearly constant textures)"/>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="HistogramMinRangeThresholdSlider" Grid.Column="0"
-                                    Minimum="0.0" Maximum="0.1" Value="0.01"
-                                    TickFrequency="0.001" SmallChange="0.001" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramMinRangeThresholdSlider, Path=Value, StringFormat={}{0:F3}}"
-                                       Width="50" TextAlignment="Right"/>
-                        </Grid>
+                                <TextBlock Text="Knee Width (soft-knee smoothing) [0.0-0.1]:" Margin="0,0,0,3"
+                                           ToolTip="Width of soft-knee region for smoothstep smoothing (0.02 = 2% recommended)"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="HistogramKneeWidthSlider" Grid.Column="0"
+                                            Minimum="0.0" Maximum="0.1" Value="0.02"
+                                            TickFrequency="0.001" SmallChange="0.001" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramKneeWidthSlider, Path=Value, StringFormat={}{0:F3}}"
+                                               Width="50" TextAlignment="Right"/>
+                                </Grid>
 
-                        <CheckBox x:Name="WriteHistogramParamsCheckBox" Content="Write Analysis Parameters to KTX2 Metadata" IsChecked="True" Margin="0,5,0,0"
+                                <TextBlock Text="Min Range Threshold [0.0-0.1]:" Margin="0,0,0,3"
+                                           ToolTip="Skip normalization if range is too narrow (avoids noise amplification for nearly constant textures)"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="HistogramMinRangeThresholdSlider" Grid.Column="0"
+                                            Minimum="0.0" Maximum="0.1" Value="0.01"
+                                            TickFrequency="0.001" SmallChange="0.001" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ElementName=HistogramMinRangeThresholdSlider, Path=Value, StringFormat={}{0:F3}}"
+                                               Width="50" TextAlignment="Right"/>
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
+
+                        <CheckBox x:Name="WriteHistogramParamsCheckBox" Content="Write Analysis Parameters to KTX2 Metadata" IsChecked="True" Margin="0,10,0,0"
                                   ToolTip="Store histogram analysis parameters (percentiles, knee) in KTX2 Key-Value Data for debugging"/>
                     </StackPanel>
                 </StackPanel>

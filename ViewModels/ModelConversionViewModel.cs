@@ -362,6 +362,7 @@ namespace AssetProcessor.ViewModels {
                 LodChain = LodSettingsData.CreateDefaultChain(),
                 GenerateBothTracks = false,
                 CleanupIntermediateFiles = true,
+                ExcludeTextures = true,
                 GenerateManifest = true,
                 GenerateQAReport = true
             };

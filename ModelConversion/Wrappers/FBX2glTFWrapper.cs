@@ -64,15 +64,22 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         /// </summary>
         /// <param name="inputPath">Путь к FBX файлу</param>
         /// <param name="outputPath">Путь к выходному GLB (без расширения)</param>
+        /// <param name="excludeTextures">Исключить текстуры (экспортировать только геометрию)</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<ConversionResult> ConvertToGlbAsync(string inputPath, string outputPath) {
+        public async Task<ConversionResult> ConvertToGlbAsync(string inputPath, string outputPath, bool excludeTextures = false) {
             var result = new ConversionResult();
 
             try {
-                Logger.Info($"FBX2glTF: Converting {inputPath} to {outputPath}.glb");
+                Logger.Info($"FBX2glTF: Converting {inputPath} to {outputPath}.glb (exclude textures: {excludeTextures})");
 
                 // Аргументы: --binary --input "file.fbx" --output "output_path"
                 var arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
+
+                // Исключение текстур (только геометрия, материалы, анимации)
+                if (excludeTextures) {
+                    arguments += " --no-embed-image";
+                    Logger.Info("FBX2glTF: Textures will be excluded (geometry only)");
+                }
 
                 Logger.Debug($"FBX2glTF command: {_executablePath} {arguments}");
 

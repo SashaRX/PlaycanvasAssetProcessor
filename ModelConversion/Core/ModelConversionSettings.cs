@@ -42,6 +42,12 @@ namespace AssetProcessor.ModelConversion.Core {
         public bool CleanupIntermediateFiles { get; set; } = true;
 
         /// <summary>
+        /// Исключить текстуры из GLB (экспортировать только геометрию, материалы, анимации)
+        /// ВАЖНО: Текстуры должны обрабатываться отдельно через TextureConversion пайплайн!
+        /// </summary>
+        public bool ExcludeTextures { get; set; } = true;
+
+        /// <summary>
         /// Создавать JSON манифест с метаданными LOD
         /// </summary>
         public bool GenerateManifest { get; set; } = true;
@@ -64,6 +70,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = false,
                 CleanupIntermediateFiles = true,
+                ExcludeTextures = true,
                 GenerateManifest = true,
                 GenerateQAReport = true
             };
@@ -81,6 +88,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = true, // Генерируем оба трека
                 CleanupIntermediateFiles = true,
+                ExcludeTextures = true,
                 GenerateManifest = true,
                 GenerateQAReport = true
             };
@@ -98,6 +106,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = true,
                 CleanupIntermediateFiles = true,
+                ExcludeTextures = true,
                 GenerateManifest = true,
                 GenerateQAReport = true
             };
@@ -115,6 +124,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = false,
                 CleanupIntermediateFiles = true,
+                ExcludeTextures = true,
                 GenerateManifest = true,
                 GenerateQAReport = true
             };

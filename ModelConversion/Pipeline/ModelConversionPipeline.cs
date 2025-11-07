@@ -67,8 +67,9 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
                 // ШАГ A: FBX → базовый GLB (без сжатия)
                 Logger.Info("=== STEP A: FBX → BASE GLB ===");
+                Logger.Info($"Exclude textures: {settings.ExcludeTextures} (textures will be processed separately)");
                 var baseGlbPath = Path.Combine(buildDir, modelName);
-                var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputFbxPath, baseGlbPath);
+                var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputFbxPath, baseGlbPath, settings.ExcludeTextures);
 
                 if (!fbxResult.Success) {
                     throw new Exception($"FBX2glTF conversion failed: {fbxResult.Error}");

@@ -61,6 +61,12 @@ namespace AssetProcessor.ModelConversion.Settings {
         public bool GenerateQAReport { get; set; } = true;
 
         /// <summary>
+        /// Исключить текстуры из GLB (экспортировать только геометрию, материалы, анимации)
+        /// ВАЖНО: Текстуры должны обрабатываться отдельно через TextureConversion пайплайн!
+        /// </summary>
+        public bool ExcludeTextures { get; set; } = true;
+
+        /// <summary>
         /// Конвертирует в ModelConversionSettings
         /// </summary>
         public ModelConversionSettings ToModelConversionSettings() {
@@ -72,6 +78,7 @@ namespace AssetProcessor.ModelConversion.Settings {
                 LodHysteresis = LodHysteresis,
                 GenerateBothTracks = GenerateBothTracks,
                 CleanupIntermediateFiles = CleanupIntermediateFiles,
+                ExcludeTextures = ExcludeTextures,
                 GenerateManifest = GenerateManifest,
                 GenerateQAReport = GenerateQAReport
             };
@@ -89,6 +96,7 @@ namespace AssetProcessor.ModelConversion.Settings {
                 LodHysteresis = settings.LodHysteresis,
                 GenerateBothTracks = settings.GenerateBothTracks,
                 CleanupIntermediateFiles = settings.CleanupIntermediateFiles,
+                ExcludeTextures = settings.ExcludeTextures,
                 GenerateManifest = settings.GenerateManifest,
                 GenerateQAReport = settings.GenerateQAReport
             };

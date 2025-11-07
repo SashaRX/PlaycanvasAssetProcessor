@@ -114,6 +114,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Generate LODs:" VerticalAlignment="Center" Margin="0,5"/>
@@ -134,11 +135,15 @@
                                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Cleanup Intermediate Files:" VerticalAlignment="Center" Margin="0,5"/>
                                 <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding CleanupIntermediateFiles}" VerticalAlignment="Center" Margin="0,5"/>
 
-                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Generate Manifest:" VerticalAlignment="Center" Margin="0,5"/>
-                                <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding GenerateManifest}" VerticalAlignment="Center" Margin="0,5"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Exclude Textures:" VerticalAlignment="Center" Margin="0,5"/>
+                                <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding ExcludeTextures}" VerticalAlignment="Center" Margin="0,5"
+                                          ToolTip="Exclude textures from GLB (textures processed separately via TextureConversion pipeline)"/>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Generate QA Report:" VerticalAlignment="Center" Margin="0,5"/>
-                                <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding GenerateQAReport}" VerticalAlignment="Center" Margin="0,5"/>
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Generate Manifest:" VerticalAlignment="Center" Margin="0,5"/>
+                                <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding GenerateManifest}" VerticalAlignment="Center" Margin="0,5"/>
+
+                                <TextBlock Grid.Row="7" Grid.Column="0" Text="Generate QA Report:" VerticalAlignment="Center" Margin="0,5"/>
+                                <CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding GenerateQAReport}" VerticalAlignment="Center" Margin="0,5"/>
                             </Grid>
                         </StackPanel>
                     </GroupBox>

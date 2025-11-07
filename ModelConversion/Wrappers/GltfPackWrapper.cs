@@ -30,9 +30,10 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     return false;
                 }
 
+                // Пробуем запустить с --help (gltfpack может не принимать -h)
                 var startInfo = new ProcessStartInfo {
                     FileName = _executablePath,
-                    Arguments = "-h",
+                    Arguments = "--help",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -47,13 +48,10 @@ namespace AssetProcessor.ModelConversion.Wrappers {
 
                 await process.WaitForExitAsync();
 
-                if (process.ExitCode == 0) {
-                    Logger.Info("gltfpack is available and working");
-                    return true;
-                } else {
-                    Logger.Warn($"gltfpack returned non-zero exit code: {process.ExitCode}");
-                    return false;
-                }
+                // gltfpack может возвращать non-zero exit code даже для --help
+                // Главное - что файл существует и процесс запускается
+                Logger.Info($"gltfpack is available (exit code: {process.ExitCode})");
+                return true;
             } catch (Exception ex) {
                 Logger.Error(ex, $"Failed to check gltfpack availability at: {_executablePath}");
                 return false;

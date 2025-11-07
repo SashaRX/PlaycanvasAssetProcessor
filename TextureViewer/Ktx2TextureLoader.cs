@@ -19,10 +19,12 @@ public static class Ktx2TextureLoader {
     public static TextureData LoadFromFile(string filePath) {
         logger.Info($"Loading KTX2 texture from: {filePath}");
 
-        // Create texture from file
+        // Create texture from file with Key-Value Data support
+        uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
+                          (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
         var result = LibKtxNative.ktxTexture2_CreateFromNamedFile(
             filePath,
-            (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT,
+            createFlags,
             out IntPtr textureHandle);
 
         if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {

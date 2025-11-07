@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using NLog;
@@ -30,6 +31,8 @@ public static class Ktx2MetadataReader {
             // Read Key-Value Data
             byte[] kvdData = new byte[tex.kvDataLen];
             Marshal.Copy(tex.kvData, kvdData, 0, (int)tex.kvDataLen);
+
+            logger.Debug($"KVD raw bytes (first 64): {BitConverter.ToString(kvdData.Take(Math.Min(64, kvdData.Length)).ToArray())}");
 
             // Parse Key-Value pairs
             return ParseKeyValueData(kvdData);

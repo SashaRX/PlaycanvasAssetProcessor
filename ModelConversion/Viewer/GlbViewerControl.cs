@@ -6,6 +6,7 @@ using Assimp;
 using HelixToolkit.Wpf;
 using AssetProcessor.ModelConversion.Core;
 using NLog;
+using AssimpVector3D = Assimp.Vector3D;
 
 namespace AssetProcessor.ModelConversion.Viewer {
     /// <summary>

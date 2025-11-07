@@ -1,3 +1,4 @@
+using System.IO;
 using AssetProcessor.ModelConversion.Analysis;
 using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Wrappers;

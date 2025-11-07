@@ -20,49 +20,59 @@ public static class Ktx2MetadataReader {
         try {
             logger.Info("[Ktx2MetadataReader] Starting histogram metadata read...");
 
-            // Get kvDataHead pointer using official libktx API
+            // Get kvDataHead structure (contains hash list)
             var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
-            IntPtr kvDataHead = tex.kvDataHead;
+            var kvDataHead = tex.kvDataHead;
 
-            if (kvDataHead == IntPtr.Zero) {
-                logger.Debug("No Key-Value Data head in KTX2 texture (kvDataHead is null)");
+            logger.Info($"kvDataHead.numEntries={kvDataHead.numEntries}, kvDataHead.pHead=0x{kvDataHead.pHead:X}");
+
+            if (kvDataHead.pHead == IntPtr.Zero) {
+                logger.Debug("No Key-Value Data in KTX2 texture (kvDataHead.pHead is null)");
                 return null;
             }
-
-            logger.Info($"Found kvDataHead pointer: 0x{kvDataHead:X}");
 
             // Use ktxHashList_FindValue to find "pc.meta" key
-            var result = LibKtxNative.ktxHashList_FindValue(
-                kvDataHead,
-                "pc.meta",
-                out uint valueLen,
-                out IntPtr pValue);
+            // Note: We need to pass pointer to the hash list structure, not pHead
+            // Create pointer to kvDataHead structure
+            int structSize = Marshal.SizeOf<LibKtxNative.KtxHashList>();
+            IntPtr pHashList = Marshal.AllocHGlobal(structSize);
+            try {
+                Marshal.StructureToPtr(kvDataHead, pHashList, false);
 
-            if (result == LibKtxNative.KtxErrorCode.KTX_NOT_FOUND) {
-                logger.Info("Key 'pc.meta' not found in KTX2 Key-Value Data");
-                return null;
+                var result = LibKtxNative.ktxHashList_FindValue(
+                    pHashList,
+                    "pc.meta",
+                    out uint valueLen,
+                    out IntPtr pValue);
+
+                if (result == LibKtxNative.KtxErrorCode.KTX_NOT_FOUND) {
+                    logger.Info("Key 'pc.meta' not found in KTX2 Key-Value Data");
+                    return null;
+                }
+
+                if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
+                    logger.Warn($"ktxHashList_FindValue failed: {LibKtxNative.GetErrorString(result)}");
+                    return null;
+                }
+
+                if (pValue == IntPtr.Zero || valueLen == 0) {
+                    logger.Warn($"Found 'pc.meta' but value is empty (len={valueLen}, ptr={pValue})");
+                    return null;
+                }
+
+                logger.Info($"Found 'pc.meta' key with {valueLen} bytes of TLV data");
+
+                // Copy TLV data from native memory
+                byte[] tlvData = new byte[valueLen];
+                Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
+
+                logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
+
+                // Parse TLV data
+                return ParseTLVHistogramData(tlvData);
+            } finally {
+                Marshal.FreeHGlobal(pHashList);
             }
-
-            if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                logger.Warn($"ktxHashList_FindValue failed: {LibKtxNative.GetErrorString(result)}");
-                return null;
-            }
-
-            if (pValue == IntPtr.Zero || valueLen == 0) {
-                logger.Warn($"Found 'pc.meta' but value is empty (len={valueLen}, ptr={pValue})");
-                return null;
-            }
-
-            logger.Info($"Found 'pc.meta' key with {valueLen} bytes of TLV data");
-
-            // Copy TLV data from native memory
-            byte[] tlvData = new byte[valueLen];
-            Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
-
-            logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
-
-            // Parse TLV data
-            return ParseTLVHistogramData(tlvData);
         } catch (Exception ex) {
             logger.Error(ex, "Failed to read histogram metadata from KTX2");
             return null;

@@ -229,49 +229,68 @@ internal static class LibKtxNative {
     }
 
     /// <summary>
+    /// ktxHashList structure from ktx.h
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KtxHashList {
+        public uint numEntries;
+        private uint _padding;  // Alignment padding before pointer
+        public IntPtr pHead;
+    }
+
+    /// <summary>
     /// Simplified KTX texture structure - only read fields we actually need.
     /// We don't try to map the entire structure since it's complex and error-prone.
     /// Instead, we rely on iterator callbacks for actual data extraction.
+    ///
+    /// CRITICAL: Field sizes and alignment must match C structure exactly!
+    /// All pointer fields are naturally aligned to 8 bytes on x64.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
     public struct KtxTexture2 {
         // Base ktxTexture fields (from ktxTexture.h)
-        public IntPtr classId;
-        public IntPtr vtbl;
-        public IntPtr vvtbl;
-        public IntPtr _protected;
+        public IntPtr classId;          // offset 0
+        public IntPtr vtbl;             // offset 8
+        public IntPtr vvtbl;            // offset 16
+        public IntPtr _protected;       // offset 24
 
         // Flags (ktx_bool_t = uint32_t in C, NOT byte!)
-        public uint isArray;
-        public uint isCubemap;
-        public uint isCompressed;
-        public uint generateMipmaps;
+        public uint isArray;            // offset 32
+        public uint isCubemap;          // offset 36
+        public uint isCompressed;       // offset 40
+        public uint generateMipmaps;    // offset 44
 
         // Dimensions
-        public uint baseWidth;
-        public uint baseHeight;
-        public uint baseDepth;
+        public uint baseWidth;          // offset 48
+        public uint baseHeight;         // offset 52
+        public uint baseDepth;          // offset 56
 
-        public uint numDimensions;
-        public uint numLevels;
-        public uint numLayers;
-        public uint numFaces;
+        public uint numDimensions;      // offset 60
+        public uint numLevels;          // offset 64
+        public uint numLayers;          // offset 68
+        public uint numFaces;           // offset 72
+
+        // PADDING: 4 bytes for pointer alignment (offset 76-79)
+        private uint _padding1;
 
         // Orientation (ktx_pack_astc_encoder_mode_e or similar)
-        public IntPtr orientation;
+        public IntPtr orientation;      // offset 80
 
-        // Key-value data
-        public IntPtr kvDataHead;
-        public uint kvDataLen;
-        public IntPtr kvData;
+        // Key-value data - kvDataHead is a ktxHashList STRUCTURE (not pointer!)
+        public KtxHashList kvDataHead;  // offset 88 (16 bytes: uint + padding + IntPtr)
+        public uint kvDataLen;          // offset 104
+        private uint _padding2;         // offset 108 (alignment for kvData pointer)
+        public IntPtr kvData;           // offset 112
 
         // Image data
-        public uint dataSize;
-        public IntPtr pData;
+        public uint dataSize;           // offset 120
+        private uint _padding3;         // offset 124
+        public IntPtr pData;            // offset 128
 
         // KTX2-specific (beyond base ktxTexture)
-        public uint vkFormat;
-        public IntPtr pDfd;
+        public uint vkFormat;           // offset 136
+        private uint _padding4;         // offset 140
+        public IntPtr pDfd;             // offset 144
 
         // Note: There are more fields but we don't need them
         // and trying to map them all leads to alignment issues

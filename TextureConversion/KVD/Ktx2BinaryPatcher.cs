@@ -82,13 +82,15 @@ namespace AssetProcessor.TextureConversion.KVD {
 
                 // Вставляем KV данные в файл
                 byte[] newFileData;
+                uint insertOffset;
+
                 if (kvdByteLength == 0) {
                     // Нет существующих KVD - создаём новую секцию
                     Logger.Info("  No existing KVD, creating new section");
 
                     // kvdByteOffset обычно указывает после Level Index Array
                     // Если kvdByteOffset == 0, используем позицию после header + level index
-                    uint insertOffset = kvdByteOffset;
+                    insertOffset = kvdByteOffset;
                     if (insertOffset == 0) {
                         insertOffset = 80 + (levelCount * 24); // header (80) + level index array
                     }
@@ -111,7 +113,7 @@ namespace AssetProcessor.TextureConversion.KVD {
                     }
                     BitConverter.GetBytes((uint)newKvPair.Length).CopyTo(newFileData, 60);
 
-                    // Корректируем остальные offset'ы
+                    // Корректируем остальные offset'ы в header
                     if (dfdByteOffset >= insertOffset) {
                         BitConverter.GetBytes(dfdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 48);
                     }
@@ -123,7 +125,7 @@ namespace AssetProcessor.TextureConversion.KVD {
                     // Добавляем к существующим KVD
                     Logger.Info("  Appending to existing KVD");
 
-                    uint insertOffset = kvdByteOffset + kvdByteLength;
+                    insertOffset = kvdByteOffset + kvdByteLength;
                     newFileData = new byte[fileData.Length + newKvPair.Length];
 
                     Array.Copy(fileData, 0, newFileData, 0, (int)insertOffset);
@@ -134,12 +136,28 @@ namespace AssetProcessor.TextureConversion.KVD {
                     // Обновляем kvdByteLength
                     BitConverter.GetBytes(kvdByteLength + (uint)newKvPair.Length).CopyTo(newFileData, 60);
 
-                    // Корректируем offset'ы после KVD
+                    // Корректируем offset'ы после KVD в header
                     if (dfdByteOffset > insertOffset) {
                         BitConverter.GetBytes(dfdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 48);
                     }
                     if (sgdByteOffset > insertOffset && sgdByteOffset > 0) {
                         BitConverter.GetBytes(sgdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 64);
+                    }
+                }
+
+                // КРИТИЧНО: Обновляем Level Index Array!
+                // Каждый level имеет структуру: byteOffset (8), byteLength (8), uncompressedByteLength (8)
+                Logger.Info("  Updating Level Index Array offsets...");
+                int levelIndexOffset = 80; // Level Index Array начинается после header
+                for (uint i = 0; i < levelCount; i++) {
+                    int currentLevelOffset = levelIndexOffset + (int)(i * 24);
+                    ulong levelByteOffset = BitConverter.ToUInt64(newFileData, currentLevelOffset);
+
+                    // Если offset уровня больше точки вставки - корректируем его
+                    if (levelByteOffset >= insertOffset) {
+                        ulong newLevelByteOffset = levelByteOffset + (uint)newKvPair.Length;
+                        BitConverter.GetBytes(newLevelByteOffset).CopyTo(newFileData, currentLevelOffset);
+                        Logger.Info($"    Level {i}: offset {levelByteOffset} -> {newLevelByteOffset}");
                     }
                 }
 

@@ -22,8 +22,13 @@ public static class Ktx2MetadataReader {
 
             // Get kvDataHead structure (contains hash list)
             var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
-            var kvDataHead = tex.kvDataHead;
 
+            // Debug: Log key structure fields to verify structure is read correctly
+            logger.Info($"[DEBUG] Structure fields: baseWidth={tex.baseWidth}, baseHeight={tex.baseHeight}, numLevels={tex.numLevels}, vkFormat={tex.vkFormat}");
+            logger.Info($"[DEBUG] isArray={tex.isArray}, isCubemap={tex.isCubemap}, isCompressed={tex.isCompressed}");
+            logger.Info($"[DEBUG] dataSize={tex.dataSize}, pData=0x{tex.pData:X}");
+
+            var kvDataHead = tex.kvDataHead;
             logger.Info($"kvDataHead.numEntries={kvDataHead.numEntries}, kvDataHead.pHead=0x{kvDataHead.pHead:X}");
 
             if (kvDataHead.pHead == IntPtr.Zero) {
@@ -31,11 +36,12 @@ public static class Ktx2MetadataReader {
                 return null;
             }
 
-            // Calculate offset of kvDataHead field within KtxTexture2 structure
-            // See LibKtxNative.cs for structure layout with offsets
-            const int kvDataHeadOffset = 88;
+            // Calculate offset of kvDataHead field within KtxTexture2 structure using Marshal.OffsetOf
+            // This is safer than hardcoding offset values
+            int kvDataHeadOffset = (int)Marshal.OffsetOf<LibKtxNative.KtxTexture2>("kvDataHead");
             IntPtr pKvDataHead = IntPtr.Add(textureHandle, kvDataHeadOffset);
 
+            logger.Info($"kvDataHead offset in structure: {kvDataHeadOffset} bytes");
             logger.Info($"Calling ktxHashList_FindValue with pKvDataHead=0x{pKvDataHead:X}");
 
             // Use ktxHashList_FindValue to find "pc.meta" key

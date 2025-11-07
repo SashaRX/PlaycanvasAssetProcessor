@@ -493,33 +493,8 @@ internal static class LibKtxNative {
     #region Key-Value Data API
 
     /// <summary>
-    /// Get raw key-value data pointer and length from texture.
-    /// This is simpler than using ktxHashList API and doesn't require
-    /// marshaling the entire KtxTexture2 structure.
-    /// </summary>
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr ktxTexture_GetData(IntPtr texture);
-
-    /// <summary>
-    /// Get data size.
-    /// </summary>
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern uint ktxTexture_GetDataSize(IntPtr texture);
-
-    /// <summary>
-    /// Iterate through key-value data entries.
-    /// Alternative approach: use ktxHashList iterator instead of FindValue.
-    /// </summary>
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-    public static extern KtxErrorCode ktxHashList_FindValue(
-        IntPtr pHead,
-        [MarshalAs(UnmanagedType.LPStr)] string key,
-        out uint pValueLen,
-        out IntPtr pValue);
-
-    /// <summary>
     /// Get kvData directly from texture using accessor function.
-    /// This avoids structure marshaling issues.
+    /// This avoids structure marshaling issues and returns both pointer and length.
     /// </summary>
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr ktxTexture_GetKvData(IntPtr texture, out uint kvDataLen);

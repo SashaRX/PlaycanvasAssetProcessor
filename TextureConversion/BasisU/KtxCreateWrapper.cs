@@ -110,13 +110,13 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// <summary>
         /// Упаковывает набор мипмапов в KTX2 файл с Basis Universal сжатием
         /// </summary>
-        public async Task<ToktxResult> PackMipmapsAsync(
+        public async Task<KtxResult> PackMipmapsAsync(
             List<string> mipmapPaths,
             string outputPath,
             CompressionSettings settings,
             Dictionary<string, string>? kvdBinaryFiles = null) {
 
-            var result = new ToktxResult {
+            var result = new KtxResult {
                 OutputPath = outputPath
             };
 

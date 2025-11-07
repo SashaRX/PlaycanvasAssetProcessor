@@ -241,11 +241,11 @@ internal static class LibKtxNative {
         public IntPtr vvtbl;
         public IntPtr _protected;
 
-        // Flags (4 bytes each in the structure, but actually booleans)
-        public byte isArray;
-        public byte isCubemap;
-        public byte isCompressed;
-        public byte generateMipmaps;
+        // Flags (ktx_bool_t = uint32_t in C, NOT byte!)
+        public uint isArray;
+        public uint isCubemap;
+        public uint isCompressed;
+        public uint generateMipmaps;
 
         // Dimensions
         public uint baseWidth;

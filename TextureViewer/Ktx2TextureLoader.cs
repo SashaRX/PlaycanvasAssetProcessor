@@ -452,6 +452,10 @@ public static class Ktx2TextureLoader {
 
         logger.Info($"KTX2 loaded successfully: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, format={detectedFormat}, sRGB={isSRGB}, alpha={hasAlpha}");
 
+        // DEBUG: Check KVD fields before reading metadata
+        var texDebug = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
+        logger.Info($"[DEBUG] KVD fields: kvDataLen={texDebug.kvDataLen}, kvData={texDebug.kvData}, kvDataHead={texDebug.kvDataHead}");
+
         // Read histogram metadata from KTX2 Key-Value Data
         var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(textureHandle);
         if (histogramMetadata != null) {

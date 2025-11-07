@@ -4,6 +4,12 @@
 
 Система автоматического анализа гистограммы позволяет оптимизировать сжатие текстур путём вычисления параметров нормализации (`scale` и `offset`) на основе реального диапазона значений в текстуре. Это особенно полезно для текстур с узким динамическим диапазоном или наличием выбросов (outliers).
 
+**ВАЖНО**: В текущей реализации histogram preprocessing — это **обязательная часть алгоритма**. Когда включен анализ гистограммы (`HistogramAnalysis != null`):
+- Текстура **ВСЕГДА** нормализуется перед сжатием (preprocessing mode)
+- Scale/offset **ВСЕГДА** записываются в KTX2 Key-Value Data для восстановления на GPU
+- Scale/offset **ВСЕГДА** инвертируются для обратного преобразования
+- Квантование **ВСЕГДА** используется Half16 (4 байта на канал)
+
 ## Принцип работы
 
 ### 1. Robust анализ с перцентилями
@@ -43,34 +49,53 @@ color = fma(color, scale, offset)
 
 ## Режимы анализа
 
-### HistogramMode
+### HistogramQuality (упрощённый API)
+
+Начиная с последних версий, API упрощён до двух режимов качества:
+
+- **HighQuality** (рекомендуется) — PercentileWithKnee (0.5%, 99.5%), knee=2%, soft-knee сглаживание
+- **Fast** — Percentile (1%, 99%), жёсткое клампирование без soft-knee
+
+Эти режимы автоматически устанавливают оптимальные параметры через factory методы `CreateHighQuality()` и `CreateFast()`.
+
+### HistogramMode (внутренний, устанавливается автоматически)
 
 - **Off** — анализ отключён (scale=1, offset=0)
-- **Percentile** — перцентили с жёстким клампированием
-- **PercentileWithKnee** — перцентили + soft-knee (рекомендуется)
-- **LocalOutlierPatch** — локальный анализ выбросов (зарезервировано)
+- **Percentile** — перцентили с жёстким клампированием (используется в Fast mode)
+- **PercentileWithKnee** — перцентили + soft-knee (используется в HighQuality mode)
+- **LocalOutlierPatch** — локальный анализ выбросов (зарезервировано для будущего)
 
 ### HistogramChannelMode
 
-- **AverageLuminance** — усреднённая яркость `(R+G+B)/3`, один scale/offset
+- **AverageLuminance** — усреднённая яркость `(R+G+B)/3`, один scale/offset (рекомендуется)
 - **PerChannel** — поканальный анализ RGB (3 scale/offset)
 - **RGBOnly** — анализ RGB, игнорируя альфа
 - **PerChannelRGBA** — поканальный анализ RGBA (4 scale/offset)
 
+### HistogramQuantization (внутренний, всегда Half16)
+
+- **Half16** — Half float (16-bit IEEE 754), всегда используется по умолчанию
+- **PackedUInt32** — Packed uint32 (2×16-bit unsigned normalized), зарезервировано
+- **Float32** — Float32 (32-bit IEEE 754), зарезервировано
+
 ## Настройки
 
-### HistogramSettings
+### HistogramSettings (упрощённый API)
 
 ```csharp
 public class HistogramSettings {
-    public HistogramMode Mode { get; set; }
-    public HistogramChannelMode ChannelMode { get; set; }
+    // НОВЫЙ УПРОЩЁННЫЙ API
+    public HistogramQuality Quality { get; set; } = HistogramQuality.HighQuality;
 
-    // Перцентили (0.0-100.0)
+    // Внутренние параметры (устанавливаются автоматически через Quality)
+    public HistogramMode Mode { get; set; } = HistogramMode.Off;
+    public HistogramChannelMode ChannelMode { get; set; } = HistogramChannelMode.AverageLuminance;
+
+    // Перцентили (0.0-100.0) - автоматически устанавливаются из Quality
     public float PercentileLow { get; set; } = 0.5f;
     public float PercentileHigh { get; set; } = 99.5f;
 
-    // Ширина колена (0.0-1.0)
+    // Ширина колена (0.0-1.0) - автоматически устанавливается из Quality
     public float KneeWidth { get; set; } = 0.02f;
 
     // Порог для предупреждений (0.0-1.0)
@@ -81,36 +106,90 @@ public class HistogramSettings {
 }
 ```
 
-### Создание настроек
+### Создание настроек (новый упрощённый API)
+
+**Рекомендуемый способ (через factory методы):**
 
 ```csharp
 // По умолчанию (отключено)
 var settings = HistogramSettings.CreateDefault();
+// Mode = Off
 
-// С перцентилями
-var settings = HistogramSettings.CreatePercentile(pLow: 0.5f, pHigh: 99.5f);
+// High Quality (рекомендуется)
+var settings = HistogramSettings.CreateHighQuality();
+// Mode = PercentileWithKnee
+// Quality = HighQuality
+// PercentileLow = 0.5f, PercentileHigh = 99.5f, KneeWidth = 0.02f
 
-// С мягким коленом (рекомендуется)
-var settings = HistogramSettings.CreateWithKnee(
-    pLow: 0.5f,
-    pHigh: 99.5f,
-    knee: 0.02f
-);
+// Fast Mode (грубая обработка)
+var settings = HistogramSettings.CreateFast();
+// Mode = Percentile
+// Quality = Fast
+// PercentileLow = 1.0f, PercentileHigh = 99.0f, KneeWidth = 0.0f
+```
+
+**Продвинутое использование (ручная настройка параметров):**
+
+```csharp
+// Пользовательские настройки на основе HighQuality
+var settings = HistogramSettings.CreateHighQuality();
+settings.ChannelMode = HistogramChannelMode.PerChannel;  // Поканальный анализ
+settings.PercentileLow = 0.1f;   // Более консервативное отсечение для HDR
+settings.PercentileHigh = 99.9f;
+settings.KneeWidth = 0.03f;
+
+// Применение пресета качества к существующим настройкам
+var settings = new HistogramSettings();
+settings.ApplyQualityPreset(HistogramQuality.HighQuality);
 ```
 
 ## Интеграция в CompressionSettings
+
+**ВАЖНО**: При включении histogram analysis ОБЯЗАТЕЛЬНО устанавливайте `UseCustomMipmaps = true`!
 
 ```csharp
 var compressionSettings = new CompressionSettings {
     CompressionFormat = CompressionFormat.ETC1S,
     QualityLevel = 128,
+    GenerateMipmaps = true,
+    UseCustomMipmaps = true,  // ОБЯЗАТЕЛЬНО для histogram preprocessing!
 
-    // Включаем анализ гистограммы
-    HistogramAnalysis = HistogramSettings.CreateWithKnee(),
-
-    // Записывать параметры в KTX2
-    WriteHistogramParams = true
+    // Включаем анализ гистограммы (High Quality)
+    HistogramAnalysis = HistogramSettings.CreateHighQuality()
 };
+```
+
+**Полный пример с ktx create:**
+
+```csharp
+var pipeline = new TextureConversionPipeline();
+
+var settings = new CompressionSettings {
+    CompressionFormat = CompressionFormat.ETC1S,
+    QualityLevel = 128,
+    GenerateMipmaps = true,
+    UseCustomMipmaps = true,  // MipGenerator создаст мипмапы вручную
+    ColorSpace = ColorSpace.SRGB,
+
+    // Histogram preprocessing (ОБЯЗАТЕЛЬНАЯ часть алгоритма)
+    HistogramAnalysis = HistogramSettings.CreateHighQuality()
+    // Текстура будет нормализована, scale/offset запишутся в KTX2 KVD
+};
+
+var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
+
+var result = await pipeline.ConvertTextureAsync(
+    inputPath: "albedo.png",
+    outputPath: "albedo.ktx2",
+    mipProfile: mipProfile,
+    compressionSettings: settings
+);
+
+if (result.Success && result.HistogramAnalysisResult != null) {
+    Console.WriteLine($"Histogram preprocessing applied:");
+    Console.WriteLine($"  Scale: {result.HistogramAnalysisResult.Scale[0]:F4}");
+    Console.WriteLine($"  Offset: {result.HistogramAnalysisResult.Offset[0]:F4}");
+}
 ```
 
 ## Формат хранения в KTX2
@@ -213,55 +292,57 @@ void main() {
 }
 ```
 
-## Рекомендуемые настройки по типам текстур
+## Рекомендуемые настройки по типам текстур (новый API)
 
 ### HDR текстуры
 
 ```csharp
-HistogramAnalysis = new HistogramSettings {
-    Mode = HistogramMode.PercentileWithKnee,
-    ChannelMode = HistogramChannelMode.AverageLuminance,
-    PercentileLow = 0.1f,      // Консервативное отсечение
-    PercentileHigh = 99.9f,
-    KneeWidth = 0.03f,
-    MinRangeThreshold = 0.05f
-}
+// Используем HighQuality с консервативными перцентилями
+var settings = HistogramSettings.CreateHighQuality();
+settings.PercentileLow = 0.1f;       // Более консервативное отсечение
+settings.PercentileHigh = 99.9f;
+settings.KneeWidth = 0.03f;          // Более широкое колено
+settings.MinRangeThreshold = 0.05f;  // Больший порог для HDR
+
+HistogramAnalysis = settings;
 ```
 
 ### Albedo/Diffuse
 
 ```csharp
-HistogramAnalysis = new HistogramSettings {
-    Mode = HistogramMode.PercentileWithKnee,
-    ChannelMode = HistogramChannelMode.AverageLuminance,
-    PercentileLow = 0.5f,
-    PercentileHigh = 99.5f,
-    KneeWidth = 0.02f
-}
+// Используем настройки по умолчанию (HighQuality)
+HistogramAnalysis = HistogramSettings.CreateHighQuality();
+// Эквивалентно:
+// Mode = PercentileWithKnee
+// PercentileLow = 0.5f, PercentileHigh = 99.5f
+// KneeWidth = 0.02f
+// ChannelMode = AverageLuminance
 ```
 
 ### Roughness/Metallic
 
 ```csharp
-HistogramAnalysis = new HistogramSettings {
-    Mode = HistogramMode.Percentile,  // Без колена для точности
-    ChannelMode = HistogramChannelMode.AverageLuminance,
-    PercentileLow = 0.5f,
-    PercentileHigh = 99.5f,
-    MinRangeThreshold = 0.005f
-}
+// Используем Fast mode (без soft-knee для точности)
+HistogramAnalysis = HistogramSettings.CreateFast();
+// Эквивалентно:
+// Mode = Percentile (жёсткое клампирование)
+// PercentileLow = 1.0f, PercentileHigh = 99.0f
+// KneeWidth = 0.0f (без колена)
+
+// Опционально: уменьшаем порог для узких диапазонов
+var settings = HistogramSettings.CreateFast();
+settings.MinRangeThreshold = 0.005f;
+HistogramAnalysis = settings;
 ```
 
 ### Emissive
 
 ```csharp
-HistogramAnalysis = new HistogramSettings {
-    Mode = HistogramMode.PercentileWithKnee,
-    ChannelMode = HistogramChannelMode.PerChannel,
-    PercentileLow = 1.0f,
-    PercentileHigh = 99.0f,
-    KneeWidth = 0.05f
-}
+// Fast mode с поканальным анализом
+var settings = HistogramSettings.CreateFast();
+settings.ChannelMode = HistogramChannelMode.PerChannel;  // Для цветных источников света
+settings.KneeWidth = 0.05f;  // Добавляем широкое колено для ярких пикселей
+HistogramAnalysis = settings;
 ```
 
 ### Normal Maps
@@ -270,14 +351,118 @@ HistogramAnalysis = new HistogramSettings {
 
 ```csharp
 HistogramAnalysis = null  // Отключено
+// ИЛИ
+HistogramAnalysis = HistogramSettings.CreateDefault()  // Mode = Off
 ```
+
+Для normal maps используйте `UseCustomMipmaps = false` и включите `ConvertToNormalMap = true` и `NormalizeVectors = true` в `CompressionSettings`, чтобы ktx create правильно обработал их.
+
+## Интеграция с ktx create и metadata injection
+
+### Workflow с ktx.exe (новый подход)
+
+Начиная с ktx 4.3.0, используется команда `ktx create` вместо устаревшего `toktx.exe`:
+
+**Шаг 1: Manual Mipmap Generation**
+```csharp
+// MipGenerator создаёт все мипмапы вручную с нужным фильтром
+UseCustomMipmaps = true
+var mipmaps = _mipGenerator.GenerateMipmaps(sourceImage, mipProfile);
+// Результат: mip0 (2048x2048), mip1 (1024x1024), ..., mip10 (1x1)
+```
+
+**Шаг 2: Histogram Preprocessing**
+```csharp
+// Анализируем mip0 для вычисления scale/offset
+var histogramResult = _histogramAnalyzer.Analyze(mip0, histogramSettings);
+
+// Применяем нормализацию ко ВСЕМ мипмапам
+for each mipmap:
+    ApplySoftKnee() or ApplyWinsorization()
+
+// Инвертируем scale/offset для GPU recovery
+scale_inv = 1.0 / scale
+offset_inv = -offset / scale
+```
+
+**Шаг 3: TLV Metadata Creation**
+```csharp
+using var tlvWriter = new TLVWriter();
+
+// Записываем результат с инвертированными параметрами
+tlvWriter.WriteHistogramResult(histogramForTLV, HistogramQuantization.Half16);
+
+// Записываем параметры анализа (для отладки)
+tlvWriter.WriteHistogramParams(histogramSettings);
+
+// Сохраняем в временный файл
+tlvWriter.SaveToFile("pc.meta.bin");
+```
+
+**Шаг 4: ktx create Packing**
+```bash
+ktx create --format R8G8B8A8_SRGB --encode basis-lz \
+  --clevel 1 --qlevel 128 \
+  mip0.png mip1.png mip2.png ... output.ktx2
+```
+
+**ВАЖНО**: ktx create **НЕ ПОДДЕРЖИВАЕТ** добавление KVD через командную строку!
+
+**Шаг 5: Post-Processing Metadata Injection**
+```csharp
+// Используем Ktx2BinaryPatcher для прямого редактирования KTX2 файла
+var patcher = new Ktx2BinaryPatcher();
+
+// Загружаем KTX2 файл, добавляем KVD секцию, обновляем Level Index Array
+patcher.InjectMetadata(outputPath, kvdBinaryFiles);
+
+// Результат: KTX2 файл с встроенными метаданными
+```
+
+### Ktx2BinaryPatcher Details
+
+Класс `Ktx2BinaryPatcher` напрямую манипулирует бинарным форматом KTX2:
+
+1. **Чтение заголовка**: Парсит KTX2 Index (дескриптор уровней и метаданных)
+2. **Резервирование места**: Вычисляет новый размер kvdByteLength
+3. **Сдвиг Level Index Array**: Обновляет byteOffset для каждого уровня мипмапа
+4. **Запись KVD**: Вставляет Key-Value Data между заголовком и уровнями
+5. **Обновление заголовка**: Записывает новые kvdByteOffset и kvdByteLength
+
+**Формат KVD записи**:
+```
+keyLength (uint32)           // Длина ключа (7 для "pc.meta")
+key (UTF-8 string + padding) // "pc.meta\0" + padding до 4 байт
+valueLength (uint32)         // Длина TLV данных
+value (binary)               // TLV блоки (HIST_SCALAR + HIST_PARAMS)
+padding                      // Выравнивание до 4 байт
+```
+
+### Zstd Supercompression Limitation
+
+**КРИТИЧЕСКАЯ ИНФОРМАЦИЯ**: Zstandard supercompression работает ТОЛЬКО с UASTC!
+
+```csharp
+// ✓ ПРАВИЛЬНО: UASTC + Zstd
+CompressionFormat = CompressionFormat.UASTC,
+KTX2Supercompression = KTX2SupercompressionType.Zstandard,
+KTX2ZstdLevel = 3
+
+// ✗ НЕПРАВИЛЬНО: ETC1S + Zstd (игнорируется ktx create)
+CompressionFormat = CompressionFormat.ETC1S,
+KTX2Supercompression = KTX2SupercompressionType.Zstandard  // НЕ ПОДДЕРЖИВАЕТСЯ!
+```
+
+Для ETC1S используйте `KTX2SupercompressionType.None` или не указывайте суперкомпрессию.
 
 ## Производительность
 
 ### Overhead
 
 - **Анализ**: ~2-5 мс для текстуры 2048×2048 (параллельная обработка)
+- **Preprocessing**: ~10-20 мс для нормализации всех мипмапов
 - **TLV метаданные**: 8-20 байт (пренебрежимо мало)
+- **Metadata injection**: ~1-2 мс (бинарное редактирование файла)
 - **GPU применение**: 1 FMA операция на пиксель (очень быстро)
 
 ### Преимущества
@@ -285,6 +470,7 @@ HistogramAnalysis = null  // Отключено
 - **Лучшее качество сжатия**: равномерное распределение гистограммы → меньше артефактов
 - **Меньший размер**: оптимизированный диапазон → лучшая компрессия
 - **Устойчивость к выбросам**: перцентили игнорируют единичные аномалии
+- **Обратимость**: GPU shader полностью восстанавливает оригинальный диапазон
 
 ## Диагностика
 

@@ -6,6 +6,7 @@ using Assimp;
 using HelixToolkit.Wpf;
 using AssetProcessor.ModelConversion.Core;
 using NLog;
+using Media3D = System.Windows.Media.Media3D;
 
 namespace AssetProcessor.ModelConversion.Viewer {
     /// <summary>

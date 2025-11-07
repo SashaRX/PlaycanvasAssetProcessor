@@ -63,11 +63,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
         public float Exposure;
         public float Gamma;
         public uint ChannelMask;
+        public Vector2 Padding1;  // CRITICAL: HLSL aligns float4 to 16-byte boundary, so we need 8 bytes padding here
         public Vector4 HistogramScale;  // RGB scale for histogram denormalization (w unused, for 16-byte alignment)
         public Vector4 HistogramOffset; // RGB offset for histogram denormalization (w unused, for 16-byte alignment)
         public uint EnableHistogramCorrection; // 0 = disabled, 1 = enabled
         public uint HistogramIsPerChannel; // 0 = scalar, 1 = per-channel
-        public Vector2 Padding; // Padding to align to 16-byte boundary
+        public Vector2 Padding2; // Padding to align to 16-byte boundary
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -534,11 +535,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
             Exposure = 0.0f,
             Gamma = currentGamma,
             ChannelMask = channelMask,
+            Padding1 = new Vector2(0.0f, 0.0f),  // CRITICAL: Explicit padding for HLSL float4 alignment
             HistogramScale = histScale,
             HistogramOffset = histOffset,
             EnableHistogramCorrection = enableHist,
             HistogramIsPerChannel = isPerChannel,
-            Padding = new Vector2(0.0f, 0.0f)
+            Padding2 = new Vector2(0.0f, 0.0f)
         };
 
         var mapped = context!.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);

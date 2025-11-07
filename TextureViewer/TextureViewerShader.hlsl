@@ -10,6 +10,8 @@ cbuffer ShaderConstants : register(b0)
     float exposure;                     // HDR exposure (EV)
     float gamma;                        // Gamma correction (2.2 for sRGB, 1.0 for linear)
     uint channelMask;                   // RGBA channel mask (bit flags)
+    // CRITICAL: HLSL adds implicit padding here (8 bytes) to align float4 to 16-byte boundary
+    // C# struct must have explicit Vector2 Padding1 field to match this alignment
     float4 histogramScale;              // Histogram denormalization scale (RGB, w unused)
     float4 histogramOffset;             // Histogram denormalization offset (RGB, w unused)
     uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
@@ -85,6 +87,22 @@ float4 PSMain(PSInput input) : SV_TARGET
         color = sourceTexture.Sample(texSampler, input.texcoord);
     }
 
+    // DEBUG: Показываем значение enableHistogramCorrection визуально
+    // КРАСНАЯ рамка = enableHistogramCorrection == 0 (ВЫКЛЮЧЕН)
+    // ЗЕЛЁНАЯ рамка = enableHistogramCorrection != 0 (ВКЛЮЧЁН)
+    if (input.texcoord.x < 0.02 || input.texcoord.x > 0.98 ||
+        input.texcoord.y < 0.02 || input.texcoord.y > 0.98)
+    {
+        if (enableHistogramCorrection != 0)
+        {
+            color.rgb = float3(0.0, 1.0, 0.0); // ЗЕЛЁНАЯ = ВКЛЮЧЁН
+        }
+        else
+        {
+            color.rgb = float3(1.0, 0.0, 0.0); // КРАСНАЯ = ВЫКЛЮЧЕН
+        }
+    }
+
     // STEP 0: Apply histogram denormalization if enabled
     // CRITICAL: Histogram metadata is in sRGB space, but BC-compressed sRGB textures
     // are auto-decoded to linear by GPU. We must convert back to sRGB, apply denormalization,
@@ -101,13 +119,6 @@ float4 PSMain(PSInput input) : SV_TARGET
 
         // Convert back to linear for rest of pipeline
         color.rgb = pow(max(srgbColor, 0.0), 2.2);
-
-        // DEBUG: Show green border when histogram correction is active
-        if (input.texcoord.x < 0.01 || input.texcoord.x > 0.99 ||
-            input.texcoord.y < 0.01 || input.texcoord.y > 0.99)
-        {
-            color.rgb = float3(0.0, 1.0, 0.0);
-        }
     }
 
     // Check if channel mask is active

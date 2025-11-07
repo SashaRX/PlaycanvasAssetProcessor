@@ -262,11 +262,17 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ГЕНЕРАЦИЯ МИПМАПОВ
             // ============================================
             if (settings.GenerateMipmaps && mipmapPaths.Count == 1) {
+                // AUTOMATIC MODE: ktx create генерирует мипмапы
                 args.Add("--generate-mipmap");
 
                 // Фильтр для генерации мипмапов
                 args.Add("--mipmap-filter");
                 args.Add("lanczos4"); // Хорошее качество по умолчанию
+            } else if (mipmapPaths.Count > 1) {
+                // MANUAL MODE: мы передаём готовые мипмапы, нужно указать --levels
+                // КРИТИЧНО: ktx create требует явно указать количество уровней!
+                args.Add("--levels");
+                args.Add(mipmapPaths.Count.ToString());
             }
 
             // ============================================

@@ -48,9 +48,11 @@
 
             <TextBlock Text="FBX2glTF:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <TextBox Text="{Binding Fbx2glTFPath, UpdateSourceTrigger=PropertyChanged}" Width="200" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <Button Content="Browse..." Command="{Binding BrowseFbx2glTFCommand}" Width="80" Height="30" Margin="0,0,10,0"/>
 
             <TextBlock Text="gltfpack:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <TextBox Text="{Binding GltfPackPath, UpdateSourceTrigger=PropertyChanged}" Width="150" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <Button Content="Browse..." Command="{Binding BrowseGltfPackCommand}" Width="80" Height="30"/>
         </StackPanel>
 
         <!-- Main content -->

@@ -35,23 +35,28 @@ ModelConversion/
 
 Пайплайн требует следующие CLI инструменты:
 
-### 1. FBX2glTF
+### 1. FBX2glTF (Godot версия - рекомендуется)
 
-Конвертирует FBX в glTF/GLB.
+Конвертирует FBX в glTF/GLB. **Рекомендуется использовать Godot fork** FBX2glTF, так как он активно поддерживается и имеет улучшения по сравнению с оригинальной версией.
 
 **Установка (Windows):**
 ```bash
-# Скачать с GitHub releases
+# Скачать Godot FBX2glTF с GitHub releases
 # https://github.com/godotengine/FBX2glTF/releases
 
-# Или использовать предкомпилированный бинарник
-# Поместить FBX2glTF-windows-x64.exe в PATH или указать путь в настройках
+# Или оригинальную версию (устаревшая)
+# https://github.com/facebookincubator/FBX2glTF/releases
+
+# Поместить FBX2glTF-windows-x64.exe в удобное место
+# Путь можно указать в GUI через кнопку "Browse..."
 ```
 
 **Проверка:**
 ```bash
 FBX2glTF-windows-x64.exe --help
 ```
+
+**Примечание:** Godot FBX2glTF совместим с оригинальной версией по параметрам командной строки.
 
 ### 2. gltfpack (meshoptimizer)
 
@@ -72,6 +77,54 @@ npm install -g gltfpack
 ```bash
 gltfpack -h
 ```
+
+## Использование GUI
+
+### Открытие окна конвертации моделей
+
+1. Запустите TexTool (PlayCanvas Asset Processor)
+2. Откройте меню **Tools → Model Conversion Pipeline (FBX → GLB + LOD)...**
+3. Откроется окно `ModelConversionWindow`
+
+### Настройка путей к инструментам
+
+В верхней панели окна конвертации:
+
+1. **FBX2glTF**: Укажите путь к `FBX2glTF-windows-x64.exe`
+   - Введите путь вручную или нажмите **Browse...** для выбора файла
+   - Рекомендуется: Godot FBX2glTF (см. раздел "Установка инструментов")
+
+2. **gltfpack**: Укажите путь к `gltfpack.exe`
+   - Введите путь вручную или нажмите **Browse...** для выбора файла
+   - Если установлен через npm, обычно находится в `%AppData%\npm\gltfpack.exe`
+
+3. **Output Directory**: Директория для выходных файлов
+   - По умолчанию: `output_models`
+   - Нажмите **Browse...** для выбора другой директории
+
+**Примечание:** Пути сохраняются автоматически и загружаются при следующем запуске.
+
+### Добавление и обработка моделей
+
+1. **Добавить модели**: Нажмите "Add FBX Models" и выберите один или несколько FBX файлов
+2. **Настройка параметров**: Выберите модель в списке и настройте параметры справа:
+   - Quick Presets: Default, Production, HighQuality, MinSize
+   - Model Settings: режим сжатия, генерация LOD, манифесты, QA отчёты
+   - Quantization Settings: биты квантования для позиций, UV, нормалей, цветов
+   - LOD Chain Configuration: детальная настройка каждого LOD уровня
+3. **Обработка**:
+   - "Process Selected" - обработать выбранную модель
+   - "Process All Enabled" - обработать все включенные модели (галочка ✓)
+4. **Сохранение настроек**: Нажмите "Save Settings" для сохранения конфигурации
+
+### Пресеты
+
+Быстрые пресеты для применения к выбранной модели или всем моделям:
+
+- **Default**: Quantization, 4 LOD уровня, манифест + QA отчёт
+- **Production**: MeshOpt (EXT_meshopt_compression), два трека (glb + meshopt), агрессивное упрощение
+- **HighQuality**: Quantization с высокими битами, мягкое упрощение LOD
+- **MinSize**: Aggressive MeshOpt, минимальные размеры файлов
 
 ## Настройки конвертации
 

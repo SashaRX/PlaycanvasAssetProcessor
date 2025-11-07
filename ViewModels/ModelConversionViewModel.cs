@@ -239,6 +239,56 @@ namespace AssetProcessor.ViewModels {
         }
 
         /// <summary>
+        /// Выбрать путь к FBX2glTF executable
+        /// </summary>
+        [RelayCommand]
+        private void BrowseFbx2glTF() {
+            var dialog = new OpenFileDialog {
+                Title = "Select FBX2glTF Executable",
+                Filter = "Executable Files|*.exe|All Files|*.*",
+                CheckFileExists = true
+            };
+
+            // Установить начальную директорию на текущий путь, если файл существует
+            if (!string.IsNullOrEmpty(Fbx2glTFPath) && File.Exists(Fbx2glTFPath)) {
+                dialog.InitialDirectory = Path.GetDirectoryName(Fbx2glTFPath);
+                dialog.FileName = Path.GetFileName(Fbx2glTFPath);
+            }
+
+            if (dialog.ShowDialog() == true) {
+                Fbx2glTFPath = dialog.FileName;
+                GlobalSettings.FBX2glTFExecutablePath = Fbx2glTFPath;
+                SaveSettings();
+                Logger.Info($"FBX2glTF path set to: {Fbx2glTFPath}");
+            }
+        }
+
+        /// <summary>
+        /// Выбрать путь к gltfpack executable
+        /// </summary>
+        [RelayCommand]
+        private void BrowseGltfPack() {
+            var dialog = new OpenFileDialog {
+                Title = "Select gltfpack Executable",
+                Filter = "Executable Files|*.exe|All Files|*.*",
+                CheckFileExists = true
+            };
+
+            // Установить начальную директорию на текущий путь, если файл существует
+            if (!string.IsNullOrEmpty(GltfPackPath) && File.Exists(GltfPackPath)) {
+                dialog.InitialDirectory = Path.GetDirectoryName(GltfPackPath);
+                dialog.FileName = Path.GetFileName(GltfPackPath);
+            }
+
+            if (dialog.ShowDialog() == true) {
+                GltfPackPath = dialog.FileName;
+                GlobalSettings.GltfPackExecutablePath = GltfPackPath;
+                SaveSettings();
+                Logger.Info($"gltfpack path set to: {GltfPackPath}");
+            }
+        }
+
+        /// <summary>
         /// Применить пресет ко всем моделям
         /// </summary>
         [RelayCommand]

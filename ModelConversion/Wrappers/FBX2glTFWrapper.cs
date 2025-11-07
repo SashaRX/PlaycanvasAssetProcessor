@@ -70,18 +70,17 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             var result = new ConversionResult();
 
             try {
-                Logger.Info($"FBX2glTF: Converting {inputPath} to {(excludeTextures ? "gltf" : "glb")} (exclude textures: {excludeTextures})");
+                Logger.Info($"FBX2glTF: Converting {inputPath} to GLB (exclude textures: {excludeTextures})");
 
-                // Аргументы: --binary для .glb (с текстурами) или без --binary для .gltf (без текстур)
-                string arguments;
+                // Аргументы: --binary всегда (GLB формат), --separate-textures для исключения текстур
+                var arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
+
                 if (excludeTextures) {
-                    // Используем .gltf формат (separate files) - текстуры останутся внешними файлами
-                    arguments = $"--input \"{inputPath}\" --output \"{outputPath}\"";
-                    Logger.Info("FBX2glTF: Exporting as .gltf format (textures as external files, not embedded)");
+                    // --separate-textures: текстуры НЕ встраиваются в GLB, остаются внешними файлами
+                    arguments += " --separate-textures";
+                    Logger.Info("FBX2glTF: Using --separate-textures flag (textures NOT embedded in GLB)");
                 } else {
-                    // Используем .glb формат (binary) - текстуры будут встроены
-                    arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
-                    Logger.Info("FBX2glTF: Exporting as .glb format (textures embedded)");
+                    Logger.Info("FBX2glTF: Textures will be embedded in GLB");
                 }
 
                 Logger.Debug($"FBX2glTF command: {_executablePath} {arguments}");
@@ -131,8 +130,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 Logger.Info($"FBX2glTF stderr (length: {result.Error?.Length ?? 0}):\n{result.Error ?? "(empty)"}");
 
                 if (process.ExitCode == 0) {
-                    // Проверяем что файл создан - FBX2glTF может создать .gltf или .glb
-                    var gltfPath = outputPath + ".gltf";
+                    // Проверяем что GLB файл создан (всегда используем --binary)
                     var glbPath = outputPath + ".glb";
 
                     // Логируем файлы в выходной директории для диагностики
@@ -142,23 +140,14 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                         Logger.Info($"Files in output directory {outputDir}: {string.Join(", ", files.Select(Path.GetFileName))}");
                     }
 
-                    string? actualOutputPath = null;
-                    if (File.Exists(gltfPath)) {
-                        actualOutputPath = gltfPath;
-                        Logger.Info($"FBX2glTF created .gltf format: {gltfPath}");
-                    } else if (File.Exists(glbPath)) {
-                        actualOutputPath = glbPath;
-                        Logger.Info($"FBX2glTF created .glb format: {glbPath}");
-                    }
-
-                    if (actualOutputPath != null) {
+                    if (File.Exists(glbPath)) {
                         result.Success = true;
-                        result.OutputFilePath = actualOutputPath;
-                        result.OutputFileSize = new FileInfo(actualOutputPath).Length;
-                        Logger.Info($"FBX2glTF: Success, output size: {result.OutputFileSize} bytes");
+                        result.OutputFilePath = glbPath;
+                        result.OutputFileSize = new FileInfo(glbPath).Length;
+                        Logger.Info($"FBX2glTF: Success, created {glbPath}, size: {result.OutputFileSize} bytes");
                     } else {
                         result.Success = false;
-                        result.Error = $"FBX2glTF completed but output file not found (checked {gltfPath} and {glbPath})";
+                        result.Error = $"FBX2glTF completed but output file not found: {glbPath}";
                         Logger.Error(result.Error);
                     }
                 } else {

@@ -201,9 +201,9 @@ var settings = new ModelConversionSettings {
    - KTX2 формат с метаданными
 
 **Метод FBX2glTF:**
-- Без `--binary` флага: Экспортирует в .gltf формат (separate files)
-- Текстуры остаются как внешние файлы (.png/.jpg), не встраиваются в выходной файл
-- gltfpack затем конвертирует .gltf в оптимизированный .glb без текстур
+- `--binary --separate-textures`: Создаёт GLB файл, но текстуры НЕ встраиваются
+- Текстуры остаются как внешние файлы (.png/.jpg) в той же директории
+- gltfpack читает GLB и создаёт оптимизированный GLB без встраивания текстур
 
 **GUI настройка:**
 - Checkbox "Exclude Textures" в разделе Model Settings (по умолчанию включен)

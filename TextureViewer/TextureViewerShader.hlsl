@@ -75,10 +75,6 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     float4 color;
 
-    // DEBUG: ПРОВЕРКА ЧТО ШЕЙДЕР ЗАГРУЖАЕТСЯ - ВСЕГДА ЗЕЛЁНЫЙ ЭКРАН
-    // ЕСЛИ ЭКРАН НЕ ЗЕЛЁНЫЙ = ШЕЙДЕР НЕ ПЕРЕКОМПИЛИРОВАЛСЯ
-    return float4(0.0, 1.0, 0.0, 1.0);
-
     // Sample texture with manual mip level or auto mip
     if (mipLevel >= 0.0)
     {
@@ -96,19 +92,22 @@ float4 PSMain(PSInput input) : SV_TARGET
     // Formula: v_original = v_normalized * scale + offset
     if (enableHistogramCorrection != 0)
     {
-        // DEBUG: ВИЗУАЛИЗАЦИЯ ЧТО HISTOGRAM CORRECTION РАБОТАЕТ
-        // ПОКРАСИМ ВСЮ ТЕКСТУРУ В ЗЕЛЁНЫЙ ЕСЛИ ВКЛЮЧЁН
-        color.rgb = float3(0.0, 1.0, 0.0);
-
         // For BC*_SRGB_BLOCK formats, GPU auto-decodes to linear before shader
         // Convert linear -> sRGB to match histogram metadata space
-        //float3 srgbColor = pow(max(color.rgb, 0.0), 1.0 / 2.2);
+        float3 srgbColor = pow(max(color.rgb, 0.0), 1.0 / 2.2);
 
         // Apply denormalization in sRGB space (use .rgb to ignore w component)
-        //srgbColor = srgbColor * histogramScale.rgb + histogramOffset.rgb;
+        srgbColor = srgbColor * histogramScale.rgb + histogramOffset.rgb;
 
         // Convert back to linear for rest of pipeline
-        //color.rgb = pow(max(srgbColor, 0.0), 2.2);
+        color.rgb = pow(max(srgbColor, 0.0), 2.2);
+
+        // DEBUG: Show green border when histogram correction is active
+        if (input.texcoord.x < 0.01 || input.texcoord.x > 0.99 ||
+            input.texcoord.y < 0.01 || input.texcoord.y > 0.99)
+        {
+            color.rgb = float3(0.0, 1.0, 0.0);
+        }
     }
 
     // Check if channel mask is active

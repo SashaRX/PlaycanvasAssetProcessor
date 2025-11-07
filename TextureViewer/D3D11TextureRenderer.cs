@@ -524,6 +524,15 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 histScale = new Vector4(scale, scale, scale, 0.0f);
                 histOffset = new Vector4(offset, offset, offset, 0.0f);
             }
+
+            // Debug logging to verify values being passed to shader
+            logger.Info($"[D3D11TextureRenderer] Histogram correction ACTIVE - passing to shader:");
+            logger.Info($"  - EnableHistogramCorrection: {enableHist}");
+            logger.Info($"  - HistogramScale: [{histScale.X:F4}, {histScale.Y:F4}, {histScale.Z:F4}]");
+            logger.Info($"  - HistogramOffset: [{histOffset.X:F4}, {histOffset.Y:F4}, {histOffset.Z:F4}]");
+            logger.Info($"  - IsPerChannel: {isPerChannel}");
+        } else {
+            logger.Info($"[D3D11TextureRenderer] Histogram correction INACTIVE - enableHist={enableHist}, hasMetadata={histogramMetadata != null}, enabled={enableHistogramCorrection}");
         }
 
         var constants = new ShaderConstants {

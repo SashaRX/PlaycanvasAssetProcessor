@@ -63,6 +63,9 @@ namespace AssetProcessor.ModelConversion.Viewer {
             _viewport.Children.Add(_modelVisual);
 
             Child = _viewport;
+
+            // Подписываемся на событие выгрузки
+            Unloaded += OnUnloaded;
         }
 
         /// <summary>
@@ -226,8 +229,7 @@ namespace AssetProcessor.ModelConversion.Viewer {
             _glbLoader.ClearCache();
         }
 
-        protected override void OnUnloaded(object sender, RoutedEventArgs e) {
-            base.OnVisualParentChanged(e);
+        private void OnUnloaded(object sender, RoutedEventArgs e) {
             _glbLoader.Dispose();
         }
     }

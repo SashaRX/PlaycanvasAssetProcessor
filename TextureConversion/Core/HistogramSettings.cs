@@ -57,15 +57,18 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Создаёт настройки высокого качества (рекомендуется)
-        /// PercentileWithKnee (0.5%, 99.5%), knee=2%, soft-knee сглаживание
+        /// CRITICAL: Using Percentile (hard clamping) instead of PercentileWithKnee
+        /// because soft-knee is NON-LINEAR and cannot be inverted by GPU's linear formula.
+        /// GPU can only apply: v_original = v_normalized * scale + offset
+        /// Percentile (0.5%, 99.5%), hard clamping
         /// </summary>
         public static HistogramSettings CreateHighQuality() {
             return new HistogramSettings {
-                Mode = HistogramMode.PercentileWithKnee,
+                Mode = HistogramMode.Percentile,  // CRITICAL: Must be linear for GPU inversion
                 Quality = HistogramQuality.HighQuality,
                 PercentileLow = 0.5f,
                 PercentileHigh = 99.5f,
-                KneeWidth = 0.02f,
+                KneeWidth = 0.0f,  // No knee for linear transformation
                 ChannelMode = HistogramChannelMode.AverageLuminance
             };
         }
@@ -87,15 +90,17 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Применяет пресет качества к текущим настройкам
+        /// CRITICAL: Both modes use Percentile (hard clamping) because soft-knee
+        /// is non-linear and cannot be inverted by GPU
         /// </summary>
         public void ApplyQualityPreset(HistogramQuality quality) {
             Quality = quality;
 
             if (quality == HistogramQuality.HighQuality) {
-                Mode = HistogramMode.PercentileWithKnee;
+                Mode = HistogramMode.Percentile;  // CRITICAL: Must be linear for GPU inversion
                 PercentileLow = 0.5f;
                 PercentileHigh = 99.5f;
-                KneeWidth = 0.02f;
+                KneeWidth = 0.0f;  // No knee for linear transformation
             } else if (quality == HistogramQuality.Fast) {
                 Mode = HistogramMode.Percentile;
                 PercentileLow = 1.0f;

@@ -323,22 +323,22 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // CRITICAL FIX: Apply winsorization to EACH CHANNEL with lo/hi from luminance histogram
-                    // This allows GPU to recover using simple linear formula: v_original = v_norm * scale + offset
+                    // CRITICAL FIX: Apply LINEAR normalization WITHOUT pre-clamping
+                    // Pre-clamping causes channels below lo to map to 0 (black), making texture red!
+                    // Instead: normalize directly, let PNG format clamp the byte values
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
-                    // Clamp each channel to [lo, hi]
-                    float r_clamped = Math.Clamp(r_norm, lo, hi);
-                    float g_clamped = Math.Clamp(g_norm, lo, hi);
-                    float b_clamped = Math.Clamp(b_norm, lo, hi);
+                    // Apply linear normalization WITHOUT pre-clamping
+                    // If v < lo: normalized < 0 → byte clamped to 0
+                    // If v > hi: normalized > 1 → byte clamped to 255
+                    // GPU recovers: v_original = v_normalized * range + lo
+                    float r_normalized = (r_norm - lo) / range;
+                    float g_normalized = (g_norm - lo) / range;
+                    float b_normalized = (b_norm - lo) / range;
 
-                    // Normalize to [0, 1] - this is the KEY step!
-                    float r_normalized = (r_clamped - lo) / range;
-                    float g_normalized = (g_clamped - lo) / range;
-                    float b_normalized = (b_clamped - lo) / range;
-
+                    // Clamp to [0, 255] byte range (this is the ONLY clamping!)
                     byte r = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
                     byte g = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
                     byte b = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);

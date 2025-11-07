@@ -200,10 +200,16 @@ var settings = new ModelConversionSettings {
    - Квантование и нормализацию
    - KTX2 формат с метаданными
 
-**Метод FBX2glTF:**
-- `--binary --separate-textures`: Создаёт GLB файл, но текстуры НЕ встраиваются
-- Текстуры остаются как внешние файлы (.png/.jpg) в той же директории
-- gltfpack читает GLB и создаёт оптимизированный GLB без встраивания текстур
+**Метод исключения текстур:**
+
+1. **FBX2glTF** (`--binary --separate-textures`):
+   - Создаёт GLB файл, но текстуры НЕ встраиваются
+   - Текстуры остаются как внешние файлы (.png/.jpg)
+
+2. **gltfpack** (`-tr`):
+   - Флаг `-tr`: keep referring to original texture paths instead of copying/embedding images
+   - Предотвращает встраивание внешних текстур в оптимизированный GLB
+   - Текстуры остаются как внешние файлы
 
 **GUI настройка:**
 - Checkbox "Exclude Textures" в разделе Model Settings (по умолчанию включен)

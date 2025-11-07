@@ -67,6 +67,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         /// <param name="compressionMode">Режим сжатия</param>
         /// <param name="quantization">Настройки квантования</param>
         /// <param name="generateReport">Генерировать ли отчет</param>
+        /// <param name="excludeTextures">Не встраивать текстуры в GLB (использовать -tr флаг)</param>
         /// <returns>Результат оптимизации</returns>
         public async Task<GltfPackResult> OptimizeAsync(
             string inputPath,
@@ -74,7 +75,8 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             LodSettings lodSettings,
             CompressionMode compressionMode,
             QuantizationSettings? quantization = null,
-            bool generateReport = false) {
+            bool generateReport = false,
+            bool excludeTextures = true) {
 
             var result = new GltfPackResult();
 
@@ -89,7 +91,8 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     lodSettings,
                     compressionMode,
                     quantization,
-                    generateReport
+                    generateReport,
+                    excludeTextures
                 );
 
                 Logger.Debug($"gltfpack command: {_executablePath} {arguments}");
@@ -185,13 +188,20 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             LodSettings lodSettings,
             CompressionMode compressionMode,
             QuantizationSettings? quantization,
-            bool generateReport) {
+            bool generateReport,
+            bool excludeTextures) {
 
             var args = new List<string>();
 
             // Входной и выходной файлы
             args.Add($"-i \"{inputPath}\"");
             args.Add($"-o \"{outputPath}\"");
+
+            // Исключение текстур: -tr предотвращает копирование/встраивание текстур
+            if (excludeTextures) {
+                args.Add("-tr");
+                Logger.Info("gltfpack: Using -tr flag (textures will NOT be embedded)");
+            }
 
             // Упрощение геометрии
             if (lodSettings.SimplificationRatio < 1.0f) {

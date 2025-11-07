@@ -111,7 +111,8 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                                 lodSettings,
                                 compressionMode,
                                 settings.Quantization,
-                                generateReport: settings.GenerateQAReport
+                                generateReport: settings.GenerateQAReport,
+                                excludeTextures: settings.ExcludeTextures
                             );
 
                             if (!gltfResult.Success) {

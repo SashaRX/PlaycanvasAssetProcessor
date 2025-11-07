@@ -50,7 +50,7 @@ namespace AssetProcessor.TextureConversion.Core {
         /// <summary>
         /// Верхние границы для каждого канала (используется при PerChannel режиме)
         /// </summary>
-        public float[] RangeHighPerChannel { get; set; } = new[] { 1.0f, 1.0f, 1.0f }
+        public float[] RangeHighPerChannel { get; set; } = new[] { 1.0f, 1.0f, 1.0f };
 
         /// <summary>
         /// Доля пикселей в хвостах распределения (за пределами перцентилей)

@@ -24,12 +24,12 @@ namespace AssetProcessor.TextureConversion.Core {
         /// <summary>
         /// Нижний перцентиль (автоматически устанавливается из Quality, можно переопределить)
         /// </summary>
-        public float PercentileLow { get; set; } = 0.5f;
+        public float PercentileLow { get; set; } = 5.0f;
 
         /// <summary>
         /// Верхний перцентиль (автоматически устанавливается из Quality, можно переопределить)
         /// </summary>
-        public float PercentileHigh { get; set; } = 99.5f;
+        public float PercentileHigh { get; set; } = 95.0f;
 
         /// <summary>
         /// Ширина мягкого колена (автоматически устанавливается из Quality, можно переопределить)
@@ -60,14 +60,14 @@ namespace AssetProcessor.TextureConversion.Core {
         /// CRITICAL: Using Percentile (hard clamping) instead of PercentileWithKnee
         /// because soft-knee is NON-LINEAR and cannot be inverted by GPU's linear formula.
         /// GPU can only apply: v_original = v_normalized * scale + offset
-        /// Percentile (0.5%, 99.5%), hard clamping
+        /// Percentile (5%, 95%), hard clamping - wider range to preserve more data
         /// </summary>
         public static HistogramSettings CreateHighQuality() {
             return new HistogramSettings {
                 Mode = HistogramMode.Percentile,  // CRITICAL: Must be linear for GPU inversion
                 Quality = HistogramQuality.HighQuality,
-                PercentileLow = 0.5f,
-                PercentileHigh = 99.5f,
+                PercentileLow = 5.0f,   // Wider range to avoid excessive clipping
+                PercentileHigh = 95.0f,
                 KneeWidth = 0.0f,  // No knee for linear transformation
                 ChannelMode = HistogramChannelMode.PerChannel  // Per-channel for correct color handling
             };
@@ -75,14 +75,14 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Создаёт настройки быстрого режима (грубая обработка)
-        /// Percentile (1%, 99%), жёсткое клампирование
+        /// Percentile (10%, 90%), жёсткое клампирование - conservative range
         /// </summary>
         public static HistogramSettings CreateFast() {
             return new HistogramSettings {
                 Mode = HistogramMode.Percentile,
                 Quality = HistogramQuality.Fast,
-                PercentileLow = 1.0f,
-                PercentileHigh = 99.0f,
+                PercentileLow = 10.0f,  // Conservative range
+                PercentileHigh = 90.0f,
                 KneeWidth = 0.0f,
                 ChannelMode = HistogramChannelMode.PerChannel  // Per-channel for correct color handling
             };
@@ -98,13 +98,13 @@ namespace AssetProcessor.TextureConversion.Core {
 
             if (quality == HistogramQuality.HighQuality) {
                 Mode = HistogramMode.Percentile;  // CRITICAL: Must be linear for GPU inversion
-                PercentileLow = 0.5f;
-                PercentileHigh = 99.5f;
+                PercentileLow = 5.0f;   // Wider range to preserve more data
+                PercentileHigh = 95.0f;
                 KneeWidth = 0.0f;  // No knee for linear transformation
             } else if (quality == HistogramQuality.Fast) {
                 Mode = HistogramMode.Percentile;
-                PercentileLow = 1.0f;
-                PercentileHigh = 99.0f;
+                PercentileLow = 10.0f;  // Conservative range
+                PercentileHigh = 90.0f;
                 KneeWidth = 0.0f;
             }
         }

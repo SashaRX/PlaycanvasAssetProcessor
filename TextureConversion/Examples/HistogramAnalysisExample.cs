@@ -12,20 +12,14 @@ namespace AssetProcessor.TextureConversion.Examples {
         public static async Task BasicHistogramAnalysis() {
             var pipeline = new TextureConversionPipeline();
 
-            // Настройки сжатия с анализом гистограммы
+            // Настройки сжатия с анализом гистограммы (High Quality режим)
             var settings = new CompressionSettings {
                 CompressionFormat = CompressionFormat.ETC1S,
                 QualityLevel = 128,
                 GenerateMipmaps = true,
 
-                // Включаем анализ гистограммы с перцентилями
-                HistogramAnalysis = HistogramSettings.CreatePercentile(
-                    pLow: 0.5f,   // Нижний перцентиль: 0.5%
-                    pHigh: 99.5f  // Верхний перцентиль: 99.5%
-                ),
-
-                // Записывать параметры анализа в KTX2
-                WriteHistogramParams = true
+                // Включаем анализ гистограммы (High Quality: PercentileWithKnee 0.5%, 99.5%)
+                HistogramAnalysis = HistogramSettings.CreateHighQuality()
             };
 
             var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
@@ -56,14 +50,8 @@ namespace AssetProcessor.TextureConversion.Examples {
                 UASTCQuality = 3,
                 UseUASTCRDO = true,
 
-                // Анализ с мягким коленом (рекомендуется)
-                HistogramAnalysis = HistogramSettings.CreateWithKnee(
-                    pLow: 0.5f,     // 0.5% нижний перцентиль
-                    pHigh: 99.5f,   // 99.5% верхний перцентиль
-                    knee: 0.02f     // 2% ширина колена
-                ),
-
-                WriteHistogramParams = true
+                // Анализ с мягким коленом (High Quality: PercentileWithKnee 0.5%, 99.5%, knee=2%)
+                HistogramAnalysis = HistogramSettings.CreateHighQuality()
             };
 
             var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
@@ -86,16 +74,15 @@ namespace AssetProcessor.TextureConversion.Examples {
                 CompressionFormat = CompressionFormat.ETC1S,
                 QualityLevel = 192,
 
-                // Поканальный анализ для RGB
+                // Поканальный анализ для RGB (High Quality с PerChannel)
                 HistogramAnalysis = new HistogramSettings {
+                    Quality = HistogramQuality.HighQuality,
                     Mode = HistogramMode.PercentileWithKnee,
                     ChannelMode = HistogramChannelMode.PerChannel, // Отдельные scale/offset для R, G, B
                     PercentileLow = 0.5f,
                     PercentileHigh = 99.5f,
                     KneeWidth = 0.02f
-                },
-
-                WriteHistogramParams = true
+                }
             };
 
             var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
@@ -125,8 +112,9 @@ namespace AssetProcessor.TextureConversion.Examples {
                 CompressionFormat = CompressionFormat.ETC1S,
                 QualityLevel = 128,
 
-                // Пользовательские настройки анализа
+                // Пользовательские настройки анализа (Fast режим с модификациями)
                 HistogramAnalysis = new HistogramSettings {
+                    Quality = HistogramQuality.Fast,  // Или HighQuality для soft-knee
                     Mode = HistogramMode.PercentileWithKnee,
                     ChannelMode = HistogramChannelMode.AverageLuminance,
 
@@ -142,9 +130,7 @@ namespace AssetProcessor.TextureConversion.Examples {
 
                     // Минимальный диапазон для нормализации
                     MinRangeThreshold = 0.02f  // Игнорировать почти константные текстуры
-                },
-
-                WriteHistogramParams = true
+                }
             };
 
             var mipProfile = MipGenerationProfile.CreateDefault(TextureType.Albedo);
@@ -190,6 +176,7 @@ namespace AssetProcessor.TextureConversion.Examples {
             /// </summary>
             public static HistogramSettings ForHDR() {
                 return new HistogramSettings {
+                    Quality = HistogramQuality.HighQuality,
                     Mode = HistogramMode.PercentileWithKnee,
                     ChannelMode = HistogramChannelMode.AverageLuminance,
                     PercentileLow = 0.1f,      // Очень консервативное отсечение
@@ -203,21 +190,17 @@ namespace AssetProcessor.TextureConversion.Examples {
             /// Настройки для albedo текстур с потенциальными выбросами
             /// </summary>
             public static HistogramSettings ForAlbedo() {
-                return new HistogramSettings {
-                    Mode = HistogramMode.PercentileWithKnee,
-                    ChannelMode = HistogramChannelMode.AverageLuminance,
-                    PercentileLow = 0.5f,
-                    PercentileHigh = 99.5f,
-                    KneeWidth = 0.02f,
-                    MinRangeThreshold = 0.01f
-                };
+                // Эквивалентно CreateHighQuality()
+                return HistogramSettings.CreateHighQuality();
             }
 
             /// <summary>
             /// Настройки для roughness/metallic карт (обычно узкий диапазон)
             /// </summary>
             public static HistogramSettings ForPBRMaps() {
+                // Эквивалентно CreateFast() с небольшими модификациями
                 return new HistogramSettings {
+                    Quality = HistogramQuality.Fast,
                     Mode = HistogramMode.Percentile,  // Без колена для точности
                     ChannelMode = HistogramChannelMode.AverageLuminance,
                     PercentileLow = 0.5f,
@@ -231,6 +214,7 @@ namespace AssetProcessor.TextureConversion.Examples {
             /// </summary>
             public static HistogramSettings ForEmissive() {
                 return new HistogramSettings {
+                    Quality = HistogramQuality.Fast,
                     Mode = HistogramMode.PercentileWithKnee,
                     ChannelMode = HistogramChannelMode.PerChannel, // Поканально для цветных источников света
                     PercentileLow = 1.0f,          // Агрессивное отсечение тёмных областей

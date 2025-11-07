@@ -126,12 +126,11 @@ namespace AssetProcessor.Controls {
             ToksvigVarianceThresholdSlider.Value = 0.002;
             NormalMapPathTextBox.Text = string.Empty;
 
-            // Histogram Analysis
+            // Histogram Analysis (упрощённая версия)
             EnableHistogramCheckBox.IsChecked = false;
             HistogramModeComboBox.SelectedItem = HistogramMode.PercentileWithKnee;
-            HistogramProcessingModeComboBox.SelectedItem = HistogramProcessingMode.MetadataOnly;
             HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
-            HistogramQuantizationComboBox.SelectedItem = HistogramQuantization.Half16;
+            // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
             HistogramPercentileLowSlider.Value = 0.5;
             HistogramPercentileHighSlider.Value = 99.5;
             HistogramKneeWidthSlider.Value = 0.02;
@@ -453,27 +452,21 @@ namespace AssetProcessor.Controls {
                 ? (HistogramMode)HistogramModeComboBox.SelectedItem
                 : HistogramMode.PercentileWithKnee;
 
-            var processingMode = HistogramProcessingModeComboBox.SelectedItem != null
-                ? (HistogramProcessingMode)HistogramProcessingModeComboBox.SelectedItem
-                : HistogramProcessingMode.MetadataOnly;
-
             var channelMode = HistogramChannelModeComboBox.SelectedItem != null
                 ? (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem
                 : HistogramChannelMode.AverageLuminance;
 
-            var quantization = HistogramQuantizationComboBox.SelectedItem != null
-                ? (HistogramQuantization)HistogramQuantizationComboBox.SelectedItem
-                : HistogramQuantization.Half16;
-
+            // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
             return new HistogramSettings {
                 Mode = mode,
-                ProcessingMode = processingMode,
                 ChannelMode = channelMode,
-                Quantization = quantization,
                 PercentileLow = (float)HistogramPercentileLowSlider.Value,
                 PercentileHigh = (float)HistogramPercentileHighSlider.Value,
                 KneeWidth = (float)HistogramKneeWidthSlider.Value,
-                MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value
+                MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value,
+                Quality = mode == HistogramMode.PercentileWithKnee
+                    ? HistogramQuality.HighQuality
+                    : HistogramQuality.Fast
             };
         }
 
@@ -705,9 +698,8 @@ namespace AssetProcessor.Controls {
             if (settings != null && settings.Mode != HistogramMode.Off) {
                 EnableHistogramCheckBox.IsChecked = true;
                 HistogramModeComboBox.SelectedItem = settings.Mode;
-                HistogramProcessingModeComboBox.SelectedItem = settings.ProcessingMode;
                 HistogramChannelModeComboBox.SelectedItem = settings.ChannelMode;
-                HistogramQuantizationComboBox.SelectedItem = settings.Quantization;
+                // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
                 HistogramPercentileLowSlider.Value = settings.PercentileLow;
                 HistogramPercentileHighSlider.Value = settings.PercentileHigh;
                 HistogramKneeWidthSlider.Value = settings.KneeWidth;
@@ -846,11 +838,7 @@ namespace AssetProcessor.Controls {
                             }
                             break;
 
-                        case "histogramProcessingMode":
-                            if (Enum.TryParse<HistogramProcessingMode>(param.Value?.ToString(), true, out var histProcessing)) {
-                                HistogramProcessingModeComboBox.SelectedItem = histProcessing;
-                            }
-                            break;
+                        // histogramProcessingMode удалён (всегда Preprocessing)
 
                         case "histogramChannelMode":
                             if (Enum.TryParse<HistogramChannelMode>(param.Value?.ToString(), true, out var histChannel)) {
@@ -858,11 +846,7 @@ namespace AssetProcessor.Controls {
                             }
                             break;
 
-                        case "histogramQuantization":
-                            if (Enum.TryParse<HistogramQuantization>(param.Value?.ToString(), true, out var histQuant)) {
-                                HistogramQuantizationComboBox.SelectedItem = histQuant;
-                            }
-                            break;
+                        // histogramQuantization удалён (всегда Half16)
 
                         case "histogramPercentileLow":
                             if (param.Value is double percLow) {

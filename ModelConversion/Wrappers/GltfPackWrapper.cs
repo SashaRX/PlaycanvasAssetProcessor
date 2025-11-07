@@ -137,13 +137,9 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 result.StdErr = errorBuilder.ToString();
                 result.ExitCode = process.ExitCode;
 
-                // Логируем полный вывод для диагностики
-                if (!string.IsNullOrWhiteSpace(result.Output)) {
-                    Logger.Info($"gltfpack stdout:\n{result.Output}");
-                }
-                if (!string.IsNullOrWhiteSpace(result.StdErr)) {
-                    Logger.Info($"gltfpack stderr:\n{result.StdErr}");
-                }
+                // Логируем полный вывод для диагностики (ВСЕГДА, даже если пусто)
+                Logger.Info($"gltfpack stdout (length: {result.Output?.Length ?? 0}):\n{result.Output ?? "(empty)"}");
+                Logger.Info($"gltfpack stderr (length: {result.StdErr?.Length ?? 0}):\n{result.StdErr ?? "(empty)"}");
 
                 if (process.ExitCode == 0) {
                     if (File.Exists(outputPath)) {
@@ -245,6 +241,9 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 var reportPath = Path.ChangeExtension(outputPath, ".report.json");
                 args.Add($"-r \"{reportPath}\"");
             }
+
+            // Verbose вывод для диагностики
+            args.Add("-v");
 
             return string.Join(" ", args);
         }

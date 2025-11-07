@@ -446,7 +446,10 @@ namespace AssetProcessor {
                     bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
                     if (HistogramCorrectionButton != null) {
                         HistogramCorrectionButton.IsEnabled = hasHistogram;
-                        HistogramCorrectionButton.IsChecked = hasHistogram; // Auto-enable if metadata present
+
+                        // Restore saved setting (default to enabled if metadata present)
+                        bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
+                        HistogramCorrectionButton.IsChecked = hasHistogram && savedEnabled;
 
                         if (hasHistogram && textureData.HistogramMetadata != null) {
                             var meta = textureData.HistogramMetadata;
@@ -462,9 +465,11 @@ namespace AssetProcessor {
 
                     // CRITICAL: Actually enable histogram correction in renderer!
                     // Setting IsChecked doesn't trigger the event handler, so we must call it explicitly
+                    // Restore saved setting
                     if (hasHistogram) {
-                        D3D11TextureViewer.Renderer.SetHistogramCorrection(true);
-                        logger.Info("Histogram correction auto-enabled for KTX2 with metadata");
+                        bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
+                        D3D11TextureViewer.Renderer.SetHistogramCorrection(savedEnabled);
+                        logger.Info($"Histogram correction {(savedEnabled ? "enabled" : "disabled")} (restored from settings)");
                     }
 
                     // Update format info in UI
@@ -569,7 +574,12 @@ namespace AssetProcessor {
             if (sender is ToggleButton button && D3D11TextureViewer?.Renderer != null) {
                 bool enabled = button.IsChecked ?? true;
                 D3D11TextureViewer.Renderer.SetHistogramCorrection(enabled);
-                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user");
+
+                // Save setting for next session
+                AppSettings.Default.HistogramCorrectionEnabled = enabled;
+                AppSettings.Default.Save();
+
+                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user (saved to settings)");
 
                 // Force immediate render to show the change
                 D3D11TextureViewer.Renderer.Render();

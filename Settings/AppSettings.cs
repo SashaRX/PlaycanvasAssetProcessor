@@ -105,5 +105,13 @@
             get => (bool)this[nameof(UseD3D11NativeKtx2)];
             set => this[nameof(UseD3D11NativeKtx2)] = value;
         }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("True")]
+        public bool HistogramCorrectionEnabled {
+            get => (bool)this[nameof(HistogramCorrectionEnabled)];
+            set => this[nameof(HistogramCorrectionEnabled)] = value;
+        }
     }
 }

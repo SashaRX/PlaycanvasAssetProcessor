@@ -70,17 +70,7 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <ObjectDataProvider x:Key="HistogramProcessingModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramProcessingMode}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:HistogramProcessingMode"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
-
-        <ObjectDataProvider x:Key="HistogramQuantizationValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramQuantization}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:HistogramQuantization"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
+        <!-- HistogramProcessingMode и HistogramQuantization удалены (всегда Preprocessing + Half16) -->
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -431,16 +421,7 @@
                                       ItemsSource="{Binding Source={StaticResource HistogramModeValues}}"/>
                         </Grid>
 
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Processing Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
-                                       ToolTip="MetadataOnly: lossless (GPU applies FMA), Preprocessing: lossy (modify pixels before compression)"/>
-                            <ComboBox Grid.Column="1" x:Name="HistogramProcessingModeComboBox"
-                                      ItemsSource="{Binding Source={StaticResource HistogramProcessingModeValues}}"/>
-                        </Grid>
+                        <!-- Processing Mode удалён (всегда Preprocessing) -->
 
                         <Grid Margin="0,0,0,5">
                             <Grid.ColumnDefinitions>
@@ -448,21 +429,12 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Channel Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
-                                       ToolTip="AverageLuminance: one scale/offset, PerChannel: RGB separate, PerChannelRGBA: RGBA separate"/>
+                                       ToolTip="AverageLuminance: one scale/offset (recommended), PerChannel: RGB separate"/>
                             <ComboBox Grid.Column="1" x:Name="HistogramChannelModeComboBox"
                                       ItemsSource="{Binding Source={StaticResource HistogramChannelModeValues}}"/>
                         </Grid>
 
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Quantization:" VerticalAlignment="Center" Margin="0,0,10,0"
-                                       ToolTip="Half16: 4 bytes (recommended), PackedUInt32: 4 bytes [0-1], Float32: 8 bytes (max precision)"/>
-                            <ComboBox Grid.Column="1" x:Name="HistogramQuantizationComboBox"
-                                      ItemsSource="{Binding Source={StaticResource HistogramQuantizationValues}}"/>
-                        </Grid>
+                        <!-- Quantization удалён (всегда Half16) -->
 
                         <TextBlock Text="Percentile Low (%) [0.0-100.0]:" Margin="0,5,0,3"
                                    ToolTip="Lower percentile to ignore outliers (e.g., 0.5% darkest pixels)"/>

@@ -69,17 +69,7 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <ObjectDataProvider x:Key="HistogramProcessingModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramProcessingMode}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:HistogramProcessingMode"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
-
-        <ObjectDataProvider x:Key="HistogramQuantizationValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramQuantization}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:HistogramQuantization"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
+        <!-- HistogramProcessingMode и HistogramQuantization удалены (всегда Preprocessing + Half16) -->
 
         <!-- Compact Expander Style -->
         <Style x:Key="CompactExpanderStyle" TargetType="Expander">
@@ -528,38 +518,16 @@
                                   Margin="0,0,0,2"
                                   ToolTip="Off: disabled, Percentile: robust outlier handling, PercentileWithKnee: smooth outliers (recommended)"/>
 
-                        <TextBlock Text="Processing Mode:" Style="{StaticResource LabelStyle}"/>
-                        <ComboBox x:Name="HistogramProcessingModeComboBox"
+                        <!-- Processing Mode удалён (всегда Preprocessing) -->
+
+                        <!-- Channel Mode (упрощённая версия, Quantization всегда Half16) -->
+                        <TextBlock Text="Channel Mode:" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="HistogramChannelModeComboBox"
                                   Style="{StaticResource ReadableComboBoxStyle}"
-                                  ItemsSource="{Binding Source={StaticResource HistogramProcessingModeValues}}"
+                                  ItemsSource="{Binding Source={StaticResource HistogramChannelModeValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
                                   Margin="0,0,0,2"
-                                  ToolTip="MetadataOnly: lossless (GPU applies FMA), Preprocessing: lossy (modify pixels before compression for better histogram distribution)"/>
-
-                        <!-- Channel Mode + Quantization (on one row) -->
-                        <Grid Margin="0,0,0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="2"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Channel:" Style="{StaticResource LabelStyle}"/>
-                                <ComboBox x:Name="HistogramChannelModeComboBox"
-                                          Style="{StaticResource ReadableComboBoxStyle}"
-                                          ItemsSource="{Binding Source={StaticResource HistogramChannelModeValues}}"
-                                          SelectionChanged="ComboBoxSettingChanged"
-                                          ToolTip="AverageLuminance: single scale/offset, PerChannel: separate RGB, PerChannelRGBA: RGBA"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Quantize:" Style="{StaticResource LabelStyle}"/>
-                                <ComboBox x:Name="HistogramQuantizationComboBox"
-                                          Style="{StaticResource ReadableComboBoxStyle}"
-                                          ItemsSource="{Binding Source={StaticResource HistogramQuantizationValues}}"
-                                          SelectionChanged="ComboBoxSettingChanged"
-                                          ToolTip="Half16: 4B (recommended), PackedUInt32: 4B [0-1], Float32: 8B (max precision)"/>
-                            </StackPanel>
-                        </Grid>
+                                  ToolTip="AverageLuminance: single scale/offset (recommended), PerChannel: separate RGB scale/offset"/>
 
                         <TextBlock Text="Percentile Low (%) [0-10]:" Style="{StaticResource LabelStyle}"/>
                         <Grid Margin="0,0,0,2"

@@ -57,9 +57,10 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <ObjectDataProvider x:Key="HistogramModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramMode}">
+        <!-- Histogram Quality (упрощённый интерфейс: HighQuality / Fast) -->
+        <ObjectDataProvider x:Key="HistogramQualityValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramQuality}">
             <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:HistogramMode"/>
+                <x:Type TypeName="core:HistogramQuality"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
@@ -510,13 +511,13 @@
                               Checked="EnableHistogramCheckBox_Changed" Unchecked="EnableHistogramCheckBox_Changed"/>
 
                     <StackPanel x:Name="HistogramSettingsPanel" IsEnabled="{Binding ElementName=EnableHistogramCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Analysis Mode:" Style="{StaticResource LabelStyle}"/>
-                        <ComboBox x:Name="HistogramModeComboBox"
+                        <TextBlock Text="Quality Mode:" Style="{StaticResource LabelStyle}"/>
+                        <ComboBox x:Name="HistogramQualityComboBox"
                                   Style="{StaticResource ReadableComboBoxStyle}"
-                                  ItemsSource="{Binding Source={StaticResource HistogramModeValues}}"
+                                  ItemsSource="{Binding Source={StaticResource HistogramQualityValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
                                   Margin="0,0,0,2"
-                                  ToolTip="Off: disabled, Percentile: robust outlier handling, PercentileWithKnee: smooth outliers (recommended)"/>
+                                  ToolTip="HighQuality (recommended): PercentileWithKnee (0.5%, 99.5%), soft-knee smoothing. Fast: Percentile (1%, 99%), hard clamping"/>
 
                         <!-- Processing Mode удалён (всегда Preprocessing) -->
 

@@ -74,10 +74,10 @@ namespace AssetProcessor.Windows {
                 ToksvigVarianceThresholdSlider.Value = _originalPreset.ToksvigSettings.VarianceThreshold;
                 ToksvigNormalMapPathTextBox.Text = _originalPreset.ToksvigSettings.NormalMapPath ?? "";
 
-                // Histogram Settings (упрощённая версия)
+                // Histogram Settings (упрощённая версия с Quality)
                 if (_originalPreset.HistogramSettings != null) {
                     EnableHistogramCheckBox.IsChecked = _originalPreset.HistogramSettings.Mode != HistogramMode.Off;
-                    HistogramModeComboBox.SelectedItem = _originalPreset.HistogramSettings.Mode;
+                    HistogramQualityComboBox.SelectedItem = _originalPreset.HistogramSettings.Quality;
                     HistogramChannelModeComboBox.SelectedItem = _originalPreset.HistogramSettings.ChannelMode;
                     // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
                     HistogramPercentileLowSlider.Value = _originalPreset.HistogramSettings.PercentileLow;
@@ -87,7 +87,7 @@ namespace AssetProcessor.Windows {
                     WriteHistogramParamsCheckBox.IsChecked = true; // Default to true
                 } else {
                     EnableHistogramCheckBox.IsChecked = false;
-                    HistogramModeComboBox.SelectedItem = HistogramMode.Off;
+                    HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
                     HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
                     // ProcessingMode и Quantization удалены
                 }
@@ -105,9 +105,9 @@ namespace AssetProcessor.Windows {
                 WrapModeComboBox.SelectedItem = WrapMode.Clamp;
                 ToksvigCalculationModeComboBox.SelectedItem = ToksvigCalculationMode.Classic;
 
-                // Histogram defaults (disabled by default, упрощённая версия)
+                // Histogram defaults (disabled by default, упрощённая версия с Quality)
                 EnableHistogramCheckBox.IsChecked = false;
-                HistogramModeComboBox.SelectedItem = HistogramMode.Off;
+                HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
                 HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
                 // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
 
@@ -303,18 +303,19 @@ namespace AssetProcessor.Windows {
             // Create Histogram settings
             HistogramSettings? histogramSettings = null;
             if (EnableHistogramCheckBox.IsChecked == true) {
-                histogramSettings = new HistogramSettings {
-                    Mode = (HistogramMode)HistogramModeComboBox.SelectedItem,
-                    ChannelMode = (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem,
-                    // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
-                    PercentileLow = (float)HistogramPercentileLowSlider.Value,
-                    PercentileHigh = (float)HistogramPercentileHighSlider.Value,
-                    KneeWidth = (float)HistogramKneeWidthSlider.Value,
-                    MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value,
-                    Quality = ((HistogramMode)HistogramModeComboBox.SelectedItem) == HistogramMode.PercentileWithKnee
-                        ? HistogramQuality.HighQuality
-                        : HistogramQuality.Fast
-                };
+                var quality = (HistogramQuality)HistogramQualityComboBox.SelectedItem;
+
+                // Создаём настройки на основе качества
+                histogramSettings = quality == HistogramQuality.HighQuality
+                    ? HistogramSettings.CreateHighQuality()
+                    : HistogramSettings.CreateFast();
+
+                // Применяем пользовательские значения
+                histogramSettings.ChannelMode = (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem;
+                histogramSettings.PercentileLow = (float)HistogramPercentileLowSlider.Value;
+                histogramSettings.PercentileHigh = (float)HistogramPercentileHighSlider.Value;
+                histogramSettings.KneeWidth = (float)HistogramKneeWidthSlider.Value;
+                histogramSettings.MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value;
             }
 
             // Create preset from UI

@@ -58,9 +58,10 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <ObjectDataProvider x:Key="HistogramModeValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramMode}">
+        <!-- Histogram Quality (упрощённый интерфейс: HighQuality / Fast) -->
+        <ObjectDataProvider x:Key="HistogramQualityValues" MethodName="GetValues" ObjectType="{x:Type core:HistogramQuality}">
             <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:HistogramMode"/>
+                <x:Type TypeName="core:HistogramQuality"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
@@ -415,10 +416,10 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Analysis Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
-                                       ToolTip="Off: disabled, Percentile: hard clamp outliers, PercentileWithKnee: soft-knee smoothing (recommended)"/>
-                            <ComboBox Grid.Column="1" x:Name="HistogramModeComboBox"
-                                      ItemsSource="{Binding Source={StaticResource HistogramModeValues}}"/>
+                            <TextBlock Grid.Column="0" Text="Quality Mode:" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="HighQuality (recommended): PercentileWithKnee (0.5%, 99.5%), soft-knee smoothing. Fast: Percentile (1%, 99%), hard clamping"/>
+                            <ComboBox Grid.Column="1" x:Name="HistogramQualityComboBox"
+                                      ItemsSource="{Binding Source={StaticResource HistogramQualityValues}}"/>
                         </Grid>
 
                         <!-- Processing Mode удалён (всегда Preprocessing) -->

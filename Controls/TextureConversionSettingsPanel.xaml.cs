@@ -126,9 +126,9 @@ namespace AssetProcessor.Controls {
             ToksvigVarianceThresholdSlider.Value = 0.002;
             NormalMapPathTextBox.Text = string.Empty;
 
-            // Histogram Analysis (упрощённая версия)
+            // Histogram Analysis (упрощённая версия с Quality)
             EnableHistogramCheckBox.IsChecked = false;
-            HistogramModeComboBox.SelectedItem = HistogramMode.PercentileWithKnee;
+            HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
             HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
             // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
             HistogramPercentileLowSlider.Value = 0.5;
@@ -448,26 +448,27 @@ namespace AssetProcessor.Controls {
                 return null;
             }
 
-            var mode = HistogramModeComboBox.SelectedItem != null
-                ? (HistogramMode)HistogramModeComboBox.SelectedItem
-                : HistogramMode.PercentileWithKnee;
+            var quality = HistogramQualityComboBox.SelectedItem != null
+                ? (HistogramQuality)HistogramQualityComboBox.SelectedItem
+                : HistogramQuality.HighQuality;
 
             var channelMode = HistogramChannelModeComboBox.SelectedItem != null
                 ? (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem
                 : HistogramChannelMode.AverageLuminance;
 
-            // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
-            return new HistogramSettings {
-                Mode = mode,
-                ChannelMode = channelMode,
-                PercentileLow = (float)HistogramPercentileLowSlider.Value,
-                PercentileHigh = (float)HistogramPercentileHighSlider.Value,
-                KneeWidth = (float)HistogramKneeWidthSlider.Value,
-                MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value,
-                Quality = mode == HistogramMode.PercentileWithKnee
-                    ? HistogramQuality.HighQuality
-                    : HistogramQuality.Fast
-            };
+            // Создаём настройки на основе выбранного качества
+            var settings = quality == HistogramQuality.HighQuality
+                ? HistogramSettings.CreateHighQuality()
+                : HistogramSettings.CreateFast();
+
+            // Применяем пользовательские значения из слайдеров (если изменялись)
+            settings.ChannelMode = channelMode;
+            settings.PercentileLow = (float)HistogramPercentileLowSlider.Value;
+            settings.PercentileHigh = (float)HistogramPercentileHighSlider.Value;
+            settings.KneeWidth = (float)HistogramKneeWidthSlider.Value;
+            settings.MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value;
+
+            return settings;
         }
 
         /// <summary>
@@ -697,7 +698,7 @@ namespace AssetProcessor.Controls {
 
             if (settings != null && settings.Mode != HistogramMode.Off) {
                 EnableHistogramCheckBox.IsChecked = true;
-                HistogramModeComboBox.SelectedItem = settings.Mode;
+                HistogramQualityComboBox.SelectedItem = settings.Quality;
                 HistogramChannelModeComboBox.SelectedItem = settings.ChannelMode;
                 // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
                 HistogramPercentileLowSlider.Value = settings.PercentileLow;
@@ -832,11 +833,13 @@ namespace AssetProcessor.Controls {
                             }
                             break;
 
-                        case "histogramMode":
-                            if (Enum.TryParse<HistogramMode>(param.Value?.ToString(), true, out var histMode)) {
-                                HistogramModeComboBox.SelectedItem = histMode;
+                        case "histogramQuality":
+                            if (Enum.TryParse<HistogramQuality>(param.Value?.ToString(), true, out var histQuality)) {
+                                HistogramQualityComboBox.SelectedItem = histQuality;
                             }
                             break;
+
+                        // histogramMode удалён (заменён на histogramQuality)
 
                         // histogramProcessingMode удалён (всегда Preprocessing)
 

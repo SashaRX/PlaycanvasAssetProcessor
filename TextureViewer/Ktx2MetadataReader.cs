@@ -18,71 +18,87 @@ public static class Ktx2MetadataReader {
     /// </summary>
     public static HistogramMetadata? ReadHistogramMetadata(IntPtr textureHandle) {
         try {
-            logger.Info("[Ktx2MetadataReader] Starting histogram metadata read...");
+            logger.Info("[Ktx2MetadataReader] Starting histogram metadata read (using ktxTexture_GetKvData)...");
 
-            // Get kvDataHead structure (contains hash list)
-            var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
+            // Try using ktxTexture_GetKvData accessor function to avoid structure marshaling issues
+            IntPtr kvDataPtr = LibKtxNative.ktxTexture_GetKvData(textureHandle, out uint kvDataLen);
 
-            // Debug: Log key structure fields to verify structure is read correctly
-            logger.Info($"[DEBUG] Structure fields: baseWidth={tex.baseWidth}, baseHeight={tex.baseHeight}, numLevels={tex.numLevels}, vkFormat={tex.vkFormat}");
-            logger.Info($"[DEBUG] isArray={tex.isArray}, isCubemap={tex.isCubemap}, isCompressed={tex.isCompressed}");
-            logger.Info($"[DEBUG] dataSize={tex.dataSize}, pData=0x{tex.pData:X}");
+            logger.Info($"ktxTexture_GetKvData returned: ptr=0x{kvDataPtr:X}, len={kvDataLen}");
 
-            var kvDataHead = tex.kvDataHead;
-            logger.Info($"kvDataHead.numEntries={kvDataHead.numEntries}, kvDataHead.pHead=0x{kvDataHead.pHead:X}");
-
-            if (kvDataHead.pHead == IntPtr.Zero) {
-                logger.Debug("No Key-Value Data in KTX2 texture (kvDataHead.pHead is null)");
+            if (kvDataPtr == IntPtr.Zero || kvDataLen == 0) {
+                logger.Info("No Key-Value Data in KTX2 texture (accessor returned null or zero length)");
                 return null;
             }
 
-            // Calculate offset of kvDataHead field within KtxTexture2 structure using Marshal.OffsetOf
-            // This is safer than hardcoding offset values
-            int kvDataHeadOffset = (int)Marshal.OffsetOf<LibKtxNative.KtxTexture2>("kvDataHead");
-            IntPtr pKvDataHead = IntPtr.Add(textureHandle, kvDataHeadOffset);
+            // Copy KVD buffer from native memory
+            byte[] kvdData = new byte[kvDataLen];
+            Marshal.Copy(kvDataPtr, kvdData, 0, (int)kvDataLen);
 
-            logger.Info($"kvDataHead offset in structure: {kvDataHeadOffset} bytes");
-            logger.Info($"Calling ktxHashList_FindValue with pKvDataHead=0x{pKvDataHead:X}");
+            logger.Debug($"KVD raw bytes (first 64): {BitConverter.ToString(kvdData.Take(Math.Min(64, kvdData.Length)).ToArray())}");
 
-            // Use ktxHashList_FindValue to find "pc.meta" key
-            // Pass pointer to kvDataHead field inside the native texture structure
-            var result = LibKtxNative.ktxHashList_FindValue(
-                pKvDataHead,
-                "pc.meta",
-                out uint valueLen,
-                out IntPtr pValue);
-
-            logger.Info($"ktxHashList_FindValue returned: {result}, valueLen={valueLen}, pValue=0x{pValue:X}");
-
-            if (result == LibKtxNative.KtxErrorCode.KTX_NOT_FOUND) {
-                logger.Info("Key 'pc.meta' not found in KTX2 Key-Value Data");
-                return null;
-            }
-
-            if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                logger.Warn($"ktxHashList_FindValue failed: {LibKtxNative.GetErrorString(result)}");
-                return null;
-            }
-
-            if (pValue == IntPtr.Zero || valueLen == 0) {
-                logger.Warn($"Found 'pc.meta' but value is empty (len={valueLen}, ptr={pValue})");
-                return null;
-            }
-
-            logger.Info($"Found 'pc.meta' key with {valueLen} bytes of TLV data");
-
-            // Copy TLV data from native memory
-            byte[] tlvData = new byte[valueLen];
-            Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
-
-            logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
-
-            // Parse TLV data
-            return ParseTLVHistogramData(tlvData);
+            // Parse Key-Value Data to find "pc.meta"
+            return ParseKeyValueData(kvdData);
         } catch (Exception ex) {
             logger.Error(ex, "Failed to read histogram metadata from KTX2");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Parses KTX2 Key-Value Data to find "pc.meta" key with TLV histogram data.
+    /// </summary>
+    private static HistogramMetadata? ParseKeyValueData(byte[] kvdData) {
+        int offset = 0;
+
+        while (offset < kvdData.Length) {
+            // Read keyAndValueByteSize (4 bytes)
+            if (offset + 4 > kvdData.Length) break;
+
+            uint keyAndValueByteSize = BitConverter.ToUInt32(kvdData, offset);
+            offset += 4;
+
+            if (keyAndValueByteSize == 0 || offset + keyAndValueByteSize > kvdData.Length) {
+                logger.Warn($"Invalid keyAndValueByteSize: {keyAndValueByteSize}");
+                break;
+            }
+
+            // Read key (null-terminated string)
+            int keyStart = offset;
+            int keyEnd = keyStart;
+            while (keyEnd < offset + keyAndValueByteSize && kvdData[keyEnd] != 0) {
+                keyEnd++;
+            }
+
+            if (keyEnd >= offset + keyAndValueByteSize) {
+                logger.Warn("No null terminator found for key");
+                break;
+            }
+
+            string key = Encoding.UTF8.GetString(kvdData, keyStart, keyEnd - keyStart);
+            int keyLength = keyEnd - keyStart + 1; // Include null terminator
+
+            // Value starts right after key (including null terminator)
+            int valueStart = offset + keyLength;
+            int valueLength = (int)keyAndValueByteSize - keyLength;
+
+            logger.Debug($"KVD entry: key=\"{key}\", valueLength={valueLength}");
+
+            // Check if this is "pc.meta"
+            if (key == "pc.meta") {
+                logger.Info($"Found pc.meta key with {valueLength} bytes of TLV data");
+                byte[] tlvData = new byte[valueLength];
+                Array.Copy(kvdData, valueStart, tlvData, 0, valueLength);
+                return ParseTLVHistogramData(tlvData);
+            }
+
+            // Move to next entry (padding to 4-byte alignment)
+            offset += (int)keyAndValueByteSize;
+            int padding = (4 - (int)(keyAndValueByteSize & 3)) & 3;
+            offset += padding;
+        }
+
+        logger.Debug("No pc.meta key found in KTX2 Key-Value Data");
+        return null;
     }
 
     /// <summary>

@@ -75,6 +75,10 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     float4 color;
 
+    // DEBUG: ПРОВЕРКА ЧТО ШЕЙДЕР ЗАГРУЖАЕТСЯ - ВСЕГДА ЗЕЛЁНЫЙ ЭКРАН
+    // ЕСЛИ ЭКРАН НЕ ЗЕЛЁНЫЙ = ШЕЙДЕР НЕ ПЕРЕКОМПИЛИРОВАЛСЯ
+    return float4(0.0, 1.0, 0.0, 1.0);
+
     // Sample texture with manual mip level or auto mip
     if (mipLevel >= 0.0)
     {

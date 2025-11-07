@@ -517,6 +517,14 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 histScale = new Vector3(scale, scale, scale);
                 histOffset = new Vector3(offset, offset, offset);
             }
+
+            // DIAGNOSTIC: Log histogram values being sent to shader
+            logger.Info($"[SHADER PARAMS] Histogram correction ENABLED");
+            logger.Info($"[SHADER PARAMS] Scale = ({histScale.X:F4}, {histScale.Y:F4}, {histScale.Z:F4})");
+            logger.Info($"[SHADER PARAMS] Offset = ({histOffset.X:F4}, {histOffset.Y:F4}, {histOffset.Z:F4})");
+            logger.Info($"[SHADER PARAMS] IsPerChannel = {isPerChannel}");
+        } else {
+            logger.Info($"[SHADER PARAMS] Histogram correction DISABLED (metadata={histogramMetadata != null}, enabled={enableHistogramCorrection})");
         }
 
         var constants = new ShaderConstants {

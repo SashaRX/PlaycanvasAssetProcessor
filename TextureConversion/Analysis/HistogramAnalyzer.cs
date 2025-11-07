@@ -316,23 +316,32 @@ namespace AssetProcessor.TextureConversion.Analysis {
         public Image<Rgba32> ApplyWinsorization(Image<Rgba32> image, float lo, float hi) {
             var result = image.Clone();
 
+            float range = hi - lo;
+
             Parallel.For(0, result.Height, y => {
                 var pixelRow = result.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // Нормализуем к [0,1], клампируем к [lo, hi], возвращаем к [0,255]
+                    // Нормализуем к [0,1]
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
+                    // Клампируем к [lo, hi]
                     float r_clamped = Math.Clamp(r_norm, lo, hi);
                     float g_clamped = Math.Clamp(g_norm, lo, hi);
                     float b_clamped = Math.Clamp(b_norm, lo, hi);
 
-                    byte r = (byte)(r_clamped * 255);
-                    byte g = (byte)(g_clamped * 255);
-                    byte b = (byte)(b_clamped * 255);
+                    // CRITICAL FIX: Нормализуем к [0, 1] после клампирования!
+                    // Это растягивает диапазон [lo, hi] → [0, 1]
+                    float r_normalized = (r_clamped - lo) / range;
+                    float g_normalized = (g_clamped - lo) / range;
+                    float b_normalized = (b_clamped - lo) / range;
+
+                    byte r = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
+                    byte g = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
+                    byte b = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);
 
                     pixelRow[x] = new Rgba32(r, g, b, pixel.A);
                 }

@@ -10,10 +10,11 @@ cbuffer ShaderConstants : register(b0)
     float exposure;                     // HDR exposure (EV)
     float gamma;                        // Gamma correction (2.2 for sRGB, 1.0 for linear)
     uint channelMask;                   // RGBA channel mask (bit flags)
-    float3 histogramScale;              // Histogram denormalization scale (RGB)
+    float4 histogramScale;              // Histogram denormalization scale (RGB, w unused)
+    float4 histogramOffset;             // Histogram denormalization offset (RGB, w unused)
     uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
-    float3 histogramOffset;             // Histogram denormalization offset (RGB)
     uint histogramIsPerChannel;         // 0 = scalar, 1 = per-channel
+    float2 padding;                     // Padding to align to 16-byte boundary
 };
 
 Texture2D<float4> sourceTexture : register(t0);
@@ -95,8 +96,8 @@ float4 PSMain(PSInput input) : SV_TARGET
         // Convert linear -> sRGB to match histogram metadata space
         float3 srgbColor = pow(max(color.rgb, 0.0), 1.0 / 2.2);
 
-        // Apply denormalization in sRGB space
-        srgbColor = srgbColor * histogramScale + histogramOffset;
+        // Apply denormalization in sRGB space (use .rgb to ignore w component)
+        srgbColor = srgbColor * histogramScale.rgb + histogramOffset.rgb;
 
         // Convert back to linear for rest of pipeline
         color.rgb = pow(max(srgbColor, 0.0), 2.2);

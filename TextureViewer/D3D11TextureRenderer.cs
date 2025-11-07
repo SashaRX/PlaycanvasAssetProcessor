@@ -63,10 +63,11 @@ public sealed class D3D11TextureRenderer : IDisposable {
         public float Exposure;
         public float Gamma;
         public uint ChannelMask;
-        public Vector3 HistogramScale;  // RGB scale for histogram denormalization
+        public Vector4 HistogramScale;  // RGB scale for histogram denormalization (w unused, for 16-byte alignment)
+        public Vector4 HistogramOffset; // RGB offset for histogram denormalization (w unused, for 16-byte alignment)
         public uint EnableHistogramCorrection; // 0 = disabled, 1 = enabled
-        public Vector3 HistogramOffset; // RGB offset for histogram denormalization
         public uint HistogramIsPerChannel; // 0 = scalar, 1 = per-channel
+        public Vector2 Padding; // Padding to align to 16-byte boundary
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -492,9 +493,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
             posScale = new Vector2(1.0f, viewportAspect / textureAspect);
         }
 
-        // Prepare histogram metadata for shader
-        Vector3 histScale = new Vector3(1.0f, 1.0f, 1.0f);
-        Vector3 histOffset = new Vector3(0.0f, 0.0f, 0.0f);
+        // Prepare histogram metadata for shader (using Vector4 for proper HLSL alignment)
+        Vector4 histScale = new Vector4(1.0f, 1.0f, 1.0f, 0.0f);
+        Vector4 histOffset = new Vector4(0.0f, 0.0f, 0.0f, 0.0f);
         uint enableHist = 0;
         uint isPerChannel = 0;
 
@@ -504,22 +505,24 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
             if (histogramMetadata.IsPerChannel) {
                 // Per-channel: use RGB values
-                histScale = new Vector3(
+                histScale = new Vector4(
                     histogramMetadata.Scale[0],
                     histogramMetadata.Scale.Length > 1 ? histogramMetadata.Scale[1] : histogramMetadata.Scale[0],
-                    histogramMetadata.Scale.Length > 2 ? histogramMetadata.Scale[2] : histogramMetadata.Scale[0]
+                    histogramMetadata.Scale.Length > 2 ? histogramMetadata.Scale[2] : histogramMetadata.Scale[0],
+                    0.0f  // w unused
                 );
-                histOffset = new Vector3(
+                histOffset = new Vector4(
                     histogramMetadata.Offset[0],
                     histogramMetadata.Offset.Length > 1 ? histogramMetadata.Offset[1] : histogramMetadata.Offset[0],
-                    histogramMetadata.Offset.Length > 2 ? histogramMetadata.Offset[2] : histogramMetadata.Offset[0]
+                    histogramMetadata.Offset.Length > 2 ? histogramMetadata.Offset[2] : histogramMetadata.Offset[0],
+                    0.0f  // w unused
                 );
             } else {
                 // Scalar: use same value for all channels
                 float scale = histogramMetadata.Scale[0];
                 float offset = histogramMetadata.Offset[0];
-                histScale = new Vector3(scale, scale, scale);
-                histOffset = new Vector3(offset, offset, offset);
+                histScale = new Vector4(scale, scale, scale, 0.0f);
+                histOffset = new Vector4(offset, offset, offset, 0.0f);
             }
         }
 
@@ -532,9 +535,10 @@ public sealed class D3D11TextureRenderer : IDisposable {
             Gamma = currentGamma,
             ChannelMask = channelMask,
             HistogramScale = histScale,
-            EnableHistogramCorrection = enableHist,
             HistogramOffset = histOffset,
-            HistogramIsPerChannel = isPerChannel
+            EnableHistogramCorrection = enableHist,
+            HistogramIsPerChannel = isPerChannel,
+            Padding = new Vector2(0.0f, 0.0f)
         };
 
         var mapped = context!.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);

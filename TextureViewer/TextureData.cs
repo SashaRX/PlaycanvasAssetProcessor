@@ -69,6 +69,12 @@ public sealed class TextureData : IDisposable {
     /// </summary>
     public HistogramMetadata? HistogramMetadata { get; init; }
 
+    /// <summary>
+    /// Normal map layout metadata (which channels contain X and Y components).
+    /// Null if this is not a normal map or layout is standard.
+    /// </summary>
+    public NormalLayoutMetadata? NormalLayoutMetadata { get; init; }
+
     public void Dispose() {
         foreach (var mip in MipLevels) {
             mip.Dispose();
@@ -155,4 +161,42 @@ public sealed class HistogramMetadata {
             Offset = new[] { 0.0f }
         };
     }
+}
+
+/// <summary>
+/// Normal map channel layout metadata.
+/// Specifies which channels contain X and Y components of the normal vector.
+/// </summary>
+public sealed class NormalLayoutMetadata {
+    /// <summary>
+    /// Layout type.
+    /// </summary>
+    public required NormalLayout Layout { get; init; }
+
+    /// <summary>
+    /// Gets a human-readable description of the layout.
+    /// </summary>
+    public string GetDescription() {
+        return Layout switch {
+            NormalLayout.RG => "R=X, G=Y (BC5/UASTC style)",
+            NormalLayout.RGBxAy => "RGB=X, A=Y (ETC1S style)",
+            NormalLayout.GA => "G=X, A=Y",
+            NormalLayout.RGB => "Full XYZ in RGB",
+            NormalLayout.AG => "A=X, G=Y",
+            _ => "Unknown"
+        };
+    }
+}
+
+/// <summary>
+/// Normal map channel layout types.
+/// Must match TextureConversion/KVD/TLVTypes.cs NormalLayout enum.
+/// </summary>
+public enum NormalLayout : byte {
+    NONE = 0,
+    RG = 1,      // X in R, Y in G (BC5/UASTC)
+    GA = 2,      // X in G, Y in A
+    RGB = 3,     // Full XYZ in RGB
+    AG = 4,      // X in A, Y in G
+    RGBxAy = 5   // X in RGB (all channels), Y in A (ETC1S)
 }

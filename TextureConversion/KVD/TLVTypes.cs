@@ -58,7 +58,7 @@ namespace AssetProcessor.TextureConversion.KVD {
         NONE = 0,
 
         /// <summary>
-        /// X в R, Y в G, Z вычисляется
+        /// X в R, Y в G, Z вычисляется (BC5/UASTC normal maps)
         /// </summary>
         RG = 1,
 
@@ -75,6 +75,11 @@ namespace AssetProcessor.TextureConversion.KVD {
         /// <summary>
         /// X в A, Y в G, Z вычисляется
         /// </summary>
-        AG = 4
+        AG = 4,
+
+        /// <summary>
+        /// X в RGB (все каналы), Y в A, Z вычисляется (ETC1S normal maps в режиме RGB-X, A-Y)
+        /// </summary>
+        RGBxAy = 5
     }
 }

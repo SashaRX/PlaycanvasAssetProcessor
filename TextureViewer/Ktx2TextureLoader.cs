@@ -32,13 +32,16 @@ public static class Ktx2TextureLoader {
         }
 
         try {
-            // Read histogram metadata directly from file (safe approach that doesn't rely on structure marshaling)
-            var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(filePath);
+            // Read ALL metadata directly from file (histogram + normal layout)
+            var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadata(filePath);
             if (histogramMetadata != null) {
                 logger.Debug($"Histogram metadata loaded: {histogramMetadata.Scale.Length} channel(s)");
             }
+            if (normalLayoutMetadata != null) {
+                logger.Info($"Normal map layout detected: {normalLayoutMetadata.GetDescription()}");
+            }
 
-            return LoadFromHandle(textureHandle, filePath, histogramMetadata);
+            return LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
         } finally {
             LibKtxNative.ktxTexture2_Destroy(textureHandle);
         }
@@ -259,7 +262,7 @@ public static class Ktx2TextureLoader {
     /// <summary>
     /// Load texture data from a ktxTexture2 handle.
     /// </summary>
-    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath, HistogramMetadata? histogramMetadata = null) {
+    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath, HistogramMetadata? histogramMetadata = null, NormalLayoutMetadata? normalLayoutMetadata = null) {
         // Read basic texture info from structure (minimal fields only)
         var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
 
@@ -431,7 +434,8 @@ public static class Ktx2TextureLoader {
             IsHDR = false,
             IsCompressed = isCompressed,
             CompressionFormat = isCompressed ? detectedFormat : null,
-            HistogramMetadata = histogramMetadata
+            HistogramMetadata = histogramMetadata,
+            NormalLayoutMetadata = normalLayoutMetadata
         };
     }
 

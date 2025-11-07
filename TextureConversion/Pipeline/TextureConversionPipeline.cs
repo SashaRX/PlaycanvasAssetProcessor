@@ -352,6 +352,25 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             // ВСЕГДА записываем параметры анализа для справки
                             tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
 
+                            // Если это normal map, записываем схему хранения каналов
+                            if (mipProfile.TextureType == TextureType.Normal) {
+                                NormalLayout normalLayout;
+
+                                // Определяем схему на основе формата компрессии
+                                if (compressionSettings.CompressionFormat == CompressionFormat.ETC1S) {
+                                    // ETC1S: X в RGB (все каналы), Y в A
+                                    normalLayout = NormalLayout.RGBxAy;
+                                    Logger.Info("ETC1S normal map: using RGB-X, A-Y layout");
+                                } else {
+                                    // UASTC/BC5: X в R, Y в G
+                                    normalLayout = NormalLayout.RG;
+                                    Logger.Info("UASTC/BC5 normal map: using R-X, G-Y layout");
+                                }
+
+                                tlvWriter.WriteNormalLayout(normalLayout);
+                                Logger.Info($"✓ Normal map layout metadata written: {normalLayout}");
+                            }
+
                             // Сохраняем TLV в временный файл
                             var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
                             tlvWriter.SaveToFile(tlvPath);

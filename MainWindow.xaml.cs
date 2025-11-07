@@ -460,6 +460,13 @@ namespace AssetProcessor {
                         }
                     }
 
+                    // CRITICAL: Actually enable histogram correction in renderer!
+                    // Setting IsChecked doesn't trigger the event handler, so we must call it explicitly
+                    if (hasHistogram) {
+                        D3D11TextureViewer.Renderer.SetHistogramCorrection(true);
+                        logger.Info("Histogram correction auto-enabled for KTX2 with metadata");
+                    }
+
                     // Update format info in UI
                     if (TextureFormatTextBlock != null) {
                         string compressionFormat = textureData.CompressionFormat ?? "Unknown";
@@ -4798,14 +4805,17 @@ namespace AssetProcessor {
                             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture && selectedTexture == texture) {
                                 MainWindowHelpers.LogInfo($"Текущая текстура сконвертирована, перезагружаем preview...");
 
-                                // Перезагружаем KTX2 preview
+                                // Перезагружаем KTX2 preview (DIRECT LOAD - with histogram metadata!)
                                 await Dispatcher.InvokeAsync(async () => {
                                     try {
-                                        bool ktx2Loaded = await TryLoadKtx2PreviewAsync(texture, CancellationToken.None);
+                                        // CRITICAL: Use TryLoadKtx2ToD3D11Async (NOT TryLoadKtx2PreviewAsync)!
+                                        // TryLoadKtx2ToD3D11Async loads KTX2 directly with metadata
+                                        // TryLoadKtx2PreviewAsync extracts to PNG (loses histogram metadata)
+                                        bool ktx2Loaded = await TryLoadKtx2ToD3D11Async(texture, CancellationToken.None);
                                         if (ktx2Loaded) {
                                             // Автоматически переключаемся на KTX2 preview
                                             SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
-                                            MainWindowHelpers.LogInfo("✓ KTX2 preview загружен и отображён");
+                                            MainWindowHelpers.LogInfo("✓ KTX2 loaded directly to D3D11 with histogram metadata");
                                         }
                                     } catch (Exception ex) {
                                         MainWindowHelpers.LogError($"Ошибка при загрузке KTX2 preview: {ex.Message}");

@@ -77,8 +77,8 @@ namespace AssetProcessor.ModelConversion.Wrappers {
 
                 // Исключение текстур (только геометрия, материалы, анимации)
                 if (excludeTextures) {
-                    arguments += " --no-embed-image";
-                    Logger.Info("FBX2glTF: Textures will be excluded (geometry only)");
+                    arguments += " --no-embed";
+                    Logger.Info("FBX2glTF: Textures will be excluded (geometry only) using --no-embed flag");
                 }
 
                 Logger.Debug($"FBX2glTF command: {_executablePath} {arguments}");

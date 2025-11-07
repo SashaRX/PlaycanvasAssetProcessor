@@ -358,20 +358,46 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     Logger.Info($"  Compression: {compressionSettings.CompressionFormat}");
                     if (kvdBinaryFiles != null) {
                         Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
-                        Logger.Warn("  WARNING: KVD metadata injection is temporarily disabled (libktx crashes)");
-                        Logger.Warn("  Histogram metadata will NOT be embedded in the KTX2 file");
                     }
 
-                    // ВРЕМЕННО: отключаем передачу метаданных, так как libktx падает при ktxHashList_AddKVPair
                     var ktxResult = await _ktxCreateWrapper.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
                         compressionSettings,
-                        null  // Передаём null вместо kvdBinaryFiles, чтобы избежать падения libktx
+                        kvdBinaryFiles
                     );
 
                     if (!ktxResult.Success) {
                         throw new Exception($"ktx create failed: {ktxResult.Error}");
+                    }
+
+                    // POST-PROCESSING: Inject TLV metadata if available
+                    if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
+                        Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
+
+                        // Получаем директорию ktx для загрузки ktx.dll
+                        var ktxDllDirectory = _ktxCreateWrapper.KtxDirectory;
+                        if (!string.IsNullOrEmpty(ktxDllDirectory)) {
+                            Logger.Info($"ktx directory: {ktxDllDirectory}");
+                        } else {
+                            Logger.Warn("ktx directory not found (ktx might be in PATH)");
+                        }
+
+                        foreach (var kvPair in kvdBinaryFiles) {
+                            Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
+                            bool injected = Ktx2MetadataInjector.InjectMetadata(
+                                outputPath,
+                                kvPair.Value,
+                                kvPair.Key,
+                                ktxDllDirectory
+                            );
+                            if (injected) {
+                                Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
+                            } else {
+                                Logger.Error($"✗ Failed to inject metadata '{kvPair.Key}'");
+                                throw new Exception($"Failed to inject metadata '{kvPair.Key}'");
+                            }
+                        }
                     }
 
                     result.Success = true;

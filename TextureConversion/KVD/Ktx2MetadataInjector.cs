@@ -76,23 +76,38 @@ namespace AssetProcessor.TextureConversion.KVD {
                 // Получаем структуру текстуры для доступа к kvDataHead
                 var texture = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(texturePtr);
 
-                // Вычисляем offset до поля kvDataHead (IntPtr находится на определённом смещении)
-                // kvDataHead - это 26-е поле в структуре (после orientation)
-                // Размер полей до kvDataHead: нужно точно вычислить
-                int kvDataHeadOffset = Marshal.OffsetOf<LibKtxNative.KtxTexture2>("kvDataHead").ToInt32();
-                IntPtr kvDataHeadPtr = IntPtr.Add(texturePtr, kvDataHeadOffset);
+                Logger.Info($"Initial kvDataHead: {texture.kvDataHead}");
+                Logger.Info($"Initial kvDataLen: {texture.kvDataLen}");
 
-                Logger.Info($"kvDataHead offset: {kvDataHeadOffset}");
+                // kvDataHead это указатель на ktxHashList, нужно проверить его значение
+                IntPtr hashListPtr = texture.kvDataHead;
+                bool needToCreateHashList = (hashListPtr == IntPtr.Zero);
+
+                if (needToCreateHashList) {
+                    Logger.Info("kvDataHead is NULL, creating new hash list...");
+                    hashListPtr = LibKtxNative.ktxHashList_Create();
+                    if (hashListPtr == IntPtr.Zero) {
+                        Logger.Error("Failed to create new hash list");
+                        return false;
+                    }
+                    Logger.Info($"New hash list created: {hashListPtr}");
+
+                    // Записываем новый указатель обратно в структуру texture
+                    int kvDataHeadOffset = Marshal.OffsetOf<LibKtxNative.KtxTexture2>("kvDataHead").ToInt32();
+                    IntPtr kvDataHeadFieldPtr = IntPtr.Add(texturePtr, kvDataHeadOffset);
+                    Marshal.WriteIntPtr(kvDataHeadFieldPtr, hashListPtr);
+                    Logger.Info("Hash list pointer written to texture->kvDataHead");
+                }
 
                 // Копируем TLV data в unmanaged память
                 IntPtr tlvPtr = Marshal.AllocHGlobal(tlvData.Length);
                 try {
                     Marshal.Copy(tlvData, 0, tlvPtr, tlvData.Length);
 
-                    // Добавляем KV пару напрямую в texture->kvDataHead
-                    Logger.Info($"Adding KV pair to texture->kvDataHead: key='{key}', valueLen={tlvData.Length}");
+                    // Добавляем KV пару в hash list
+                    Logger.Info($"Adding KV pair to hash list: key='{key}', valueLen={tlvData.Length}, hashList={hashListPtr}");
                     result = LibKtxNative.ktxHashList_AddKVPair(
-                        kvDataHeadPtr,
+                        hashListPtr,
                         key,
                         (uint)tlvData.Length,
                         tlvPtr
@@ -103,7 +118,7 @@ namespace AssetProcessor.TextureConversion.KVD {
                         return false;
                     }
 
-                    Logger.Info("KV pair added successfully to texture kvDataHead");
+                    Logger.Info("✓ KV pair added successfully to hash list");
                 } finally {
                     Marshal.FreeHGlobal(tlvPtr);
                 }

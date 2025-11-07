@@ -407,6 +407,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                     CompositePower = 1.0f,
                     MinToksvigMipLevel = 0,
                     SmoothVariance = true,
+                    UseEnergyPreserving = true,
                     NormalMapPath = null // Автоопределение
                 }
             };

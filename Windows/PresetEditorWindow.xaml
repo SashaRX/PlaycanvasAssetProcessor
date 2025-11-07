@@ -377,6 +377,9 @@
                         <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance (Classic only)" IsChecked="True" Margin="0,0,0,5"
                                   ToolTip="Apply 3x3 blur to variance map (only in Classic mode)"/>
 
+                        <CheckBox x:Name="ToksvigUseEnergyPreservingCheckBox" Content="Use Energy-Preserving Filtering" IsChecked="True" Margin="0,0,0,5"
+                                  ToolTip="Apply energy-preserving filtering to preserve material energy (alpha² averaging). Prevents loss of specular highlights on distant mipmaps."/>
+
                         <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
                             <TextBlock Text="Variance Threshold (Dead Zone):" Margin="0,0,0,3"
                                        ToolTip="Variance below this value is set to 0 (reduces noise)"/>

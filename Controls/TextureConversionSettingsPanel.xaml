@@ -463,6 +463,11 @@
                                   ToolTip="Apply 3x3 Gaussian blur to variance map for smoother results. Only available in Classic mode. Reduces noise but may slightly blur the correction."
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
+                        <CheckBox x:Name="ToksvigUseEnergyPreservingCheckBox" Content="Energy-Preserving Filtering" IsChecked="True"
+                                  Margin="0,0,0,2"
+                                  ToolTip="Preserve material energy (alpha² averaging) to prevent specular highlight loss on distant mipmaps. Recommended: keep enabled for physically accurate results."
+                                  Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
+
                         <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
                             <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"/>
                             <Grid Margin="0,0,0,2"

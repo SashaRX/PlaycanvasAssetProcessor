@@ -474,6 +474,21 @@ namespace AssetProcessor.TextureConversion.Settings {
                         }
                     },
 
+                    // Use Energy-Preserving Filtering
+                    new ConversionParameter {
+                        Id = "useEnergyPreserving",
+                        DisplayName = "Use Energy-Preserving Filtering",
+                        UIType = ParameterUIType.Checkbox,
+                        Section = ParameterSection.Toksvig,
+                        DefaultValue = true,
+                        Description = "Применить energy-preserving фильтрацию для сохранения энергии материала (усреднение alpha²)",
+                        IsInternal = true,
+                        Visibility = new VisibilityCondition {
+                            DependsOnParameter = "enableToksvig",
+                            RequiredValue = true
+                        }
+                    },
+
                     // Composite Power (k)
                     new ConversionParameter {
                         Id = "compositePower",

@@ -70,6 +70,7 @@ namespace AssetProcessor.Windows {
                 ToksvigCompositePowerSlider.Value = _originalPreset.ToksvigSettings.CompositePower;
                 ToksvigMinMipLevelSlider.Value = _originalPreset.ToksvigSettings.MinToksvigMipLevel;
                 ToksvigSmoothVarianceCheckBox.IsChecked = _originalPreset.ToksvigSettings.SmoothVariance;
+                ToksvigUseEnergyPreservingCheckBox.IsChecked = _originalPreset.ToksvigSettings.UseEnergyPreserving;
                 ToksvigVarianceThresholdSlider.Value = _originalPreset.ToksvigSettings.VarianceThreshold;
                 ToksvigNormalMapPathTextBox.Text = _originalPreset.ToksvigSettings.NormalMapPath ?? "";
 
@@ -289,6 +290,7 @@ namespace AssetProcessor.Windows {
                 CompositePower = (float)ToksvigCompositePowerSlider.Value,
                 MinToksvigMipLevel = (int)Math.Round(ToksvigMinMipLevelSlider.Value),
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                UseEnergyPreserving = ToksvigUseEnergyPreservingCheckBox.IsChecked ?? true,
                 VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
                 NormalMapPath = string.IsNullOrWhiteSpace(ToksvigNormalMapPathTextBox.Text)
                     ? null

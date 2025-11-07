@@ -437,6 +437,7 @@ namespace AssetProcessor.Controls {
                 CompositePower = (float)ToksvigCompositePowerSlider.Value,
                 MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                UseEnergyPreserving = ToksvigUseEnergyPreservingCheckBox.IsChecked ?? true,
                 VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
                 NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
             };
@@ -677,6 +678,7 @@ namespace AssetProcessor.Controls {
             ToksvigCompositePowerSlider.Value = settings.CompositePower;
             ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
             ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
+            ToksvigUseEnergyPreservingCheckBox.IsChecked = settings.UseEnergyPreserving;
             ToksvigVarianceThresholdSlider.Value = settings.VarianceThreshold;
 
             // Если Toksvig включен, автоматически включаем Custom Mipmaps

@@ -1,12 +1,11 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using AssetProcessor.TextureViewer;
 using NLog;
 
 namespace AssetProcessor.TextureConversion.KVD {
     /// <summary>
-    /// Инжектирует TLV metadata в существующий KTX2 файл используя libktx API
+    /// Инжектирует TLV metadata в существующий KTX2 файл через прямое редактирование бинарного формата
+    /// Использует Ktx2BinaryPatcher вместо libktx P/Invoke для надёжности
     /// </summary>
     public class Ktx2MetadataInjector {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -17,7 +16,7 @@ namespace AssetProcessor.TextureConversion.KVD {
         /// <param name="ktx2FilePath">Путь к существующему KTX2 файлу</param>
         /// <param name="tlvFilePath">Путь к TLV binary файлу с метаданными</param>
         /// <param name="key">Ключ для метаданных (по умолчанию "pc.meta")</param>
-        /// <param name="ktxDllDirectory">Директория с ktx.dll (обычно та же, что и toktx.exe)</param>
+        /// <param name="ktxDllDirectory">НЕ ИСПОЛЬЗУЕТСЯ (оставлен для совместимости API)</param>
         public static bool InjectMetadata(string ktx2FilePath, string tlvFilePath, string key = "pc.meta", string? ktxDllDirectory = null) {
             if (!File.Exists(ktx2FilePath)) {
                 Logger.Error($"KTX2 file not found: {ktx2FilePath}");
@@ -27,17 +26,6 @@ namespace AssetProcessor.TextureConversion.KVD {
             if (!File.Exists(tlvFilePath)) {
                 Logger.Error($"TLV metadata file not found: {tlvFilePath}");
                 return false;
-            }
-
-            // Загружаем ktx.dll если указана директория
-            if (!string.IsNullOrEmpty(ktxDllDirectory)) {
-                Logger.Info($"Loading ktx.dll from directory: {ktxDllDirectory}");
-                if (!LibKtxNative.LoadKtxDll(ktxDllDirectory)) {
-                    Logger.Error($"Failed to load ktx.dll from: {ktxDllDirectory}");
-                    Logger.Error("Make sure ktx.dll exists in the same directory as toktx.exe");
-                    return false;
-                }
-                Logger.Info("✓ ktx.dll loaded successfully");
             }
 
             Logger.Info($"=== KTX2 METADATA INJECTION START ===");
@@ -55,100 +43,19 @@ namespace AssetProcessor.TextureConversion.KVD {
                 return false;
             }
 
-            // Загружаем KTX2 файл
-            IntPtr texturePtr = IntPtr.Zero;
+            // Используем binary patching вместо libktx P/Invoke для надёжности
+            bool success = Ktx2BinaryPatcher.AddKeyValueData(ktx2FilePath, key, tlvData);
 
-            try {
-                Logger.Info("Loading KTX2 file with libktx...");
-                var result = LibKtxNative.ktxTexture2_CreateFromNamedFile(
-                    ktx2FilePath,
-                    (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT,
-                    out texturePtr
-                );
-
-                if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                    Logger.Error($"Failed to load KTX2 file: {LibKtxNative.GetErrorString(result)}");
-                    return false;
-                }
-
-                Logger.Info("KTX2 file loaded successfully");
-
-                // Получаем структуру текстуры для доступа к kvDataHead
-                var texture = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(texturePtr);
-
-                Logger.Info($"Initial kvDataHead: {texture.kvDataHead}");
-                Logger.Info($"Initial kvDataLen: {texture.kvDataLen}");
-
-                // kvDataHead это указатель на ktxHashList, нужно проверить его значение
-                IntPtr hashListPtr = texture.kvDataHead;
-                bool needToCreateHashList = (hashListPtr == IntPtr.Zero);
-
-                if (needToCreateHashList) {
-                    Logger.Info("kvDataHead is NULL, creating new hash list...");
-                    hashListPtr = LibKtxNative.ktxHashList_Create();
-                    if (hashListPtr == IntPtr.Zero) {
-                        Logger.Error("Failed to create new hash list");
-                        return false;
-                    }
-                    Logger.Info($"New hash list created: {hashListPtr}");
-
-                    // Записываем новый указатель обратно в структуру texture
-                    int kvDataHeadOffset = Marshal.OffsetOf<LibKtxNative.KtxTexture2>("kvDataHead").ToInt32();
-                    IntPtr kvDataHeadFieldPtr = IntPtr.Add(texturePtr, kvDataHeadOffset);
-                    Marshal.WriteIntPtr(kvDataHeadFieldPtr, hashListPtr);
-                    Logger.Info("Hash list pointer written to texture->kvDataHead");
-                }
-
-                // Копируем TLV data в unmanaged память
-                IntPtr tlvPtr = Marshal.AllocHGlobal(tlvData.Length);
-                try {
-                    Marshal.Copy(tlvData, 0, tlvPtr, tlvData.Length);
-
-                    // Добавляем KV пару в hash list
-                    Logger.Info($"Adding KV pair to hash list: key='{key}', valueLen={tlvData.Length}, hashList={hashListPtr}");
-                    result = LibKtxNative.ktxHashList_AddKVPair(
-                        hashListPtr,
-                        key,
-                        (uint)tlvData.Length,
-                        tlvPtr
-                    );
-
-                    if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                        Logger.Error($"Failed to add KV pair: {LibKtxNative.GetErrorString(result)}");
-                        return false;
-                    }
-
-                    Logger.Info("✓ KV pair added successfully to hash list");
-                } finally {
-                    Marshal.FreeHGlobal(tlvPtr);
-                }
-
-                // Сохраняем KTX2 файл с metadata
-                Logger.Info($"Writing KTX2 file with metadata...");
-                result = LibKtxNative.ktxTexture2_WriteToNamedFile(texturePtr, ktx2FilePath);
-                if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                    Logger.Error($"Failed to write KTX2 file: {LibKtxNative.GetErrorString(result)}");
-                    return false;
-                }
-
+            if (success) {
                 var fileInfo = new FileInfo(ktx2FilePath);
                 Logger.Info($"=== KTX2 METADATA INJECTION SUCCESS ===");
                 Logger.Info($"  Output file: {ktx2FilePath}");
                 Logger.Info($"  File size: {fileInfo.Length} bytes");
                 Logger.Info($"  Metadata key: {key}");
                 Logger.Info($"  Metadata size: {tlvData.Length} bytes");
-
-                return true;
-
-            } catch (Exception ex) {
-                Logger.Error(ex, "Exception during metadata injection");
-                return false;
-            } finally {
-                // Освобождаем ресурсы
-                if (texturePtr != IntPtr.Zero) {
-                    LibKtxNative.ktxTexture2_Destroy(texturePtr);
-                }
             }
+
+            return success;
         }
     }
 }

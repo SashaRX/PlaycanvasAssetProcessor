@@ -31,48 +31,48 @@ public static class Ktx2MetadataReader {
                 return null;
             }
 
+            // Calculate offset of kvDataHead field within KtxTexture2 structure
+            // See LibKtxNative.cs for structure layout with offsets
+            const int kvDataHeadOffset = 88;
+            IntPtr pKvDataHead = IntPtr.Add(textureHandle, kvDataHeadOffset);
+
+            logger.Info($"Calling ktxHashList_FindValue with pKvDataHead=0x{pKvDataHead:X}");
+
             // Use ktxHashList_FindValue to find "pc.meta" key
-            // Note: We need to pass pointer to the hash list structure, not pHead
-            // Create pointer to kvDataHead structure
-            int structSize = Marshal.SizeOf<LibKtxNative.KtxHashList>();
-            IntPtr pHashList = Marshal.AllocHGlobal(structSize);
-            try {
-                Marshal.StructureToPtr(kvDataHead, pHashList, false);
+            // Pass pointer to kvDataHead field inside the native texture structure
+            var result = LibKtxNative.ktxHashList_FindValue(
+                pKvDataHead,
+                "pc.meta",
+                out uint valueLen,
+                out IntPtr pValue);
 
-                var result = LibKtxNative.ktxHashList_FindValue(
-                    pHashList,
-                    "pc.meta",
-                    out uint valueLen,
-                    out IntPtr pValue);
+            logger.Info($"ktxHashList_FindValue returned: {result}, valueLen={valueLen}, pValue=0x{pValue:X}");
 
-                if (result == LibKtxNative.KtxErrorCode.KTX_NOT_FOUND) {
-                    logger.Info("Key 'pc.meta' not found in KTX2 Key-Value Data");
-                    return null;
-                }
-
-                if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-                    logger.Warn($"ktxHashList_FindValue failed: {LibKtxNative.GetErrorString(result)}");
-                    return null;
-                }
-
-                if (pValue == IntPtr.Zero || valueLen == 0) {
-                    logger.Warn($"Found 'pc.meta' but value is empty (len={valueLen}, ptr={pValue})");
-                    return null;
-                }
-
-                logger.Info($"Found 'pc.meta' key with {valueLen} bytes of TLV data");
-
-                // Copy TLV data from native memory
-                byte[] tlvData = new byte[valueLen];
-                Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
-
-                logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
-
-                // Parse TLV data
-                return ParseTLVHistogramData(tlvData);
-            } finally {
-                Marshal.FreeHGlobal(pHashList);
+            if (result == LibKtxNative.KtxErrorCode.KTX_NOT_FOUND) {
+                logger.Info("Key 'pc.meta' not found in KTX2 Key-Value Data");
+                return null;
             }
+
+            if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
+                logger.Warn($"ktxHashList_FindValue failed: {LibKtxNative.GetErrorString(result)}");
+                return null;
+            }
+
+            if (pValue == IntPtr.Zero || valueLen == 0) {
+                logger.Warn($"Found 'pc.meta' but value is empty (len={valueLen}, ptr={pValue})");
+                return null;
+            }
+
+            logger.Info($"Found 'pc.meta' key with {valueLen} bytes of TLV data");
+
+            // Copy TLV data from native memory
+            byte[] tlvData = new byte[valueLen];
+            Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
+
+            logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
+
+            // Parse TLV data
+            return ParseTLVHistogramData(tlvData);
         } catch (Exception ex) {
             logger.Error(ex, "Failed to read histogram metadata from KTX2");
             return null;

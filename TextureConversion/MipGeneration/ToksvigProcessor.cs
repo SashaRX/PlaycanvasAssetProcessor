@@ -93,7 +93,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             Logger.Info($"🔧 Toksvig: k={settings.CompositePower:F1}, mode={modeInfo}, minLevel={settings.MinToksvigMipLevel}{energyInfo}");
 
             // Генерируем мипмапы для normal map
+            // КРИТИЧНО: НЕ нормализуем нормали после фильтрации!
+            // Нормализация должна происходить ВНУТРИ расчёта дисперсии (Energy preserving ДО Toksvig)
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
+            normalProfile.NormalizeNormals = false; // Отключаем глобальную нормализацию
             var normalMipmaps = _mipGenerator.GenerateMipmaps(normalMapImage, normalProfile);
 
             Logger.Info($"Сгенерировано {normalMipmaps.Count} уровней мипмапов для normal map");
@@ -461,14 +464,20 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
                     var pixel = normalMip[x, y].ToVector4();
 
-                    // Конвертируем из [0,1] в [-1,1] (как в Unreal)
+                    // Конвертируем из [0,1] в [-1,1]
                     var normal = new Vector3(
                         pixel.X * 2.0f - 1.0f,
                         pixel.Y * 2.0f - 1.0f,
                         pixel.Z * 2.0f - 1.0f
                     );
 
-                    // НЕ нормализуем индивидуальные нормали - используем как есть
+                    // КРИТИЧНО: НОРМАЛИЗУЕМ каждую нормаль ПЕРЕД усреднением (Energy preserving)
+                    // Это предотвращает потерю информации о дисперсии при фильтрации мипмапов
+                    float length = normal.Length();
+                    if (length > Epsilon) {
+                        normal = Vector3.Normalize(normal);
+                    }
+
                     normals.Add(normal);
                 }
             }
@@ -567,7 +576,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// </summary>
         public Image<Rgba32> CreateVarianceVisualization(Image<Rgba32> normalMapImage, ToksvigSettings settings) {
             // Генерируем мипмапы для normal map
+            // КРИТИЧНО: НЕ нормализуем нормали после фильтрации!
+            // Нормализация должна происходить ВНУТРИ расчёта дисперсии (Energy preserving ДО Toksvig)
             var normalProfile = MipGenerationProfile.CreateDefault(TextureType.Normal);
+            normalProfile.NormalizeNormals = false; // Отключаем глобальную нормализацию
             var normalMipmaps = _mipGenerator.GenerateMipmaps(normalMapImage, normalProfile);
 
             if (normalMipmaps.Count <= settings.MinToksvigMipLevel) {

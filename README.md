@@ -67,9 +67,25 @@ cd PlaycanvasAssetProcessor
 
 ```bash
 # Через Visual Studio: Build > Build Solution (Ctrl+Shift+B)
+
 # Или через командную строку:
+# Debug сборка
+dotnet build TexTool.sln --configuration Debug
+
+# Release сборка (оптимизирована)
 dotnet build TexTool.sln --configuration Release
+
+# Публикация single-file приложения
+dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false
 ```
+
+**Оптимизации Release сборки:**
+- **RuntimeIdentifier=win-x64**: включаются только Windows x64 библиотеки
+- **DebuggerSupport=false**: удаление отладочных метаданных
+- **Optimize=true**: оптимизации компилятора
+- **StripSymbols=true**: удаление debug символов
+
+Подробнее об оптимизациях: [Docs/BuildOptimizations.md](Docs/BuildOptimizations.md)
 
 ### 4. Получение API ключа PlayCanvas
 
@@ -457,5 +473,6 @@ dotnet add package PackageName --version X.Y.Z
 - **Toksvig коррекция**: [TextureConversion/TOKSVIG_README.md](TextureConversion/TOKSVIG_README.md)
 - **Система настроек**: [TextureConversion/Settings/CONVERSION_SETTINGS_USAGE.md](TextureConversion/Settings/CONVERSION_SETTINGS_USAGE.md)
 - **TextureViewer**: [Docs/TextureViewerSpec.md](Docs/TextureViewerSpec.md)
+- **Оптимизации сборки**: [Docs/BuildOptimizations.md](Docs/BuildOptimizations.md)
 - **Устранение проблем с toktx**: [TROUBLESHOOTING_TOKTX.md](TROUBLESHOOTING_TOKTX.md)
 - **Улучшения гистограмм**: [HISTOGRAM_IMPROVEMENTS.md](HISTOGRAM_IMPROVEMENTS.md)

@@ -70,8 +70,27 @@ namespace AssetProcessor.Windows {
                 ToksvigCompositePowerSlider.Value = _originalPreset.ToksvigSettings.CompositePower;
                 ToksvigMinMipLevelSlider.Value = _originalPreset.ToksvigSettings.MinToksvigMipLevel;
                 ToksvigSmoothVarianceCheckBox.IsChecked = _originalPreset.ToksvigSettings.SmoothVariance;
+                ToksvigUseEnergyPreservingCheckBox.IsChecked = _originalPreset.ToksvigSettings.UseEnergyPreserving;
                 ToksvigVarianceThresholdSlider.Value = _originalPreset.ToksvigSettings.VarianceThreshold;
                 ToksvigNormalMapPathTextBox.Text = _originalPreset.ToksvigSettings.NormalMapPath ?? "";
+
+                // Histogram Settings (упрощённая версия с Quality)
+                if (_originalPreset.HistogramSettings != null) {
+                    EnableHistogramCheckBox.IsChecked = _originalPreset.HistogramSettings.Mode != HistogramMode.Off;
+                    HistogramQualityComboBox.SelectedItem = _originalPreset.HistogramSettings.Quality;
+                    HistogramChannelModeComboBox.SelectedItem = _originalPreset.HistogramSettings.ChannelMode;
+                    // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
+                    HistogramPercentileLowSlider.Value = _originalPreset.HistogramSettings.PercentileLow;
+                    HistogramPercentileHighSlider.Value = _originalPreset.HistogramSettings.PercentileHigh;
+                    HistogramKneeWidthSlider.Value = _originalPreset.HistogramSettings.KneeWidth;
+                    HistogramMinRangeThresholdSlider.Value = _originalPreset.HistogramSettings.MinRangeThreshold;
+                    WriteHistogramParamsCheckBox.IsChecked = true; // Default to true
+                } else {
+                    EnableHistogramCheckBox.IsChecked = false;
+                    HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
+                    HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
+                    // ProcessingMode и Quantization удалены
+                }
 
                 // Load suffixes
                 SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>(_originalPreset.Suffixes);
@@ -85,6 +104,12 @@ namespace AssetProcessor.Windows {
                 ToktxFilterComboBox.SelectedItem = ToktxFilterType.Kaiser;
                 WrapModeComboBox.SelectedItem = WrapMode.Clamp;
                 ToksvigCalculationModeComboBox.SelectedItem = ToksvigCalculationMode.Classic;
+
+                // Histogram defaults (disabled by default, упрощённая версия с Quality)
+                EnableHistogramCheckBox.IsChecked = false;
+                HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
+                HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
+                // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
 
                 // Empty suffixes list for new preset
                 SuffixesListBox.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<string>();
@@ -236,6 +261,33 @@ namespace AssetProcessor.Windows {
             // Nothing to do
         }
 
+        private void EnableHistogramCheckBox_Changed(object sender, RoutedEventArgs e) {
+            // Binding handles IsEnabled state automatically
+        }
+
+        /// <summary>
+        /// Обработчик изменения Quality Mode - автоматически обновляет слайдеры
+        /// </summary>
+        private void HistogramQualityComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (HistogramQualityComboBox.SelectedItem == null) return;
+
+            // Получаем выбранное качество
+            var quality = (HistogramQuality)HistogramQualityComboBox.SelectedItem;
+
+            // Автоматически обновляем слайдеры согласно выбранному качеству
+            if (quality == HistogramQuality.HighQuality) {
+                // HighQuality: PercentileWithKnee (0.5%, 99.5%), knee=2%
+                HistogramPercentileLowSlider.Value = 0.5;
+                HistogramPercentileHighSlider.Value = 99.5;
+                HistogramKneeWidthSlider.Value = 0.02;
+            } else {
+                // Fast: Percentile (1%, 99%), no knee
+                HistogramPercentileLowSlider.Value = 1.0;
+                HistogramPercentileHighSlider.Value = 99.0;
+                HistogramKneeWidthSlider.Value = 0.0;
+            }
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e) {
             // Validate name
             string name = NameTextBox.Text.Trim();
@@ -258,6 +310,7 @@ namespace AssetProcessor.Windows {
                 CompositePower = (float)ToksvigCompositePowerSlider.Value,
                 MinToksvigMipLevel = (int)Math.Round(ToksvigMinMipLevelSlider.Value),
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                UseEnergyPreserving = ToksvigUseEnergyPreservingCheckBox.IsChecked ?? true,
                 VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
                 NormalMapPath = string.IsNullOrWhiteSpace(ToksvigNormalMapPathTextBox.Text)
                     ? null
@@ -268,6 +321,24 @@ namespace AssetProcessor.Windows {
             if (toksvigSettings.Enabled && !toksvigSettings.Validate(out string? error)) {
                 MessageBox.Show($"Invalid Toksvig settings: {error}", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
+            }
+
+            // Create Histogram settings
+            HistogramSettings? histogramSettings = null;
+            if (EnableHistogramCheckBox.IsChecked == true) {
+                var quality = (HistogramQuality)HistogramQualityComboBox.SelectedItem;
+
+                // Создаём настройки на основе качества
+                histogramSettings = quality == HistogramQuality.HighQuality
+                    ? HistogramSettings.CreateHighQuality()
+                    : HistogramSettings.CreateFast();
+
+                // Применяем пользовательские значения
+                histogramSettings.ChannelMode = (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem;
+                histogramSettings.PercentileLow = (float)HistogramPercentileLowSlider.Value;
+                histogramSettings.PercentileHigh = (float)HistogramPercentileHighSlider.Value;
+                histogramSettings.KneeWidth = (float)HistogramKneeWidthSlider.Value;
+                histogramSettings.MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value;
             }
 
             // Create preset from UI
@@ -313,6 +384,9 @@ namespace AssetProcessor.Windows {
 
                 // Toksvig
                 ToksvigSettings = toksvigSettings,
+
+                // Histogram
+                HistogramSettings = histogramSettings,
 
                 IsBuiltIn = false
             };

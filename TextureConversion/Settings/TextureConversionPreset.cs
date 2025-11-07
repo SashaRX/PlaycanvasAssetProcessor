@@ -190,6 +190,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         public ToksvigSettings ToksvigSettings { get; set; } = new();
 
         /// <summary>
+        /// Настройки анализа гистограммы
+        /// </summary>
+        public HistogramSettings? HistogramSettings { get; set; } = null;
+
+        /// <summary>
         /// Создает встроенный пресет "Default ETC1S"
         /// </summary>
         public static TextureConversionPreset CreateDefaultETC1S() {
@@ -402,6 +407,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                     CompositePower = 1.0f,
                     MinToksvigMipLevel = 0,
                     SmoothVariance = true,
+                    UseEnergyPreserving = true,
                     NormalMapPath = null // Автоопределение
                 }
             };
@@ -512,7 +518,8 @@ namespace AssetProcessor.TextureConversion.Settings {
                 ConvertToNormalMap = this.ConvertToNormalMap,
                 NormalizeVectors = this.NormalizeVectors,
                 KeepRGBLayout = this.KeepRGBLayout,
-                RemoveTemporaryMipmaps = this.RemoveTemporaryMipmaps
+                RemoveTemporaryMipmaps = this.RemoveTemporaryMipmaps,
+                HistogramAnalysis = this.HistogramSettings
             };
         }
 

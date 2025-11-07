@@ -19,10 +19,12 @@ public static class Ktx2TextureLoader {
     public static TextureData LoadFromFile(string filePath) {
         logger.Info($"Loading KTX2 texture from: {filePath}");
 
-        // Create texture from file
+        // Create texture from file with Key-Value Data support
+        uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
+                          (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
         var result = LibKtxNative.ktxTexture2_CreateFromNamedFile(
             filePath,
-            (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT,
+            createFlags,
             out IntPtr textureHandle);
 
         if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
@@ -30,7 +32,13 @@ public static class Ktx2TextureLoader {
         }
 
         try {
-            return LoadFromHandle(textureHandle, filePath);
+            // Read histogram metadata directly from file (safe approach that doesn't rely on structure marshaling)
+            var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(filePath);
+            if (histogramMetadata != null) {
+                logger.Info($"Histogram metadata loaded from file: {histogramMetadata.Scale.Length} channel(s), scale={string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}");
+            }
+
+            return LoadFromHandle(textureHandle, filePath, histogramMetadata);
         } finally {
             LibKtxNative.ktxTexture2_Destroy(textureHandle);
         }
@@ -255,7 +263,7 @@ public static class Ktx2TextureLoader {
     /// <summary>
     /// Load texture data from a ktxTexture2 handle.
     /// </summary>
-    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath) {
+    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath, HistogramMetadata? histogramMetadata = null) {
         // Read basic texture info from structure (minimal fields only)
         var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
 
@@ -450,6 +458,8 @@ public static class Ktx2TextureLoader {
 
         logger.Info($"KTX2 loaded successfully: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, format={detectedFormat}, sRGB={isSRGB}, alpha={hasAlpha}");
 
+        // Histogram metadata was already read before transcoding (passed as parameter)
+
         return new TextureData {
             Width = actualWidth,
             Height = actualHeight,
@@ -459,7 +469,8 @@ public static class Ktx2TextureLoader {
             SourceFormat = sourceFormat,
             IsHDR = false,
             IsCompressed = isCompressed,
-            CompressionFormat = isCompressed ? detectedFormat : null
+            CompressionFormat = isCompressed ? detectedFormat : null,
+            HistogramMetadata = histogramMetadata
         };
     }
 

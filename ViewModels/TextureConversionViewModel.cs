@@ -39,14 +39,15 @@ namespace AssetProcessor.ViewModels {
         private int _processingProgress;
 
         [ObservableProperty]
-        private string _toktxPath = "toktx";
+        private string _ktxPath = "ktx";
 
         public TextureConversionViewModel() {
             _globalSettings = TextureConversionSettingsManager.LoadSettings();
             _outputDirectory = _globalSettings.DefaultOutputDirectory;
-            _toktxPath = string.IsNullOrWhiteSpace(_globalSettings.ToktxExecutablePath)
-                ? "toktx"
-                : _globalSettings.ToktxExecutablePath;
+            // Используем KtxExecutablePath, но fallback на ToktxExecutablePath для обратной совместимости
+            _ktxPath = string.IsNullOrWhiteSpace(_globalSettings.KtxExecutablePath)
+                ? (string.IsNullOrWhiteSpace(_globalSettings.ToktxExecutablePath) ? "ktx" : _globalSettings.ToktxExecutablePath)
+                : _globalSettings.KtxExecutablePath;
 
             // Загружаем сохраненные текстуры
             LoadSavedTextures();
@@ -118,7 +119,8 @@ namespace AssetProcessor.ViewModels {
             ProcessingProgress = 0;
 
             try {
-                var pipeline = new TextureConversionPipeline(ToktxPath);
+                // Передаём путь к ktx.exe (можно указывать и toktx.exe, и ktx.exe)
+                var pipeline = new TextureConversionPipeline(KtxPath);
 
                 Directory.CreateDirectory(OutputDirectory);
 
@@ -192,7 +194,8 @@ namespace AssetProcessor.ViewModels {
             ProcessingStatus = $"Processing {Path.GetFileName(SelectedTexture.TexturePath)}...";
 
             try {
-                var pipeline = new TextureConversionPipeline(ToktxPath);
+                // Передаём путь к ktx.exe (можно указывать и toktx.exe, и ktx.exe)
+                var pipeline = new TextureConversionPipeline(KtxPath);
                 Directory.CreateDirectory(OutputDirectory);
 
                 var mipProfile = SelectedTexture.MipProfile.ToMipGenerationProfile(SelectedTexture.TextureType);
@@ -310,7 +313,7 @@ namespace AssetProcessor.ViewModels {
         private void SaveSettings() {
             GlobalSettings.TextureSettings = Textures.Select(t => t.ToSettings()).ToList();
             GlobalSettings.DefaultOutputDirectory = OutputDirectory;
-            GlobalSettings.ToktxExecutablePath = ToktxPath;
+            GlobalSettings.KtxExecutablePath = KtxPath;
             TextureConversionSettingsManager.SaveSettings(GlobalSettings);
         }
 

@@ -126,6 +126,16 @@ namespace AssetProcessor.Controls {
             ToksvigVarianceThresholdSlider.Value = 0.002;
             NormalMapPathTextBox.Text = string.Empty;
 
+            // Histogram Analysis (упрощённая версия с Quality)
+            EnableHistogramCheckBox.IsChecked = false;
+            HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
+            HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
+            // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
+            HistogramPercentileLowSlider.Value = 0.5;
+            HistogramPercentileHighSlider.Value = 99.5;
+            HistogramKneeWidthSlider.Value = 0.02;
+            HistogramMinRangeThresholdSlider.Value = 0.01;
+
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
             UpdateToksvigCalculationModePanels();
@@ -276,6 +286,12 @@ namespace AssetProcessor.Controls {
             }
         }
 
+        private void EnableHistogramCheckBox_Changed(object sender, RoutedEventArgs e) {
+            if (!_isLoading) {
+                CheckboxSettingChanged(sender, e);
+            }
+        }
+
         private void NormalMapPathTextBox_TextChanged(object sender, TextChangedEventArgs e) {
             if (!_isLoading) {
                 UpdateNormalMapAutoDetect();
@@ -420,9 +436,39 @@ namespace AssetProcessor.Controls {
                 CompositePower = (float)ToksvigCompositePowerSlider.Value,
                 MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
                 SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
+                UseEnergyPreserving = ToksvigUseEnergyPreservingCheckBox.IsChecked ?? true,
                 VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
                 NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
             };
+        }
+
+        public HistogramSettings? GetHistogramSettings() {
+            // Если histogram analysis отключен, возвращаем null
+            if (EnableHistogramCheckBox.IsChecked != true) {
+                return null;
+            }
+
+            var quality = HistogramQualityComboBox.SelectedItem != null
+                ? (HistogramQuality)HistogramQualityComboBox.SelectedItem
+                : HistogramQuality.HighQuality;
+
+            var channelMode = HistogramChannelModeComboBox.SelectedItem != null
+                ? (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem
+                : HistogramChannelMode.AverageLuminance;
+
+            // Создаём настройки на основе выбранного качества
+            var settings = quality == HistogramQuality.HighQuality
+                ? HistogramSettings.CreateHighQuality()
+                : HistogramSettings.CreateFast();
+
+            // Применяем пользовательские значения из слайдеров (если изменялись)
+            settings.ChannelMode = channelMode;
+            settings.PercentileLow = (float)HistogramPercentileLowSlider.Value;
+            settings.PercentileHigh = (float)HistogramPercentileHighSlider.Value;
+            settings.KneeWidth = (float)HistogramKneeWidthSlider.Value;
+            settings.MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value;
+
+            return settings;
         }
 
         /// <summary>
@@ -626,6 +672,7 @@ namespace AssetProcessor.Controls {
             ToksvigCompositePowerSlider.Value = settings.CompositePower;
             ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
             ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
+            ToksvigUseEnergyPreservingCheckBox.IsChecked = settings.UseEnergyPreserving;
             ToksvigVarianceThresholdSlider.Value = settings.VarianceThreshold;
 
             // Если Toksvig включен, автоматически включаем Custom Mipmaps
@@ -642,6 +689,25 @@ namespace AssetProcessor.Controls {
 
             UpdateToksvigCalculationModePanels();
             UpdateMipmapPanelsVisibility();
+
+            _isLoading = false;
+        }
+
+        public void LoadHistogramSettings(HistogramSettings? settings) {
+            _isLoading = true;
+
+            if (settings != null && settings.Mode != HistogramMode.Off) {
+                EnableHistogramCheckBox.IsChecked = true;
+                HistogramQualityComboBox.SelectedItem = settings.Quality;
+                HistogramChannelModeComboBox.SelectedItem = settings.ChannelMode;
+                // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
+                HistogramPercentileLowSlider.Value = settings.PercentileLow;
+                HistogramPercentileHighSlider.Value = settings.PercentileHigh;
+                HistogramKneeWidthSlider.Value = settings.KneeWidth;
+                HistogramMinRangeThresholdSlider.Value = settings.MinRangeThreshold;
+            } else {
+                EnableHistogramCheckBox.IsChecked = false;
+            }
 
             _isLoading = false;
         }
@@ -759,6 +825,55 @@ namespace AssetProcessor.Controls {
                                 ToksvigCompositePowerSlider.Value = compositePower;
                             }
                             break;
+
+                        // Histogram Analysis
+                        case "enableHistogram":
+                            if (param.Value is bool enableHistogram) {
+                                EnableHistogramCheckBox.IsChecked = enableHistogram;
+                            }
+                            break;
+
+                        case "histogramQuality":
+                            if (Enum.TryParse<HistogramQuality>(param.Value?.ToString(), true, out var histQuality)) {
+                                HistogramQualityComboBox.SelectedItem = histQuality;
+                            }
+                            break;
+
+                        // histogramMode удалён (заменён на histogramQuality)
+
+                        // histogramProcessingMode удалён (всегда Preprocessing)
+
+                        case "histogramChannelMode":
+                            if (Enum.TryParse<HistogramChannelMode>(param.Value?.ToString(), true, out var histChannel)) {
+                                HistogramChannelModeComboBox.SelectedItem = histChannel;
+                            }
+                            break;
+
+                        // histogramQuantization удалён (всегда Half16)
+
+                        case "histogramPercentileLow":
+                            if (param.Value is double percLow) {
+                                HistogramPercentileLowSlider.Value = percLow;
+                            }
+                            break;
+
+                        case "histogramPercentileHigh":
+                            if (param.Value is double percHigh) {
+                                HistogramPercentileHighSlider.Value = percHigh;
+                            }
+                            break;
+
+                        case "histogramKneeWidth":
+                            if (param.Value is double kneeWidth) {
+                                HistogramKneeWidthSlider.Value = kneeWidth;
+                            }
+                            break;
+
+                        case "histogramMinRangeThreshold":
+                            if (param.Value is double minRange) {
+                                HistogramMinRangeThresholdSlider.Value = minRange;
+                            }
+                            break;
                     }
                 }
 
@@ -815,6 +930,9 @@ namespace AssetProcessor.Controls {
 
             // Toksvig
             LoadToksvigSettings(preset.ToksvigSettings);
+
+            // Histogram Analysis
+            LoadHistogramSettings(preset.HistogramSettings);
 
             UpdateCompressionPanels();
             UpdateOutputFormatPanels();
@@ -905,6 +1023,40 @@ namespace AssetProcessor.Controls {
             if (!_isLoading) {
                 OnSettingsChanged();
             }
+        }
+
+        /// <summary>
+        /// Обработчик изменения Quality Mode - автоматически обновляет слайдеры
+        /// </summary>
+        private void HistogramQualityComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (_isLoading) return;
+
+            // Получаем выбранное качество
+            var quality = HistogramQualityComboBox.SelectedItem != null
+                ? (HistogramQuality)HistogramQualityComboBox.SelectedItem
+                : HistogramQuality.HighQuality;
+
+            // Автоматически обновляем слайдеры согласно выбранному качеству
+            _isLoading = true;
+            try {
+                if (quality == HistogramQuality.HighQuality) {
+                    // HighQuality: PercentileWithKnee (0.5%, 99.5%), knee=2%
+                    HistogramPercentileLowSlider.Value = 0.5;
+                    HistogramPercentileHighSlider.Value = 99.5;
+                    HistogramKneeWidthSlider.Value = 0.02;
+                    Logger.Info("Histogram Quality Mode changed to HighQuality: percentiles=[0.5%, 99.5%], knee=0.02");
+                } else {
+                    // Fast: Percentile (1%, 99%), no knee
+                    HistogramPercentileLowSlider.Value = 1.0;
+                    HistogramPercentileHighSlider.Value = 99.0;
+                    HistogramKneeWidthSlider.Value = 0.0;
+                    Logger.Info("Histogram Quality Mode changed to Fast: percentiles=[1%, 99%], knee=0");
+                }
+            } finally {
+                _isLoading = false;
+            }
+
+            OnSettingsChanged();
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {

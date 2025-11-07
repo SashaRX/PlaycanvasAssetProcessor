@@ -3,13 +3,17 @@
 
 cbuffer ShaderConstants : register(b0)
 {
-    float2 uvScale;      // UV scaling for zoom
-    float2 uvOffset;     // UV offset for pan
-    float2 posScale;     // Position scaling for aspect ratio correction
-    float mipLevel;      // Manual mip level (-1 for auto)
-    float exposure;      // HDR exposure (EV)
-    float gamma;         // Gamma correction (2.2 for sRGB, 1.0 for linear)
-    uint channelMask;    // RGBA channel mask (bit flags)
+    float2 uvScale;                     // UV scaling for zoom
+    float2 uvOffset;                    // UV offset for pan
+    float2 posScale;                    // Position scaling for aspect ratio correction
+    float mipLevel;                     // Manual mip level (-1 for auto)
+    float exposure;                     // HDR exposure (EV)
+    float gamma;                        // Gamma correction (2.2 for sRGB, 1.0 for linear)
+    uint channelMask;                   // RGBA channel mask (bit flags)
+    float3 histogramScale;              // Histogram denormalization scale (RGB)
+    uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
+    float3 histogramOffset;             // Histogram denormalization offset (RGB)
+    uint histogramIsPerChannel;         // 0 = scalar, 1 = per-channel
 };
 
 Texture2D<float4> sourceTexture : register(t0);
@@ -78,6 +82,14 @@ float4 PSMain(PSInput input) : SV_TARGET
     else
     {
         color = sourceTexture.Sample(texSampler, input.texcoord);
+    }
+
+    // STEP 0: Apply histogram denormalization if enabled
+    // This must happen FIRST, on the raw sampled data (normalized to [0,1])
+    // Formula: v_original = v_normalized * scale + offset
+    if (enableHistogramCorrection != 0)
+    {
+        color.rgb = color.rgb * histogramScale + histogramOffset;
     }
 
     // Check if channel mask is active

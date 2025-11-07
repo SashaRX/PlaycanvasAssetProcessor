@@ -17,6 +17,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                 GetMipmapsGroup(),
                 GetNormalMapsGroup(),
                 GetToksvigGroup(),
+                HistogramGroupExtension.GetHistogramGroup(),
                 GetActionsGroup()
             };
         }
@@ -466,6 +467,21 @@ namespace AssetProcessor.TextureConversion.Settings {
                         Section = ParameterSection.Toksvig,
                         DefaultValue = false,
                         Description = "Сглаживание вариации углов (внутренний препроцесс)",
+                        IsInternal = true,
+                        Visibility = new VisibilityCondition {
+                            DependsOnParameter = "enableToksvig",
+                            RequiredValue = true
+                        }
+                    },
+
+                    // Use Energy-Preserving Filtering
+                    new ConversionParameter {
+                        Id = "useEnergyPreserving",
+                        DisplayName = "Use Energy-Preserving Filtering",
+                        UIType = ParameterUIType.Checkbox,
+                        Section = ParameterSection.Toksvig,
+                        DefaultValue = true,
+                        Description = "Применить energy-preserving фильтрацию для сохранения энергии материала (усреднение alpha²)",
                         IsInternal = true,
                         Visibility = new VisibilityCondition {
                             DependsOnParameter = "enableToksvig",

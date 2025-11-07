@@ -1,6 +1,8 @@
 using System.IO;
+using AssetProcessor.TextureConversion.Analysis;
 using AssetProcessor.TextureConversion.BasisU;
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.TextureConversion.KVD;
 using AssetProcessor.TextureConversion.MipGeneration;
 using NLog;
 using SixLabors.ImageSharp;
@@ -14,15 +16,17 @@ namespace AssetProcessor.TextureConversion.Pipeline {
     public class TextureConversionPipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly MipGenerator _mipGenerator;
-        private readonly ToktxWrapper _toktxWrapper;
+        private readonly KtxCreateWrapper _ktxCreateWrapper;
         private readonly ToksvigProcessor _toksvigProcessor;
         private readonly NormalMapMatcher _normalMapMatcher;
+        private readonly HistogramAnalyzer _histogramAnalyzer;
 
-        public TextureConversionPipeline(string? toktxExecutablePath = null) {
+        public TextureConversionPipeline(string? ktxExecutablePath = null) {
             _mipGenerator = new MipGenerator();
-            _toktxWrapper = new ToktxWrapper(toktxExecutablePath ?? "toktx");
+            _ktxCreateWrapper = new KtxCreateWrapper(ktxExecutablePath ?? "ktx");
             _toksvigProcessor = new ToksvigProcessor();
             _normalMapMatcher = new NormalMapMatcher();
+            _histogramAnalyzer = new HistogramAnalyzer();
         }
 
         /// <summary>
@@ -53,9 +57,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             try {
                 Logger.Info($"Starting conversion: {inputPath}");
 
-                // Проверяем доступность toktx
-                if (!await _toktxWrapper.IsAvailableAsync()) {
-                    throw new Exception("toktx executable not found. Please install KTX-Software: winget install KhronosGroup.KTX-Software");
+                // Проверяем доступность ktx
+                if (!await _ktxCreateWrapper.IsAvailableAsync()) {
+                    throw new Exception("ktx executable not found. Please specify path to ktx.exe in settings (e.g., KTX-Software/build_ktx/Release/ktx.exe)");
                 }
 
                 // Загружаем изображение
@@ -245,29 +249,191 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info($"Мипмапы сохранены в {mipmapOutputDir}");
                     }
 
-                    // Упаковываем мипмапы в KTX2 используя toktx
-                    Logger.Info("=== PACKING TO KTX2 WITH TOKTX ===");
+                    // HISTOGRAM ANALYSIS - анализ перед упаковкой
+                    HistogramResult? histogramResult = null;
+                    Dictionary<string, string>? kvdBinaryFiles = null;
+
+                    if (compressionSettings.HistogramAnalysis != null &&
+                        compressionSettings.HistogramAnalysis.Mode != HistogramMode.Off) {
+
+                        Logger.Info("=== HISTOGRAM ANALYSIS ===");
+
+                        // Анализируем первый мипмап (mip0)
+                        using var mip0 = await Image.LoadAsync<Rgba32>(tempMipmapPaths[0]);
+                        histogramResult = _histogramAnalyzer.Analyze(mip0, compressionSettings.HistogramAnalysis);
+
+                        if (histogramResult.Success) {
+                            Logger.Info($"Histogram analysis successful");
+                            Logger.Info($"  Scale: [{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}]");
+                            Logger.Info($"  Offset: [{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
+                            Logger.Info($"  Quality mode: {compressionSettings.HistogramAnalysis.Quality}");
+
+                            // ВСЕГДА применяем Preprocessing (нормализацию текстуры)
+                            Logger.Info("=== HISTOGRAM PREPROCESSING ===");
+                            Logger.Info("Normalizing texture before compression, scale/offset will be stored in KVD for GPU recovery");
+
+                            // Применяем трансформацию к ВСЕМ мипмапам
+                            for (int i = 0; i < mipmaps.Count; i++) {
+                                Image<Rgba32> transformedMip;
+
+                                if (compressionSettings.HistogramAnalysis.Mode == HistogramMode.PercentileWithKnee) {
+                                    // Soft-knee (High Quality)
+                                    float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth * (histogramResult.RangeHigh - histogramResult.RangeLow);
+                                    Logger.Info($"Applying soft-knee (width={kneeWidth:F4}) to mip {i}");
+                                    transformedMip = _histogramAnalyzer.ApplySoftKnee(
+                                        mipmaps[i],
+                                        histogramResult.RangeLow,
+                                        histogramResult.RangeHigh,
+                                        kneeWidth
+                                    );
+                                } else {
+                                    // Winsorization (Fast mode - жёсткое клампирование)
+                                    Logger.Info($"Applying winsorization to mip {i}");
+                                    transformedMip = _histogramAnalyzer.ApplyWinsorization(
+                                        mipmaps[i],
+                                        histogramResult.RangeLow,
+                                        histogramResult.RangeHigh
+                                    );
+                                }
+
+                                // Заменяем мипмап
+                                mipmaps[i].Dispose();
+                                mipmaps[i] = transformedMip;
+                            }
+
+                            Logger.Info($"Preprocessing applied to {mipmaps.Count} mipmaps");
+
+                            // Пересохраняем трансформированные мипмапы
+                            for (int i = 0; i < mipmaps.Count; i++) {
+                                var mipPath = tempMipmapPaths[i];
+                                await mipmaps[i].SaveAsPngAsync(mipPath);
+                                Logger.Info($"✓ Preprocessed mip {i} saved to {mipPath}");
+                            }
+
+                            // Создаём TLV метаданные
+                            using var tlvWriter = new TLVWriter();
+
+                            // ВСЕГДА инвертируем scale/offset для восстановления на GPU
+                            // т.к. текстура нормализована: v_norm = (v - lo) / (hi - lo)
+                            // GPU применит обратное преобразование: v_original = v_norm * (hi - lo) + lo
+                            Logger.Info("=== INVERTING SCALE/OFFSET FOR GPU RECOVERY ===");
+                            Logger.Info("Texture normalized, computing inverse transform for GPU denormalization");
+                            Logger.Info($"Forward transform: scale=[{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
+
+                            // Создаём копию для TLV с инвертированными параметрами
+                            var histogramForTLV = new HistogramResult {
+                                Success = histogramResult.Success,
+                                Mode = histogramResult.Mode,
+                                ChannelMode = histogramResult.ChannelMode,
+                                Scale = new float[histogramResult.Scale.Length],
+                                Offset = new float[histogramResult.Offset.Length],
+                                RangeLow = histogramResult.RangeLow,
+                                RangeHigh = histogramResult.RangeHigh,
+                                TailFraction = histogramResult.TailFraction,
+                                KneeApplied = histogramResult.KneeApplied,
+                                TotalPixels = histogramResult.TotalPixels,
+                                Error = histogramResult.Error,
+                                Warnings = new List<string>(histogramResult.Warnings)
+                            };
+
+                            // Инвертируем каждый канал: scale_inv = 1/scale, offset_inv = -offset/scale
+                            for (int i = 0; i < histogramResult.Scale.Length; i++) {
+                                float scale = histogramResult.Scale[i];
+                                float offset = histogramResult.Offset[i];
+
+                                histogramForTLV.Scale[i] = 1.0f / scale;
+                                histogramForTLV.Offset[i] = -offset / scale;
+                            }
+
+                            Logger.Info($"Inverse transform: scale=[{string.Join(", ", histogramForTLV.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramForTLV.Offset.Select(o => o.ToString("F4")))}]");
+                            Logger.Info("GPU will apply: v_original = fma(v_normalized, scale, offset)");
+
+                            // Записываем результат анализа (Half16 формат)
+                            tlvWriter.WriteHistogramResult(histogramForTLV, HistogramQuantization.Half16);
+
+                            // ВСЕГДА записываем параметры анализа для справки
+                            tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
+
+                            // Сохраняем TLV в временный файл
+                            var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
+                            tlvWriter.SaveToFile(tlvPath);
+                            Logger.Info($"TLV metadata saved to: {tlvPath}");
+
+                            // Проверяем создание файла
+                            if (File.Exists(tlvPath)) {
+                                var fileInfo = new FileInfo(tlvPath);
+                                Logger.Info($"TLV file size: {fileInfo.Length} bytes");
+
+                                // Добавляем в словарь KVD файлов для toktx
+                                kvdBinaryFiles = new Dictionary<string, string> {
+                                    { "pc.meta", tlvPath }
+                                };
+                            } else {
+                                Logger.Warn("TLV file not created, skipping KVD metadata");
+                            }
+
+                            result.HistogramAnalysisResult = histogramResult;
+                        } else {
+                            Logger.Warn($"Histogram analysis failed: {histogramResult.Error}");
+                        }
+                    }
+
+                    // Упаковываем мипмапы в KTX2 используя ktx create
+                    Logger.Info("=== PACKING TO KTX2 WITH KTX CREATE ===");
                     Logger.Info($"  Mipmaps: {tempMipmapPaths.Count}");
                     Logger.Info($"  Output: {outputPath}");
                     Logger.Info($"  Compression: {compressionSettings.CompressionFormat}");
+                    if (kvdBinaryFiles != null) {
+                        Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
+                    }
 
-                    var toktxResult = await _toktxWrapper.PackMipmapsAsync(
+                    var ktxResult = await _ktxCreateWrapper.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
-                        compressionSettings
+                        compressionSettings,
+                        kvdBinaryFiles
                     );
 
-                    if (!toktxResult.Success) {
-                        throw new Exception($"toktx packing failed: {toktxResult.Error}");
+                    if (!ktxResult.Success) {
+                        throw new Exception($"ktx create failed: {ktxResult.Error}");
+                    }
+
+                    // POST-PROCESSING: Inject TLV metadata if available
+                    if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
+                        Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
+
+                        // Получаем директорию ktx для загрузки ktx.dll
+                        var ktxDllDirectory = _ktxCreateWrapper.KtxDirectory;
+                        if (!string.IsNullOrEmpty(ktxDllDirectory)) {
+                            Logger.Info($"ktx directory: {ktxDllDirectory}");
+                        } else {
+                            Logger.Warn("ktx directory not found (ktx might be in PATH)");
+                        }
+
+                        foreach (var kvPair in kvdBinaryFiles) {
+                            Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
+                            bool injected = Ktx2MetadataInjector.InjectMetadata(
+                                outputPath,
+                                kvPair.Value,
+                                kvPair.Key,
+                                ktxDllDirectory
+                            );
+                            if (injected) {
+                                Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
+                            } else {
+                                Logger.Error($"✗ Failed to inject metadata '{kvPair.Key}'");
+                                throw new Exception($"Failed to inject metadata '{kvPair.Key}'");
+                            }
+                        }
                     }
 
                     result.Success = true;
-                    result.BasisOutput = toktxResult.Output;
+                    result.BasisOutput = ktxResult.Output;
                     result.MipLevels = mipmaps.Count;
 
                     Logger.Info($"=== KTX2 PACKING SUCCESS ===");
                     Logger.Info($"  Output: {outputPath}");
-                    Logger.Info($"  File size: {toktxResult.OutputFileSize} bytes");
+                    Logger.Info($"  File size: {ktxResult.OutputFileSize} bytes");
                     Logger.Info($"  Mip levels: {mipmaps.Count}");
 
                 } finally {
@@ -591,5 +757,10 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// ВНУТРЕННЕЕ: Старые мипмапы для освобождения после завершения
         /// </summary>
         internal List<Image<Rgba32>>? OldMipmapsToDispose { get; set; }
+
+        /// <summary>
+        /// Результат анализа гистограммы (если применимо)
+        /// </summary>
+        public HistogramResult? HistogramAnalysisResult { get; set; }
     }
 }

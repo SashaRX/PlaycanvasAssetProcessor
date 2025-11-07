@@ -21,7 +21,11 @@
       "Bash(cmd.exe /c \"taskkill /F /PID 19316\")",
       "Bash(cmd.exe /c \"taskkill /F /PID 3996\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build FAILED\" -Context 0,2)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

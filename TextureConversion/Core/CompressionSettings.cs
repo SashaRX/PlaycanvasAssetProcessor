@@ -189,6 +189,12 @@ namespace AssetProcessor.TextureConversion.Core {
         public bool RemoveTemporaryMipmaps { get; set; } = true;
 
         /// <summary>
+        /// Настройки анализа гистограммы для оптимизации сжатия
+        /// Текстура всегда нормализуется (preprocessing), scale/offset записываются в KTX2 для восстановления
+        /// </summary>
+        public HistogramSettings? HistogramAnalysis { get; set; } = null;
+
+        /// <summary>
         /// Создает настройки по умолчанию для ETC1S
         /// </summary>
         public static CompressionSettings CreateETC1SDefault() {

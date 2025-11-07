@@ -26,6 +26,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         Mipmaps,
         NormalMaps,
         Toksvig,
+        Histogram,
         Actions
     }
 

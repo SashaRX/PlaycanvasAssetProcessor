@@ -63,6 +63,12 @@ public sealed class TextureData : IDisposable {
     /// </summary>
     public string? CompressionFormat { get; init; }
 
+    /// <summary>
+    /// Histogram preprocessing metadata (scale/offset for GPU denormalization).
+    /// Null if no histogram preprocessing was applied.
+    /// </summary>
+    public HistogramMetadata? HistogramMetadata { get; init; }
+
     public void Dispose() {
         foreach (var mip in MipLevels) {
             mip.Dispose();
@@ -112,5 +118,41 @@ public sealed class MipLevel : IDisposable {
     public void Dispose() {
         // Data will be GC'd, but we can explicitly clear if needed
         Array.Clear(Data, 0, Data.Length);
+    }
+}
+
+/// <summary>
+/// Histogram preprocessing metadata for GPU denormalization.
+/// </summary>
+public sealed class HistogramMetadata {
+    /// <summary>
+    /// Scale values for denormalization.
+    /// - Scalar mode: 1 value
+    /// - Per-channel RGB: 3 values (R, G, B)
+    /// - Per-channel RGBA: 4 values (R, G, B, A)
+    /// </summary>
+    public required float[] Scale { get; init; }
+
+    /// <summary>
+    /// Offset values for denormalization.
+    /// - Scalar mode: 1 value
+    /// - Per-channel RGB: 3 values (R, G, B)
+    /// - Per-channel RGBA: 4 values (R, G, B, A)
+    /// </summary>
+    public required float[] Offset { get; init; }
+
+    /// <summary>
+    /// Whether this is per-channel (true) or scalar (false).
+    /// </summary>
+    public bool IsPerChannel => Scale.Length > 1;
+
+    /// <summary>
+    /// Returns identity metadata (scale=1, offset=0).
+    /// </summary>
+    public static HistogramMetadata Identity() {
+        return new HistogramMetadata {
+            Scale = new[] { 1.0f },
+            Offset = new[] { 0.0f }
+        };
     }
 }

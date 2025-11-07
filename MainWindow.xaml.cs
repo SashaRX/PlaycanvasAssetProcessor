@@ -442,11 +442,30 @@ namespace AssetProcessor {
                     D3D11TextureViewer.Renderer.LoadTexture(textureData);
                     logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
+                    // Update histogram correction button state
+                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
+                    if (HistogramCorrectionButton != null) {
+                        HistogramCorrectionButton.IsEnabled = hasHistogram;
+                        HistogramCorrectionButton.IsChecked = hasHistogram; // Auto-enable if metadata present
+
+                        if (hasHistogram && textureData.HistogramMetadata != null) {
+                            var meta = textureData.HistogramMetadata;
+                            string scaleStr = meta.IsPerChannel
+                                ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
+                                : meta.Scale[0].ToString("F3");
+                            HistogramCorrectionButton.ToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
+                            logger.Info($"Histogram metadata found: scale={scaleStr}");
+                        } else {
+                            HistogramCorrectionButton.ToolTip = "No histogram metadata in this texture";
+                        }
+                    }
+
                     // Update format info in UI
                     if (TextureFormatTextBlock != null) {
                         string compressionFormat = textureData.CompressionFormat ?? "Unknown";
                         string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
-                        TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}";
+                        string histInfo = hasHistogram ? " + Histogram" : "";
+                        TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
                     }
 
                     // Trigger immediate render to show the updated texture with preserved zoom/pan
@@ -536,6 +555,17 @@ namespace AssetProcessor {
                 bool useLinearFilter = button.IsChecked ?? true;
                 D3D11TextureViewer?.Renderer?.SetFilter(useLinearFilter);
                 logger.Info($"Filter toggle: {(useLinearFilter ? "Trilinear" : "Point")}");
+            }
+        }
+
+        private void HistogramCorrectionButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is ToggleButton button && D3D11TextureViewer?.Renderer != null) {
+                bool enabled = button.IsChecked ?? true;
+                D3D11TextureViewer.Renderer.SetHistogramCorrection(enabled);
+                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user");
+
+                // Force immediate render to show the change
+                D3D11TextureViewer.Renderer.Render();
             }
         }
 
@@ -4605,11 +4635,12 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                var toktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath)
-                    ? "toktx"
-                    : globalTextureSettings.ToktxExecutablePath;
+                // Используем KtxExecutablePath, но fallback на ToktxExecutablePath для обратной совместимости
+                var ktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.KtxExecutablePath)
+                    ? (string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath) ? "ktx" : globalTextureSettings.ToktxExecutablePath)
+                    : globalTextureSettings.KtxExecutablePath;
 
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(toktxPath);
+                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(ktxPath);
 
                 foreach (var texture in texturesToProcess) {
                     try {
@@ -4633,8 +4664,13 @@ namespace AssetProcessor {
                             MapTextureTypeToCore(textureType));
 
                         // Используем глобальные настройки из TextureConversionSettingsPanel
-                        var compressionSettings = ConversionSettingsPanel.GetCompressionSettings()
-                            .ToCompressionSettings(globalTextureSettings!); // Already checked for null above
+                        var compressionSettingsData = ConversionSettingsPanel.GetCompressionSettings();
+
+                        // Получаем настройки histogram analysis из UI
+                        var histogramSettings = ConversionSettingsPanel.GetHistogramSettings();
+                        compressionSettingsData.HistogramAnalysis = histogramSettings;
+
+                        var compressionSettings = compressionSettingsData.ToCompressionSettings(globalTextureSettings!); // Already checked for null above
 
                         // Save converted file in the same directory as source file
                         var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;

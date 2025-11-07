@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace AssetProcessor.TextureViewer;
@@ -10,6 +11,75 @@ namespace AssetProcessor.TextureViewer;
 internal static class LibKtxNative {
     // Try different DLL names (ktx.dll from vcpkg, libktx.dll from official builds)
     private const string DllName = "ktx";
+
+    private static bool _dllLoaded = false;
+    private static IntPtr _ktxHandle = IntPtr.Zero;
+
+    /// <summary>
+    /// Загружает ktx.dll из указанной директории или рядом с exe
+    /// </summary>
+    public static bool LoadKtxDll(string? ktxDirectory = null) {
+        if (_dllLoaded) {
+            return true;
+        }
+
+        // Список мест для поиска ktx.dll (в порядке приоритета)
+        var searchPaths = new List<string>();
+
+        // 1. Рядом с AssetProcessor.exe (highest priority)
+        var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        searchPaths.Add(Path.Combine(exeDirectory, "ktx.dll"));
+
+        // 2. В указанной директории (если задана)
+        if (!string.IsNullOrEmpty(ktxDirectory)) {
+            searchPaths.Add(Path.Combine(ktxDirectory, "ktx.dll"));
+        }
+
+        // 3. Пробуем загрузить из каждого места
+        foreach (var ktxDllPath in searchPaths) {
+            Console.WriteLine($"[LibKtxNative] Checking: {ktxDllPath}");
+
+            if (!File.Exists(ktxDllPath)) {
+                Console.WriteLine($"[LibKtxNative]   File not found");
+                continue;
+            }
+
+            Console.WriteLine($"[LibKtxNative]   File exists, attempting LoadLibrary...");
+            _ktxHandle = LoadLibrary(ktxDllPath);
+
+            if (_ktxHandle != IntPtr.Zero) {
+                Console.WriteLine($"[LibKtxNative]   ✓ Loaded successfully (handle: 0x{_ktxHandle:X})");
+                _dllLoaded = true;
+                _loadedFrom = ktxDllPath;
+                return true;
+            } else {
+                var error = Marshal.GetLastWin32Error();
+                Console.WriteLine($"[LibKtxNative]   ✗ LoadLibrary failed (Win32 error: {error})");
+            }
+        }
+
+        Console.WriteLine($"[LibKtxNative] Failed to load ktx.dll from any location");
+        return false;
+    }
+
+    private static string? _loadedFrom = null;
+
+    /// <summary>
+    /// Возвращает статус загрузки ktx.dll для отладки
+    /// </summary>
+    public static string GetLoadStatus() {
+        if (_dllLoaded) {
+            return $"ktx.dll loaded from: {_loadedFrom ?? "unknown"} (handle: 0x{_ktxHandle:X})";
+        }
+        return "ktx.dll not loaded";
+    }
+
+    // Kernel32 LoadLibrary для динамической загрузки DLL
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibrary(string lpFileName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool FreeLibrary(IntPtr hModule);
 
     #region Enums
 
@@ -86,30 +156,27 @@ internal static class LibKtxNative {
         KHR_DF_TRANSFER_ADOBERGB = 18
     }
 
+    /// <summary>
+    /// Storage allocation options for texture creation
+    /// </summary>
+    public enum KtxTextureCreateStorage : uint {
+        KTX_TEXTURE_CREATE_NO_STORAGE = 0,
+        KTX_TEXTURE_CREATE_ALLOC_STORAGE = 1
+    }
+
     #endregion
 
     #region Structs
 
     /// <summary>
-    /// Simplified KTX texture structure - only read fields we actually need.
-    /// We don't try to map the entire structure since it's complex and error-prone.
-    /// Instead, we rely on iterator callbacks for actual data extraction.
+    /// Structure for passing texture information to ktxTexture2_Create()
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public struct KtxTexture2 {
-        // Base ktxTexture fields (from ktxTexture.h)
-        public IntPtr classId;
-        public IntPtr vtbl;
-        public IntPtr vvtbl;
-        public IntPtr _protected;
+    public struct KtxTextureCreateInfo {
+        public uint glInternalformat;  // Ignored for KTX2
+        public uint vkFormat;          // VkFormat (e.g., VK_FORMAT_R8G8B8A8_UNORM = 37)
+        public IntPtr pDfd;            // Optional DFD, can be IntPtr.Zero
 
-        // Flags (4 bytes each in the structure, but actually booleans)
-        public byte isArray;
-        public byte isCubemap;
-        public byte isCompressed;
-        public byte generateMipmaps;
-
-        // Dimensions
         public uint baseWidth;
         public uint baseHeight;
         public uint baseDepth;
@@ -119,21 +186,111 @@ internal static class LibKtxNative {
         public uint numLayers;
         public uint numFaces;
 
-        // Orientation (ktx_pack_astc_encoder_mode_e or similar)
-        public IntPtr orientation;
+        public byte isArray;           // KTX_TRUE or KTX_FALSE
+        public byte generateMipmaps;   // KTX_TRUE or KTX_FALSE
+    }
 
-        // Key-value data
-        public IntPtr kvDataHead;
-        public uint kvDataLen;
-        public IntPtr kvData;
+    /// <summary>
+    /// Extended parameters for Basis Universal compression
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KtxBasisParams {
+        // Размер структуры (ОБЯЗАТЕЛЬНО!)
+        public uint structSize;
+
+        // Общие параметры
+        public byte uastc;              // 1 = UASTC, 0 = ETC1S
+        public byte verbose;            // Вывод отладочной информации
+        public byte noSSE;              // Запретить SSE
+        public uint threadCount;        // Количество потоков (0 = auto)
+
+        // ETC1S параметры
+        public uint compressionLevel;   // 0-6, default = 2
+        public uint qualityLevel;       // 1-255, default = 128
+        public uint maxEndpoints;       // Максимум endpoint палитры
+        public float endpointRDOThreshold;
+        public uint maxSelectors;       // Максимум selector палитры
+        public float selectorRDOThreshold;
+
+        // Padding для выравнивания (struct довольно большой)
+        // Полная структура содержит много других полей, но для базового использования достаточно этих
+        // Остальное можно оставить нулевым
+    }
+
+    /// <summary>
+    /// VkFormat значения для KTX2
+    /// </summary>
+    public enum VkFormat : uint {
+        VK_FORMAT_UNDEFINED = 0,
+        VK_FORMAT_R8G8B8A8_UNORM = 37,
+        VK_FORMAT_R8G8B8A8_SRGB = 43,
+        VK_FORMAT_R8G8B8_UNORM = 23,
+        VK_FORMAT_R8G8B8_SRGB = 29
+    }
+
+    /// <summary>
+    /// ktxHashList structure from ktx.h
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KtxHashList {
+        public uint numEntries;
+        private uint _padding;  // Alignment padding before pointer
+        public IntPtr pHead;
+    }
+
+    /// <summary>
+    /// Simplified KTX texture structure - only read fields we actually need.
+    /// We don't try to map the entire structure since it's complex and error-prone.
+    /// Instead, we rely on iterator callbacks for actual data extraction.
+    ///
+    /// CRITICAL: Field sizes and alignment must match C structure exactly!
+    /// All pointer fields are naturally aligned to 8 bytes on x64.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    public struct KtxTexture2 {
+        // Base ktxTexture fields (from ktxTexture.h)
+        public IntPtr classId;          // offset 0
+        public IntPtr vtbl;             // offset 8
+        public IntPtr vvtbl;            // offset 16
+        public IntPtr _protected;       // offset 24
+
+        // Flags (ktx_bool_t = uint32_t in C, NOT byte!)
+        public uint isArray;            // offset 32
+        public uint isCubemap;          // offset 36
+        public uint isCompressed;       // offset 40
+        public uint generateMipmaps;    // offset 44
+
+        // Dimensions
+        public uint baseWidth;          // offset 48
+        public uint baseHeight;         // offset 52
+        public uint baseDepth;          // offset 56
+
+        public uint numDimensions;      // offset 60
+        public uint numLevels;          // offset 64
+        public uint numLayers;          // offset 68
+        public uint numFaces;           // offset 72
+
+        // PADDING: 4 bytes for pointer alignment (offset 76-79)
+        private uint _padding1;
+
+        // Orientation (ktx_pack_astc_encoder_mode_e or similar)
+        public IntPtr orientation;      // offset 80
+
+        // Key-value data - kvDataHead is a ktxHashList STRUCTURE (not pointer!)
+        public KtxHashList kvDataHead;  // offset 88 (16 bytes: uint + padding + IntPtr)
+        public uint kvDataLen;          // offset 104
+        private uint _padding2;         // offset 108 (alignment for kvData pointer)
+        public IntPtr kvData;           // offset 112
 
         // Image data
-        public uint dataSize;
-        public IntPtr pData;
+        public uint dataSize;           // offset 120
+        private uint _padding3;         // offset 124
+        public IntPtr pData;            // offset 128
 
         // KTX2-specific (beyond base ktxTexture)
-        public uint vkFormat;
-        public IntPtr pDfd;
+        public uint vkFormat;           // offset 136
+        private uint _padding4;         // offset 140
+        public IntPtr pDfd;             // offset 144
 
         // Note: There are more fields but we don't need them
         // and trying to map them all leads to alignment issues
@@ -253,6 +410,98 @@ internal static class LibKtxNative {
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern KtxErrorCode ktxTexture_IterateLevelFaces(IntPtr texture, KtxIterCallback iterCb, IntPtr userdata);
+
+    /// <summary>
+    /// Create a new hash list for key-value data.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr ktxHashList_Create();
+
+    /// <summary>
+    /// Destroy a hash list.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void ktxHashList_Destroy(IntPtr hashList);
+
+    /// <summary>
+    /// Add a key-value pair (binary data) to the hash list.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxHashList_AddKVPair(
+        IntPtr hashList,
+        [MarshalAs(UnmanagedType.LPStr)] string key,
+        uint valueLen,
+        IntPtr value);
+
+    /// <summary>
+    /// Serialize hash list to byte array (allocates memory).
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxHashList_Serialize(
+        IntPtr hashList,
+        out uint kvdLen,
+        out IntPtr kvd);
+
+    /// <summary>
+    /// Write KTX2 texture to file.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    public static extern KtxErrorCode ktxTexture2_WriteToNamedFile(
+        IntPtr texture,
+        [MarshalAs(UnmanagedType.LPStr)] string dstname);
+
+    /// <summary>
+    /// Create a new empty KTX2 texture.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_Create(
+        ref KtxTextureCreateInfo createInfo,
+        KtxTextureCreateStorage storageAllocation,
+        out IntPtr newTex);
+
+    /// <summary>
+    /// Set image data for a specific mip level, layer, and face from memory (KTX2 specific).
+    /// Signature: KTX_error_code ktxTexture2_SetImageFromMemory(ktxTexture2 *This, ktx_uint32_t level, ktx_uint32_t layer, ktx_uint32_t faceSlice, const ktx_uint8_t *src, ktx_size_t srcSize)
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_SetImageFromMemory(
+        IntPtr texture,
+        uint level,
+        uint layer,
+        uint faceSlice,
+        IntPtr src,
+        nuint srcSize);
+
+    /// <summary>
+    /// Compress texture using Basis Universal with extended parameters.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_CompressBasisEx(
+        IntPtr texture,
+        ref KtxBasisParams params_);
+
+    /// <summary>
+    /// Compress texture using Basis Universal with simple quality parameter.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern KtxErrorCode ktxTexture2_CompressBasis(
+        IntPtr texture,
+        uint quality);
+
+    #endregion
+
+    #region Key-Value Data API
+
+    /// <summary>
+    /// Find a value in the hash list by key.
+    /// Returns KTX_SUCCESS if found, KTX_NOT_FOUND if not found.
+    /// </summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    public static extern KtxErrorCode ktxHashList_FindValue(
+        IntPtr pHead,
+        [MarshalAs(UnmanagedType.LPStr)] string key,
+        out uint pValueLen,
+        out IntPtr pValue);
 
     #endregion
 

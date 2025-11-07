@@ -50,11 +50,12 @@ Release сборка оптимизирована для уменьшения р
 
 ### External Dependencies
 
-The texture conversion pipeline requires the **toktx** CLI tool from KTX-Software:
+The texture conversion pipeline requires the **ktx** CLI tool from KTX-Software:
 - Installation: `winget install KhronosGroup.KTX-Software` (Windows)
-- Verify: `toktx --version`
-- Used by TextureConversion pipeline for Basis Universal compression and KTX2 packing
+- Verify: `ktx --version`
+- Used by TextureConversion pipeline via `ktx create` command for Basis Universal compression and KTX2 packing
 - Required version: 4.3.0 or higher
+- **Important**: We use `ktx.exe` (modern tool), NOT the legacy `toktx.exe`
 
 ## Architecture Overview
 
@@ -90,19 +91,22 @@ The texture conversion pipeline requires the **toktx** CLI tool from KTX-Softwar
 A sophisticated system for texture processing and compression located in `TextureConversion/`:
 
 **Pipeline Components**:
-- **Core/**: Base types (TextureType, FilterType, CompressionFormat, CompressionSettings, ToksvigSettings)
-- **MipGeneration/**: Mipmap generation with multiple filter types, gamma correction, and Toksvig processor
-- **BasisU/**: Wrapper for toktx CLI tool (KTX2 packing with Basis Universal encoder)
-- **Pipeline/**: Main conversion pipeline and batch processor
+- **Core/**: Base types (TextureType, FilterType, CompressionFormat, CompressionSettings, ToksvigSettings, HistogramSettings)
+- **MipGeneration/**: Manual mipmap generation with multiple filter types, gamma correction, and Toksvig processor
+- **BasisU/**: Wrapper for ktx CLI tool (KTX2 packing with Basis Universal encoder via `ktx create`)
+- **Pipeline/**: Main conversion pipeline with histogram preprocessing and batch processor
 - **Settings/**: Advanced conversion settings system with presets and parameter schema
+- **Analysis/**: Histogram analysis for dynamic range optimization
+- **KVD/**: TLV metadata writer and Ktx2BinaryPatcher for post-processing metadata injection
 
 **Key Classes**:
-- `TextureConversionPipeline`: Main orchestrator combining mipmap generation and KTX2 packing
-- `MipGenerator`: Generates mipmaps with filter types (Box, Bilinear, Bicubic, Lanczos3, Mitchell, Kaiser)
+- `TextureConversionPipeline`: Main orchestrator combining manual mipmap generation, histogram preprocessing, and KTX2 packing
+- `MipGenerator`: Generates mipmaps manually with filter types (Box, Bilinear, Bicubic, Lanczos3, Mitchell, Kaiser)
 - `ToksvigProcessor`: Applies Toksvig correction for gloss/roughness anti-aliasing
-- `ToktxWrapper`: CLI wrapper for toktx executable (KTX2 packing)
+- `KtxCreateWrapper`: CLI wrapper for ktx executable (`ktx create` command for KTX2 packing)
+- `HistogramAnalyzer`: Robust percentile-based histogram analysis with soft-knee for dynamic range optimization
+- `Ktx2BinaryPatcher`: Direct KTX2 binary format manipulation for metadata injection (Level Index Array updates)
 - `BatchProcessor`: Parallel texture processing with progress reporting
-- `ConversionSettingsManager`: Manages conversion parameters and generates toktx arguments
 
 **Texture Type Profiles**:
 - Albedo: Kaiser filter with gamma correction (sRGB)
@@ -115,6 +119,169 @@ A sophisticated system for texture processing and compression located in `Textur
 - ETC1S: Smaller file size, good for albedo/diffuse
 - UASTC: Higher quality, better for normal maps
 - Output formats: .basis or .ktx2
+
+### Detailed Texture Processing Workflow
+
+#### Manual vs Automatic Mipmap Generation
+
+The pipeline supports two mipmap generation strategies controlled by `CompressionSettings.UseCustomMipmaps`:
+
+**Manual Mipmap Generation (`UseCustomMipmaps = true`)**:
+- `MipGenerator` creates all mipmap levels before ktx create
+- Full control over filtering algorithm (Box, Bilinear, Bicubic, Lanczos3, Mitchell, Kaiser)
+- Gamma correction applied correctly (convert to linear → filter → convert back to sRGB)
+- Energy-preserving filtering for roughness/gloss textures
+- **Required for**: Toksvig correction (must analyze and modify each mipmap level)
+- **Required for**: Histogram preprocessing with multiple mipmaps
+- **Process flow**:
+  1. MipGenerator creates all mipmap levels with specified filter
+  2. Optional: Apply Toksvig correction to each mipmap level
+  3. Optional: Apply histogram preprocessing to all mipmaps
+  4. Save all mipmaps as temporary PNGs
+  5. Pass all PNG files to ktx create (no `--generate-mipmap` flag)
+
+**Automatic Mipmap Generation (`UseCustomMipmaps = false`)**:
+- Pass single source image to ktx create
+- ktx create generates mipmaps with `--generate-mipmap --mipmap-filter lanczos4`
+- **Required for**: `--normal-mode` and `--normalize` flags to work correctly
+- **Limitation**: Cannot apply Toksvig correction or histogram preprocessing to individual mipmap levels
+- **Process flow**:
+  1. Clone source image (mip0)
+  2. Optional: Apply histogram preprocessing to mip0 only
+  3. Save mip0 as temporary PNG
+  4. Pass single PNG to ktx create with `--generate-mipmap`
+
+**When to use Manual vs Automatic**:
+- **Use Manual** for: Albedo, Roughness, Gloss (with Toksvig), any texture requiring histogram preprocessing
+- **Use Automatic** for: Normal maps (benefit from `--normal-mode` and `--normalize`)
+
+#### ktx create Command Line Parameters
+
+The `KtxCreateWrapper` generates ktx create commands with the following parameters:
+
+**Format Specification** (required):
+```
+--format R8G8B8A8_SRGB   # For sRGB color space textures
+--format R8G8B8A8_UNORM  # For linear color space textures
+```
+
+**Encoding** (required for Basis Universal):
+```
+--encode uastc    # UASTC format (high quality)
+--encode basis-lz # ETC1S/BasisLZ format (smaller size)
+```
+
+**Mipmap Generation** (automatic mode only):
+```
+--generate-mipmap              # Generate mipmaps automatically
+--mipmap-filter lanczos4       # Filter type (lanczos4 default)
+```
+
+**Compression Parameters**:
+
+ETC1S/BasisLZ:
+```
+--clevel 1        # Compression level (0-5, default 1)
+--qlevel 128      # Quality level (1-255, default 128)
+```
+
+UASTC:
+```
+--uastc-quality 2          # Quality level (0-4, default 2)
+--uastc-rdo                # Enable RDO optimization
+--uastc-rdo-l 1.0          # RDO lambda (0.001-10.0)
+```
+
+**Supercompression** (Zstandard):
+```
+--zstd 3          # Zstd compression level (1-22)
+```
+**CRITICAL**: Zstd is ONLY supported with UASTC, NOT with ETC1S/BasisLZ!
+
+**Normal Map Processing**:
+```
+--normal-mode     # Convert to XY(RGB/A) normal map layout
+--normalize       # Normalize normal vectors
+```
+
+**Threading**:
+```
+--threads 8       # Number of threads (0 = auto)
+```
+
+**Input/Output Order**:
+```
+ktx create [options] input1.png input2.png ... output.ktx2
+```
+Input files BEFORE output file!
+
+#### Histogram Preprocessing Pipeline
+
+When `CompressionSettings.HistogramAnalysis` is set (not null and Mode != Off), the pipeline ALWAYS applies preprocessing:
+
+**Step 1: Analysis**
+- Analyze mip0 to compute robust percentile-based range
+- Modes: `PercentileWithKnee` (High Quality) or `Percentile` (Fast)
+- Returns scale/offset for normalization
+
+**Step 2: Normalization (Preprocessing)**
+- Apply transformation to ALL mipmaps:
+  - `PercentileWithKnee`: Soft-knee smoothstep for outliers
+  - `Percentile`: Hard winsorization clamping
+- Texture normalized to [0, 1] range
+- Better utilizes compressed texture precision
+
+**Step 3: Inverse Transform for GPU**
+- Compute inverse scale/offset for GPU denormalization:
+  ```
+  scale_inv = 1.0 / scale
+  offset_inv = -offset / scale
+  ```
+- GPU applies: `v_original = v_normalized * scale_inv + offset_inv`
+
+**Step 4: Metadata Writing**
+- Create TLV (Type-Length-Value) metadata with:
+  - Histogram result (HIST_SCALAR or HIST_PER_CHANNEL_3)
+  - Histogram parameters (percentiles, knee width)
+- Quantization: Always Half16 (4 bytes per channel)
+- Save to `pc.meta.bin` file
+
+**Step 5: Post-Processing Injection**
+- ktx create doesn't support KVD via CLI
+- `Ktx2BinaryPatcher` injects metadata after ktx create:
+  1. Load KTX2 file
+  2. Insert KVD data section
+  3. Update Level Index Array offsets
+  4. Rewrite file with correct headers
+
+**Quality Modes**:
+- **HighQuality** (recommended): PercentileWithKnee (0.5%, 99.5%), knee=2%, soft-knee smoothing
+- **Fast**: Percentile (1%, 99%), hard clamping without soft-knee
+
+**Channel Modes**:
+- **AverageLuminance**: Single scale/offset for all channels (4 bytes metadata)
+- **PerChannel**: Separate scale/offset for RGB (12 bytes metadata)
+
+#### Filter Types and Gamma Correction
+
+**Available Filters** (`MipGenerator`):
+- **Box**: Fast, blocky results (for metallic maps)
+- **Bilinear**: Linear interpolation, soft
+- **Bicubic**: Cubic interpolation, sharper than bilinear
+- **Lanczos3**: 3-lobe Lanczos, good quality/performance
+- **Mitchell**: Mitchell-Netravali filter, balanced
+- **Kaiser**: High-quality filter (recommended for albedo)
+
+**Gamma Correction** (for sRGB textures):
+- Applied during manual mipmap generation
+- Process: sRGB → Linear → Filter → Linear → sRGB
+- Default gamma: 2.2
+- Prevents color shifts during downsampling
+
+**Energy-Preserving Filtering** (for roughness/gloss):
+- Computes variance of filtered normals
+- Adjusts roughness to preserve specular energy
+- Prevents excessive specular aliasing at distance
 
 ### Configuration
 
@@ -208,8 +375,79 @@ Histogram calculation in `MainWindowHelpers.cs` uses thread-local strategy to av
 1. Presets defined in `TextureConversion/Settings/ConversionSettingsSchema.cs`
 2. UI editing in `Windows/PresetEditorWindow.xaml.cs`
 3. Parameter visibility controlled by `VisibilityCondition` (e.g., UASTC options only visible when UASTC format selected)
-4. CLI argument generation in `ConversionSettingsManager.GenerateToktxArguments()`
-5. Internal preprocessing parameters (Toksvig, mipmap generation) handled before toktx invocation
+4. CLI argument generation in `KtxCreateWrapper.GenerateKtxCreateArguments()`
+5. Internal preprocessing parameters (Toksvig, mipmap generation, histogram) handled before ktx create invocation
+
+### Using Histogram Preprocessing
+
+Histogram preprocessing is a powerful feature for optimizing texture compression by normalizing dynamic range.
+
+**Basic Usage (High Quality - Recommended)**:
+```csharp
+var settings = new CompressionSettings {
+    CompressionFormat = CompressionFormat.ETC1S,
+    QualityLevel = 128,
+    GenerateMipmaps = true,
+    UseCustomMipmaps = true,  // Required for histogram preprocessing
+
+    // Enable histogram preprocessing with High Quality mode
+    HistogramAnalysis = HistogramSettings.CreateHighQuality()
+    // Uses: PercentileWithKnee (0.5%, 99.5%), knee=2%, soft-knee smoothing
+};
+```
+
+**Fast Mode (Lower Quality, Faster)**:
+```csharp
+var settings = new CompressionSettings {
+    CompressionFormat = CompressionFormat.ETC1S,
+    QualityLevel = 128,
+    UseCustomMipmaps = true,
+
+    // Fast mode with hard clamping
+    HistogramAnalysis = HistogramSettings.CreateFast()
+    // Uses: Percentile (1%, 99%), no soft-knee
+};
+```
+
+**Per-Channel Mode (for color-rich textures)**:
+```csharp
+var settings = new CompressionSettings {
+    CompressionFormat = CompressionFormat.ETC1S,
+    QualityLevel = 192,
+    UseCustomMipmaps = true,
+
+    HistogramAnalysis = new HistogramSettings {
+        Quality = HistogramQuality.HighQuality,
+        Mode = HistogramMode.PercentileWithKnee,
+        ChannelMode = HistogramChannelMode.PerChannel,  // Separate scale/offset for R, G, B
+        PercentileLow = 0.5f,
+        PercentileHigh = 99.5f,
+        KneeWidth = 0.02f
+    }
+};
+```
+
+**UI Configuration**:
+- Open Texture Conversion Settings panel
+- Enable "Enable Histogram Preprocessing" checkbox
+- Select Quality Mode: "HighQuality" or "Fast"
+- Select Channel Mode: "AverageLuminance" (default) or "PerChannel"
+- Adjust sliders if needed (percentiles, knee width)
+
+**Important Notes**:
+- Histogram preprocessing ALWAYS normalizes the texture (preprocessing mode)
+- Scale/offset are ALWAYS written to KTX2 metadata for GPU recovery
+- Metadata format: Always Half16 (4 bytes per channel)
+- GPU shader must read metadata and apply: `v_original = fma(v_normalized, scale, offset)`
+- Use `UseCustomMipmaps = true` when histogram preprocessing is enabled
+- Metadata injected via `Ktx2BinaryPatcher` post-processing (ktx create doesn't support KVD)
+
+**Recommended Settings by Texture Type**:
+- **Albedo**: HighQuality, AverageLuminance
+- **HDR textures**: HighQuality with conservative percentiles (0.1%, 99.9%)
+- **Emissive**: Fast, PerChannel (for colored light sources)
+- **Roughness/Metallic**: Fast, AverageLuminance (narrow range)
+- **Normal maps**: Disable histogram (use standard normalization)
 
 ### Working with PlayCanvas API
 

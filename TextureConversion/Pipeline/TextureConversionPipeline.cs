@@ -319,8 +319,47 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             // Создаём TLV метаданные
                             using var tlvWriter = new TLVWriter();
 
+                            // Для Preprocessing режима нужно инвертировать scale/offset
+                            // т.к. текстура уже нормализована: v_norm = (v - lo) / (hi - lo)
+                            // и на GPU нужно применить обратное преобразование: v = v_norm * (hi - lo) + lo
+                            HistogramResult histogramForTLV = histogramResult;
+
+                            if (compressionSettings.HistogramAnalysis.ProcessingMode == HistogramProcessingMode.Preprocessing) {
+                                Logger.Info("=== INVERTING SCALE/OFFSET FOR PREPROCESSING MODE ===");
+                                Logger.Info("Texture already normalized, computing inverse transform for GPU denormalization");
+                                Logger.Info($"Forward transform: scale=[{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
+
+                                // Создаём копию для TLV с инвертированными параметрами
+                                histogramForTLV = new HistogramResult {
+                                    Success = histogramResult.Success,
+                                    Mode = histogramResult.Mode,
+                                    ChannelMode = histogramResult.ChannelMode,
+                                    Scale = new float[histogramResult.Scale.Length],
+                                    Offset = new float[histogramResult.Offset.Length],
+                                    RangeLow = histogramResult.RangeLow,
+                                    RangeHigh = histogramResult.RangeHigh,
+                                    TailFraction = histogramResult.TailFraction,
+                                    KneeApplied = histogramResult.KneeApplied,
+                                    TotalPixels = histogramResult.TotalPixels,
+                                    Error = histogramResult.Error,
+                                    Warnings = new List<string>(histogramResult.Warnings)
+                                };
+
+                                // Инвертируем каждый канал: scale_inv = 1/scale, offset_inv = -offset/scale
+                                for (int i = 0; i < histogramResult.Scale.Length; i++) {
+                                    float scale = histogramResult.Scale[i];
+                                    float offset = histogramResult.Offset[i];
+
+                                    histogramForTLV.Scale[i] = 1.0f / scale;
+                                    histogramForTLV.Offset[i] = -offset / scale;
+                                }
+
+                                Logger.Info($"Inverse transform: scale=[{string.Join(", ", histogramForTLV.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramForTLV.Offset.Select(o => o.ToString("F4")))}]");
+                                Logger.Info("GPU will apply: v_original = fma(v_normalized, scale, offset)");
+                            }
+
                             // Записываем результат анализа с выбранным квантованием
-                            tlvWriter.WriteHistogramResult(histogramResult, compressionSettings.HistogramAnalysis.Quantization);
+                            tlvWriter.WriteHistogramResult(histogramForTLV, compressionSettings.HistogramAnalysis.Quantization);
 
                             // Опционально записываем параметры анализа
                             if (compressionSettings.WriteHistogramParams) {

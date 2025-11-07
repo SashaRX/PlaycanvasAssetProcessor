@@ -323,34 +323,25 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // CRITICAL FIX: For AverageLuminance mode, apply winsorization to LUMINANCE, not per-channel
-                    // This preserves color while adjusting brightness
+                    // CRITICAL FIX: Apply winsorization to EACH CHANNEL with lo/hi from luminance histogram
+                    // This allows GPU to recover using simple linear formula: v_original = v_norm * scale + offset
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
-                    // Compute luminance (same formula as in histogram analysis)
-                    float luminance = (r_norm + g_norm + b_norm) / 3.0f;
+                    // Clamp each channel to [lo, hi]
+                    float r_clamped = Math.Clamp(r_norm, lo, hi);
+                    float g_clamped = Math.Clamp(g_norm, lo, hi);
+                    float b_clamped = Math.Clamp(b_norm, lo, hi);
 
-                    // Clamp and normalize luminance
-                    float clamped_lum = Math.Clamp(luminance, lo, hi);
-                    float normalized_lum = (clamped_lum - lo) / range;
+                    // Normalize to [0, 1] - this is the KEY step!
+                    float r_normalized = (r_clamped - lo) / range;
+                    float g_normalized = (g_clamped - lo) / range;
+                    float b_normalized = (b_clamped - lo) / range;
 
-                    // Avoid division by zero
-                    if (luminance > 0.0001f) {
-                        // Scale RGB proportionally to luminance change
-                        float scale = normalized_lum / luminance;
-                        r_norm *= scale;
-                        g_norm *= scale;
-                        b_norm *= scale;
-                    } else {
-                        // For very dark pixels, set to normalized luminance
-                        r_norm = g_norm = b_norm = normalized_lum;
-                    }
-
-                    byte r = (byte)Math.Clamp((int)(r_norm * 255), 0, 255);
-                    byte g = (byte)Math.Clamp((int)(g_norm * 255), 0, 255);
-                    byte b = (byte)Math.Clamp((int)(b_norm * 255), 0, 255);
+                    byte r = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
+                    byte g = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
+                    byte b = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);
 
                     pixelRow[x] = new Rgba32(r, g, b, pixel.A);
                 }
@@ -371,33 +362,20 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // CRITICAL FIX: For AverageLuminance mode, apply soft-knee to LUMINANCE, not per-channel
-                    // This preserves color while adjusting brightness
+                    // CRITICAL FIX: Apply soft-knee to EACH CHANNEL with lo/hi from luminance histogram
+                    // This allows GPU to recover using simple linear formula: v_original = v_norm * scale + offset
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
-                    // Compute luminance (same formula as in histogram analysis)
-                    float luminance = (r_norm + g_norm + b_norm) / 3.0f;
+                    // Apply soft-knee to each channel separately
+                    float r_normalized = ApplySoftKneeToValue(r_norm, lo, hi, kneeWidth);
+                    float g_normalized = ApplySoftKneeToValue(g_norm, lo, hi, kneeWidth);
+                    float b_normalized = ApplySoftKneeToValue(b_norm, lo, hi, kneeWidth);
 
-                    // Apply soft-knee to luminance
-                    float normalizedLuminance = ApplySoftKneeToValue(luminance, lo, hi, kneeWidth);
-
-                    // Avoid division by zero
-                    if (luminance > 0.0001f) {
-                        // Scale RGB proportionally to luminance change
-                        float scale = normalizedLuminance / luminance;
-                        r_norm *= scale;
-                        g_norm *= scale;
-                        b_norm *= scale;
-                    } else {
-                        // For very dark pixels, set to normalized luminance
-                        r_norm = g_norm = b_norm = normalizedLuminance;
-                    }
-
-                    byte rByte = (byte)Math.Clamp((int)(r_norm * 255), 0, 255);
-                    byte gByte = (byte)Math.Clamp((int)(g_norm * 255), 0, 255);
-                    byte bByte = (byte)Math.Clamp((int)(b_norm * 255), 0, 255);
+                    byte rByte = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
+                    byte gByte = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
+                    byte bByte = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);
 
                     pixelRow[x] = new Rgba32(rByte, gByte, bByte, pixel.A);
                 }

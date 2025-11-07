@@ -1,7 +1,7 @@
 # Histogram Metadata Specification
-## Единый стандартизированный формат scale/offset
+## Единый упрощённый формат scale/offset
 
-**Версия:** 2.0
+**Версия:** 3.0 (Simplified)
 **Дата:** 2025-11-07
 **Статус:** ✅ УТВЕРЖДЁН И РЕАЛИЗОВАН
 
@@ -9,11 +9,13 @@
 
 ## Резюме
 
-Система histogram preprocessing использует **единственный правильный формат** для хранения метаданных в KTX2 файлах:
+Система histogram preprocessing использует **единственный формат** для хранения метаданных в KTX2 файлах:
 
-- **ВСЕГДА** записываются **инвертированные** значения scale/offset
-- **ВСЕГДА** используется квантование **Half16** (IEEE 754 half float)
-- GPU применяет **прямое FMA** без дополнительных вычислений: `v = v_norm * scale + offset`
+- **Хранятся** GPU recovery values (scale < 1.0, offset)
+- **Квантование:** Half16 (IEEE 754 half float)
+- **Чтение:** Без инверсий, значения используются напрямую
+- **GPU:** Простое FMA: `v = v_norm * scale + offset`
+- **Валидация:** Если scale > 1.0 → ошибка, файл нужно пересжать
 
 ---
 
@@ -81,22 +83,23 @@ v_original = v_normalized * (hi - lo) + lo
 
 ## Формат хранения в файле
 
-### Правило определения формата
+### Единственный правильный формат
 
-**НОВЫЙ ФОРМАТ (правильный):**
+**GPU recovery values (hi - lo):**
 ```
-scale[0] < 1.0   →   GPU recovery values (hi - lo), готовы для использования
-```
-
-**СТАРЫЙ ФОРМАТ (устаревший, требует инверсии):**
-```
-scale[0] > 1.0   →   Normalization values 1/(hi - lo), нужна инверсия!
+scale < 1.0   →   Значения для прямого восстановления на GPU
+offset        →   Смещение диапазона
 ```
 
-**Логика детекции:**
+**Правило валидации:**
 ```csharp
-bool needsInversion = metadata.Scale[0] > 1.0f;  // Если scale > 1.0 → старый формат
+if (metadata.Scale[0] > 1.0f) {
+    // ОШИБКА: неправильный формат, файл нужно пересжать!
+    return null;
+}
 ```
+
+**Никаких инверсий при чтении!** Значения из файла передаются в shader напрямую.
 
 ### Структура TLV блока
 
@@ -243,7 +246,7 @@ private byte[] QuantizeScaleOffset(float scale, float offset, HistogramQuantizat
 }
 ```
 
-### 4. Чтение и совместимость (Ktx2MetadataReader.cs)
+### 4. Чтение метаданных (Ktx2MetadataReader.cs)
 
 ```csharp
 public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
@@ -251,25 +254,18 @@ public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
 
     var metadata = ParseKeyValueData(kvdData);
 
-    // СОВМЕСТИМОСТЬ: Автодетект старого формата
-    // NEW format: scale < 1.0 → GPU recovery values
-    // OLD format: scale > 1.0 → normalization values (need inversion!)
-    bool needsInversion = metadata.Scale[0] > 1.0f;
+    if (metadata != null) {
+        Logger.Info($"Scale={metadata.Scale[0]:F4}, Offset={metadata.Offset[0]:F4}");
 
-    if (needsInversion) {
-        Logger.Warn("Detected OLD format (normalization values), inverting for GPU");
-
-        // Инвертируем: scale_inv = 1/scale, offset_inv = -offset/scale
-        for (int i = 0; i < metadata.Scale.Length; i++) {
-            float s = metadata.Scale[i];
-            float o = metadata.Offset[i];
-            metadata.Scale[i] = 1.0f / s;
-            metadata.Offset[i] = -o / s;
+        // Валидация формата
+        if (metadata.Scale[0] > 1.0f) {
+            Logger.Error($"INVALID format: scale={metadata.Scale[0]:F4} > 1.0");
+            Logger.Error("Please re-convert the texture with current version.");
+            return null;
         }
-    } else {
-        Logger.Info("NEW format detected (scale < 1.0), using values directly");
     }
 
+    // Передаём значения в shader напрямую, без инверсий!
     return metadata;
 }
 ```
@@ -406,49 +402,32 @@ v_restored = 0.5 * 0.2 + 0.4 = 0.5 ✅
 
 ## Диагностика проблем
 
-### Симптом: Текстура слишком темная или неправильные цвета
+### Симптом: Ошибка "INVALID histogram format"
 
-**Возможная причина:** Двойная инверсия - новый формат (scale < 1.0) был ошибочно инвертирован
-
-**Решение:**
-1. Проверить правило детекции: `needsInversion = metadata.Scale[0] > 1.0f` (НЕ `< 1.0f`!)
-2. Новый формат (scale < 1.0) использовать напрямую
-3. Старый формат (scale > 1.0) требует инверсии
-
-**Правильный код проверки:**
-```csharp
-// ПРАВИЛЬНАЯ логика детекции
-bool needsInversion = metadata.Scale[0] > 1.0f;
-
-if (needsInversion) {
-    Logger.Warn("OLD format detected, inverting...");
-    for (int i = 0; i < metadata.Scale.Length; i++) {
-        float s = metadata.Scale[i];
-        float o = metadata.Offset[i];
-        metadata.Scale[i] = 1.0f / s;
-        metadata.Offset[i] = -o / s;
-    }
-} else {
-    Logger.Info("NEW format, using directly");
-}
-```
-
-### Симптом: Текстура слишком яркая
-
-**Возможная причина:** Старый формат (scale > 1.0) не был инвертирован
+**Причина:** Файл использует старый/неправильный формат (scale > 1.0)
 
 **Решение:**
-1. Убедиться что правило детекции: `needsInversion = metadata.Scale[0] > 1.0f`
-2. Применить инверсию для старого формата
+1. Пересжать текстуру с текущей версией приложения
+2. Удалить старый KTX2 файл
+3. Запустить конвертацию заново
+
+### Симптом: Текстура слишком темная/яркая
+
+**Возможная причина:** Histogram correction отключена в UI
+
+**Решение:**
+1. Включить "Enable Histogram Correction" в настройках просмотра
+2. Проверить логи: должны быть строки с scale/offset
+3. Убедиться что metadata загружается (логи: "Found histogram metadata")
 
 ### Симптом: Текстура красная/розовая
 
-**Возможная причина:** Shader применяет неправильное преобразование или metadata не читается
+**Возможная причина:** Shader не применяет коррекцию или применяет неправильно
 
 **Решение:**
-1. Проверить что metadata загружается корректно (логи)
-2. Убедиться что shader применяет: `v_original = v_normalized * scale + offset`
-3. Проверить что histogram correction включена в UI
+1. Проверить что shader использует: `v_original = v_normalized * scale + offset`
+2. Убедиться что scale и offset передаются в uniform переменные
+3. Проверить что metadata читается корректно (логи)
 
 ---
 
@@ -467,9 +446,9 @@ if (needsInversion) {
 ### При чтении метаданных
 
 - [ ] Парсинг TLV извлекает scale и offset из payload
-- [ ] Проверяется формат: `if (scale[0] < 1.0)` → новый формат
-- [ ] Если старый формат → применить инверсию для совместимости
-- [ ] Значения передаются в shader **без дополнительной обработки**
+- [ ] Валидация: `if (scale[0] > 1.0)` → ошибка, файл нужно пересжать
+- [ ] Значения передаются в shader **напрямую, без инверсий**
+- [ ] Логирование scale/offset для отладки
 
 ### В шейдере
 
@@ -481,19 +460,21 @@ if (needsInversion) {
 
 ## Заключение
 
-### Единственный правильный формат:
+### Единственный формат (упрощённый):
 
 1. **CPU:** Нормализует текстуру прямым преобразованием
-2. **Файл:** Хранит **инвертированные** значения (scale < 1.0)
+2. **Файл:** Хранит **GPU recovery values** (scale < 1.0)
 3. **GPU:** Применяет простое FMA для восстановления
+4. **Чтение:** Никаких инверсий! Значения используются напрямую
 
 ### Преимущества:
 
-- ✅ Простота на GPU (одна FMA операция)
-- ✅ Совместимость с любыми шейдерами (GLSL, HLSL, Metal)
-- ✅ Обратная совместимость через автодетект формата
-- ✅ Компактность (4 байта Half16 для scalar)
-- ✅ Математически точное восстановление
+- ✅ **Простота:** Один формат, нет legacy кода
+- ✅ **Производительность:** Одна FMA операция на GPU
+- ✅ **Совместимость:** Работает с любыми шейдерами (GLSL, HLSL, Metal)
+- ✅ **Компактность:** 4 байта Half16 для scalar mode
+- ✅ **Точность:** Математически точное восстановление
+- ✅ **Надёжность:** Валидация формата при чтении
 
 ### Ссылки:
 

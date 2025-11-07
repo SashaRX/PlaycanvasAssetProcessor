@@ -81,36 +81,14 @@ public static class Ktx2MetadataReader {
             var metadata = ParseKeyValueData(kvdData);
             if (metadata != null) {
                 logger.Info("[SUCCESS] Found histogram metadata in KTX2 file");
+                logger.Info($"Scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], Offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
 
-                // COMPATIBILITY: Check if metadata contains direct or inverse values
-                // NEW format (correct): scale < 1.0 → GPU recovery values (hi - lo)
-                // OLD format (broken): scale > 1.0 → normalization values 1/(hi - lo)
-                // CRITICAL: Inverted logic compared to previous implementation!
-                bool needsInversion = metadata.Scale[0] > 1.0f;
-
-                if (needsInversion) {
-                    logger.Warn("Detected OLD format histogram metadata (normalization values), inverting for GPU compatibility");
-                    logger.Info($"Before inversion: scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
-
-                    // Invert: scale_inv = 1/scale, offset_inv = -offset/scale
-                    float[] scaleInv = new float[metadata.Scale.Length];
-                    float[] offsetInv = new float[metadata.Offset.Length];
-
-                    for (int i = 0; i < metadata.Scale.Length; i++) {
-                        scaleInv[i] = 1.0f / metadata.Scale[i];
-                        offsetInv[i] = -metadata.Offset[i] / metadata.Scale[i];
-                    }
-
-                    metadata = new HistogramMetadata {
-                        Scale = scaleInv,
-                        Offset = offsetInv
-                    };
-
-                    logger.Info($"After inversion: scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
-                    logger.Info("GPU will now correctly apply: v_original = v_normalized * scale + offset");
-                } else {
-                    logger.Info("NEW format detected (scale < 1.0), using values directly for GPU");
-                    logger.Info($"Scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], Offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
+                // Verify format correctness
+                if (metadata.Scale[0] > 1.0f) {
+                    logger.Error($"INVALID histogram format detected: scale={metadata.Scale[0]:F4} > 1.0");
+                    logger.Error("This file uses old/broken format. Please re-convert the texture with current version.");
+                    logger.Error("Expected: scale < 1.0 (GPU recovery values)");
+                    return null;
                 }
             } else {
                 logger.Info("No 'pc.meta' key found in KVD section");

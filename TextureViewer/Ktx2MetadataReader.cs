@@ -25,7 +25,7 @@ public static class Ktx2MetadataReader {
     /// </summary>
     public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
         try {
-            logger.Debug($"Reading histogram metadata from file: {filePath}");
+            logger.Info($"[Ktx2MetadataReader] Reading histogram metadata from file: {filePath}");
 
             if (!File.Exists(filePath)) {
                 logger.Warn($"File not found: {filePath}");
@@ -41,6 +41,8 @@ public static class Ktx2MetadataReader {
                 logger.Warn("Not a valid KTX2 file (identifier mismatch)");
                 return null;
             }
+
+            logger.Info("[Ktx2MetadataReader] KTX2 identifier verified");
 
             // Read KTX2 header fields (according to KTX2 spec)
             uint vkFormat = reader.ReadUInt32();           // +12: VkFormat
@@ -61,9 +63,11 @@ public static class Ktx2MetadataReader {
             uint kvdByteOffset = reader.ReadUInt32();      // +56: kvdByteOffset
             uint kvdByteLength = reader.ReadUInt32();      // +60: kvdByteLength
 
+            logger.Info($"[Ktx2MetadataReader] KVD: offset={kvdByteOffset}, length={kvdByteLength}");
+
             // Check if KVD exists
             if (kvdByteLength == 0) {
-                logger.Debug("No Key-Value Data in this KTX2 file");
+                logger.Info("[Ktx2MetadataReader] No Key-Value Data in this KTX2 file");
                 return null;
             }
 
@@ -72,11 +76,12 @@ public static class Ktx2MetadataReader {
 
             // Read entire KVD section
             byte[] kvdData = reader.ReadBytes((int)kvdByteLength);
+            logger.Info($"[Ktx2MetadataReader] Read {kvdData.Length} bytes of KVD data");
 
             // Parse KVD to find "pc.meta" key
             var metadata = ParseKeyValueData(kvdData);
             if (metadata != null) {
-                logger.Debug($"Found histogram metadata: {metadata.Scale.Length} channel(s)");
+                logger.Info($"[Ktx2MetadataReader] Found histogram metadata: {metadata.Scale.Length} channel(s)");
 
                 // Verify format correctness
                 if (metadata.Scale[0] > 1.0f) {
@@ -131,11 +136,11 @@ public static class Ktx2MetadataReader {
             int valueStart = offset + keyLength;
             int valueLength = (int)keyAndValueByteSize - keyLength;
 
-            logger.Debug($"KVD entry: key=\"{key}\", valueLength={valueLength}");
+            logger.Info($"[Ktx2MetadataReader] KVD entry: key=\"{key}\", valueLength={valueLength}");
 
             // Check if this is "pc.meta"
             if (key == "pc.meta") {
-                logger.Debug($"Found pc.meta key with {valueLength} bytes of TLV data");
+                logger.Info($"[Ktx2MetadataReader] Found pc.meta key with {valueLength} bytes of TLV data");
                 byte[] tlvData = new byte[valueLength];
                 Array.Copy(kvdData, valueStart, tlvData, 0, valueLength);
                 return ParseTLVHistogramData(tlvData);
@@ -147,7 +152,7 @@ public static class Ktx2MetadataReader {
             offset += padding;
         }
 
-        logger.Debug("No pc.meta key found in KTX2 Key-Value Data");
+        logger.Info("[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data");
         return null;
     }
 
@@ -172,7 +177,7 @@ public static class Ktx2MetadataReader {
             byte[] payload = new byte[length];
             Array.Copy(tlvData, offset, payload, 0, length);
 
-            logger.Debug($"TLV block: type=0x{type:X2}, flags=0x{flags:X2}, length={length}");
+            logger.Info($"[Ktx2MetadataReader] TLV block: type=0x{type:X2}, flags=0x{flags:X2}, length={length}");
 
             // Check if this is a histogram block
             var histogramMeta = ParseHistogramTLV(type, flags, payload);
@@ -199,22 +204,23 @@ public static class Ktx2MetadataReader {
 
         switch (type) {
             case 0x01: // HIST_SCALAR
-                logger.Debug("Found HIST_SCALAR metadata");
+                logger.Info("[Ktx2MetadataReader] Found HIST_SCALAR metadata");
                 return ParseScalarHistogram(payload, quantization);
 
             case 0x02: // HIST_RGB
-                logger.Debug("Found HIST_RGB metadata");
+                logger.Info("[Ktx2MetadataReader] Found HIST_RGB metadata");
                 return ParseScalarHistogram(payload, quantization); // Same format as scalar
 
             case 0x03: // HIST_PER_CHANNEL_3 (RGB)
-                logger.Debug("Found HIST_PER_CHANNEL_3 metadata");
+                logger.Info("[Ktx2MetadataReader] Found HIST_PER_CHANNEL_3 metadata");
                 return ParsePerChannelHistogram(payload, 3, quantization);
 
             case 0x04: // HIST_PER_CHANNEL_4 (RGBA)
-                logger.Debug("Found HIST_PER_CHANNEL_4 metadata");
+                logger.Info("[Ktx2MetadataReader] Found HIST_PER_CHANNEL_4 metadata");
                 return ParsePerChannelHistogram(payload, 4, quantization);
 
             default:
+                logger.Info($"[Ktx2MetadataReader] Unknown TLV type: 0x{type:X2} (not a histogram block)");
                 return null; // Not a histogram block
         }
     }

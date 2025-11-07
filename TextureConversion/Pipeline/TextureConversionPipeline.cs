@@ -16,14 +16,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
     public class TextureConversionPipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly MipGenerator _mipGenerator;
-        private readonly ToktxWrapper _toktxWrapper;
+        private readonly KtxCreateWrapper _ktxCreateWrapper;
         private readonly ToksvigProcessor _toksvigProcessor;
         private readonly NormalMapMatcher _normalMapMatcher;
         private readonly HistogramAnalyzer _histogramAnalyzer;
 
-        public TextureConversionPipeline(string? toktxExecutablePath = null) {
+        public TextureConversionPipeline(string? ktxExecutablePath = null) {
             _mipGenerator = new MipGenerator();
-            _toktxWrapper = new ToktxWrapper(toktxExecutablePath ?? "toktx");
+            _ktxCreateWrapper = new KtxCreateWrapper(ktxExecutablePath ?? "ktx");
             _toksvigProcessor = new ToksvigProcessor();
             _normalMapMatcher = new NormalMapMatcher();
             _histogramAnalyzer = new HistogramAnalyzer();
@@ -57,9 +57,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             try {
                 Logger.Info($"Starting conversion: {inputPath}");
 
-                // Проверяем доступность toktx
-                if (!await _toktxWrapper.IsAvailableAsync()) {
-                    throw new Exception("toktx executable not found. Please specify path to toktx.exe in settings or install KTX-Software");
+                // Проверяем доступность ktx
+                if (!await _ktxCreateWrapper.IsAvailableAsync()) {
+                    throw new Exception("ktx executable not found. Please specify path to ktx.exe in settings (e.g., KTX-Software/build_ktx/Release/ktx.exe)");
                 }
 
                 // Загружаем изображение
@@ -351,52 +351,27 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         }
                     }
 
-                    // Упаковываем мипмапы в KTX2 используя toktx
-                    Logger.Info("=== PACKING TO KTX2 WITH TOKTX ===");
+                    // Упаковываем мипмапы в KTX2 используя ktx create
+                    Logger.Info("=== PACKING TO KTX2 WITH KTX CREATE ===");
                     Logger.Info($"  Mipmaps: {tempMipmapPaths.Count}");
                     Logger.Info($"  Output: {outputPath}");
                     Logger.Info($"  Compression: {compressionSettings.CompressionFormat}");
                     if (kvdBinaryFiles != null) {
                         Logger.Info($"  KVD files: {kvdBinaryFiles.Count}");
+                        Logger.Warn("  WARNING: KVD metadata injection is temporarily disabled (libktx crashes)");
+                        Logger.Warn("  Histogram metadata will NOT be embedded in the KTX2 file");
                     }
 
-                    var ktxResult = await _toktxWrapper.PackMipmapsAsync(
+                    // ВРЕМЕННО: отключаем передачу метаданных, так как libktx падает при ktxHashList_AddKVPair
+                    var ktxResult = await _ktxCreateWrapper.PackMipmapsAsync(
                         tempMipmapPaths,
                         outputPath,
                         compressionSettings,
-                        kvdBinaryFiles
+                        null  // Передаём null вместо kvdBinaryFiles, чтобы избежать падения libktx
                     );
 
                     if (!ktxResult.Success) {
-                        throw new Exception($"toktx failed: {ktxResult.Error}");
-                    }
-
-                    // POST-PROCESSING: Inject TLV metadata if available
-                    if (kvdBinaryFiles != null && kvdBinaryFiles.Count > 0) {
-                        Logger.Info("=== POST-PROCESSING: METADATA INJECTION ===");
-
-                        // Получаем директорию toktx для загрузки ktx.dll
-                        var ktxDllDirectory = _toktxWrapper.ToktxDirectory;
-                        if (!string.IsNullOrEmpty(ktxDllDirectory)) {
-                            Logger.Info($"toktx directory: {ktxDllDirectory}");
-                        } else {
-                            Logger.Warn("toktx directory not found (toktx might be in PATH)");
-                        }
-
-                        foreach (var kvPair in kvdBinaryFiles) {
-                            Logger.Info($"Injecting metadata: key='{kvPair.Key}', file='{kvPair.Value}'");
-                            bool injected = Ktx2MetadataInjector.InjectMetadata(
-                                outputPath,
-                                kvPair.Value,
-                                kvPair.Key,
-                                ktxDllDirectory
-                            );
-                            if (injected) {
-                                Logger.Info($"✓ Metadata '{kvPair.Key}' injected successfully");
-                            } else {
-                                Logger.Warn($"✗ Failed to inject metadata '{kvPair.Key}'");
-                            }
-                        }
+                        throw new Exception($"ktx create failed: {ktxResult.Error}");
                     }
 
                     result.Success = true;

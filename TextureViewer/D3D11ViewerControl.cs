@@ -51,14 +51,11 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
             throw new InvalidOperationException("Failed to create host window for D3D11 renderer");
         }
 
-        logger.Info($"Created D3D11 host window: 0x{hwnd:X}");
-
         // Initialize D3D11 renderer
         try {
-            logger.Info($"Creating D3D11TextureRenderer: {currentWidth}x{currentHeight}");
+            logger.Debug($"Initializing D3D11TextureRenderer: {currentWidth}x{currentHeight}");
             renderer = new D3D11TextureRenderer();
             renderer.Initialize(hwnd, currentWidth, currentHeight);
-            logger.Info("D3D11TextureRenderer initialized successfully");
 
             // Render current texture if one was set before renderer was ready
             if (currentTexture != null) {
@@ -73,7 +70,7 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
     }
 
     protected override void DestroyWindowCore(HandleRef hwnd) {
-        logger.Info("Destroying D3D11 host window");
+        logger.Debug("Destroying D3D11 host window");
         DestroyWindow(hwnd.Handle);
     }
 
@@ -89,7 +86,7 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
                 currentHeight = newHeight;
 
                 try {
-                    logger.Info($"Resizing D3D11 renderer to {newWidth}x{newHeight}");
+                    logger.Debug($"Resizing D3D11 renderer to {newWidth}x{newHeight}");
                     renderer?.Resize(newWidth, newHeight);
 
                     // Re-render current texture at new size
@@ -116,7 +113,7 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
         }
 
         try {
-            logger.Info($"Loading KTX2 file: {filePath}");
+            logger.Debug($"Loading KTX2: {filePath}");
 
             // Dispose previous texture
             currentTexture?.Dispose();
@@ -124,9 +121,6 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
 
             // Load KTX2 via libktx
             currentTexture = Ktx2TextureLoader.LoadFromFile(filePath);
-
-            logger.Info($"Loaded KTX2: {currentTexture.Width}x{currentTexture.Height}, " +
-                       $"{currentTexture.MipCount} mips, format: {currentTexture.SourceFormat}");
 
             // Render if renderer is ready
             if (renderer != null) {
@@ -149,7 +143,7 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
         }
 
         try {
-            logger.Info($"Loading PNG file: {filePath}");
+            logger.Debug($"Loading PNG: {filePath}");
 
             // Dispose previous texture
             currentTexture?.Dispose();
@@ -157,8 +151,6 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
 
             // Load PNG via ImageSharp
             currentTexture = PngTextureLoader.LoadFromFile(filePath);
-
-            logger.Info($"Loaded PNG: {currentTexture.Width}x{currentTexture.Height}");
 
             // Render if renderer is ready
             if (renderer != null) {
@@ -189,7 +181,6 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
         }
 
         try {
-            logger.Info("Loading and rendering texture to D3D11 surface");
             renderer.LoadTexture(currentTexture);
             renderer.Render();
         } catch (Exception ex) {
@@ -201,7 +192,7 @@ public sealed class D3D11ViewerControl : HwndHost, IDisposable {
     protected override void Dispose(bool disposing) {
         if (!isDisposed) {
             if (disposing) {
-                logger.Info("Disposing D3D11ViewerControl");
+                logger.Debug("Disposing D3D11ViewerControl");
 
                 currentTexture?.Dispose();
                 currentTexture = null;

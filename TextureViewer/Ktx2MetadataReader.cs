@@ -25,7 +25,7 @@ public static class Ktx2MetadataReader {
     /// </summary>
     public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
         try {
-            logger.Info($"[Ktx2MetadataReader] Reading histogram metadata from file: {filePath}");
+            logger.Debug($"Reading histogram metadata from file: {filePath}");
 
             if (!File.Exists(filePath)) {
                 logger.Warn($"File not found: {filePath}");
@@ -61,12 +61,9 @@ public static class Ktx2MetadataReader {
             uint kvdByteOffset = reader.ReadUInt32();      // +56: kvdByteOffset
             uint kvdByteLength = reader.ReadUInt32();      // +60: kvdByteLength
 
-            logger.Info($"KTX2 header: {pixelWidth}x{pixelHeight}, {levelCount} levels, vkFormat={vkFormat}");
-            logger.Info($"KVD section: offset={kvdByteOffset}, length={kvdByteLength}");
-
             // Check if KVD exists
             if (kvdByteLength == 0) {
-                logger.Info("No Key-Value Data in this KTX2 file");
+                logger.Debug("No Key-Value Data in this KTX2 file");
                 return null;
             }
 
@@ -75,13 +72,11 @@ public static class Ktx2MetadataReader {
 
             // Read entire KVD section
             byte[] kvdData = reader.ReadBytes((int)kvdByteLength);
-            logger.Info($"Read {kvdData.Length} bytes of KVD data");
 
             // Parse KVD to find "pc.meta" key
             var metadata = ParseKeyValueData(kvdData);
             if (metadata != null) {
-                logger.Info("[SUCCESS] Found histogram metadata in KTX2 file");
-                logger.Info($"Scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], Offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
+                logger.Debug($"Found histogram metadata: {metadata.Scale.Length} channel(s)");
 
                 // Verify format correctness
                 if (metadata.Scale[0] > 1.0f) {
@@ -90,8 +85,6 @@ public static class Ktx2MetadataReader {
                     logger.Error("Expected: scale < 1.0 (GPU recovery values)");
                     return null;
                 }
-            } else {
-                logger.Info("No 'pc.meta' key found in KVD section");
             }
 
             return metadata;
@@ -142,7 +135,7 @@ public static class Ktx2MetadataReader {
 
             // Check if this is "pc.meta"
             if (key == "pc.meta") {
-                logger.Info($"Found pc.meta key with {valueLength} bytes of TLV data");
+                logger.Debug($"Found pc.meta key with {valueLength} bytes of TLV data");
                 byte[] tlvData = new byte[valueLength];
                 Array.Copy(kvdData, valueStart, tlvData, 0, valueLength);
                 return ParseTLVHistogramData(tlvData);
@@ -206,19 +199,19 @@ public static class Ktx2MetadataReader {
 
         switch (type) {
             case 0x01: // HIST_SCALAR
-                logger.Info("Found HIST_SCALAR metadata");
+                logger.Debug("Found HIST_SCALAR metadata");
                 return ParseScalarHistogram(payload, quantization);
 
             case 0x02: // HIST_RGB
-                logger.Info("Found HIST_RGB metadata");
+                logger.Debug("Found HIST_RGB metadata");
                 return ParseScalarHistogram(payload, quantization); // Same format as scalar
 
             case 0x03: // HIST_PER_CHANNEL_3 (RGB)
-                logger.Info("Found HIST_PER_CHANNEL_3 metadata");
+                logger.Debug("Found HIST_PER_CHANNEL_3 metadata");
                 return ParsePerChannelHistogram(payload, 3, quantization);
 
             case 0x04: // HIST_PER_CHANNEL_4 (RGBA)
-                logger.Info("Found HIST_PER_CHANNEL_4 metadata");
+                logger.Debug("Found HIST_PER_CHANNEL_4 metadata");
                 return ParsePerChannelHistogram(payload, 4, quantization);
 
             default:
@@ -267,8 +260,6 @@ public static class Ktx2MetadataReader {
             scale = BitConverter.ToSingle(payload, 0);
             offset = BitConverter.ToSingle(payload, 4);
         }
-
-        logger.Info($"Histogram metadata: scale={scale:F4}, offset={offset:F4} (quantization={quantization})");
 
         return new HistogramMetadata {
             Scale = new[] { scale },
@@ -326,11 +317,6 @@ public static class Ktx2MetadataReader {
                 scale[i] = BitConverter.ToSingle(payload, i * 4);
                 offset[i] = BitConverter.ToSingle(payload, channelCount * 4 + i * 4);
             }
-        }
-
-        logger.Info($"Per-channel histogram metadata: channels={channelCount}, quantization={quantization}");
-        for (int i = 0; i < channelCount; i++) {
-            logger.Info($"  Channel {i}: scale={scale[i]:F4}, offset={offset[i]:F4}");
         }
 
         return new HistogramMetadata {

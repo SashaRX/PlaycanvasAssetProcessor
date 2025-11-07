@@ -318,6 +318,11 @@ namespace AssetProcessor.TextureConversion.Analysis {
 
             float range = hi - lo;
 
+            // Safety check: avoid division by zero or invalid range
+            if (range < 0.0001f || float.IsNaN(range) || float.IsInfinity(range)) {
+                return result; // Return unmodified if range is too small or invalid
+            }
+
             Parallel.For(0, result.Height, y => {
                 var pixelRow = result.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
@@ -356,6 +361,13 @@ namespace AssetProcessor.TextureConversion.Analysis {
         /// </summary>
         public Image<Rgba32> ApplySoftKnee(Image<Rgba32> image, float lo, float hi, float kneeWidth) {
             var result = image.Clone();
+
+            float range = hi - lo;
+
+            // Safety check: avoid division by zero or invalid range
+            if (range < 0.0001f || float.IsNaN(range) || float.IsInfinity(range)) {
+                return result; // Return unmodified if range is too small or invalid
+            }
 
             Parallel.For(0, result.Height, y => {
                 var pixelRow = result.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;

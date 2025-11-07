@@ -294,9 +294,16 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // СУПЕРКОМПРЕССИЯ (Zstandard)
             // ============================================
+            // ВАЖНО: ktx create НЕ ПОДДЕРЖИВАЕТ Zstd для ETC1S/BasisLZ!
+            // Можно использовать только с UASTC
             if (settings.KTX2Supercompression == KTX2SupercompressionType.Zstandard) {
-                args.Add("--zstd");
-                args.Add(settings.KTX2ZstdLevel.ToString()); // Используем уровень из настроек
+                if (isUASTC) {
+                    args.Add("--zstd");
+                    args.Add(settings.KTX2ZstdLevel.ToString());
+                } else {
+                    Logger.Warn("Zstd supercompression is not supported with ETC1S/BasisLZ in ktx create");
+                    Logger.Warn("Ignoring Zstd setting. Use UASTC format if you need Zstd compression.");
+                }
             }
 
             // ============================================

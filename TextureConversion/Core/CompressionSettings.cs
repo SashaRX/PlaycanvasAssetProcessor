@@ -190,13 +190,9 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Настройки анализа гистограммы для оптимизации сжатия
+        /// Текстура всегда нормализуется (preprocessing), scale/offset записываются в KTX2 для восстановления
         /// </summary>
         public HistogramSettings? HistogramAnalysis { get; set; } = null;
-
-        /// <summary>
-        /// Записывать параметры анализа гистограммы в KTX2 метаданные
-        /// </summary>
-        public bool WriteHistogramParams { get; set; } = true;
 
         /// <summary>
         /// Создает настройки по умолчанию для ETC1S

@@ -266,105 +266,93 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             Logger.Info($"Histogram analysis successful");
                             Logger.Info($"  Scale: [{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}]");
                             Logger.Info($"  Offset: [{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
-                            Logger.Info($"  Processing mode: {compressionSettings.HistogramAnalysis.ProcessingMode}");
-                            Logger.Info($"  Quantization: {compressionSettings.HistogramAnalysis.Quantization}");
+                            Logger.Info($"  Quality mode: {compressionSettings.HistogramAnalysis.Quality}");
 
-                            // Применяем Preprocessing если включен
-                            if (compressionSettings.HistogramAnalysis.ProcessingMode == HistogramProcessingMode.Preprocessing) {
-                                Logger.Info("=== HISTOGRAM PREPROCESSING (LOSSY) ===");
-                                Logger.Info("Applying transformation to texture pixels before compression");
+                            // ВСЕГДА применяем Preprocessing (нормализацию текстуры)
+                            Logger.Info("=== HISTOGRAM PREPROCESSING ===");
+                            Logger.Info("Normalizing texture before compression, scale/offset will be stored in KVD for GPU recovery");
 
-                                // Применяем трансформацию к ВСЕМ мипмапам
-                                for (int i = 0; i < mipmaps.Count; i++) {
-                                    Image<Rgba32> transformedMip;
+                            // Применяем трансформацию к ВСЕМ мипмапам
+                            for (int i = 0; i < mipmaps.Count; i++) {
+                                Image<Rgba32> transformedMip;
 
-                                    if (compressionSettings.HistogramAnalysis.Mode == HistogramMode.PercentileWithKnee) {
-                                        // Soft-knee
-                                        float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth * (histogramResult.RangeHigh - histogramResult.RangeLow);
-                                        Logger.Info($"Applying soft-knee (width={kneeWidth:F4}) to mip {i}");
-                                        transformedMip = _histogramAnalyzer.ApplySoftKnee(
-                                            mipmaps[i],
-                                            histogramResult.RangeLow,
-                                            histogramResult.RangeHigh,
-                                            kneeWidth
-                                        );
-                                    } else {
-                                        // Winsorization (жёсткое клампирование)
-                                        Logger.Info($"Applying winsorization to mip {i}");
-                                        transformedMip = _histogramAnalyzer.ApplyWinsorization(
-                                            mipmaps[i],
-                                            histogramResult.RangeLow,
-                                            histogramResult.RangeHigh
-                                        );
-                                    }
-
-                                    // Заменяем мипмап
-                                    mipmaps[i].Dispose();
-                                    mipmaps[i] = transformedMip;
+                                if (compressionSettings.HistogramAnalysis.Mode == HistogramMode.PercentileWithKnee) {
+                                    // Soft-knee (High Quality)
+                                    float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth * (histogramResult.RangeHigh - histogramResult.RangeLow);
+                                    Logger.Info($"Applying soft-knee (width={kneeWidth:F4}) to mip {i}");
+                                    transformedMip = _histogramAnalyzer.ApplySoftKnee(
+                                        mipmaps[i],
+                                        histogramResult.RangeLow,
+                                        histogramResult.RangeHigh,
+                                        kneeWidth
+                                    );
+                                } else {
+                                    // Winsorization (Fast mode - жёсткое клампирование)
+                                    Logger.Info($"Applying winsorization to mip {i}");
+                                    transformedMip = _histogramAnalyzer.ApplyWinsorization(
+                                        mipmaps[i],
+                                        histogramResult.RangeLow,
+                                        histogramResult.RangeHigh
+                                    );
                                 }
 
-                                Logger.Info($"Preprocessing applied to {mipmaps.Count} mipmaps");
+                                // Заменяем мипмап
+                                mipmaps[i].Dispose();
+                                mipmaps[i] = transformedMip;
+                            }
 
-                                // Пересохраняем трансформированные мипмапы
-                                for (int i = 0; i < mipmaps.Count; i++) {
-                                    var mipPath = tempMipmapPaths[i];
-                                    await mipmaps[i].SaveAsPngAsync(mipPath);
-                                    Logger.Info($"✓ Preprocessed mip {i} saved to {mipPath}");
-                                }
-                            } else {
-                                Logger.Info("=== METADATA-ONLY MODE (LOSSLESS) ===");
-                                Logger.Info("scale/offset will be applied on GPU, no preprocessing");
+                            Logger.Info($"Preprocessing applied to {mipmaps.Count} mipmaps");
+
+                            // Пересохраняем трансформированные мипмапы
+                            for (int i = 0; i < mipmaps.Count; i++) {
+                                var mipPath = tempMipmapPaths[i];
+                                await mipmaps[i].SaveAsPngAsync(mipPath);
+                                Logger.Info($"✓ Preprocessed mip {i} saved to {mipPath}");
                             }
 
                             // Создаём TLV метаданные
                             using var tlvWriter = new TLVWriter();
 
-                            // Для Preprocessing режима нужно инвертировать scale/offset
-                            // т.к. текстура уже нормализована: v_norm = (v - lo) / (hi - lo)
-                            // и на GPU нужно применить обратное преобразование: v = v_norm * (hi - lo) + lo
-                            HistogramResult histogramForTLV = histogramResult;
+                            // ВСЕГДА инвертируем scale/offset для восстановления на GPU
+                            // т.к. текстура нормализована: v_norm = (v - lo) / (hi - lo)
+                            // GPU применит обратное преобразование: v_original = v_norm * (hi - lo) + lo
+                            Logger.Info("=== INVERTING SCALE/OFFSET FOR GPU RECOVERY ===");
+                            Logger.Info("Texture normalized, computing inverse transform for GPU denormalization");
+                            Logger.Info($"Forward transform: scale=[{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
 
-                            if (compressionSettings.HistogramAnalysis.ProcessingMode == HistogramProcessingMode.Preprocessing) {
-                                Logger.Info("=== INVERTING SCALE/OFFSET FOR PREPROCESSING MODE ===");
-                                Logger.Info("Texture already normalized, computing inverse transform for GPU denormalization");
-                                Logger.Info($"Forward transform: scale=[{string.Join(", ", histogramResult.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramResult.Offset.Select(o => o.ToString("F4")))}]");
+                            // Создаём копию для TLV с инвертированными параметрами
+                            var histogramForTLV = new HistogramResult {
+                                Success = histogramResult.Success,
+                                Mode = histogramResult.Mode,
+                                ChannelMode = histogramResult.ChannelMode,
+                                Scale = new float[histogramResult.Scale.Length],
+                                Offset = new float[histogramResult.Offset.Length],
+                                RangeLow = histogramResult.RangeLow,
+                                RangeHigh = histogramResult.RangeHigh,
+                                TailFraction = histogramResult.TailFraction,
+                                KneeApplied = histogramResult.KneeApplied,
+                                TotalPixels = histogramResult.TotalPixels,
+                                Error = histogramResult.Error,
+                                Warnings = new List<string>(histogramResult.Warnings)
+                            };
 
-                                // Создаём копию для TLV с инвертированными параметрами
-                                histogramForTLV = new HistogramResult {
-                                    Success = histogramResult.Success,
-                                    Mode = histogramResult.Mode,
-                                    ChannelMode = histogramResult.ChannelMode,
-                                    Scale = new float[histogramResult.Scale.Length],
-                                    Offset = new float[histogramResult.Offset.Length],
-                                    RangeLow = histogramResult.RangeLow,
-                                    RangeHigh = histogramResult.RangeHigh,
-                                    TailFraction = histogramResult.TailFraction,
-                                    KneeApplied = histogramResult.KneeApplied,
-                                    TotalPixels = histogramResult.TotalPixels,
-                                    Error = histogramResult.Error,
-                                    Warnings = new List<string>(histogramResult.Warnings)
-                                };
+                            // Инвертируем каждый канал: scale_inv = 1/scale, offset_inv = -offset/scale
+                            for (int i = 0; i < histogramResult.Scale.Length; i++) {
+                                float scale = histogramResult.Scale[i];
+                                float offset = histogramResult.Offset[i];
 
-                                // Инвертируем каждый канал: scale_inv = 1/scale, offset_inv = -offset/scale
-                                for (int i = 0; i < histogramResult.Scale.Length; i++) {
-                                    float scale = histogramResult.Scale[i];
-                                    float offset = histogramResult.Offset[i];
-
-                                    histogramForTLV.Scale[i] = 1.0f / scale;
-                                    histogramForTLV.Offset[i] = -offset / scale;
-                                }
-
-                                Logger.Info($"Inverse transform: scale=[{string.Join(", ", histogramForTLV.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramForTLV.Offset.Select(o => o.ToString("F4")))}]");
-                                Logger.Info("GPU will apply: v_original = fma(v_normalized, scale, offset)");
+                                histogramForTLV.Scale[i] = 1.0f / scale;
+                                histogramForTLV.Offset[i] = -offset / scale;
                             }
 
-                            // Записываем результат анализа с выбранным квантованием
-                            tlvWriter.WriteHistogramResult(histogramForTLV, compressionSettings.HistogramAnalysis.Quantization);
+                            Logger.Info($"Inverse transform: scale=[{string.Join(", ", histogramForTLV.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", histogramForTLV.Offset.Select(o => o.ToString("F4")))}]");
+                            Logger.Info("GPU will apply: v_original = fma(v_normalized, scale, offset)");
 
-                            // Опционально записываем параметры анализа
-                            if (compressionSettings.WriteHistogramParams) {
-                                tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
-                            }
+                            // Записываем результат анализа (Half16 формат)
+                            tlvWriter.WriteHistogramResult(histogramForTLV, HistogramQuantization.Half16);
+
+                            // ВСЕГДА записываем параметры анализа для справки
+                            tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
 
                             // Сохраняем TLV в временный файл
                             var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");

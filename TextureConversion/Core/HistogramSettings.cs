@@ -1,59 +1,50 @@
 namespace AssetProcessor.TextureConversion.Core {
     /// <summary>
-    /// Настройки анализа гистограммы
+    /// Упрощённые настройки анализа гистограммы
+    /// Текстура всегда нормализуется перед сжатием (preprocessing), scale/offset записываются в KVD
     /// </summary>
     public class HistogramSettings {
         /// <summary>
         /// Режим анализа гистограммы
+        /// Off = отключено, PercentileWithKnee = включён soft-knee (устанавливается автоматически из Quality)
         /// </summary>
         public HistogramMode Mode { get; set; } = HistogramMode.Off;
 
         /// <summary>
-        /// Режим анализа каналов
+        /// Режим качества preprocessing (HighQuality или Fast)
+        /// Автоматически настраивает перцентили, knee, и другие параметры
+        /// </summary>
+        public HistogramQuality Quality { get; set; } = HistogramQuality.HighQuality;
+
+        /// <summary>
+        /// Режим анализа каналов (по умолчанию - усреднённая яркость)
         /// </summary>
         public HistogramChannelMode ChannelMode { get; set; } = HistogramChannelMode.AverageLuminance;
 
         /// <summary>
-        /// Нижний перцентиль для устойчивого анализа (0.0-100.0, по умолчанию 0.5%)
-        /// Используется для определения минимального значения диапазона с учётом выбросов
+        /// Нижний перцентиль (автоматически устанавливается из Quality, можно переопределить)
         /// </summary>
         public float PercentileLow { get; set; } = 0.5f;
 
         /// <summary>
-        /// Верхний перцентиль для устойчивого анализа (0.0-100.0, по умолчанию 99.5%)
-        /// Используется для определения максимального значения диапазона с учётом выбросов
+        /// Верхний перцентиль (автоматически устанавливается из Quality, можно переопределить)
         /// </summary>
         public float PercentileHigh { get; set; } = 99.5f;
 
         /// <summary>
-        /// Ширина мягкого колена (knee) в долях диапазона (0.0-1.0, по умолчанию 0.02 = 2%)
-        /// Применяется только в режиме PercentileWithKnee
-        /// Определяет ширину зоны сглаживания для выбросов
+        /// Ширина мягкого колена (автоматически устанавливается из Quality, можно переопределить)
         /// </summary>
         public float KneeWidth { get; set; } = 0.02f;
 
         /// <summary>
-        /// Порог доли хвостов гистограммы для автоматического включения soft-knee (0.0-1.0, по умолчанию 0.005 = 0.5%)
-        /// Если доля пикселей за пределами перцентилей превышает этот порог, включается предупреждение
-        /// </summary>
-        public float TailThreshold { get; set; } = 0.005f;
-
-        /// <summary>
-        /// Минимальный порог применения нормализации
-        /// Если диапазон (hi - lo) меньше этого значения, нормализация не применяется
-        /// Предотвращает усиление шума на почти константных текстурах
+        /// Минимальный порог применения нормализации (предотвращает усиление шума)
         /// </summary>
         public float MinRangeThreshold { get; set; } = 0.01f;
 
         /// <summary>
-        /// Режим обработки: MetadataOnly (lossless) или Preprocessing (lossy)
+        /// Порог доли хвостов гистограммы для предупреждений
         /// </summary>
-        public HistogramProcessingMode ProcessingMode { get; set; } = HistogramProcessingMode.MetadataOnly;
-
-        /// <summary>
-        /// Формат квантования метаданных (Half16, PackedUInt32, Float32)
-        /// </summary>
-        public HistogramQuantization Quantization { get; set; } = HistogramQuantization.Half16;
+        public float TailThreshold { get; set; } = 0.005f;
 
         /// <summary>
         /// Создаёт настройки по умолчанию (анализ отключён)
@@ -65,26 +56,52 @@ namespace AssetProcessor.TextureConversion.Core {
         }
 
         /// <summary>
-        /// Создаёт настройки с перцентилями (устойчивый анализ)
+        /// Создаёт настройки высокого качества (рекомендуется)
+        /// PercentileWithKnee (0.5%, 99.5%), knee=2%, soft-knee сглаживание
         /// </summary>
-        public static HistogramSettings CreatePercentile(float pLow = 0.5f, float pHigh = 99.5f) {
+        public static HistogramSettings CreateHighQuality() {
             return new HistogramSettings {
-                Mode = HistogramMode.Percentile,
-                PercentileLow = pLow,
-                PercentileHigh = pHigh
+                Mode = HistogramMode.PercentileWithKnee,
+                Quality = HistogramQuality.HighQuality,
+                PercentileLow = 0.5f,
+                PercentileHigh = 99.5f,
+                KneeWidth = 0.02f,
+                ChannelMode = HistogramChannelMode.AverageLuminance
             };
         }
 
         /// <summary>
-        /// Создаёт настройки с мягким коленом (рекомендуется для большинства случаев)
+        /// Создаёт настройки быстрого режима (грубая обработка)
+        /// Percentile (1%, 99%), жёсткое клампирование
         /// </summary>
-        public static HistogramSettings CreateWithKnee(float pLow = 0.5f, float pHigh = 99.5f, float knee = 0.02f) {
+        public static HistogramSettings CreateFast() {
             return new HistogramSettings {
-                Mode = HistogramMode.PercentileWithKnee,
-                PercentileLow = pLow,
-                PercentileHigh = pHigh,
-                KneeWidth = knee
+                Mode = HistogramMode.Percentile,
+                Quality = HistogramQuality.Fast,
+                PercentileLow = 1.0f,
+                PercentileHigh = 99.0f,
+                KneeWidth = 0.0f,
+                ChannelMode = HistogramChannelMode.AverageLuminance
             };
+        }
+
+        /// <summary>
+        /// Применяет пресет качества к текущим настройкам
+        /// </summary>
+        public void ApplyQualityPreset(HistogramQuality quality) {
+            Quality = quality;
+
+            if (quality == HistogramQuality.HighQuality) {
+                Mode = HistogramMode.PercentileWithKnee;
+                PercentileLow = 0.5f;
+                PercentileHigh = 99.5f;
+                KneeWidth = 0.02f;
+            } else if (quality == HistogramQuality.Fast) {
+                Mode = HistogramMode.Percentile;
+                PercentileLow = 1.0f;
+                PercentileHigh = 99.0f;
+                KneeWidth = 0.0f;
+            }
         }
     }
 }

@@ -21,6 +21,14 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         /// </summary>
         public async Task<bool> IsAvailableAsync() {
             try {
+                Logger.Info($"Checking FBX2glTF availability at: {_executablePath}");
+
+                // Проверка существования файла
+                if (!File.Exists(_executablePath)) {
+                    Logger.Warn($"FBX2glTF executable not found at: {_executablePath}");
+                    return false;
+                }
+
                 var startInfo = new ProcessStartInfo {
                     FileName = _executablePath,
                     Arguments = "--help",
@@ -31,12 +39,22 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 };
 
                 using var process = Process.Start(startInfo);
-                if (process == null) return false;
+                if (process == null) {
+                    Logger.Warn("Failed to start FBX2glTF process");
+                    return false;
+                }
 
                 await process.WaitForExitAsync();
-                return process.ExitCode == 0;
+
+                if (process.ExitCode == 0) {
+                    Logger.Info("FBX2glTF is available and working");
+                    return true;
+                } else {
+                    Logger.Warn($"FBX2glTF returned non-zero exit code: {process.ExitCode}");
+                    return false;
+                }
             } catch (Exception ex) {
-                Logger.Error(ex, "Failed to check FBX2glTF availability");
+                Logger.Error(ex, $"Failed to check FBX2glTF availability at: {_executablePath}");
                 return false;
             }
         }

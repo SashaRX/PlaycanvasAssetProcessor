@@ -18,6 +18,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
         public ModelConversionPipeline(
             string? fbx2glTFPath = null,
             string? gltfPackPath = null) {
+            Logger.Info($"Initializing ModelConversionPipeline with FBX2glTF: {fbx2glTFPath ?? "default"}, gltfpack: {gltfPackPath ?? "default"}");
             _fbx2glTFWrapper = new FBX2glTFWrapper(fbx2glTFPath);
             _gltfPackWrapper = new GltfPackWrapper(gltfPackPath);
             _manifestGenerator = new LodManifestGenerator();

@@ -323,25 +323,34 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // Нормализуем к [0,1]
+                    // CRITICAL FIX: For AverageLuminance mode, apply winsorization to LUMINANCE, not per-channel
+                    // This preserves color while adjusting brightness
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
-                    // Клампируем к [lo, hi]
-                    float r_clamped = Math.Clamp(r_norm, lo, hi);
-                    float g_clamped = Math.Clamp(g_norm, lo, hi);
-                    float b_clamped = Math.Clamp(b_norm, lo, hi);
+                    // Compute luminance (same formula as in histogram analysis)
+                    float luminance = (r_norm + g_norm + b_norm) / 3.0f;
 
-                    // CRITICAL FIX: Нормализуем к [0, 1] после клампирования!
-                    // Это растягивает диапазон [lo, hi] → [0, 1]
-                    float r_normalized = (r_clamped - lo) / range;
-                    float g_normalized = (g_clamped - lo) / range;
-                    float b_normalized = (b_clamped - lo) / range;
+                    // Clamp and normalize luminance
+                    float clamped_lum = Math.Clamp(luminance, lo, hi);
+                    float normalized_lum = (clamped_lum - lo) / range;
 
-                    byte r = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
-                    byte g = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
-                    byte b = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);
+                    // Avoid division by zero
+                    if (luminance > 0.0001f) {
+                        // Scale RGB proportionally to luminance change
+                        float scale = normalized_lum / luminance;
+                        r_norm *= scale;
+                        g_norm *= scale;
+                        b_norm *= scale;
+                    } else {
+                        // For very dark pixels, set to normalized luminance
+                        r_norm = g_norm = b_norm = normalized_lum;
+                    }
+
+                    byte r = (byte)Math.Clamp((int)(r_norm * 255), 0, 255);
+                    byte g = (byte)Math.Clamp((int)(g_norm * 255), 0, 255);
+                    byte b = (byte)Math.Clamp((int)(b_norm * 255), 0, 255);
 
                     pixelRow[x] = new Rgba32(r, g, b, pixel.A);
                 }
@@ -362,14 +371,33 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // Применяем soft-knee к каждому каналу
-                    float r = ApplySoftKneeToValue(pixel.R / 255.0f, lo, hi, kneeWidth);
-                    float g = ApplySoftKneeToValue(pixel.G / 255.0f, lo, hi, kneeWidth);
-                    float b = ApplySoftKneeToValue(pixel.B / 255.0f, lo, hi, kneeWidth);
+                    // CRITICAL FIX: For AverageLuminance mode, apply soft-knee to LUMINANCE, not per-channel
+                    // This preserves color while adjusting brightness
+                    float r_norm = pixel.R / 255.0f;
+                    float g_norm = pixel.G / 255.0f;
+                    float b_norm = pixel.B / 255.0f;
 
-                    byte rByte = (byte)Math.Clamp((int)(r * 255), 0, 255);
-                    byte gByte = (byte)Math.Clamp((int)(g * 255), 0, 255);
-                    byte bByte = (byte)Math.Clamp((int)(b * 255), 0, 255);
+                    // Compute luminance (same formula as in histogram analysis)
+                    float luminance = (r_norm + g_norm + b_norm) / 3.0f;
+
+                    // Apply soft-knee to luminance
+                    float normalizedLuminance = ApplySoftKneeToValue(luminance, lo, hi, kneeWidth);
+
+                    // Avoid division by zero
+                    if (luminance > 0.0001f) {
+                        // Scale RGB proportionally to luminance change
+                        float scale = normalizedLuminance / luminance;
+                        r_norm *= scale;
+                        g_norm *= scale;
+                        b_norm *= scale;
+                    } else {
+                        // For very dark pixels, set to normalized luminance
+                        r_norm = g_norm = b_norm = normalizedLuminance;
+                    }
+
+                    byte rByte = (byte)Math.Clamp((int)(r_norm * 255), 0, 255);
+                    byte gByte = (byte)Math.Clamp((int)(g_norm * 255), 0, 255);
+                    byte bByte = (byte)Math.Clamp((int)(b_norm * 255), 0, 255);
 
                     pixelRow[x] = new Rgba32(rByte, gByte, bByte, pixel.A);
                 }

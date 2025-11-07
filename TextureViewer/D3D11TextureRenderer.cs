@@ -281,9 +281,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
             // Store histogram metadata for GPU compensation
             histogramMetadata = textureData.HistogramMetadata;
             if (histogramMetadata != null) {
-                logger.Debug($"Histogram metadata: {histogramMetadata.Scale.Length} channel(s)");
+                logger.Info($"[D3D11TextureRenderer] Histogram metadata loaded: {histogramMetadata.Scale.Length} channel(s)");
+                logger.Info($"[D3D11TextureRenderer] Scale = [{string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}]");
+                logger.Info($"[D3D11TextureRenderer] Offset = [{string.Join(", ", histogramMetadata.Offset.Select(o => o.ToString("F4")))}]");
+                logger.Info($"[D3D11TextureRenderer] IsPerChannel = {histogramMetadata.IsPerChannel}");
                 enableHistogramCorrection = true; // Enable by default when metadata present
             } else {
+                logger.Info("[D3D11TextureRenderer] No histogram metadata in texture");
                 enableHistogramCorrection = false; // No metadata, disable correction
             }
 
@@ -517,14 +521,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 histScale = new Vector3(scale, scale, scale);
                 histOffset = new Vector3(offset, offset, offset);
             }
-
-            // DIAGNOSTIC: Log histogram values being sent to shader
-            logger.Info($"[SHADER PARAMS] Histogram correction ENABLED");
-            logger.Info($"[SHADER PARAMS] Scale = ({histScale.X:F4}, {histScale.Y:F4}, {histScale.Z:F4})");
-            logger.Info($"[SHADER PARAMS] Offset = ({histOffset.X:F4}, {histOffset.Y:F4}, {histOffset.Z:F4})");
-            logger.Info($"[SHADER PARAMS] IsPerChannel = {isPerChannel}");
-        } else {
-            logger.Info($"[SHADER PARAMS] Histogram correction DISABLED (metadata={histogramMetadata != null}, enabled={enableHistogramCorrection})");
         }
 
         var constants = new ShaderConstants {

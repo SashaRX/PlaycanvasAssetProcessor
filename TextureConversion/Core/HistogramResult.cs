@@ -58,11 +58,9 @@ namespace AssetProcessor.TextureConversion.Core {
         public float TailFraction { get; set; }
 
         /// <summary>
-        /// Индикатор, что используется поканальный режим
+        /// Индикатор, что используется поканальный режим (RGB per-channel)
         /// </summary>
-        public bool IsPerChannel => ChannelMode == HistogramChannelMode.PerChannel ||
-                                     ChannelMode == HistogramChannelMode.RGBOnly ||
-                                     ChannelMode == HistogramChannelMode.PerChannelRGBA;
+        public bool IsPerChannel => ChannelMode == HistogramChannelMode.PerChannel;
 
         /// <summary>
         /// Было ли применено мягкое колено (soft knee)

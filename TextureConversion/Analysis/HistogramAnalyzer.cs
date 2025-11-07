@@ -37,18 +37,14 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 };
 
                 // Выбираем режим анализа в зависимости от настроек
+                // CRITICAL: Только 2 режима - AverageLuminance и PerChannel (RGB only, no RGBA)
                 switch (settings.ChannelMode) {
                     case HistogramChannelMode.AverageLuminance:
                         AnalyzeLuminance(image, settings, result);
                         break;
 
                     case HistogramChannelMode.PerChannel:
-                    case HistogramChannelMode.RGBOnly:
-                        AnalyzePerChannel(image, settings, result, includeAlpha: false);
-                        break;
-
-                    case HistogramChannelMode.PerChannelRGBA:
-                        AnalyzePerChannel(image, settings, result, includeAlpha: true);
+                        AnalyzePerChannel(image, settings, result, includeAlpha: false); // RGB only
                         break;
 
                     default:

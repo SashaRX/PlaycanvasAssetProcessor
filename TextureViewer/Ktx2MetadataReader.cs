@@ -357,27 +357,21 @@ public static class Ktx2MetadataReader {
 
     /// <summary>
     /// Parses a single TLV block if it's a histogram type.
+    /// CRITICAL: Только 2 типа - HIST_SCALAR (0x01) и HIST_PER_CHANNEL_3 (0x03)
+    /// RGBA (4 канала) НЕ поддерживается!
     /// </summary>
     private static HistogramMetadata? ParseHistogramTLV(byte type, byte flags, byte[] payload) {
         // Extract quantization from flags [3:2]
         byte quantization = (byte)((flags >> 2) & 0x03);
 
         switch (type) {
-            case 0x01: // HIST_SCALAR
+            case 0x01: // HIST_SCALAR (AverageLuminance)
                 logger.Info("[Ktx2MetadataReader] Found HIST_SCALAR metadata");
                 return ParseScalarHistogram(payload, quantization);
 
-            case 0x02: // HIST_RGB
-                logger.Info("[Ktx2MetadataReader] Found HIST_RGB metadata");
-                return ParseScalarHistogram(payload, quantization); // Same format as scalar
-
-            case 0x03: // HIST_PER_CHANNEL_3 (RGB)
+            case 0x03: // HIST_PER_CHANNEL_3 (RGB PerChannel)
                 logger.Info("[Ktx2MetadataReader] Found HIST_PER_CHANNEL_3 metadata");
                 return ParsePerChannelHistogram(payload, 3, quantization);
-
-            case 0x04: // HIST_PER_CHANNEL_4 (RGBA)
-                logger.Info("[Ktx2MetadataReader] Found HIST_PER_CHANNEL_4 metadata");
-                return ParsePerChannelHistogram(payload, 4, quantization);
 
             default:
                 logger.Info($"[Ktx2MetadataReader] Unknown TLV type: 0x{type:X2} (not a histogram block)");

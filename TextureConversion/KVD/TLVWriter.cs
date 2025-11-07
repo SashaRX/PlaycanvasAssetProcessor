@@ -52,25 +52,18 @@ namespace AssetProcessor.TextureConversion.KVD {
             }
 
             // Определяем тип TLV блока в зависимости от количества каналов
+            // CRITICAL: Только 2 режима - HIST_SCALAR (0x01) и HIST_PER_CHANNEL_3 (0x03)
             TLVType tlvType;
             byte[] payload;
 
             if (result.ChannelMode == HistogramChannelMode.AverageLuminance) {
-                // HIST_SCALAR: один scale/offset для всех каналов
+                // HIST_SCALAR: один scale/offset для всех каналов (4 bytes)
                 tlvType = TLVType.HIST_SCALAR;
                 payload = QuantizeScaleOffset(result.Scale[0], result.Offset[0], quantization);
-            } else if (result.ChannelMode == HistogramChannelMode.RGBOnly) {
-                // HIST_RGB: общий scale/offset для RGB
-                tlvType = TLVType.HIST_RGB;
-                payload = QuantizeScaleOffset(result.Scale[0], result.Offset[0], quantization);
             } else if (result.ChannelMode == HistogramChannelMode.PerChannel) {
-                // HIST_PER_CHANNEL_3: поканально для RGB
+                // HIST_PER_CHANNEL_3: поканально для RGB (12 bytes)
                 tlvType = TLVType.HIST_PER_CHANNEL_3;
                 payload = QuantizeScaleOffsetArray(result.Scale, result.Offset, 3, quantization);
-            } else if (result.ChannelMode == HistogramChannelMode.PerChannelRGBA) {
-                // HIST_PER_CHANNEL_4: поканально для RGBA
-                tlvType = TLVType.HIST_PER_CHANNEL_4;
-                payload = QuantizeScaleOffsetArray(result.Scale, result.Offset, 4, quantization);
             } else {
                 return; // Unknown channel mode
             }

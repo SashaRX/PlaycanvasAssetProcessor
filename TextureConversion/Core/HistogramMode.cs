@@ -29,27 +29,21 @@ namespace AssetProcessor.TextureConversion.Core {
 
     /// <summary>
     /// Режим анализа каналов
+    /// CRITICAL: Только 2 режима - Scalar (HIST_SCALAR) и RGB per-channel (HIST_PER_CHANNEL_3)
+    /// RGBA (4 канала) НЕ поддерживается!
     /// </summary>
     public enum HistogramChannelMode {
         /// <summary>
         /// Усреднённая яркость (R+G+B)/3 - один общий scale/offset
+        /// → TLV: HIST_SCALAR (0x01), 4 bytes (scale, offset)
         /// </summary>
         AverageLuminance = 0,
 
         /// <summary>
-        /// Поканальный анализ RGB - отдельные scale/offset для каждого канала
+        /// Поканальный анализ RGB - отдельные scale/offset для R, G, B
+        /// → TLV: HIST_PER_CHANNEL_3 (0x03), 12 bytes (scale.rgb, offset.rgb)
         /// </summary>
-        PerChannel = 1,
-
-        /// <summary>
-        /// Анализ только RGB, игнорируя альфа-канал
-        /// </summary>
-        RGBOnly = 2,
-
-        /// <summary>
-        /// Поканальный анализ RGBA (включая альфа)
-        /// </summary>
-        PerChannelRGBA = 3
+        PerChannel = 1
     }
 
     /// <summary>

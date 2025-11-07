@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,94 +13,81 @@ namespace AssetProcessor.TextureViewer;
 public static class Ktx2MetadataReader {
     private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
+    // KTX2 file identifier (12 bytes)
+    private static readonly byte[] KTX2_IDENTIFIER = new byte[] {
+        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
+    };
+
     /// <summary>
-    /// Reads histogram metadata from KTX2 texture handle using ktxHashList API.
+    /// Reads histogram metadata directly from KTX2 file.
+    /// This is the SAFE approach that doesn't rely on broken structure marshaling.
     /// Returns null if no histogram metadata found.
     /// </summary>
-    public static HistogramMetadata? ReadHistogramMetadata(IntPtr textureHandle) {
+    public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
         try {
-            logger.Info("[Ktx2MetadataReader] Starting histogram metadata read (experimental offset scan)...");
+            logger.Info($"[Ktx2MetadataReader] Reading histogram metadata from file: {filePath}");
 
-            // EXPERIMENTAL: Scan structure memory to find kvData and kvDataLen fields
-            // We'll look for pairs of (IntPtr, uint) where IntPtr is non-zero and uint is reasonable (10-200 bytes)
-
-            logger.Info("Scanning structure memory for KVD fields...");
-
-            for (int offset = 0; offset < 512; offset += 4) {
-                try {
-                    // APPROACH 1: Try using ktxHashList_FindValue with this offset
-                    // This is the PROPER way - using libktx API instead of manual parsing
-                    IntPtr pHashListHead = IntPtr.Add(textureHandle, offset);
-
-                    try {
-                        var result = LibKtxNative.ktxHashList_FindValue(
-                            pHashListHead,
-                            "pc.meta",
-                            out uint valueLen,
-                            out IntPtr pValue);
-
-                        if (result == LibKtxNative.KtxErrorCode.KTX_SUCCESS && pValue != IntPtr.Zero && valueLen > 0) {
-                            logger.Info($"[SUCCESS via API] Found 'pc.meta' using ktxHashList_FindValue at offset {offset}!");
-                            logger.Info($"  valueLen={valueLen}, pValue=0x{pValue:X}");
-
-                            // Copy TLV data from native memory
-                            byte[] tlvData = new byte[valueLen];
-                            Marshal.Copy(pValue, tlvData, 0, (int)valueLen);
-
-                            logger.Debug($"TLV raw bytes (first 32): {BitConverter.ToString(tlvData.Take(Math.Min(32, tlvData.Length)).ToArray())}");
-
-                            // Parse TLV data
-                            var metadata = ParseTLVHistogramData(tlvData);
-                            if (metadata != null) {
-                                logger.Info($"[FINAL SUCCESS] kvDataHead offset = {offset}");
-                                return metadata;
-                            }
-                        }
-                    } catch {
-                        // ktxHashList_FindValue failed at this offset, continue scanning
-                    }
-
-                    // APPROACH 2: Fallback - manual memory scan (if API approach fails)
-                    // Try reading IntPtr at this offset
-                    IntPtr ptrValue = Marshal.ReadIntPtr(textureHandle, offset);
-
-                    // Skip NULL pointers
-                    if (ptrValue == IntPtr.Zero) continue;
-
-                    // Try reading uint at offset+8 (assuming kvDataHead structure layout)
-                    if (offset + 12 < 512) {
-                        uint lenValue = (uint)Marshal.ReadInt32(textureHandle, offset + 8);
-
-                        // Check if this looks like kvData/kvDataLen pair
-                        // kvDataLen should be reasonable (10-200 bytes for our metadata)
-                        if (lenValue > 0 && lenValue < 500) {
-                            logger.Debug($"[SCAN fallback] Offset {offset}: ptr=0x{ptrValue:X}, len={lenValue}");
-
-                            // Try to read and parse as KVD
-                            try {
-                                byte[] testData = new byte[lenValue];
-                                Marshal.Copy(ptrValue, testData, 0, (int)lenValue);
-
-                                // Try parsing
-                                var result = ParseKeyValueData(testData);
-                                if (result != null) {
-                                    logger.Info($"[SUCCESS via manual] Found KVD at offset {offset} (kvData pointer offset)");
-                                    return result;
-                                }
-                            } catch {
-                                // Not valid memory, continue scanning
-                            }
-                        }
-                    }
-                } catch {
-                    // Invalid offset, continue
-                }
+            if (!File.Exists(filePath)) {
+                logger.Warn($"File not found: {filePath}");
+                return null;
             }
 
-            logger.Warn("Failed to find KVD fields in structure memory scan");
-            return null;
+            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var reader = new BinaryReader(fileStream);
+
+            // Read and verify KTX2 identifier (12 bytes)
+            byte[] identifier = reader.ReadBytes(12);
+            if (!identifier.SequenceEqual(KTX2_IDENTIFIER)) {
+                logger.Warn("Not a valid KTX2 file (identifier mismatch)");
+                return null;
+            }
+
+            // Read KTX2 header fields (according to KTX2 spec)
+            uint vkFormat = reader.ReadUInt32();           // +12: VkFormat
+            uint typeSize = reader.ReadUInt32();           // +16: typeSize
+            uint pixelWidth = reader.ReadUInt32();         // +20: pixelWidth
+            uint pixelHeight = reader.ReadUInt32();        // +24: pixelHeight
+            uint pixelDepth = reader.ReadUInt32();         // +28: pixelDepth
+            uint layerCount = reader.ReadUInt32();         // +32: layerCount
+            uint faceCount = reader.ReadUInt32();          // +36: faceCount
+            uint levelCount = reader.ReadUInt32();         // +40: levelCount
+            uint supercompressionScheme = reader.ReadUInt32(); // +44: supercompressionScheme
+
+            // DFD (Data Format Descriptor) offset and length
+            uint dfdByteOffset = reader.ReadUInt32();      // +48: dfdByteOffset
+            uint dfdByteLength = reader.ReadUInt32();      // +52: dfdByteLength
+
+            // KVD (Key-Value Data) offset and length - THIS IS WHAT WE NEED!
+            uint kvdByteOffset = reader.ReadUInt32();      // +56: kvdByteOffset
+            uint kvdByteLength = reader.ReadUInt32();      // +60: kvdByteLength
+
+            logger.Info($"KTX2 header: {pixelWidth}x{pixelHeight}, {levelCount} levels, vkFormat={vkFormat}");
+            logger.Info($"KVD section: offset={kvdByteOffset}, length={kvdByteLength}");
+
+            // Check if KVD exists
+            if (kvdByteLength == 0) {
+                logger.Info("No Key-Value Data in this KTX2 file");
+                return null;
+            }
+
+            // Seek to KVD section
+            fileStream.Seek(kvdByteOffset, SeekOrigin.Begin);
+
+            // Read entire KVD section
+            byte[] kvdData = reader.ReadBytes((int)kvdByteLength);
+            logger.Info($"Read {kvdData.Length} bytes of KVD data");
+
+            // Parse KVD to find "pc.meta" key
+            var metadata = ParseKeyValueData(kvdData);
+            if (metadata != null) {
+                logger.Info("[SUCCESS] Found histogram metadata in KTX2 file");
+            } else {
+                logger.Info("No 'pc.meta' key found in KVD section");
+            }
+
+            return metadata;
         } catch (Exception ex) {
-            logger.Error(ex, "Failed to read histogram metadata from KTX2");
+            logger.Error(ex, "Failed to read histogram metadata from KTX2 file");
             return null;
         }
     }

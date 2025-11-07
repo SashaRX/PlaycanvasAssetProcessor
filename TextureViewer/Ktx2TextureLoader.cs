@@ -32,10 +32,10 @@ public static class Ktx2TextureLoader {
         }
 
         try {
-            // CRITICAL: Read histogram metadata BEFORE transcoding (transcoding destroys KVD)
-            var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(textureHandle);
+            // Read histogram metadata directly from file (safe approach that doesn't rely on structure marshaling)
+            var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(filePath);
             if (histogramMetadata != null) {
-                logger.Info($"Histogram metadata read before transcoding: {histogramMetadata.Scale.Length} channel(s), scale={string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}");
+                logger.Info($"Histogram metadata loaded from file: {histogramMetadata.Scale.Length} channel(s), scale={string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}");
             }
 
             return LoadFromHandle(textureHandle, filePath, histogramMetadata);

@@ -603,7 +603,17 @@ public sealed class D3D11TextureRenderer : IDisposable {
             if (histogramMetadata != null) {
                 logger.Info($"[D3D11TextureRenderer] Histogram correction {(enabled ? "ENABLED" : "DISABLED")}");
                 if (enabled) {
-                    logger.Info($"[D3D11TextureRenderer] Will apply: v_original = v_normalized * {histogramMetadata.Scale[0]:F4} + {histogramMetadata.Offset[0]:F4}");
+                    if (histogramMetadata.IsPerChannel && histogramMetadata.Scale.Length >= 3) {
+                        // Per-channel mode: show all RGB channels
+                        logger.Info($"[D3D11TextureRenderer] Per-channel mode (R, G, B):");
+                        logger.Info($"  R: v_original = v_normalized * {histogramMetadata.Scale[0]:F4} + {histogramMetadata.Offset[0]:F4}");
+                        logger.Info($"  G: v_original = v_normalized * {histogramMetadata.Scale[1]:F4} + {histogramMetadata.Offset[1]:F4}");
+                        logger.Info($"  B: v_original = v_normalized * {histogramMetadata.Scale[2]:F4} + {histogramMetadata.Offset[2]:F4}");
+                    } else {
+                        // Scalar mode: show single value for all channels
+                        logger.Info($"[D3D11TextureRenderer] Scalar mode (all channels):");
+                        logger.Info($"  v_original = v_normalized * {histogramMetadata.Scale[0]:F4} + {histogramMetadata.Offset[0]:F4}");
+                    }
                 }
             } else {
                 logger.Info($"[D3D11TextureRenderer] SetHistogramCorrection called but NO metadata (enabled={enabled})");

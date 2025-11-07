@@ -349,6 +349,22 @@ namespace AssetProcessor.TextureConversion.Analysis {
             if (range_g < 0.0001f) range_g = 1.0f;
             if (range_b < 0.0001f) range_b = 1.0f;
 
+            // Diagnostic logging: show example transformations
+            Logger.Info($"Winsorization parameters:");
+            Logger.Info($"  R: lo={lo_r:F4}, hi={hi_r:F4}, range={range_r:F4}");
+            Logger.Info($"  G: lo={lo_g:F4}, hi={hi_g:F4}, range={range_g:F4}");
+            Logger.Info($"  B: lo={lo_b:F4}, hi={hi_b:F4}, range={range_b:F4}");
+
+            // Show example: middle gray (0.5) transformation
+            float test_gray = 0.5f;
+            float test_r = Math.Clamp(test_gray, lo_r, hi_r);
+            float test_g = Math.Clamp(test_gray, lo_g, hi_g);
+            float test_b = Math.Clamp(test_gray, lo_b, hi_b);
+            float test_r_norm = (test_r - lo_r) / range_r;
+            float test_g_norm = (test_g - lo_g) / range_g;
+            float test_b_norm = (test_b - lo_b) / range_b;
+            Logger.Info($"Example: gray 0.5 → R={test_r_norm:F4}, G={test_g_norm:F4}, B={test_b_norm:F4}");
+
             Parallel.For(0, result.Height, y => {
                 var pixelRow = result.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {

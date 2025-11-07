@@ -32,7 +32,13 @@ public static class Ktx2TextureLoader {
         }
 
         try {
-            return LoadFromHandle(textureHandle, filePath);
+            // CRITICAL: Read histogram metadata BEFORE transcoding (transcoding destroys KVD)
+            var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(textureHandle);
+            if (histogramMetadata != null) {
+                logger.Info($"Histogram metadata read before transcoding: {histogramMetadata.Scale.Length} channel(s), scale={string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}");
+            }
+
+            return LoadFromHandle(textureHandle, filePath, histogramMetadata);
         } finally {
             LibKtxNative.ktxTexture2_Destroy(textureHandle);
         }
@@ -257,7 +263,7 @@ public static class Ktx2TextureLoader {
     /// <summary>
     /// Load texture data from a ktxTexture2 handle.
     /// </summary>
-    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath) {
+    private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath, HistogramMetadata? histogramMetadata = null) {
         // Read basic texture info from structure (minimal fields only)
         var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
 
@@ -452,15 +458,7 @@ public static class Ktx2TextureLoader {
 
         logger.Info($"KTX2 loaded successfully: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, format={detectedFormat}, sRGB={isSRGB}, alpha={hasAlpha}");
 
-        // DEBUG: Check KVD fields before reading metadata
-        var texDebug = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
-        logger.Info($"[DEBUG] KVD fields: kvDataLen={texDebug.kvDataLen}, kvData={texDebug.kvData}, kvDataHead={texDebug.kvDataHead}");
-
-        // Read histogram metadata from KTX2 Key-Value Data
-        var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(textureHandle);
-        if (histogramMetadata != null) {
-            logger.Info($"Histogram metadata found: {histogramMetadata.Scale.Length} channel(s), scale={string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}");
-        }
+        // Histogram metadata was already read before transcoding (passed as parameter)
 
         return new TextureData {
             Width = actualWidth,

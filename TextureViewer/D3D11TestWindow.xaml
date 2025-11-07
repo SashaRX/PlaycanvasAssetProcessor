@@ -57,6 +57,9 @@
                           Checked="FilterCheckBox_Changed" Unchecked="FilterCheckBox_Changed" Margin="5,0"/>
                 <CheckBox x:Name="SrgbCheckBox" Content="sRGB" IsChecked="True"
                           Checked="SrgbCheckBox_Changed" Unchecked="SrgbCheckBox_Changed" Margin="20,0,5,0"/>
+                <CheckBox x:Name="HistogramCorrectionCheckBox" Content="Histogram Correction" IsChecked="True"
+                          Checked="HistogramCorrectionCheckBox_Changed" Unchecked="HistogramCorrectionCheckBox_Changed" Margin="20,0,5,0"
+                          ToolTip="Enable/disable histogram preprocessing compensation. Allows visual comparison of normalized vs denormalized texture."/>
             </StackPanel>
 
             <TextBlock x:Name="InfoText" Margin="0,5" FontFamily="Consolas" FontSize="11"/>

@@ -450,6 +450,12 @@ public static class Ktx2TextureLoader {
 
         logger.Info($"KTX2 loaded successfully: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, format={detectedFormat}, sRGB={isSRGB}, alpha={hasAlpha}");
 
+        // Read histogram metadata from KTX2 Key-Value Data
+        var histogramMetadata = Ktx2MetadataReader.ReadHistogramMetadata(textureHandle);
+        if (histogramMetadata != null) {
+            logger.Info($"Histogram metadata found: {histogramMetadata.Scale.Length} channel(s), scale={string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}");
+        }
+
         return new TextureData {
             Width = actualWidth,
             Height = actualHeight,
@@ -459,7 +465,8 @@ public static class Ktx2TextureLoader {
             SourceFormat = sourceFormat,
             IsHDR = false,
             IsCompressed = isCompressed,
-            CompressionFormat = isCompressed ? detectedFormat : null
+            CompressionFormat = isCompressed ? detectedFormat : null,
+            HistogramMetadata = histogramMetadata
         };
     }
 

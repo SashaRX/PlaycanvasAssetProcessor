@@ -131,6 +131,11 @@ public partial class D3D11TestWindow : Window {
 
         SrgbCheckBox.IsChecked = currentTexture.IsSRGB;
 
+        // Update histogram correction checkbox state
+        bool hasHistogram = TextureViewer.Renderer.HasHistogramMetadata();
+        HistogramCorrectionCheckBox.IsEnabled = hasHistogram;
+        HistogramCorrectionCheckBox.IsChecked = hasHistogram; // Enable if metadata present
+
         UpdateInfoText();
     }
 
@@ -176,6 +181,15 @@ public partial class D3D11TestWindow : Window {
         // To change sRGB, we need to reload the texture with different format
         // For now, just update the checkbox state
         // TODO: Implement reload with different format
+    }
+
+    private void HistogramCorrectionCheckBox_Changed(object sender, RoutedEventArgs e) {
+        if (TextureViewer?.Renderer == null) return;
+
+        bool enabled = HistogramCorrectionCheckBox.IsChecked == true;
+        TextureViewer.Renderer.SetHistogramCorrection(enabled);
+
+        logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user");
     }
 
     private void Overlay_MouseWheel(object sender, MouseWheelEventArgs e) {
@@ -272,12 +286,22 @@ public partial class D3D11TestWindow : Window {
             return;
         }
 
+        string histogramInfo = "";
+        if (currentTexture.HistogramMetadata != null) {
+            var meta = currentTexture.HistogramMetadata;
+            string scaleStr = meta.IsPerChannel
+                ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
+                : meta.Scale[0].ToString("F3");
+            histogramInfo = $" | Histogram: scale={scaleStr}";
+        }
+
         InfoText.Text = $"Resolution: {currentTexture.Width}x{currentTexture.Height} | " +
                        $"Mips: {currentTexture.MipCount} | " +
                        $"Format: {currentTexture.SourceFormat} | " +
                        $"sRGB: {currentTexture.IsSRGB} | " +
                        $"Alpha: {currentTexture.HasAlpha} | " +
-                       $"HDR: {currentTexture.IsHDR}";
+                       $"HDR: {currentTexture.IsHDR}" +
+                       histogramInfo;
     }
 
     protected override void OnClosed(EventArgs e) {

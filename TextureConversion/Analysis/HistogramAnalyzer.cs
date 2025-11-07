@@ -119,6 +119,10 @@ namespace AssetProcessor.TextureConversion.Analysis {
             result.RangeHigh = hi;
             result.TailFraction = tailFraction;
 
+            // For AverageLuminance mode, use same thresholds for all channels
+            result.RangeLowPerChannel = new[] { lo, lo, lo };
+            result.RangeHighPerChannel = new[] { hi, hi, hi };
+
             // Проверяем минимальный диапазон
             float range = hi - lo;
             if (range < settings.MinRangeThreshold) {
@@ -129,7 +133,7 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 return;
             }
 
-            // Вычисляем scale и offset
+            // Вычисляем scale и offset (одинаковые для всех каналов)
             float scale = 1.0f / range;
             float offset = -lo * scale;
 
@@ -188,6 +192,8 @@ namespace AssetProcessor.TextureConversion.Analysis {
             // Анализируем каждый канал
             var scales = new float[channelCount];
             var offsets = new float[channelCount];
+            var rangeLows = new float[channelCount];
+            var rangeHighs = new float[channelCount];
             float totalTailFraction = 0;
 
             for (int c = 0; c < channelCount; c++) {
@@ -195,6 +201,10 @@ namespace AssetProcessor.TextureConversion.Analysis {
                 CalculatePercentilesAndRange(histograms[c], settings, out lo, out hi, out float tailFraction);
 
                 totalTailFraction += tailFraction;
+
+                // Store per-channel thresholds
+                rangeLows[c] = lo;
+                rangeHighs[c] = hi;
 
                 // Вычисляем scale и offset для канала
                 float range = hi - lo;
@@ -212,11 +222,13 @@ namespace AssetProcessor.TextureConversion.Analysis {
 
             result.Scale = scales;
             result.Offset = offsets;
+            result.RangeLowPerChannel = rangeLows;
+            result.RangeHighPerChannel = rangeHighs;
             result.TailFraction = totalTailFraction / channelCount;
 
-            // Для упрощения используем средний диапазон
-            result.RangeLow = offsets.Average();
-            result.RangeHigh = (scales.Sum() / channelCount);
+            // Store average values for backward compatibility
+            result.RangeLow = rangeLows.Average();
+            result.RangeHigh = rangeHighs.Average();
 
             if (result.TailFraction > settings.TailThreshold) {
                 result.Warnings.Add($"High tail fraction ({result.TailFraction:P2}), potential outliers or noise detected");
@@ -311,42 +323,57 @@ namespace AssetProcessor.TextureConversion.Analysis {
 
         /// <summary>
         /// Применяет винсоризацию (winsorization) к изображению
-        /// ВАЖНО: Это модифицирующая операция, применяется опционально
+        /// Использует либо единые пороги (AverageLuminance), либо поканальные (PerChannel)
         /// </summary>
-        public Image<Rgba32> ApplyWinsorization(Image<Rgba32> image, float lo, float hi) {
+        public Image<Rgba32> ApplyWinsorization(Image<Rgba32> image, HistogramResult histogramResult) {
             var result = image.Clone();
 
-            float range = hi - lo;
+            // Determine if we use per-channel or uniform thresholds
+            bool usePerChannel = histogramResult.IsPerChannel;
 
-            // Safety check: avoid division by zero or invalid range
-            if (range < 0.0001f || float.IsNaN(range) || float.IsInfinity(range)) {
-                return result; // Return unmodified if range is too small or invalid
-            }
+            // Get thresholds
+            float lo_r = usePerChannel ? histogramResult.RangeLowPerChannel[0] : histogramResult.RangeLow;
+            float hi_r = usePerChannel ? histogramResult.RangeHighPerChannel[0] : histogramResult.RangeHigh;
+            float lo_g = usePerChannel ? histogramResult.RangeLowPerChannel[1] : histogramResult.RangeLow;
+            float hi_g = usePerChannel ? histogramResult.RangeHighPerChannel[1] : histogramResult.RangeHigh;
+            float lo_b = usePerChannel ? histogramResult.RangeLowPerChannel[2] : histogramResult.RangeLow;
+            float hi_b = usePerChannel ? histogramResult.RangeHighPerChannel[2] : histogramResult.RangeHigh;
+
+            // Calculate ranges
+            float range_r = hi_r - lo_r;
+            float range_g = hi_g - lo_g;
+            float range_b = hi_b - lo_b;
+
+            // Safety checks
+            if (range_r < 0.0001f) range_r = 1.0f;
+            if (range_g < 0.0001f) range_g = 1.0f;
+            if (range_b < 0.0001f) range_b = 1.0f;
 
             Parallel.For(0, result.Height, y => {
                 var pixelRow = result.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // CRITICAL FIX: Apply LINEAR normalization WITHOUT pre-clamping
-                    // Pre-clamping causes channels below lo to map to 0 (black), making texture red!
-                    // Instead: normalize directly, let PNG format clamp the byte values
+                    // CORRECT ALGORITHM: Clamp first, then normalize
+                    // Step 1: Convert to float and clamp to thresholds
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
-                    // Apply linear normalization WITHOUT pre-clamping
-                    // If v < lo: normalized < 0 → byte clamped to 0
-                    // If v > hi: normalized > 1 → byte clamped to 255
-                    // GPU recovers: v_original = v_normalized * range + lo
-                    float r_normalized = (r_norm - lo) / range;
-                    float g_normalized = (g_norm - lo) / range;
-                    float b_normalized = (b_norm - lo) / range;
+                    // Clamp each channel to its respective range
+                    float r_clamped = Math.Clamp(r_norm, lo_r, hi_r);
+                    float g_clamped = Math.Clamp(g_norm, lo_g, hi_g);
+                    float b_clamped = Math.Clamp(b_norm, lo_b, hi_b);
 
-                    // Clamp to [0, 255] byte range (this is the ONLY clamping!)
-                    byte r = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
-                    byte g = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
-                    byte b = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);
+                    // Step 2: Normalize clamped values to [0, 1]
+                    float r_normalized = (r_clamped - lo_r) / range_r;
+                    float g_normalized = (g_clamped - lo_g) / range_g;
+                    float b_normalized = (b_clamped - lo_b) / range_b;
+
+                    // Convert back to bytes
+                    byte r = (byte)Math.Clamp((int)(r_normalized * 255 + 0.5f), 0, 255);
+                    byte g = (byte)Math.Clamp((int)(g_normalized * 255 + 0.5f), 0, 255);
+                    byte b = (byte)Math.Clamp((int)(b_normalized * 255 + 0.5f), 0, 255);
 
                     pixelRow[x] = new Rgba32(r, g, b, pixel.A);
                 }
@@ -356,38 +383,54 @@ namespace AssetProcessor.TextureConversion.Analysis {
         }
 
         /// <summary>
-        /// Применяет soft-knee к изображению (опционально)
-        /// ВАЖНО: Это модифицирующая операция для предобработки
+        /// Применяет soft-knee к изображению с поддержкой поканальных порогов
         /// </summary>
-        public Image<Rgba32> ApplySoftKnee(Image<Rgba32> image, float lo, float hi, float kneeWidth) {
+        public Image<Rgba32> ApplySoftKnee(Image<Rgba32> image, HistogramResult histogramResult, float kneeWidth) {
             var result = image.Clone();
 
-            float range = hi - lo;
+            // Determine if we use per-channel or uniform thresholds
+            bool usePerChannel = histogramResult.IsPerChannel;
 
-            // Safety check: avoid division by zero or invalid range
-            if (range < 0.0001f || float.IsNaN(range) || float.IsInfinity(range)) {
-                return result; // Return unmodified if range is too small or invalid
-            }
+            // Get thresholds
+            float lo_r = usePerChannel ? histogramResult.RangeLowPerChannel[0] : histogramResult.RangeLow;
+            float hi_r = usePerChannel ? histogramResult.RangeHighPerChannel[0] : histogramResult.RangeHigh;
+            float lo_g = usePerChannel ? histogramResult.RangeLowPerChannel[1] : histogramResult.RangeLow;
+            float hi_g = usePerChannel ? histogramResult.RangeHighPerChannel[1] : histogramResult.RangeHigh;
+            float lo_b = usePerChannel ? histogramResult.RangeLowPerChannel[2] : histogramResult.RangeLow;
+            float hi_b = usePerChannel ? histogramResult.RangeHighPerChannel[2] : histogramResult.RangeHigh;
+
+            // Calculate ranges
+            float range_r = hi_r - lo_r;
+            float range_g = hi_g - lo_g;
+            float range_b = hi_b - lo_b;
+
+            // Safety checks
+            if (range_r < 0.0001f) range_r = 1.0f;
+            if (range_g < 0.0001f) range_g = 1.0f;
+            if (range_b < 0.0001f) range_b = 1.0f;
+
+            // Calculate knee widths per channel
+            float knee_r = kneeWidth * range_r;
+            float knee_g = kneeWidth * range_g;
+            float knee_b = kneeWidth * range_b;
 
             Parallel.For(0, result.Height, y => {
                 var pixelRow = result.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < pixelRow.Length; x++) {
                     var pixel = pixelRow[x];
 
-                    // CRITICAL FIX: Apply soft-knee to EACH CHANNEL with lo/hi from luminance histogram
-                    // This allows GPU to recover using simple linear formula: v_original = v_norm * scale + offset
                     float r_norm = pixel.R / 255.0f;
                     float g_norm = pixel.G / 255.0f;
                     float b_norm = pixel.B / 255.0f;
 
-                    // Apply soft-knee to each channel separately
-                    float r_normalized = ApplySoftKneeToValue(r_norm, lo, hi, kneeWidth);
-                    float g_normalized = ApplySoftKneeToValue(g_norm, lo, hi, kneeWidth);
-                    float b_normalized = ApplySoftKneeToValue(b_norm, lo, hi, kneeWidth);
+                    // Apply soft-knee to each channel with its own thresholds
+                    float r_normalized = ApplySoftKneeToValue(r_norm, lo_r, hi_r, knee_r);
+                    float g_normalized = ApplySoftKneeToValue(g_norm, lo_g, hi_g, knee_g);
+                    float b_normalized = ApplySoftKneeToValue(b_norm, lo_b, hi_b, knee_b);
 
-                    byte rByte = (byte)Math.Clamp((int)(r_normalized * 255), 0, 255);
-                    byte gByte = (byte)Math.Clamp((int)(g_normalized * 255), 0, 255);
-                    byte bByte = (byte)Math.Clamp((int)(b_normalized * 255), 0, 255);
+                    byte rByte = (byte)Math.Clamp((int)(r_normalized * 255 + 0.5f), 0, 255);
+                    byte gByte = (byte)Math.Clamp((int)(g_normalized * 255 + 0.5f), 0, 255);
+                    byte bByte = (byte)Math.Clamp((int)(b_normalized * 255 + 0.5f), 0, 255);
 
                     pixelRow[x] = new Rgba32(rByte, gByte, bByte, pixel.A);
                 }

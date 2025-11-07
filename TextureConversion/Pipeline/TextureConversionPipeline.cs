@@ -278,12 +278,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                                 if (compressionSettings.HistogramAnalysis.Mode == HistogramMode.PercentileWithKnee) {
                                     // Soft-knee (High Quality)
-                                    float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth * (histogramResult.RangeHigh - histogramResult.RangeLow);
+                                    float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth;
                                     Logger.Info($"Applying soft-knee (width={kneeWidth:F4}) to mip {i}");
                                     transformedMip = _histogramAnalyzer.ApplySoftKnee(
                                         mipmaps[i],
-                                        histogramResult.RangeLow,
-                                        histogramResult.RangeHigh,
+                                        histogramResult,
                                         kneeWidth
                                     );
                                 } else {
@@ -291,8 +290,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                     Logger.Info($"Applying winsorization to mip {i}");
                                     transformedMip = _histogramAnalyzer.ApplyWinsorization(
                                         mipmaps[i],
-                                        histogramResult.RangeLow,
-                                        histogramResult.RangeHigh
+                                        histogramResult
                                     );
                                 }
 

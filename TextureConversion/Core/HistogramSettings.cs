@@ -17,9 +17,9 @@ namespace AssetProcessor.TextureConversion.Core {
         public HistogramQuality Quality { get; set; } = HistogramQuality.HighQuality;
 
         /// <summary>
-        /// Режим анализа каналов (по умолчанию - усреднённая яркость)
+        /// Режим анализа каналов (по умолчанию - поканальный для правильной обработки цветных текстур)
         /// </summary>
-        public HistogramChannelMode ChannelMode { get; set; } = HistogramChannelMode.AverageLuminance;
+        public HistogramChannelMode ChannelMode { get; set; } = HistogramChannelMode.PerChannel;
 
         /// <summary>
         /// Нижний перцентиль (автоматически устанавливается из Quality, можно переопределить)
@@ -69,7 +69,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 PercentileLow = 0.5f,
                 PercentileHigh = 99.5f,
                 KneeWidth = 0.0f,  // No knee for linear transformation
-                ChannelMode = HistogramChannelMode.AverageLuminance
+                ChannelMode = HistogramChannelMode.PerChannel  // Per-channel for correct color handling
             };
         }
 
@@ -84,7 +84,7 @@ namespace AssetProcessor.TextureConversion.Core {
                 PercentileLow = 1.0f,
                 PercentileHigh = 99.0f,
                 KneeWidth = 0.0f,
-                ChannelMode = HistogramChannelMode.AverageLuminance
+                ChannelMode = HistogramChannelMode.PerChannel  // Per-channel for correct color handling
             };
         }
 

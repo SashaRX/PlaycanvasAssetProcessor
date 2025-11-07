@@ -81,6 +81,34 @@ public static class Ktx2MetadataReader {
             var metadata = ParseKeyValueData(kvdData);
             if (metadata != null) {
                 logger.Info("[SUCCESS] Found histogram metadata in KTX2 file");
+
+                // COMPATIBILITY: Check if metadata contains direct or inverse values
+                // After histogram preprocessing refactor, we ALWAYS store inverse values in file
+                // But old files may contain direct values (scale < 1.0 for normalization)
+                // If scale[0] < 1.0, it's a direct value, need to invert for GPU
+                bool needsInversion = metadata.Scale[0] < 1.0f;
+
+                if (needsInversion) {
+                    logger.Warn("Detected OLD format histogram metadata (direct values), inverting for GPU compatibility");
+                    logger.Info($"Before inversion: scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
+
+                    // Invert: scale_inv = 1/scale, offset_inv = -offset/scale
+                    float[] scaleInv = new float[metadata.Scale.Length];
+                    float[] offsetInv = new float[metadata.Offset.Length];
+
+                    for (int i = 0; i < metadata.Scale.Length; i++) {
+                        scaleInv[i] = 1.0f / metadata.Scale[i];
+                        offsetInv[i] = -metadata.Offset[i] / metadata.Scale[i];
+                    }
+
+                    metadata = new HistogramMetadata {
+                        Scale = scaleInv,
+                        Offset = offsetInv
+                    };
+
+                    logger.Info($"After inversion: scale=[{string.Join(", ", metadata.Scale.Select(s => s.ToString("F4")))}], offset=[{string.Join(", ", metadata.Offset.Select(o => o.ToString("F4")))}]");
+                    logger.Info("GPU will now correctly apply: v_original = v_normalized * scale + offset");
+                }
             } else {
                 logger.Info("No 'pc.meta' key found in KVD section");
             }

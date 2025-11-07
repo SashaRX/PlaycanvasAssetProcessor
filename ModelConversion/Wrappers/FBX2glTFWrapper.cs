@@ -70,15 +70,18 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             var result = new ConversionResult();
 
             try {
-                Logger.Info($"FBX2glTF: Converting {inputPath} to {outputPath}.glb (exclude textures: {excludeTextures})");
+                Logger.Info($"FBX2glTF: Converting {inputPath} to {(excludeTextures ? "gltf" : "glb")} (exclude textures: {excludeTextures})");
 
-                // Аргументы: --binary --input "file.fbx" --output "output_path"
-                var arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
-
-                // Исключение текстур (только геометрия, материалы, анимации)
+                // Аргументы: --binary для .glb (с текстурами) или без --binary для .gltf (без текстур)
+                string arguments;
                 if (excludeTextures) {
-                    arguments += " --no-embed";
-                    Logger.Info("FBX2glTF: Textures will be excluded (geometry only) using --no-embed flag");
+                    // Используем .gltf формат (separate files) - текстуры останутся внешними файлами
+                    arguments = $"--input \"{inputPath}\" --output \"{outputPath}\"";
+                    Logger.Info("FBX2glTF: Exporting as .gltf format (textures as external files, not embedded)");
+                } else {
+                    // Используем .glb формат (binary) - текстуры будут встроены
+                    arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
+                    Logger.Info("FBX2glTF: Exporting as .glb format (textures embedded)");
                 }
 
                 Logger.Debug($"FBX2glTF command: {_executablePath} {arguments}");
@@ -124,16 +127,18 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 result.ExitCode = process.ExitCode;
 
                 if (process.ExitCode == 0) {
-                    // Проверяем что файл создан
-                    var glbPath = outputPath + ".glb";
-                    if (File.Exists(glbPath)) {
+                    // Проверяем что файл создан (.gltf или .glb)
+                    var expectedExtension = excludeTextures ? ".gltf" : ".glb";
+                    var outputFilePath = outputPath + expectedExtension;
+
+                    if (File.Exists(outputFilePath)) {
                         result.Success = true;
-                        result.OutputFilePath = glbPath;
-                        result.OutputFileSize = new FileInfo(glbPath).Length;
-                        Logger.Info($"FBX2glTF: Success, output size: {result.OutputFileSize} bytes");
+                        result.OutputFilePath = outputFilePath;
+                        result.OutputFileSize = new FileInfo(outputFilePath).Length;
+                        Logger.Info($"FBX2glTF: Success, output: {outputFilePath}, size: {result.OutputFileSize} bytes");
                     } else {
                         result.Success = false;
-                        result.Error = $"FBX2glTF completed but output file not found: {glbPath}";
+                        result.Error = $"FBX2glTF completed but output file not found: {outputFilePath}";
                         Logger.Error(result.Error);
                     }
                 } else {

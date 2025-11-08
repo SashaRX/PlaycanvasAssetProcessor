@@ -461,14 +461,26 @@ namespace AssetProcessor {
                     D3D11TextureViewer.Renderer.Render();
                     logger.Info("Forced render to apply current zoom/pan after KTX2 load");
 
-                    // AUTO-ENABLE Normal reconstruction for normal maps with NormalLayout metadata
-                    if (textureData.NormalLayoutMetadata != null && D3D11TextureViewer?.Renderer != null) {
-                        // Auto-enable Normal reconstruction mode for KTX2 normal maps
+                    // AUTO-ENABLE Normal reconstruction for normal maps
+                    // Priority 1: Check NormalLayout metadata (for new KTX2 files with metadata)
+                    // Priority 2: Check TextureType (for older KTX2 files without metadata)
+                    bool shouldAutoEnableNormal = false;
+                    string autoEnableReason = "";
+
+                    if (textureData.NormalLayoutMetadata != null) {
+                        shouldAutoEnableNormal = true;
+                        autoEnableReason = $"KTX2 normal map with metadata (layout: {textureData.NormalLayoutMetadata.Layout})";
+                    } else if (currentSelectedTexture?.TextureType?.ToLower() == "normal") {
+                        shouldAutoEnableNormal = true;
+                        autoEnableReason = "KTX2 normal map detected by TextureType (no metadata)";
+                    }
+
+                    if (shouldAutoEnableNormal && D3D11TextureViewer?.Renderer != null) {
                         currentActiveChannelMask = "Normal";
                         D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
                         D3D11TextureViewer.Renderer.Render();
                         UpdateChannelButtonsState(); // Sync button UI
-                        logger.Info($"Auto-enabled Normal reconstruction mode for KTX2 normal map (layout: {textureData.NormalLayoutMetadata.Layout})");
+                        logger.Info($"Auto-enabled Normal reconstruction mode for {autoEnableReason}");
                     }
                 });
 

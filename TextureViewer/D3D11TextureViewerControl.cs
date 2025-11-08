@@ -125,16 +125,12 @@ public class D3D11TextureViewerControl : HwndHost {
     public void HandleZoomFromWpf(int delta) {
         if (renderer == null) return;
 
-        logger.Info($"[WPF] Mouse wheel: delta={delta}, zoom before={zoom}");
-
         // Zoom with mouse wheel
         float zoomDelta = delta > 0 ? 1.1f : 0.9f;
         zoom *= zoomDelta;
         zoom = Math.Clamp(zoom, 0.125f, 16.0f);
 
         renderer.SetZoom(zoom);
-
-        logger.Info($"[WPF] Zoom after={zoom}");
     }
 
     // Static dictionary to map HWND to control instances for WndProc routing
@@ -230,8 +226,6 @@ public class D3D11TextureViewerControl : HwndHost {
         // Convert to client coordinates
         POINT pt = new POINT { x = screenX, y = screenY };
         ScreenToClient(hwndHost, ref pt);
-
-        logger.Info($"[Native] Mouse wheel: delta={delta}, zoom before={zoom}, mouse at client ({pt.x}, {pt.y})");
 
         // Get ACTUAL client area size from the window (not WPF properties!)
         // This is critical - mouse coordinates from ScreenToClient are relative to this size
@@ -339,8 +333,6 @@ public class D3D11TextureViewerControl : HwndHost {
         lastMouseX = (short)((long)lParam & 0xFFFF);
         lastMouseY = (short)((long)lParam >> 16);
 
-        logger.Info($"[Native] Middle button down at {lastMouseX}, {lastMouseY}");
-
         isPanning = true;
         SetCapture(hwndHost);
 
@@ -351,8 +343,6 @@ public class D3D11TextureViewerControl : HwndHost {
     }
 
     private void HandleMiddleButtonUp() {
-        logger.Info("[Native] Middle button up - stop panning");
-
         isPanning = false;
         ReleaseCapture();
 

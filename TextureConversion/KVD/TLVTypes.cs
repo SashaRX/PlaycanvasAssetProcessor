@@ -1,31 +1,23 @@
 namespace AssetProcessor.TextureConversion.KVD {
     /// <summary>
     /// Типы TLV блоков для KTX2 Key-Value Data
+    /// CRITICAL: Только HIST_SCALAR (0x01) и HIST_PER_CHANNEL_3 (0x03)
+    /// RGBA (4 канала) НЕ поддерживается!
     /// </summary>
     public enum TLVType : byte {
         /// <summary>
         /// HIST_SCALAR: общий scale/offset для всех каналов
         /// Payload: half scale, half offset (4 байта)
+        /// Используется для HistogramChannelMode.AverageLuminance
         /// </summary>
         HIST_SCALAR = 0x01,
 
         /// <summary>
-        /// HIST_RGB: общий scale/offset для RGB, альфа не трогаем
-        /// Payload: half scale, half offset (4 байта)
-        /// </summary>
-        HIST_RGB = 0x02,
-
-        /// <summary>
-        /// HIST_PER_CHANNEL_3: поканально для RGB
+        /// HIST_PER_CHANNEL_3: поканально для RGB (3 канала)
         /// Payload: half3 scale, half3 offset (12 байт)
+        /// Используется для HistogramChannelMode.PerChannel
         /// </summary>
         HIST_PER_CHANNEL_3 = 0x03,
-
-        /// <summary>
-        /// HIST_PER_CHANNEL_4: поканально для RGBA
-        /// Payload: half4 scale, half4 offset (16 байт)
-        /// </summary>
-        HIST_PER_CHANNEL_4 = 0x04,
 
         /// <summary>
         /// HIST_PARAMS: параметры анализа гистограммы (опционально)
@@ -58,7 +50,7 @@ namespace AssetProcessor.TextureConversion.KVD {
         NONE = 0,
 
         /// <summary>
-        /// X в R, Y в G, Z вычисляется
+        /// X в R, Y в G, Z вычисляется (BC5/UASTC normal maps)
         /// </summary>
         RG = 1,
 
@@ -75,6 +67,11 @@ namespace AssetProcessor.TextureConversion.KVD {
         /// <summary>
         /// X в A, Y в G, Z вычисляется
         /// </summary>
-        AG = 4
+        AG = 4,
+
+        /// <summary>
+        /// X в RGB (все каналы), Y в A, Z вычисляется (ETC1S normal maps в режиме RGB-X, A-Y)
+        /// </summary>
+        RGBxAy = 5
     }
 }

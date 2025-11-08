@@ -118,7 +118,9 @@ namespace AssetProcessor.TextureConversion.KVD {
                         BitConverter.GetBytes(dfdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 48);
                     }
                     if (sgdByteOffset >= insertOffset && sgdByteOffset > 0) {
-                        BitConverter.GetBytes(sgdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 64);
+                        uint newSgdByteOffset = sgdByteOffset + (uint)newKvPair.Length;
+                        BitConverter.GetBytes(newSgdByteOffset).CopyTo(newFileData, 64);
+                        Logger.Info($"    SGD offset updated: {sgdByteOffset} -> {newSgdByteOffset}");
                     }
 
                 } else {
@@ -140,8 +142,12 @@ namespace AssetProcessor.TextureConversion.KVD {
                     if (dfdByteOffset > insertOffset) {
                         BitConverter.GetBytes(dfdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 48);
                     }
-                    if (sgdByteOffset > insertOffset && sgdByteOffset > 0) {
-                        BitConverter.GetBytes(sgdByteOffset + (uint)newKvPair.Length).CopyTo(newFileData, 64);
+                    // КРИТИЧНО: используем >= для sgdByteOffset, так как SGD может начинаться РОВНО в точке insertOffset
+                    // (когда KVD заканчивается и SGD начинается сразу после него без gap)
+                    if (sgdByteOffset >= insertOffset && sgdByteOffset > 0) {
+                        uint newSgdByteOffset = sgdByteOffset + (uint)newKvPair.Length;
+                        BitConverter.GetBytes(newSgdByteOffset).CopyTo(newFileData, 64);
+                        Logger.Info($"    SGD offset updated: {sgdByteOffset} -> {newSgdByteOffset}");
                     }
                 }
 

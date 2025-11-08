@@ -10,10 +10,14 @@ cbuffer ShaderConstants : register(b0)
     float exposure;                     // HDR exposure (EV)
     float gamma;                        // Gamma correction (2.2 for sRGB, 1.0 for linear)
     uint channelMask;                   // RGBA channel mask (bit flags)
-    float3 histogramScale;              // Histogram denormalization scale (RGB)
+    // CRITICAL: HLSL adds implicit padding here (8 bytes) to align float4 to 16-byte boundary
+    // C# struct must have explicit Vector2 Padding1 field to match this alignment
+    float4 histogramScale;              // Histogram denormalization scale (RGB, w unused)
+    float4 histogramOffset;             // Histogram denormalization offset (RGB, w unused)
     uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
-    float3 histogramOffset;             // Histogram denormalization offset (RGB)
     uint histogramIsPerChannel;         // 0 = scalar, 1 = per-channel
+    uint normalLayout;                  // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
+    uint padding3;                      // Padding to align to 16-byte boundary
 };
 
 Texture2D<float4> sourceTexture : register(t0);
@@ -85,22 +89,35 @@ float4 PSMain(PSInput input) : SV_TARGET
     }
 
     // STEP 0: Apply histogram denormalization if enabled
-    // This must happen FIRST, on the raw sampled data (normalized to [0,1])
+    // CRITICAL: Histogram metadata is in sRGB space, but BC-compressed sRGB textures
+    // are auto-decoded to linear by GPU. We must convert back to sRGB, apply denormalization,
+    // then convert to linear again for the rest of the pipeline.
     // Formula: v_original = v_normalized * scale + offset
     if (enableHistogramCorrection != 0)
     {
-        color.rgb = color.rgb * histogramScale + histogramOffset;
+        // For BC*_SRGB_BLOCK formats, GPU auto-decodes to linear before shader
+        // Convert linear -> sRGB to match histogram metadata space
+        float3 srgbColor = pow(max(color.rgb, 0.0), 1.0 / 2.2);
+
+        // Apply denormalization in sRGB space (use .rgb to ignore w component)
+        srgbColor = srgbColor * histogramScale.rgb + histogramOffset.rgb;
+
+        // Convert back to linear for rest of pipeline
+        color.rgb = pow(max(srgbColor, 0.0), 2.2);
     }
 
     // Check if channel mask is active
     bool hasMask = (channelMask != 0xFFFFFFFF);
 
-    // STEP 1: Convert texture data to LINEAR space (for both masked and unmasked)
-    // For sRGB textures (gamma==1.0): decode sRGB->linear
-    // For linear textures (gamma==2.2): already linear, no conversion needed
-    if (gamma == 1.0)
+    // STEP 1: Data is now in LINEAR space
+    // For BC-compressed sRGB textures: already converted above
+    // For uncompressed PNG textures loaded as R8G8B8A8_UNorm:
+    //   - gamma==1.0 (sRGB): decode sRGB->linear
+    //   - gamma==2.2 (linear): already linear, no conversion
+    if (gamma == 1.0 && enableHistogramCorrection == 0)
     {
-        // sRGB texture - decode to linear
+        // sRGB texture without histogram - decode to linear
+        // (if histogram enabled, we already did this conversion above)
         color.rgb = pow(max(color.rgb, 0.0), 2.2);
     }
 
@@ -118,27 +135,49 @@ float4 PSMain(PSInput input) : SV_TARGET
 
         if (showNormal)
         {
-            // Normal Map Reconstruction Mode
-            // Standard BC5 format: X in Red/Green channel, Y in Green/Alpha channel, Z reconstructed
-            // Load XY from appropriate channels (GA is common for BC5)
+            // Normal Map Reconstruction Mode (ONLY FOR KTX2 TEXTURES)
+            // Extract XY components based on normalLayout metadata from KTX2
+            // Supported layouts: 1=RG (UASTC/BC5), 5=RGBxAy (ETC1S)
             float2 nml;
-            nml.x = color.r; // X from Red (or could be Green for BC5)
-            nml.y = color.a; // Y from Alpha (or could be Green for BC5)
 
-            // Unpack from [0,1] to [-1,1]
-            nml = nml * 2.0 - 1.0;
+            if (normalLayout == 1)
+            {
+                // RG layout: X in R, Y in G (BC5/UASTC standard)
+                nml.x = color.r;
+                nml.y = color.g;
+            }
+            else if (normalLayout == 5)
+            {
+                // RGBxAy layout: X in RGB (all channels), Y in A (ETC1S)
+                nml.x = color.r; // X encoded in all RGB channels
+                nml.y = color.a;
+            }
+            else
+            {
+                // NONE (0) or unknown: no reconstruction, show raw texture
+                // This happens for PNG sources (R=X, G=Y, B=Z already)
+                // Just display color as-is without reconstruction
+                color.a = 1.0;
+            }
 
-            // Reconstruct Z component
-            // Z = sqrt(1 - dot(XY, XY)) = sqrt(1 - X² - Y²)
-            float zSquared = max(0.0, 1.0 - dot(nml, nml));
-            float nmlZ = sqrt(zSquared);
+            // Only reconstruct if we have a valid layout
+            if (normalLayout == 1 || normalLayout == 5)
+            {
+                // Unpack from [0,1] to [-1,1]
+                nml = nml * 2.0 - 1.0;
 
-            // Pack back to [0,1] for display (so we can see negative values)
-            float3 normalVis = float3(nml.x, nml.y, nmlZ);
-            normalVis = normalVis * 0.5 + 0.5; // [-1,1] -> [0,1] for visualization
+                // Reconstruct Z component
+                // Z = sqrt(1 - X² - Y²)
+                float zSquared = max(0.0, 1.0 - dot(nml, nml));
+                float nmlZ = sqrt(zSquared);
 
-            color.rgb = normalVis;
-            color.a = 1.0;
+                // Pack back to [0,1] for display
+                float3 normalVis = float3(nml.x, nml.y, nmlZ);
+                normalVis = normalVis * 0.5 + 0.5; // [-1,1] -> [0,1] for visualization
+
+                color.rgb = normalVis;
+                color.a = 1.0;
+            }
         }
         else if (showGrayscale)
         {

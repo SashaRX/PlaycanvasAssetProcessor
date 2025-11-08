@@ -172,16 +172,30 @@
                         </Grid>
                     </StackPanel>
 
-                    <!-- ETC1S Quality -->
+                    <!-- ETC1S Options -->
                     <StackPanel x:Name="ETC1SPanel" Visibility="Collapsed" Margin="0,10,0,0">
-                        <TextBlock Text="ETC1S Quality (0-255):" Margin="0,0,0,3"/>
+                        <TextBlock Text="Compression Level (0-5):" Margin="0,0,0,3"
+                                   ToolTip="0=fastest, 5=slowest/best compression"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="CompressionLevelSlider" Grid.Column="0"
+                                    Minimum="0" Maximum="5" Value="1"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=CompressionLevelSlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="ETC1S Quality (1-255):" Margin="0,0,0,3"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
-                                    Minimum="0" Maximum="255" Value="128"
+                                    Minimum="1" Maximum="255" Value="128"
                                     TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
                                        Width="40" TextAlignment="Right"/>

@@ -325,6 +325,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             if (settings.ConvertToNormalMap) {
                 args.Add("--normal-mode");
+
+                // КРИТИЧНО: Указываем что вход уже linear (не sRGB)
+                // Без этого ktx create видит PNG как sRGB и конвертирует sRGB→Linear,
+                // что ОСВЕТЛЯЕТ текстуру (из-за gamma removal)
+                args.Add("--assign-oetf");
+                args.Add("linear");
+
+                Logger.Info("Normal map mode: --normal-mode with --assign-oetf linear");
             }
 
             // ============================================

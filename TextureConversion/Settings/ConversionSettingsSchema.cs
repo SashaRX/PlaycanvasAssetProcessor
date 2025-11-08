@@ -620,10 +620,10 @@ namespace AssetProcessor.TextureConversion.Settings {
                     }
                 },
 
-                // Gloss (Linear + Toksvig) - также подходит для Roughness и AO
+                // Gloss (Linear + Toksvig)
                 new ConversionPreset {
                     Name = "Gloss (Linear + Toksvig)",
-                    Description = "Оптимизирован для gloss/roughness с коррекцией Toksvig",
+                    Description = "Оптимизирован для gloss с коррекцией Toksvig",
                     TextureType = TextureType.Gloss,
                     ParameterValues = new Dictionary<string, object?> {
                         { "compressionFormat", "etc1s" },

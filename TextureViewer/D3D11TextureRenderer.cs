@@ -51,6 +51,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private HistogramMetadata? histogramMetadata = null;
     private bool enableHistogramCorrection = true; // Enabled by default if metadata present
 
+    // Track loaded texture source to distinguish KTX2 from PNG
+    private string? currentTexturePath = null;
+
     // Lock for thread-safe access to texture resources
     private readonly object renderLock = new object();
 
@@ -63,10 +66,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
         public float Exposure;
         public float Gamma;
         public uint ChannelMask;
-        public Vector3 HistogramScale;  // RGB scale for histogram denormalization
+        public Vector2 Padding1;  // CRITICAL: HLSL aligns float4 to 16-byte boundary, so we need 8 bytes padding here
+        public Vector4 HistogramScale;  // RGB scale for histogram denormalization (w unused, for 16-byte alignment)
+        public Vector4 HistogramOffset; // RGB offset for histogram denormalization (w unused, for 16-byte alignment)
         public uint EnableHistogramCorrection; // 0 = disabled, 1 = enabled
-        public Vector3 HistogramOffset; // RGB offset for histogram denormalization
         public uint HistogramIsPerChannel; // 0 = scalar, 1 = per-channel
+        public uint NormalLayout; // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
+        public uint Padding3; // Padding to maintain 16-byte alignment
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -87,7 +93,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Initialize D3D11 device and resources.
     /// </summary>
     public void Initialize(IntPtr hwnd, int width, int height) {
-        logger.Info($"Initializing D3D11 renderer: {width}x{height}, hwnd={hwnd:X}");
+        logger.Debug($"Initializing D3D11 renderer: {width}x{height}");
 
         windowHandle = hwnd;
         viewportWidth = width;
@@ -122,14 +128,10 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 out _,
                 out context);
 
-            logger.Info("D3D11 device created successfully");
-
             CreateRenderTarget();
             CreateSamplers();
             CreateShaders();
             CreateVertexBuffer();
-
-            logger.Info("D3D11 renderer initialized successfully");
         } catch (Exception ex) {
             logger.Error(ex, "Failed to initialize D3D11 renderer");
             throw;
@@ -176,22 +178,18 @@ public sealed class D3D11TextureRenderer : IDisposable {
             // Try alternative path (in case HLSL is in root)
             shaderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TextureViewerShader.hlsl");
             if (File.Exists(shaderPath)) {
-                logger.Info($"Found shader at alternative path: {shaderPath}");
+                logger.Debug($"Found shader at alternative path: {shaderPath}");
             } else {
                 logger.Error($"Shader not found at alternative path either: {shaderPath}");
                 logger.Warn("Rendering will NOT work without shaders!");
                 return;
             }
-        } else {
-            logger.Info($"Shader file found: {shaderPath}");
         }
 
         try {
             string shaderCode = File.ReadAllText(shaderPath);
-            logger.Info($"Shader code loaded, size: {shaderCode.Length} chars");
 
             // Compile vertex shader
-            logger.Info("Compiling vertex shader...");
             var vsBlob = Vortice.D3DCompiler.Compiler.Compile(
                 shaderSource: shaderCode,
                 entryPoint: "VSMain",
@@ -204,7 +202,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
             }
 
             vertexShader = device!.CreateVertexShader(vsBlob.Span);
-            logger.Info("Vertex shader compiled successfully");
 
             // Create input layout
             var inputElements = new InputElementDescription[] {
@@ -214,7 +211,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
             inputLayout = device!.CreateInputLayout(inputElements, vsBlob.Span);
 
             // Compile pixel shader
-            logger.Info("Compiling pixel shader...");
             var psBlob = Vortice.D3DCompiler.Compiler.Compile(
                 shaderSource: shaderCode,
                 entryPoint: "PSMain",
@@ -227,7 +223,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
             }
 
             pixelShader = device!.CreatePixelShader(psBlob.Span);
-            logger.Info("Pixel shader compiled successfully");
 
             // Create constant buffer
             var cbDesc = new BufferDescription {
@@ -237,8 +232,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 CPUAccessFlags = CpuAccessFlags.Write
             };
             constantBuffer = device!.CreateBuffer(cbDesc);
-
-            logger.Info("Shaders compiled and created successfully");
         } catch (Exception ex) {
             logger.Error(ex, "Failed to compile shaders");
         }
@@ -286,19 +279,22 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Load texture data into GPU.
     /// </summary>
     public void LoadTexture(TextureData textureData) {
-        logger.Info($"LoadTexture called: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips, sRGB={textureData.IsSRGB}");
+        logger.Debug($"LoadTexture: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
         lock (renderLock) {
-            logger.Info($"LoadTexture acquired lock, loading texture...");
-
             currentTexture = textureData;
+            currentTexturePath = textureData.SourcePath; // Track source (KTX2 path or null for PNG)
 
             // Store histogram metadata for GPU compensation
             histogramMetadata = textureData.HistogramMetadata;
             if (histogramMetadata != null) {
-                logger.Info($"Histogram metadata loaded: {histogramMetadata.Scale.Length} channel(s)");
+                logger.Info($"[D3D11TextureRenderer] Histogram metadata loaded: {histogramMetadata.Scale.Length} channel(s)");
+                logger.Info($"[D3D11TextureRenderer] Scale = [{string.Join(", ", histogramMetadata.Scale.Select(s => s.ToString("F4")))}]");
+                logger.Info($"[D3D11TextureRenderer] Offset = [{string.Join(", ", histogramMetadata.Offset.Select(o => o.ToString("F4")))}]");
+                logger.Info($"[D3D11TextureRenderer] IsPerChannel = {histogramMetadata.IsPerChannel}");
                 enableHistogramCorrection = true; // Enable by default when metadata present
             } else {
+                logger.Info("[D3D11TextureRenderer] No histogram metadata in texture");
                 enableHistogramCorrection = false; // No metadata, disable correction
             }
 
@@ -340,20 +336,15 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 // PNG: Check IsSRGB flag to determine if bytes are already sRGB-encoded
                 currentGamma = textureData.IsSRGB ? 1.0f : 2.2f;
                 originalGamma = currentGamma; // Save for restoring after mask
-                logger.Info($"PNG texture: Set gamma to {currentGamma} (IsSRGB={textureData.IsSRGB})");
             } else {
                 // KTX2: GPU output is always Linear, need to encode to sRGB for monitor
                 currentGamma = 2.2f;
                 originalGamma = currentGamma; // Save for restoring after mask
-                logger.Info($"KTX2 texture: Set gamma to {currentGamma} (format={textureData.CompressionFormat})");
             }
 
             // Dispose old texture
-            logger.Info("Disposing old texture resources...");
             textureSRV?.Dispose();
-            logger.Info("textureSRV disposed");
             texture?.Dispose();
-            logger.Info("texture disposed");
 
         // Determine format based on compression
         Format format;
@@ -368,13 +359,11 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 "BC1_RGBA_UNORM_BLOCK" => Format.BC1_UNorm,
                 _ => throw new Exception($"Unsupported compression format: {textureData.CompressionFormat}")
             };
-            logger.Info($"Using compressed D3D11 format: {format} for {textureData.CompressionFormat}");
         } else {
             // Uncompressed RGBA8 - WPF gives us BGRA32, so use BGRA format
             // Always use UNorm (no automatic sRGB decode)
             // Gamma correction in shader will handle sRGB encoding for display
             format = Format.B8G8R8A8_UNorm;
-            logger.Info($"Using uncompressed D3D11 format: {format} (BGRA byte order from WPF, no auto sRGB decode)");
         }
 
         // Create texture description
@@ -394,11 +383,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
         var pinnedHandles = new GCHandle[textureData.MipCount];
 
         try {
-            logger.Info("Preparing mip data for GPU upload...");
             for (int i = 0; i < textureData.MipCount; i++) {
                 var mip = textureData.MipLevels[i];
-
-                logger.Info($"Mip {i}: {mip.Width}x{mip.Height}, data length={mip.Data.Length}, rowPitch={mip.RowPitch}");
 
                 if (mip.Data == null || mip.Data.Length == 0) {
                     throw new Exception($"Mip {i} has no data!");
@@ -415,19 +401,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
                     RowPitch = (uint)mip.RowPitch,
                     SlicePitch = slicePitch
                 };
-
-                logger.Info($"Mip {i} SubresourceData: RowPitch={mip.RowPitch}, SlicePitch={slicePitch}");
             }
 
-            logger.Info("Creating D3D11 texture...");
             // Create texture
             texture = device!.CreateTexture2D(texDesc, subresources);
 
-            logger.Info("Creating shader resource view...");
             // Create SRV
             textureSRV = device!.CreateShaderResourceView(texture);
-
-            logger.Info("Texture loaded successfully");
         } finally {
             // Free pinned handles
             foreach (var handle in pinnedHandles) {
@@ -444,8 +424,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
             // zoomLevel = 1.0f;  // DON'T RESET
             // panX = 0.0f;        // DON'T RESET
             // panY = 0.0f;        // DON'T RESET
-
-            logger.Info($"LoadTexture completed, preserving zoom={zoomLevel} pan=({panX},{panY}), releasing lock");
         } // lock (renderLock)
     }
 
@@ -521,9 +499,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
             posScale = new Vector2(1.0f, viewportAspect / textureAspect);
         }
 
-        // Prepare histogram metadata for shader
-        Vector3 histScale = new Vector3(1.0f, 1.0f, 1.0f);
-        Vector3 histOffset = new Vector3(0.0f, 0.0f, 0.0f);
+        // Prepare histogram metadata for shader (using Vector4 for proper HLSL alignment)
+        Vector4 histScale = new Vector4(1.0f, 1.0f, 1.0f, 0.0f);
+        Vector4 histOffset = new Vector4(0.0f, 0.0f, 0.0f, 0.0f);
         uint enableHist = 0;
         uint isPerChannel = 0;
 
@@ -533,24 +511,31 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
             if (histogramMetadata.IsPerChannel) {
                 // Per-channel: use RGB values
-                histScale = new Vector3(
+                histScale = new Vector4(
                     histogramMetadata.Scale[0],
                     histogramMetadata.Scale.Length > 1 ? histogramMetadata.Scale[1] : histogramMetadata.Scale[0],
-                    histogramMetadata.Scale.Length > 2 ? histogramMetadata.Scale[2] : histogramMetadata.Scale[0]
+                    histogramMetadata.Scale.Length > 2 ? histogramMetadata.Scale[2] : histogramMetadata.Scale[0],
+                    0.0f  // w unused
                 );
-                histOffset = new Vector3(
+                histOffset = new Vector4(
                     histogramMetadata.Offset[0],
                     histogramMetadata.Offset.Length > 1 ? histogramMetadata.Offset[1] : histogramMetadata.Offset[0],
-                    histogramMetadata.Offset.Length > 2 ? histogramMetadata.Offset[2] : histogramMetadata.Offset[0]
+                    histogramMetadata.Offset.Length > 2 ? histogramMetadata.Offset[2] : histogramMetadata.Offset[0],
+                    0.0f  // w unused
                 );
             } else {
                 // Scalar: use same value for all channels
                 float scale = histogramMetadata.Scale[0];
                 float offset = histogramMetadata.Offset[0];
-                histScale = new Vector3(scale, scale, scale);
-                histOffset = new Vector3(offset, offset, offset);
+                histScale = new Vector4(scale, scale, scale, 0.0f);
+                histOffset = new Vector4(offset, offset, offset, 0.0f);
             }
         }
+
+        // Get normal layout from texture metadata (default to NONE if not available)
+        uint normalLayout = currentTexture?.NormalLayoutMetadata?.Layout != null
+            ? (uint)currentTexture.NormalLayoutMetadata.Layout
+            : 0u;
 
         var constants = new ShaderConstants {
             UvScale = new Vector2(1.0f / zoomLevel, 1.0f / zoomLevel),
@@ -560,10 +545,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
             Exposure = 0.0f,
             Gamma = currentGamma,
             ChannelMask = channelMask,
+            Padding1 = new Vector2(0.0f, 0.0f),  // CRITICAL: Explicit padding for HLSL float4 alignment
             HistogramScale = histScale,
-            EnableHistogramCorrection = enableHist,
             HistogramOffset = histOffset,
-            HistogramIsPerChannel = isPerChannel
+            EnableHistogramCorrection = enableHist,
+            HistogramIsPerChannel = isPerChannel,
+            NormalLayout = normalLayout,
+            Padding3 = 0u
         };
 
         var mapped = context!.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
@@ -630,7 +618,22 @@ public sealed class D3D11TextureRenderer : IDisposable {
         lock (renderLock) {
             enableHistogramCorrection = enabled;
             if (histogramMetadata != null) {
-                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")}");
+                logger.Info($"[D3D11TextureRenderer] Histogram correction {(enabled ? "ENABLED" : "DISABLED")}");
+                if (enabled) {
+                    if (histogramMetadata.IsPerChannel && histogramMetadata.Scale.Length >= 3) {
+                        // Per-channel mode: show all RGB channels
+                        logger.Info($"[D3D11TextureRenderer] Per-channel mode (R, G, B):");
+                        logger.Info($"  R: v_original = v_normalized * {histogramMetadata.Scale[0]:F4} + {histogramMetadata.Offset[0]:F4}");
+                        logger.Info($"  G: v_original = v_normalized * {histogramMetadata.Scale[1]:F4} + {histogramMetadata.Offset[1]:F4}");
+                        logger.Info($"  B: v_original = v_normalized * {histogramMetadata.Scale[2]:F4} + {histogramMetadata.Offset[2]:F4}");
+                    } else {
+                        // Scalar mode: show single value for all channels
+                        logger.Info($"[D3D11TextureRenderer] Scalar mode (all channels):");
+                        logger.Info($"  v_original = v_normalized * {histogramMetadata.Scale[0]:F4} + {histogramMetadata.Offset[0]:F4}");
+                    }
+                }
+            } else {
+                logger.Info($"[D3D11TextureRenderer] SetHistogramCorrection called but NO metadata (enabled={enabled})");
             }
         }
     }
@@ -644,6 +647,18 @@ public sealed class D3D11TextureRenderer : IDisposable {
     public bool HasHistogramMetadata() {
         lock (renderLock) {
             return histogramMetadata != null;
+        }
+    }
+
+    public HistogramMetadata? GetHistogramMetadata() {
+        lock (renderLock) {
+            return histogramMetadata;
+        }
+    }
+
+    public string? GetCurrentTexturePath() {
+        lock (renderLock) {
+            return currentTexturePath;
         }
     }
 
@@ -671,6 +686,6 @@ public sealed class D3D11TextureRenderer : IDisposable {
         context?.Dispose();
         device?.Dispose();
 
-        logger.Info("D3D11 renderer disposed");
+        logger.Debug("D3D11 renderer disposed");
     }
 }

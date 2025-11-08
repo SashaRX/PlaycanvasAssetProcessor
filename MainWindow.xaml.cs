@@ -129,6 +129,7 @@ namespace AssetProcessor {
         private string? projectName = string.Empty;
         private bool? isViewerVisible = true;
         private BitmapSource? originalBitmapSource;
+        private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
@@ -405,6 +406,9 @@ namespace AssetProcessor {
                             string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
                             TextureFormatTextBlock.Text = $"Format: {formatInfo}";
                         }
+
+                        // Update histogram correction button state (PNG has no metadata)
+                        UpdateHistogramCorrectionButtonState();
                     });
 
                     // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
@@ -443,24 +447,10 @@ namespace AssetProcessor {
                     logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
                     // Update histogram correction button state
-                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-                    if (HistogramCorrectionButton != null) {
-                        HistogramCorrectionButton.IsEnabled = hasHistogram;
-                        HistogramCorrectionButton.IsChecked = hasHistogram; // Auto-enable if metadata present
-
-                        if (hasHistogram && textureData.HistogramMetadata != null) {
-                            var meta = textureData.HistogramMetadata;
-                            string scaleStr = meta.IsPerChannel
-                                ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
-                                : meta.Scale[0].ToString("F3");
-                            HistogramCorrectionButton.ToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
-                            logger.Info($"Histogram metadata found: scale={scaleStr}");
-                        } else {
-                            HistogramCorrectionButton.ToolTip = "No histogram metadata in this texture";
-                        }
-                    }
+                    UpdateHistogramCorrectionButtonState();
 
                     // Update format info in UI
+                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
                     if (TextureFormatTextBlock != null) {
                         string compressionFormat = textureData.CompressionFormat ?? "Unknown";
                         string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
@@ -471,6 +461,28 @@ namespace AssetProcessor {
                     // Trigger immediate render to show the updated texture with preserved zoom/pan
                     D3D11TextureViewer.Renderer.Render();
                     logger.Info("Forced render to apply current zoom/pan after KTX2 load");
+
+                    // AUTO-ENABLE Normal reconstruction for normal maps
+                    // Priority 1: Check NormalLayout metadata (for new KTX2 files with metadata)
+                    // Priority 2: Check TextureType (for older KTX2 files without metadata)
+                    bool shouldAutoEnableNormal = false;
+                    string autoEnableReason = "";
+
+                    if (textureData.NormalLayoutMetadata != null) {
+                        shouldAutoEnableNormal = true;
+                        autoEnableReason = $"KTX2 normal map with metadata (layout: {textureData.NormalLayoutMetadata.Layout})";
+                    } else if (currentSelectedTexture?.TextureType?.ToLower() == "normal") {
+                        shouldAutoEnableNormal = true;
+                        autoEnableReason = "KTX2 normal map detected by TextureType (no metadata)";
+                    }
+
+                    if (shouldAutoEnableNormal && D3D11TextureViewer?.Renderer != null) {
+                        currentActiveChannelMask = "Normal";
+                        D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                        D3D11TextureViewer.Renderer.Render();
+                        UpdateChannelButtonsState(); // Sync button UI
+                        logger.Info($"Auto-enabled Normal reconstruction mode for {autoEnableReason}");
+                    }
                 });
 
                 return true;
@@ -500,14 +512,25 @@ namespace AssetProcessor {
 
         #region UI Viewer
         private async void FilterButton_Click(object sender, RoutedEventArgs e) {
+            // Ignore programmatic updates to prevent recursive calls
+            if (isUpdatingChannelButtons) {
+                return;
+            }
+
             if (sender is ToggleButton button) {
                 string? channel = button.Tag.ToString();
                 if (button.IsChecked == true) {
-                    // Сброс всех остальных кнопок
-                    RChannelButton.IsChecked = button == RChannelButton;
-                    GChannelButton.IsChecked = button == GChannelButton;
-                    BChannelButton.IsChecked = button == BChannelButton;
-                    AChannelButton.IsChecked = button == AChannelButton;
+                    // Сброс всех остальных кнопок (including NormalButton)
+                    isUpdatingChannelButtons = true;
+                    try {
+                        RChannelButton.IsChecked = button == RChannelButton;
+                        GChannelButton.IsChecked = button == GChannelButton;
+                        BChannelButton.IsChecked = button == BChannelButton;
+                        AChannelButton.IsChecked = button == AChannelButton;
+                        NormalButton.IsChecked = button == NormalButton;
+                    } finally {
+                        isUpdatingChannelButtons = false;
+                    }
 
                     // Применяем фильтр
                     if (!string.IsNullOrEmpty(channel)) {
@@ -524,11 +547,16 @@ namespace AssetProcessor {
         /// Synchronize channel button GUI state with currentActiveChannelMask.
         /// </summary>
         private void UpdateChannelButtonsState() {
-            RChannelButton.IsChecked = currentActiveChannelMask == "R";
-            GChannelButton.IsChecked = currentActiveChannelMask == "G";
-            BChannelButton.IsChecked = currentActiveChannelMask == "B";
-            AChannelButton.IsChecked = currentActiveChannelMask == "A";
-            NormalButton.IsChecked = currentActiveChannelMask == "Normal";
+            isUpdatingChannelButtons = true;
+            try {
+                RChannelButton.IsChecked = currentActiveChannelMask == "R";
+                GChannelButton.IsChecked = currentActiveChannelMask == "G";
+                BChannelButton.IsChecked = currentActiveChannelMask == "B";
+                AChannelButton.IsChecked = currentActiveChannelMask == "A";
+                NormalButton.IsChecked = currentActiveChannelMask == "Normal";
+            } finally {
+                isUpdatingChannelButtons = false;
+            }
         }
 
         private void FitResetButton_Click(object sender, RoutedEventArgs e) {
@@ -562,10 +590,50 @@ namespace AssetProcessor {
             if (sender is ToggleButton button && D3D11TextureViewer?.Renderer != null) {
                 bool enabled = button.IsChecked ?? true;
                 D3D11TextureViewer.Renderer.SetHistogramCorrection(enabled);
-                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user");
+
+                // Save setting for next session
+                AppSettings.Default.HistogramCorrectionEnabled = enabled;
+                AppSettings.Default.Save();
+
+                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user (saved to settings)");
 
                 // Force immediate render to show the change
                 D3D11TextureViewer.Renderer.Render();
+            }
+        }
+
+        /// <summary>
+        /// Updates the histogram correction button state based on whether current texture has histogram metadata
+        /// </summary>
+        private void UpdateHistogramCorrectionButtonState() {
+            if (HistogramCorrectionButton == null || D3D11TextureViewer?.Renderer == null) {
+                return;
+            }
+
+            bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
+            HistogramCorrectionButton.IsEnabled = hasHistogram;
+
+            if (hasHistogram) {
+                // Restore saved setting (default to enabled if metadata present)
+                bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
+                HistogramCorrectionButton.IsChecked = savedEnabled;
+                D3D11TextureViewer.Renderer.SetHistogramCorrection(savedEnabled);
+                logger.Info($"Histogram correction {(savedEnabled ? "enabled" : "disabled")} (restored from settings)");
+
+                // Update tooltip with metadata info
+                var meta = D3D11TextureViewer.Renderer.GetHistogramMetadata();
+                if (meta != null) {
+                    string scaleStr = meta.IsPerChannel
+                        ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
+                        : meta.Scale[0].ToString("F3");
+                    HistogramCorrectionButton.ToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
+                    logger.Info($"Histogram metadata found: scale={scaleStr}");
+                }
+            } else {
+                // No histogram metadata - disable button
+                HistogramCorrectionButton.IsChecked = false;
+                HistogramCorrectionButton.ToolTip = "No histogram metadata in this texture";
+                logger.Info("No histogram metadata in current texture");
             }
         }
 
@@ -1024,8 +1092,27 @@ namespace AssetProcessor {
                     // Old method: extracted PNG mipmaps available (WPF mode)
                     UpdateMipmapControls(currentKtxMipmaps);
                     SetCurrentMipLevel(currentMipLevel);
+                } else if (D3D11TextureViewer?.Renderer != null &&
+                           D3D11TextureViewer.Renderer.GetCurrentTexturePath() == currentLoadedKtx2Path &&
+                           !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
+                    // CRITICAL: KTX2 is ALREADY loaded in D3D11 (check path match to prevent PNG confusion)
+                    UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
+                    logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
+
+                    // Update histogram correction button state
+                    UpdateHistogramCorrectionButtonState();
+
+                    // Restore channel mask if already loaded
+                    // BUT: Don't restore if auto-enable already set Normal mode for normal maps
+                    if (savedMask != null && currentActiveChannelMask != "Normal") {
+                        currentActiveChannelMask = savedMask;
+                        _ = FilterChannelAsync(savedMask);
+                        logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
+                    } else if (currentActiveChannelMask == "Normal") {
+                        logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
+                    }
                 } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
-                    // New method: Reload KTX2 natively to D3D11
+                    // New method: Reload KTX2 natively to D3D11 (only if not already loaded)
                     _ = Task.Run(async () => {
                         try {
                             await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
@@ -1035,10 +1122,13 @@ namespace AssetProcessor {
                                     logger.Info($"Reloaded KTX2 to D3D11 when switching to KTX2 mode - {D3D11TextureViewer.Renderer.MipCount} mip levels");
 
                                     // Restore channel mask after KTX2 load
-                                    if (savedMask != null) {
+                                    // BUT: Don't restore if auto-enable already set Normal mode for normal maps
+                                    if (savedMask != null && currentActiveChannelMask != "Normal") {
                                         currentActiveChannelMask = savedMask;
                                         _ = FilterChannelAsync(savedMask);
                                         logger.Info($"Restored channel mask '{savedMask}' after switching to KTX2 mode");
+                                    } else if (currentActiveChannelMask == "Normal") {
+                                        logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                                     }
                                 }
                             });
@@ -1046,17 +1136,6 @@ namespace AssetProcessor {
                             logger.Error(ex, "Failed to reload KTX2 when switching to KTX2 mode");
                         }
                     });
-                } else if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
-                    // KTX2 already loaded in D3D11
-                    UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
-                    logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
-
-                    // Restore channel mask if already loaded
-                    if (savedMask != null) {
-                        currentActiveChannelMask = savedMask;
-                        _ = FilterChannelAsync(savedMask);
-                        logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
-                    }
                 } else {
                     HideMipmapControls();
                 }
@@ -1312,6 +1391,16 @@ namespace AssetProcessor {
                     UpdateChannelButtonsState();
                     UpdateHistogram(originalBitmapSource);
                     ScheduleFitZoomUpdate(recalculateFitZoom);
+
+                    // AUTO-ENABLE Normal reconstruction for normal map textures (PNG)
+                    // Must be AFTER all reset operations to prevent being cleared
+                    if (!preserveMask && currentSelectedTexture?.TextureType?.ToLower() == "normal" && D3D11TextureViewer?.Renderer != null) {
+                        currentActiveChannelMask = "Normal";
+                        D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                        D3D11TextureViewer.Renderer.Render();
+                        UpdateChannelButtonsState(); // Sync button UI
+                        logger.Info("Auto-enabled Normal reconstruction mode for normal map texture (PNG)");
+                    }
                 });
             }
         }
@@ -1772,6 +1861,8 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
+
             // Update selection count in central control box
             UpdateSelectedTexturesCount();
 
@@ -1781,10 +1872,13 @@ namespace AssetProcessor {
             CancellationToken cancellationToken = textureLoadCancellation.Token;
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
+
                 ResetPreviewState();
                 ClearD3D11Viewer();
 
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Path is valid, entering main load block");
                     try {
                         // Обновляем информацию о текстуре сразу
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
@@ -1804,12 +1898,16 @@ namespace AssetProcessor {
 
                         // Debounce: wait a bit to see if user is still scrolling
                         await Task.Delay(50, cancellationToken);
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Debounce completed for: {selectedTexture.Name}");
 
                         // Load conversion settings for this texture
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Loading conversion settings for: {selectedTexture.Name}");
                         LoadTextureConversionSettings(selectedTexture);
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Conversion settings loaded for: {selectedTexture.Name}");
 
                         // Check cancellation before starting heavy operations
                         cancellationToken.ThrowIfCancellationRequested();
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Starting texture load for: {selectedTexture.Name}");
 
                         // FIXED: Separate D3D11 native KTX2 loading from PNG extraction
                         // to prevent conflicts
@@ -1817,14 +1915,22 @@ namespace AssetProcessor {
 
                         if (isUsingD3D11Renderer) {
                             // D3D11 MODE: Try D3D11 native KTX2 loading (always use native when D3D11 is active)
+                            MainWindowHelpers.LogInfo($"[TextureSelection] Attempting KTX2 load for: {selectedTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
+                            MainWindowHelpers.LogInfo($"[TextureSelection] KTX2 load result for {selectedTexture.Name}: {ktxLoaded}");
 
                             if (ktxLoaded) {
                                 // KTX2 loaded successfully to D3D11, still load source for histogram/info
-                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: false);
+                                // If user is in Source mode, show the PNG; otherwise just load for histogram
+                                bool showInViewer = (currentPreviewSourceMode == TexturePreviewSourceMode.Source);
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Loading source preview for {selectedTexture.Name}, showInViewer: {showInViewer}");
+                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: showInViewer);
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
                             } else {
                                 // No KTX2 or failed, fallback to source preview
+                                MainWindowHelpers.LogInfo($"[TextureSelection] No KTX2, loading source preview for: {selectedTexture.Name}");
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
                             }
                         } else {
                             // WPF MODE: Use PNG extraction for mipmaps (old method)
@@ -1849,6 +1955,7 @@ namespace AssetProcessor {
                             });
                         }
                     } catch (OperationCanceledException) {
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
                         // Загрузка была отменена - это нормально
                     } catch (Exception ex) {
                         MainWindowHelpers.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
@@ -1963,15 +2070,20 @@ namespace AssetProcessor {
 
         private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
             // Reset channel masks when loading new texture
-            currentActiveChannelMask = null;
-            Dispatcher.Invoke(() => {
-                UpdateChannelButtonsState();
-                // Reset D3D11 renderer mask
-                if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
-                    D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
-                    D3D11TextureViewer.Renderer.RestoreOriginalGamma();
-                }
-            });
+            // BUT: Don't reset if Normal mode was auto-enabled for normal maps
+            if (currentActiveChannelMask != "Normal") {
+                currentActiveChannelMask = null;
+                Dispatcher.Invoke(() => {
+                    UpdateChannelButtonsState();
+                    // Reset D3D11 renderer mask
+                    if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                        D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
+                        D3D11TextureViewer.Renderer.RestoreOriginalGamma();
+                    }
+                });
+            } else {
+                logger.Info("LoadSourcePreviewAsync: Skipping mask reset - Normal mode is active for normal map");
+            }
 
             // Store currently selected texture for sRGB detection
             currentSelectedTexture = selectedTexture;
@@ -4474,9 +4586,17 @@ namespace AssetProcessor {
         }
 
         private void ConversionSettingsPanel_SettingsChanged(object? sender, EventArgs e) {
+            MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event triggered");
+
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Updating settings for texture: {selectedTexture.Name}");
                 UpdateTextureConversionSettings(selectedTexture);
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Settings updated for texture: {selectedTexture.Name}");
+            } else {
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] No texture selected, skipping update");
             }
+
+            MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event handler completed");
         }
 
         private void UpdateTextureConversionSettings(TextureResource texture) {
@@ -4494,6 +4614,8 @@ namespace AssetProcessor {
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
+
             // КРИТИЧНО: Устанавливаем путь текущей текстуры для auto-detect normal map!
             ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
 
@@ -4504,24 +4626,36 @@ namespace AssetProcessor {
             // Это позволяет автоматически выбирать правильный preset для каждой текстуры
             var presetManager = new TextureConversion.Settings.PresetManager();
             var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");
 
             if (matchedPreset != null) {
                 // Нашли preset по имени файла (например "gloss" → "Gloss (Linear + Toksvig)")
                 texture.PresetName = matchedPreset.Name;
                 MainWindowHelpers.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
 
-                // Устанавливаем preset в dropdown
-                if (ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().Contains(matchedPreset.Name)) {
-                    ConversionSettingsPanel.PresetComboBox.SelectedItem = matchedPreset.Name;
+                // Проверяем наличие preset в dropdown
+                var dropdownItems = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().ToList();
+                MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Dropdown contains {dropdownItems.Count} items: {string.Join(", ", dropdownItems)}");
+
+                bool presetExistsInDropdown = dropdownItems.Contains(matchedPreset.Name);
+                MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
+
+                // КРИТИЧНО: Устанавливаем preset БЕЗ триггера событий чтобы не блокировать загрузку текстуры!
+                if (presetExistsInDropdown) {
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: {matchedPreset.Name}");
+                    ConversionSettingsPanel.SetPresetSilently(matchedPreset.Name);
                 } else {
-                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom SILENTLY");
+                    ConversionSettingsPanel.SetPresetSilently("Custom");
                 }
             } else {
                 // Preset не найден по имени файла - используем "Custom"
                 texture.PresetName = "";
-                ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
-                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom");
+                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom SILENTLY");
+                ConversionSettingsPanel.SetPresetSilently("Custom");
             }
+
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");
 
             // Загружаем default настройки для типа текстуры (если Custom)
             if (string.IsNullOrEmpty(texture.PresetName)) {
@@ -4794,14 +4928,17 @@ namespace AssetProcessor {
                             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture && selectedTexture == texture) {
                                 MainWindowHelpers.LogInfo($"Текущая текстура сконвертирована, перезагружаем preview...");
 
-                                // Перезагружаем KTX2 preview
+                                // Перезагружаем KTX2 preview (DIRECT LOAD - with histogram metadata!)
                                 await Dispatcher.InvokeAsync(async () => {
                                     try {
-                                        bool ktx2Loaded = await TryLoadKtx2PreviewAsync(texture, CancellationToken.None);
+                                        // CRITICAL: Use TryLoadKtx2ToD3D11Async (NOT TryLoadKtx2PreviewAsync)!
+                                        // TryLoadKtx2ToD3D11Async loads KTX2 directly with metadata
+                                        // TryLoadKtx2PreviewAsync extracts to PNG (loses histogram metadata)
+                                        bool ktx2Loaded = await TryLoadKtx2ToD3D11Async(texture, CancellationToken.None);
                                         if (ktx2Loaded) {
                                             // Автоматически переключаемся на KTX2 preview
                                             SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
-                                            MainWindowHelpers.LogInfo("✓ KTX2 preview загружен и отображён");
+                                            MainWindowHelpers.LogInfo("✓ KTX2 loaded directly to D3D11 with histogram metadata");
                                         }
                                     } catch (Exception ex) {
                                         MainWindowHelpers.LogError($"Ошибка при загрузке KTX2 preview: {ex.Message}");

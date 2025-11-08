@@ -278,12 +278,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                                 if (compressionSettings.HistogramAnalysis.Mode == HistogramMode.PercentileWithKnee) {
                                     // Soft-knee (High Quality)
-                                    float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth * (histogramResult.RangeHigh - histogramResult.RangeLow);
+                                    float kneeWidth = compressionSettings.HistogramAnalysis.KneeWidth;
                                     Logger.Info($"Applying soft-knee (width={kneeWidth:F4}) to mip {i}");
                                     transformedMip = _histogramAnalyzer.ApplySoftKnee(
                                         mipmaps[i],
-                                        histogramResult.RangeLow,
-                                        histogramResult.RangeHigh,
+                                        histogramResult,
                                         kneeWidth
                                     );
                                 } else {
@@ -291,8 +290,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                     Logger.Info($"Applying winsorization to mip {i}");
                                     transformedMip = _histogramAnalyzer.ApplyWinsorization(
                                         mipmaps[i],
-                                        histogramResult.RangeLow,
-                                        histogramResult.RangeHigh
+                                        histogramResult
                                     );
                                 }
 
@@ -354,6 +352,17 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             // ВСЕГДА записываем параметры анализа для справки
                             tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
 
+                            // NORMAL MAP LAYOUT - если это normal map, добавляем layout В ТОТ ЖЕ TLVWriter
+                            if (mipProfile.TextureType == TextureType.Normal && compressionSettings.ConvertToNormalMap) {
+                                // КРИТИЧНО: --normal-mode ВСЕГДА конвертирует RGB(XYZ) → RGBxAy
+                                // Это работает для ВСЕХ форматов (ETC1S и UASTC)
+                                // Результат: X в RGB каналах, Y в A канале
+                                NormalLayout normalLayout = NormalLayout.RGBxAy;
+                                Logger.Info($"Normal map with --normal-mode: using RGBxAy layout (X in RGB, Y in A) for {compressionSettings.CompressionFormat}");
+                                tlvWriter.WriteNormalLayout(normalLayout);
+                                Logger.Info($"✓ Normal map layout added to histogram TLV: {normalLayout}");
+                            }
+
                             // Сохраняем TLV в временный файл
                             var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
                             tlvWriter.SaveToFile(tlvPath);
@@ -375,6 +384,33 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             result.HistogramAnalysisResult = histogramResult;
                         } else {
                             Logger.Warn($"Histogram analysis failed: {histogramResult.Error}");
+                        }
+                    }
+
+                    // NORMAL MAP LAYOUT - если histogram НЕ был включен, но это normal map
+                    if (mipProfile.TextureType == TextureType.Normal &&
+                        compressionSettings.ConvertToNormalMap &&
+                        kvdBinaryFiles == null) {
+
+                        Logger.Info("=== NORMAL MAP LAYOUT METADATA (NO HISTOGRAM) ===");
+
+                        using var tlvWriter = new TLVWriter();
+
+                        // КРИТИЧНО: --normal-mode ВСЕГДА конвертирует RGB(XYZ) → RGBxAy
+                        // Это работает для ВСЕХ форматов (ETC1S и UASTC)
+                        NormalLayout normalLayout = NormalLayout.RGBxAy;
+                        Logger.Info($"Normal map with --normal-mode: using RGBxAy layout (X in RGB, Y in A) for {compressionSettings.CompressionFormat}");
+
+                        tlvWriter.WriteNormalLayout(normalLayout);
+
+                        var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
+                        tlvWriter.SaveToFile(tlvPath);
+
+                        if (File.Exists(tlvPath)) {
+                            var fileInfo = new FileInfo(tlvPath);
+                            Logger.Info($"TLV file size: {fileInfo.Length} bytes");
+                            kvdBinaryFiles = new Dictionary<string, string> { { "pc.meta", tlvPath } };
+                            Logger.Info($"✓ Normal map layout metadata written: {normalLayout}");
                         }
                     }
 

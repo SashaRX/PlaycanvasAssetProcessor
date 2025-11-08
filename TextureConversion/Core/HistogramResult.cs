@@ -89,8 +89,8 @@ namespace AssetProcessor.TextureConversion.Core {
             return new HistogramResult {
                 Success = true,
                 Mode = HistogramMode.Off,
-                Scale = new[] { 1.0f },
-                Offset = new[] { 0.0f },
+                Scale = [1.0f],
+                Offset = [0.0f],
                 RangeLow = 0.0f,
                 RangeHigh = 1.0f
             };

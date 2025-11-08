@@ -1006,16 +1006,41 @@ namespace AssetProcessor.Controls {
             presetsWindow.Owner = Window.GetWindow(this);
             presetsWindow.ShowDialog();
 
-            // Обновляем список пресетов после закрытия окна
-            var currentPreset = PresetComboBox.SelectedItem as TextureConversionPreset;
-            InitializePresets();
+            // КРИТИЧНО: Проверяем какая система пресетов используется
+            if (_conversionSettingsManager != null) {
+                // Новая система - обновляем список строк
+                System.Diagnostics.Debug.WriteLine($"[ManagePresets_Click] Using NEW preset system (ConversionSettingsManager)");
+                var presets = ConversionSettingsSchema.GetPredefinedPresets();
+                var currentSelectedName = PresetComboBox.SelectedItem as string;
 
-            // Пытаемся восстановить выбранный пресет
-            if (currentPreset != null) {
-                var updatedPreset = _presetManager.GetPreset(currentPreset.Name);
-                if (updatedPreset != null) {
-                    PresetComboBox.SelectedItem = updatedPreset;
+                var presetNames = new List<string> { "Custom" };
+                presetNames.AddRange(presets.Select(p => p.Name));
+
+                PresetComboBox.ItemsSource = presetNames;
+
+                // Восстанавливаем выбранный пресет
+                if (!string.IsNullOrEmpty(currentSelectedName) && presetNames.Contains(currentSelectedName)) {
+                    PresetComboBox.SelectedItem = currentSelectedName;
+                } else {
+                    PresetComboBox.SelectedIndex = 0; // "Custom"
                 }
+
+                System.Diagnostics.Debug.WriteLine($"[ManagePresets_Click] Refreshed NEW system presets, selected: {PresetComboBox.SelectedItem}");
+            } else {
+                // Старая система - обновляем список объектов
+                System.Diagnostics.Debug.WriteLine($"[ManagePresets_Click] Using OLD preset system (PresetManager)");
+                var currentPreset = PresetComboBox.SelectedItem as TextureConversionPreset;
+                InitializePresets();
+
+                // Пытаемся восстановить выбранный пресет
+                if (currentPreset != null) {
+                    var updatedPreset = _presetManager.GetPreset(currentPreset.Name);
+                    if (updatedPreset != null) {
+                        PresetComboBox.SelectedItem = updatedPreset;
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[ManagePresets_Click] Refreshed OLD system presets");
             }
         }
 

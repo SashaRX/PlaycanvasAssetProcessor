@@ -1806,6 +1806,8 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
+
             // Update selection count in central control box
             UpdateSelectedTexturesCount();
 
@@ -1815,10 +1817,13 @@ namespace AssetProcessor {
             CancellationToken cancellationToken = textureLoadCancellation.Token;
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
+
                 ResetPreviewState();
                 ClearD3D11Viewer();
 
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Path is valid, entering main load block");
                     try {
                         // Обновляем информацию о текстуре сразу
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;

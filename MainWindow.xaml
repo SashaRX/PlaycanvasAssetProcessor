@@ -93,6 +93,17 @@
             <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
         </ContextMenu>
 
+        <!-- ContextMenu для строк моделей -->
+        <ContextMenu x:Key="ModelRowContextMenu">
+            <MenuItem Header="Process Model" Click="ProcessSelectedModel_Click"/>
+            <MenuItem Header="Upload to PlayCanvas" Click="UploadModel_Click"/>
+            <Separator/>
+            <MenuItem Header="Open File Location" Click="OpenModelFileLocation_Click"/>
+            <MenuItem Header="Copy Path" Click="CopyModelPath_Click"/>
+            <Separator/>
+            <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
+        </ContextMenu>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -326,6 +337,11 @@
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
                               Background="#FFD6D6D6">
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
+                                </Style>
+                            </DataGrid.RowStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
@@ -602,61 +618,110 @@
                 </Border>
             </ScrollViewer>
 
-            <Border x:Name="ModelViewer" Visibility="Collapsed" Background="#FF414D58" Grid.RowSpan="1" Grid.ColumnSpan="1" Grid.Column="2" MinWidth="256" MinHeight="256">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" MinHeight="128"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+            <ScrollViewer x:Name="ModelViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                <Border x:Name="ModelViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                    <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true" Grid.Row="0" Grid.ColumnSpan="3">
-                        <helix:DefaultLights/>
-                    </helix:HelixViewport3D>
-
-                    <Canvas HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ZIndex="1" Grid.Row="0">
-                        <TextBlock x:Name="ModelNameTextBlock" Text="Model Name:" Canvas.Left="10" Canvas.Top="10" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                        <TextBlock x:Name="ModelTrianglesTextBlock" Text="Triangles:" Canvas.Left="10" Canvas.Top="30" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                        <TextBlock x:Name="ModelVerticesTextBlock" Text="Vertices:" Canvas.Left="10" Canvas.Top="50" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                        <TextBlock x:Name="ModelUVChannelsTextBlock" Text="UV Channels:" Canvas.Left="10" Canvas.Top="70" Background="#AAFFFFFF" Padding="2" FontSize="10" />
-                    </Canvas>
-
-                    <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="Gray" VerticalContentAlignment="Bottom" HorizontalContentAlignment="Stretch" Panel.ZIndex="1" />
-
-                    <Border Grid.Row="2" Grid.ColumnSpan="3" BorderBrush="Black" BorderThickness="1" Margin="0" Height="auto" MinWidth="128" MinHeight="137">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                        <!-- Model Preview Section -->
+                        <Expander Grid.Row="0" Header="Model Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7FFFFFFF"/>
-                                <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
-                                    <Image x:Name="UVImage" Stretch="Uniform" MinWidth="128" MinHeight="128" />
-                                </Viewbox>
-                            </Grid>
-                            <Grid Grid.Column="1">
-                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="ModelPreviewContentRow" Height="300" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7FFFFFFF"/>
-                                <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
-                                    <Image x:Name="UVImage2" Stretch="Uniform" MinWidth="128" MinHeight="128" />
-                                </Viewbox>
+
+                                <!-- Model Info Panel (ABOVE viewport) -->
+                                <Border Grid.Row="0" Background="#DD000000" BorderThickness="0,0,0,1" BorderBrush="#FF555555" Padding="6,4">
+                                    <StackPanel Orientation="Vertical">
+                                        <TextBlock x:Name="ModelNameTextBlock"
+                                                  Text="Model Name:"
+                                                  Foreground="White"
+                                                  FontSize="10"
+                                                  FontWeight="SemiBold"
+                                                  Margin="0,0,0,2" />
+                                        <TextBlock x:Name="ModelTrianglesTextBlock"
+                                                  Text="Triangles:"
+                                                  Foreground="#FFCCCCCC"
+                                                  FontSize="9"
+                                                  Margin="0,0,0,1" />
+                                        <TextBlock x:Name="ModelVerticesTextBlock"
+                                                  Text="Vertices:"
+                                                  Foreground="#FFCCCCCC"
+                                                  FontSize="9"
+                                                  Margin="0,0,0,1" />
+                                        <TextBlock x:Name="ModelUVChannelsTextBlock"
+                                                  Text="UV Channels:"
+                                                  Foreground="#FFAAAAAA"
+                                                  FontSize="9" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 3D Viewport -->
+                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
+                                    <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true">
+                                        <helix:DefaultLights/>
+                                    </helix:HelixViewport3D>
+                                </Border>
+
+                                <GridSplitter Grid.Row="2"
+                                              Height="6"
+                                              Margin="0,4,0,4"
+                                              Background="#FFE0E0E0"
+                                              HorizontalAlignment="Stretch"
+                                              ResizeDirection="Rows"
+                                              ResizeBehavior="PreviousAndNext"
+                                              ShowsPreview="False"
+                                              Cursor="SizeNS" />
                             </Grid>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </Border>
+                        </Expander>
+
+                        <!-- UV Maps Section -->
+                        <Expander Grid.Row="1" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
+                            <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="137" MaxHeight="300">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7F000000"/>
+                                        <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
+                                            <Image x:Name="UVImage" Stretch="Uniform" MinWidth="128" MinHeight="128" />
+                                        </Viewbox>
+                                    </Grid>
+                                    <Grid Grid.Column="1">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7F000000"/>
+                                        <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
+                                            <Image x:Name="UVImage2" Stretch="Uniform" MinWidth="128" MinHeight="128" />
+                                        </Viewbox>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </Expander>
+
+                        <!-- Model Conversion Settings Panel -->
+                        <Expander Grid.Row="2" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
+                                  Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
+                            <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
+                                                                   ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>
+                        </Expander>
+                    </Grid>
+                </Border>
+            </ScrollViewer>
 
             <!-- Просмотр параметров материала -->
             <ScrollViewer x:Name="MaterialViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">

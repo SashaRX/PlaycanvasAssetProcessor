@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using AssetProcessor.ModelConversion.Core;
@@ -205,7 +206,11 @@ namespace AssetProcessor.ModelConversion.Wrappers {
 
             // Упрощение геометрии
             if (lodSettings.SimplificationRatio < 1.0f) {
-                args.Add($"-si {lodSettings.SimplificationRatio:F2}");
+                // КРИТИЧНО: Используем InvariantCulture чтобы получить "0.60" вместо "0,60"
+                // gltfpack не понимает запятую как десятичный разделитель
+                var simplificationStr = lodSettings.SimplificationRatio.ToString("F2", CultureInfo.InvariantCulture);
+                args.Add($"-si {simplificationStr}");
+                Logger.Debug($"Simplification argument: -si {simplificationStr}");
 
                 // Агрессивное упрощение
                 if (lodSettings.AggressiveSimplification) {

@@ -56,9 +56,33 @@ namespace AssetProcessor.Controls {
                 ? (CompressionMode)CompressionModeComboBox.SelectedItem
                 : CompressionMode.Quantization;
 
+            // Build LOD chain based on user settings
+            var lodChain = new List<LodSettings>();
+
+            // LOD0 always enabled
+            lodChain.Add(LodSettings.CreateDefault(LodLevel.LOD0));
+
+            if (Lod1EnabledCheckBox.IsChecked == true) {
+                var lod1 = LodSettings.CreateDefault(LodLevel.LOD1);
+                lod1.SimplificationRatio = (float)(Lod1RatioSlider.Value / 100.0);
+                lodChain.Add(lod1);
+            }
+
+            if (Lod2EnabledCheckBox.IsChecked == true) {
+                var lod2 = LodSettings.CreateDefault(LodLevel.LOD2);
+                lod2.SimplificationRatio = (float)(Lod2RatioSlider.Value / 100.0);
+                lodChain.Add(lod2);
+            }
+
+            if (Lod3EnabledCheckBox.IsChecked == true) {
+                var lod3 = LodSettings.CreateDefault(LodLevel.LOD3);
+                lod3.SimplificationRatio = (float)(Lod3RatioSlider.Value / 100.0);
+                lodChain.Add(lod3);
+            }
+
             return new ModelConversionSettings {
                 GenerateLods = GenerateLodsCheckBox.IsChecked ?? true,
-                LodChain = LodSettings.CreateFullChain(), // Default LOD chain
+                LodChain = lodChain,
                 CompressionMode = compressionMode,
                 Quantization = quantization,
                 LodHysteresis = (float)LodHysteresisSlider.Value,
@@ -90,6 +114,32 @@ namespace AssetProcessor.Controls {
                 TexCoordBitsSlider.Value = settings.Quantization.TexCoordBits;
                 NormalBitsSlider.Value = settings.Quantization.NormalBits;
                 ColorBitsSlider.Value = settings.Quantization.ColorBits;
+            }
+
+            // Load LOD settings
+            if (settings.LodChain != null) {
+                // Reset all LOD checkboxes
+                Lod1EnabledCheckBox.IsChecked = false;
+                Lod2EnabledCheckBox.IsChecked = false;
+                Lod3EnabledCheckBox.IsChecked = false;
+
+                // Enable and configure based on LodChain
+                foreach (var lod in settings.LodChain) {
+                    switch (lod.Level) {
+                        case LodLevel.LOD1:
+                            Lod1EnabledCheckBox.IsChecked = true;
+                            Lod1RatioSlider.Value = lod.SimplificationRatio * 100;
+                            break;
+                        case LodLevel.LOD2:
+                            Lod2EnabledCheckBox.IsChecked = true;
+                            Lod2RatioSlider.Value = lod.SimplificationRatio * 100;
+                            break;
+                        case LodLevel.LOD3:
+                            Lod3EnabledCheckBox.IsChecked = true;
+                            Lod3RatioSlider.Value = lod.SimplificationRatio * 100;
+                            break;
+                    }
+                }
             }
 
             _isLoading = false;

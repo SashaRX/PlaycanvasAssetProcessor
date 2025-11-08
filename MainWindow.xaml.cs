@@ -4976,6 +4976,106 @@ namespace AssetProcessor {
             }
         }
 
+        // Context menu handlers for model rows
+        private async void ProcessSelectedModel_Click(object sender, RoutedEventArgs e) {
+            try {
+                var selectedModel = ModelsDataGrid.SelectedItem as ModelResource;
+                if (selectedModel == null) {
+                    MessageBox.Show("No model selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(selectedModel.Path)) {
+                    MessageBox.Show("Model file path is empty.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Get settings from ModelConversionSettingsPanel
+                var settings = ModelConversionSettingsPanel.GetSettings();
+
+                // Create output directory
+                var modelName = Path.GetFileNameWithoutExtension(selectedModel.Path);
+                var sourceDir = Path.GetDirectoryName(selectedModel.Path) ?? Environment.CurrentDirectory;
+                var outputDir = Path.Combine(sourceDir, "_out", modelName);
+                Directory.CreateDirectory(outputDir);
+
+                MainWindowHelpers.LogInfo($"Processing model: {selectedModel.Name}");
+                MainWindowHelpers.LogInfo($"  Source: {selectedModel.Path}");
+                MainWindowHelpers.LogInfo($"  Output: {outputDir}");
+
+                // TODO: Get FBX2glTF and gltfpack paths from global settings
+                var fbx2glTFPath = "FBX2glTF-windows-x64.exe";
+                var gltfPackPath = "gltfpack.exe";
+
+                var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
+
+                ProgressTextBlock.Text = $"Processing {selectedModel.Name}...";
+
+                var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
+
+                if (result.Success) {
+                    MainWindowHelpers.LogInfo($"✓ Model processed successfully");
+                    MainWindowHelpers.LogInfo($"  LOD files: {result.LodFiles.Count}");
+                    MainWindowHelpers.LogInfo($"  Manifest: {result.ManifestPath}");
+                    MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
+                        "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                } else {
+                    var errors = string.Join("\n", result.Errors);
+                    MainWindowHelpers.LogError($"✗ Model processing failed:\n{errors}");
+                    MessageBox.Show($"Model processing failed:\n\n{errors}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+
+                ProgressTextBlock.Text = "Ready";
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error processing model: {ex.Message}");
+                MessageBox.Show($"Error processing model: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ProgressTextBlock.Text = "Ready";
+            }
+        }
+
+        private void UploadModel_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement model upload
+            MessageBox.Show("Model upload not yet implemented.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void OpenModelFileLocation_Click(object sender, RoutedEventArgs e) {
+            if (ModelsDataGrid.SelectedItem is ModelResource model) {
+                if (!string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
+                    var directory = Path.GetDirectoryName(model.Path);
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
+                        System.Diagnostics.Process.Start("explorer.exe", directory);
+                    }
+                } else {
+                    MessageBox.Show("Model file path is invalid or file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyModelPath_Click(object sender, RoutedEventArgs e) {
+            if (ModelsDataGrid.SelectedItem is ModelResource model) {
+                if (!string.IsNullOrEmpty(model.Path)) {
+                    try {
+                        Clipboard.SetText(model.Path);
+                        MessageBox.Show($"Path copied to clipboard:\n{model.Path}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    } catch (Exception ex) {
+                        MessageBox.Show($"Failed to copy path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+        }
+
+        private void RefreshModelPreview_Click(object sender, RoutedEventArgs e) {
+            if (ModelsDataGrid.SelectedItem is ModelResource model) {
+                // Trigger a refresh by re-selecting the model
+                ModelsDataGrid_SelectionChanged(ModelsDataGrid, null!);
+            }
+        }
+
+        private void ModelConversionSettingsPanel_ProcessRequested(object sender, EventArgs e) {
+            // When user clicks "Process Selected Model" button in the settings panel
+            ProcessSelectedModel_Click(sender, new RoutedEventArgs());
+        }
+
         #endregion
     }
 }

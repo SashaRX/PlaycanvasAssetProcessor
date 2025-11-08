@@ -716,7 +716,8 @@
                         <!-- Model Conversion Settings Panel -->
                         <Expander Grid.Row="2" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
                                   Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
-                            <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"/>
+                            <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
+                                                                   ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>
                         </Expander>
                     </Grid>
                 </Border>

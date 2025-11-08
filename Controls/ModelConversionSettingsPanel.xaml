@@ -49,6 +49,23 @@
             <Setter Property="FontSize" Value="9"/>
         </Style>
 
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#FF1E1E1E"/>
+            <Setter Property="Foreground" Value="#FFE0E0E0"/>
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF2D2D30"/>
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#FF007ACC"/>
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Label Style -->
         <Style x:Key="LabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="9"/>
@@ -180,12 +197,69 @@
                                    Width="35" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="LOD Configuration:" FontWeight="SemiBold" Margin="0,4,0,2" FontSize="9"/>
-                    <TextBlock Text="Default LOD levels:" Foreground="Gray" Margin="0,0,0,1" FontSize="8" TextWrapping="Wrap"/>
-                    <TextBlock Text="• LOD0: 100% (full detail)" Foreground="Gray" Margin="0,0,0,1" FontSize="8"/>
-                    <TextBlock Text="• LOD1: 60% (medium detail)" Foreground="Gray" Margin="0,0,0,1" FontSize="8"/>
-                    <TextBlock Text="• LOD2: 30% (low detail)" Foreground="Gray" Margin="0,0,0,1" FontSize="8"/>
-                    <TextBlock Text="• LOD3: 12% (very low detail)" Foreground="Gray" Margin="0,0,0,4" FontSize="8"/>
+                    <TextBlock Text="LOD Levels:" FontWeight="SemiBold" Margin="0,4,0,2" FontSize="9"/>
+
+                    <!-- LOD0 -->
+                    <CheckBox x:Name="Lod0EnabledCheckBox" Content="LOD0 (Full Detail)" IsChecked="True" Margin="0,0,0,1" FontWeight="SemiBold"
+                              ToolTip="Enable LOD0 (always enabled, full detail)"/>
+                    <TextBlock Text="Simplification Ratio: 100%" Foreground="Gray" Margin="16,0,0,2" FontSize="8"/>
+
+                    <!-- LOD1 -->
+                    <CheckBox x:Name="Lod1EnabledCheckBox" Content="LOD1 (High Detail)" IsChecked="True" Margin="0,2,0,1" FontWeight="SemiBold"
+                              ToolTip="Enable LOD1"/>
+                    <StackPanel x:Name="Lod1SettingsPanel" Margin="16,0,0,2" IsEnabled="{Binding ElementName=Lod1EnabledCheckBox, Path=IsChecked}">
+                        <TextBlock Text="Simplification (%):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="Lod1RatioSlider" Grid.Column="0"
+                                    Minimum="10" Maximum="100" Value="60"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,2,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod1RatioSlider, Path=Value, StringFormat={}{0:F0}%}"
+                                       Width="35" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- LOD2 -->
+                    <CheckBox x:Name="Lod2EnabledCheckBox" Content="LOD2 (Medium Detail)" IsChecked="True" Margin="0,2,0,1" FontWeight="SemiBold"
+                              ToolTip="Enable LOD2"/>
+                    <StackPanel x:Name="Lod2SettingsPanel" Margin="16,0,0,2" IsEnabled="{Binding ElementName=Lod2EnabledCheckBox, Path=IsChecked}">
+                        <TextBlock Text="Simplification (%):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="Lod2RatioSlider" Grid.Column="0"
+                                    Minimum="5" Maximum="100" Value="30"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,2,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod2RatioSlider, Path=Value, StringFormat={}{0:F0}%}"
+                                       Width="35" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- LOD3 -->
+                    <CheckBox x:Name="Lod3EnabledCheckBox" Content="LOD3 (Low Detail)" IsChecked="True" Margin="0,2,0,1" FontWeight="SemiBold"
+                              ToolTip="Enable LOD3"/>
+                    <StackPanel x:Name="Lod3SettingsPanel" Margin="16,0,0,2" IsEnabled="{Binding ElementName=Lod3EnabledCheckBox, Path=IsChecked}">
+                        <TextBlock Text="Simplification (%):" Style="{StaticResource LabelStyle}"/>
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="Lod3RatioSlider" Grid.Column="0"
+                                    Minimum="1" Maximum="100" Value="12"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Margin="0,0,2,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod3RatioSlider, Path=Value, StringFormat={}{0:F0}%}"
+                                       Width="35" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
             </Expander>
 

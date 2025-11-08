@@ -1,0 +1,225 @@
+<UserControl x:Class="AssetProcessor.Controls.ModelConversionSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:core="clr-namespace:AssetProcessor.ModelConversion.Core"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="280">
+
+    <UserControl.Resources>
+        <!-- Enum Data Providers -->
+        <ObjectDataProvider x:Key="CompressionModeValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:CompressionMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <!-- Compact Expander Style -->
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HeaderTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="9" Margin="0,1"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Compact GroupBox Style -->
+        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="1"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- ComboBox Style -->
+        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Label Style -->
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+        </Style>
+
+        <!-- Checkbox Style -->
+        <Style TargetType="CheckBox">
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Padding" Value="3,1"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="1">
+
+            <!-- 1. BASIC SETTINGS -->
+            <Expander Header="Basic Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="GenerateLodsCheckBox" Content="Generate LODs" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Generate LOD levels (LOD0-LOD3)"/>
+
+                    <TextBlock Text="Compression Mode:" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="CompressionModeComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource CompressionModeValues}}"
+                              SelectedIndex="0"
+                              Margin="0,0,0,2"
+                              ToolTip="Quantization or Meshopt compression"/>
+
+                    <CheckBox x:Name="GenerateBothTracksCheckBox" Content="Generate Both Tracks" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Generate both quantization and meshopt tracks"/>
+
+                    <CheckBox x:Name="ExcludeTexturesCheckBox" Content="Exclude Textures" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Exclude textures from GLB (process separately via Texture Conversion)"/>
+
+                    <CheckBox x:Name="GenerateManifestCheckBox" Content="Generate Manifest" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Generate LOD switching manifest for PlayCanvas"/>
+
+                    <CheckBox x:Name="GenerateQAReportCheckBox" Content="Generate QA Report" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Generate quality assurance validation report"/>
+
+                    <CheckBox x:Name="CleanupIntermediateFilesCheckBox" Content="Cleanup Intermediate Files" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Remove intermediate files after processing"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 2. QUANTIZATION SETTINGS -->
+            <Expander Header="Quantization Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <TextBlock Text="Position Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="PositionBitsSlider" Grid.Column="0"
+                                Minimum="8" Maximum="16" Value="14"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=PositionBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="TexCoord Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="TexCoordBitsSlider" Grid.Column="0"
+                                Minimum="8" Maximum="16" Value="12"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=TexCoordBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="Normal Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="NormalBitsSlider" Grid.Column="0"
+                                Minimum="8" Maximum="16" Value="10"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=NormalBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="Color Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="ColorBitsSlider" Grid.Column="0"
+                                Minimum="8" Maximum="16" Value="8"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=ColorBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Expander>
+
+            <!-- 3. LOD SETTINGS -->
+            <Expander Header="LOD Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <TextBlock Text="LOD Hysteresis (0.01-0.1):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="LodHysteresisSlider" Grid.Column="0"
+                                Minimum="0.01" Maximum="0.1" Value="0.02"
+                                TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"
+                                ToolTip="Hysteresis factor for LOD switching"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=LodHysteresisSlider, Path=Value, StringFormat={}{0:F2}}"
+                                   Width="35" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="LOD Configuration:" FontWeight="SemiBold" Margin="0,4,0,2" FontSize="9"/>
+                    <TextBlock Text="Default LOD levels:" Foreground="Gray" Margin="0,0,0,1" FontSize="8" TextWrapping="Wrap"/>
+                    <TextBlock Text="• LOD0: 100% (full detail)" Foreground="Gray" Margin="0,0,0,1" FontSize="8"/>
+                    <TextBlock Text="• LOD1: 60% (medium detail)" Foreground="Gray" Margin="0,0,0,1" FontSize="8"/>
+                    <TextBlock Text="• LOD2: 30% (low detail)" Foreground="Gray" Margin="0,0,0,1" FontSize="8"/>
+                    <TextBlock Text="• LOD3: 12% (very low detail)" Foreground="Gray" Margin="0,0,0,4" FontSize="8"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 4. QUICK PRESETS -->
+            <Expander Header="Quick Presets" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <Button Content="Default" x:Name="ApplyDefaultPresetButton" Height="22" Margin="0,0,0,1"
+                            Click="ApplyDefaultPreset_Click"
+                            ToolTip="Default settings (balanced quality/size)"/>
+                    <Button Content="Production" x:Name="ApplyProductionPresetButton" Height="22" Margin="0,0,0,1"
+                            Click="ApplyProductionPreset_Click"
+                            ToolTip="Production settings (good quality, moderate size)"/>
+                    <Button Content="High Quality" x:Name="ApplyHighQualityPresetButton" Height="22" Margin="0,0,0,1"
+                            Click="ApplyHighQualityPreset_Click"
+                            ToolTip="High quality settings (best quality, larger size)"/>
+                    <Button Content="Min Size" x:Name="ApplyMinSizePresetButton" Height="22" Margin="0,0,0,1"
+                            Click="ApplyMinSizePreset_Click"
+                            ToolTip="Minimum size settings (lower quality, smallest size)"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 5. ACTIONS SECTION -->
+            <GroupBox Header="Actions" Style="{StaticResource CompactGroupBoxStyle}">
+                <StackPanel>
+                    <Button Content="Process Selected Model" x:Name="ProcessButton" Height="26" Margin="0,0,0,1"
+                            Click="Process_Click" FontWeight="Bold" Background="#FF4CAF50" Foreground="White"
+                            ToolTip="Process selected model with current settings"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="Apply" x:Name="ApplyButton" Width="50" Margin="0,0,2,0" Click="Apply_Click"/>
+                        <Button Content="Reset" x:Name="ResetButton" Width="50" Click="Reset_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

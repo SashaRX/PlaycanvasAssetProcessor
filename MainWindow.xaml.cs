@@ -1675,19 +1675,19 @@ namespace AssetProcessor {
 
         private void ShowTextureViewer() {
             TextureViewerScroll.Visibility = Visibility.Visible;
-            ModelViewer.Visibility = Visibility.Collapsed;
+            ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowModelViewer() {
             TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewer.Visibility = Visibility.Visible;
+            ModelViewerScroll.Visibility = Visibility.Visible;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowMaterialViewer() {
             TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewer.Visibility = Visibility.Collapsed;
+            ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Visible;
         }
 
@@ -2813,15 +2813,6 @@ namespace AssetProcessor {
             settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
         }
 
-        private void TextureConversionMenu(object? sender, RoutedEventArgs e) {
-            TextureConversionWindow textureConversionWindow = new();
-            textureConversionWindow.ShowDialog();
-        }
-
-        private void ModelConversionMenu(object? sender, RoutedEventArgs e) {
-            ModelConversionWindow modelConversionWindow = new();
-            modelConversionWindow.ShowDialog();
-        }
 
         private void ExitMenu(object? sender, RoutedEventArgs e) {
             Close();

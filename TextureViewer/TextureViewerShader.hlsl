@@ -135,58 +135,49 @@ float4 PSMain(PSInput input) : SV_TARGET
 
         if (showNormal)
         {
-            // Normal Map Reconstruction Mode
+            // Normal Map Reconstruction Mode (ONLY FOR KTX2 TEXTURES)
             // Extract XY components based on normalLayout metadata from KTX2
-            // Layout types: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
+            // Supported layouts: 1=RG (UASTC/BC5), 5=RGBxAy (ETC1S)
             float2 nml;
 
-            // Switch on layout to extract correct channels
             if (normalLayout == 1)
             {
-                // RG: X in R, Y in G (BC5/UASTC standard)
+                // RG layout: X in R, Y in G (BC5/UASTC standard)
                 nml.x = color.r;
-                nml.y = color.g;
-            }
-            else if (normalLayout == 2)
-            {
-                // GA: X in G, Y in A
-                nml.x = color.g;
-                nml.y = color.a;
-            }
-            else if (normalLayout == 4)
-            {
-                // AG: X in A, Y in G
-                nml.x = color.a;
                 nml.y = color.g;
             }
             else if (normalLayout == 5)
             {
-                // RGBxAy: X in RGB (all channels), Y in A (ETC1S)
+                // RGBxAy layout: X in RGB (all channels), Y in A (ETC1S)
                 nml.x = color.r; // X encoded in all RGB channels
                 nml.y = color.a;
             }
             else
             {
-                // Default (NONE or unknown): assume RA layout
-                // RA: X in R, Y in A (legacy BC5 RA layout)
-                nml.x = color.r;
-                nml.y = color.a;
+                // NONE (0) or unknown: no reconstruction, show raw texture
+                // This happens for PNG sources (R=X, G=Y, B=Z already)
+                // Just display color as-is without reconstruction
+                color.a = 1.0;
             }
 
-            // Unpack from [0,1] to [-1,1]
-            nml = nml * 2.0 - 1.0;
+            // Only reconstruct if we have a valid layout
+            if (normalLayout == 1 || normalLayout == 5)
+            {
+                // Unpack from [0,1] to [-1,1]
+                nml = nml * 2.0 - 1.0;
 
-            // Reconstruct Z component
-            // Z = sqrt(1 - dot(XY, XY)) = sqrt(1 - X² - Y²)
-            float zSquared = max(0.0, 1.0 - dot(nml, nml));
-            float nmlZ = sqrt(zSquared);
+                // Reconstruct Z component
+                // Z = sqrt(1 - X² - Y²)
+                float zSquared = max(0.0, 1.0 - dot(nml, nml));
+                float nmlZ = sqrt(zSquared);
 
-            // Pack back to [0,1] for display (so we can see negative values)
-            float3 normalVis = float3(nml.x, nml.y, nmlZ);
-            normalVis = normalVis * 0.5 + 0.5; // [-1,1] -> [0,1] for visualization
+                // Pack back to [0,1] for display
+                float3 normalVis = float3(nml.x, nml.y, nmlZ);
+                normalVis = normalVis * 0.5 + 0.5; // [-1,1] -> [0,1] for visualization
 
-            color.rgb = normalVis;
-            color.a = 1.0;
+                color.rgb = normalVis;
+                color.a = 1.0;
+            }
         }
         else if (showGrayscale)
         {

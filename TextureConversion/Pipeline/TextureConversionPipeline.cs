@@ -352,25 +352,6 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             // ВСЕГДА записываем параметры анализа для справки
                             tlvWriter.WriteHistogramParams(compressionSettings.HistogramAnalysis);
 
-                            // Если это normal map, записываем схему хранения каналов
-                            if (mipProfile.TextureType == TextureType.Normal) {
-                                NormalLayout normalLayout;
-
-                                // Определяем схему на основе формата компрессии
-                                if (compressionSettings.CompressionFormat == CompressionFormat.ETC1S) {
-                                    // ETC1S: X в RGB (все каналы), Y в A
-                                    normalLayout = NormalLayout.RGBxAy;
-                                    Logger.Info("ETC1S normal map: using RGB-X, A-Y layout");
-                                } else {
-                                    // UASTC/BC5: X в R, Y в G
-                                    normalLayout = NormalLayout.RG;
-                                    Logger.Info("UASTC/BC5 normal map: using R-X, G-Y layout");
-                                }
-
-                                tlvWriter.WriteNormalLayout(normalLayout);
-                                Logger.Info($"✓ Normal map layout metadata written: {normalLayout}");
-                            }
-
                             // Сохраняем TLV в временный файл
                             var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
                             tlvWriter.SaveToFile(tlvPath);
@@ -393,6 +374,62 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         } else {
                             Logger.Warn($"Histogram analysis failed: {histogramResult.Error}");
                         }
+                    }
+
+                    // NORMAL MAP LAYOUT METADATA - независимо от histogram
+                    if (mipProfile.TextureType == TextureType.Normal && compressionSettings.ConvertToNormalMap) {
+                        Logger.Info("=== NORMAL MAP LAYOUT METADATA ===");
+
+                        NormalLayout normalLayout;
+
+                        // Определяем схему на основе формата компрессии
+                        if (compressionSettings.CompressionFormat == CompressionFormat.ETC1S) {
+                            // ETC1S: X в RGB (все каналы), Y в A
+                            normalLayout = NormalLayout.RGBxAy;
+                            Logger.Info("ETC1S normal map: using RGBxAy layout (X in RGB, Y in A)");
+                        } else {
+                            // UASTC/BC5: X в R, Y в G
+                            normalLayout = NormalLayout.RG;
+                            Logger.Info("UASTC/BC5 normal map: using RG layout (X in R, Y in G)");
+                        }
+
+                        // Создаём или дополняем TLV metadata
+                        if (kvdBinaryFiles == null) {
+                            // Histogram не был включен, создаём новый TLV writer
+                            using var tlvWriter = new TLVWriter();
+                            tlvWriter.WriteNormalLayout(normalLayout);
+
+                            // Сохраняем TLV в временный файл
+                            var tlvPath = Path.Combine(tempMipmapDir, "pc.meta.bin");
+                            tlvWriter.SaveToFile(tlvPath);
+                            Logger.Info($"TLV metadata (NormalLayout only) saved to: {tlvPath}");
+
+                            if (File.Exists(tlvPath)) {
+                                var fileInfo = new FileInfo(tlvPath);
+                                Logger.Info($"TLV file size: {fileInfo.Length} bytes");
+
+                                kvdBinaryFiles = new Dictionary<string, string> {
+                                    { "pc.meta", tlvPath }
+                                };
+                            }
+                        } else {
+                            // Histogram был включен, дополняем существующий TLV файл
+                            var existingTlvPath = kvdBinaryFiles["pc.meta"];
+
+                            // TLV формат позволяет просто добавлять блоки в конец
+                            // Создаём новый TLV только с NormalLayout
+                            using var normalLayoutWriter = new TLVWriter();
+                            normalLayoutWriter.WriteNormalLayout(normalLayout);
+                            var normalLayoutBytes = normalLayoutWriter.ToArray();
+
+                            // Добавляем к существующему файлу
+                            using var fileStream = new FileStream(existingTlvPath, FileMode.Append);
+                            fileStream.Write(normalLayoutBytes, 0, normalLayoutBytes.Length);
+
+                            Logger.Info($"NormalLayout metadata appended to existing TLV: {existingTlvPath}");
+                        }
+
+                        Logger.Info($"✓ Normal map layout metadata written: {normalLayout}");
                     }
 
                     // Упаковываем мипмапы в KTX2 используя ktx create

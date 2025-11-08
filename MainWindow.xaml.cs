@@ -5003,9 +5003,17 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogInfo($"  Source: {selectedModel.Path}");
                 MainWindowHelpers.LogInfo($"  Output: {outputDir}");
 
-                // TODO: Get FBX2glTF and gltfpack paths from global settings
-                var fbx2glTFPath = "FBX2glTF-windows-x64.exe";
-                var gltfPackPath = "gltfpack.exe";
+                // Load FBX2glTF and gltfpack paths from global settings
+                var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
+                var fbx2glTFPath = string.IsNullOrWhiteSpace(modelConversionSettings.FBX2glTFExecutablePath)
+                    ? "FBX2glTF-windows-x64.exe"
+                    : modelConversionSettings.FBX2glTFExecutablePath;
+                var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
+                    ? "gltfpack.exe"
+                    : modelConversionSettings.GltfPackExecutablePath;
+
+                MainWindowHelpers.LogInfo($"  FBX2glTF: {fbx2glTFPath}");
+                MainWindowHelpers.LogInfo($"  gltfpack: {gltfPackPath}");
 
                 var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
 

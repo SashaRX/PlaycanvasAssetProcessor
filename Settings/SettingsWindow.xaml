@@ -196,6 +196,99 @@
                 </ScrollViewer>
             </TabItem>
 
+            <TabItem Header="Model Conversion">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <GroupBox Header="Model Conversion Tools" Margin="0,0,0,6">
+                            <StackPanel Margin="2">
+                                <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+
+                                <!-- FBX2glTF -->
+                                <TextBlock Text="FBX2glTF:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="50"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox x:Name="FBX2glTFExecutableBox"
+                                             Grid.Column="0"
+                                             Text="{Binding FBX2glTFExecutablePath, UpdateSourceTrigger=PropertyChanged}"
+                                             VerticalContentAlignment="Center"
+                                             Height="22"
+                                             Margin="0,0,4,0"
+                                             FontSize="10"/>
+
+                                    <Button Grid.Column="1"
+                                            Content="Browse"
+                                            Click="SelectFBX2glTFExecutable"
+                                            Height="22"
+                                            Margin="0,0,4,0"
+                                            FontSize="10"/>
+
+                                    <Button Grid.Column="2"
+                                            Content="Test"
+                                            Click="TestFBX2glTF_Click"
+                                            Height="22"
+                                            FontSize="10"/>
+                                </Grid>
+                                <TextBlock x:Name="FBX2glTFStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
+
+                                <!-- gltfpack -->
+                                <TextBlock Text="gltfpack:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="50"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox x:Name="GltfPackExecutableBox"
+                                             Grid.Column="0"
+                                             Text="{Binding GltfPackExecutablePath, UpdateSourceTrigger=PropertyChanged}"
+                                             VerticalContentAlignment="Center"
+                                             Height="22"
+                                             Margin="0,0,4,0"
+                                             FontSize="10"/>
+
+                                    <Button Grid.Column="1"
+                                            Content="Browse"
+                                            Click="SelectGltfPackExecutable"
+                                            Height="22"
+                                            Margin="0,0,4,0"
+                                            FontSize="10"/>
+
+                                    <Button Grid.Column="2"
+                                            Content="Test"
+                                            Click="TestGltfPack_Click"
+                                            Height="22"
+                                            FontSize="10"/>
+                                </Grid>
+                                <TextBlock x:Name="GltfPackStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
+
+                                <!-- Installation info -->
+                                <TextBlock Text="Install:" Margin="0,2,0,0" FontWeight="SemiBold" FontSize="10"/>
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,2" FontSize="9">
+                                    <Run Text="FBX2glTF:" FontWeight="SemiBold"/>
+                                    <Run Text="Download from"/>
+                                    <Hyperlink NavigateUri="https://github.com/godotengine/FBX2glTF" RequestNavigate="Hyperlink_RequestNavigate">
+                                        <Run Text="GitHub"/>
+                                    </Hyperlink>
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,0" FontSize="9">
+                                    <Run Text="gltfpack:" FontWeight="SemiBold"/>
+                                    <Run Text="Download from"/>
+                                    <Hyperlink NavigateUri="https://github.com/zeux/meshoptimizer" RequestNavigate="Hyperlink_RequestNavigate">
+                                        <Run Text="GitHub"/>
+                                    </Hyperlink>
+                                </TextBlock>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <TabItem Header="TinyPng">
             </TabItem>
         </TabControl>

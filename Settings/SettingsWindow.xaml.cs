@@ -1,6 +1,7 @@
 ﻿using AssetProcessor.Settings;
 using AssetProcessor.TextureConversion.BasisU;
 using AssetProcessor.TextureConversion.Settings;
+using AssetProcessor.ModelConversion.Settings;
 using Microsoft.Win32;
 using Ookii.Dialogs.Wpf;
 using System.ComponentModel;
@@ -14,6 +15,7 @@ using System.Windows.Navigation;
 namespace AssetProcessor {
     public partial class SettingsWindow : Window, INotifyPropertyChanged {
         private GlobalTextureConversionSettings _textureSettings;
+        private GlobalModelConversionSettings _modelSettings;
 
         // Event for preview renderer changes
         public event Action<bool>? OnPreviewRendererChanged;
@@ -78,8 +80,29 @@ namespace AssetProcessor {
             }
         }
 
+        public string FBX2glTFExecutablePath {
+            get => _modelSettings.FBX2glTFExecutablePath;
+            set {
+                if (_modelSettings.FBX2glTFExecutablePath != value) {
+                    _modelSettings.FBX2glTFExecutablePath = value;
+                    OnPropertyChanged(nameof(FBX2glTFExecutablePath));
+                }
+            }
+        }
+
+        public string GltfPackExecutablePath {
+            get => _modelSettings.GltfPackExecutablePath;
+            set {
+                if (_modelSettings.GltfPackExecutablePath != value) {
+                    _modelSettings.GltfPackExecutablePath = value;
+                    OnPropertyChanged(nameof(GltfPackExecutablePath));
+                }
+            }
+        }
+
         public SettingsWindow() {
             _textureSettings = TextureConversionSettingsManager.LoadSettings();
+            _modelSettings = ModelConversionSettingsManager.LoadSettings();
             InitializeComponent();
             DataContext = this;
             LoadSettings();
@@ -102,6 +125,10 @@ namespace AssetProcessor {
             DownloadSemaphoreTextBlock.Text = AppSettings.Default.DownloadSemaphoreLimit.ToString();
             ToktxExecutableBox.Text = _textureSettings.ToktxExecutablePath;
             KtxExecutableBox.Text = _textureSettings.KtxExecutablePath;
+
+            // Load model conversion settings
+            FBX2glTFExecutableBox.Text = _modelSettings.FBX2glTFExecutablePath;
+            GltfPackExecutableBox.Text = _modelSettings.GltfPackExecutablePath;
 
             // Load D3D11 Preview checkbox
             UseD3D11PreviewCheckBox.Checked -= D3D11PreviewCheckBox_Changed;
@@ -175,6 +202,11 @@ namespace AssetProcessor {
             _textureSettings.ToktxExecutablePath = ToktxExecutableBox.Text;
             _textureSettings.KtxExecutablePath = KtxExecutableBox.Text;
             TextureConversionSettingsManager.SaveSettings(_textureSettings);
+
+            // Save model conversion settings
+            _modelSettings.FBX2glTFExecutablePath = FBX2glTFExecutableBox.Text;
+            _modelSettings.GltfPackExecutablePath = GltfPackExecutableBox.Text;
+            ModelConversionSettingsManager.SaveSettings(_modelSettings);
 
             this.Close();
         }
@@ -339,6 +371,146 @@ namespace AssetProcessor {
 
             // Notify MainWindow about the change
             OnPreviewRendererChanged?.Invoke(useD3D11);
+        }
+
+        private void SelectFBX2glTFExecutable(object sender, RoutedEventArgs e) {
+            OpenFileDialog fileDialog = new() {
+                Title = "Select FBX2glTF executable",
+                Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (fileDialog.ShowDialog() == true) {
+                FBX2glTFExecutablePath = fileDialog.FileName;
+                FBX2glTFExecutableBox.Text = fileDialog.FileName;
+            }
+        }
+
+        private async void TestFBX2glTF_Click(object sender, RoutedEventArgs e) {
+            if (FBX2glTFStatusText != null) {
+                FBX2glTFStatusText.Text = "Testing...";
+                FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+            }
+
+            try {
+                var path = string.IsNullOrWhiteSpace(FBX2glTFExecutableBox.Text) ? "FBX2glTF-windows-x64.exe" : FBX2glTFExecutableBox.Text;
+
+                ProcessStartInfo startInfo = new() {
+                    FileName = path,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null) {
+                    if (FBX2glTFStatusText != null) {
+                        FBX2glTFStatusText.Text = "✗ FBX2glTF not found";
+                        FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                    return;
+                }
+
+                string stdout = await process.StandardOutput.ReadToEndAsync();
+                string stderr = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (FBX2glTFStatusText != null) {
+                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
+                    if (hasOutput || process.ExitCode == 0) {
+                        string version = "unknown";
+                        string output = stdout + stderr;
+                        if (!string.IsNullOrWhiteSpace(output)) {
+                            var match = System.Text.RegularExpressions.Regex.Match(output, @"version[:\s]+(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            if (match.Success) {
+                                version = match.Groups[1].Value.Trim();
+                            }
+                        }
+                        FBX2glTFStatusText.Text = $"✓ FBX2glTF {version}";
+                        FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                    } else {
+                        FBX2glTFStatusText.Text = $"✗ Exit code: {process.ExitCode}";
+                        FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                }
+            } catch (Exception ex) {
+                if (FBX2glTFStatusText != null) {
+                    FBX2glTFStatusText.Text = $"✗ Error: {ex.Message}";
+                    FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                }
+            }
+        }
+
+        private void SelectGltfPackExecutable(object sender, RoutedEventArgs e) {
+            OpenFileDialog fileDialog = new() {
+                Title = "Select gltfpack executable",
+                Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (fileDialog.ShowDialog() == true) {
+                GltfPackExecutablePath = fileDialog.FileName;
+                GltfPackExecutableBox.Text = fileDialog.FileName;
+            }
+        }
+
+        private async void TestGltfPack_Click(object sender, RoutedEventArgs e) {
+            if (GltfPackStatusText != null) {
+                GltfPackStatusText.Text = "Testing...";
+                GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+            }
+
+            try {
+                var path = string.IsNullOrWhiteSpace(GltfPackExecutableBox.Text) ? "gltfpack.exe" : GltfPackExecutableBox.Text;
+
+                ProcessStartInfo startInfo = new() {
+                    FileName = path,
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null) {
+                    if (GltfPackStatusText != null) {
+                        GltfPackStatusText.Text = "✗ gltfpack not found";
+                        GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                    return;
+                }
+
+                string stdout = await process.StandardOutput.ReadToEndAsync();
+                string stderr = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (GltfPackStatusText != null) {
+                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
+                    if (hasOutput || process.ExitCode == 0) {
+                        string version = "unknown";
+                        string output = stdout + stderr;
+                        if (!string.IsNullOrWhiteSpace(output)) {
+                            var match = System.Text.RegularExpressions.Regex.Match(output, @"v(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            if (match.Success) {
+                                version = match.Groups[1].Value.Trim();
+                            }
+                        }
+                        GltfPackStatusText.Text = $"✓ gltfpack {version}";
+                        GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                    } else {
+                        GltfPackStatusText.Text = $"✗ Exit code: {process.ExitCode}";
+                        GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                }
+            } catch (Exception ex) {
+                if (GltfPackStatusText != null) {
+                    GltfPackStatusText.Text = $"✗ Error: {ex.Message}";
+                    GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                }
+            }
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e) {

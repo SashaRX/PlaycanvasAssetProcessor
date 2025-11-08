@@ -136,9 +136,6 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 Logger.Info($"FBX2glTF stderr (length: {result.Error?.Length ?? 0}):\n{result.Error ?? "(empty)"}");
 
                 if (process.ExitCode == 0) {
-                    // Проверяем что выходной файл создан (.gltf или .glb в зависимости от excludeTextures)
-                    var outputFilePath = outputPath + expectedExtension;
-
                     // Логируем файлы в выходной директории для диагностики
                     var outputDir = Path.GetDirectoryName(outputPath);
                     if (!string.IsNullOrEmpty(outputDir) && Directory.Exists(outputDir)) {
@@ -146,14 +143,27 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                         Logger.Info($"Files in output directory {outputDir}: {string.Join(", ", files.Select(Path.GetFileName))}");
                     }
 
-                    if (File.Exists(outputFilePath)) {
+                    // Проверяем оба возможных расширения (Godot fork может вести себя иначе)
+                    var gltfPath = outputPath + ".gltf";
+                    var glbPath = outputPath + ".glb";
+
+                    string? foundPath = null;
+                    if (File.Exists(gltfPath)) {
+                        foundPath = gltfPath;
+                        Logger.Info($"FBX2glTF: Found .gltf file (expected: {expectedExtension})");
+                    } else if (File.Exists(glbPath)) {
+                        foundPath = glbPath;
+                        Logger.Info($"FBX2glTF: Found .glb file (expected: {expectedExtension})");
+                    }
+
+                    if (foundPath != null) {
                         result.Success = true;
-                        result.OutputFilePath = outputFilePath;
-                        result.OutputFileSize = new FileInfo(outputFilePath).Length;
-                        Logger.Info($"FBX2glTF: Success, created {outputFilePath}, size: {result.OutputFileSize} bytes");
+                        result.OutputFilePath = foundPath;
+                        result.OutputFileSize = new FileInfo(foundPath).Length;
+                        Logger.Info($"FBX2glTF: Success, created {foundPath}, size: {result.OutputFileSize} bytes");
                     } else {
                         result.Success = false;
-                        result.Error = $"FBX2glTF completed but output file not found: {outputFilePath}";
+                        result.Error = $"FBX2glTF completed but output file not found. Expected: {outputPath + expectedExtension}, also checked: {(expectedExtension == ".gltf" ? glbPath : gltfPath)}";
                         Logger.Error(result.Error);
                     }
                 } else {

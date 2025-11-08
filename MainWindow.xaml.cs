@@ -1855,7 +1855,9 @@ namespace AssetProcessor {
 
                             if (ktxLoaded) {
                                 // KTX2 loaded successfully to D3D11, still load source for histogram/info
-                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: false);
+                                // If user is in Source mode, show the PNG; otherwise just load for histogram
+                                bool showInViewer = (currentPreviewSourceMode == TexturePreviewSourceMode.Source);
+                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: showInViewer);
                             } else {
                                 // No KTX2 or failed, fallback to source preview
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);

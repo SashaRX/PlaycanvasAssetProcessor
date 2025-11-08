@@ -2074,15 +2074,20 @@ namespace AssetProcessor {
 
         private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
             // Reset channel masks when loading new texture
-            currentActiveChannelMask = null;
-            Dispatcher.Invoke(() => {
-                UpdateChannelButtonsState();
-                // Reset D3D11 renderer mask
-                if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
-                    D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
-                    D3D11TextureViewer.Renderer.RestoreOriginalGamma();
-                }
-            });
+            // BUT: Don't reset if Normal mode was auto-enabled for normal maps
+            if (currentActiveChannelMask != "Normal") {
+                currentActiveChannelMask = null;
+                Dispatcher.Invoke(() => {
+                    UpdateChannelButtonsState();
+                    // Reset D3D11 renderer mask
+                    if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                        D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
+                        D3D11TextureViewer.Renderer.RestoreOriginalGamma();
+                    }
+                });
+            } else {
+                logger.Info("LoadSourcePreviewAsync: Skipping mask reset - Normal mode is active for normal map");
+            }
 
             // Store currently selected texture for sRGB detection
             currentSelectedTexture = selectedTexture;

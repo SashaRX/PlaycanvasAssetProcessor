@@ -6,6 +6,7 @@ using AssetProcessor.TextureConversion.MipGeneration;
 using NLog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace AssetProcessor.TextureConversion.Pipeline {
     /// <summary>

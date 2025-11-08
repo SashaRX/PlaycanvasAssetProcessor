@@ -460,6 +460,16 @@ namespace AssetProcessor {
                     // Trigger immediate render to show the updated texture with preserved zoom/pan
                     D3D11TextureViewer.Renderer.Render();
                     logger.Info("Forced render to apply current zoom/pan after KTX2 load");
+
+                    // AUTO-ENABLE Normal reconstruction for normal maps with NormalLayout metadata
+                    if (textureData.NormalLayoutMetadata != null && D3D11TextureViewer?.Renderer != null) {
+                        // Auto-enable Normal reconstruction mode for KTX2 normal maps
+                        currentActiveChannelMask = "Normal";
+                        D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                        D3D11TextureViewer.Renderer.Render();
+                        UpdateChannelButtonsState(); // Sync button UI
+                        logger.Info($"Auto-enabled Normal reconstruction mode for KTX2 normal map (layout: {textureData.NormalLayoutMetadata.Layout})");
+                    }
                 });
 
                 return true;
@@ -695,6 +705,16 @@ namespace AssetProcessor {
                 logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={currentSelectedTexture?.TextureType})");
                 LoadTextureToD3D11Viewer(bitmap, isSRGB);
                 logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
+
+                // AUTO-ENABLE Normal reconstruction for normal map textures
+                if (currentSelectedTexture?.TextureType?.ToLower() == "normal" && D3D11TextureViewer?.Renderer != null) {
+                    // Auto-enable Normal reconstruction mode for PNG normal maps
+                    currentActiveChannelMask = "Normal";
+                    D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                    D3D11TextureViewer.Renderer.Render();
+                    UpdateChannelButtonsState(); // Sync button UI
+                    logger.Info("Auto-enabled Normal reconstruction mode for normal map texture (PNG)");
+                }
             } catch (Exception ex) {
                 logger.Error(ex, "Exception in UpdatePreviewImage when calling LoadTextureToD3D11Viewer");
             }

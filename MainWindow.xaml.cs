@@ -129,6 +129,7 @@ namespace AssetProcessor {
         private string? projectName = string.Empty;
         private bool? isViewerVisible = true;
         private BitmapSource? originalBitmapSource;
+        private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
@@ -511,14 +512,25 @@ namespace AssetProcessor {
 
         #region UI Viewer
         private async void FilterButton_Click(object sender, RoutedEventArgs e) {
+            // Ignore programmatic updates to prevent recursive calls
+            if (isUpdatingChannelButtons) {
+                return;
+            }
+
             if (sender is ToggleButton button) {
                 string? channel = button.Tag.ToString();
                 if (button.IsChecked == true) {
-                    // Сброс всех остальных кнопок
-                    RChannelButton.IsChecked = button == RChannelButton;
-                    GChannelButton.IsChecked = button == GChannelButton;
-                    BChannelButton.IsChecked = button == BChannelButton;
-                    AChannelButton.IsChecked = button == AChannelButton;
+                    // Сброс всех остальных кнопок (including NormalButton)
+                    isUpdatingChannelButtons = true;
+                    try {
+                        RChannelButton.IsChecked = button == RChannelButton;
+                        GChannelButton.IsChecked = button == GChannelButton;
+                        BChannelButton.IsChecked = button == BChannelButton;
+                        AChannelButton.IsChecked = button == AChannelButton;
+                        NormalButton.IsChecked = button == NormalButton;
+                    } finally {
+                        isUpdatingChannelButtons = false;
+                    }
 
                     // Применяем фильтр
                     if (!string.IsNullOrEmpty(channel)) {
@@ -535,11 +547,16 @@ namespace AssetProcessor {
         /// Synchronize channel button GUI state with currentActiveChannelMask.
         /// </summary>
         private void UpdateChannelButtonsState() {
-            RChannelButton.IsChecked = currentActiveChannelMask == "R";
-            GChannelButton.IsChecked = currentActiveChannelMask == "G";
-            BChannelButton.IsChecked = currentActiveChannelMask == "B";
-            AChannelButton.IsChecked = currentActiveChannelMask == "A";
-            NormalButton.IsChecked = currentActiveChannelMask == "Normal";
+            isUpdatingChannelButtons = true;
+            try {
+                RChannelButton.IsChecked = currentActiveChannelMask == "R";
+                GChannelButton.IsChecked = currentActiveChannelMask == "G";
+                BChannelButton.IsChecked = currentActiveChannelMask == "B";
+                AChannelButton.IsChecked = currentActiveChannelMask == "A";
+                NormalButton.IsChecked = currentActiveChannelMask == "Normal";
+            } finally {
+                isUpdatingChannelButtons = false;
+            }
         }
 
         private void FitResetButton_Click(object sender, RoutedEventArgs e) {

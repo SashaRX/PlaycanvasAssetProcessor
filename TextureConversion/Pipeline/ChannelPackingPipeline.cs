@@ -121,14 +121,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             Logger.Info($"  Source size: {sourceImage.Width}x{sourceImage.Height}");
 
             // Ресайзим если нужно
-            Image<Rgba32> workingImage;
+            Image<Rgba32> workingImage = sourceImage.Clone();
             if (targetSize.HasValue &&
                 (sourceImage.Width != targetSize.Value.width || sourceImage.Height != targetSize.Value.height)) {
                 Logger.Info($"  Resizing to {targetSize.Value.width}x{targetSize.Value.height}");
-                workingImage = sourceImage.Clone(ctx =>
-                    ctx.Resize(targetSize.Value.width, targetSize.Value.height));
-            } else {
-                workingImage = sourceImage.Clone();
+                workingImage.Mutate(ctx => ctx.Resize(targetSize.Value.width, targetSize.Value.height));
             }
 
             // Генерируем мипмапы

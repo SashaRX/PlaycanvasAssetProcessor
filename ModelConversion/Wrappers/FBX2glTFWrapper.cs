@@ -70,17 +70,23 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             var result = new ConversionResult();
 
             try {
-                Logger.Info($"FBX2glTF: Converting {inputPath} to GLB (exclude textures: {excludeTextures})");
+                Logger.Info($"FBX2glTF: Converting {inputPath} (exclude textures: {excludeTextures})");
 
-                // Аргументы: --binary всегда (GLB формат), --separate-textures для исключения текстур
-                var arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
+                string arguments;
+                string expectedExtension;
 
                 if (excludeTextures) {
-                    // --separate-textures: текстуры НЕ встраиваются в GLB, остаются внешними файлами
-                    arguments += " --separate-textures";
-                    Logger.Info("FBX2glTF: Using --separate-textures flag (textures NOT embedded in GLB)");
+                    // ВАЖНО: --separate-textures БЕЗ --binary создает .gltf (JSON) + .bin + внешние текстуры
+                    // Текстуры НЕ встраиваются в файл, остаются внешними
+                    // gltfpack затем конвертирует .gltf -> .glb с сохранением внешних текстур через -tr
+                    arguments = $"--separate-textures --input \"{inputPath}\" --output \"{outputPath}\"";
+                    expectedExtension = ".gltf";
+                    Logger.Info("FBX2glTF: Using .gltf format with --separate-textures (textures will be external)");
                 } else {
-                    Logger.Info("FBX2glTF: Textures will be embedded in GLB");
+                    // --binary создает .glb (binary) с встроенными текстурами
+                    arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
+                    expectedExtension = ".glb";
+                    Logger.Info("FBX2glTF: Using .glb format with embedded textures");
                 }
 
                 Logger.Debug($"FBX2glTF command: {_executablePath} {arguments}");
@@ -130,8 +136,8 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 Logger.Info($"FBX2glTF stderr (length: {result.Error?.Length ?? 0}):\n{result.Error ?? "(empty)"}");
 
                 if (process.ExitCode == 0) {
-                    // Проверяем что GLB файл создан (всегда используем --binary)
-                    var glbPath = outputPath + ".glb";
+                    // Проверяем что выходной файл создан (.gltf или .glb в зависимости от excludeTextures)
+                    var outputFilePath = outputPath + expectedExtension;
 
                     // Логируем файлы в выходной директории для диагностики
                     var outputDir = Path.GetDirectoryName(outputPath);
@@ -140,14 +146,14 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                         Logger.Info($"Files in output directory {outputDir}: {string.Join(", ", files.Select(Path.GetFileName))}");
                     }
 
-                    if (File.Exists(glbPath)) {
+                    if (File.Exists(outputFilePath)) {
                         result.Success = true;
-                        result.OutputFilePath = glbPath;
-                        result.OutputFileSize = new FileInfo(glbPath).Length;
-                        Logger.Info($"FBX2glTF: Success, created {glbPath}, size: {result.OutputFileSize} bytes");
+                        result.OutputFilePath = outputFilePath;
+                        result.OutputFileSize = new FileInfo(outputFilePath).Length;
+                        Logger.Info($"FBX2glTF: Success, created {outputFilePath}, size: {result.OutputFileSize} bytes");
                     } else {
                         result.Success = false;
-                        result.Error = $"FBX2glTF completed but output file not found: {glbPath}";
+                        result.Error = $"FBX2glTF completed but output file not found: {outputFilePath}";
                         Logger.Error(result.Error);
                     }
                 } else {

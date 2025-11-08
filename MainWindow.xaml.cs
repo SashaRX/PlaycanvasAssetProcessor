@@ -705,16 +705,6 @@ namespace AssetProcessor {
                 logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={currentSelectedTexture?.TextureType})");
                 LoadTextureToD3D11Viewer(bitmap, isSRGB);
                 logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
-
-                // AUTO-ENABLE Normal reconstruction for normal map textures
-                if (currentSelectedTexture?.TextureType?.ToLower() == "normal" && D3D11TextureViewer?.Renderer != null) {
-                    // Auto-enable Normal reconstruction mode for PNG normal maps
-                    currentActiveChannelMask = "Normal";
-                    D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
-                    D3D11TextureViewer.Renderer.Render();
-                    UpdateChannelButtonsState(); // Sync button UI
-                    logger.Info("Auto-enabled Normal reconstruction mode for normal map texture (PNG)");
-                }
             } catch (Exception ex) {
                 logger.Error(ex, "Exception in UpdatePreviewImage when calling LoadTextureToD3D11Viewer");
             }
@@ -1366,6 +1356,16 @@ namespace AssetProcessor {
                     UpdateChannelButtonsState();
                     UpdateHistogram(originalBitmapSource);
                     ScheduleFitZoomUpdate(recalculateFitZoom);
+
+                    // AUTO-ENABLE Normal reconstruction for normal map textures (PNG)
+                    // Must be AFTER all reset operations to prevent being cleared
+                    if (!preserveMask && currentSelectedTexture?.TextureType?.ToLower() == "normal" && D3D11TextureViewer?.Renderer != null) {
+                        currentActiveChannelMask = "Normal";
+                        D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                        D3D11TextureViewer.Renderer.Render();
+                        UpdateChannelButtonsState(); // Sync button UI
+                        logger.Info("Auto-enabled Normal reconstruction mode for normal map texture (PNG)");
+                    }
                 });
             }
         }

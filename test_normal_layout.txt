@@ -1,0 +1,27 @@
+Анализ проблемы:
+
+Из лога:
+```
+[Ktx2MetadataReader] KVD: offset=404, length=148
+[Ktx2MetadataReader] KVD entry: key="KTXwriter", valueLength=56
+[Ktx2MetadataReader] KVD entry: key="KTXwriterScParams", valueLength=38  
+[Ktx2MetadataReader] KVD entry: key="pc.meta", valueLength=4
+```
+
+Размер KVD: 148 bytes
+
+Расчёт:
+- KTXwriter: 56 + 1 (null) + 4 (length) = 61 → padding до 64
+- KTXwriterScParams: 38 + 1 + 4 = 43 → padding до 44  
+- pc.meta: 4 + 1 + 4 = 9 → padding до 12
+
+Итого: 64 + 44 + 12 = 120 bytes (но в логе 148!)
+
+Проблема: KVD размер НЕ совпадает с ожиданием!
+
+Возможно:
+1. Старые данные остались в файле?
+2. Padding рассчитан неправильно?
+3. ktx create добавляет ещё какие-то KVD ключи?
+
+РЕШЕНИЕ: Пользователю нужно ПОЛНОСТЬЮ УДАЛИТЬ старый KTX2 и перекон вертировать!

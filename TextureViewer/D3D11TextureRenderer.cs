@@ -639,6 +639,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
         }
     }
 
+    public HistogramMetadata? GetHistogramMetadata() {
+        lock (renderLock) {
+            return histogramMetadata;
+        }
+    }
+
     public void ResetView() {
         lock (renderLock) {
             zoomLevel = 1.0f;

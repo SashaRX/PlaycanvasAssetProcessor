@@ -405,6 +405,9 @@ namespace AssetProcessor {
                             string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
                             TextureFormatTextBlock.Text = $"Format: {formatInfo}";
                         }
+
+                        // Update histogram correction button state (PNG has no metadata)
+                        UpdateHistogramCorrectionButtonState();
                     });
 
                     // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
@@ -443,36 +446,10 @@ namespace AssetProcessor {
                     logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
                     // Update histogram correction button state
-                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-                    if (HistogramCorrectionButton != null) {
-                        HistogramCorrectionButton.IsEnabled = hasHistogram;
-
-                        // Restore saved setting (default to enabled if metadata present)
-                        bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
-                        HistogramCorrectionButton.IsChecked = hasHistogram && savedEnabled;
-
-                        if (hasHistogram && textureData.HistogramMetadata != null) {
-                            var meta = textureData.HistogramMetadata;
-                            string scaleStr = meta.IsPerChannel
-                                ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
-                                : meta.Scale[0].ToString("F3");
-                            HistogramCorrectionButton.ToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
-                            logger.Info($"Histogram metadata found: scale={scaleStr}");
-                        } else {
-                            HistogramCorrectionButton.ToolTip = "No histogram metadata in this texture";
-                        }
-                    }
-
-                    // CRITICAL: Actually enable histogram correction in renderer!
-                    // Setting IsChecked doesn't trigger the event handler, so we must call it explicitly
-                    // Restore saved setting
-                    if (hasHistogram) {
-                        bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
-                        D3D11TextureViewer.Renderer.SetHistogramCorrection(savedEnabled);
-                        logger.Info($"Histogram correction {(savedEnabled ? "enabled" : "disabled")} (restored from settings)");
-                    }
+                    UpdateHistogramCorrectionButtonState();
 
                     // Update format info in UI
+                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
                     if (TextureFormatTextBlock != null) {
                         string compressionFormat = textureData.CompressionFormat ?? "Unknown";
                         string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
@@ -583,6 +560,41 @@ namespace AssetProcessor {
 
                 // Force immediate render to show the change
                 D3D11TextureViewer.Renderer.Render();
+            }
+        }
+
+        /// <summary>
+        /// Updates the histogram correction button state based on whether current texture has histogram metadata
+        /// </summary>
+        private void UpdateHistogramCorrectionButtonState() {
+            if (HistogramCorrectionButton == null || D3D11TextureViewer?.Renderer == null) {
+                return;
+            }
+
+            bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
+            HistogramCorrectionButton.IsEnabled = hasHistogram;
+
+            if (hasHistogram) {
+                // Restore saved setting (default to enabled if metadata present)
+                bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
+                HistogramCorrectionButton.IsChecked = savedEnabled;
+                D3D11TextureViewer.Renderer.SetHistogramCorrection(savedEnabled);
+                logger.Info($"Histogram correction {(savedEnabled ? "enabled" : "disabled")} (restored from settings)");
+
+                // Update tooltip with metadata info
+                var meta = D3D11TextureViewer.Renderer.GetHistogramMetadata();
+                if (meta != null) {
+                    string scaleStr = meta.IsPerChannel
+                        ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
+                        : meta.Scale[0].ToString("F3");
+                    HistogramCorrectionButton.ToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
+                    logger.Info($"Histogram metadata found: scale={scaleStr}");
+                }
+            } else {
+                // No histogram metadata - disable button
+                HistogramCorrectionButton.IsChecked = false;
+                HistogramCorrectionButton.ToolTip = "No histogram metadata in this texture";
+                logger.Info("No histogram metadata in current texture");
             }
         }
 

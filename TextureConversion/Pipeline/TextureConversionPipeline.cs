@@ -354,14 +354,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
 
                             // NORMAL MAP LAYOUT - если это normal map, добавляем layout В ТОТ ЖЕ TLVWriter
                             if (mipProfile.TextureType == TextureType.Normal && compressionSettings.ConvertToNormalMap) {
-                                NormalLayout normalLayout;
-                                if (compressionSettings.CompressionFormat == CompressionFormat.ETC1S) {
-                                    normalLayout = NormalLayout.RGBxAy;
-                                    Logger.Info("ETC1S normal map: using RGBxAy layout (X in RGB, Y in A)");
-                                } else {
-                                    normalLayout = NormalLayout.RG;
-                                    Logger.Info("UASTC/BC5 normal map: using RG layout (X in R, Y in G)");
-                                }
+                                // КРИТИЧНО: --normal-mode ВСЕГДА конвертирует RGB(XYZ) → RGBxAy
+                                // Это работает для ВСЕХ форматов (ETC1S и UASTC)
+                                // Результат: X в RGB каналах, Y в A канале
+                                NormalLayout normalLayout = NormalLayout.RGBxAy;
+                                Logger.Info($"Normal map with --normal-mode: using RGBxAy layout (X in RGB, Y in A) for {compressionSettings.CompressionFormat}");
                                 tlvWriter.WriteNormalLayout(normalLayout);
                                 Logger.Info($"✓ Normal map layout added to histogram TLV: {normalLayout}");
                             }
@@ -398,15 +395,11 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info("=== NORMAL MAP LAYOUT METADATA (NO HISTOGRAM) ===");
 
                         using var tlvWriter = new TLVWriter();
-                        NormalLayout normalLayout;
 
-                        if (compressionSettings.CompressionFormat == CompressionFormat.ETC1S) {
-                            normalLayout = NormalLayout.RGBxAy;
-                            Logger.Info("ETC1S normal map: using RGBxAy layout (X in RGB, Y in A)");
-                        } else {
-                            normalLayout = NormalLayout.RG;
-                            Logger.Info("UASTC/BC5 normal map: using RG layout (X in R, Y in G)");
-                        }
+                        // КРИТИЧНО: --normal-mode ВСЕГДА конвертирует RGB(XYZ) → RGBxAy
+                        // Это работает для ВСЕХ форматов (ETC1S и UASTC)
+                        NormalLayout normalLayout = NormalLayout.RGBxAy;
+                        Logger.Info($"Normal map with --normal-mode: using RGBxAy layout (X in RGB, Y in A) for {compressionSettings.CompressionFormat}");
 
                         tlvWriter.WriteNormalLayout(normalLayout);
 

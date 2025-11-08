@@ -1074,10 +1074,13 @@ namespace AssetProcessor {
                     UpdateHistogramCorrectionButtonState();
 
                     // Restore channel mask if already loaded
-                    if (savedMask != null) {
+                    // BUT: Don't restore if auto-enable already set Normal mode for normal maps
+                    if (savedMask != null && currentActiveChannelMask != "Normal") {
                         currentActiveChannelMask = savedMask;
                         _ = FilterChannelAsync(savedMask);
                         logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
+                    } else if (currentActiveChannelMask == "Normal") {
+                        logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                     }
                 } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
                     // New method: Reload KTX2 natively to D3D11 (only if not already loaded)
@@ -1090,10 +1093,13 @@ namespace AssetProcessor {
                                     logger.Info($"Reloaded KTX2 to D3D11 when switching to KTX2 mode - {D3D11TextureViewer.Renderer.MipCount} mip levels");
 
                                     // Restore channel mask after KTX2 load
-                                    if (savedMask != null) {
+                                    // BUT: Don't restore if auto-enable already set Normal mode for normal maps
+                                    if (savedMask != null && currentActiveChannelMask != "Normal") {
                                         currentActiveChannelMask = savedMask;
                                         _ = FilterChannelAsync(savedMask);
                                         logger.Info($"Restored channel mask '{savedMask}' after switching to KTX2 mode");
+                                    } else if (currentActiveChannelMask == "Normal") {
+                                        logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                                     }
                                 }
                             });

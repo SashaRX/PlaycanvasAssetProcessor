@@ -93,6 +93,17 @@
             <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
         </ContextMenu>
 
+        <!-- ContextMenu для строк моделей -->
+        <ContextMenu x:Key="ModelRowContextMenu">
+            <MenuItem Header="Process Model" Click="ProcessSelectedModel_Click"/>
+            <MenuItem Header="Upload to PlayCanvas" Click="UploadModel_Click"/>
+            <Separator/>
+            <MenuItem Header="Open File Location" Click="OpenModelFileLocation_Click"/>
+            <MenuItem Header="Copy Path" Click="CopyModelPath_Click"/>
+            <Separator/>
+            <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
+        </ContextMenu>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -326,6 +337,11 @@
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
                               Background="#FFD6D6D6">
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
+                                </Style>
+                            </DataGrid.RowStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />

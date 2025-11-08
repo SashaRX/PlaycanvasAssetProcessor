@@ -143,17 +143,44 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                         Logger.Info($"Files in output directory {outputDir}: {string.Join(", ", files.Select(Path.GetFileName))}");
                     }
 
-                    // Проверяем оба возможных расширения (Godot fork может вести себя иначе)
-                    var gltfPath = outputPath + ".gltf";
-                    var glbPath = outputPath + ".glb";
+                    // ВАЖНО: Godot FBX2glTF fork создаёт поддиректорию {basename}_out/
+                    // Пример: --output "path/to/model" создаёт "path/to/model_out/model.gltf"
+                    var outputBaseName = Path.GetFileName(outputPath);
+                    var outputDirPath = Path.GetDirectoryName(outputPath);
+                    var outSubdirectory = Path.Combine(outputDirPath!, outputBaseName + "_out");
 
                     string? foundPath = null;
-                    if (File.Exists(gltfPath)) {
-                        foundPath = gltfPath;
-                        Logger.Info($"FBX2glTF: Found .gltf file (expected: {expectedExtension})");
-                    } else if (File.Exists(glbPath)) {
-                        foundPath = glbPath;
-                        Logger.Info($"FBX2glTF: Found .glb file (expected: {expectedExtension})");
+
+                    // Сначала проверяем поддиректорию _out (поведение Godot fork)
+                    if (Directory.Exists(outSubdirectory)) {
+                        Logger.Info($"FBX2glTF: Found _out subdirectory: {outSubdirectory}");
+                        var outFiles = Directory.GetFiles(outSubdirectory);
+                        Logger.Info($"Files in _out subdirectory: {string.Join(", ", outFiles.Select(Path.GetFileName))}");
+
+                        var gltfInOut = Path.Combine(outSubdirectory, outputBaseName + ".gltf");
+                        var glbInOut = Path.Combine(outSubdirectory, outputBaseName + ".glb");
+
+                        if (File.Exists(gltfInOut)) {
+                            foundPath = gltfInOut;
+                            Logger.Info($"FBX2glTF: Found .gltf in _out subdirectory");
+                        } else if (File.Exists(glbInOut)) {
+                            foundPath = glbInOut;
+                            Logger.Info($"FBX2glTF: Found .glb in _out subdirectory");
+                        }
+                    }
+
+                    // Если не нашли в _out, проверяем основную директорию
+                    if (foundPath == null) {
+                        var gltfPath = outputPath + ".gltf";
+                        var glbPath = outputPath + ".glb";
+
+                        if (File.Exists(gltfPath)) {
+                            foundPath = gltfPath;
+                            Logger.Info($"FBX2glTF: Found .gltf file (expected: {expectedExtension})");
+                        } else if (File.Exists(glbPath)) {
+                            foundPath = glbPath;
+                            Logger.Info($"FBX2glTF: Found .glb file (expected: {expectedExtension})");
+                        }
                     }
 
                     if (foundPath != null) {
@@ -163,7 +190,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                         Logger.Info($"FBX2glTF: Success, created {foundPath}, size: {result.OutputFileSize} bytes");
                     } else {
                         result.Success = false;
-                        result.Error = $"FBX2glTF completed but output file not found. Expected: {outputPath + expectedExtension}, also checked: {(expectedExtension == ".gltf" ? glbPath : gltfPath)}";
+                        result.Error = $"FBX2glTF completed but output file not found. Expected: {outputPath + expectedExtension} or {outSubdirectory}";
                         Logger.Error(result.Error);
                     }
                 } else {

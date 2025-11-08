@@ -960,6 +960,26 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
+        /// Программно устанавливает пресет БЕЗ триггера событий SettingsChanged (для новой системы)
+        /// </summary>
+        public void SetPresetSilently(string presetName) {
+            System.Diagnostics.Debug.WriteLine($"[SetPresetSilently] Setting preset to: {presetName}, _isLoading before: {_isLoading}");
+            _isLoading = true;
+            try {
+                if (PresetComboBox.Items.Cast<string>().Contains(presetName)) {
+                    PresetComboBox.SelectedItem = presetName;
+                    System.Diagnostics.Debug.WriteLine($"[SetPresetSilently] Successfully set to: {presetName}");
+                } else {
+                    PresetComboBox.SelectedIndex = 0; // "Custom"
+                    System.Diagnostics.Debug.WriteLine($"[SetPresetSilently] Preset '{presetName}' not found, set to Custom");
+                }
+            } finally {
+                _isLoading = false;
+                System.Diagnostics.Debug.WriteLine($"[SetPresetSilently] _isLoading restored to false");
+            }
+        }
+
+        /// <summary>
         /// Автоматически выбирает пресет на основе имени файла
         /// </summary>
         public bool AutoDetectPresetByFileName(string fileName) {

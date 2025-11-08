@@ -620,20 +620,6 @@ namespace AssetProcessor.TextureConversion.Settings {
                     }
                 },
 
-                // Roughness/Metallic/AO (Linear) - ADDED TO MATCH TextureConversionPreset
-                new ConversionPreset {
-                    Name = "Roughness/Metallic/AO",
-                    Description = "Оптимизирован для roughness/metallic/AO карт",
-                    TextureType = TextureType.Roughness,
-                    ParameterValues = new Dictionary<string, object?> {
-                        { "compressionFormat", "etc1s" },
-                        { "qualityLevel", 128 },
-                        { "treatAsLinear", true },
-                        { "mipFilter", "kaiser" },
-                        { "perceptualMode", false }
-                    }
-                },
-
                 // Gloss (Linear + Toksvig)
                 new ConversionPreset {
                     Name = "Gloss (Linear + Toksvig)",

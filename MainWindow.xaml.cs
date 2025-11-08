@@ -4579,19 +4579,19 @@ namespace AssetProcessor {
                 bool presetExistsInDropdown = dropdownItems.Contains(matchedPreset.Name);
                 MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
 
-                // Устанавливаем preset в dropdown
+                // КРИТИЧНО: Устанавливаем preset БЕЗ триггера событий чтобы не блокировать загрузку текстуры!
                 if (presetExistsInDropdown) {
-                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Setting dropdown to preset: {matchedPreset.Name}");
-                    ConversionSettingsPanel.PresetComboBox.SelectedItem = matchedPreset.Name;
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: {matchedPreset.Name}");
+                    ConversionSettingsPanel.SetPresetSilently(matchedPreset.Name);
                 } else {
-                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom");
-                    ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom SILENTLY");
+                    ConversionSettingsPanel.SetPresetSilently("Custom");
                 }
             } else {
                 // Preset не найден по имени файла - используем "Custom"
                 texture.PresetName = "";
-                ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
-                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom");
+                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom SILENTLY");
+                ConversionSettingsPanel.SetPresetSilently("Custom");
             }
 
             MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");

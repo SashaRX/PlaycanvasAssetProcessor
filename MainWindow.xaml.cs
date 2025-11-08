@@ -514,11 +514,13 @@ namespace AssetProcessor {
         private async void FilterButton_Click(object sender, RoutedEventArgs e) {
             // Ignore programmatic updates to prevent recursive calls
             if (isUpdatingChannelButtons) {
+                logger.Info($"FilterButton_Click: Ignored (isUpdatingChannelButtons=true)");
                 return;
             }
 
             if (sender is ToggleButton button) {
                 string? channel = button.Tag.ToString();
+                logger.Info($"FilterButton_Click: channel='{channel}', IsChecked={button.IsChecked}");
                 if (button.IsChecked == true) {
                     // Сброс всех остальных кнопок (including NormalButton)
                     isUpdatingChannelButtons = true;
@@ -554,6 +556,8 @@ namespace AssetProcessor {
                 BChannelButton.IsChecked = currentActiveChannelMask == "B";
                 AChannelButton.IsChecked = currentActiveChannelMask == "A";
                 NormalButton.IsChecked = currentActiveChannelMask == "Normal";
+
+                logger.Info($"UpdateChannelButtonsState: currentActiveChannelMask='{currentActiveChannelMask}', NormalButton.IsChecked={NormalButton.IsChecked}");
             } finally {
                 isUpdatingChannelButtons = false;
             }

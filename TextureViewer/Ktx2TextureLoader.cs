@@ -431,6 +431,7 @@ public static class Ktx2TextureLoader {
             IsSRGB = isSRGB,
             HasAlpha = hasAlpha,
             SourceFormat = sourceFormat,
+            SourcePath = filePath, // Track KTX2 file path
             IsHDR = false,
             IsCompressed = isCompressed,
             CompressionFormat = isCompressed ? detectedFormat : null,

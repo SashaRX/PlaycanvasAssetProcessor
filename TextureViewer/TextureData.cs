@@ -47,6 +47,12 @@ public sealed class TextureData : IDisposable {
     public required string SourceFormat { get; init; }
 
     /// <summary>
+    /// Source file path (e.g., "C:/path/to/texture.ktx2").
+    /// Null for textures loaded from memory (e.g., PNG converted to TextureData).
+    /// </summary>
+    public string? SourcePath { get; init; }
+
+    /// <summary>
     /// Whether this is an HDR texture (requires special handling for exposure/tonemapping).
     /// </summary>
     public bool IsHDR { get; init; }

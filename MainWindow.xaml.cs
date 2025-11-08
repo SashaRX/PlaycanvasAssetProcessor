@@ -1053,10 +1053,15 @@ namespace AssetProcessor {
                     // Old method: extracted PNG mipmaps available (WPF mode)
                     UpdateMipmapControls(currentKtxMipmaps);
                     SetCurrentMipLevel(currentMipLevel);
-                } else if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
-                    // CRITICAL: Check if KTX2 is ALREADY loaded in D3D11 FIRST to prevent infinite reload loop
+                } else if (D3D11TextureViewer?.Renderer != null &&
+                           D3D11TextureViewer.Renderer.GetCurrentTexturePath() == currentLoadedKtx2Path &&
+                           !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
+                    // CRITICAL: KTX2 is ALREADY loaded in D3D11 (check path match to prevent PNG confusion)
                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                     logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
+
+                    // Update histogram correction button state
+                    UpdateHistogramCorrectionButtonState();
 
                     // Restore channel mask if already loaded
                     if (savedMask != null) {

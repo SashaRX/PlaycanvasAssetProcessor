@@ -51,6 +51,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private HistogramMetadata? histogramMetadata = null;
     private bool enableHistogramCorrection = true; // Enabled by default if metadata present
 
+    // Track loaded texture source to distinguish KTX2 from PNG
+    private string? currentTexturePath = null;
+
     // Lock for thread-safe access to texture resources
     private readonly object renderLock = new object();
 
@@ -279,6 +282,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
         lock (renderLock) {
             currentTexture = textureData;
+            currentTexturePath = textureData.SourcePath; // Track source (KTX2 path or null for PNG)
 
             // Store histogram metadata for GPU compensation
             histogramMetadata = textureData.HistogramMetadata;
@@ -642,6 +646,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
     public HistogramMetadata? GetHistogramMetadata() {
         lock (renderLock) {
             return histogramMetadata;
+        }
+    }
+
+    public string? GetCurrentTexturePath() {
+        lock (renderLock) {
+            return currentTexturePath;
         }
     }
 

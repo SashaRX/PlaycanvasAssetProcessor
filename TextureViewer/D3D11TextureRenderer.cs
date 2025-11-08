@@ -533,7 +533,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
         }
 
         // Get normal layout from texture metadata (default to NONE if not available)
-        uint normalLayout = currentTexture?.NormalLayout != null ? (uint)currentTexture.NormalLayout : 0u;
+        uint normalLayout = currentTexture?.NormalLayoutMetadata?.Layout != null
+            ? (uint)currentTexture.NormalLayoutMetadata.Layout
+            : 0u;
 
         var constants = new ShaderConstants {
             UvScale = new Vector2(1.0f / zoomLevel, 1.0f / zoomLevel),

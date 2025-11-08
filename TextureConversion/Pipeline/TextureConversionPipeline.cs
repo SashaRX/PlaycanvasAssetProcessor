@@ -707,6 +707,143 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         }
 
         /// <summary>
+        /// Конвертирует упакованную ORM текстуру (несколько каналов) в KTX2 формат
+        /// </summary>
+        /// <param name="packingSettings">Настройки упаковки каналов (AO, Gloss, Metallic, Height)</param>
+        /// <param name="outputPath">Путь к выходному файлу (.ktx2)</param>
+        /// <param name="compressionSettings">Настройки сжатия</param>
+        /// <param name="saveSeparateMipmaps">Сохранить ли мипмапы отдельно</param>
+        /// <param name="mipmapOutputDir">Директория для сохранения отдельных мипмапов</param>
+        /// <returns>Результат конвертации</returns>
+        public async Task<ConversionResult> ConvertPackedTextureAsync(
+            ChannelPackingSettings packingSettings,
+            string outputPath,
+            CompressionSettings compressionSettings,
+            bool saveSeparateMipmaps = false,
+            string? mipmapOutputDir = null) {
+
+            var result = new ConversionResult {
+                InputPath = $"[Channel Packing: {packingSettings.Mode}]",
+                OutputPath = outputPath
+            };
+
+            var startTime = DateTime.Now;
+
+            try {
+                Logger.Info($"=== STARTING PACKED TEXTURE CONVERSION ===");
+                Logger.Info($"  Mode: {packingSettings.Mode}");
+                Logger.Info($"  Output: {outputPath}");
+
+                // Валидация настроек
+                if (!packingSettings.Validate(out var error)) {
+                    throw new ArgumentException($"Invalid packing settings: {error}");
+                }
+
+                // КРИТИЧНО: Упаковка каналов требует ручных мипмапов
+                if (!compressionSettings.UseCustomMipmaps) {
+                    Logger.Warn("Channel packing requires UseCustomMipmaps=true, enabling automatically");
+                    compressionSettings.UseCustomMipmaps = true;
+                }
+
+                // Проверяем доступность ktx
+                if (!await _ktxCreateWrapper.IsAvailableAsync()) {
+                    throw new Exception("ktx executable not found. Please specify path to ktx.exe in settings");
+                }
+
+                // Создаем ChannelPackingPipeline
+                var channelPacker = new ChannelPackingPipeline();
+
+                // Упаковываем каналы в RGBA текстуру с мипмапами
+                var mipmaps = await channelPacker.PackChannelsAsync(packingSettings);
+
+                Logger.Info($"=== CHANNEL PACKING COMPLETE ===");
+                Logger.Info($"  Generated {mipmaps.Count} mipmap levels");
+                Logger.Info($"  Texture size: {mipmaps[0].Width}x{mipmaps[0].Height}");
+
+                // Далее следует стандартный путь: сохранение мипмапов и упаковка в KTX2
+                var fileName = $"{packingSettings.Mode.ToString().ToLower()}_packed";
+
+                var tempMipmapDir = Path.Combine(Path.GetTempPath(), "TexTool_Mipmaps", Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempMipmapDir);
+                Logger.Info($"Создана временная директория для мипмапов: {tempMipmapDir}");
+
+                var tempMipmapPaths = new List<string>();
+
+                try {
+                    // Сохраняем все мипмапы как временные PNG для ktx
+                    Logger.Info($"Сохраняем {mipmaps.Count} мипмапов для ktx...");
+                    for (int i = 0; i < mipmaps.Count; i++) {
+                        var mipPath = Path.Combine(tempMipmapDir, $"{fileName}_mip{i}.png");
+                        await mipmaps[i].SaveAsPngAsync(mipPath);
+                        tempMipmapPaths.Add(mipPath);
+                        Logger.Info($"✓ Mipmap {i} сохранён: {mipPath}");
+                    }
+
+                    // Опционально: копируем мипмапы в директорию пользователя
+                    if (saveSeparateMipmaps && !string.IsNullOrEmpty(mipmapOutputDir)) {
+                        Logger.Info($"Копируем {mipmaps.Count} мипмапов в {mipmapOutputDir}");
+                        Directory.CreateDirectory(mipmapOutputDir);
+
+                        for (int i = 0; i < tempMipmapPaths.Count; i++) {
+                            var destPath = Path.Combine(mipmapOutputDir, $"{fileName}_mip{i}.png");
+                            File.Copy(tempMipmapPaths[i], destPath, overwrite: true);
+                        }
+
+                        result.MipmapsSavedPath = mipmapOutputDir;
+                    }
+
+                    // КРИТИЧНО: ORM текстуры ВСЕГДА Linear (не sRGB)
+                    if (compressionSettings.ColorSpace != ColorSpace.Linear) {
+                        Logger.Warn($"ORM textures must use Linear color space, changing from {compressionSettings.ColorSpace} to Linear");
+                        compressionSettings.ColorSpace = ColorSpace.Linear;
+                    }
+
+                    // Упаковываем мипмапы в KTX2
+                    Logger.Info("=== PACKING TO KTX2 ===");
+                    var ktxResult = await _ktxCreateWrapper.PackMipmapsAsync(
+                        tempMipmapPaths,
+                        outputPath,
+                        compressionSettings,
+                        kvdBinaryFiles: null // ORM текстуры обычно не требуют метаданных
+                    );
+
+                    if (!ktxResult.Success) {
+                        throw new Exception($"ktx create failed: {ktxResult.Error}");
+                    }
+
+                    result.Success = true;
+                    result.BasisOutput = ktxResult.Output;
+                    result.MipLevels = mipmaps.Count;
+
+                    Logger.Info($"=== PACKED TEXTURE CONVERSION SUCCESS ===");
+                    Logger.Info($"  Output: {outputPath}");
+                    Logger.Info($"  File size: {ktxResult.OutputFileSize} bytes");
+                    Logger.Info($"  Mip levels: {mipmaps.Count}");
+
+                } finally {
+                    // Очистка временных файлов
+                    if (Directory.Exists(tempMipmapDir)) {
+                        Directory.Delete(tempMipmapDir, recursive: true);
+                        Logger.Info($"Временная директория удалена: {tempMipmapDir}");
+                    }
+                }
+
+                // Освобождаем память мипмапов
+                foreach (var mip in mipmaps) {
+                    mip.Dispose();
+                }
+
+            } catch (Exception ex) {
+                Logger.Error(ex, $"Packed texture conversion failed");
+                result.Success = false;
+                result.Error = ex.Message;
+            }
+
+            result.Duration = DateTime.Now - startTime;
+            return result;
+        }
+
+        /// <summary>
         /// Конвертирует только мипмапы без сжатия (для тестирования)
         /// </summary>
         public async Task<List<string>> GenerateMipmapsOnlyAsync(

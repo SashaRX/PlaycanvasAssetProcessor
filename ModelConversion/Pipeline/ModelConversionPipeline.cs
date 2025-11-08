@@ -82,117 +82,91 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 if (settings.GenerateLods) {
                     Logger.Info("=== STEP B & C: LOD GENERATION ===");
 
-                    // Генерируем два трека если нужно:
-                    // 1. dist/glb - только квантование (fallback для редакторов)
-                    // 2. dist/meshopt - с EXT_meshopt_compression (для продакшена)
-                    var tracks = settings.GenerateBothTracks
-                        ? new[] { ("glb", CompressionMode.Quantization), ("meshopt", settings.CompressionMode) }
-                        : new[] { (settings.CompressionMode == CompressionMode.MeshOpt || settings.CompressionMode == CompressionMode.MeshOptAggressive ? "meshopt" : "glb", settings.CompressionMode) };
+                    // Сохраняем LOD файлы напрямую в outputDirectory
+                    var lodFiles = new Dictionary<LodLevel, string>();
+                    var lodMetrics = new Dictionary<string, MeshMetrics>();
 
-                    foreach (var (trackName, compressionMode) in tracks) {
-                        Logger.Info($"Generating track: {trackName} (compression: {compressionMode})");
+                    foreach (var lodSettings in settings.LodChain) {
+                        var lodName = $"LOD{(int)lodSettings.Level}";
+                        var lodFileName = $"{modelName}_lod{(int)lodSettings.Level}.glb";
+                        var lodOutputPath = Path.Combine(outputDirectory, lodFileName);
 
-                        var trackDir = Path.Combine(outputDirectory, "dist", trackName);
-                        Directory.CreateDirectory(trackDir);
+                        Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
 
-                        var lodFiles = new Dictionary<LodLevel, string>();
-                        var lodMetrics = new Dictionary<string, MeshMetrics>();
+                        var gltfResult = await _gltfPackWrapper.OptimizeAsync(
+                            fbxResult.OutputFilePath!,
+                            lodOutputPath,
+                            lodSettings,
+                            settings.CompressionMode,
+                            settings.Quantization,
+                            generateReport: settings.GenerateQAReport,
+                            excludeTextures: settings.ExcludeTextures
+                        );
 
-                        foreach (var lodSettings in settings.LodChain) {
-                            var lodName = $"LOD{(int)lodSettings.Level}";
-                            var lodFileName = $"{modelName}_lod{(int)lodSettings.Level}.glb";
-                            var lodOutputPath = Path.Combine(trackDir, lodFileName);
-
-                            Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
-
-                            var gltfResult = await _gltfPackWrapper.OptimizeAsync(
-                                fbxResult.OutputFilePath!,
-                                lodOutputPath,
-                                lodSettings,
-                                compressionMode,
-                                settings.Quantization,
-                                generateReport: settings.GenerateQAReport,
-                                excludeTextures: settings.ExcludeTextures
-                            );
-
-                            if (!gltfResult.Success) {
-                                Logger.Error($"Failed to generate {lodName}: {gltfResult.Error}");
-                                result.Errors.Add($"{lodName} generation failed: {gltfResult.Error}");
-                                continue;
-                            }
-
-                            Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
-
-                            lodFiles[lodSettings.Level] = lodOutputPath;
-
-                            // Собираем метрики
-                            lodMetrics[lodName] = new MeshMetrics {
-                                TriangleCount = gltfResult.TriangleCount,
-                                VertexCount = gltfResult.VertexCount,
-                                FileSize = gltfResult.OutputFileSize,
-                                SimplificationRatio = lodSettings.SimplificationRatio,
-                                CompressionMode = compressionMode.ToString()
-                            };
+                        if (!gltfResult.Success) {
+                            Logger.Error($"Failed to generate {lodName}: {gltfResult.Error}");
+                            result.Errors.Add($"{lodName} generation failed: {gltfResult.Error}");
+                            continue;
                         }
 
-                        // Сохраняем LOD файлы и метрики в результат
-                        if (trackName == "meshopt" || !settings.GenerateBothTracks) {
-                            result.LodFiles = lodFiles;
-                            result.LodMetrics = lodMetrics;
-                        }
+                        Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
 
-                        // ШАГ D: Генерация манифеста
-                        if (settings.GenerateManifest && lodFiles.Count > 0) {
-                            Logger.Info($"=== STEP D: MANIFEST GENERATION ({trackName}) ===");
+                        lodFiles[lodSettings.Level] = lodOutputPath;
 
-                            var manifestDir = Path.Combine(outputDirectory, "dist", "manifest");
-                            Directory.CreateDirectory(manifestDir);
+                        // Собираем метрики
+                        lodMetrics[lodName] = new MeshMetrics {
+                            TriangleCount = gltfResult.TriangleCount,
+                            VertexCount = gltfResult.VertexCount,
+                            FileSize = gltfResult.OutputFileSize,
+                            SimplificationRatio = lodSettings.SimplificationRatio,
+                            CompressionMode = settings.CompressionMode.ToString()
+                        };
+                    }
 
-                            var manifestPath = _manifestGenerator.GenerateManifest(
-                                modelName,
-                                lodFiles,
-                                settings,
-                                manifestDir
-                            );
+                    // Сохраняем LOD файлы и метрики в результат
+                    result.LodFiles = lodFiles;
+                    result.LodMetrics = lodMetrics;
 
-                            Logger.Info($"Manifest created: {manifestPath}");
+                    // ШАГ D: Генерация манифеста
+                    if (settings.GenerateManifest && lodFiles.Count > 0) {
+                        Logger.Info($"=== STEP D: MANIFEST GENERATION ===");
 
-                            if (trackName == "meshopt" || !settings.GenerateBothTracks) {
-                                result.ManifestPath = manifestPath;
-                            }
-                        }
+                        var manifestPath = _manifestGenerator.GenerateManifest(
+                            modelName,
+                            lodFiles,
+                            settings,
+                            outputDirectory
+                        );
 
-                        // ШАГ E: QA отчёт
-                        if (settings.GenerateQAReport && lodMetrics.Count > 0) {
-                            Logger.Info($"=== STEP E: QA REPORT ({trackName}) ===");
+                        Logger.Info($"Manifest created: {manifestPath}");
+                        result.ManifestPath = manifestPath;
+                    }
 
-                            var qaReport = new QualityReport {
-                                ModelName = modelName,
-                                LodMetrics = lodMetrics
-                            };
+                    // ШАГ E: QA отчёт
+                    if (settings.GenerateQAReport && lodMetrics.Count > 0) {
+                        Logger.Info($"=== STEP E: QA REPORT ===");
 
-                            // Оцениваем критерии приёмки
-                            qaReport.EvaluateAcceptanceCriteria(settings);
+                        var qaReport = new QualityReport {
+                            ModelName = modelName,
+                            LodMetrics = lodMetrics
+                        };
 
-                            // Сохраняем отчёт
-                            var reportsDir = Path.Combine(outputDirectory, "reports");
-                            Directory.CreateDirectory(reportsDir);
+                        // Оцениваем критерии приёмки
+                        qaReport.EvaluateAcceptanceCriteria(settings);
 
-                            var reportPath = Path.Combine(reportsDir, $"{modelName}_{trackName}_report.json");
-                            qaReport.SaveToFile(reportPath);
+                        // Сохраняем отчёт в outputDirectory
+                        var reportPath = Path.Combine(outputDirectory, $"{modelName}_qa_report.json");
+                        qaReport.SaveToFile(reportPath);
 
-                            Logger.Info($"QA Report saved: {reportPath}");
-                            Logger.Info(qaReport.ToTextReport());
+                        Logger.Info($"QA Report saved: {reportPath}");
+                        Logger.Info(qaReport.ToTextReport());
 
-                            if (trackName == "meshopt" || !settings.GenerateBothTracks) {
-                                result.QAReport = qaReport;
-                                result.QAReportPath = reportPath;
-                            }
+                        result.QAReport = qaReport;
+                        result.QAReportPath = reportPath;
 
-                            // Добавляем warnings/errors из отчёта
-                            result.Warnings.AddRange(qaReport.Warnings);
-                            result.Errors.AddRange(qaReport.Errors);
-                        }
+                        // Добавляем warnings/errors из отчёта
+                        result.Warnings.AddRange(qaReport.Warnings);
+                        result.Errors.AddRange(qaReport.Errors);
                     }
                 }
 

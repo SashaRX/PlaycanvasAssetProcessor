@@ -4996,7 +4996,7 @@ namespace AssetProcessor {
                 // Create output directory
                 var modelName = Path.GetFileNameWithoutExtension(selectedModel.Path);
                 var sourceDir = Path.GetDirectoryName(selectedModel.Path) ?? Environment.CurrentDirectory;
-                var outputDir = Path.Combine(sourceDir, "_out", modelName);
+                var outputDir = Path.Combine(sourceDir, modelName, "glb");
                 Directory.CreateDirectory(outputDir);
 
                 MainWindowHelpers.LogInfo($"Processing model: {selectedModel.Name}");

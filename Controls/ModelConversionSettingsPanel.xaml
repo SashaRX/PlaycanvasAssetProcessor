@@ -110,11 +110,11 @@
                     <CheckBox x:Name="GenerateManifestCheckBox" Content="Generate Manifest" IsChecked="True" Margin="0,0,0,2"
                               ToolTip="Generate LOD switching manifest for PlayCanvas"/>
 
-                    <CheckBox x:Name="GenerateQAReportCheckBox" Content="Generate QA Report" IsChecked="True" Margin="0,0,0,2"
-                              ToolTip="Generate quality assurance validation report"/>
-
                     <CheckBox x:Name="CleanupIntermediateFilesCheckBox" Content="Cleanup Intermediate Files" IsChecked="True" Margin="0,0,0,2"
                               ToolTip="Remove intermediate files after processing"/>
+
+                    <CheckBox x:Name="GenerateQAReportCheckBox" Content="Generate QA Report" IsChecked="False" Margin="0,0,0,2"
+                              ToolTip="Generate quality assurance validation report (optional)"/>
                 </StackPanel>
             </Expander>
 

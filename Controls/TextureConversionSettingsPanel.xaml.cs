@@ -717,25 +717,44 @@ namespace AssetProcessor.Controls {
         // ============================================
 
         private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (_isLoading) return;
+            System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] START - _isLoading: {_isLoading}, SelectedItem: {PresetComboBox.SelectedItem}");
+
+            if (_isLoading) {
+                System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] Skipping - _isLoading is true");
+                return;
+            }
 
             // Новая система: строковые имена пресетов (ConversionSettingsManager)
             if (PresetComboBox.SelectedItem is string presetName) {
+                System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] New system - preset name: {presetName}");
+
                 if (_conversionSettingsManager != null && presetName != "Custom") {
                     // Применяем пресет из ConversionSettingsSchema
                     var presets = ConversionSettingsSchema.GetPredefinedPresets();
+                    System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] Looking for preset in {presets.Count} predefined presets");
+
                     var preset = presets.FirstOrDefault(p => p.Name == presetName);
                     if (preset != null) {
+                        System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] Found preset: {preset.Name}, loading to UI");
                         LoadConversionPresetToUI(preset);
+                        System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] Preset loaded, triggering OnSettingsChanged");
                         OnSettingsChanged();
+                        System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] OnSettingsChanged completed");
+                    } else {
+                        System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] WARNING: Preset '{presetName}' not found in ConversionSettingsSchema!");
                     }
+                } else {
+                    System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] Skipping preset load - manager is null or Custom selected");
                 }
             }
             // Старая система: объекты TextureConversionPreset (PresetManager)
             else if (PresetComboBox.SelectedItem is TextureConversionPreset selectedPreset) {
+                System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] Old system - preset: {selectedPreset.Name}");
                 LoadPresetToUI(selectedPreset);
                 OnSettingsChanged();
             }
+
+            System.Diagnostics.Debug.WriteLine($"[PresetComboBox_SelectionChanged] END");
         }
 
         /// <summary>
@@ -1078,7 +1097,9 @@ namespace AssetProcessor.Controls {
         }
 
         private void OnSettingsChanged() {
+            System.Diagnostics.Debug.WriteLine($"[OnSettingsChanged] Triggering SettingsChanged event");
             SettingsChanged?.Invoke(this, EventArgs.Empty);
+            System.Diagnostics.Debug.WriteLine($"[OnSettingsChanged] SettingsChanged event completed");
         }
 
         private void OnConvertRequested() {

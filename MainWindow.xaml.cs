@@ -1838,12 +1838,16 @@ namespace AssetProcessor {
 
                         // Debounce: wait a bit to see if user is still scrolling
                         await Task.Delay(50, cancellationToken);
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Debounce completed for: {selectedTexture.Name}");
 
                         // Load conversion settings for this texture
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Loading conversion settings for: {selectedTexture.Name}");
                         LoadTextureConversionSettings(selectedTexture);
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Conversion settings loaded for: {selectedTexture.Name}");
 
                         // Check cancellation before starting heavy operations
                         cancellationToken.ThrowIfCancellationRequested();
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Starting texture load for: {selectedTexture.Name}");
 
                         // FIXED: Separate D3D11 native KTX2 loading from PNG extraction
                         // to prevent conflicts
@@ -1851,16 +1855,22 @@ namespace AssetProcessor {
 
                         if (isUsingD3D11Renderer) {
                             // D3D11 MODE: Try D3D11 native KTX2 loading (always use native when D3D11 is active)
+                            MainWindowHelpers.LogInfo($"[TextureSelection] Attempting KTX2 load for: {selectedTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
+                            MainWindowHelpers.LogInfo($"[TextureSelection] KTX2 load result for {selectedTexture.Name}: {ktxLoaded}");
 
                             if (ktxLoaded) {
                                 // KTX2 loaded successfully to D3D11, still load source for histogram/info
                                 // If user is in Source mode, show the PNG; otherwise just load for histogram
                                 bool showInViewer = (currentPreviewSourceMode == TexturePreviewSourceMode.Source);
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Loading source preview for {selectedTexture.Name}, showInViewer: {showInViewer}");
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: showInViewer);
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
                             } else {
                                 // No KTX2 or failed, fallback to source preview
+                                MainWindowHelpers.LogInfo($"[TextureSelection] No KTX2, loading source preview for: {selectedTexture.Name}");
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
                             }
                         } else {
                             // WPF MODE: Use PNG extraction for mipmaps (old method)
@@ -1885,6 +1895,7 @@ namespace AssetProcessor {
                             });
                         }
                     } catch (OperationCanceledException) {
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
                         // Загрузка была отменена - это нормально
                     } catch (Exception ex) {
                         MainWindowHelpers.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
@@ -4514,9 +4525,17 @@ namespace AssetProcessor {
         }
 
         private void ConversionSettingsPanel_SettingsChanged(object? sender, EventArgs e) {
+            MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event triggered");
+
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Updating settings for texture: {selectedTexture.Name}");
                 UpdateTextureConversionSettings(selectedTexture);
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Settings updated for texture: {selectedTexture.Name}");
+            } else {
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] No texture selected, skipping update");
             }
+
+            MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event handler completed");
         }
 
         private void UpdateTextureConversionSettings(TextureResource texture) {
@@ -4534,6 +4553,8 @@ namespace AssetProcessor {
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
+
             // КРИТИЧНО: Устанавливаем путь текущей текстуры для auto-detect normal map!
             ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
 
@@ -4544,16 +4565,26 @@ namespace AssetProcessor {
             // Это позволяет автоматически выбирать правильный preset для каждой текстуры
             var presetManager = new TextureConversion.Settings.PresetManager();
             var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");
 
             if (matchedPreset != null) {
                 // Нашли preset по имени файла (например "gloss" → "Gloss (Linear + Toksvig)")
                 texture.PresetName = matchedPreset.Name;
                 MainWindowHelpers.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
 
+                // Проверяем наличие preset в dropdown
+                var dropdownItems = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().ToList();
+                MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Dropdown contains {dropdownItems.Count} items: {string.Join(", ", dropdownItems)}");
+
+                bool presetExistsInDropdown = dropdownItems.Contains(matchedPreset.Name);
+                MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
+
                 // Устанавливаем preset в dropdown
-                if (ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().Contains(matchedPreset.Name)) {
+                if (presetExistsInDropdown) {
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Setting dropdown to preset: {matchedPreset.Name}");
                     ConversionSettingsPanel.PresetComboBox.SelectedItem = matchedPreset.Name;
                 } else {
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom");
                     ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
                 }
             } else {
@@ -4562,6 +4593,8 @@ namespace AssetProcessor {
                 ConversionSettingsPanel.PresetComboBox.SelectedIndex = 0; // "Custom"
                 MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom");
             }
+
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");
 
             // Загружаем default настройки для типа текстуры (если Custom)
             if (string.IsNullOrEmpty(texture.PresetName)) {

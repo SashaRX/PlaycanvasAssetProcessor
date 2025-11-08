@@ -71,7 +71,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
         public Vector4 HistogramOffset; // RGB offset for histogram denormalization (w unused, for 16-byte alignment)
         public uint EnableHistogramCorrection; // 0 = disabled, 1 = enabled
         public uint HistogramIsPerChannel; // 0 = scalar, 1 = per-channel
-        public Vector2 Padding2; // Padding to align to 16-byte boundary
+        public uint NormalLayout; // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
+        public uint Padding3; // Padding to maintain 16-byte alignment
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -531,6 +532,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
             }
         }
 
+        // Get normal layout from texture metadata (default to NONE if not available)
+        uint normalLayout = currentTexture?.NormalLayout != null ? (uint)currentTexture.NormalLayout : 0u;
+
         var constants = new ShaderConstants {
             UvScale = new Vector2(1.0f / zoomLevel, 1.0f / zoomLevel),
             UvOffset = new Vector2(panX, panY),
@@ -544,7 +548,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
             HistogramOffset = histOffset,
             EnableHistogramCorrection = enableHist,
             HistogramIsPerChannel = isPerChannel,
-            Padding2 = new Vector2(0.0f, 0.0f)
+            NormalLayout = normalLayout,
+            Padding3 = 0u
         };
 
         var mapped = context!.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);

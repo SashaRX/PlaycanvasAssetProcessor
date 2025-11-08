@@ -29,6 +29,7 @@ namespace AssetProcessor.Windows {
                 KTX2ZstdLevelSlider.Value = _originalPreset.KTX2ZstdLevel;
 
                 // ETC1S
+                CompressionLevelSlider.Value = _originalPreset.CompressionLevel;
                 ETC1SQualitySlider.Value = _originalPreset.QualityLevel;
                 UseETC1SRDOCheckBox.IsChecked = _originalPreset.UseETC1SRDO;
                 ETC1SRDOLambdaSlider.Value = _originalPreset.ETC1SRDOLambda;
@@ -351,6 +352,7 @@ namespace AssetProcessor.Windows {
                 CompressionFormat = (CompressionFormat)CompressionFormatComboBox.SelectedItem,
                 OutputFormat = (OutputFormat)OutputFormatComboBox.SelectedItem,
                 ColorSpace = (ColorSpace)ColorSpaceComboBox.SelectedItem,
+                CompressionLevel = (int)Math.Round(CompressionLevelSlider.Value),
                 QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
                 UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
                 UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? false,

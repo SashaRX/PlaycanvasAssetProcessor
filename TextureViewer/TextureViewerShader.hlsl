@@ -16,7 +16,8 @@ cbuffer ShaderConstants : register(b0)
     float4 histogramOffset;             // Histogram denormalization offset (RGB, w unused)
     uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
     uint histogramIsPerChannel;         // 0 = scalar, 1 = per-channel
-    float2 padding;                     // Padding to align to 16-byte boundary
+    uint normalLayout;                  // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
+    uint padding3;                      // Padding to align to 16-byte boundary
 };
 
 Texture2D<float4> sourceTexture : register(t0);
@@ -135,11 +136,42 @@ float4 PSMain(PSInput input) : SV_TARGET
         if (showNormal)
         {
             // Normal Map Reconstruction Mode
-            // Standard BC5 format: X in Red/Green channel, Y in Green/Alpha channel, Z reconstructed
-            // Load XY from appropriate channels (GA is common for BC5)
+            // Extract XY components based on normalLayout metadata from KTX2
+            // Layout types: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
             float2 nml;
-            nml.x = color.r; // X from Red (or could be Green for BC5)
-            nml.y = color.a; // Y from Alpha (or could be Green for BC5)
+
+            // Switch on layout to extract correct channels
+            if (normalLayout == 1)
+            {
+                // RG: X in R, Y in G (BC5/UASTC standard)
+                nml.x = color.r;
+                nml.y = color.g;
+            }
+            else if (normalLayout == 2)
+            {
+                // GA: X in G, Y in A
+                nml.x = color.g;
+                nml.y = color.a;
+            }
+            else if (normalLayout == 4)
+            {
+                // AG: X in A, Y in G
+                nml.x = color.a;
+                nml.y = color.g;
+            }
+            else if (normalLayout == 5)
+            {
+                // RGBxAy: X in RGB (all channels), Y in A (ETC1S)
+                nml.x = color.r; // X encoded in all RGB channels
+                nml.y = color.a;
+            }
+            else
+            {
+                // Default (NONE or unknown): assume RA layout
+                // RA: X in R, Y in A (legacy BC5 RA layout)
+                nml.x = color.r;
+                nml.y = color.a;
+            }
 
             // Unpack from [0,1] to [-1,1]
             nml = nml * 2.0 - 1.0;

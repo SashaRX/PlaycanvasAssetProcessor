@@ -13,7 +13,7 @@ namespace AssetProcessor.Resources {
         private TextureResource? heightSource;
 
         // AO settings
-        private AOProcessingMode aoProcessingMode = AOProcessingMode.BiasedDarkening;
+        private AOProcessingMode aoProcessingMode = AOProcessingMode.None;  // Changed from BiasedDarkening to None to avoid validation errors on Gloss channel
         private float aoBias = 0.5f;
         private float aoPercentile = 10.0f;
 

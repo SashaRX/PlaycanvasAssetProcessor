@@ -5181,10 +5181,17 @@ namespace AssetProcessor {
             }
 
             try {
+                // Debug: Log material map IDs
+                MainWindowHelpers.LogInfo($"Material '{material.Name}': AOMapId={material.AOMapId}, GlossMapId={material.GlossMapId}, " +
+                    $"MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId}, UseMetalness={material.UseMetalness}");
+
                 // Find textures by map IDs
                 TextureResource? aoTexture = FindTextureById(material.AOMapId);
                 TextureResource? glossTexture = FindTextureById(material.GlossMapId);
                 TextureResource? metalnessTexture = null;
+
+                // Debug: Log found textures
+                MainWindowHelpers.LogInfo($"Found textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
 
                 // Check workflow type - Metalness or Specular
                 string workflowInfo = "";
@@ -5192,10 +5199,12 @@ namespace AssetProcessor {
                     // Metalness workflow (PBR)
                     metalnessTexture = FindTextureById(material.MetalnessMapId);
                     workflowInfo = "Workflow: Metalness (PBR)";
+                    MainWindowHelpers.LogInfo($"Metalness workflow: Metallic={metalnessTexture?.Name ?? "null"}");
                 } else {
                     // Specular workflow - use Specular map as Metallic substitute
                     metalnessTexture = FindTextureById(material.SpecularMapId);
                     workflowInfo = "Workflow: Specular (Legacy)\nNote: Specular map will be used as Metallic";
+                    MainWindowHelpers.LogInfo($"Specular workflow: Specular={metalnessTexture?.Name ?? "null"}");
                 }
 
                 // Auto-detect packing mode
@@ -5368,7 +5377,16 @@ namespace AssetProcessor {
         // Finds texture by material map ID
         private TextureResource? FindTextureById(int? mapId) {
             if (mapId == null) return null;
-            return Textures.FirstOrDefault(t => t.ID == mapId.Value);
+
+            // Debug: Log search
+            var found = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+            if (found == null) {
+                MainWindowHelpers.LogWarn($"Texture with ID {mapId.Value} not found. Total textures in collection: {Textures.Count}");
+                // Log first few texture IDs for debugging
+                var sampleIds = string.Join(", ", Textures.Take(5).Select(t => $"{t.ID}({t.Name})"));
+                MainWindowHelpers.LogInfo($"Sample texture IDs: {sampleIds}");
+            }
+            return found;
         }
 
         private ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {

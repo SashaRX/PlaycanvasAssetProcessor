@@ -2232,7 +2232,9 @@ namespace AssetProcessor {
 
         private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
             try {
-                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+                if (globalTextureSettings == null) {
+                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+                }
             } catch (Exception ex) {
                 logger.Debug(ex, "Не удалось загрузить настройки конвертации для определения каталога KTX2.");
                 return null;
@@ -2598,12 +2600,15 @@ namespace AssetProcessor {
         }
 
         private void CancelButton_Click(object? sender, RoutedEventArgs e) {
-            cancellationTokenSource?.Cancel();
+            if (cancellationTokenSource != null) {
+                cancellationTokenSource.Cancel();
+            }
+
             cancellationTokenSource = new CancellationTokenSource();
         }
 
         private void Setting(object? sender, RoutedEventArgs e) {
-            SettingsWindow settingsWindow = new();
+            SettingsWindow settingsWindow = new SettingsWindow();
             // Subscribe to preview renderer changes
             settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
             settingsWindow.ShowDialog();
@@ -2701,7 +2706,7 @@ namespace AssetProcessor {
 
             if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
-                SettingsWindow settingsWindow = new();
+                SettingsWindow settingsWindow = new SettingsWindow();
                 // Subscribe to preview renderer changes
                 settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
                 settingsWindow.ShowDialog();
@@ -2904,7 +2909,7 @@ namespace AssetProcessor {
         }
 
         private void SettingsMenu(object? sender, RoutedEventArgs e) {
-            SettingsWindow settingsWindow = new();
+            SettingsWindow settingsWindow = new SettingsWindow();
             // Subscribe to preview renderer changes
             settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
             settingsWindow.ShowDialog();
@@ -3252,7 +3257,9 @@ namespace AssetProcessor {
 
                 mapId = mapIdSelector(material);
             }
-            material ??= new MaterialResource { Name = "<unknown>", ID = -1 };
+            if (material == null) {
+                material = new MaterialResource { Name = "<unknown>", ID = -1 };
+            }
             if (!mapId.HasValue) {
                 logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры {MapType}.", material.Name, material.ID, mapType);
                 return;
@@ -3874,7 +3881,9 @@ namespace AssetProcessor {
         private void InitializeConversionSettings() {
             try {
                 // Загружаем глобальные настройки
-                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+                if (globalTextureSettings == null) {
+                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+                }
 
                 // Создаем менеджер настроек конвертации
                 conversionSettingsManager = new ConversionSettingsManager(globalTextureSettings);

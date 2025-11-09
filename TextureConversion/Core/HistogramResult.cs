@@ -32,35 +32,18 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Нижняя граница диапазона (после анализа перцентилей)
-        /// Для AverageLuminance - одно значение, для PerChannel - среднее по каналам
         /// </summary>
         public float RangeLow { get; set; }
 
         /// <summary>
         /// Верхняя граница диапазона (после анализа перцентилей)
-        /// Для AverageLuminance - одно значение, для PerChannel - среднее по каналам
         /// </summary>
         public float RangeHigh { get; set; }
-
-        /// <summary>
-        /// Нижние границы для каждого канала (используется при PerChannel режиме)
-        /// </summary>
-        public float[] RangeLowPerChannel { get; set; } = new[] { 0.0f, 0.0f, 0.0f };
-
-        /// <summary>
-        /// Верхние границы для каждого канала (используется при PerChannel режиме)
-        /// </summary>
-        public float[] RangeHighPerChannel { get; set; } = new[] { 1.0f, 1.0f, 1.0f };
 
         /// <summary>
         /// Доля пикселей в хвостах распределения (за пределами перцентилей)
         /// </summary>
         public float TailFraction { get; set; }
-
-        /// <summary>
-        /// Индикатор, что используется поканальный режим (RGB per-channel)
-        /// </summary>
-        public bool IsPerChannel => ChannelMode == HistogramChannelMode.PerChannel;
 
         /// <summary>
         /// Было ли применено мягкое колено (soft knee)
@@ -89,8 +72,8 @@ namespace AssetProcessor.TextureConversion.Core {
             return new HistogramResult {
                 Success = true,
                 Mode = HistogramMode.Off,
-                Scale = [1.0f],
-                Offset = [0.0f],
+                Scale = new[] { 1.0f },
+                Offset = new[] { 0.0f },
                 RangeLow = 0.0f,
                 RangeHigh = 1.0f
             };

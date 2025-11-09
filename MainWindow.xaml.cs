@@ -1872,13 +1872,18 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected ORM texture: {ormTexture.Name}");
 
                 // Hide conversion settings panel, show ORM panel
-                ConversionSettingsExpander.Visibility = Visibility.Collapsed;
-                ORMPanel.Visibility = Visibility.Visible;
+                if (ConversionSettingsExpander != null) {
+                    ConversionSettingsExpander.Visibility = Visibility.Collapsed;
+                }
 
-                // Initialize ORM panel with available textures (exclude other ORM textures)
-                var availableTextures = Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                ORMPanel.Initialize(this, availableTextures);
-                ORMPanel.SetORMTexture(ormTexture);
+                if (ORMPanel != null) {
+                    ORMPanel.Visibility = Visibility.Visible;
+
+                    // Initialize ORM panel with available textures (exclude other ORM textures)
+                    var availableTextures = Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                    ORMPanel.Initialize(this, availableTextures);
+                    ORMPanel.SetORMTexture(ormTexture);
+                }
 
                 // Don't load preview for virtual textures
                 ResetPreviewState();
@@ -1896,8 +1901,12 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
 
                 // Show conversion settings panel, hide ORM panel (for regular textures)
-                ConversionSettingsExpander.Visibility = Visibility.Visible;
-                ORMPanel.Visibility = Visibility.Collapsed;
+                if (ConversionSettingsExpander != null) {
+                    ConversionSettingsExpander.Visibility = Visibility.Visible;
+                }
+                if (ORMPanel != null) {
+                    ORMPanel.Visibility = Visibility.Collapsed;
+                }
 
                 ResetPreviewState();
                 ClearD3D11Viewer();

@@ -25,7 +25,8 @@
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build FAILED\" -Context 0,2)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git clean:*)"
     ],
     "deny": [],
     "ask": []

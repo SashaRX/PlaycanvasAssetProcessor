@@ -30,7 +30,9 @@
       "Bash(git push:*)",
       "Bash(dotnet list:*)",
       "Bash(dotnet nuget search:*)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(git merge-base:*)",
+      "Bash(xargs git log --oneline -1)"
     ],
     "deny": [],
     "ask": []

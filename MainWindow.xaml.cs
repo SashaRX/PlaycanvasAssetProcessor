@@ -2797,17 +2797,22 @@ namespace AssetProcessor {
                     return;
                 }
 
-                // Проект скачан, проверяем hash для определения обновлений
-                MainWindowHelpers.LogInfo("Project found, checking for updates...");
+                // Проект скачан, загружаем локальные данные
+                MainWindowHelpers.LogInfo("Project found, loading local assets...");
+                logger.Info("CheckProjectState: Loading local assets...");
+                await LoadAssetsFromJsonFileAsync();
+
+                // Проверяем hash для определения обновлений
+                MainWindowHelpers.LogInfo("Checking for updates...");
                 bool hasUpdates = await CheckForUpdates();
 
                 if (hasUpdates) {
-                    // Есть обновления - нужна загрузка
+                    // Есть обновления на сервере
+                    logger.Info("CheckProjectState: Updates available on server");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
-                    // Проект актуален - загружаем локально
-                    MainWindowHelpers.LogInfo("Project is up to date - loading from local JSON...");
-                    await LoadAssetsFromJsonFileAsync();
+                    // Проект актуален
+                    logger.Info("CheckProjectState: Project is up to date");
                     UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {
@@ -4483,19 +4488,23 @@ namespace AssetProcessor {
                     string serverHash = ComputeHash(serverData.ToString());
                     MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
 
+                    // Загружаем локальные данные в любом случае
+                    logger.Info("SmartLoadAssets: Loading local assets...");
+                    MainWindowHelpers.LogInfo("Loading local assets...");
+                    await LoadAssetsFromJsonFileAsync();
+
                     if (localHash == serverHash) {
-                        // Hash совпадают - загружаем локально (быстро!)
-                        logger.Info("SmartLoadAssets: Hashes match! Loading from local JSON...");
-                        MainWindowHelpers.LogInfo("Hashes match! Loading from local JSON...");
-                        await LoadAssetsFromJsonFileAsync();
+                        // Hash совпадают - проект актуален
+                        logger.Info("SmartLoadAssets: Hashes match! Project is up to date.");
+                        MainWindowHelpers.LogInfo("Hashes match! Project is up to date.");
                         UpdateConnectionButton(ConnectionState.UpToDate);
-                        logger.Info("SmartLoadAssets: Assets loaded successfully");
                     } else {
-                        // Hash отличаются - нужно обновить
-                        logger.Info("SmartLoadAssets: Hashes differ! Need to download updates.");
-                        MainWindowHelpers.LogInfo("Hashes differ! Need to download updates.");
+                        // Hash отличаются - есть обновления на сервере
+                        logger.Info("SmartLoadAssets: Hashes differ! Updates available on server.");
+                        MainWindowHelpers.LogInfo("Hashes differ! Updates available on server.");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     }
+                    logger.Info("SmartLoadAssets: Assets loaded successfully");
                 } else {
                     // Локального файла нет - нужна загрузка
                     logger.Info("SmartLoadAssets: No local assets_list.json found - need to download");

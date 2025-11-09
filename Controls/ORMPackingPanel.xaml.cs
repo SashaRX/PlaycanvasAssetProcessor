@@ -222,7 +222,7 @@ namespace AssetProcessor.Controls {
             }
 
             // Используем первую попавшуюся текстуру как базу для поиска
-            var basePath = availableTextures[0].LocalPath;
+            var basePath = availableTextures[0].Path;
 
             if (string.IsNullOrEmpty(basePath)) {
                 MessageBox.Show("Base texture path is not available", "Auto-Detect", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -234,7 +234,7 @@ namespace AssetProcessor.Controls {
 
             if (!string.IsNullOrEmpty(foundPath)) {
                 // Ищем в списке текстуру с таким путем
-                var foundTexture = availableTextures.FirstOrDefault(t => t.LocalPath == foundPath);
+                var foundTexture = availableTextures.FirstOrDefault(t => t.Path == foundPath);
 
                 if (foundTexture != null) {
                     targetComboBox.SelectedItem = foundTexture;
@@ -268,7 +268,7 @@ namespace AssetProcessor.Controls {
                 // Создаем диалог сохранения
                 var saveDialog = new Microsoft.Win32.SaveFileDialog {
                     Filter = "KTX2 files (*.ktx2)|*.ktx2",
-                    FileName = $"{currentORMTexture.Name.Replace("[ORM Texture - Not Packed]", "packed_orm")}.ktx2"
+                    FileName = $"{(currentORMTexture.Name ?? "orm_texture").Replace("[ORM Texture - Not Packed]", "packed_orm")}.ktx2"
                 };
 
                 if (saveDialog.ShowDialog() != true) {
@@ -299,7 +299,7 @@ namespace AssetProcessor.Controls {
 
                     // Обновляем имя ORM текстуры
                     currentORMTexture.Name = Path.GetFileNameWithoutExtension(saveDialog.FileName);
-                    currentORMTexture.LocalPath = saveDialog.FileName;
+                    currentORMTexture.Path = saveDialog.FileName;
                 } else {
                     MessageBox.Show($"Packing failed: {result.Error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     StatusText.Text = "✗ Packing failed";
@@ -323,7 +323,7 @@ namespace AssetProcessor.Controls {
 
             // AO channel
             if (settings.RedChannel != null) {
-                settings.RedChannel.SourcePath = currentORMTexture.AOSource?.LocalPath;
+                settings.RedChannel.SourcePath = currentORMTexture.AOSource?.Path;
                 settings.RedChannel.DefaultValue = currentORMTexture.AODefaultValue;
                 settings.RedChannel.AOProcessingMode = currentORMTexture.AOProcessingMode;
                 settings.RedChannel.AOBias = currentORMTexture.AOBias;
@@ -334,7 +334,7 @@ namespace AssetProcessor.Controls {
             if (settings.GreenChannel != null || settings.AlphaChannel != null) {
                 var glossChannel = settings.GreenChannel ?? settings.AlphaChannel;
                 if (glossChannel != null) {
-                    glossChannel.SourcePath = currentORMTexture.GlossSource?.LocalPath;
+                    glossChannel.SourcePath = currentORMTexture.GlossSource?.Path;
                     glossChannel.DefaultValue = currentORMTexture.GlossDefaultValue;
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
 
@@ -350,13 +350,13 @@ namespace AssetProcessor.Controls {
 
             // Metallic channel
             if (settings.BlueChannel != null) {
-                settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.LocalPath;
+                settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.Path;
                 settings.BlueChannel.DefaultValue = currentORMTexture.MetallicDefaultValue;
             }
 
             // Height channel
             if (settings.AlphaChannel != null && currentORMTexture.PackingMode == ChannelPackingMode.OGMH) {
-                settings.AlphaChannel.SourcePath = currentORMTexture.HeightSource?.LocalPath;
+                settings.AlphaChannel.SourcePath = currentORMTexture.HeightSource?.Path;
                 settings.AlphaChannel.DefaultValue = currentORMTexture.HeightDefaultValue;
             }
 

@@ -4,7 +4,7 @@ namespace AssetProcessor.Services {
     /// <summary>
     /// Interface for PlayCanvas API service operations
     /// </summary>
-    public interface IPlayCanvasService {
+    public interface IPlayCanvasService : IDisposable {
         /// <summary>
         /// Gets the user ID for a given username
         /// </summary>

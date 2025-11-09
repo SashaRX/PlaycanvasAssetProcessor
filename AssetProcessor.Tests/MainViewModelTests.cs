@@ -67,5 +67,9 @@ public class MainViewModelTests {
         public Task<Dictionary<string, string>> GetProjectsAsync(string? userId, string? apiKey, Dictionary<string, string> projects, CancellationToken cancellationToken) => Task.FromResult(new Dictionary<string, string>());
 
         public Task<string> GetUserIdAsync(string? username, string? apiKey, CancellationToken cancellationToken) => Task.FromResult("user");
+
+        public void Dispose() {
+            // No resources to dispose in fake implementation
+        }
     }
 }

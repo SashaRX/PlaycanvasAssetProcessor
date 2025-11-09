@@ -245,6 +245,11 @@ namespace AssetProcessor {
 
             this.Closing += MainWindow_Closing;
             this.Closed += MainWindow_Closed;
+            DataContextChanged += MainWindow_DataContextChanged;
+
+            if (DataContext is MainViewModel viewModel) {
+                AttachViewModel(viewModel);
+            }
             //LoadLastSettings();
 
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
@@ -2595,7 +2600,7 @@ namespace AssetProcessor {
                     logger.Error(ex, "Error canceling operations during window closing");
                 } finally {
                     SaveCurrentSettings();
-                    Dispatcher.BeginInvoke(new Action(() => {
+                    _ = Dispatcher.BeginInvoke(new Action(() => {
                         Closing -= MainWindow_Closing;
                         Close();
                     }), DispatcherPriority.Normal);
@@ -3785,10 +3790,28 @@ namespace AssetProcessor {
                 foreach (MaterialResource material in result.Materials) {
                     materials.Add(material);
                 }
-            });
 
-            folderPaths = result.FolderPaths;
-            RecalculateIndices();
+                folderPaths = result.FolderPaths;
+
+                // Пересчитываем индексы на UI потоке
+                int index = 1;
+                foreach (TextureResource texture in textures) {
+                    texture.Index = index++;
+                }
+                TexturesDataGrid.Items.Refresh();
+
+                index = 1;
+                foreach (ModelResource model in models) {
+                    model.Index = index++;
+                }
+                ModelsDataGrid.Items.Refresh();
+
+                index = 1;
+                foreach (MaterialResource material in materials) {
+                    material.Index = index++;
+                }
+                MaterialsDataGrid.Items.Refresh();
+            });
         }
 
         private void RecalculateIndices() {

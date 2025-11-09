@@ -73,15 +73,23 @@ namespace AssetProcessor.Controls {
             // Packing mode
             PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
 
-            // Sources
-            if (currentORMTexture.AOSource != null)
-                AOSourceComboBox.SelectedItem = currentORMTexture.AOSource;
-            if (currentORMTexture.GlossSource != null)
-                GlossSourceComboBox.SelectedItem = currentORMTexture.GlossSource;
-            if (currentORMTexture.MetallicSource != null)
-                MetallicSourceComboBox.SelectedItem = currentORMTexture.MetallicSource;
-            if (currentORMTexture.HeightSource != null)
-                HeightSourceComboBox.SelectedItem = currentORMTexture.HeightSource;
+            // Sources - find by ID (more reliable than reference comparison)
+            if (currentORMTexture.AOSource != null) {
+                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.AOSource.ID);
+                if (found != null) AOSourceComboBox.SelectedItem = found;
+            }
+            if (currentORMTexture.GlossSource != null) {
+                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.GlossSource.ID);
+                if (found != null) GlossSourceComboBox.SelectedItem = found;
+            }
+            if (currentORMTexture.MetallicSource != null) {
+                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.MetallicSource.ID);
+                if (found != null) MetallicSourceComboBox.SelectedItem = found;
+            }
+            if (currentORMTexture.HeightSource != null) {
+                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.HeightSource.ID);
+                if (found != null) HeightSourceComboBox.SelectedItem = found;
+            }
 
             // AO settings
             AOProcessingComboBox.SelectedIndex = (int)currentORMTexture.AOProcessingMode;

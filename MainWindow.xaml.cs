@@ -2188,7 +2188,7 @@ namespace AssetProcessor {
 
             // КРИТИЧНО: Применяем SanitizePath к входному пути!
             // Без этого File.Exists() не найдёт файл если путь содержит \n
-            sourcePath = SanitizePath(sourcePath);
+            sourcePath = localCacheService.SanitizePath(sourcePath);
 
             string? directory = Path.GetDirectoryName(sourcePath);
             if (string.IsNullOrEmpty(directory)) {
@@ -2587,7 +2587,9 @@ namespace AssetProcessor {
                 textureLoadCancellation?.Dispose();
 
                 // Освобождаем PlayCanvasService
-                playCanvasService?.Dispose();
+                if (playCanvasService is IDisposable disposableService) {
+                    disposableService.Dispose();
+                }
             } catch (Exception ex) {
                 logger.Error(ex, "Error canceling operations during window closing");
             }

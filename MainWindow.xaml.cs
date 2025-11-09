@@ -4116,36 +4116,38 @@ namespace AssetProcessor {
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {
-                    MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
+                    MainWindowHelpers.LogInfo($"Processing material: {material.Name}, Status: {material.Status}");
 
-                    switch (material.Status) {
-                        case "Downloaded":
-                            break;
-                        case "On Server":
-                            break;
-                        case "Size Mismatch":
-                            break;
-                        case "Corrupted":
-                            break;
-                        case "Empty File":
-                            break;
-                        case "Hash ERROR":
-                            break;
-                        case "Error":
-                            break;
+                    // Load full material data to get MapIds
+                    if (material.Status == "Downloaded" && !string.IsNullOrEmpty(material.Path) && File.Exists(material.Path)) {
+                        // Material JSON exists locally - parse MapIds from it
+                        try {
+                            MaterialResource detailedMaterial = await ParseMaterialJsonAsync(material.Path);
+                            if (detailedMaterial != null) {
+                                // Copy parsed MapIds and other properties to material
+                                material.AOMapId = detailedMaterial.AOMapId;
+                                material.GlossMapId = detailedMaterial.GlossMapId;
+                                material.MetalnessMapId = detailedMaterial.MetalnessMapId;
+                                material.SpecularMapId = detailedMaterial.SpecularMapId;
+                                material.DiffuseMapId = detailedMaterial.DiffuseMapId;
+                                material.NormalMapId = detailedMaterial.NormalMapId;
+                                material.EmissiveMapId = detailedMaterial.EmissiveMapId;
+                                material.OpacityMapId = detailedMaterial.OpacityMapId;
+                                material.UseMetalness = detailedMaterial.UseMetalness;
+
+                                MainWindowHelpers.LogInfo($"Loaded MapIds for '{material.Name}': " +
+                                    $"AO={material.AOMapId?.ToString() ?? "null"}, Gloss={material.GlossMapId?.ToString() ?? "null"}, " +
+                                    $"Metalness={material.MetalnessMapId?.ToString() ?? "null"}, Specular={material.SpecularMapId?.ToString() ?? "null"}");
+                            }
+                        } catch (Exception ex) {
+                            MainWindowHelpers.LogWarn($"Failed to parse material JSON for '{material.Name}': {ex.Message}");
+                        }
+                    } else {
+                        // Material not downloaded yet - MapIds will be unavailable until download
+                        MainWindowHelpers.LogInfo($"Material '{material.Name}' not downloaded, MapIds unavailable (Status: {material.Status})");
                     }
 
-                    using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
-
-                    //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
-                    //    material.TextureIds.AddRange(from textureId in materialJson["textures"]!
-                    //                                 select (int)textureId);
-                    //}
-
                     MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
-
                     await Dispatcher.InvokeAsync(() => materials.Add(material));
                 });
             } catch (Exception ex) {

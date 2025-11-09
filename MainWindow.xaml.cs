@@ -5184,17 +5184,31 @@ namespace AssetProcessor {
                 // Find textures by map IDs
                 TextureResource? aoTexture = FindTextureById(material.AOMapId);
                 TextureResource? glossTexture = FindTextureById(material.GlossMapId);
-                TextureResource? metalnessTexture = FindTextureById(material.MetalnessMapId);
+                TextureResource? metalnessTexture = null;
+
+                // Check workflow type - Metalness or Specular
+                string workflowInfo = "";
+                if (material.UseMetalness) {
+                    // Metalness workflow (PBR)
+                    metalnessTexture = FindTextureById(material.MetalnessMapId);
+                    workflowInfo = "Workflow: Metalness (PBR)";
+                } else {
+                    // Specular workflow - use Specular map as Metallic substitute
+                    metalnessTexture = FindTextureById(material.SpecularMapId);
+                    workflowInfo = "Workflow: Specular (Legacy)\nNote: Specular map will be used as Metallic";
+                }
 
                 // Auto-detect packing mode
                 ChannelPackingMode mode = DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
 
                 // If only one texture or none - don't create ORM
                 if (mode == ChannelPackingMode.None) {
+                    string mapType = material.UseMetalness ? "Metallic" : "Specular";
                     MessageBox.Show($"Material '{material.Name}' doesn't have enough textures for ORM packing.\n\n" +
+                                  $"{workflowInfo}\n\n" +
                                   $"AO: {(aoTexture != null ? "✓" : "✗")}\n" +
                                   $"Gloss: {(glossTexture != null ? "✓" : "✗")}\n" +
-                                  $"Metallic: {(metalnessTexture != null ? "✓" : "✗")}\n\n" +
+                                  $"{mapType}: {(metalnessTexture != null ? "✓" : "✗")}\n\n" +
                                   $"At least 2 textures are required.",
                         "Insufficient Textures", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
@@ -5259,7 +5273,15 @@ namespace AssetProcessor {
                         // Find textures
                         TextureResource? aoTexture = FindTextureById(material.AOMapId);
                         TextureResource? glossTexture = FindTextureById(material.GlossMapId);
-                        TextureResource? metalnessTexture = FindTextureById(material.MetalnessMapId);
+                        TextureResource? metalnessTexture = null;
+
+                        // Check workflow type
+                        if (material.UseMetalness) {
+                            metalnessTexture = FindTextureById(material.MetalnessMapId);
+                        } else {
+                            // Use Specular map for Specular workflow
+                            metalnessTexture = FindTextureById(material.SpecularMapId);
+                        }
 
                         // Auto-detect mode
                         ChannelPackingMode mode = DetectPackingMode(aoTexture, glossTexture, metalnessTexture);

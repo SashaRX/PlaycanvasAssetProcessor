@@ -2831,17 +2831,22 @@ namespace AssetProcessor {
                     return;
                 }
 
-                // Проект скачан, проверяем hash для определения обновлений
-                MainWindowHelpers.LogInfo("Project found, checking for updates...");
+                // Проект скачан, загружаем локальные данные
+                MainWindowHelpers.LogInfo("Project found, loading local assets...");
+                logger.Info("CheckProjectState: Loading local assets...");
+                await LoadAssetsFromJsonFileAsync();
+
+                // Проверяем hash для определения обновлений
+                MainWindowHelpers.LogInfo("Checking for updates...");
                 bool hasUpdates = await CheckForUpdates();
 
                 if (hasUpdates) {
-                    // Есть обновления - нужна загрузка
+                    // Есть обновления на сервере
+                    logger.Info("CheckProjectState: Updates available on server");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
-                    // Проект актуален - загружаем локально
-                    MainWindowHelpers.LogInfo("Project is up to date - loading from local JSON...");
-                    await LoadAssetsFromJsonFileAsync();
+                    // Проект актуален
+                    logger.Info("CheckProjectState: Project is up to date");
                     UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {
@@ -4455,21 +4460,26 @@ namespace AssetProcessor {
         /// </summary>
         private async Task InitializeOnStartup() {
             try {
+                logger.Info("=== InitializeOnStartup: Starting ===");
                 MainWindowHelpers.LogInfo("=== Initializing on startup ===");
 
                 // Проверяем наличие API ключа и username
                 if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
                     string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+                    logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
                     MainWindowHelpers.LogInfo("No API key or username - showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
 
                 // Подключаемся к серверу и загружаем список проектов
+                logger.Info("InitializeOnStartup: Connecting to PlayCanvas server...");
                 MainWindowHelpers.LogInfo("Connecting to PlayCanvas server...");
                 await LoadLastSettings();
+                logger.Info("InitializeOnStartup: LoadLastSettings completed");
 
             } catch (Exception ex) {
+                logger.Error(ex, "Error during startup initialization");
                 MainWindowHelpers.LogError($"Error during startup initialization: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.Disconnected);
             }
@@ -4481,9 +4491,11 @@ namespace AssetProcessor {
         /// </summary>
         private async Task SmartLoadAssets() {
             try {
+                logger.Info("=== SmartLoadAssets: Starting ===");
                 MainWindowHelpers.LogInfo("=== SmartLoadAssets: Checking for updates ===");
 
                 if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                    logger.Warn($"SmartLoadAssets: No project or branch selected (Project={ProjectsComboBox.SelectedItem != null}, Branch={BranchesComboBox.SelectedItem != null})");
                     MainWindowHelpers.LogInfo("No project or branch selected");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
@@ -4510,23 +4522,32 @@ namespace AssetProcessor {
                     string serverHash = ComputeHash(serverData.ToString());
                     MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
 
+                    // Загружаем локальные данные в любом случае
+                    logger.Info("SmartLoadAssets: Loading local assets...");
+                    MainWindowHelpers.LogInfo("Loading local assets...");
+                    await LoadAssetsFromJsonFileAsync();
+
                     if (localHash == serverHash) {
-                        // Hash совпадают - загружаем локально (быстро!)
-                        MainWindowHelpers.LogInfo("Hashes match! Loading from local JSON...");
-                        await LoadAssetsFromJsonFileAsync();
+                        // Hash совпадают - проект актуален
+                        logger.Info("SmartLoadAssets: Hashes match! Project is up to date.");
+                        MainWindowHelpers.LogInfo("Hashes match! Project is up to date.");
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     } else {
-                        // Hash отличаются - нужно обновить
-                        MainWindowHelpers.LogInfo("Hashes differ! Need to download updates.");
+                        // Hash отличаются - есть обновления на сервере
+                        logger.Info("SmartLoadAssets: Hashes differ! Updates available on server.");
+                        MainWindowHelpers.LogInfo("Hashes differ! Updates available on server.");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     }
+                    logger.Info("SmartLoadAssets: Assets loaded successfully");
                 } else {
                     // Локального файла нет - нужна загрузка
+                    logger.Info("SmartLoadAssets: No local assets_list.json found - need to download");
                     MainWindowHelpers.LogInfo("No local assets_list.json found - need to download");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 }
 
             } catch (Exception ex) {
+                logger.Error(ex, "Error in SmartLoadAssets");
                 MainWindowHelpers.LogError($"Error in SmartLoadAssets: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
@@ -4537,6 +4558,7 @@ namespace AssetProcessor {
         /// </summary>
         private async Task LoadLastSettings() {
             try {
+                logger.Info("LoadLastSettings: Starting");
                 userName = AppSettings.Default.UserName.ToLower();
                 if (string.IsNullOrEmpty(userName)) {
                     throw new Exception("Username is null or empty");
@@ -4544,15 +4566,18 @@ namespace AssetProcessor {
 
                 CancellationToken cancellationToken = new();
 
+                logger.Info($"LoadLastSettings: Getting user ID for {userName}");
                 userID = await playCanvasService.GetUserIdAsync(userName, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
                 if (string.IsNullOrEmpty(userID)) {
                     throw new Exception("User ID is null or empty");
                 } else {
                     UpdateConnectionStatus(true, $"by userID: {userID}");
                 }
+                logger.Info($"LoadLastSettings: Getting projects for user {userID}");
                 Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
 
                 if (projectsDict != null && projectsDict.Count > 0) {
+                    logger.Info($"LoadLastSettings: Found {projectsDict.Count} projects");
                     Projects.Clear();
                     foreach (KeyValuePair<string, string> project in projectsDict) {
                         Projects.Add(project);
@@ -4562,8 +4587,10 @@ namespace AssetProcessor {
                     try {
                         if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedProjectId) && projectsDict.ContainsKey(AppSettings.Default.LastSelectedProjectId)) {
                             ProjectsComboBox.SelectedValue = AppSettings.Default.LastSelectedProjectId;
+                            logger.Info($"LoadLastSettings: Selected last project: {AppSettings.Default.LastSelectedProjectId}");
                         } else {
                             ProjectsComboBox.SelectedIndex = 0;
+                            logger.Info("LoadLastSettings: Selected first project");
                         }
                     } finally {
                         isProjectInitializationInProgress = false;
@@ -4571,9 +4598,11 @@ namespace AssetProcessor {
 
                     if (ProjectsComboBox.SelectedItem != null) {
                         string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                        logger.Info($"LoadLastSettings: Getting branches for project {projectId}");
                         List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
 
                         if (branchesList != null && branchesList.Count > 0) {
+                            logger.Info($"LoadLastSettings: Found {branchesList.Count} branches");
                             Branches.Clear();
                             foreach (Branch branch in branchesList) {
                                 Branches.Add(branch);
@@ -4585,11 +4614,14 @@ namespace AssetProcessor {
                                     Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
                                     if (selectedBranch != null) {
                                         BranchesComboBox.SelectedValue = selectedBranch.Id;
+                                        logger.Info($"LoadLastSettings: Selected last branch: {selectedBranch.Name}");
                                     } else {
                                         BranchesComboBox.SelectedIndex = 0;
+                                        logger.Info("LoadLastSettings: Last branch not found, selected first branch");
                                     }
                                 } else {
                                     BranchesComboBox.SelectedIndex = 0;
+                                    logger.Info("LoadLastSettings: No last branch, selected first branch");
                                 }
                             } finally {
                                 isBranchInitializationInProgress = false;
@@ -4599,13 +4631,14 @@ namespace AssetProcessor {
                         // Загружаем данные с проверкой hash
                         projectName = MainWindowHelpers.CleanProjectName(((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Value);
                         projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+                        logger.Info($"LoadLastSettings: Project folder path set to: {projectFolderPath}");
 
                         // Умная загрузка: проверяем hash и загружаем локально если актуально
                         await SmartLoadAssets();
                     }
                 }
-                projectFolderPath = AppSettings.Default.ProjectsFolderPath;
             } catch (Exception ex) {
+                logger.Error(ex, "Error loading last settings");
                 MessageBox.Show($"Error loading last settings: {ex.Message}");
             }
         }

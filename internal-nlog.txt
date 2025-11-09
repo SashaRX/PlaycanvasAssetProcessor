@@ -181,3 +181,8 @@
 2025-11-08 18:10:01.2457 Info Configuration initialized.
 2025-11-08 18:14:09.9345 Info AppDomain Shutting down. LogFactory closing...
 2025-11-08 18:14:09.9345 Info LogFactory has been closed.
+2025-11-09 03:06:03.3359 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2025-11-09 03:06:03.3387 Info Registered target NLog.Targets.ConsoleTarget(Name=consoleTarget)
+2025-11-09 03:06:03.3387 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2025-11-09 03:06:03.3912 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Debug\net9.0-windows10.0.26100.0\NLog.config
+2025-11-09 03:06:03.3912 Info Configuration initialized.

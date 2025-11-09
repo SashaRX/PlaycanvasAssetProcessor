@@ -5259,9 +5259,9 @@ namespace AssetProcessor {
                 }
 
                 // Get base material name without _mat suffix
-                string baseMaterialName = material.Name.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                string baseMaterialName = (material.Name?.EndsWith("_mat", StringComparison.OrdinalIgnoreCase) == true)
                     ? material.Name.Substring(0, material.Name.Length - 4)
-                    : material.Name;
+                    : (material.Name ?? "unknown");
 
                 // Check if ORM texture already exists for this material
                 var existingORM = Textures.OfType<ORMTextureResource>()
@@ -5343,9 +5343,9 @@ namespace AssetProcessor {
                         }
 
                         // Get base material name without _mat suffix
-                        string baseMaterialName = material.Name.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                        string baseMaterialName = (material.Name?.EndsWith("_mat", StringComparison.OrdinalIgnoreCase) == true)
                             ? material.Name.Substring(0, material.Name.Length - 4)
-                            : material.Name;
+                            : (material.Name ?? "unknown");
 
                         // Check if already exists
                         var existingORM = Textures.OfType<ORMTextureResource>()
@@ -5403,9 +5403,9 @@ namespace AssetProcessor {
             }
 
             // Get base material name without _mat suffix
-            string baseMaterialName = material.Name.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+            string baseMaterialName = (material.Name?.EndsWith("_mat", StringComparison.OrdinalIgnoreCase) == true)
                 ? material.Name.Substring(0, material.Name.Length - 4)
-                : material.Name;
+                : (material.Name ?? "unknown");
 
             var ormTexture = Textures.OfType<ORMTextureResource>()
                 .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");

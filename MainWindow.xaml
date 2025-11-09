@@ -201,6 +201,11 @@
                         <Button x:Name="AutoDetectAllButton" Content="Auto-detect All" Width="110"
                                 Click="AutoDetectAllButton_Click"
                                 ToolTip="Automatically detect presets for all textures based on filenames"/>
+
+                        <Button x:Name="CreateORMButton" Content="Create ORM" Width="90" Margin="5,0,0,0"
+                                Click="CreateORMButton_Click"
+                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
+                                ToolTip="Create virtual ORM texture for channel packing (AO+Gloss+Metallic)"/>
                     </StackPanel>
 
                     <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"
@@ -614,6 +619,11 @@
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
                                                                      SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
                         </Expander>
+
+                        <!-- ORM Packing Panel (only visible when ORM texture is selected) -->
+                        <controls:ORMPackingPanel x:Name="ORMPanel"
+                                                  Visibility="Collapsed"
+                                                  Margin="0,2,0,0"/>
                     </Grid>
                 </Border>
             </ScrollViewer>

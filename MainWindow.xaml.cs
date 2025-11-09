@@ -35,6 +35,7 @@ using System.Windows.Threading;
 using Xceed.Wpf.Toolkit;
 using MessageBox = System.Windows.MessageBox;
 using System.Linq;
+using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
 
@@ -1866,6 +1867,26 @@ namespace AssetProcessor {
             // Update selection count in central control box
             UpdateSelectedTexturesCount();
 
+            // Check if selected item is an ORM texture (virtual texture for packing)
+            if (TexturesDataGrid.SelectedItem is ORMTextureResource ormTexture) {
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected ORM texture: {ormTexture.Name}");
+
+                // Hide conversion settings panel, show ORM panel
+                ConversionSettingsExpander.Visibility = Visibility.Collapsed;
+                ORMPanel.Visibility = Visibility.Visible;
+
+                // Initialize ORM panel with available textures (exclude other ORM textures)
+                var availableTextures = Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                ORMPanel.Initialize(this, availableTextures);
+                ORMPanel.SetORMTexture(ormTexture);
+
+                // Don't load preview for virtual textures
+                ResetPreviewState();
+                ClearD3D11Viewer();
+
+                return; // Exit early for ORM textures
+            }
+
             // Отменяем предыдущую загрузку, если она еще выполняется
             textureLoadCancellation?.Cancel();
             textureLoadCancellation = new CancellationTokenSource();
@@ -1873,6 +1894,10 @@ namespace AssetProcessor {
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
                 MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
+
+                // Show conversion settings panel, hide ORM panel (for regular textures)
+                ConversionSettingsExpander.Visibility = Visibility.Visible;
+                ORMPanel.Visibility = Visibility.Collapsed;
 
                 ResetPreviewState();
                 ClearD3D11Viewer();
@@ -5068,6 +5093,34 @@ namespace AssetProcessor {
                           $"✓ Matched: {matchedCount}\n" +
                           $"✗ Not matched: {notMatchedCount}",
                 "Auto-detect Results", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
+            try {
+                // Count existing ORM textures to generate unique name
+                int ormCount = Textures.Count(t => t is ORMTextureResource) + 1;
+
+                // Create virtual ORM texture
+                var ormTexture = new ORMTextureResource {
+                    Name = $"[ORM Texture {ormCount}]",
+                    TextureType = "ORM (Virtual)",
+                    PackingMode = ChannelPackingMode.OGM, // Default to standard OGM mode
+                    Status = "Ready to configure"
+                };
+
+                // Add to textures collection
+                Textures.Add(ormTexture);
+
+                // Select the newly created ORM texture
+                TexturesDataGrid.SelectedItem = ormTexture;
+                TexturesDataGrid.ScrollIntoView(ormTexture);
+
+                MainWindowHelpers.LogInfo($"Created new ORM texture: {ormTexture.Name}");
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error creating ORM texture: {ex.Message}");
+                MessageBox.Show($"Failed to create ORM texture: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // Context menu handlers for texture rows

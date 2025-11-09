@@ -5446,6 +5446,23 @@ namespace AssetProcessor {
             }
         }
 
+        private void DeleteORMFromList_Click(object sender, RoutedEventArgs e) {
+            // Get selected texture from TexturesDataGrid
+            if (TexturesDataGrid.SelectedItem is not ORMTextureResource ormTexture) {
+                MessageBox.Show("Please select an ORM texture to delete.\n\nThis option only works for ORM textures (textureName_og, textureName_ogm, textureName_ogmh).",
+                    "Not an ORM Texture", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source textures.",
+                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes) {
+                Textures.Remove(ormTexture);
+                MainWindowHelpers.LogInfo($"Deleted ORM texture '{ormTexture.Name}' from texture list");
+            }
+        }
+
         // Helper methods for ORM creation
         // Finds texture by material map ID
         private TextureResource? FindTextureById(int? mapId) {

@@ -255,7 +255,15 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="4,2,4,2" Grid.Row="0" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
+                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,10,0" VerticalAlignment="Center" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
+                            <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                            <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0" Value="1.0"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                            <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
+                        </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
                                 ItemsSource="{Binding FilteredTextures}"
                                 AutoGenerateColumns="False"
@@ -269,6 +277,10 @@
                                 CanUserResizeColumns="True"
                                 CanUserReorderColumns="True"
                                 Background="#FFD6D6D6">
+                            <DataGrid.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
+                                                ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
+                            </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureColumnHeaderContextMenu}"/>
@@ -343,7 +355,19 @@
                 </TabItem>
                 <TabItem Header="Models">
                     <Grid Background="#FFE5E5E5">
-                        <DataGrid x:Name="ModelsDataGrid"
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
+                            <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0" Value="1.0"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                            <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
+                        </StackPanel>
+                        <DataGrid x:Name="ModelsDataGrid" Grid.Row="1"
                               AutoGenerateColumns="False"
                               SelectionChanged="ModelsDataGrid_SelectionChanged"
                               IsReadOnly="True"
@@ -353,6 +377,10 @@
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6">
+                            <DataGrid.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
+                                                ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
+                            </DataGrid.LayoutTransform>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
@@ -380,7 +408,20 @@
                     </Grid>
                 </TabItem>
                 <TabItem x:Name="MaterialsTabItem" Header="Materials">
-                    <DataGrid x:Name="MaterialsDataGrid"
+                    <Grid Background="#FFE5E5E5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
+                            <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <Slider x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0" Value="1.0"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                            <TextBlock Text="{Binding ElementName=MaterialsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
+                        </StackPanel>
+                    <DataGrid x:Name="MaterialsDataGrid" Grid.Row="1"
                               AutoGenerateColumns="False"
                               ItemsSource="{Binding Materials}"
                               SelectionChanged="MaterialsDataGrid_SelectionChanged"
@@ -391,6 +432,10 @@
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6">
+                        <DataGrid.LayoutTransform>
+                            <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
+                                            ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
+                        </DataGrid.LayoutTransform>
                         <DataGrid.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Columns Visibility">
@@ -416,6 +461,7 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    </Grid>
                 </TabItem>
                 <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
                     <controls:LogViewerControl x:Name="LogViewer"/>

@@ -138,6 +138,8 @@ namespace AssetProcessor {
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
+        private bool isShutdownInitiated;
+        private Task? shutdownTask;
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
         private ConversionSettingsManager? conversionSettingsManager; // Менеджер параметров конвертации
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
@@ -262,6 +264,7 @@ namespace AssetProcessor {
 
             DataContext = this;
             this.Closing += MainWindow_Closing;
+            this.Closed += MainWindow_Closed;
             //LoadLastSettings();
 
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
@@ -2596,25 +2599,49 @@ namespace AssetProcessor {
             }
         }
 
-        private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
-            // Отменяем все активные операции перед закрытием
-            try {
-                cancellationTokenSource?.Cancel();
-                textureLoadCancellation?.Cancel();
+        private async void MainWindow_Closing(object? sender, CancelEventArgs? e) {
+            if (!isShutdownInitiated) {
+                e?.Cancel = true;
+                isShutdownInitiated = true;
+                shutdownTask = PerformShutdownAsync();
 
-                // Даём задачам немного времени на корректную отмену
-                System.Threading.Thread.Sleep(100);
-
-                cancellationTokenSource?.Dispose();
-                textureLoadCancellation?.Dispose();
-
-                // Освобождаем PlayCanvasService
-                playCanvasService?.Dispose();
-            } catch (Exception ex) {
-                logger.Error(ex, "Error canceling operations during window closing");
+                try {
+                    await shutdownTask.ConfigureAwait(true);
+                } catch (Exception ex) {
+                    logger.Error(ex, "Error canceling operations during window closing");
+                } finally {
+                    SaveCurrentSettings();
+                    Close();
+                }
+            } else if (shutdownTask != null && !shutdownTask.IsCompleted) {
+                e?.Cancel = true;
             }
+        }
 
-            SaveCurrentSettings();
+        private async void MainWindow_Closed(object? sender, EventArgs e) {
+            if (shutdownTask != null) {
+                try {
+                    await shutdownTask.ConfigureAwait(true);
+                } catch (Exception ex) {
+                    logger.Error(ex, "Error completing shutdown sequence after window closed");
+                } finally {
+                    shutdownTask = null;
+                }
+            }
+        }
+
+        private async Task PerformShutdownAsync() {
+            cancellationTokenSource?.Cancel();
+            textureLoadCancellation?.Cancel();
+
+            await Task.Delay(100).ConfigureAwait(true);
+
+            cancellationTokenSource?.Dispose();
+            textureLoadCancellation?.Dispose();
+            textureLoadCancellation = null;
+
+            // Освобождаем PlayCanvasService
+            playCanvasService?.Dispose();
         }
 
         private void CancelButton_Click(object? sender, RoutedEventArgs e) {

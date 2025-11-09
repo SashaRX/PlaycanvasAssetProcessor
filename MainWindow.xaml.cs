@@ -11,6 +11,7 @@ using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -140,6 +141,8 @@ namespace AssetProcessor {
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private bool isShutdownInitiated;
         private Task? shutdownTask;
+        private readonly ConcurrentDictionary<int, Task> backgroundOperations = new();
+        private int backgroundOperationId;
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
         private ConversionSettingsManager? conversionSettingsManager; // Менеджер параметров конвертации
         private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
@@ -222,7 +225,7 @@ namespace AssetProcessor {
             InitializeComponent();
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
-            _ = InitializeOnStartup();
+            _ = TrackBackgroundOperation(InitializeOnStartup());
 
             // Инициализация ConversionSettings
             InitializeConversionSettings();
@@ -537,7 +540,7 @@ namespace AssetProcessor {
 
                     // Применяем фильтр
                     if (!string.IsNullOrEmpty(channel)) {
-                        await FilterChannelAsync(channel);
+                        await TrackBackgroundOperation(FilterChannelAsync(channel));
                     }
                 } else {
                     // Сбрасываем фильтр, если кнопка была отжата
@@ -1065,7 +1068,7 @@ namespace AssetProcessor {
 
                 if (originalFileBitmapSource != null) {
                     originalBitmapSource = originalFileBitmapSource;
-                    _ = UpdateHistogramAsync(originalBitmapSource);
+                    _ = TrackBackgroundOperation(UpdateHistogramAsync(originalBitmapSource));
                     // Preserve channel mask when switching from KTX to Source
                     ShowOriginalImage(preserveMask: true);
 
@@ -1083,7 +1086,7 @@ namespace AssetProcessor {
 
                 // Update histogram from source image (KTX2 is compressed, use source for histogram)
                 if (originalFileBitmapSource != null) {
-                    _ = UpdateHistogramAsync(originalFileBitmapSource);
+                    _ = TrackBackgroundOperation(UpdateHistogramAsync(originalFileBitmapSource));
                 }
 
                 // Save current mask before switching
@@ -1109,14 +1112,14 @@ namespace AssetProcessor {
                     // BUT: Don't restore if auto-enable already set Normal mode for normal maps
                     if (savedMask != null && currentActiveChannelMask != "Normal") {
                         currentActiveChannelMask = savedMask;
-                        _ = FilterChannelAsync(savedMask);
+                        _ = TrackBackgroundOperation(FilterChannelAsync(savedMask));
                         logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
                     } else if (currentActiveChannelMask == "Normal") {
                         logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                     }
                 } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
                     // New method: Reload KTX2 natively to D3D11 (only if not already loaded)
-                    _ = Task.Run(async () => {
+                    _ = TrackBackgroundOperation(Task.Run(async () => {
                         try {
                             await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
                             await Dispatcher.InvokeAsync(() => {
@@ -1128,7 +1131,7 @@ namespace AssetProcessor {
                                     // BUT: Don't restore if auto-enable already set Normal mode for normal maps
                                     if (savedMask != null && currentActiveChannelMask != "Normal") {
                                         currentActiveChannelMask = savedMask;
-                                        _ = FilterChannelAsync(savedMask);
+                                        _ = TrackBackgroundOperation(FilterChannelAsync(savedMask));
                                         logger.Info($"Restored channel mask '{savedMask}' after switching to KTX2 mode");
                                     } else if (currentActiveChannelMask == "Normal") {
                                         logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
@@ -1138,7 +1141,7 @@ namespace AssetProcessor {
                         } catch (Exception ex) {
                             logger.Error(ex, "Failed to reload KTX2 when switching to KTX2 mode");
                         }
-                    });
+                    }));
                 } else {
                     HideMipmapControls();
                 }
@@ -1376,7 +1379,7 @@ namespace AssetProcessor {
                 // Preserve mask - reapply it if active
                 if (currentActiveChannelMask != null && isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                     // Reapply the current mask to the renderer
-                    _ = FilterChannelAsync(currentActiveChannelMask);
+                    _ = TrackBackgroundOperation(FilterChannelAsync(currentActiveChannelMask));
                     logger.Info($"Preserved and reapplied channel mask '{currentActiveChannelMask}' when switching to Source mode");
                 }
             }
@@ -2116,7 +2119,7 @@ namespace AssetProcessor {
 
                     // Always update histogram when source image is loaded (even if showing KTX2)
                     // Use the source bitmap for histogram calculation
-                    _ = UpdateHistogramAsync(cachedImage);
+                    _ = TrackBackgroundOperation(UpdateHistogramAsync(cachedImage));
 
                     UpdatePreviewSourceControls();
                 });
@@ -2149,7 +2152,7 @@ namespace AssetProcessor {
 
                 // Always update histogram when source image is loaded (even if showing KTX2)
                 // Use the source bitmap for histogram calculation
-                _ = UpdateHistogramAsync(thumbnailImage);
+                _ = TrackBackgroundOperation(UpdateHistogramAsync(thumbnailImage));
 
                 UpdatePreviewSourceControls();
             });
@@ -2196,7 +2199,7 @@ namespace AssetProcessor {
 
                         // Always update histogram when full-resolution image is loaded (even if showing KTX2)
                         // This replaces the thumbnail-based histogram with accurate full-image data
-                        _ = UpdateHistogramAsync(bitmapImage);
+                        _ = TrackBackgroundOperation(UpdateHistogramAsync(bitmapImage));
 
                         UpdatePreviewSourceControls();
                     });
@@ -2634,11 +2637,37 @@ namespace AssetProcessor {
             }
         }
 
+        private Task TrackBackgroundOperation(Task task) {
+            if (task == null) {
+                throw new ArgumentNullException(nameof(task));
+            }
+
+            int operationKey = Interlocked.Increment(ref backgroundOperationId);
+            backgroundOperations[operationKey] = task;
+
+            task.ContinueWith(static (t, state) => {
+                var (operations, key) = ((ConcurrentDictionary<int, Task> Operations, int Key))state!;
+                operations.TryRemove(key, out _);
+            }, (backgroundOperations, operationKey), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+            return task;
+        }
+
         private async Task PerformShutdownAsync() {
             cancellationTokenSource?.Cancel();
             textureLoadCancellation?.Cancel();
 
-            await Task.Delay(100).ConfigureAwait(true);
+            Task[] pendingOperations = backgroundOperations.Values
+                .Where(task => task != null && !task.IsCompleted)
+                .ToArray();
+
+            if (pendingOperations.Length > 0) {
+                try {
+                    await Task.WhenAll(pendingOperations).ConfigureAwait(true);
+                } catch (Exception ex) {
+                    logger.Error(ex, "Error awaiting background operations during shutdown");
+                }
+            }
 
             cancellationTokenSource?.Dispose();
             textureLoadCancellation?.Dispose();

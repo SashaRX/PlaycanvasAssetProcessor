@@ -5345,7 +5345,8 @@ namespace AssetProcessor {
         // Helper methods for ORM creation
         private TextureResource? FindTextureById(int? mapId) {
             if (mapId == null) return null;
-            return Textures.FirstOrDefault(t => t.ID == mapId.ToString());
+            string targetId = mapId.Value.ToString();
+            return Textures.FirstOrDefault(t => t.ID == targetId);
         }
 
         private ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {

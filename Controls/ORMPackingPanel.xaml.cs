@@ -95,16 +95,10 @@ namespace AssetProcessor.Controls {
             AOProcessingComboBox.SelectedIndex = (int)currentORMTexture.AOProcessingMode;
             AOBiasSlider.Value = currentORMTexture.AOBias;
             AOPercentileSlider.Value = currentORMTexture.AOPercentile;
-            AODefaultSlider.Value = currentORMTexture.AODefaultValue;
 
             // Gloss settings
             GlossToksvigCheckBox.IsChecked = currentORMTexture.GlossToksvigEnabled;
             GlossToksvigPowerSlider.Value = currentORMTexture.GlossToksvigPower;
-            GlossDefaultSlider.Value = currentORMTexture.GlossDefaultValue;
-
-            // Metallic/Height defaults
-            MetallicDefaultSlider.Value = currentORMTexture.MetallicDefaultValue;
-            HeightDefaultSlider.Value = currentORMTexture.HeightDefaultValue;
 
             UpdateStatus();
         }
@@ -117,10 +111,8 @@ namespace AssetProcessor.Controls {
             if (AOSourceComboBox == null || GlossSourceComboBox == null ||
                 MetallicSourceComboBox == null || HeightSourceComboBox == null ||
                 AOProcessingComboBox == null || AOBiasSlider == null ||
-                AOPercentileSlider == null || AODefaultSlider == null ||
-                GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null ||
-                GlossDefaultSlider == null || MetallicDefaultSlider == null ||
-                HeightDefaultSlider == null) return;
+                AOPercentileSlider == null ||
+                GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null) return;
             if (currentORMTexture == null) return;
 
             // Sources
@@ -133,16 +125,10 @@ namespace AssetProcessor.Controls {
             currentORMTexture.AOProcessingMode = (AOProcessingMode)AOProcessingComboBox.SelectedIndex;
             currentORMTexture.AOBias = (float)AOBiasSlider.Value;
             currentORMTexture.AOPercentile = (float)AOPercentileSlider.Value;
-            currentORMTexture.AODefaultValue = (float)AODefaultSlider.Value;
 
             // Gloss settings
             currentORMTexture.GlossToksvigEnabled = GlossToksvigCheckBox.IsChecked ?? false;
             currentORMTexture.GlossToksvigPower = (float)GlossToksvigPowerSlider.Value;
-            currentORMTexture.GlossDefaultValue = (float)GlossDefaultSlider.Value;
-
-            // Metallic/Height defaults
-            currentORMTexture.MetallicDefaultValue = (float)MetallicDefaultSlider.Value;
-            currentORMTexture.HeightDefaultValue = (float)HeightDefaultSlider.Value;
         }
 
         /// <summary>
@@ -223,55 +209,6 @@ namespace AssetProcessor.Controls {
             UpdateStatus();
         }
 
-        // Auto-detect handlers
-        private void AutoDetectAO_Click(object sender, RoutedEventArgs e) {
-            AutoDetectChannel(ChannelType.AmbientOcclusion, AOSourceComboBox);
-        }
-
-        private void AutoDetectGloss_Click(object sender, RoutedEventArgs e) {
-            AutoDetectChannel(ChannelType.Gloss, GlossSourceComboBox);
-        }
-
-        private void AutoDetectMetallic_Click(object sender, RoutedEventArgs e) {
-            AutoDetectChannel(ChannelType.Metallic, MetallicSourceComboBox);
-        }
-
-        private void AutoDetectHeight_Click(object sender, RoutedEventArgs e) {
-            AutoDetectChannel(ChannelType.Height, HeightSourceComboBox);
-        }
-
-        private void AutoDetectChannel(ChannelType channelType, ComboBox targetComboBox) {
-            if (availableTextures.Count == 0) {
-                MessageBox.Show("No textures available for detection", "Auto-Detect", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            // Используем первую попавшуюся текстуру как базу для поиска
-            var basePath = availableTextures[0].Path;
-
-            if (string.IsNullOrEmpty(basePath)) {
-                MessageBox.Show("Base texture path is not available", "Auto-Detect", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var detector = new ORMTextureDetector();
-            var foundPath = detector.FindTextureByType(basePath, channelType, validateDimensions: false);
-
-            if (!string.IsNullOrEmpty(foundPath)) {
-                // Ищем в списке текстуру с таким путем
-                var foundTexture = availableTextures.FirstOrDefault(t => t.Path == foundPath);
-
-                if (foundTexture != null) {
-                    targetComboBox.SelectedItem = foundTexture;
-                    MessageBox.Show($"Found: {foundTexture.Name}", "Auto-Detect", MessageBoxButton.OK, MessageBoxImage.Information);
-                } else {
-                    MessageBox.Show($"Texture found but not in list: {Path.GetFileName(foundPath)}", "Auto-Detect", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-            } else {
-                MessageBox.Show($"No {channelType} texture found with common naming patterns", "Auto-Detect", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
         // Pack & Convert button
         private async void PackConvert_Click(object sender, RoutedEventArgs e) {
             if (currentORMTexture == null || mainWindow == null) return;
@@ -346,21 +283,21 @@ namespace AssetProcessor.Controls {
         private ChannelPackingSettings CreatePackingSettings() {
             var settings = ChannelPackingSettings.CreateDefault(currentORMTexture!.PackingMode);
 
-            // AO channel
+            // AO channel (Red or RGB)
             if (settings.RedChannel != null) {
                 settings.RedChannel.SourcePath = currentORMTexture.AOSource?.Path;
-                settings.RedChannel.DefaultValue = currentORMTexture.AODefaultValue;
+                settings.RedChannel.DefaultValue = 1.0f; // White (no occlusion)
                 settings.RedChannel.AOProcessingMode = currentORMTexture.AOProcessingMode;
                 settings.RedChannel.AOBias = currentORMTexture.AOBias;
                 settings.RedChannel.AOPercentile = currentORMTexture.AOPercentile;
             }
 
-            // Gloss channel
+            // Gloss channel (Green or Alpha)
             if (settings.GreenChannel != null || settings.AlphaChannel != null) {
                 var glossChannel = settings.GreenChannel ?? settings.AlphaChannel;
                 if (glossChannel != null) {
                     glossChannel.SourcePath = currentORMTexture.GlossSource?.Path;
-                    glossChannel.DefaultValue = currentORMTexture.GlossDefaultValue;
+                    glossChannel.DefaultValue = 0.5f; // Medium gloss
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
 
                     if (glossChannel.ApplyToksvig) {
@@ -373,16 +310,16 @@ namespace AssetProcessor.Controls {
                 }
             }
 
-            // Metallic channel
+            // Metallic channel (Blue)
             if (settings.BlueChannel != null) {
                 settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.Path;
-                settings.BlueChannel.DefaultValue = currentORMTexture.MetallicDefaultValue;
+                settings.BlueChannel.DefaultValue = 0.0f; // Non-metallic by default
             }
 
-            // Height channel
+            // Height channel (Alpha in OGMH mode)
             if (settings.AlphaChannel != null && currentORMTexture.PackingMode == ChannelPackingMode.OGMH) {
                 settings.AlphaChannel.SourcePath = currentORMTexture.HeightSource?.Path;
-                settings.AlphaChannel.DefaultValue = currentORMTexture.HeightDefaultValue;
+                settings.AlphaChannel.DefaultValue = 0.5f; // Middle height
             }
 
             return settings;

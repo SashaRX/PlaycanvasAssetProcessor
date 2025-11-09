@@ -41,9 +41,24 @@ namespace AssetProcessor.TextureConversion.Core {
         public float RangeHigh { get; set; }
 
         /// <summary>
+        /// Нижние границы для каждого канала (используется при PerChannel режиме)
+        /// </summary>
+        public float[] RangeLowPerChannel { get; set; } = new[] { 0.0f, 0.0f, 0.0f };
+
+        /// <summary>
+        /// Верхние границы для каждого канала (используется при PerChannel режиме)
+        /// </summary>
+        public float[] RangeHighPerChannel { get; set; } = new[] { 1.0f, 1.0f, 1.0f };
+
+        /// <summary>
         /// Доля пикселей в хвостах распределения (за пределами перцентилей)
         /// </summary>
         public float TailFraction { get; set; }
+
+        /// <summary>
+        /// Индикатор, что используется поканальный режим (RGB per-channel)
+        /// </summary>
+        public bool IsPerChannel => ChannelMode == HistogramChannelMode.PerChannel;
 
         /// <summary>
         /// Было ли применено мягкое колено (soft knee)

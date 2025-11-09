@@ -52,6 +52,11 @@ namespace AssetProcessor.Controls {
         /// </summary>
         private void RefreshSourceLists() {
             // No default/empty item - all channels must have actual texture sources
+            Logger.Info($"RefreshSourceLists: availableTextures count = {availableTextures.Count}");
+            if (availableTextures.Count > 0) {
+                Logger.Info($"First 3 textures: {string.Join(", ", availableTextures.Take(3).Select(t => $"{t.Name}(ID={t.ID})"))}");
+            }
+
             AOSourceComboBox.ItemsSource = availableTextures.ToList();
             GlossSourceComboBox.ItemsSource = availableTextures.ToList();
             MetallicSourceComboBox.ItemsSource = availableTextures.ToList();
@@ -70,25 +75,46 @@ namespace AssetProcessor.Controls {
         private void LoadORMSettings() {
             if (currentORMTexture == null) return;
 
+            Logger.Info($"LoadORMSettings: ORM Name = {currentORMTexture.Name}");
+            Logger.Info($"  AOSource: {currentORMTexture.AOSource?.Name ?? "null"} (ID={currentORMTexture.AOSource?.ID})");
+            Logger.Info($"  GlossSource: {currentORMTexture.GlossSource?.Name ?? "null"} (ID={currentORMTexture.GlossSource?.ID})");
+            Logger.Info($"  MetallicSource: {currentORMTexture.MetallicSource?.Name ?? "null"} (ID={currentORMTexture.MetallicSource?.ID})");
+
             // Packing mode
             PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
 
             // Sources - find by ID (more reliable than reference comparison)
             if (currentORMTexture.AOSource != null) {
                 var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.AOSource.ID);
-                if (found != null) AOSourceComboBox.SelectedItem = found;
+                Logger.Info($"  Searching for AO ID={currentORMTexture.AOSource.ID}: found={found?.Name ?? "null"}");
+                if (found != null) {
+                    AOSourceComboBox.SelectedItem = found;
+                    Logger.Info($"  Set AOSourceComboBox.SelectedItem to {found.Name}");
+                }
             }
             if (currentORMTexture.GlossSource != null) {
                 var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.GlossSource.ID);
-                if (found != null) GlossSourceComboBox.SelectedItem = found;
+                Logger.Info($"  Searching for Gloss ID={currentORMTexture.GlossSource.ID}: found={found?.Name ?? "null"}");
+                if (found != null) {
+                    GlossSourceComboBox.SelectedItem = found;
+                    Logger.Info($"  Set GlossSourceComboBox.SelectedItem to {found.Name}");
+                }
             }
             if (currentORMTexture.MetallicSource != null) {
                 var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.MetallicSource.ID);
-                if (found != null) MetallicSourceComboBox.SelectedItem = found;
+                Logger.Info($"  Searching for Metallic ID={currentORMTexture.MetallicSource.ID}: found={found?.Name ?? "null"}");
+                if (found != null) {
+                    MetallicSourceComboBox.SelectedItem = found;
+                    Logger.Info($"  Set MetallicSourceComboBox.SelectedItem to {found.Name}");
+                }
             }
             if (currentORMTexture.HeightSource != null) {
                 var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.HeightSource.ID);
-                if (found != null) HeightSourceComboBox.SelectedItem = found;
+                Logger.Info($"  Searching for Height ID={currentORMTexture.HeightSource.ID}: found={found?.Name ?? "null"}");
+                if (found != null) {
+                    HeightSourceComboBox.SelectedItem = found;
+                    Logger.Info($"  Set HeightSourceComboBox.SelectedItem to {found.Name}");
+                }
             }
 
             // AO settings

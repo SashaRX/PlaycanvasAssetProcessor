@@ -1,15 +1,18 @@
 using AssetProcessor.Resources;
-using AssetProcessor.Services;
 using AssetProcessor.ViewModels;
-using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading;
 using Xunit;
 
 namespace AssetProcessor.Tests;
 
-public class MainViewModelTests {
+public class MainViewModelTests : IClassFixture<MainViewModelFixture> {
+    private readonly MainViewModelFixture fixture;
+
+    public MainViewModelTests(MainViewModelFixture fixture) {
+        this.fixture = fixture;
+    }
+
     [Fact]
     public void SettingSelectedMaterial_FiltersTexturesByMaterialMaps() {
         var viewModel = CreateViewModelWithTextures();
@@ -44,28 +47,15 @@ public class MainViewModelTests {
         Assert.Empty(viewModel.FilteredTextures);
     }
 
-    private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService()) {
-            Textures = new ObservableCollection<TextureResource> {
-                new() { ID = 1, Name = "Diffuse" },
-                new() { ID = 2, Name = "Normal" },
-                new() { ID = 3, Name = "Gloss" },
-                new() { ID = 4, Name = "Unused" }
-            }
+    private MainViewModel CreateViewModelWithTextures() {
+        var viewModel = fixture.CreateMainViewModel();
+        viewModel.Textures = new ObservableCollection<TextureResource> {
+            new() { ID = 1, Name = "Diffuse" },
+            new() { ID = 2, Name = "Normal" },
+            new() { ID = 3, Name = "Gloss" },
+            new() { ID = 4, Name = "Unused" }
         };
 
         return viewModel;
-    }
-
-    private sealed class FakePlayCanvasService : IPlayCanvasService {
-        public Task<JObject> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken) => Task.FromResult(new JObject());
-
-        public Task<JArray> GetAssetsAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken) => Task.FromResult(new JArray());
-
-        public Task<List<Branch>> GetBranchesAsync(string projectId, string apiKey, List<Branch> branches, CancellationToken cancellationToken) => Task.FromResult(new List<Branch>());
-
-        public Task<Dictionary<string, string>> GetProjectsAsync(string? userId, string? apiKey, Dictionary<string, string> projects, CancellationToken cancellationToken) => Task.FromResult(new Dictionary<string, string>());
-
-        public Task<string> GetUserIdAsync(string? username, string? apiKey, CancellationToken cancellationToken) => Task.FromResult("user");
     }
 }

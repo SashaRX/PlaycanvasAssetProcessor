@@ -134,7 +134,8 @@ namespace AssetProcessor {
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly PlayCanvasService playCanvasService = new();
+        private readonly IPlayCanvasService playCanvasService;
+        private readonly AppSettings appSettings;
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
@@ -216,7 +217,10 @@ namespace AssetProcessor {
             get { return branches; }
         }
 
-        public MainWindow() {
+        public MainWindow(IPlayCanvasService playCanvasService, AppSettings appSettings) {
+            this.playCanvasService = playCanvasService;
+            this.appSettings = appSettings;
+
             InitializeComponent();
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
@@ -247,10 +251,10 @@ namespace AssetProcessor {
 
             LoadModel(path: MainWindowHelpers.MODEL_PATH);
 
-            getAssetsSemaphore = new SemaphoreSlim(AppSettings.Default.GetTexturesSemaphoreLimit);
-            downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
+            getAssetsSemaphore = new SemaphoreSlim(appSettings.GetTexturesSemaphoreLimit);
+            downloadSemaphore = new SemaphoreSlim(appSettings.DownloadSemaphoreLimit);
 
-            projectFolderPath = AppSettings.Default.ProjectsFolderPath;
+            projectFolderPath = appSettings.ProjectsFolderPath;
             UpdateConnectionStatus(false);
 
             TexturesDataGrid.ItemsSource = textures;
@@ -307,7 +311,7 @@ namespace AssetProcessor {
             logger.Info("MainWindow loaded - D3D11 viewer ready");
 
             // Apply UseD3D11Preview setting on startup
-            bool useD3D11 = AppSettings.Default.UseD3D11Preview;
+            bool useD3D11 = appSettings.UseD3D11Preview;
             SwitchPreviewRenderer(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
         }
@@ -592,8 +596,8 @@ namespace AssetProcessor {
                 D3D11TextureViewer.Renderer.SetHistogramCorrection(enabled);
 
                 // Save setting for next session
-                AppSettings.Default.HistogramCorrectionEnabled = enabled;
-                AppSettings.Default.Save();
+                appSettings.HistogramCorrectionEnabled = enabled;
+                appSettings.Save();
 
                 logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user (saved to settings)");
 
@@ -615,7 +619,7 @@ namespace AssetProcessor {
 
             if (hasHistogram) {
                 // Restore saved setting (default to enabled if metadata present)
-                bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
+                bool savedEnabled = appSettings.HistogramCorrectionEnabled;
                 HistogramCorrectionButton.IsChecked = savedEnabled;
                 D3D11TextureViewer.Renderer.SetHistogramCorrection(savedEnabled);
                 logger.Info($"Histogram correction {(savedEnabled ? "enabled" : "disabled")} (restored from settings)");
@@ -1809,7 +1813,7 @@ namespace AssetProcessor {
 
             if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
-                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+                projectFolderPath = Path.Combine(appSettings.ProjectsFolderPath, projectName);
                 MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
 
                 // Проверяем наличие JSON-файла
@@ -1823,7 +1827,7 @@ namespace AssetProcessor {
                 // Обновляем ветки для выбранного проекта
                 isBranchInitializationInProgress = true;
                 try {
-                    List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, [], CancellationToken.None);
+                    List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, appSettings.PlaycanvasApiKey, [], CancellationToken.None);
                     if (branches != null && branches.Count > 0) {
                         Branches.Clear();
                         foreach (Branch branch in branches) {
@@ -2719,7 +2723,7 @@ namespace AssetProcessor {
         private async void Connect(object? sender, RoutedEventArgs? e) {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+            if (string.IsNullOrEmpty(appSettings.PlaycanvasApiKey) || string.IsNullOrEmpty(appSettings.UserName)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
                 SettingsWindow settingsWindow = new();
                 // Subscribe to preview renderer changes
@@ -2730,17 +2734,17 @@ namespace AssetProcessor {
                 return; // Прерываем выполнение Connect, если данные не заполнены
             } else {
                 try {
-                    userName = AppSettings.Default.UserName.ToLower();
-                    userID = await playCanvasService.GetUserIdAsync(userName, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                    userName = appSettings.UserName.ToLower();
+                    userID = await playCanvasService.GetUserIdAsync(userName, appSettings.PlaycanvasApiKey, cancellationToken);
                     if (string.IsNullOrEmpty(userID)) {
                         throw new Exception("User ID is null or empty");
                     } else {
                         await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userID}"));
                     }
 
-                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, appSettings.PlaycanvasApiKey, [], cancellationToken);
                     if (projectsDict != null && projectsDict.Count > 0) {
-                        string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
+                        string lastSelectedProjectId = appSettings.LastSelectedProjectId;
 
                         Projects.Clear();
                         foreach (KeyValuePair<string, string> project in projectsDict) {
@@ -2844,7 +2848,7 @@ namespace AssetProcessor {
                 JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
 
                 // Получаем серверный JSON
-                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, appSettings.PlaycanvasApiKey, CancellationToken.None);
 
                 // Сравниваем hash или количество ассетов
                 string localHash = ComputeHash(localJson);
@@ -2879,14 +2883,14 @@ namespace AssetProcessor {
             try {
                 isBranchInitializationInProgress = true;
 
-                List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, appSettings.PlaycanvasApiKey, [], cancellationToken);
                 if (branchesList != null && branchesList.Count > 0) {
                     Branches.Clear();
                     foreach (Branch branch in branchesList) {
                         Branches.Add(branch);
                     }
 
-                    string lastSelectedBranchName = AppSettings.Default.LastSelectedBranchName;
+                    string lastSelectedBranchName = appSettings.LastSelectedBranchName;
                     if (!string.IsNullOrEmpty(lastSelectedBranchName)) {
                         Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
                         if (selectedBranch != null) {
@@ -2913,7 +2917,7 @@ namespace AssetProcessor {
 
             if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
-                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+                projectFolderPath = Path.Combine(appSettings.ProjectsFolderPath, projectName);
 
                 MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
             }
@@ -3592,7 +3596,7 @@ namespace AssetProcessor {
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
+                    string apiKey = appSettings.PlaycanvasApiKey;
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
 
@@ -3632,7 +3636,7 @@ namespace AssetProcessor {
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     using HttpClient client = new();
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", appSettings.PlaycanvasApiKey);
 
                     HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
 
@@ -3712,7 +3716,7 @@ namespace AssetProcessor {
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
                 MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
-                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, appSettings.PlaycanvasApiKey, cancellationToken);
                 if (assetsResponse != null) {
                     MainWindowHelpers.LogInfo("Assets received from server, processing...");
                     // Строим иерархию папок из списка ассетов
@@ -4084,7 +4088,7 @@ namespace AssetProcessor {
                     }
 
                     using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
+                    string apiKey = appSettings.PlaycanvasApiKey;
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 
                     //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
@@ -4180,7 +4184,7 @@ namespace AssetProcessor {
                 throw new Exception("Project name is null or empty");
             }
 
-            string pathProjectFolder = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+            string pathProjectFolder = Path.Combine(appSettings.ProjectsFolderPath, projectName);
             string pathSourceFolder = pathProjectFolder;
 
             // Если указан parent ID (ID папки), используем построенную иерархию
@@ -4364,12 +4368,12 @@ namespace AssetProcessor {
 
         private void SaveCurrentSettings() {
             if (ProjectsComboBox.SelectedItem != null) {
-                AppSettings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                appSettings.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
             }
             if (BranchesComboBox.SelectedItem != null) {
-                AppSettings.Default.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
+                appSettings.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
             }
-            AppSettings.Default.Save();
+            appSettings.Save();
         }
 
         /// <summary>
@@ -4430,8 +4434,8 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogInfo("=== Initializing on startup ===");
 
                 // Проверяем наличие API ключа и username
-                if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
-                    string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+                if (string.IsNullOrEmpty(appSettings.PlaycanvasApiKey) ||
+                    string.IsNullOrEmpty(appSettings.UserName)) {
                     logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
                     MainWindowHelpers.LogInfo("No API key or username - showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
@@ -4484,7 +4488,7 @@ namespace AssetProcessor {
 
                     // Получаем данные с сервера для сравнения hash
                     MainWindowHelpers.LogInfo("Fetching assets from server to check hash...");
-                    JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                    JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, appSettings.PlaycanvasApiKey, CancellationToken.None);
                     string serverHash = ComputeHash(serverData.ToString());
                     MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
 
@@ -4525,7 +4529,7 @@ namespace AssetProcessor {
         private async Task LoadLastSettings() {
             try {
                 logger.Info("LoadLastSettings: Starting");
-                userName = AppSettings.Default.UserName.ToLower();
+                userName = appSettings.UserName.ToLower();
                 if (string.IsNullOrEmpty(userName)) {
                     throw new Exception("Username is null or empty");
                 }
@@ -4533,14 +4537,14 @@ namespace AssetProcessor {
                 CancellationToken cancellationToken = new();
 
                 logger.Info($"LoadLastSettings: Getting user ID for {userName}");
-                userID = await playCanvasService.GetUserIdAsync(userName, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                userID = await playCanvasService.GetUserIdAsync(userName, appSettings.PlaycanvasApiKey, cancellationToken);
                 if (string.IsNullOrEmpty(userID)) {
                     throw new Exception("User ID is null or empty");
                 } else {
                     UpdateConnectionStatus(true, $"by userID: {userID}");
                 }
                 logger.Info($"LoadLastSettings: Getting projects for user {userID}");
-                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, appSettings.PlaycanvasApiKey, [], cancellationToken);
 
                 if (projectsDict != null && projectsDict.Count > 0) {
                     logger.Info($"LoadLastSettings: Found {projectsDict.Count} projects");
@@ -4551,9 +4555,9 @@ namespace AssetProcessor {
 
                     isProjectInitializationInProgress = true;
                     try {
-                        if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedProjectId) && projectsDict.ContainsKey(AppSettings.Default.LastSelectedProjectId)) {
-                            ProjectsComboBox.SelectedValue = AppSettings.Default.LastSelectedProjectId;
-                            logger.Info($"LoadLastSettings: Selected last project: {AppSettings.Default.LastSelectedProjectId}");
+                        if (!string.IsNullOrEmpty(appSettings.LastSelectedProjectId) && projectsDict.ContainsKey(appSettings.LastSelectedProjectId)) {
+                            ProjectsComboBox.SelectedValue = appSettings.LastSelectedProjectId;
+                            logger.Info($"LoadLastSettings: Selected last project: {appSettings.LastSelectedProjectId}");
                         } else {
                             ProjectsComboBox.SelectedIndex = 0;
                             logger.Info("LoadLastSettings: Selected first project");
@@ -4565,7 +4569,7 @@ namespace AssetProcessor {
                     if (ProjectsComboBox.SelectedItem != null) {
                         string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                         logger.Info($"LoadLastSettings: Getting branches for project {projectId}");
-                        List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                        List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, appSettings.PlaycanvasApiKey, [], cancellationToken);
 
                         if (branchesList != null && branchesList.Count > 0) {
                             logger.Info($"LoadLastSettings: Found {branchesList.Count} branches");
@@ -4576,8 +4580,8 @@ namespace AssetProcessor {
 
                             isBranchInitializationInProgress = true;
                             try {
-                                if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
-                                    Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
+                                if (!string.IsNullOrEmpty(appSettings.LastSelectedBranchName)) {
+                                    Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == appSettings.LastSelectedBranchName);
                                     if (selectedBranch != null) {
                                         BranchesComboBox.SelectedValue = selectedBranch.Id;
                                         logger.Info($"LoadLastSettings: Selected last branch: {selectedBranch.Name}");
@@ -4596,7 +4600,7 @@ namespace AssetProcessor {
 
                         // Загружаем данные с проверкой hash
                         projectName = MainWindowHelpers.CleanProjectName(((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Value);
-                        projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+                        projectFolderPath = Path.Combine(appSettings.ProjectsFolderPath, projectName);
                         logger.Info($"LoadLastSettings: Project folder path set to: {projectFolderPath}");
 
                         // Умная загрузка: проверяем hash и загружаем локально если актуально

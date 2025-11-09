@@ -77,6 +77,9 @@
     <!-- Image Processing - Updated to fix security vulnerabilities -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 
+    <!-- Dependency Injection -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+
     <!-- UI and Visualization -->
     <PackageReference Include="Extended.Wpf.Toolkit" Version="4.6.1" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />

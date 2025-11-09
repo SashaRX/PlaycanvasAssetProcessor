@@ -106,7 +106,7 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             var patterns = new List<string>();
 
             foreach (var suffix in suffixes) {
-                // 1. Заменяем существующий суффикс на новый
+                // 1. Заменяем существующий суффикс на новый (только для цветовых карт)
                 patterns.Add(baseFileNameWithoutExt.Replace("_albedo", suffix));
                 patterns.Add(baseFileNameWithoutExt.Replace("_Albedo", suffix));
                 patterns.Add(baseFileNameWithoutExt.Replace("_diffuse", suffix));
@@ -114,12 +114,11 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 patterns.Add(baseFileNameWithoutExt.Replace("_color", suffix));
                 patterns.Add(baseFileNameWithoutExt.Replace("_Color", suffix));
 
-                // 2. Добавляем суффикс к чистому базовому имени
+                // 2. Добавляем суффикс к чистому базовому имени (основной метод)
                 patterns.Add(cleanBaseName + suffix);
 
-                // 3. Прямая замена (если базовое имя уже содержит другой суффикс)
-                patterns.Add(baseFileNameWithoutExt.Replace("_normal", suffix));
-                patterns.Add(baseFileNameWithoutExt.Replace("_roughness", suffix));
+                // NOTE: Removed _normal and _roughness replacements - they're wrong!
+                // We should never try to replace _normal with _ao, they're different textures
             }
 
             // Удаляем дубликаты

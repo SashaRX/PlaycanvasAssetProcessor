@@ -51,17 +51,17 @@ namespace AssetProcessor.Controls {
         /// Обновляет списки источников
         /// </summary>
         private void RefreshSourceLists() {
-            var emptyItem = new TextureResource { Name = "[None - Use Default Value]" };
+            // No default/empty item - all channels must have actual texture sources
+            AOSourceComboBox.ItemsSource = availableTextures.ToList();
+            GlossSourceComboBox.ItemsSource = availableTextures.ToList();
+            MetallicSourceComboBox.ItemsSource = availableTextures.ToList();
+            HeightSourceComboBox.ItemsSource = availableTextures.ToList();
 
-            AOSourceComboBox.ItemsSource = new[] { emptyItem }.Concat(availableTextures).ToList();
-            GlossSourceComboBox.ItemsSource = new[] { emptyItem }.Concat(availableTextures).ToList();
-            MetallicSourceComboBox.ItemsSource = new[] { emptyItem }.Concat(availableTextures).ToList();
-            HeightSourceComboBox.ItemsSource = new[] { emptyItem }.Concat(availableTextures).ToList();
-
-            AOSourceComboBox.SelectedIndex = 0;
-            GlossSourceComboBox.SelectedIndex = 0;
-            MetallicSourceComboBox.SelectedIndex = 0;
-            HeightSourceComboBox.SelectedIndex = 0;
+            // Set to -1 (no selection) by default
+            AOSourceComboBox.SelectedIndex = -1;
+            GlossSourceComboBox.SelectedIndex = -1;
+            MetallicSourceComboBox.SelectedIndex = -1;
+            HeightSourceComboBox.SelectedIndex = -1;
         }
 
         /// <summary>

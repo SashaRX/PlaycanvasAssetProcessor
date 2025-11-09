@@ -5258,9 +5258,14 @@ namespace AssetProcessor {
                     return;
                 }
 
+                // Get base material name without _mat suffix
+                string baseMaterialName = material.Name.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                    ? material.Name.Substring(0, material.Name.Length - 4)
+                    : material.Name;
+
                 // Check if ORM texture already exists for this material
                 var existingORM = Textures.OfType<ORMTextureResource>()
-                    .FirstOrDefault(t => t.Name == $"[ORM - {material.Name}]");
+                    .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");
 
                 if (existingORM != null) {
                     var result = MessageBox.Show($"ORM texture already exists for material '{material.Name}'.\n\nDo you want to update it?",
@@ -5274,7 +5279,7 @@ namespace AssetProcessor {
 
                 // Create ORM texture
                 var ormTexture = new ORMTextureResource {
-                    Name = $"[ORM - {material.Name}]",
+                    Name = $"[ORM - {baseMaterialName}]",
                     TextureType = "ORM (Virtual)",
                     PackingMode = mode,
                     AOSource = aoTexture,
@@ -5337,9 +5342,14 @@ namespace AssetProcessor {
                             continue;
                         }
 
+                        // Get base material name without _mat suffix
+                        string baseMaterialName = material.Name.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                            ? material.Name.Substring(0, material.Name.Length - 4)
+                            : material.Name;
+
                         // Check if already exists
                         var existingORM = Textures.OfType<ORMTextureResource>()
-                            .FirstOrDefault(t => t.Name == $"[ORM - {material.Name}]");
+                            .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");
 
                         if (existingORM != null) {
                             skipped++;
@@ -5348,7 +5358,7 @@ namespace AssetProcessor {
 
                         // Create ORM texture
                         var ormTexture = new ORMTextureResource {
-                            Name = $"[ORM - {material.Name}]",
+                            Name = $"[ORM - {baseMaterialName}]",
                             TextureType = "ORM (Virtual)",
                             PackingMode = mode,
                             AOSource = aoTexture,
@@ -5392,8 +5402,13 @@ namespace AssetProcessor {
                 return;
             }
 
+            // Get base material name without _mat suffix
+            string baseMaterialName = material.Name.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                ? material.Name.Substring(0, material.Name.Length - 4)
+                : material.Name;
+
             var ormTexture = Textures.OfType<ORMTextureResource>()
-                .FirstOrDefault(t => t.Name == $"[ORM - {material.Name}]");
+                .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");
 
             if (ormTexture == null) {
                 MessageBox.Show($"No ORM texture found for material '{material.Name}'.",

@@ -266,6 +266,8 @@
                                 CanUserAddRows="False"
                                 CanUserDeleteRows="False"
                                 CanUserSortColumns="True"
+                                CanUserResizeColumns="True"
+                                CanUserReorderColumns="True"
                                 Background="#FFD6D6D6">
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
@@ -278,18 +280,18 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
-                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
-                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
-                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="auto" MinWidth="20"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="35"/>
-                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="45"/>
-                                <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
-                                <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
-                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="auto" MinWidth="60"/>
-                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="auto" MinWidth="50"/>
-                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="auto" MinWidth="80"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
+                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
+                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="200" MinWidth="100"/>
+                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="70" MinWidth="50"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="80" MinWidth="60"/>
+                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="90" MinWidth="70"/>
+                                <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="100" MinWidth="80" SortMemberPath="ResolutionArea"/>
+                                <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="120" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>
+                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="100" MinWidth="80"/>
+                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="70" MinWidth="60"/>
+                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="120" MinWidth="90"/>
+                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -348,6 +350,8 @@
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
+                              CanUserResizeColumns="True"
+                              CanUserReorderColumns="True"
                               Background="#FFD6D6D6">
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
@@ -355,13 +359,13 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
-                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
-                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
-                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100"/>
-                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="auto" MinWidth="50"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
+                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="80" MinWidth="60" />
+                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="250" MinWidth="120"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60"/>
+                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100" MinWidth="80"/>
+                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="80" MinWidth="60"/>
+                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -384,6 +388,8 @@
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
+                              CanUserResizeColumns="True"
+                              CanUserReorderColumns="True"
                               Background="#FFD6D6D6">
                         <DataGrid.ContextMenu>
                             <ContextMenu>
@@ -395,10 +401,10 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto"/>
-                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
-                            <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
+                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="300" MinWidth="150"/>
+                            <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>

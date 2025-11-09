@@ -101,17 +101,17 @@
                   SelectionMode="Extended"
                   BorderThickness="0">
             <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Time" Width="90" DisplayMemberBinding="{Binding Timestamp}"/>
-                    <GridViewColumn Header="Level" Width="60">
+                <GridView AllowsColumnReorder="True">
+                    <GridViewColumn Header="Time" Width="110" DisplayMemberBinding="{Binding Timestamp}"/>
+                    <GridViewColumn Header="Level" Width="70">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Level}" FontWeight="Bold" Foreground="{Binding LevelColor}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Logger" Width="180" DisplayMemberBinding="{Binding Logger}"/>
-                    <GridViewColumn Header="Message" Width="800">
+                    <GridViewColumn Header="Logger" Width="200" DisplayMemberBinding="{Binding Logger}"/>
+                    <GridViewColumn Header="Message" Width="600">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Message}"

@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -30,7 +31,7 @@ namespace AssetProcessor.ViewModels {
             this.appSettings = appSettings ?? AppSettings.Default;
 
             Username = this.appSettings.UserName;
-            ApiKey = this.appSettings.PlaycanvasApiKey;
+            // ApiKey is not set from encrypted storage - user must enter it manually or it will be resolved via ResolveApiKey()
 
             logger.Info("MainViewModel initialized");
         }
@@ -123,13 +124,28 @@ namespace AssetProcessor.ViewModels {
             }
         }
 
+        private string? ResolveApiKey() {
+            if (!string.IsNullOrWhiteSpace(ApiKey)) {
+                return ApiKey;
+            }
+
+            try {
+                return AppSettings.Default.GetDecryptedPlaycanvasApiKey();
+            } catch (CryptographicException ex) {
+                logger.Error(ex, "Не удалось расшифровать Playcanvas API key из настроек.");
+                StatusMessage = "Ошибка безопасности: проверьте мастер-пароль.";
+                return null;
+            }
+        }
+
         private bool CanExecutePrimaryAction() {
             if (IsBusy) {
                 return false;
             }
 
+            string? resolvedApiKey = ResolveApiKey();
             return ConnectionState switch {
-                ConnectionState.Disconnected => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(ApiKey),
+                ConnectionState.Disconnected => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrEmpty(resolvedApiKey),
                 _ => !string.IsNullOrWhiteSpace(SelectedProjectId) && !string.IsNullOrWhiteSpace(SelectedBranchId)
             };
         }
@@ -181,7 +197,8 @@ namespace AssetProcessor.ViewModels {
         }
 
         private async Task ConnectInternalAsync(CancellationToken cancellationToken) {
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(ApiKey)) {
+            string? resolvedApiKey = ResolveApiKey();
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrEmpty(resolvedApiKey)) {
                 StatusMessage = "Username and API Key are required";
                 logger.Warn("Connection attempt without username or API key");
                 return;
@@ -193,10 +210,10 @@ namespace AssetProcessor.ViewModels {
                 ConnectionStatusMessage = "Connecting...";
                 ConnectionStatusBrush = Brushes.DarkOrange;
 
-                var userId = await playCanvasService.GetUserIdAsync(Username, ApiKey, cancellationToken).ConfigureAwait(false);
+                var userId = await playCanvasService.GetUserIdAsync(Username, resolvedApiKey, cancellationToken).ConfigureAwait(false);
                 logger.Info($"Retrieved user ID: {userId}");
 
-                var projectsDict = await playCanvasService.GetProjectsAsync(userId, ApiKey, new Dictionary<string, string>(), cancellationToken).ConfigureAwait(false);
+                var projectsDict = await playCanvasService.GetProjectsAsync(userId, resolvedApiKey, new Dictionary<string, string>(), cancellationToken).ConfigureAwait(false);
 
                 Projects.Clear();
                 foreach (var pair in projectsDict.OrderBy(p => p.Value, StringComparer.OrdinalIgnoreCase)) {
@@ -257,7 +274,8 @@ namespace AssetProcessor.ViewModels {
         }
 
         private async Task LoadBranchesAsync(CancellationToken cancellationToken) {
-            if (string.IsNullOrWhiteSpace(SelectedProjectId) || string.IsNullOrWhiteSpace(ApiKey)) {
+            string? resolvedApiKey = ResolveApiKey();
+            if (string.IsNullOrWhiteSpace(SelectedProjectId) || string.IsNullOrEmpty(resolvedApiKey)) {
                 StatusMessage = "Please select a project first";
                 return;
             }
@@ -266,7 +284,7 @@ namespace AssetProcessor.ViewModels {
                 IsBusy = true;
                 StatusMessage = "Loading branches...";
 
-                var branchesList = await playCanvasService.GetBranchesAsync(SelectedProjectId, ApiKey, new List<Branch>(), cancellationToken).ConfigureAwait(false);
+                var branchesList = await playCanvasService.GetBranchesAsync(SelectedProjectId, resolvedApiKey, new List<Branch>(), cancellationToken).ConfigureAwait(false);
 
                 var orderedBranches = branchesList.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase).ToList();
                 Branches.Clear();
@@ -308,7 +326,8 @@ namespace AssetProcessor.ViewModels {
         }
 
         private async Task LoadAssetsAsync(CancellationToken cancellationToken) {
-            if (string.IsNullOrWhiteSpace(SelectedProjectId) || string.IsNullOrWhiteSpace(SelectedBranchId) || string.IsNullOrWhiteSpace(ApiKey)) {
+            string? resolvedApiKey = ResolveApiKey();
+            if (string.IsNullOrWhiteSpace(SelectedProjectId) || string.IsNullOrWhiteSpace(SelectedBranchId) || string.IsNullOrEmpty(resolvedApiKey)) {
                 StatusMessage = "Please select a project and branch first";
                 return;
             }
@@ -318,7 +337,7 @@ namespace AssetProcessor.ViewModels {
                 StatusMessage = "Loading assets...";
                 logger.Info($"Loading assets for project: {SelectedProjectId}, branch: {SelectedBranchId}");
 
-                var assetsArray = await playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, ApiKey, cancellationToken).ConfigureAwait(false);
+                var assetsArray = await playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, resolvedApiKey, cancellationToken).ConfigureAwait(false);
 
                 Textures.Clear();
                 Models.Clear();

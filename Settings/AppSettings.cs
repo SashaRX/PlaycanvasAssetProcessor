@@ -1,5 +1,8 @@
-﻿namespace AssetProcessor.Settings {
-    public sealed partial class AppSettings : System.Configuration.ApplicationSettingsBase {
+using AssetProcessor.Helpers;
+using System.Security.Cryptography;
+
+namespace AssetProcessor.Settings {
+    internal sealed partial class AppSettings : System.Configuration.ApplicationSettingsBase {
         public static AppSettings Default { get; } = (AppSettings)Synchronized(new AppSettings());
 
         [System.Configuration.UserScopedSetting()]
@@ -39,7 +42,13 @@
         [System.Configuration.DefaultSettingValue("")]
         public string PlaycanvasApiKey {
             get => (string)this[nameof(PlaycanvasApiKey)];
-            set => this[nameof(PlaycanvasApiKey)] = value;
+            set {
+                if (string.IsNullOrEmpty(value)) {
+                    this[nameof(PlaycanvasApiKey)] = string.Empty;
+                } else {
+                    this[nameof(PlaycanvasApiKey)] = SecureStorageHelper.Protect(value);
+                }
+            }
         }
 
         [System.Configuration.UserScopedSetting()]
@@ -161,5 +170,29 @@
             get => (double)this[nameof(ModelPreviewRowHeight)];
             set => this[nameof(ModelPreviewRowHeight)] = value;
         }
+
+        public bool TryGetDecryptedPlaycanvasApiKey(out string? apiKey) {
+            bool success = SecureStorageHelper.TryUnprotect(
+                (string)this[nameof(PlaycanvasApiKey)],
+                out apiKey,
+                out bool wasProtected);
+
+            if (success && !string.IsNullOrEmpty(apiKey) && !wasProtected) {
+                this[nameof(PlaycanvasApiKey)] = SecureStorageHelper.Protect(apiKey);
+                Save();
+            }
+
+            return success;
+        }
+
+        public string? GetDecryptedPlaycanvasApiKey() {
+            if (!TryGetDecryptedPlaycanvasApiKey(out string? apiKey)) {
+                throw new CryptographicException("Stored API key could not be decrypted. It may be corrupted or protected with an invalid master password.");
+            }
+
+            return apiKey;
+        }
+
+        public bool HasStoredPlaycanvasApiKey => !string.IsNullOrEmpty((string)this[nameof(PlaycanvasApiKey)]);
     }
 }

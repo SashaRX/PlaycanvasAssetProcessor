@@ -20,6 +20,18 @@ namespace AssetProcessor.Resources {
         // Gloss settings
         private bool glossToksvigEnabled = true;
         private float glossToksvigPower = 4.0f;
+        private ToksvigCalculationMode glossToksvigCalculationMode = ToksvigCalculationMode.Classic;
+        private int glossToksvigMinMipLevel = 0;
+        private bool glossToksvigEnergyPreserving = true;
+
+        // Compression settings
+        private CompressionFormat compressionFormat = CompressionFormat.ETC1S;
+        private int qualityLevel = 128;  // ETC1S quality (1-255)
+        private int uastcQuality = 2;    // UASTC quality (0-4)
+
+        // Mipmap settings
+        private int mipmapCount = 0;     // 0 = auto
+        private FilterType filterType = FilterType.Kaiser;
 
         // Default values for missing channels
         private float aoDefaultValue = 1.0f;
@@ -159,6 +171,94 @@ namespace AssetProcessor.Resources {
             set {
                 glossToksvigPower = value;
                 OnPropertyChanged(nameof(GlossToksvigPower));
+            }
+        }
+
+        /// <summary>
+        /// Режим расчёта Toksvig
+        /// </summary>
+        public ToksvigCalculationMode GlossToksvigCalculationMode {
+            get => glossToksvigCalculationMode;
+            set {
+                glossToksvigCalculationMode = value;
+                OnPropertyChanged(nameof(GlossToksvigCalculationMode));
+            }
+        }
+
+        /// <summary>
+        /// Минимальный уровень мипмапа для Toksvig
+        /// </summary>
+        public int GlossToksvigMinMipLevel {
+            get => glossToksvigMinMipLevel;
+            set {
+                glossToksvigMinMipLevel = value;
+                OnPropertyChanged(nameof(GlossToksvigMinMipLevel));
+            }
+        }
+
+        /// <summary>
+        /// Использовать Energy-Preserving фильтрацию
+        /// </summary>
+        public bool GlossToksvigEnergyPreserving {
+            get => glossToksvigEnergyPreserving;
+            set {
+                glossToksvigEnergyPreserving = value;
+                OnPropertyChanged(nameof(GlossToksvigEnergyPreserving));
+            }
+        }
+
+        /// <summary>
+        /// Формат сжатия
+        /// </summary>
+        public CompressionFormat CompressionFormat {
+            get => compressionFormat;
+            set {
+                compressionFormat = value;
+                OnPropertyChanged(nameof(CompressionFormat));
+            }
+        }
+
+        /// <summary>
+        /// Качество для ETC1S (1-255)
+        /// </summary>
+        public int QualityLevel {
+            get => qualityLevel;
+            set {
+                qualityLevel = value;
+                OnPropertyChanged(nameof(QualityLevel));
+            }
+        }
+
+        /// <summary>
+        /// Качество для UASTC (0-4)
+        /// </summary>
+        public int UASTCQuality {
+            get => uastcQuality;
+            set {
+                uastcQuality = value;
+                OnPropertyChanged(nameof(UASTCQuality));
+            }
+        }
+
+        /// <summary>
+        /// Количество мипмапов (0 = auto)
+        /// </summary>
+        public int MipmapCount {
+            get => mipmapCount;
+            set {
+                mipmapCount = value;
+                OnPropertyChanged(nameof(MipmapCount));
+            }
+        }
+
+        /// <summary>
+        /// Тип фильтра для мипмапов
+        /// </summary>
+        public FilterType FilterType {
+            get => filterType;
+            set {
+                filterType = value;
+                OnPropertyChanged(nameof(FilterType));
             }
         }
 

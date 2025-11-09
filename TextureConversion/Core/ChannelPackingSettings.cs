@@ -35,6 +35,16 @@ namespace AssetProcessor.TextureConversion.Core {
         public string? AutoDetectBasePath { get; set; }
 
         /// <summary>
+        /// Количество мипмап уровней (-1 = авто, 0 = только базовый уровень, >0 = конкретное количество)
+        /// </summary>
+        public int MipmapCount { get; set; } = -1;
+
+        /// <summary>
+        /// Профиль генерации мипмапов
+        /// </summary>
+        public MipGenerationProfile? MipGenerationProfile { get; set; }
+
+        /// <summary>
         /// Создает настройки по умолчанию для режима упаковки
         /// </summary>
         public static ChannelPackingSettings CreateDefault(ChannelPackingMode mode) {

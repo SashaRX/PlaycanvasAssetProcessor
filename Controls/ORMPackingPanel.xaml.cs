@@ -125,6 +125,30 @@ namespace AssetProcessor.Controls {
             // Gloss settings
             GlossToksvigCheckBox.IsChecked = currentORMTexture.GlossToksvigEnabled;
             GlossToksvigPowerSlider.Value = currentORMTexture.GlossToksvigPower;
+            ToksvigMinMipLevelSlider.Value = currentORMTexture.GlossToksvigMinMipLevel;
+            ToksvigEnergyPreservingCheckBox.IsChecked = currentORMTexture.GlossToksvigEnergyPreserving;
+
+            // Use Dispatcher.BeginInvoke to set ComboBox selected items after binding is complete
+            Dispatcher.BeginInvoke(new Action(() => {
+                // Compression settings
+                CompressionFormatComboBox.SelectedItem = currentORMTexture.CompressionFormat;
+                Logger.Info($"  Set CompressionFormatComboBox to {currentORMTexture.CompressionFormat}");
+
+                // Toksvig calculation mode
+                ToksvigCalculationModeComboBox.SelectedItem = currentORMTexture.GlossToksvigCalculationMode;
+                Logger.Info($"  Set ToksvigCalculationModeComboBox to {currentORMTexture.GlossToksvigCalculationMode}");
+
+                // Filter type
+                FilterTypeComboBox.SelectedItem = currentORMTexture.FilterType;
+                Logger.Info($"  Set FilterTypeComboBox to {currentORMTexture.FilterType}");
+            }), System.Windows.Threading.DispatcherPriority.Background);
+
+            // Compression quality settings
+            QualityLevelSlider.Value = currentORMTexture.QualityLevel;
+            UASTCQualitySlider.Value = currentORMTexture.UASTCQuality;
+
+            // Mipmap settings
+            MipmapCountSlider.Value = currentORMTexture.MipmapCount;
 
             UpdateStatus();
         }
@@ -138,7 +162,11 @@ namespace AssetProcessor.Controls {
                 MetallicSourceComboBox == null || HeightSourceComboBox == null ||
                 AOProcessingComboBox == null || AOBiasSlider == null ||
                 AOPercentileSlider == null ||
-                GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null) return;
+                GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null ||
+                CompressionFormatComboBox == null || QualityLevelSlider == null ||
+                UASTCQualitySlider == null || MipmapCountSlider == null ||
+                FilterTypeComboBox == null || ToksvigCalculationModeComboBox == null ||
+                ToksvigMinMipLevelSlider == null || ToksvigEnergyPreservingCheckBox == null) return;
             if (currentORMTexture == null) return;
 
             // Sources
@@ -155,6 +183,26 @@ namespace AssetProcessor.Controls {
             // Gloss settings
             currentORMTexture.GlossToksvigEnabled = GlossToksvigCheckBox.IsChecked ?? false;
             currentORMTexture.GlossToksvigPower = (float)GlossToksvigPowerSlider.Value;
+            currentORMTexture.GlossToksvigMinMipLevel = (int)ToksvigMinMipLevelSlider.Value;
+            currentORMTexture.GlossToksvigEnergyPreserving = ToksvigEnergyPreservingCheckBox.IsChecked ?? true;
+
+            // Toksvig calculation mode - handle null case
+            if (ToksvigCalculationModeComboBox.SelectedItem != null) {
+                currentORMTexture.GlossToksvigCalculationMode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem;
+            }
+
+            // Compression settings
+            if (CompressionFormatComboBox.SelectedItem != null) {
+                currentORMTexture.CompressionFormat = (CompressionFormat)CompressionFormatComboBox.SelectedItem;
+            }
+            currentORMTexture.QualityLevel = (int)QualityLevelSlider.Value;
+            currentORMTexture.UASTCQuality = (int)UASTCQualitySlider.Value;
+
+            // Mipmap settings
+            currentORMTexture.MipmapCount = (int)MipmapCountSlider.Value;
+            if (FilterTypeComboBox.SelectedItem != null) {
+                currentORMTexture.FilterType = (FilterType)FilterTypeComboBox.SelectedItem;
+            }
         }
 
         /// <summary>
@@ -235,6 +283,27 @@ namespace AssetProcessor.Controls {
             UpdateStatus();
         }
 
+        private void CompressionFormat_Changed(object sender, SelectionChangedEventArgs e) {
+            // Early return if controls not initialized yet
+            if (ETC1SPanel == null || UASTCPanel == null || CompressionFormatComboBox == null) return;
+            if (CompressionFormatComboBox.SelectedItem == null) return;
+
+            var format = (CompressionFormat)CompressionFormatComboBox.SelectedItem;
+
+            // Show/hide panels based on compression format
+            if (format == CompressionFormat.ETC1S) {
+                ETC1SPanel.Visibility = Visibility.Visible;
+                UASTCPanel.Visibility = Visibility.Collapsed;
+                Logger.Info("Switched to ETC1S compression format");
+            } else if (format == CompressionFormat.UASTC) {
+                ETC1SPanel.Visibility = Visibility.Collapsed;
+                UASTCPanel.Visibility = Visibility.Visible;
+                Logger.Info("Switched to UASTC compression format");
+            }
+
+            UpdateStatus();
+        }
+
         // Pack & Convert button
         private async void PackConvert_Click(object sender, RoutedEventArgs e) {
             if (currentORMTexture == null || mainWindow == null) return;
@@ -266,9 +335,21 @@ namespace AssetProcessor.Controls {
 
                 // Создаем пайплайн и упаковываем
                 var pipeline = new TextureConversionPipeline();
-                var compressionSettings = CompressionSettings.CreateETC1SDefault();
-                compressionSettings.QualityLevel = 192; // Высокое качество для ORM
-                compressionSettings.ColorSpace = ColorSpace.Linear; // КРИТИЧНО!
+
+                // Create compression settings based on selected format
+                var compressionSettings = currentORMTexture.CompressionFormat == CompressionFormat.UASTC
+                    ? CompressionSettings.CreateUASTCDefault()
+                    : CompressionSettings.CreateETC1SDefault();
+
+                // Apply user settings
+                compressionSettings.CompressionFormat = currentORMTexture.CompressionFormat;
+                compressionSettings.QualityLevel = currentORMTexture.QualityLevel;
+                compressionSettings.UASTCQuality = currentORMTexture.UASTCQuality;
+                compressionSettings.ColorSpace = ColorSpace.Linear; // КРИТИЧНО для ORM!
+
+                // Mipmap settings
+                compressionSettings.GenerateMipmaps = true;
+                compressionSettings.UseCustomMipmaps = currentORMTexture.GlossToksvigEnabled; // Use custom mipmaps if Toksvig is enabled
 
                 StatusText.Text = "Converting to KTX2...";
 
@@ -309,6 +390,15 @@ namespace AssetProcessor.Controls {
         private ChannelPackingSettings CreatePackingSettings() {
             var settings = ChannelPackingSettings.CreateDefault(currentORMTexture!.PackingMode);
 
+            // Set mipmap generation settings
+            settings.MipmapCount = currentORMTexture.MipmapCount == 0 ? -1 : currentORMTexture.MipmapCount; // 0 = auto = -1
+            settings.MipGenerationProfile = new MipGenerationProfile {
+                Filter = currentORMTexture.FilterType,
+                ApplyGammaCorrection = false, // Linear space for ORM
+                IncludeLastLevel = true,
+                MinMipSize = 1
+            };
+
             // AO channel (Red or RGB)
             if (settings.RedChannel != null) {
                 settings.RedChannel.SourcePath = currentORMTexture.AOSource?.Path;
@@ -330,7 +420,11 @@ namespace AssetProcessor.Controls {
                         glossChannel.ToksvigSettings = new ToksvigSettings {
                             Enabled = true,
                             CompositePower = currentORMTexture.GlossToksvigPower,
-                            CalculationMode = ToksvigCalculationMode.Simplified
+                            CalculationMode = currentORMTexture.GlossToksvigCalculationMode,
+                            MinToksvigMipLevel = currentORMTexture.GlossToksvigMinMipLevel,
+                            UseEnergyPreserving = currentORMTexture.GlossToksvigEnergyPreserving,
+                            SmoothVariance = true,
+                            VarianceThreshold = 0.002f
                         };
                     }
                 }

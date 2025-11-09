@@ -5195,25 +5195,31 @@ namespace AssetProcessor {
 
                 // Smart workflow detection: prefer actual texture presence over UseMetalness flag
                 string workflowInfo = "";
+                string mapType = ""; // Track which map type we're actually using
 
                 // First try to find Metalness texture (modern PBR workflow)
                 TextureResource? metalnessCandidate = FindTextureById(material.MetalnessMapId);
                 TextureResource? specularCandidate = FindTextureById(material.SpecularMapId);
 
+                MainWindowHelpers.LogInfo($"Texture candidates: Metalness={metalnessCandidate?.Name ?? "null"}, Specular={specularCandidate?.Name ?? "null"}");
+
                 if (metalnessCandidate != null) {
                     // Metalness texture exists - use PBR workflow
                     metalnessTexture = metalnessCandidate;
                     workflowInfo = "Workflow: Metalness (PBR)";
+                    mapType = "Metallic";
                     MainWindowHelpers.LogInfo($"Metalness workflow detected: Metallic={metalnessTexture.Name}");
                 } else if (specularCandidate != null) {
                     // Only Specular texture exists - use legacy workflow
                     metalnessTexture = specularCandidate;
                     workflowInfo = "Workflow: Specular (Legacy)\nNote: Specular map will be used as Metallic";
+                    mapType = "Specular";
                     MainWindowHelpers.LogInfo($"Specular workflow detected: Specular={metalnessTexture.Name}");
                 } else {
                     // No metallic/specular texture found
-                    MainWindowHelpers.LogInfo($"No metallic or specular texture found (MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId})");
+                    MainWindowHelpers.LogWarn($"No metallic or specular texture found for material '{material.Name}' (MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId})");
                     workflowInfo = material.UseMetalness ? "Workflow: Metalness (PBR)" : "Workflow: Specular (Legacy)";
+                    mapType = material.UseMetalness ? "Metallic" : "Specular";
                 }
 
                 // Auto-detect packing mode
@@ -5221,7 +5227,7 @@ namespace AssetProcessor {
 
                 // If only one texture or none - don't create ORM
                 if (mode == ChannelPackingMode.None) {
-                    string mapType = material.UseMetalness ? "Metallic" : "Specular";
+                    // mapType is already set by workflow detection above
                     MessageBox.Show($"Material '{material.Name}' doesn't have enough textures for ORM packing.\n\n" +
                                   $"{workflowInfo}\n\n" +
                                   $"AO: {(aoTexture != null ? "✓" : "✗")}\n" +

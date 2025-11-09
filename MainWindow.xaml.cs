@@ -3054,7 +3054,16 @@ namespace AssetProcessor {
                 JToken? data = json["data"];
                 if (data != null) {
 
-                    return new MaterialResource {
+                    // Debug: Log texture map tokens from JSON
+                    var materialName = json["name"]?.ToString() ?? "Unknown";
+                    logger.Debug($"Parsing material '{materialName}' from JSON:");
+                    logger.Debug($"  aoMap token: {data["aoMap"]?.ToString() ?? "null"}");
+                    logger.Debug($"  glossMap token: {data["glossMap"]?.ToString() ?? "null"}");
+                    logger.Debug($"  metalnessMap token: {data["metalnessMap"]?.ToString() ?? "null"}");
+                    logger.Debug($"  specularMap token: {data["specularMap"]?.ToString() ?? "null"}");
+                    logger.Debug($"  useMetalness: {data["useMetalness"]?.ToString() ?? "null"}");
+
+                    var materialResource = new MaterialResource {
                         ID = json["id"]?.ToObject<int>() ?? 0,
                         Name = json["name"]?.ToString() ?? string.Empty,
                         CreatedAt = json["createdAt"]?.ToString() ?? string.Empty,
@@ -3109,6 +3118,15 @@ namespace AssetProcessor {
                         GlossinessColorChannel = ParseColorChannel(data["glossMapChannel"]?.ToString() ?? string.Empty),
                         AOChannel = ParseColorChannel(data["aoMapChannel"]?.ToString() ?? string.Empty)
                     };
+
+                    // Debug: Log parsed MapIds
+                    logger.Debug($"  Parsed MapIds for '{materialName}':");
+                    logger.Debug($"    AOMapId: {materialResource.AOMapId?.ToString() ?? "null"}");
+                    logger.Debug($"    GlossMapId: {materialResource.GlossMapId?.ToString() ?? "null"}");
+                    logger.Debug($"    MetalnessMapId: {materialResource.MetalnessMapId?.ToString() ?? "null"}");
+                    logger.Debug($"    SpecularMapId: {materialResource.SpecularMapId?.ToString() ?? "null"}");
+
+                    return materialResource;
                 }
             } catch (Exception ex) {
                 System.Diagnostics.Debug.WriteLine($"Error parsing material JSON: {ex.Message}");
@@ -5182,8 +5200,8 @@ namespace AssetProcessor {
 
             try {
                 // Debug: Log material map IDs
-                MainWindowHelpers.LogInfo($"Material '{material.Name}': AOMapId={material.AOMapId}, GlossMapId={material.GlossMapId}, " +
-                    $"MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId}, UseMetalness={material.UseMetalness}");
+                MainWindowHelpers.LogInfo($"Material '{material.Name}': AOMapId={material.AOMapId?.ToString() ?? "null"}, GlossMapId={material.GlossMapId?.ToString() ?? "null"}, " +
+                    $"MetalnessMapId={material.MetalnessMapId?.ToString() ?? "null"}, SpecularMapId={material.SpecularMapId?.ToString() ?? "null"}, UseMetalness={material.UseMetalness}");
 
                 // Find textures by map IDs
                 TextureResource? aoTexture = FindTextureById(material.AOMapId);

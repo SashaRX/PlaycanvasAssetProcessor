@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:AssetProcessor"
+    xmlns:settings="clr-namespace:AssetProcessor.Settings"
     xmlns:controls="clr-namespace:AssetProcessor.Controls"
     xmlns:help ="clr-namespace:AssetProcessor.Helpers"
     xmlns:viewer="clr-namespace:AssetProcessor.TextureViewer"
@@ -258,7 +259,8 @@
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,10,0" VerticalAlignment="Center" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="10,0,5,0"/>
-                            <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0" Value="1.0"
+                            <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                                    Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"/>
                             <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
@@ -361,7 +363,8 @@
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0" Value="1.0"
+                            <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                                    Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"/>
                             <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
@@ -415,7 +418,8 @@
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0" Value="1.0"
+                            <Slider x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                                    Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"/>
                             <TextBlock Text="{Binding ElementName=MaterialsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
@@ -686,9 +690,13 @@
                 <Border x:Name="ModelViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition x:Name="ModelPreviewRow" MinHeight="200" MaxHeight="800">
+                                <RowDefinition.Height>
+                                    <GridLength Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelPreviewRowHeight, Mode=TwoWay}" />
+                                </RowDefinition.Height>
+                            </RowDefinition>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" MinHeight="150" />
                         </Grid.RowDefinitions>
 
                         <!-- Model Preview Section -->
@@ -696,7 +704,7 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition x:Name="ModelPreviewContentRow" Height="400" />
+                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
                                 <!-- Model Info Panel (ABOVE viewport) -->
@@ -734,8 +742,27 @@
                             </Grid>
                         </Expander>
 
+                        <!-- GridSplitter between Model Preview and bottom section -->
+                        <GridSplitter Grid.Row="1"
+                                      Height="6"
+                                      Margin="0,4,0,4"
+                                      Background="#FFE0E0E0"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Center"
+                                      ResizeDirection="Rows"
+                                      ResizeBehavior="PreviousAndNext"
+                                      ShowsPreview="False"
+                                      Cursor="SizeNS" />
+
+                        <!-- Bottom section: UV Maps + Settings -->
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
                         <!-- UV Maps Section -->
-                        <Expander Grid.Row="1" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="0" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
                             <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="137" MaxHeight="300">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -767,11 +794,12 @@
                         </Expander>
 
                         <!-- Model Conversion Settings Panel -->
-                        <Expander Grid.Row="2" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
+                        <Expander Grid.Row="1" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
                                   Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
                             <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
                                                                    ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>
                         </Expander>
+                        </Grid>
                     </Grid>
                 </Border>
             </ScrollViewer>

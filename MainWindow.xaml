@@ -386,21 +386,15 @@
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
                               Background="#FFD6D6D6">
-                        <DataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="ContextMenu">
-                                    <Setter.Value>
-                                        <ContextMenu>
-                                            <MenuItem Header="Columns Visibility">
-                                                <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
-                                                <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
-                                                <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
-                                            </MenuItem>
-                                        </ContextMenu>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Columns Visibility">
+                                    <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
+                                    <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
+                                    <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
+                                </MenuItem>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>

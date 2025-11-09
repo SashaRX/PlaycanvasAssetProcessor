@@ -327,6 +327,8 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                                 Offset = new float[histogramResult.Offset.Length],
                                 RangeLow = histogramResult.RangeLow,
                                 RangeHigh = histogramResult.RangeHigh,
+                                RangeLowPerChannel = histogramResult.RangeLowPerChannel,
+                                RangeHighPerChannel = histogramResult.RangeHighPerChannel,
                                 TailFraction = histogramResult.TailFraction,
                                 KneeApplied = histogramResult.KneeApplied,
                                 TotalPixels = histogramResult.TotalPixels,

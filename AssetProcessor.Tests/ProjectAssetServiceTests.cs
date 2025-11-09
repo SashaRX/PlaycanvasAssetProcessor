@@ -73,20 +73,20 @@ public class ProjectAssetServiceTests {
                 progress: null,
                 fetchTextureResolution: false);
 
-            Assert.Single(result.Textures);
-            TextureResource texture = result.Textures.Single();
+            TextureResource texture = Assert.Single(result.Textures);
             Assert.Equal("Texture", texture.Name);
-            Assert.True(texture.Path.EndsWith(Path.Combine("Project", "Texture.png")));
+            string texturePath = Assert.NotNull(texture.Path);
+            Assert.EndsWith(Path.Combine("Project", "Texture.png"), texturePath);
 
-            Assert.Single(result.Models);
-            ModelResource model = result.Models.Single();
+            ModelResource model = Assert.Single(result.Models);
             Assert.Equal("Model", model.Name);
-            Assert.True(model.Path.EndsWith(Path.Combine("Project", "Model.fbx")));
+            string modelPath = Assert.NotNull(model.Path);
+            Assert.EndsWith(Path.Combine("Project", "Model.fbx"), modelPath);
 
-            Assert.Single(result.Materials);
-            MaterialResource material = result.Materials.Single();
+            MaterialResource material = Assert.Single(result.Materials);
             Assert.Equal("Material", material.Name);
-            Assert.True(material.Path.EndsWith(Path.Combine("Project", "Material.json")));
+            string materialPath = Assert.NotNull(material.Path);
+            Assert.EndsWith(Path.Combine("Project", "Material.json"), materialPath);
         } finally {
             if (Directory.Exists(root)) {
                 Directory.Delete(root, true);

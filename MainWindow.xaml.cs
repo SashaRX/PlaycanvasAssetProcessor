@@ -2805,7 +2805,9 @@ namespace AssetProcessor {
                     // Есть обновления - нужна загрузка
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
-                    // Проект актуален - можно только обновить вручную
+                    // Проект актуален - загружаем локально
+                    MainWindowHelpers.LogInfo("Project is up to date - loading from local JSON...");
+                    await LoadAssetsFromJsonFileAsync();
                     UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {

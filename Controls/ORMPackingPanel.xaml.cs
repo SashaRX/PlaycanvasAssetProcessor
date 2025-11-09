@@ -233,7 +233,7 @@ namespace AssetProcessor.Controls {
         // Event handlers
         private void PackingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Early return if controls not initialized yet (happens during XAML parsing with IsSelected="True")
-            if (MetallicPanel == null || HeightPanel == null || ModeDescription == null) return;
+            if (MetallicPanel == null || HeightPanel == null) return;
             if (currentORMTexture == null || PackingModeComboBox.SelectedItem == null) return;
 
             var tag = ((ComboBoxItem)PackingModeComboBox.SelectedItem).Tag.ToString();
@@ -249,8 +249,6 @@ namespace AssetProcessor.Controls {
                 ? Visibility.Visible : Visibility.Collapsed;
             HeightPanel.Visibility = currentORMTexture.PackingMode == ChannelPackingMode.OGMH
                 ? Visibility.Visible : Visibility.Collapsed;
-
-            ModeDescription.Text = currentORMTexture.PackingModeDescription;
 
             UpdateStatus();
         }

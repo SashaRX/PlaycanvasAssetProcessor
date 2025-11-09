@@ -210,7 +210,7 @@ namespace AssetProcessor.Resources {
         /// <summary>
         /// Формат сжатия
         /// </summary>
-        public CompressionFormat CompressionFormat {
+        public new CompressionFormat CompressionFormat {
             get => compressionFormat;
             set {
                 compressionFormat = value;
@@ -243,7 +243,7 @@ namespace AssetProcessor.Resources {
         /// <summary>
         /// Количество мипмапов (0 = auto)
         /// </summary>
-        public int MipmapCount {
+        public new int MipmapCount {
             get => mipmapCount;
             set {
                 mipmapCount = value;

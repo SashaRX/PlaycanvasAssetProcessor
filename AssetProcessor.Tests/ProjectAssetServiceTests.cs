@@ -75,17 +75,20 @@ public class ProjectAssetServiceTests {
 
             TextureResource texture = Assert.Single(result.Textures);
             Assert.Equal("Texture", texture.Name);
-            string texturePath = Assert.NotNull(texture.Path);
+            Assert.NotNull(texture.Path);
+            string texturePath = texture.Path;
             Assert.Equal(Path.Combine(root, "Project", "Texture.png"), texturePath);
 
             ModelResource model = Assert.Single(result.Models);
             Assert.Equal("Model", model.Name);
-            string modelPath = Assert.NotNull(model.Path);
+            Assert.NotNull(model.Path);
+            string modelPath = model.Path;
             Assert.Equal(Path.Combine(root, "Project", "Model.fbx"), modelPath);
 
             MaterialResource material = Assert.Single(result.Materials);
             Assert.Equal("Material", material.Name);
-            string materialPath = Assert.NotNull(material.Path);
+            Assert.NotNull(material.Path);
+            string materialPath = material.Path;
             Assert.Equal(Path.Combine(root, "Project", "Material.json"), materialPath);
         } finally {
             if (Directory.Exists(root)) {

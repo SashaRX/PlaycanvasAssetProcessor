@@ -5263,12 +5263,21 @@ namespace AssetProcessor {
                     ? material.Name.Substring(0, material.Name.Length - 4)
                     : (material.Name ?? "unknown");
 
+                // Generate ORM texture name based on packing mode
+                string modeSuffix = mode switch {
+                    ChannelPackingMode.OG => "_og",
+                    ChannelPackingMode.OGM => "_ogm",
+                    ChannelPackingMode.OGMH => "_ogmh",
+                    _ => "_ogm"
+                };
+                string ormTextureName = baseMaterialName + modeSuffix;
+
                 // Check if ORM texture already exists for this material
                 var existingORM = Textures.OfType<ORMTextureResource>()
-                    .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");
+                    .FirstOrDefault(t => t.Name == ormTextureName);
 
                 if (existingORM != null) {
-                    var result = MessageBox.Show($"ORM texture already exists for material '{material.Name}'.\n\nDo you want to update it?",
+                    var result = MessageBox.Show($"ORM texture '{ormTextureName}' already exists.\n\nDo you want to update it?",
                         "ORM Already Exists", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (result == MessageBoxResult.No) {
                         return;
@@ -5279,7 +5288,7 @@ namespace AssetProcessor {
 
                 // Create ORM texture
                 var ormTexture = new ORMTextureResource {
-                    Name = $"[ORM - {baseMaterialName}]",
+                    Name = ormTextureName,
                     TextureType = "ORM (Virtual)",
                     PackingMode = mode,
                     AOSource = aoTexture,
@@ -5347,9 +5356,18 @@ namespace AssetProcessor {
                             ? material.Name.Substring(0, material.Name.Length - 4)
                             : (material.Name ?? "unknown");
 
+                        // Generate ORM texture name based on packing mode
+                        string modeSuffix = mode switch {
+                            ChannelPackingMode.OG => "_og",
+                            ChannelPackingMode.OGM => "_ogm",
+                            ChannelPackingMode.OGMH => "_ogmh",
+                            _ => "_ogm"
+                        };
+                        string ormTextureName = baseMaterialName + modeSuffix;
+
                         // Check if already exists
                         var existingORM = Textures.OfType<ORMTextureResource>()
-                            .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");
+                            .FirstOrDefault(t => t.Name == ormTextureName);
 
                         if (existingORM != null) {
                             skipped++;
@@ -5358,7 +5376,7 @@ namespace AssetProcessor {
 
                         // Create ORM texture
                         var ormTexture = new ORMTextureResource {
-                            Name = $"[ORM - {baseMaterialName}]",
+                            Name = ormTextureName,
                             TextureType = "ORM (Virtual)",
                             PackingMode = mode,
                             AOSource = aoTexture,
@@ -5407,11 +5425,14 @@ namespace AssetProcessor {
                 ? material.Name.Substring(0, material.Name.Length - 4)
                 : (material.Name ?? "unknown");
 
+            // Try all possible ORM suffixes
             var ormTexture = Textures.OfType<ORMTextureResource>()
-                .FirstOrDefault(t => t.Name == $"[ORM - {baseMaterialName}]");
+                .FirstOrDefault(t => t.Name == baseMaterialName + "_og" ||
+                                     t.Name == baseMaterialName + "_ogm" ||
+                                     t.Name == baseMaterialName + "_ogmh");
 
             if (ormTexture == null) {
-                MessageBox.Show($"No ORM texture found for material '{material.Name}'.",
+                MessageBox.Show($"No ORM texture found for material '{material.Name}'.\n\nExpected: {baseMaterialName}_og, {baseMaterialName}_ogm, or {baseMaterialName}_ogmh",
                     "Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }

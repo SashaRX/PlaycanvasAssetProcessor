@@ -237,6 +237,15 @@ namespace AssetProcessor.Helpers {
             }
         }
 
+        public static void LogWarn(string message) {
+            string logFilePath = "warning_log.txt";
+            lock (logLock) {
+                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
+                // Output to IDE console for visibility
+                System.Diagnostics.Debug.WriteLine($"{DateTime.Now}: WARNING: {message}");
+            }
+        }
+
         public static double[] MovingAverage(int[] values, int windowSize) {
             double[] result = new double[values.Length];
             double sum = 0;

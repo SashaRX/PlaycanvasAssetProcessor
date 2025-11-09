@@ -1,5 +1,5 @@
 ﻿namespace AssetProcessor.Settings {
-    internal sealed partial class AppSettings : System.Configuration.ApplicationSettingsBase {
+    public sealed partial class AppSettings : System.Configuration.ApplicationSettingsBase {
         public static AppSettings Default { get; } = (AppSettings)Synchronized(new AppSettings());
 
         [System.Configuration.UserScopedSetting()]

@@ -2601,7 +2601,9 @@ namespace AssetProcessor {
 
         private async void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             if (!isShutdownInitiated) {
-                e?.Cancel = true;
+                if (e != null) {
+                    e.Cancel = true;
+                }
                 isShutdownInitiated = true;
                 shutdownTask = PerformShutdownAsync();
 
@@ -2614,7 +2616,9 @@ namespace AssetProcessor {
                     Close();
                 }
             } else if (shutdownTask != null && !shutdownTask.IsCompleted) {
-                e?.Cancel = true;
+                if (e != null) {
+                    e.Cancel = true;
+                }
             }
         }
 

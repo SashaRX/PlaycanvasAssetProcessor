@@ -104,6 +104,14 @@
             <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
         </ContextMenu>
 
+        <!-- ContextMenu для строк материалов -->
+        <ContextMenu x:Key="MaterialRowContextMenu">
+            <MenuItem Header="Create ORM Texture" Click="CreateORMFromMaterial_Click" FontWeight="Bold"/>
+            <MenuItem Header="Create ORM for All Materials" Click="CreateORMForAllMaterials_Click"/>
+            <Separator/>
+            <MenuItem Header="Delete ORM Texture" Click="DeleteORMTexture_Click"/>
+        </ContextMenu>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -378,15 +386,26 @@
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
                               Background="#FFD6D6D6">
-                        <DataGrid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Columns Visibility">
-                                    <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
-                                    <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
-                                    <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
-                                </MenuItem>
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu>
+                                            <MenuItem Header="Columns Visibility">
+                                                <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
+                                                <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
+                                                <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto"/>
                             <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
@@ -418,6 +437,7 @@
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -621,7 +641,8 @@
                         </Expander>
 
                         <!-- ORM Packing Panel (only visible when ORM texture is selected) -->
-                        <controls:ORMPackingPanel x:Name="ORMPanel"
+                        <controls:ORMPackingPanel Grid.Row="3"
+                                                  x:Name="ORMPanel"
                                                   Visibility="Collapsed"
                                                   Margin="0,2,0,0"/>
                     </Grid>
@@ -742,6 +763,18 @@
                             <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " Margin="4,0,4,0" FontWeight="Bold" />
                             <TextBlock x:Name="MaterialNameTextBlock" Text="Name: " Margin="4,0,4,0" FontWeight="Bold" />
                         </StackPanel>
+
+                        <!-- ORM Texture Creation -->
+                        <Button x:Name="CreateORMFromMaterialButton"
+                                Content="Create ORM Texture"
+                                Click="CreateORMFromMaterial_Click"
+                                Margin="4,8,4,8"
+                                Padding="8,4"
+                                Background="#FF4CAF50"
+                                Foreground="White"
+                                FontWeight="Bold"
+                                HorizontalAlignment="Stretch"
+                                ToolTip="Create packed ORM texture from material maps (AO+Gloss+Metallic)"/>
 
                         <Expander x:Name="AOExpander" Header="Ambient Occlusion" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White" IsExpanded="True" Margin="2,2,2,3">
                             <StackPanel>

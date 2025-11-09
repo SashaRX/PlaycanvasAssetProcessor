@@ -5165,6 +5165,209 @@ namespace AssetProcessor {
             }
         }
 
+        // ORM from Material handlers
+        private void CreateORMFromMaterial_Click(object sender, RoutedEventArgs e) {
+            MaterialResource? material = null;
+
+            // Get material from DataGrid selection or button context
+            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                material = selectedMaterial;
+            }
+
+            if (material == null) {
+                MessageBox.Show("Please select a material first.",
+                    "No Material Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try {
+                // Find textures by map IDs
+                TextureResource? aoTexture = FindTextureById(material.AOMapId);
+                TextureResource? glossTexture = FindTextureById(material.GlossMapId);
+                TextureResource? metalnessTexture = FindTextureById(material.MetalnessMapId);
+
+                // Auto-detect packing mode
+                ChannelPackingMode mode = DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
+
+                // If only one texture or none - don't create ORM
+                if (mode == ChannelPackingMode.None) {
+                    MessageBox.Show($"Material '{material.Name}' doesn't have enough textures for ORM packing.\n\n" +
+                                  $"AO: {(aoTexture != null ? "✓" : "✗")}\n" +
+                                  $"Gloss: {(glossTexture != null ? "✓" : "✗")}\n" +
+                                  $"Metallic: {(metalnessTexture != null ? "✓" : "✗")}\n\n" +
+                                  $"At least 2 textures are required.",
+                        "Insufficient Textures", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Check if ORM texture already exists for this material
+                var existingORM = Textures.OfType<ORMTextureResource>()
+                    .FirstOrDefault(t => t.Name == $"[ORM - {material.Name}]");
+
+                if (existingORM != null) {
+                    var result = MessageBox.Show($"ORM texture already exists for material '{material.Name}'.\n\nDo you want to update it?",
+                        "ORM Already Exists", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result == MessageBoxResult.No) {
+                        return;
+                    }
+                    // Remove existing
+                    Textures.Remove(existingORM);
+                }
+
+                // Create ORM texture
+                var ormTexture = new ORMTextureResource {
+                    Name = $"[ORM - {material.Name}]",
+                    TextureType = "ORM (Virtual)",
+                    PackingMode = mode,
+                    AOSource = aoTexture,
+                    GlossSource = glossTexture,
+                    MetallicSource = metalnessTexture,
+                    Status = "Ready to pack"
+                };
+
+                // Add to textures collection
+                Textures.Add(ormTexture);
+
+                // Select the newly created ORM texture and switch to Textures tab
+                tabControl.SelectedItem = TexturesTabItem;
+                TexturesDataGrid.SelectedItem = ormTexture;
+                TexturesDataGrid.ScrollIntoView(ormTexture);
+
+                MainWindowHelpers.LogInfo($"Created ORM texture '{ormTexture.Name}' with mode {mode}");
+                MessageBox.Show($"Created ORM texture:\n\n" +
+                              $"Name: {ormTexture.Name}\n" +
+                              $"Mode: {mode}\n" +
+                              $"AO: {aoTexture?.Name ?? "None"}\n" +
+                              $"Gloss: {glossTexture?.Name ?? "None"}\n" +
+                              $"Metallic: {metalnessTexture?.Name ?? "None"}",
+                    "ORM Texture Created", MessageBoxButton.OK, MessageBoxImage.Information);
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error creating ORM from material: {ex.Message}");
+                MessageBox.Show($"Failed to create ORM texture: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CreateORMForAllMaterials_Click(object sender, RoutedEventArgs e) {
+            try {
+                int created = 0;
+                int skipped = 0;
+                var errors = new List<string>();
+
+                foreach (var material in Materials) {
+                    try {
+                        // Find textures
+                        TextureResource? aoTexture = FindTextureById(material.AOMapId);
+                        TextureResource? glossTexture = FindTextureById(material.GlossMapId);
+                        TextureResource? metalnessTexture = FindTextureById(material.MetalnessMapId);
+
+                        // Auto-detect mode
+                        ChannelPackingMode mode = DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
+
+                        if (mode == ChannelPackingMode.None) {
+                            skipped++;
+                            continue;
+                        }
+
+                        // Check if already exists
+                        var existingORM = Textures.OfType<ORMTextureResource>()
+                            .FirstOrDefault(t => t.Name == $"[ORM - {material.Name}]");
+
+                        if (existingORM != null) {
+                            skipped++;
+                            continue;
+                        }
+
+                        // Create ORM texture
+                        var ormTexture = new ORMTextureResource {
+                            Name = $"[ORM - {material.Name}]",
+                            TextureType = "ORM (Virtual)",
+                            PackingMode = mode,
+                            AOSource = aoTexture,
+                            GlossSource = glossTexture,
+                            MetallicSource = metalnessTexture,
+                            Status = "Ready to pack"
+                        };
+
+                        Textures.Add(ormTexture);
+                        created++;
+                    } catch (Exception ex) {
+                        errors.Add($"{material.Name}: {ex.Message}");
+                    }
+                }
+
+                var message = $"Batch ORM Creation Results:\n\n" +
+                             $"✓ Created: {created}\n" +
+                             $"⊘ Skipped: {skipped}\n" +
+                             $"✗ Errors: {errors.Count}";
+
+                if (errors.Count > 0) {
+                    message += $"\n\nErrors:\n{string.Join("\n", errors.Take(5))}";
+                    if (errors.Count > 5) {
+                        message += $"\n... and {errors.Count - 5} more";
+                    }
+                }
+
+                MainWindowHelpers.LogInfo($"Batch ORM creation: {created} created, {skipped} skipped, {errors.Count} errors");
+                MessageBox.Show(message, "Batch ORM Creation Complete",
+                    MessageBoxButton.OK, errors.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error in batch ORM creation: {ex.Message}");
+                MessageBox.Show($"Failed to create ORM textures: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void DeleteORMTexture_Click(object sender, RoutedEventArgs e) {
+            // Get selected material to find associated ORM
+            if (MaterialsDataGrid.SelectedItem is not MaterialResource material) {
+                return;
+            }
+
+            var ormTexture = Textures.OfType<ORMTextureResource>()
+                .FirstOrDefault(t => t.Name == $"[ORM - {material.Name}]");
+
+            if (ormTexture == null) {
+                MessageBox.Show($"No ORM texture found for material '{material.Name}'.",
+                    "Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source textures.",
+                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes) {
+                Textures.Remove(ormTexture);
+                MainWindowHelpers.LogInfo($"Deleted ORM texture: {ormTexture.Name}");
+            }
+        }
+
+        // Helper methods for ORM creation
+        private TextureResource? FindTextureById(int? mapId) {
+            if (mapId == null) return null;
+            return Textures.FirstOrDefault(t => t.ID == mapId.ToString());
+        }
+
+        private ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {
+            int count = 0;
+            if (ao != null) count++;
+            if (gloss != null) count++;
+            if (metallic != null) count++;
+
+            // Need at least 2 textures
+            if (count < 2) return ChannelPackingMode.None;
+
+            // Determine mode
+            if (ao != null && gloss != null && metallic != null) {
+                return ChannelPackingMode.OGM; // R=AO, G=Gloss, B=Metallic
+            } else if (ao != null && gloss != null) {
+                return ChannelPackingMode.OG;  // RGB=AO, A=Gloss
+            } else {
+                // Other combinations - default to OGM with missing channels
+                return ChannelPackingMode.OGM;
+            }
+        }
+
         // Context menu handlers for texture rows
         private void ProcessSelectedTextures_Click(object sender, RoutedEventArgs e) {
             ProcessTexturesButton_Click(sender, e);

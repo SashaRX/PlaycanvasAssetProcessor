@@ -3246,7 +3246,8 @@ namespace AssetProcessor {
                 hyperlink.DataContext = material;
 
                 if (mapId.HasValue) {
-                    TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                    string targetId = mapId.Value.ToString();
+                    TextureResource? texture = Textures.FirstOrDefault(t => t.ID == targetId);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
                         // Сохраняем ID в NavigateUri с пользовательской схемой для последующего извлечения
                         hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
@@ -3324,7 +3325,8 @@ namespace AssetProcessor {
                     logger.Debug("Вкладка текстур активирована через TabControl.");
                 }
 
-                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                string targetId = mapId.Value.ToString();
+                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == targetId);
                 if (texture != null) {
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                     view?.MoveCurrentTo(texture);
@@ -3403,7 +3405,8 @@ namespace AssetProcessor {
                     logger.Debug("Вкладка текстур активирована через TabControl.");
                 }
 
-                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                string targetId = textureId.Value.ToString();
+                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == targetId);
                 if (texture != null) {
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                     view?.MoveCurrentTo(texture);
@@ -3463,7 +3466,8 @@ namespace AssetProcessor {
 
             foreach (var textureId in textureIds) {
                 if (textureId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                    string targetId = textureId.Value.ToString();
+                    var texture = Textures.FirstOrDefault(t => t.ID == targetId);
                     if (texture != null) {
                         textureToSelect = texture;
                         break;
@@ -3491,7 +3495,8 @@ namespace AssetProcessor {
 
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
             if (textureId.HasValue) {
-                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                string targetId = textureId.Value.ToString();
+                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == targetId);
                 if (texture != null && File.Exists(texture.Path)) {
                     BitmapImage bitmapImage = new(new Uri(texture.Path));
                     imageControl.Source = bitmapImage;

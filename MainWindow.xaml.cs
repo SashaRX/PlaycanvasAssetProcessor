@@ -5193,18 +5193,27 @@ namespace AssetProcessor {
                 // Debug: Log found textures
                 MainWindowHelpers.LogInfo($"Found textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
 
-                // Check workflow type - Metalness or Specular
+                // Smart workflow detection: prefer actual texture presence over UseMetalness flag
                 string workflowInfo = "";
-                if (material.UseMetalness) {
-                    // Metalness workflow (PBR)
-                    metalnessTexture = FindTextureById(material.MetalnessMapId);
+
+                // First try to find Metalness texture (modern PBR workflow)
+                TextureResource? metalnessCandidate = FindTextureById(material.MetalnessMapId);
+                TextureResource? specularCandidate = FindTextureById(material.SpecularMapId);
+
+                if (metalnessCandidate != null) {
+                    // Metalness texture exists - use PBR workflow
+                    metalnessTexture = metalnessCandidate;
                     workflowInfo = "Workflow: Metalness (PBR)";
-                    MainWindowHelpers.LogInfo($"Metalness workflow: Metallic={metalnessTexture?.Name ?? "null"}");
-                } else {
-                    // Specular workflow - use Specular map as Metallic substitute
-                    metalnessTexture = FindTextureById(material.SpecularMapId);
+                    MainWindowHelpers.LogInfo($"Metalness workflow detected: Metallic={metalnessTexture.Name}");
+                } else if (specularCandidate != null) {
+                    // Only Specular texture exists - use legacy workflow
+                    metalnessTexture = specularCandidate;
                     workflowInfo = "Workflow: Specular (Legacy)\nNote: Specular map will be used as Metallic";
-                    MainWindowHelpers.LogInfo($"Specular workflow: Specular={metalnessTexture?.Name ?? "null"}");
+                    MainWindowHelpers.LogInfo($"Specular workflow detected: Specular={metalnessTexture.Name}");
+                } else {
+                    // No metallic/specular texture found
+                    MainWindowHelpers.LogInfo($"No metallic or specular texture found (MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId})");
+                    workflowInfo = material.UseMetalness ? "Workflow: Metalness (PBR)" : "Workflow: Specular (Legacy)";
                 }
 
                 // Auto-detect packing mode
@@ -5284,12 +5293,14 @@ namespace AssetProcessor {
                         TextureResource? glossTexture = FindTextureById(material.GlossMapId);
                         TextureResource? metalnessTexture = null;
 
-                        // Check workflow type
-                        if (material.UseMetalness) {
-                            metalnessTexture = FindTextureById(material.MetalnessMapId);
-                        } else {
-                            // Use Specular map for Specular workflow
-                            metalnessTexture = FindTextureById(material.SpecularMapId);
+                        // Smart workflow detection: prefer actual texture presence over UseMetalness flag
+                        TextureResource? metalnessCandidate = FindTextureById(material.MetalnessMapId);
+                        TextureResource? specularCandidate = FindTextureById(material.SpecularMapId);
+
+                        if (metalnessCandidate != null) {
+                            metalnessTexture = metalnessCandidate;
+                        } else if (specularCandidate != null) {
+                            metalnessTexture = specularCandidate;
                         }
 
                         // Auto-detect mode

@@ -5348,6 +5348,7 @@ namespace AssetProcessor {
         }
 
         // Helper methods for ORM creation
+        // Finds texture by material map ID (converts int? to string for comparison)
         private TextureResource? FindTextureById(int? mapId) {
             if (mapId == null) return null;
             string targetId = mapId.Value.ToString();

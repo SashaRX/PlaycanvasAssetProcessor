@@ -85,6 +85,14 @@
         [System.Configuration.UserScopedSetting()]
         [System.Diagnostics.DebuggerNonUserCode()]
         [System.Configuration.DefaultSettingValue("")]
+        public string LastSelectedBranchId {
+            get => (string)this[nameof(LastSelectedBranchId)];
+            set => this[nameof(LastSelectedBranchId)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
         public string LastSelectedBranchName {
             get => (string)this[nameof(LastSelectedBranchName)];
             set => this[nameof(LastSelectedBranchName)] = value;

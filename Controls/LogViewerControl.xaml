@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:AssetProcessor"
+             xmlns:settings="clr-namespace:AssetProcessor.Settings;assembly=AssetProcessor"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800">
     <UserControl.Resources>
@@ -78,6 +80,13 @@
 
                 <!-- Control Buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <Slider x:Name="LogScaleSlider" Width="100" Minimum="0.5" Maximum="2.0"
+                            Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=LogsTableScale, Mode=TwoWay}"
+                            TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                            ToolTip="Adjust table scale (50% - 200%)" Margin="0,0,5,0"/>
+                    <TextBlock Text="{Binding ElementName=LogScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                               VerticalAlignment="Center" Margin="0,0,10,0" MinWidth="40"/>
                     <Button x:Name="AutoScrollBtn" Content="📌 Auto-scroll" Width="95" Height="26"
                             Click="AutoScrollBtn_Click"
                             ToolTip="Auto-scroll to bottom on new logs"
@@ -100,18 +109,22 @@
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                   SelectionMode="Extended"
                   BorderThickness="0">
+            <ListView.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding ElementName=LogScaleSlider, Path=Value}"
+                                ScaleY="{Binding ElementName=LogScaleSlider, Path=Value}"/>
+            </ListView.LayoutTransform>
             <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Time" Width="90" DisplayMemberBinding="{Binding Timestamp}"/>
-                    <GridViewColumn Header="Level" Width="60">
+                <GridView AllowsColumnReorder="True">
+                    <GridViewColumn Header="Time" Width="110" DisplayMemberBinding="{Binding Timestamp}"/>
+                    <GridViewColumn Header="Level" Width="70">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Level}" FontWeight="Bold" Foreground="{Binding LevelColor}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Logger" Width="180" DisplayMemberBinding="{Binding Logger}"/>
-                    <GridViewColumn Header="Message" Width="800">
+                    <GridViewColumn Header="Logger" Width="200" DisplayMemberBinding="{Binding Logger}"/>
+                    <GridViewColumn Header="Message" Width="600">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Message}"

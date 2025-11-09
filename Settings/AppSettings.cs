@@ -121,5 +121,45 @@
             get => (bool)this[nameof(HistogramCorrectionEnabled)];
             set => this[nameof(HistogramCorrectionEnabled)] = value;
         }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("1.0")]
+        public double TexturesTableScale {
+            get => (double)this[nameof(TexturesTableScale)];
+            set => this[nameof(TexturesTableScale)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("1.0")]
+        public double ModelsTableScale {
+            get => (double)this[nameof(ModelsTableScale)];
+            set => this[nameof(ModelsTableScale)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("1.0")]
+        public double MaterialsTableScale {
+            get => (double)this[nameof(MaterialsTableScale)];
+            set => this[nameof(MaterialsTableScale)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("1.0")]
+        public double LogsTableScale {
+            get => (double)this[nameof(LogsTableScale)];
+            set => this[nameof(LogsTableScale)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("400")]
+        public double ModelPreviewRowHeight {
+            get => (double)this[nameof(ModelPreviewRowHeight)];
+            set => this[nameof(ModelPreviewRowHeight)] = value;
+        }
     }
 }

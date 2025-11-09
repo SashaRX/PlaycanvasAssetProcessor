@@ -50,5 +50,20 @@
     <Setting Name="UseD3D11NativeKtx2" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="TexturesTableScale" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">1.0</Value>
+    </Setting>
+    <Setting Name="ModelsTableScale" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">1.0</Value>
+    </Setting>
+    <Setting Name="MaterialsTableScale" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">1.0</Value>
+    </Setting>
+    <Setting Name="LogsTableScale" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">1.0</Value>
+    </Setting>
+    <Setting Name="ModelPreviewRowHeight" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">400</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

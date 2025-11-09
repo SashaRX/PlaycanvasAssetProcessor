@@ -105,6 +105,14 @@ namespace AssetProcessor.Controls {
         /// Сохраняет настройки в ORM текстуру
         /// </summary>
         private void SaveORMSettings() {
+            // Early return if controls not initialized yet
+            if (AOSourceComboBox == null || GlossSourceComboBox == null ||
+                MetallicSourceComboBox == null || HeightSourceComboBox == null ||
+                AOProcessingComboBox == null || AOBiasSlider == null ||
+                AOPercentileSlider == null || AODefaultSlider == null ||
+                GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null ||
+                GlossDefaultSlider == null || MetallicDefaultSlider == null ||
+                HeightDefaultSlider == null) return;
             if (currentORMTexture == null) return;
 
             // Sources
@@ -133,6 +141,8 @@ namespace AssetProcessor.Controls {
         /// Обновляет статус готовности
         /// </summary>
         private void UpdateStatus() {
+            // Early return if controls not initialized yet
+            if (StatusText == null || MissingChannelsText == null || PackConvertButton == null) return;
             if (currentORMTexture == null) return;
 
             SaveORMSettings();
@@ -154,6 +164,8 @@ namespace AssetProcessor.Controls {
 
         // Event handlers
         private void PackingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Early return if controls not initialized yet (happens during XAML parsing with IsSelected="True")
+            if (MetallicPanel == null || HeightPanel == null || ModeDescription == null) return;
             if (currentORMTexture == null || PackingModeComboBox.SelectedItem == null) return;
 
             var tag = ((ComboBoxItem)PackingModeComboBox.SelectedItem).Tag.ToString();
@@ -180,6 +192,8 @@ namespace AssetProcessor.Controls {
         }
 
         private void AOProcessing_Changed(object sender, SelectionChangedEventArgs e) {
+            // Early return if controls not initialized yet
+            if (AOBiasPanel == null || AOPercentilePanel == null) return;
             if (AOProcessingComboBox.SelectedItem == null) return;
 
             var mode = ((ComboBoxItem)AOProcessingComboBox.SelectedItem).Tag.ToString();
@@ -193,6 +207,9 @@ namespace AssetProcessor.Controls {
         }
 
         private void GlossToksvig_Changed(object sender, RoutedEventArgs e) {
+            // Early return if controls not initialized yet
+            if (GlossToksvigPanel == null || GlossToksvigCheckBox == null) return;
+
             GlossToksvigPanel.Visibility = (GlossToksvigCheckBox.IsChecked ?? false)
                 ? Visibility.Visible : Visibility.Collapsed;
             UpdateStatus();

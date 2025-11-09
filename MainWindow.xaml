@@ -11,10 +11,16 @@
     xmlns:helix="http://helix-toolkit.org/wpf"
     xmlns:oxy="http://oxyplot.org/wpf"
     xmlns:resources="clr-namespace:AssetProcessor.Resources"
+    xmlns:viewModels="clr-namespace:AssetProcessor.ViewModels"
+    xmlns:infra="clr-namespace:AssetProcessor.Infrastructure"
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
     Title="MainWindow" Height="684" Width="942">
+
+    <Window.DataContext>
+        <infra:ServiceProviderExtension ServiceType="{x:Type viewModels:MainViewModel}" />
+    </Window.DataContext>
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -109,7 +115,11 @@
         <!-- Статусная строка -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" VerticalAlignment="Center" Width="320"/>
+                <TextBlock x:Name="ConnectionStatusTextBlock"
+                           Text="{Binding ConnectionStatusMessage}"
+                           Foreground="{Binding ConnectionStatusBrush}"
+                           VerticalAlignment="Center"
+                           Width="320"/>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
                 <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="Gray" FontSize="10" MinWidth="200" TextAlignment="Right"/>
@@ -129,12 +139,12 @@
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <!-- Dynamic Action Button -->
                     <Button x:Name="DynamicConnectionButton"
-                            Content="Connect"
+                            Content="{Binding ConnectionButtonContent}"
+                            Command="{Binding PrimaryActionCommand}"
                             Margin="0,2,0,4"
                             Height="24"
                             FontWeight="Bold"
-                            Click="DynamicConnectionButton_Click"
-                            ToolTip="Connect to PlayCanvas"/>
+                            ToolTip="{Binding ConnectionButtonToolTip}"/>
 
                     <!-- Project and Branch Selection -->
                     <StackPanel Orientation="Horizontal">
@@ -142,6 +152,7 @@
                                   ItemsSource="{Binding Projects}"
                                   DisplayMemberPath="Value"
                                   SelectedValuePath="Key"
+                                  SelectedValue="{Binding SelectedProjectId, Mode=TwoWay}"
                                   SelectionChanged="ProjectsComboBox_SelectionChanged"
                                   Margin="0,0,4,0"
                                   Width="160"
@@ -161,6 +172,7 @@
                                   ItemsSource="{Binding Branches}"
                                   DisplayMemberPath="Name"
                                   SelectedValuePath="Id"
+                                  SelectedValue="{Binding SelectedBranchId, Mode=TwoWay}"
                                   SelectionChanged="BranchesComboBox_SelectionChanged"
                                   Width="160"
                                   Height="20"

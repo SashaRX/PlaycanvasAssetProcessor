@@ -6,6 +6,26 @@
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="350">
+
+    <UserControl.Resources>
+        <!-- ComboBox Style (same as TextureConversionSettingsPanel) -->
+        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="10"/>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="10"/>
+        </Style>
+    </UserControl.Resources>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="10">
             <!-- Header -->
@@ -16,7 +36,9 @@
             <!-- Packing Mode -->
             <GroupBox Header="Packing Mode" Margin="0,0,0,10">
                 <StackPanel>
-                    <ComboBox x:Name="PackingModeComboBox" SelectionChanged="PackingModeComboBox_SelectionChanged">
+                    <ComboBox x:Name="PackingModeComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              SelectionChanged="PackingModeComboBox_SelectionChanged">
                         <ComboBoxItem Content="OG (RGB=AO, A=Gloss)" Tag="OG"/>
                         <ComboBoxItem Content="OGM (R=AO, G=Gloss, B=Metallic)" Tag="OGM" IsSelected="True"/>
                         <ComboBoxItem Content="OGMH (R=AO, G=Gloss, B=Metallic, A=Height)" Tag="OGMH"/>
@@ -30,11 +52,16 @@
             <GroupBox Header="🔴 AO Channel" Margin="0,0,0,10">
                 <StackPanel>
                     <Label Content="Source Texture:" FontWeight="Bold"/>
-                    <ComboBox x:Name="AOSourceComboBox" DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <ComboBox x:Name="AOSourceComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="SourceComboBox_SelectionChanged"/>
                     <Button Content="Auto-Detect" Click="AutoDetectAO_Click" Margin="0,5,0,10" Padding="5,2"/>
 
                     <Label Content="Mipmap Processing:" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <ComboBox x:Name="AOProcessingComboBox" SelectionChanged="AOProcessing_Changed">
+                    <ComboBox x:Name="AOProcessingComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              SelectionChanged="AOProcessing_Changed">
                         <ComboBoxItem Content="Biased Darkening (Recommended)" Tag="BiasedDarkening" IsSelected="True"/>
                         <ComboBoxItem Content="Percentile-based" Tag="Percentile"/>
                         <ComboBoxItem Content="None" Tag="None"/>
@@ -69,7 +96,10 @@
             <GroupBox Header="🟢 Gloss Channel" Margin="0,0,0,10">
                 <StackPanel>
                     <Label Content="Source Texture:" FontWeight="Bold"/>
-                    <ComboBox x:Name="GlossSourceComboBox" DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <ComboBox x:Name="GlossSourceComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="SourceComboBox_SelectionChanged"/>
                     <Button Content="Auto-Detect" Click="AutoDetectGloss_Click" Margin="0,5,0,10" Padding="5,2"/>
 
                     <CheckBox x:Name="GlossToksvigCheckBox" Content="Enable Toksvig Correction"
@@ -96,7 +126,10 @@
             <GroupBox x:Name="MetallicPanel" Header="🔵 Metallic Channel" Margin="0,0,0,10">
                 <StackPanel>
                     <Label Content="Source Texture:" FontWeight="Bold"/>
-                    <ComboBox x:Name="MetallicSourceComboBox" DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <ComboBox x:Name="MetallicSourceComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="SourceComboBox_SelectionChanged"/>
                     <Button Content="Auto-Detect" Click="AutoDetectMetallic_Click" Margin="0,5,0,10" Padding="5,2"/>
 
                     <Label Content="Default Value (if no source):" FontSize="10"/>
@@ -111,7 +144,10 @@
             <GroupBox x:Name="HeightPanel" Header="⚪ Height Channel" Margin="0,0,0,10" Visibility="Collapsed">
                 <StackPanel>
                     <Label Content="Source Texture:" FontWeight="Bold"/>
-                    <ComboBox x:Name="HeightSourceComboBox" DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <ComboBox x:Name="HeightSourceComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="SourceComboBox_SelectionChanged"/>
                     <Button Content="Auto-Detect" Click="AutoDetectHeight_Click" Margin="0,5,0,10" Padding="5,2"/>
 
                     <Label Content="Default Value (if no source):" FontSize="10"/>

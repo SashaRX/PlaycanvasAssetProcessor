@@ -57,10 +57,11 @@ namespace AssetProcessor.Controls {
                 Logger.Info($"First 3 textures: {string.Join(", ", availableTextures.Take(3).Select(t => $"{t.Name}(ID={t.ID})"))}");
             }
 
-            AOSourceComboBox.ItemsSource = availableTextures.ToList();
-            GlossSourceComboBox.ItemsSource = availableTextures.ToList();
-            MetallicSourceComboBox.ItemsSource = availableTextures.ToList();
-            HeightSourceComboBox.ItemsSource = availableTextures.ToList();
+            // CRITICAL: Use same list instance for all ComboBoxes so SelectedItem reference matching works
+            AOSourceComboBox.ItemsSource = availableTextures;
+            GlossSourceComboBox.ItemsSource = availableTextures;
+            MetallicSourceComboBox.ItemsSource = availableTextures;
+            HeightSourceComboBox.ItemsSource = availableTextures;
 
             // Set to -1 (no selection) by default
             AOSourceComboBox.SelectedIndex = -1;
@@ -83,40 +84,6 @@ namespace AssetProcessor.Controls {
             // Packing mode
             PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
 
-            // Sources - find by ID (more reliable than reference comparison)
-            if (currentORMTexture.AOSource != null) {
-                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.AOSource.ID);
-                Logger.Info($"  Searching for AO ID={currentORMTexture.AOSource.ID}: found={found?.Name ?? "null"}");
-                if (found != null) {
-                    AOSourceComboBox.SelectedItem = found;
-                    Logger.Info($"  Set AOSourceComboBox.SelectedItem to {found.Name}");
-                }
-            }
-            if (currentORMTexture.GlossSource != null) {
-                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.GlossSource.ID);
-                Logger.Info($"  Searching for Gloss ID={currentORMTexture.GlossSource.ID}: found={found?.Name ?? "null"}");
-                if (found != null) {
-                    GlossSourceComboBox.SelectedItem = found;
-                    Logger.Info($"  Set GlossSourceComboBox.SelectedItem to {found.Name}");
-                }
-            }
-            if (currentORMTexture.MetallicSource != null) {
-                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.MetallicSource.ID);
-                Logger.Info($"  Searching for Metallic ID={currentORMTexture.MetallicSource.ID}: found={found?.Name ?? "null"}");
-                if (found != null) {
-                    MetallicSourceComboBox.SelectedItem = found;
-                    Logger.Info($"  Set MetallicSourceComboBox.SelectedItem to {found.Name}");
-                }
-            }
-            if (currentORMTexture.HeightSource != null) {
-                var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.HeightSource.ID);
-                Logger.Info($"  Searching for Height ID={currentORMTexture.HeightSource.ID}: found={found?.Name ?? "null"}");
-                if (found != null) {
-                    HeightSourceComboBox.SelectedItem = found;
-                    Logger.Info($"  Set HeightSourceComboBox.SelectedItem to {found.Name}");
-                }
-            }
-
             // AO settings
             AOProcessingComboBox.SelectedIndex = (int)currentORMTexture.AOProcessingMode;
             AOBiasSlider.Value = currentORMTexture.AOBias;
@@ -127,28 +94,75 @@ namespace AssetProcessor.Controls {
             GlossToksvigPowerSlider.Value = currentORMTexture.GlossToksvigPower;
             ToksvigMinMipLevelSlider.Value = currentORMTexture.GlossToksvigMinMipLevel;
             ToksvigEnergyPreservingCheckBox.IsChecked = currentORMTexture.GlossToksvigEnergyPreserving;
-
-            // Use Dispatcher.BeginInvoke to set ComboBox selected items after binding is complete
-            Dispatcher.BeginInvoke(new Action(() => {
-                // Compression settings
-                CompressionFormatComboBox.SelectedItem = currentORMTexture.CompressionFormat;
-                Logger.Info($"  Set CompressionFormatComboBox to {currentORMTexture.CompressionFormat}");
-
-                // Toksvig calculation mode
-                ToksvigCalculationModeComboBox.SelectedItem = currentORMTexture.GlossToksvigCalculationMode;
-                Logger.Info($"  Set ToksvigCalculationModeComboBox to {currentORMTexture.GlossToksvigCalculationMode}");
-
-                // Filter type
-                FilterTypeComboBox.SelectedItem = currentORMTexture.FilterType;
-                Logger.Info($"  Set FilterTypeComboBox to {currentORMTexture.FilterType}");
-            }), System.Windows.Threading.DispatcherPriority.Background);
+            ToksvigSmoothVarianceCheckBox.IsChecked = currentORMTexture.GlossToksvigSmoothVariance;
 
             // Compression quality settings
             QualityLevelSlider.Value = currentORMTexture.QualityLevel;
             UASTCQualitySlider.Value = currentORMTexture.UASTCQuality;
 
-            // Mipmap settings
-            MipmapCountSlider.Value = currentORMTexture.MipmapCount;
+            // UASTC RDO settings
+            EnableRDOCheckBox.IsChecked = currentORMTexture.EnableRDO;
+            RDOLambdaSlider.Value = currentORMTexture.RDOLambda;
+
+            // Perceptual
+            PerceptualCheckBox.IsChecked = currentORMTexture.Perceptual;
+
+            // Supercompression
+            EnableSupercompressionCheckBox.IsChecked = currentORMTexture.EnableSupercompression;
+            SupercompressionLevelSlider.Value = currentORMTexture.SupercompressionLevel;
+
+            // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
+            Dispatcher.BeginInvoke(new Action(() => {
+                Logger.Info("=== Dispatcher.BeginInvoke: Setting ComboBox selections ===");
+
+                // Sources - find by ID and set
+                if (currentORMTexture.AOSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.AOSource.ID);
+                    Logger.Info($"  AO: Looking for ID={currentORMTexture.AOSource.ID}, found={found?.Name ?? "null"}");
+                    if (found != null) {
+                        AOSourceComboBox.SelectedItem = found;
+                        Logger.Info($"  AO: Set SelectedItem to {found.Name}, result={AOSourceComboBox.SelectedItem?.Name ?? "null"}");
+                    }
+                }
+
+                if (currentORMTexture.GlossSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.GlossSource.ID);
+                    Logger.Info($"  Gloss: Looking for ID={currentORMTexture.GlossSource.ID}, found={found?.Name ?? "null"}");
+                    if (found != null) {
+                        GlossSourceComboBox.SelectedItem = found;
+                        Logger.Info($"  Gloss: Set SelectedItem to {found.Name}, result={GlossSourceComboBox.SelectedItem?.Name ?? "null"}");
+                    }
+                }
+
+                if (currentORMTexture.MetallicSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.MetallicSource.ID);
+                    Logger.Info($"  Metallic: Looking for ID={currentORMTexture.MetallicSource.ID}, found={found?.Name ?? "null"}");
+                    if (found != null) {
+                        MetallicSourceComboBox.SelectedItem = found;
+                        Logger.Info($"  Metallic: Set SelectedItem to {found.Name}, result={MetallicSourceComboBox.SelectedItem?.Name ?? "null"}");
+                    }
+                }
+
+                if (currentORMTexture.HeightSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.HeightSource.ID);
+                    if (found != null) HeightSourceComboBox.SelectedItem = found;
+                }
+
+                // Compression settings
+                CompressionFormatComboBox.SelectedItem = currentORMTexture.CompressionFormat;
+                Logger.Info($"  CompressionFormat: Set to {currentORMTexture.CompressionFormat}");
+
+                // Toksvig calculation mode
+                ToksvigCalculationModeComboBox.SelectedItem = currentORMTexture.GlossToksvigCalculationMode;
+                Logger.Info($"  ToksvigCalculationMode: Set to {currentORMTexture.GlossToksvigCalculationMode}");
+
+                // Filter types for each channel
+                AOFilterTypeComboBox.SelectedItem = currentORMTexture.AOFilterType;
+                GlossFilterTypeComboBox.SelectedItem = currentORMTexture.GlossFilterType;
+                MetallicFilterTypeComboBox.SelectedItem = currentORMTexture.MetallicFilterType;
+
+                Logger.Info("=== Dispatcher.BeginInvoke: DONE ===");
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
 
             UpdateStatus();
         }
@@ -164,9 +178,9 @@ namespace AssetProcessor.Controls {
                 AOPercentileSlider == null ||
                 GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null ||
                 CompressionFormatComboBox == null || QualityLevelSlider == null ||
-                UASTCQualitySlider == null || MipmapCountSlider == null ||
-                FilterTypeComboBox == null || ToksvigCalculationModeComboBox == null ||
-                ToksvigMinMipLevelSlider == null || ToksvigEnergyPreservingCheckBox == null) return;
+                UASTCQualitySlider == null || ToksvigCalculationModeComboBox == null ||
+                ToksvigMinMipLevelSlider == null || ToksvigEnergyPreservingCheckBox == null ||
+                ToksvigSmoothVarianceCheckBox == null) return;
             if (currentORMTexture == null) return;
 
             // Sources
@@ -185,6 +199,7 @@ namespace AssetProcessor.Controls {
             currentORMTexture.GlossToksvigPower = (float)GlossToksvigPowerSlider.Value;
             currentORMTexture.GlossToksvigMinMipLevel = (int)ToksvigMinMipLevelSlider.Value;
             currentORMTexture.GlossToksvigEnergyPreserving = ToksvigEnergyPreservingCheckBox.IsChecked ?? true;
+            currentORMTexture.GlossToksvigSmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true;
 
             // Toksvig calculation mode - handle null case
             if (ToksvigCalculationModeComboBox.SelectedItem != null) {
@@ -198,10 +213,26 @@ namespace AssetProcessor.Controls {
             currentORMTexture.QualityLevel = (int)QualityLevelSlider.Value;
             currentORMTexture.UASTCQuality = (int)UASTCQualitySlider.Value;
 
-            // Mipmap settings
-            currentORMTexture.MipmapCount = (int)MipmapCountSlider.Value;
-            if (FilterTypeComboBox.SelectedItem != null) {
-                currentORMTexture.FilterType = (FilterType)FilterTypeComboBox.SelectedItem;
+            // UASTC RDO settings
+            currentORMTexture.EnableRDO = EnableRDOCheckBox.IsChecked ?? false;
+            currentORMTexture.RDOLambda = (float)RDOLambdaSlider.Value;
+
+            // Perceptual
+            currentORMTexture.Perceptual = PerceptualCheckBox.IsChecked ?? false;
+
+            // Supercompression
+            currentORMTexture.EnableSupercompression = EnableSupercompressionCheckBox.IsChecked ?? false;
+            currentORMTexture.SupercompressionLevel = (int)SupercompressionLevelSlider.Value;
+
+            // Per-channel filter settings
+            if (AOFilterTypeComboBox.SelectedItem != null) {
+                currentORMTexture.AOFilterType = (FilterType)AOFilterTypeComboBox.SelectedItem;
+            }
+            if (GlossFilterTypeComboBox.SelectedItem != null) {
+                currentORMTexture.GlossFilterType = (FilterType)GlossFilterTypeComboBox.SelectedItem;
+            }
+            if (MetallicFilterTypeComboBox.SelectedItem != null) {
+                currentORMTexture.MetallicFilterType = (FilterType)MetallicFilterTypeComboBox.SelectedItem;
             }
         }
 
@@ -233,7 +264,7 @@ namespace AssetProcessor.Controls {
         // Event handlers
         private void PackingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Early return if controls not initialized yet (happens during XAML parsing with IsSelected="True")
-            if (MetallicPanel == null || HeightPanel == null) return;
+            if (MetallicPanel == null || HeightPanel == null || MetallicFilterPanel == null) return;
             if (currentORMTexture == null || PackingModeComboBox.SelectedItem == null) return;
 
             var tag = ((ComboBoxItem)PackingModeComboBox.SelectedItem).Tag.ToString();
@@ -246,6 +277,8 @@ namespace AssetProcessor.Controls {
 
             // Update UI visibility
             MetallicPanel.Visibility = currentORMTexture.PackingMode >= ChannelPackingMode.OGM
+                ? Visibility.Visible : Visibility.Collapsed;
+            MetallicFilterPanel.Visibility = currentORMTexture.PackingMode >= ChannelPackingMode.OGM
                 ? Visibility.Visible : Visibility.Collapsed;
             HeightPanel.Visibility = currentORMTexture.PackingMode == ChannelPackingMode.OGMH
                 ? Visibility.Visible : Visibility.Collapsed;
@@ -299,6 +332,24 @@ namespace AssetProcessor.Controls {
                 Logger.Info("Switched to UASTC compression format");
             }
 
+            UpdateStatus();
+        }
+
+        private void EnableRDO_Changed(object sender, RoutedEventArgs e) {
+            // Early return if controls not initialized yet
+            if (RDOPanel == null || EnableRDOCheckBox == null) return;
+
+            RDOPanel.Visibility = (EnableRDOCheckBox.IsChecked ?? false)
+                ? Visibility.Visible : Visibility.Collapsed;
+            UpdateStatus();
+        }
+
+        private void EnableSupercompression_Changed(object sender, RoutedEventArgs e) {
+            // Early return if controls not initialized yet
+            if (SupercompressionPanel == null || EnableSupercompressionCheckBox == null) return;
+
+            SupercompressionPanel.Visibility = (EnableSupercompressionCheckBox.IsChecked ?? false)
+                ? Visibility.Visible : Visibility.Collapsed;
             UpdateStatus();
         }
 
@@ -388,10 +439,10 @@ namespace AssetProcessor.Controls {
         private ChannelPackingSettings CreatePackingSettings() {
             var settings = ChannelPackingSettings.CreateDefault(currentORMTexture!.PackingMode);
 
-            // Set mipmap generation settings
-            settings.MipmapCount = currentORMTexture.MipmapCount == 0 ? -1 : currentORMTexture.MipmapCount; // 0 = auto = -1
+            // Set mipmap generation settings - use auto mipmap count
+            settings.MipmapCount = -1; // Auto
             settings.MipGenerationProfile = new MipGenerationProfile {
-                Filter = currentORMTexture.FilterType,
+                Filter = FilterType.Kaiser, // Default, will be overridden per-channel
                 ApplyGammaCorrection = false, // Linear space for ORM
                 IncludeLastLevel = true,
                 MinMipSize = 1
@@ -404,6 +455,7 @@ namespace AssetProcessor.Controls {
                 settings.RedChannel.AOProcessingMode = currentORMTexture.AOProcessingMode;
                 settings.RedChannel.AOBias = currentORMTexture.AOBias;
                 settings.RedChannel.AOPercentile = currentORMTexture.AOPercentile;
+                settings.RedChannel.Filter = currentORMTexture.AOFilterType;
             }
 
             // Gloss channel (Green or Alpha)
@@ -413,6 +465,7 @@ namespace AssetProcessor.Controls {
                     glossChannel.SourcePath = currentORMTexture.GlossSource?.Path;
                     glossChannel.DefaultValue = 0.5f; // Medium gloss
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
+                    glossChannel.Filter = currentORMTexture.GlossFilterType;
 
                     if (glossChannel.ApplyToksvig) {
                         glossChannel.ToksvigSettings = new ToksvigSettings {
@@ -421,7 +474,7 @@ namespace AssetProcessor.Controls {
                             CalculationMode = currentORMTexture.GlossToksvigCalculationMode,
                             MinToksvigMipLevel = currentORMTexture.GlossToksvigMinMipLevel,
                             UseEnergyPreserving = currentORMTexture.GlossToksvigEnergyPreserving,
-                            SmoothVariance = true,
+                            SmoothVariance = currentORMTexture.GlossToksvigSmoothVariance,
                             VarianceThreshold = 0.002f
                         };
                     }
@@ -432,6 +485,7 @@ namespace AssetProcessor.Controls {
             if (settings.BlueChannel != null) {
                 settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.Path;
                 settings.BlueChannel.DefaultValue = 0.0f; // Non-metallic by default
+                settings.BlueChannel.Filter = currentORMTexture.MetallicFilterType;
             }
 
             // Height channel (Alpha in OGMH mode)

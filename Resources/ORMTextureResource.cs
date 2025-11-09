@@ -23,15 +23,32 @@ namespace AssetProcessor.Resources {
         private ToksvigCalculationMode glossToksvigCalculationMode = ToksvigCalculationMode.Classic;
         private int glossToksvigMinMipLevel = 0;
         private bool glossToksvigEnergyPreserving = true;
+        private bool glossToksvigSmoothVariance = true;
 
         // Compression settings
         private CompressionFormat compressionFormat = CompressionFormat.ETC1S;
         private int qualityLevel = 128;  // ETC1S quality (1-255)
         private int uastcQuality = 2;    // UASTC quality (0-4)
 
+        // UASTC RDO settings
+        private bool enableRDO = false;
+        private float rdoLambda = 1.0f;  // 0.001-10.0
+
+        // Perceptual settings
+        private bool perceptual = false;
+
+        // Supercompression (Zstd) - ONLY for UASTC!
+        private bool enableSupercompression = false;
+        private int supercompressionLevel = 3;  // 1-22
+
         // Mipmap settings
         private int mipmapCount = 0;     // 0 = auto
         private FilterType filterType = FilterType.Kaiser;
+
+        // Per-channel filter settings
+        private FilterType aoFilterType = FilterType.Kaiser;
+        private FilterType glossFilterType = FilterType.Kaiser;
+        private FilterType metallicFilterType = FilterType.Box;  // Box for binary metallic values
 
         // Default values for missing channels
         private float aoDefaultValue = 1.0f;
@@ -208,6 +225,17 @@ namespace AssetProcessor.Resources {
         }
 
         /// <summary>
+        /// Сглаживать вариацию при Toksvig расчете
+        /// </summary>
+        public bool GlossToksvigSmoothVariance {
+            get => glossToksvigSmoothVariance;
+            set {
+                glossToksvigSmoothVariance = value;
+                OnPropertyChanged(nameof(GlossToksvigSmoothVariance));
+            }
+        }
+
+        /// <summary>
         /// Формат сжатия
         /// </summary>
         public new CompressionFormat CompressionFormat {
@@ -241,6 +269,61 @@ namespace AssetProcessor.Resources {
         }
 
         /// <summary>
+        /// Включить RDO для UASTC
+        /// </summary>
+        public bool EnableRDO {
+            get => enableRDO;
+            set {
+                enableRDO = value;
+                OnPropertyChanged(nameof(EnableRDO));
+            }
+        }
+
+        /// <summary>
+        /// RDO Lambda (0.001-10.0)
+        /// </summary>
+        public float RDOLambda {
+            get => rdoLambda;
+            set {
+                rdoLambda = value;
+                OnPropertyChanged(nameof(RDOLambda));
+            }
+        }
+
+        /// <summary>
+        /// Perceptual mode
+        /// </summary>
+        public bool Perceptual {
+            get => perceptual;
+            set {
+                perceptual = value;
+                OnPropertyChanged(nameof(Perceptual));
+            }
+        }
+
+        /// <summary>
+        /// Включить Supercompression (Zstd) - только для UASTC!
+        /// </summary>
+        public bool EnableSupercompression {
+            get => enableSupercompression;
+            set {
+                enableSupercompression = value;
+                OnPropertyChanged(nameof(EnableSupercompression));
+            }
+        }
+
+        /// <summary>
+        /// Уровень Supercompression (1-22)
+        /// </summary>
+        public int SupercompressionLevel {
+            get => supercompressionLevel;
+            set {
+                supercompressionLevel = value;
+                OnPropertyChanged(nameof(SupercompressionLevel));
+            }
+        }
+
+        /// <summary>
         /// Количество мипмапов (0 = auto)
         /// </summary>
         public new int MipmapCount {
@@ -259,6 +342,39 @@ namespace AssetProcessor.Resources {
             set {
                 filterType = value;
                 OnPropertyChanged(nameof(FilterType));
+            }
+        }
+
+        /// <summary>
+        /// Тип фильтра для AO канала
+        /// </summary>
+        public FilterType AOFilterType {
+            get => aoFilterType;
+            set {
+                aoFilterType = value;
+                OnPropertyChanged(nameof(AOFilterType));
+            }
+        }
+
+        /// <summary>
+        /// Тип фильтра для Gloss канала
+        /// </summary>
+        public FilterType GlossFilterType {
+            get => glossFilterType;
+            set {
+                glossFilterType = value;
+                OnPropertyChanged(nameof(GlossFilterType));
+            }
+        }
+
+        /// <summary>
+        /// Тип фильтра для Metallic канала
+        /// </summary>
+        public FilterType MetallicFilterType {
+            get => metallicFilterType;
+            set {
+                metallicFilterType = value;
+                OnPropertyChanged(nameof(MetallicFilterType));
             }
         }
 

@@ -23,6 +23,7 @@
         <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
         <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
+        <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
 
 
         <Style TargetType="Expander">
@@ -278,6 +279,12 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
+                                    <Style.Triggers>
+                                        <!-- Color ORM textures with green background -->
+                                        <DataTrigger Binding="{Binding Name, Converter={StaticResource ORMTextureColorConverter}}" Value="True">
+                                            <Setter Property="Background" Value="#7fc149"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>

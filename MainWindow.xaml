@@ -690,11 +690,7 @@
                 <Border x:Name="ModelViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition x:Name="ModelPreviewRow" MinHeight="200" MaxHeight="800">
-                                <RowDefinition.Height>
-                                    <GridLength Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelPreviewRowHeight, Mode=TwoWay}" />
-                                </RowDefinition.Height>
-                            </RowDefinition>
+                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="800" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" MinHeight="150" />
                         </Grid.RowDefinitions>
@@ -743,7 +739,8 @@
                         </Expander>
 
                         <!-- GridSplitter between Model Preview and bottom section -->
-                        <GridSplitter Grid.Row="1"
+                        <GridSplitter x:Name="ModelPreviewGridSplitter"
+                                      Grid.Row="1"
                                       Height="6"
                                       Margin="0,4,0,4"
                                       Background="#FFE0E0E0"
@@ -752,7 +749,8 @@
                                       ResizeDirection="Rows"
                                       ResizeBehavior="PreviousAndNext"
                                       ShowsPreview="False"
-                                      Cursor="SizeNS" />
+                                      Cursor="SizeNS"
+                                      DragCompleted="ModelPreviewGridSplitter_DragCompleted" />
 
                         <!-- Bottom section: UV Maps + Settings -->
                         <Grid Grid.Row="2">

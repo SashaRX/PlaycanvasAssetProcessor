@@ -212,6 +212,12 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
+
+            // Загрузка сохраненной высоты ModelPreviewRow из настроек
+            if (ModelPreviewRow != null && AppSettings.Default.ModelPreviewRowHeight > 0) {
+                ModelPreviewRow.Height = new GridLength(AppSettings.Default.ModelPreviewRowHeight);
+            }
+
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -2950,6 +2956,17 @@ namespace AssetProcessor {
 
             if (row1Height < minHeight || row2Height < minHeight) {
                 e.Handled = true;
+            }
+        }
+
+        private void ModelPreviewGridSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+            // Сохраняем текущую высоту ModelPreviewRow в настройки
+            if (ModelPreviewRow != null) {
+                double currentHeight = ModelPreviewRow.ActualHeight;
+                if (currentHeight > 0 && currentHeight >= 200 && currentHeight <= 800) {
+                    AppSettings.Default.ModelPreviewRowHeight = currentHeight;
+                    AppSettings.Default.Save();
+                }
             }
         }
 

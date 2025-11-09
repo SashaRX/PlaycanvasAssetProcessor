@@ -2616,7 +2616,10 @@ namespace AssetProcessor {
                     logger.Error(ex, "Error canceling operations during window closing");
                 } finally {
                     SaveCurrentSettings();
-                    Close();
+                    Dispatcher.BeginInvoke(new Action(() => {
+                        Closing -= MainWindow_Closing;
+                        Close();
+                    }), DispatcherPriority.Normal);
                 }
             } else if (shutdownTask != null && !shutdownTask.IsCompleted) {
                 if (e != null) {
@@ -2662,10 +2665,17 @@ namespace AssetProcessor {
                 .ToArray();
 
             if (pendingOperations.Length > 0) {
-                try {
-                    await Task.WhenAll(pendingOperations).ConfigureAwait(true);
-                } catch (Exception ex) {
-                    logger.Error(ex, "Error awaiting background operations during shutdown");
+                Task waitAllTask = Task.WhenAll(pendingOperations);
+                Task completedTask = await Task.WhenAny(waitAllTask, Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(true);
+
+                if (completedTask == waitAllTask) {
+                    try {
+                        await waitAllTask.ConfigureAwait(true);
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Error awaiting background operations during shutdown");
+                    }
+                } else {
+                    logger.Warn("Timeout while waiting for background operations to finish during shutdown. Continuing shutdown");
                 }
             }
 

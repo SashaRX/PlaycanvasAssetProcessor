@@ -52,12 +52,6 @@ namespace AssetProcessor {
         UV1
     }
 
-    public enum ConnectionState {
-        Disconnected,    // Не подключены - кнопка "Connect"
-        UpToDate,        // Проект загружен, актуален - кнопка "Refresh" (проверить обновления)
-        NeedsDownload    // Нужно скачать (первый раз ИЛИ есть обновления) - кнопка "Download"
-    }
-
     public partial class MainWindow : Window, INotifyPropertyChanged {
 
         /// <summary>
@@ -260,8 +254,12 @@ namespace AssetProcessor {
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
             TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
 
-            DataContext = this;
             this.Closing += MainWindow_Closing;
+            DataContextChanged += MainWindow_DataContextChanged;
+
+            if (DataContext is MainViewModel viewModel) {
+                AttachViewModel(viewModel);
+            }
             //LoadLastSettings();
 
             RenderOptions.SetBitmapScalingMode(UVImage, BitmapScalingMode.HighQuality);
@@ -4234,15 +4232,17 @@ namespace AssetProcessor {
         }
 
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
-            Dispatcher.Invoke(() => {
+            if (DataContext is MainViewModel viewModel) {
                 if (isConnected) {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                    viewModel.ConnectionStatusMessage = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
+                    viewModel.ConnectionStatusBrush = new SolidColorBrush(Colors.Green);
                 } else {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+                    viewModel.ConnectionStatusMessage = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
+                    viewModel.ConnectionStatusBrush = new SolidColorBrush(Colors.Red);
                 }
-            });
+
+                viewModel.IsConnected = isConnected;
+            }
         }
 
         /// <summary>
@@ -4251,56 +4251,14 @@ namespace AssetProcessor {
         private void UpdateConnectionButton(ConnectionState newState) {
             currentConnectionState = newState;
 
-            Dispatcher.Invoke(() => {
-                bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
-
-                switch (currentConnectionState) {
-                    case ConnectionState.Disconnected:
-                        DynamicConnectionButton.Content = "Connect";
-                        DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
-                        DynamicConnectionButton.IsEnabled = true;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)); // Grey
-                        break;
-
-                    case ConnectionState.UpToDate:
-                        DynamicConnectionButton.Content = "Refresh";
-                        DynamicConnectionButton.ToolTip = "Check for updates from PlayCanvas server";
-                        DynamicConnectionButton.IsEnabled = hasSelection;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
-                        break;
-
-                    case ConnectionState.NeedsDownload:
-                        DynamicConnectionButton.Content = "Download";
-                        DynamicConnectionButton.ToolTip = "Download assets from PlayCanvas (list + files)";
-                        DynamicConnectionButton.IsEnabled = hasSelection;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
-                        break;
-                }
-            });
+            if (DataContext is MainViewModel viewModel) {
+                viewModel.ConnectionState = newState;
+            }
         }
 
         /// <summary>
         /// Обработчик клика по динамической кнопке подключения
         /// </summary>
-        private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
-            switch (currentConnectionState) {
-                case ConnectionState.Disconnected:
-                    // Подключаемся к PlayCanvas и загружаем список проектов
-                    ConnectToPlayCanvas();
-                    break;
-
-                case ConnectionState.UpToDate:
-                    // Проверяем наличие обновлений на сервере
-                    await RefreshFromServer();
-                    break;
-
-                case ConnectionState.NeedsDownload:
-                    // Скачиваем список ассетов + файлы
-                    await DownloadFromServer();
-                    break;
-            }
-        }
-
         /// <summary>
         /// Подключение к PlayCanvas - загружает список проектов и веток
         /// </summary>
@@ -4315,7 +4273,9 @@ namespace AssetProcessor {
         /// </summary>
         private async Task RefreshFromServer() {
             try {
-                DynamicConnectionButton.IsEnabled = false;
+                if (DataContext is MainViewModel viewModel) {
+                    viewModel.IsBusy = true;
+                }
 
                 bool hasUpdates = await CheckForUpdates();
 
@@ -4331,7 +4291,9 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 MainWindowHelpers.LogError($"Error in RefreshFromServer: {ex}");
             } finally {
-                DynamicConnectionButton.IsEnabled = true;
+                if (DataContext is MainViewModel viewModel) {
+                    viewModel.IsBusy = false;
+                }
             }
         }
 
@@ -4341,7 +4303,9 @@ namespace AssetProcessor {
         private async Task DownloadFromServer() {
             try {
                 CancelButton.IsEnabled = true;
-                DynamicConnectionButton.IsEnabled = false;
+                if (DataContext is MainViewModel viewModel) {
+                    viewModel.IsBusy = true;
+                }
 
                 if (cancellationTokenSource != null) {
                     // Загружаем список ассетов (assets_list.json) с сервера
@@ -4358,18 +4322,43 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogError($"Error in DownloadFromServer: {ex}");
             } finally {
                 CancelButton.IsEnabled = false;
-                DynamicConnectionButton.IsEnabled = true;
+                if (DataContext is MainViewModel viewModel) {
+                    viewModel.IsBusy = false;
+                }
             }
         }
 
         private void SaveCurrentSettings() {
-            if (ProjectsComboBox.SelectedItem != null) {
-                AppSettings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+            if (DataContext is MainViewModel viewModel) {
+                if (!string.IsNullOrWhiteSpace(viewModel.SelectedProjectId)) {
+                    AppSettings.Default.LastSelectedProjectId = viewModel.SelectedProjectId;
+                }
+
+                if (!string.IsNullOrWhiteSpace(viewModel.SelectedBranchId)) {
+                    var branchName = viewModel.Branches.FirstOrDefault(b => string.Equals(b.Id, viewModel.SelectedBranchId, StringComparison.Ordinal))?.Name;
+                    if (!string.IsNullOrWhiteSpace(branchName)) {
+                        AppSettings.Default.LastSelectedBranchName = branchName;
+                    }
+                }
+
+                AppSettings.Default.Save();
             }
-            if (BranchesComboBox.SelectedItem != null) {
-                AppSettings.Default.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
+        }
+
+        private void MainWindow_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e) {
+            if (e.NewValue is MainViewModel viewModel) {
+                AttachViewModel(viewModel);
             }
-            AppSettings.Default.Save();
+        }
+
+        private void AttachViewModel(MainViewModel viewModel) {
+            viewModel.Textures = Textures;
+            viewModel.Models = Models;
+            viewModel.Materials = Materials;
+            viewModel.Assets = Assets;
+            viewModel.Projects = Projects;
+            viewModel.Branches = Branches;
+            viewModel.ConnectionState = currentConnectionState;
         }
 
         /// <summary>

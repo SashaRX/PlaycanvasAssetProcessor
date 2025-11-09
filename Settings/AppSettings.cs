@@ -1,5 +1,5 @@
 ﻿namespace AssetProcessor.Settings {
-    internal sealed partial class AppSettings : System.Configuration.ApplicationSettingsBase {
+    public sealed partial class AppSettings : System.Configuration.ApplicationSettingsBase {
         public static AppSettings Default { get; } = (AppSettings)Synchronized(new AppSettings());
 
         [System.Configuration.UserScopedSetting()]
@@ -80,6 +80,14 @@
         public string LastSelectedProjectId {
             get => (string)this[nameof(LastSelectedProjectId)];
             set => this[nameof(LastSelectedProjectId)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string LastSelectedBranchId {
+            get => (string)this[nameof(LastSelectedBranchId)];
+            set => this[nameof(LastSelectedBranchId)] = value;
         }
 
         [System.Configuration.UserScopedSetting()]

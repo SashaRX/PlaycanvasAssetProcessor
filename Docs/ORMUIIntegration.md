@@ -108,17 +108,17 @@ private void AutoCreateORMTextures() {
     foreach (var group in groupedTextures) {
         // Берем любую текстуру как базу
         var baseTexture = group.First();
-        var detection = detector.DetectORMTextures(baseTexture.LocalPath, validateDimensions: false);
+        var detection = detector.DetectORMTextures(baseTexture.Path, validateDimensions: false);
 
         if (detection.FoundCount >= 2) {
             var ormTexture = new ORMTextureResource {
                 Name = $"[ORM] {group.Key}",
                 TextureType = "ORM (Virtual)",
                 PackingMode = detection.GetRecommendedPackingMode(),
-                AOSource = Textures.FirstOrDefault(t => t.LocalPath == detection.AOPath),
-                GlossSource = Textures.FirstOrDefault(t => t.LocalPath == detection.GlossPath),
-                MetallicSource = Textures.FirstOrDefault(t => t.LocalPath == detection.MetallicPath),
-                HeightSource = Textures.FirstOrDefault(t => t.LocalPath == detection.HeightPath)
+                AOSource = Textures.FirstOrDefault(t => t.Path == detection.AOPath),
+                GlossSource = Textures.FirstOrDefault(t => t.Path == detection.GlossPath),
+                MetallicSource = Textures.FirstOrDefault(t => t.Path == detection.MetallicPath),
+                HeightSource = Textures.FirstOrDefault(t => t.Path == detection.HeightPath)
             };
 
             Textures.Add(ormTexture);

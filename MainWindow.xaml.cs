@@ -17,8 +17,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,22 +57,6 @@ namespace AssetProcessor {
     }
 
     public partial class MainWindow : Window, INotifyPropertyChanged {
-
-        /// <summary>
-        /// КРИТИЧНО: Универсальный sanitizer для всех путей файлов и папок.
-        /// Удаляет символы новой строки (\r, \n) и лишние пробелы, которые могут приходить из PlayCanvas API.
-        /// ВСЕГДА применяйте этот метод к путям перед File/Directory операциями!
-        /// </summary>
-        private static string SanitizePath(string? path) {
-            if (string.IsNullOrWhiteSpace(path)) {
-                return string.Empty;
-            }
-
-            return path
-                .Replace("\r", "")   // Удаляем \r
-                .Replace("\n", "")   // Удаляем \n (КРИТИЧНО! Ломает toktx и File.Exists)
-                .Trim();             // Удаляем пробелы по краям
-        }
 
         private ObservableCollection<TextureResource> textures = [];
         public ObservableCollection<TextureResource> Textures {
@@ -121,8 +103,10 @@ namespace AssetProcessor {
             }
         }
 
-        private readonly SemaphoreSlim getAssetsSemaphore;
-        private readonly SemaphoreSlim downloadSemaphore;
+        private readonly AssetQueueService assetQueueService;
+        private readonly LocalCacheService localCacheService;
+        private readonly ProjectAssetService projectAssetService;
+        private readonly IPlayCanvasService playCanvasService;
         private string? projectFolderPath = string.Empty;
         private string? userName = string.Empty;
         private string? userID = string.Empty;
@@ -130,11 +114,7 @@ namespace AssetProcessor {
         private bool? isViewerVisible = true;
         private BitmapSource? originalBitmapSource;
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
-        private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
-        private readonly List<string> excludedFormats = [".hdr", ".avif"];
-        private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly PlayCanvasService playCanvasService = new();
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
@@ -194,9 +174,6 @@ namespace AssetProcessor {
             public required int Height { get; init; }
         }
 
-        private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
-        private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
-        private readonly object ignoredAssetTypesLock = new();
         private bool isBranchInitializationInProgress;
         private bool isProjectInitializationInProgress;
 
@@ -218,6 +195,10 @@ namespace AssetProcessor {
 
         public MainWindow() {
             InitializeComponent();
+            playCanvasService = new PlayCanvasService();
+            localCacheService = new LocalCacheService();
+            assetQueueService = new AssetQueueService(AppSettings.Default.GetTexturesSemaphoreLimit, AppSettings.Default.DownloadSemaphoreLimit);
+            projectAssetService = new ProjectAssetService(playCanvasService, localCacheService, assetQueueService);
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -246,9 +227,6 @@ namespace AssetProcessor {
             PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
 
             LoadModel(path: MainWindowHelpers.MODEL_PATH);
-
-            getAssetsSemaphore = new SemaphoreSlim(AppSettings.Default.GetTexturesSemaphoreLimit);
-            downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
 
             projectFolderPath = AppSettings.Default.ProjectsFolderPath;
             UpdateConnectionStatus(false);
@@ -2210,7 +2188,7 @@ namespace AssetProcessor {
 
             // КРИТИЧНО: Применяем SanitizePath к входному пути!
             // Без этого File.Exists() не найдёт файл если путь содержит \n
-            sourcePath = SanitizePath(sourcePath);
+            sourcePath = localCacheService.SanitizePath(sourcePath);
 
             string? directory = Path.GetDirectoryName(sourcePath);
             if (string.IsNullOrEmpty(directory)) {
@@ -2254,7 +2232,9 @@ namespace AssetProcessor {
 
         private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
             try {
-                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+                if (globalTextureSettings == null) {
+                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+                }
             } catch (Exception ex) {
                 logger.Debug(ex, "Не удалось загрузить настройки конвертации для определения каталога KTX2.");
                 return null;
@@ -2609,7 +2589,9 @@ namespace AssetProcessor {
                 textureLoadCancellation?.Dispose();
 
                 // Освобождаем PlayCanvasService
-                playCanvasService?.Dispose();
+                if (playCanvasService is IDisposable disposableService) {
+                    disposableService.Dispose();
+                }
             } catch (Exception ex) {
                 logger.Error(ex, "Error canceling operations during window closing");
             }
@@ -2618,12 +2600,15 @@ namespace AssetProcessor {
         }
 
         private void CancelButton_Click(object? sender, RoutedEventArgs e) {
-            cancellationTokenSource?.Cancel();
+            if (cancellationTokenSource != null) {
+                cancellationTokenSource.Cancel();
+            }
+
             cancellationTokenSource = new CancellationTokenSource();
         }
 
         private void Setting(object? sender, RoutedEventArgs e) {
-            SettingsWindow settingsWindow = new();
+            SettingsWindow settingsWindow = new SettingsWindow();
             // Subscribe to preview renderer changes
             settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
             settingsWindow.ShowDialog();
@@ -2721,7 +2706,7 @@ namespace AssetProcessor {
 
             if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
-                SettingsWindow settingsWindow = new();
+                SettingsWindow settingsWindow = new SettingsWindow();
                 // Subscribe to preview renderer changes
                 settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
                 settingsWindow.ShowDialog();
@@ -2924,7 +2909,7 @@ namespace AssetProcessor {
         }
 
         private void SettingsMenu(object? sender, RoutedEventArgs e) {
-            SettingsWindow settingsWindow = new();
+            SettingsWindow settingsWindow = new SettingsWindow();
             // Subscribe to preview renderer changes
             settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
             settingsWindow.ShowDialog();
@@ -3272,7 +3257,9 @@ namespace AssetProcessor {
 
                 mapId = mapIdSelector(material);
             }
-            material ??= new MaterialResource { Name = "<unknown>", ID = -1 };
+            if (material == null) {
+                material = new MaterialResource { Name = "<unknown>", ID = -1 };
+            }
             if (!mapId.HasValue) {
                 logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры {MapType}.", material.Name, material.ID, mapType);
                 return;
@@ -3542,157 +3529,38 @@ namespace AssetProcessor {
                                                                              m.Status == "Error").Cast<BaseResource>())
                                                 .OrderBy(r => r.Name)];
 
-                IEnumerable<Task> downloadTasks = selectedResources.Select(resource => DownloadResourceAsync(resource));
+                CancellationToken token = cancellationTokenSource.Token;
+                IEnumerable<Task> downloadTasks = selectedResources.Select(resource => DownloadResourceAsync(resource, token));
                 await Task.WhenAll(downloadTasks);
 
-                // Пересчитываем индексы после завершения загрузки
                 RecalculateIndices();
+            } catch (OperationCanceledException) {
+                MainWindowHelpers.LogInfo("Download operation was cancelled.");
             } catch (Exception ex) {
                 MessageBox.Show($"Error: {ex.Message}");
                 MainWindowHelpers.LogError($"Error: {ex}");
             }
         }
 
-        private async Task DownloadResourceAsync(BaseResource resource) {
-            const int maxRetries = 5;
-
-            await downloadSemaphore.WaitAsync(); // Ожидаем освобождения слота в семафоре
-            try {
-                for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                    try {
-                        resource.Status = "Downloading";
-                        resource.DownloadProgress = 0;
-
-                        if (resource is MaterialResource materialResource) {
-                            // Обработка загрузки материалов по ID
-                            await DownloadMaterialByIdAsync(materialResource);
-                        } else {
-                            // Обработка загрузки файлов (текстур и моделей)
-                            await DownloadFileAsync(resource);
-                        }
-                        break;
-                    } catch (Exception ex) {
-                        MainWindowHelpers.LogError($"Error downloading resource: {ex.Message}");
-                        resource.Status = "Error";
-                        if (attempt == maxRetries) {
-                            break;
-                        }
-                    }
-                }
-            } finally {
-                downloadSemaphore.Release();
-            }
-
-        }
-
-        private static async Task DownloadMaterialByIdAsync(MaterialResource materialResource) {
-            const int maxRetries = 5;
-            const int delayMilliseconds = 2000;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        private Task DownloadResourceAsync(BaseResource resource, CancellationToken cancellationToken) {
+            return assetQueueService.RunDownloadQueueAsync(async ct => {
                 try {
-                    using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
-                        ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
+                    resource.Status = "Downloading";
+                    resource.DownloadProgress = 0;
 
-                    // Изменение: заменяем последнюю папку на файл с расширением .json
-                    string directoryPath = Path.GetDirectoryName(materialResource.Path) ?? throw new InvalidOperationException();
-                    string materialPath = Path.Combine(directoryPath, $"{materialResource.Name}.json");
-
-                    Directory.CreateDirectory(directoryPath);
-
-                    await File.WriteAllTextAsync(materialPath, materialJson.ToString(), default);
-                    materialResource.Status = "Downloaded";
-                    break;
-                } catch (IOException ex) {
-                    if (attempt == maxRetries) {
-                        materialResource.Status = "Error";
-                        MainWindowHelpers.LogError($"Error downloading material after {maxRetries} attempts: {ex.Message}");
+                    if (resource is MaterialResource materialResource) {
+                        await localCacheService.DownloadMaterialAsync(materialResource, innerToken => playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), AppSettings.Default.PlaycanvasApiKey, innerToken), ct).ConfigureAwait(false);
                     } else {
-                        MainWindowHelpers.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
-                        await Task.Delay(delayMilliseconds);
+                        await localCacheService.DownloadFileAsync(resource, AppSettings.Default.PlaycanvasApiKey, ct).ConfigureAwait(false);
                     }
-                } catch (Exception ex) {
-                    materialResource.Status = "Error";
-                    MainWindowHelpers.LogError($"Error downloading material: {ex.Message}");
-                    break;
-                }
-            }
-        }
-
-        private static async Task DownloadFileAsync(BaseResource resource) {
-            if (resource == null || string.IsNullOrEmpty(resource.Path)) { // Если путь к файлу не указан, создаем его в папке проекта
-                return;
-            }
-
-            const int maxRetries = 5;
-            const int delayMilliseconds = 2000;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    using HttpClient client = new();
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
-
-                    HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
-
-                    if (!response.IsSuccessStatusCode) {
-                        throw new Exception($"Failed to download resource: {response.StatusCode}");
-                    }
-
-                    long totalBytes = response.Content.Headers.ContentLength ?? 0L;
-                    byte[] buffer = new byte[8192];
-                    int bytesRead = 0;
-
-                    using (Stream stream = await response.Content.ReadAsStreamAsync())
-                    using (FileStream fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
-                        while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
-                            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                            resource.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
-                        }
-                    }
-
-                    MainWindowHelpers.LogInfo($"File downloaded successfully: {resource.Path}");
-                    if (!File.Exists(resource.Path)) {
-                        MainWindowHelpers.LogError($"File was expected but not found: {resource.Path}");
-                        resource.Status = "Error";
-                        return;
-                    }
-
-                    // Дополнительное логирование размера файла
-                    FileInfo fileInfo = new(resource.Path);
-                    long fileSizeInBytes = fileInfo.Length;
-                    long resourceSizeInBytes = resource.Size;
-                    MainWindowHelpers.LogInfo($"File size after download: {fileSizeInBytes}");
-
-                    double tolerance = 0.05;
-                    double lowerBound = resourceSizeInBytes * (1 - tolerance);
-                    double upperBound = resourceSizeInBytes * (1 + tolerance);
-
-                    if (fileInfo.Length == 0) {
-                        resource.Status = "Empty File";
-                    } else if (!string.IsNullOrEmpty(resource.Hash) && FileHelper.VerifyFileHash(resource.Path, resource.Hash)) {
-                        resource.Status = "Downloaded";
-                    } else if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                        resource.Status = "Size Mismatch";
-                    } else {
-                        resource.Status = "Corrupted";
-                    }
-                    break;
-                } catch (IOException ex) {
-                    if (attempt == maxRetries) {
-                        resource.Status = "Error";
-                        MainWindowHelpers.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
-                    } else {
-                        MainWindowHelpers.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
-                        await Task.Delay(delayMilliseconds);
-                    }
+                } catch (OperationCanceledException) {
+                    resource.Status = "Error";
+                    throw;
                 } catch (Exception ex) {
                     resource.Status = "Error";
                     MainWindowHelpers.LogError($"Error downloading resource: {ex.Message}");
-                    break;
                 }
-            }
+            }, cancellationToken);
         }
 
         #endregion
@@ -3713,391 +3581,49 @@ namespace AssetProcessor {
 
                 MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
                 JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
-                if (assetsResponse != null) {
-                    MainWindowHelpers.LogInfo("Assets received from server, processing...");
-                    // Строим иерархию папок из списка ассетов
-                    BuildFolderHierarchyFromAssets(assetsResponse);
-                    // Сохраняем JSON-ответ в файл
-
-                    if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
-                        string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
-                        await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
-                        if (!File.Exists(jsonFilePath)) {
-                            MessageBox.Show($"Failed to save the JSON file to {jsonFilePath}. Please check your permissions.");
-                        }
-                    }
-
-
-                    UpdateConnectionStatus(true);
-
-                    textures.Clear(); // Очищаем текущий список текстур
-                    models.Clear(); // Очищаем текущий список моделей
-                    materials.Clear(); // Очищаем текущий список материалов
-
-                    List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
-                    int assetCount = supportedAssets.Count;
-
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        ProgressBar.Value = 0;
-                        ProgressBar.Maximum = assetCount;
-                        ProgressTextBlock.Text = $"0/{assetCount}";
-                    });
-
-                    IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
-                    {
-                        await ProcessAsset(asset, 0, cancellationToken);  // Передаем аргумент cancellationToken
-                        await Dispatcher.InvokeAsync(() =>
-                        {
-                            ProgressBar.Value++;
-                            ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
-                        });
-                    }));
-
-                    await Task.WhenAll(tasks);
-
-                    RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
-                    MainWindowHelpers.LogInfo("=== TryConnect COMPLETED ===");
-                } else {
+                if (assetsResponse == null) {
                     UpdateConnectionStatus(false, "Failed to connect");
+                    return;
                 }
+
+                folderPaths = projectAssetService.BuildFolderHierarchy(assetsResponse);
+
+                if (!string.IsNullOrEmpty(projectFolderPath)) {
+                    await localCacheService.SaveAssetsListAsync(assetsResponse, projectFolderPath, cancellationToken).ConfigureAwait(false);
+                }
+
+                UpdateConnectionStatus(true);
+
+                List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null || string.Equals(asset["type"]?.ToString(), "material", StringComparison.OrdinalIgnoreCase))];
+                int assetCount = supportedAssets.Count;
+
+                await Dispatcher.InvokeAsync(() => {
+                    ProgressBar.Value = 0;
+                    ProgressBar.Maximum = assetCount;
+                    ProgressTextBlock.Text = $"0/{assetCount}";
+                });
+
+                IProgress<int> progress = new Progress<int>(_ => Dispatcher.Invoke(() => {
+                    ProgressBar.Value++;
+                    ProgressTextBlock.Text = $"{ProgressBar.Value}/{ProgressBar.Maximum}";
+                }));
+
+                ProjectAssetsResult result = await projectAssetService.ProcessAssetsAsync(
+                    assetsResponse,
+                    AppSettings.Default.ProjectsFolderPath,
+                    projectName ?? string.Empty,
+                    folderPaths,
+                    AppSettings.Default.PlaycanvasApiKey,
+                    cancellationToken,
+                    progress).ConfigureAwait(false);
+
+                ApplyAssetResult(result);
+                MainWindowHelpers.LogInfo("=== TryConnect COMPLETED ===");
+            } catch (OperationCanceledException) {
+                MainWindowHelpers.LogInfo("TryConnect cancelled");
             } catch (Exception ex) {
                 MessageBox.Show($"Error in TryConnect: {ex.Message}");
                 MainWindowHelpers.LogError($"Error in TryConnect: {ex}");
-            }
-        }
-
-        private void BuildFolderHierarchyFromAssets(JArray assetsResponse) {
-            try {
-                folderPaths.Clear();
-
-                // Извлекаем только папки из списка ассетов
-                var folders = assetsResponse.Where(asset => asset["type"]?.ToString() == "folder").ToList();
-
-                // Создаем словарь для быстрого доступа к папкам по ID
-                Dictionary<int, JToken> foldersById = new();
-                foreach (JToken folder in folders) {
-                    int? folderId = folder["id"]?.Type == JTokenType.Integer ? (int?)folder["id"] : null;
-                    if (folderId.HasValue) {
-                        foldersById[folderId.Value] = folder;
-                    }
-                }
-
-                // Рекурсивная функция для построения полного пути папки
-                string BuildFolderPath(int folderId) {
-                    if (folderPaths.ContainsKey(folderId)) {
-                        return folderPaths[folderId];
-                    }
-
-                    if (!foldersById.ContainsKey(folderId)) {
-                        return string.Empty;
-                    }
-
-                    JToken folder = foldersById[folderId];
-                    // КРИТИЧНО: Используем SanitizePath для очистки имени папки от \r, \n и пробелов!
-                    string folderName = SanitizePath(folder["name"]?.ToString());
-                    int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
-
-                    string fullPath;
-                    if (parentId.HasValue && parentId.Value != 0) {
-                        // Есть родительская папка - рекурсивно строим путь
-                        string parentPath = BuildFolderPath(parentId.Value);
-                        fullPath = string.IsNullOrEmpty(parentPath) ? folderName : Path.Combine(parentPath, folderName);
-                    } else {
-                        // Папка верхнего уровня (parent == 0 или null)
-                        fullPath = folderName;
-                    }
-
-                    // КРИТИЧНО: Применяем SanitizePath к финальному пути для гарантии
-                    fullPath = SanitizePath(fullPath);
-
-                    folderPaths[folderId] = fullPath;
-                    return fullPath;
-                }
-
-                // Строим пути для всех папок
-                foreach (var folderId in foldersById.Keys) {
-                    BuildFolderPath(folderId);
-                }
-
-                MainWindowHelpers.LogInfo($"Built folder hierarchy with {folderPaths.Count} folders from assets list");
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error building folder hierarchy from assets: {ex.Message}");
-                // Продолжаем работу даже если не удалось загрузить папки
-            }
-        }
-
-        private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
-            try {
-                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
-
-                if (!Directory.Exists(projectFolderPath)) {
-                    Directory.CreateDirectory(projectFolderPath);
-                }
-
-                string jsonString = jsonResponse.ToString(Formatting.Indented);
-                await File.WriteAllTextAsync(jsonFilePath, jsonString);
-
-                MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
-            } catch (ArgumentNullException ex) {
-                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
-            } catch (ArgumentException ex) {
-                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
-            }
-        }
-
-        private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
-            try {
-                await getAssetsSemaphore.WaitAsync(cancellationToken);
-
-                string? type = asset["type"]?.ToString() ?? string.Empty;
-                string? assetPath = asset["path"]?.ToString() ?? string.Empty;
-                MainWindowHelpers.LogInfo($"Processing {type}, API path: {assetPath}");
-
-                if (!string.IsNullOrEmpty(type) && ignoredAssetTypes.Contains(type)) {
-                    lock (ignoredAssetTypesLock) {
-                        if (reportedIgnoredAssetTypes.Add(type)) {
-                            MainWindowHelpers.LogInfo($"Asset type '{type}' is currently ignored (stub handler).");
-                        }
-                    }
-                    return;
-                }
-
-                // Обработка материала без параметра file
-                if (type == "material") {
-                    await ProcessMaterialAsset(asset, index, cancellationToken);
-                    return;
-                }
-
-                JToken? file = asset["file"];
-                if (file == null || file.Type != JTokenType.Object) {
-                    MainWindowHelpers.LogError("Invalid asset file format");
-                    return;
-                }
-
-                string? fileUrl = MainWindowHelpers.GetFileUrl(file);
-                if (string.IsNullOrEmpty(fileUrl)) {
-                    throw new Exception("File URL is null or empty");
-                }
-
-                string? extension = MainWindowHelpers.GetFileExtension(fileUrl);
-                if (string.IsNullOrEmpty(extension)) {
-                    throw new Exception("Unable to determine file extension");
-                }
-
-                switch (type) {
-                    case "texture" when IsSupportedTextureFormat(extension):
-                        await ProcessTextureAsset(asset, index, fileUrl, extension, cancellationToken);
-                        break;
-                    case "scene" when IsSupportedModelFormat(extension):
-                        await ProcessModelAsset(asset, index, fileUrl, extension, cancellationToken);
-                        break;
-                    default:
-                        MainWindowHelpers.LogError($"Unsupported asset type or format: {type} - {extension}");
-                        break;
-                }
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error in ProcessAsset: {ex}");
-            } finally {
-                getAssetsSemaphore.Release();
-            }
-        }
-
-        private async Task ProcessModelAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken _) {
-            ArgumentNullException.ThrowIfNull(asset);
-
-            if (!string.IsNullOrEmpty(fileUrl)) {
-                if (string.IsNullOrEmpty(extension)) {
-                    throw new ArgumentException($"'{nameof(extension)}' cannot be null or empty.", nameof(extension));
-                }
-
-                try {
-                    string? assetPath = asset["path"]?.ToString();
-                    int? parentId = asset["parent"]?.Type == JTokenType.Integer ? (int?)asset["parent"] : null;
-                    ModelResource model = new() {
-                        ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
-                        Index = index,
-                        Name = asset["name"]?.ToString().Split('.')[0] ?? "Unknown",
-                        Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
-                        Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                        Path = GetResourcePath(asset["name"]?.ToString(), parentId),
-                        Extension = extension,
-                        Status = "On Server",
-                        Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
-                        Parent = parentId,
-                        UVChannels = 0 // Инициализация значения UV каналов
-                    };
-
-                    await MainWindowHelpers.VerifyAndProcessResourceAsync(model, async () => {
-                        MainWindowHelpers.LogInfo($"Adding model to list: {model.Name}");
-
-                        switch (model.Status) {
-                            case "Downloaded":
-                                if (File.Exists(model.Path)) {
-                                    AssimpContext context = new();
-                                    MainWindowHelpers.LogInfo($"Attempting to import file: {model.Path}");
-                                    Scene scene = context.ImportFile(model.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                                    MainWindowHelpers.LogInfo($"Import result: {scene != null}");
-
-                                    if (scene == null || scene.Meshes == null || scene.MeshCount <= 0) {
-                                        MainWindowHelpers.LogError("Scene is null or has no meshes.");
-                                        return;
-                                    }
-
-                                    Mesh? mesh = scene.Meshes.FirstOrDefault();
-                                    if (mesh != null) {
-                                        model.UVChannels = mesh.TextureCoordinateChannelCount;
-                                    }
-                                }
-                                break;
-                            case "On Server":
-                                break;
-                            case "Size Mismatch":
-                                break;
-                            case "Corrupted":
-                                break;
-                            case "Empty File":
-                                break;
-                            case "Hash ERROR":
-                                break;
-                            case "Error":
-                                break;
-                        }
-
-
-                        await Dispatcher.InvokeAsync(() => models.Add(model));
-                    });
-                } catch (FileNotFoundException ex) {
-                    MainWindowHelpers.LogError($"File not found: {ex.FileName}");
-                } catch (Exception ex) {
-                    MainWindowHelpers.LogError($"Error processing model: {ex.Message}");
-                }
-            } else {
-                throw new ArgumentException($"'{nameof(fileUrl)}' cannot be null or empty.", nameof(fileUrl));
-            }
-        }
-
-        private async Task ProcessTextureAsset(JToken asset, int index, string fileUrl, string extension, CancellationToken cancellationToken) {
-            try {
-                // КРИТИЧНО: Используем SanitizePath для очистки имени файла от \r, \n и пробелов!
-                string rawFileName = asset["name"]?.ToString() ?? "Unknown";
-                string cleanFileName = SanitizePath(rawFileName);
-                string textureName = cleanFileName.Split('.')[0];
-                int? parentId = asset["parent"]?.Type == JTokenType.Integer ? (int?)asset["parent"] : null;
-
-                // КРИТИЧНО: Применяем SanitizePath к пути текстуры!
-                string texturePath = SanitizePath(GetResourcePath(cleanFileName, parentId));
-
-                TextureResource texture = new() {
-                    ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
-                    Index = index,
-                    Name = textureName,
-                    Size = int.TryParse(asset["file"]?["size"]?.ToString(), out int size) ? size : 0,
-                    Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
-                    Path = texturePath,
-                    Extension = extension,
-                    Resolution = new int[2],
-                    ResizeResolution = new int[2],
-                    Status = "On Server",
-                    Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
-                    Parent = parentId,
-                    Type = asset["type"]?.ToString(), // Устанавливаем свойство Type
-                    GroupName = TextureResource.ExtractBaseTextureName(textureName),
-                    TextureType = TextureResource.DetermineTextureType(textureName)
-                };
-
-                await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {
-                    MainWindowHelpers.LogInfo($"Adding texture to list: {texture.Name}");
-
-                    switch (texture.Status) {
-                        case "Downloaded":
-                            (int width, int height)? resolution = MainWindowHelpers.GetLocalImageResolution(texture.Path);
-                            if (resolution.HasValue) {
-                                texture.Resolution[0] = resolution.Value.width;
-                                texture.Resolution[1] = resolution.Value.height;
-                            }
-                            break;
-                        case "On Server":
-                            await MainWindowHelpers.UpdateTextureResolutionAsync(texture, cancellationToken);
-                            break;
-                        case "Size Mismatch":
-                            break;
-                        case "Corrupted":
-                            break;
-                        case "Empty File":
-                            break;
-                        case "Hash ERROR":
-                            break;
-                        case "Error":
-                            break;
-                    }
-
-                    await Dispatcher.InvokeAsync(() => textures.Add(texture));
-                    Dispatcher.Invoke(() => {
-                        ProgressBar.Value++;
-                        ProgressTextBlock.Text = $"{ProgressBar.Value}/{textures.Count}";
-                    });
-                });
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error processing texture: {ex.Message}");
-            }
-        }
-
-        private async Task ProcessMaterialAsset(JToken asset, int index, CancellationToken cancellationToken) {
-            try {
-                string name = asset["name"]?.ToString() ?? "Unknown";
-                string? assetPath = asset["path"]?.ToString();
-                int? parentId = asset["parent"]?.Type == JTokenType.Integer ? (int?)asset["parent"] : null;
-
-                MaterialResource material = new() {
-                    ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
-                    Index = index,
-                    Name = name,
-                    Size = 0, // У материалов нет файла, поэтому размер 0
-                    Path = GetResourcePath($"{name}.json", parentId),
-                    Status = "On Server",
-                    Hash = string.Empty, // У материалов нет хеша
-                    Parent = parentId
-                                         //TextureIds = []
-                };
-
-                await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {
-                    MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
-
-                    switch (material.Status) {
-                        case "Downloaded":
-                            break;
-                        case "On Server":
-                            break;
-                        case "Size Mismatch":
-                            break;
-                        case "Corrupted":
-                            break;
-                        case "Empty File":
-                            break;
-                        case "Hash ERROR":
-                            break;
-                        case "Error":
-                            break;
-                    }
-
-                    using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
-
-                    //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
-                    //    material.TextureIds.AddRange(from textureId in materialJson["textures"]!
-                    //                                 select (int)textureId);
-                    //}
-
-                    MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
-
-                    await Dispatcher.InvokeAsync(() => materials.Add(material));
-                });
-            } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error processing material: {ex.Message}");
             }
         }
 
@@ -4113,23 +3639,42 @@ namespace AssetProcessor {
             try {
                 MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
 
-                if (String.IsNullOrEmpty(projectFolderPath) || String.IsNullOrEmpty(projectName)) {
+                if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
                     throw new Exception("Project folder path or name is null or empty");
                 }
 
-                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
-                if (File.Exists(jsonFilePath)) {
-                    MainWindowHelpers.LogInfo($"Loading from JSON file: {jsonFilePath}");
-                    string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
-                    JArray assetsResponse = JArray.Parse(jsonContent);
-
-                    // Строим иерархию папок из списка ассетов
-                    BuildFolderHierarchyFromAssets(assetsResponse);
-
-                    await ProcessAssetsFromJson(assetsResponse);
-                    MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
-                    return true;
+                JArray? assetsResponse = await localCacheService.LoadAssetsListAsync(projectFolderPath, CancellationToken.None).ConfigureAwait(false);
+                if (assetsResponse == null) {
+                    return false;
                 }
+
+                folderPaths = projectAssetService.BuildFolderHierarchy(assetsResponse);
+                List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null || string.Equals(asset["type"]?.ToString(), "material", StringComparison.OrdinalIgnoreCase))];
+
+                await Dispatcher.InvokeAsync(() => {
+                    ProgressBar.Value = 0;
+                    ProgressBar.Maximum = supportedAssets.Count;
+                    ProgressTextBlock.Text = $"0/{supportedAssets.Count}";
+                });
+
+                IProgress<int> progress = new Progress<int>(_ => Dispatcher.Invoke(() => {
+                    ProgressBar.Value++;
+                    ProgressTextBlock.Text = $"{ProgressBar.Value}/{ProgressBar.Maximum}";
+                }));
+
+                ProjectAssetsResult result = await projectAssetService.ProcessAssetsAsync(
+                    assetsResponse,
+                    AppSettings.Default.ProjectsFolderPath,
+                    projectName,
+                    folderPaths,
+                    AppSettings.Default.PlaycanvasApiKey,
+                    CancellationToken.None,
+                    progress,
+                    fetchTextureResolution: false).ConfigureAwait(false);
+
+                ApplyAssetResult(result);
+                MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
+                return true;
             } catch (JsonReaderException ex) {
                 MessageBox.Show($"Invalid JSON format: {ex.Message}");
             } catch (Exception ex) {
@@ -4138,68 +3683,34 @@ namespace AssetProcessor {
             return false;
         }
 
-        private async Task ProcessAssetsFromJson(JToken assetsResponse) {
-            textures.Clear();
-            models.Clear();
-            materials.Clear();
-
-            List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
-            int assetCount = supportedAssets.Count;
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                ProgressBar.Value = 0;
-                ProgressBar.Maximum = assetCount;
-                ProgressTextBlock.Text = $"0/{assetCount}";
-            });
-
-            IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
-            {
-                await ProcessAsset(asset, 0, CancellationToken.None); // Используем токен отмены по умолчанию
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    ProgressBar.Value++;
-                    ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
-                });
-            }));
-
-            await Task.WhenAll(tasks);
-            RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
-        }
-
         #endregion
 
         #region Helper Methods
 
-        private string GetResourcePath(string? fileName, int? parentId = null) {
-            if (string.IsNullOrEmpty(projectFolderPath)) {
-                throw new Exception("Project folder path is null or empty");
+        private void ApplyAssetResult(ProjectAssetsResult? result) {
+            if (result == null) {
+                return;
             }
 
-            if (string.IsNullOrEmpty(projectName)) {
-                throw new Exception("Project name is null or empty");
-            }
-
-            string pathProjectFolder = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-            string pathSourceFolder = pathProjectFolder;
-
-            // Если указан parent ID (ID папки), используем построенную иерархию
-            if (parentId.HasValue && folderPaths.ContainsKey(parentId.Value)) {
-                string folderPath = folderPaths[parentId.Value];
-                if (!string.IsNullOrEmpty(folderPath)) {
-                    // Создаем полный путь с иерархией папок из PlayCanvas
-                    pathSourceFolder = Path.Combine(pathSourceFolder, folderPath);
-                    MainWindowHelpers.LogInfo($"Using folder hierarchy: {folderPath}");
+            Dispatcher.Invoke(() => {
+                textures.Clear();
+                foreach (TextureResource texture in result.Textures) {
+                    textures.Add(texture);
                 }
-            }
 
-            if (!Directory.Exists(pathSourceFolder)) {
-                Directory.CreateDirectory(pathSourceFolder);
-            }
+                models.Clear();
+                foreach (ModelResource model in result.Models) {
+                    models.Add(model);
+                }
 
-            string fullPath = Path.Combine(pathSourceFolder, fileName ?? "Unknown");
-            MainWindowHelpers.LogInfo($"Generated resource path: {fullPath}");
-            return fullPath;
+                materials.Clear();
+                foreach (MaterialResource material in result.Materials) {
+                    materials.Add(material);
+                }
+            });
+
+            folderPaths = result.FolderPaths;
+            RecalculateIndices();
         }
 
         private void RecalculateIndices() {
@@ -4223,14 +3734,6 @@ namespace AssetProcessor {
                 }
                 MaterialsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
             });
-        }
-
-        private bool IsSupportedTextureFormat(string extension) {
-            return supportedFormats.Contains(extension) && !excludedFormats.Contains(extension);
-        }
-
-        private bool IsSupportedModelFormat(string extension) {
-            return supportedModelFormats.Contains(extension) && !excludedFormats.Contains(extension); // исправлено
         }
 
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
@@ -4378,7 +3881,9 @@ namespace AssetProcessor {
         private void InitializeConversionSettings() {
             try {
                 // Загружаем глобальные настройки
-                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+                if (globalTextureSettings == null) {
+                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
+                }
 
                 // Создаем менеджер настроек конвертации
                 conversionSettingsManager = new ConversionSettingsManager(globalTextureSettings);

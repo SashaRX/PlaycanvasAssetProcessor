@@ -26,52 +26,43 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <Style x:Key="CompactComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="Background" Value="#F5F5F5"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="2,1"/>
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
-
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Padding" Value="2,1"/>
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
+        <!-- Ultra compact styles -->
         <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,3"/>
-            <Setter Property="Padding" Value="3"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="2"/>
             <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style x:Key="CompactTextBlockStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="9"/>
+        <Style x:Key="CompactTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="8"/>
             <Setter Property="Margin" Value="0,1"/>
         </Style>
 
+        <Style x:Key="CompactComboStyle" TargetType="ComboBox">
+            <Setter Property="FontSize" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="2,1"/>
+        </Style>
+
         <Style x:Key="CompactSliderStyle" TargetType="Slider">
-            <Setter Property="Height" Value="18"/>
+            <Setter Property="Height" Value="16"/>
             <Setter Property="Margin" Value="0,0,0,1"/>
         </Style>
 
-        <Style x:Key="CompactCheckBoxStyle" TargetType="CheckBox">
-            <Setter Property="FontSize" Value="9"/>
+        <Style x:Key="CompactCheckStyle" TargetType="CheckBox">
+            <Setter Property="FontSize" Value="8"/>
             <Setter Property="Margin" Value="0,1"/>
         </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="5">
-            <TextBlock Text="ORM Channel Packing" FontSize="14" FontWeight="Bold" Margin="0,0,0,3"/>
+        <StackPanel Margin="3">
+            <TextBlock Text="ORM Channel Packing" FontSize="12" FontWeight="Bold" Margin="0,0,0,2"/>
 
             <!-- Packing Mode -->
-            <GroupBox Header="Packing Mode" Style="{StaticResource CompactGroupBoxStyle}">
-                <ComboBox x:Name="PackingModeComboBox" Style="{StaticResource CompactComboBoxStyle}"
+            <GroupBox Header="Mode" Style="{StaticResource CompactGroupBoxStyle}">
+                <ComboBox x:Name="PackingModeComboBox" Style="{StaticResource CompactComboStyle}"
                           SelectionChanged="PackingModeComboBox_SelectionChanged">
                     <ComboBoxItem Content="OG (RGB=AO, A=Gloss)" Tag="OG"/>
                     <ComboBoxItem Content="OGM (R=AO, G=Gloss, B=Metallic)" Tag="OGM" IsSelected="True"/>
@@ -79,156 +70,142 @@
                 </ComboBox>
             </GroupBox>
 
-            <!-- Channel Sources -->
-            <GroupBox Header="Channel Sources" Style="{StaticResource CompactGroupBoxStyle}">
+            <!-- AO Channel -->
+            <GroupBox Header="AO Channel" Style="{StaticResource CompactGroupBoxStyle}">
                 <StackPanel>
-                    <TextBlock Text="AO:" Style="{StaticResource CompactTextBlockStyle}" FontWeight="Bold"/>
-                    <ComboBox x:Name="AOSourceComboBox" Style="{StaticResource CompactComboBoxStyle}"
+                    <TextBlock Text="Source:" Style="{StaticResource CompactTextStyle}"/>
+                    <ComboBox x:Name="AOSourceComboBox" Style="{StaticResource CompactComboStyle}"
                               DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
 
-                    <TextBlock Text="Gloss:" Style="{StaticResource CompactTextBlockStyle}" FontWeight="Bold"/>
-                    <ComboBox x:Name="GlossSourceComboBox" Style="{StaticResource CompactComboBoxStyle}"
-                              DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <TextBlock Text="Mip Filter:" Style="{StaticResource CompactTextStyle}"/>
+                    <ComboBox x:Name="AOFilterTypeComboBox" Style="{StaticResource CompactComboStyle}"
+                              ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
 
-                    <StackPanel x:Name="MetallicPanel">
-                        <TextBlock Text="Metallic:" Style="{StaticResource CompactTextBlockStyle}" FontWeight="Bold"/>
-                        <ComboBox x:Name="MetallicSourceComboBox" Style="{StaticResource CompactComboBoxStyle}"
-                                  DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <TextBlock Text="Processing:" Style="{StaticResource CompactTextStyle}"/>
+                    <ComboBox x:Name="AOProcessingComboBox" Style="{StaticResource CompactComboStyle}"
+                              SelectionChanged="AOProcessing_Changed">
+                        <ComboBoxItem Content="None" Tag="None" IsSelected="True"/>
+                        <ComboBoxItem Content="Biased Darkening" Tag="BiasedDarkening"/>
+                        <ComboBoxItem Content="Percentile" Tag="Percentile"/>
+                    </ComboBox>
+
+                    <StackPanel x:Name="AOBiasPanel" Visibility="Collapsed" Margin="0,1,0,0">
+                        <TextBlock Text="Bias:" Style="{StaticResource CompactTextStyle}"/>
+                        <Slider x:Name="AOBiasSlider" Style="{StaticResource CompactSliderStyle}"
+                                Minimum="0.1" Maximum="1.0" Value="0.5" TickFrequency="0.1"/>
                     </StackPanel>
 
-                    <StackPanel x:Name="HeightPanel" Visibility="Collapsed">
-                        <TextBlock Text="Height:" Style="{StaticResource CompactTextBlockStyle}" FontWeight="Bold"/>
-                        <ComboBox x:Name="HeightSourceComboBox" Style="{StaticResource CompactComboBoxStyle}"
-                                  DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+                    <StackPanel x:Name="AOPercentilePanel" Visibility="Collapsed" Margin="0,1,0,0">
+                        <TextBlock Text="Percentile (%):" Style="{StaticResource CompactTextStyle}"/>
+                        <Slider x:Name="AOPercentileSlider" Style="{StaticResource CompactSliderStyle}"
+                                Minimum="1" Maximum="50" Value="10" TickFrequency="1"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
 
-            <!-- Per-Channel Mipmap Filters -->
-            <GroupBox Header="Per-Channel Mipmap Filters" Style="{StaticResource CompactGroupBoxStyle}">
+            <!-- Gloss Channel -->
+            <GroupBox Header="Gloss Channel" Style="{StaticResource CompactGroupBoxStyle}">
                 <StackPanel>
-                    <TextBlock Text="AO Filter:" Style="{StaticResource CompactTextBlockStyle}"/>
-                    <ComboBox x:Name="AOFilterTypeComboBox" Style="{StaticResource CompactComboBoxStyle}"
+                    <TextBlock Text="Source:" Style="{StaticResource CompactTextStyle}"/>
+                    <ComboBox x:Name="GlossSourceComboBox" Style="{StaticResource CompactComboStyle}"
+                              DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+
+                    <TextBlock Text="Mip Filter:" Style="{StaticResource CompactTextStyle}"/>
+                    <ComboBox x:Name="GlossFilterTypeComboBox" Style="{StaticResource CompactComboStyle}"
                               ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
 
-                    <TextBlock Text="Gloss Filter:" Style="{StaticResource CompactTextBlockStyle}"/>
-                    <ComboBox x:Name="GlossFilterTypeComboBox" Style="{StaticResource CompactComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
+                    <TextBlock Text="Processing:" Style="{StaticResource CompactTextStyle}"/>
+                    <CheckBox x:Name="GlossToksvigCheckBox" Content="Toksvig Anti-Aliasing"
+                              Style="{StaticResource CompactCheckStyle}" IsChecked="True"
+                              Checked="GlossToksvig_Changed" Unchecked="GlossToksvig_Changed"/>
 
-                    <StackPanel x:Name="MetallicFilterPanel">
-                        <TextBlock Text="Metallic Filter:" Style="{StaticResource CompactTextBlockStyle}"/>
-                        <ComboBox x:Name="MetallicFilterTypeComboBox" Style="{StaticResource CompactComboBoxStyle}"
+                    <StackPanel x:Name="GlossToksvigPanel">
+                        <ComboBox x:Name="ToksvigCalculationModeComboBox" Style="{StaticResource CompactComboStyle}"
+                                  ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"/>
+
+                        <TextBlock Text="Power:" Style="{StaticResource CompactTextStyle}"/>
+                        <Slider x:Name="GlossToksvigPowerSlider" Style="{StaticResource CompactSliderStyle}"
+                                Minimum="0.5" Maximum="8" Value="4.0" TickFrequency="0.1"/>
+
+                        <TextBlock Text="Min Mip:" Style="{StaticResource CompactTextStyle}"/>
+                        <Slider x:Name="ToksvigMinMipLevelSlider" Style="{StaticResource CompactSliderStyle}"
+                                Minimum="0" Maximum="5" Value="0" TickFrequency="1"/>
+
+                        <CheckBox x:Name="ToksvigEnergyPreservingCheckBox" Content="Energy-Preserving"
+                                  Style="{StaticResource CompactCheckStyle}" IsChecked="True"/>
+                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance"
+                                  Style="{StaticResource CompactCheckStyle}" IsChecked="True"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Metallic Channel -->
+            <StackPanel x:Name="MetallicPanel">
+                <GroupBox Header="Metallic Channel" Style="{StaticResource CompactGroupBoxStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Source:" Style="{StaticResource CompactTextStyle}"/>
+                        <ComboBox x:Name="MetallicSourceComboBox" Style="{StaticResource CompactComboStyle}"
+                                  DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+
+                        <TextBlock Text="Mip Filter:" Style="{StaticResource CompactTextStyle}"/>
+                        <ComboBox x:Name="MetallicFilterTypeComboBox" Style="{StaticResource CompactComboStyle}"
                                   ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
-                    </StackPanel>
-                </StackPanel>
-            </GroupBox>
 
-            <!-- Compression Settings -->
+                        <TextBlock Text="Processing: None (Binary values)" Style="{StaticResource CompactTextStyle}" Foreground="Gray"/>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+
+            <!-- Height Channel -->
+            <StackPanel x:Name="HeightPanel" Visibility="Collapsed">
+                <GroupBox Header="Height Channel" Style="{StaticResource CompactGroupBoxStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Source:" Style="{StaticResource CompactTextStyle}"/>
+                        <ComboBox x:Name="HeightSourceComboBox" Style="{StaticResource CompactComboStyle}"
+                                  DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
+
+                        <TextBlock Text="Processing: None" Style="{StaticResource CompactTextStyle}" Foreground="Gray"/>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+
+            <!-- Compression -->
             <GroupBox Header="Compression" Style="{StaticResource CompactGroupBoxStyle}">
                 <StackPanel>
-                    <TextBlock Text="Format:" Style="{StaticResource CompactTextBlockStyle}"/>
-                    <ComboBox x:Name="CompressionFormatComboBox" Style="{StaticResource CompactComboBoxStyle}"
+                    <ComboBox x:Name="CompressionFormatComboBox" Style="{StaticResource CompactComboStyle}"
                               ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
                               SelectionChanged="CompressionFormat_Changed"/>
 
-                    <!-- ETC1S Settings -->
+                    <!-- ETC1S -->
                     <StackPanel x:Name="ETC1SPanel">
-                        <TextBlock Text="Quality (1-255):" Style="{StaticResource CompactTextBlockStyle}"/>
+                        <TextBlock Text="Quality:" Style="{StaticResource CompactTextStyle}"/>
                         <Slider x:Name="QualityLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="1" Maximum="255" Value="128" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                        <TextBlock Text="{Binding ElementName=QualityLevelSlider, Path=Value, StringFormat='{}{0:F0}'}"
-                                   HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
-
-                        <CheckBox x:Name="PerceptualCheckBox" Content="Perceptual" Style="{StaticResource CompactCheckBoxStyle}"/>
+                                Minimum="1" Maximum="255" Value="128" TickFrequency="1"/>
+                        <CheckBox x:Name="PerceptualCheckBox" Content="Perceptual" Style="{StaticResource CompactCheckStyle}"/>
                     </StackPanel>
 
-                    <!-- UASTC Settings -->
+                    <!-- UASTC -->
                     <StackPanel x:Name="UASTCPanel" Visibility="Collapsed">
-                        <TextBlock Text="Quality (0-4):" Style="{StaticResource CompactTextBlockStyle}"/>
+                        <TextBlock Text="Quality:" Style="{StaticResource CompactTextStyle}"/>
                         <Slider x:Name="UASTCQualitySlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0" Maximum="4" Value="2" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                        <TextBlock Text="{Binding ElementName=UASTCQualitySlider, Path=Value, StringFormat='{}{0:F0}'}"
-                                   HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
+                                Minimum="0" Maximum="4" Value="2" TickFrequency="1"/>
 
-                        <CheckBox x:Name="EnableRDOCheckBox" Content="Enable RDO" Style="{StaticResource CompactCheckBoxStyle}"
+                        <CheckBox x:Name="EnableRDOCheckBox" Content="RDO" Style="{StaticResource CompactCheckStyle}"
                                   Checked="EnableRDO_Changed" Unchecked="EnableRDO_Changed"/>
-
                         <StackPanel x:Name="RDOPanel" Visibility="Collapsed">
-                            <TextBlock Text="RDO Lambda (0.001-10.0):" Style="{StaticResource CompactTextBlockStyle}"/>
+                            <TextBlock Text="Lambda:" Style="{StaticResource CompactTextStyle}"/>
                             <Slider x:Name="RDOLambdaSlider" Style="{StaticResource CompactSliderStyle}"
-                                    Minimum="0.001" Maximum="10.0" Value="1.0" TickFrequency="0.1" IsSnapToTickEnabled="False"/>
-                            <TextBlock Text="{Binding ElementName=RDOLambdaSlider, Path=Value, StringFormat='{}{0:F3}'}"
-                                       HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
+                                    Minimum="0.001" Maximum="10.0" Value="1.0"/>
                         </StackPanel>
 
-                        <CheckBox x:Name="EnableSupercompressionCheckBox" Content="Supercompression (Zstd)" Style="{StaticResource CompactCheckBoxStyle}"
+                        <CheckBox x:Name="EnableSupercompressionCheckBox" Content="Supercompression (Zstd)"
+                                  Style="{StaticResource CompactCheckStyle}"
                                   Checked="EnableSupercompression_Changed" Unchecked="EnableSupercompression_Changed"/>
-
                         <StackPanel x:Name="SupercompressionPanel" Visibility="Collapsed">
-                            <TextBlock Text="Zstd Level (1-22):" Style="{StaticResource CompactTextBlockStyle}"/>
+                            <TextBlock Text="Level:" Style="{StaticResource CompactTextStyle}"/>
                             <Slider x:Name="SupercompressionLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                    Minimum="1" Maximum="22" Value="3" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                            <TextBlock Text="{Binding ElementName=SupercompressionLevelSlider, Path=Value, StringFormat='{}{0:F0}'}"
-                                       HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
+                                    Minimum="1" Maximum="22" Value="3" TickFrequency="1"/>
                         </StackPanel>
-                    </StackPanel>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- AO Processing -->
-            <GroupBox Header="AO Processing" Style="{StaticResource CompactGroupBoxStyle}">
-                <StackPanel>
-                    <ComboBox x:Name="AOProcessingComboBox" Style="{StaticResource CompactComboBoxStyle}"
-                              SelectionChanged="AOProcessing_Changed">
-                        <ComboBoxItem Content="Biased Darkening" Tag="BiasedDarkening" IsSelected="True"/>
-                        <ComboBoxItem Content="Percentile" Tag="Percentile"/>
-                        <ComboBoxItem Content="None" Tag="None"/>
-                    </ComboBox>
-
-                    <StackPanel x:Name="AOBiasPanel" Margin="0,2,0,0">
-                        <TextBlock Text="Bias:" Style="{StaticResource CompactTextBlockStyle}"/>
-                        <Slider x:Name="AOBiasSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0.1" Maximum="1.0" Value="0.5" TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                ValueChanged="AOBias_ValueChanged"/>
-                        <TextBlock Text="{Binding ElementName=AOBiasSlider, Path=Value, StringFormat='{}{0:F1}'}"
-                                   HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
-                    </StackPanel>
-
-                    <StackPanel x:Name="AOPercentilePanel" Visibility="Collapsed" Margin="0,2,0,0">
-                        <TextBlock Text="Percentile (%):" Style="{StaticResource CompactTextBlockStyle}"/>
-                        <Slider x:Name="AOPercentileSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="1" Maximum="50" Value="10" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                        <TextBlock Text="{Binding ElementName=AOPercentileSlider, Path=Value, StringFormat='{}{0:F0}%'}"
-                                   HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
-                    </StackPanel>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Toksvig Settings -->
-            <GroupBox Header="Toksvig (Gloss Anti-Aliasing)" Style="{StaticResource CompactGroupBoxStyle}">
-                <StackPanel>
-                    <CheckBox x:Name="GlossToksvigCheckBox" Content="Enable Toksvig" Style="{StaticResource CompactCheckBoxStyle}"
-                              IsChecked="True" Checked="GlossToksvig_Changed" Unchecked="GlossToksvig_Changed"/>
-
-                    <StackPanel x:Name="GlossToksvigPanel">
-                        <TextBlock Text="Calculation Mode:" Style="{StaticResource CompactTextBlockStyle}"/>
-                        <ComboBox x:Name="ToksvigCalculationModeComboBox" Style="{StaticResource CompactComboBoxStyle}"
-                                  ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"/>
-
-                        <TextBlock Text="Composite Power (0.5-8):" Style="{StaticResource CompactTextBlockStyle}"/>
-                        <Slider x:Name="GlossToksvigPowerSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0.5" Maximum="8" Value="1.0" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
-                        <TextBlock Text="{Binding ElementName=GlossToksvigPowerSlider, Path=Value, StringFormat='{}{0:F1}'}"
-                                   HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
-
-                        <TextBlock Text="Min Mip Level:" Style="{StaticResource CompactTextBlockStyle}"/>
-                        <Slider x:Name="ToksvigMinMipLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0" Maximum="5" Value="0" TickFrequency="1" IsSnapToTickEnabled="True"/>
-                        <TextBlock Text="{Binding ElementName=ToksvigMinMipLevelSlider, Path=Value, StringFormat='{}{0:F0}'}"
-                                   HorizontalAlignment="Center" Style="{StaticResource CompactTextBlockStyle}"/>
-
-                        <CheckBox x:Name="ToksvigEnergyPreservingCheckBox" Content="Energy-Preserving" Style="{StaticResource CompactCheckBoxStyle}" IsChecked="True"/>
-                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance" Style="{StaticResource CompactCheckBoxStyle}" IsChecked="True"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
@@ -236,15 +213,15 @@
             <!-- Status -->
             <GroupBox Header="Status" Style="{StaticResource CompactGroupBoxStyle}">
                 <StackPanel>
-                    <TextBlock x:Name="StatusText" Text="Ready" TextWrapping="Wrap" Style="{StaticResource CompactTextBlockStyle}"/>
-                    <TextBlock x:Name="MissingChannelsText" Text="" TextWrapping="Wrap" Style="{StaticResource CompactTextBlockStyle}" Foreground="Orange"/>
+                    <TextBlock x:Name="StatusText" Text="Ready" Style="{StaticResource CompactTextStyle}"/>
+                    <TextBlock x:Name="MissingChannelsText" Text="" Style="{StaticResource CompactTextStyle}" Foreground="Orange"/>
                 </StackPanel>
             </GroupBox>
 
             <!-- Pack Button -->
             <Button x:Name="PackConvertButton" Content="Pack &amp; Convert to KTX2"
-                    Click="PackConvert_Click" Height="30" FontSize="12" FontWeight="Bold"
-                    Background="#FF4CAF50" Foreground="White"/>
+                    Click="PackConvert_Click" Height="24" FontSize="10" FontWeight="Bold"
+                    Background="#FF4CAF50" Foreground="White" Margin="0,2,0,0"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

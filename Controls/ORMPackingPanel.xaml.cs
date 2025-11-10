@@ -84,8 +84,13 @@ namespace AssetProcessor.Controls {
             // Packing mode
             PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
 
-            // AO settings
-            AOProcessingComboBox.SelectedIndex = (int)currentORMTexture.AOProcessingMode;
+            // AO settings (None=0, BiasedDarkening=1, Percentile=2)
+            AOProcessingComboBox.SelectedIndex = currentORMTexture.AOProcessingMode switch {
+                AOProcessingMode.None => 0,
+                AOProcessingMode.BiasedDarkening => 1,
+                AOProcessingMode.Percentile => 2,
+                _ => 0
+            };
             AOBiasSlider.Value = currentORMTexture.AOBias;
             AOPercentileSlider.Value = currentORMTexture.AOPercentile;
 
@@ -200,8 +205,13 @@ namespace AssetProcessor.Controls {
             currentORMTexture.MetallicSource = MetallicSourceComboBox.SelectedItem as TextureResource;
             currentORMTexture.HeightSource = HeightSourceComboBox.SelectedItem as TextureResource;
 
-            // AO settings
-            currentORMTexture.AOProcessingMode = (AOProcessingMode)AOProcessingComboBox.SelectedIndex;
+            // AO settings (None=0, BiasedDarkening=1, Percentile=2)
+            currentORMTexture.AOProcessingMode = AOProcessingComboBox.SelectedIndex switch {
+                0 => AOProcessingMode.None,
+                1 => AOProcessingMode.BiasedDarkening,
+                2 => AOProcessingMode.Percentile,
+                _ => AOProcessingMode.None
+            };
             currentORMTexture.AOBias = (float)AOBiasSlider.Value;
             currentORMTexture.AOPercentile = (float)AOPercentileSlider.Value;
 
@@ -275,7 +285,7 @@ namespace AssetProcessor.Controls {
         // Event handlers
         private void PackingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Early return if controls not initialized yet (happens during XAML parsing with IsSelected="True")
-            if (MetallicPanel == null || HeightPanel == null || MetallicFilterPanel == null) return;
+            if (MetallicPanel == null || HeightPanel == null) return;
             if (currentORMTexture == null || PackingModeComboBox.SelectedItem == null) return;
 
             var tag = ((ComboBoxItem)PackingModeComboBox.SelectedItem).Tag.ToString();
@@ -288,8 +298,6 @@ namespace AssetProcessor.Controls {
 
             // Update UI visibility
             MetallicPanel.Visibility = currentORMTexture.PackingMode >= ChannelPackingMode.OGM
-                ? Visibility.Visible : Visibility.Collapsed;
-            MetallicFilterPanel.Visibility = currentORMTexture.PackingMode >= ChannelPackingMode.OGM
                 ? Visibility.Visible : Visibility.Collapsed;
             HeightPanel.Visibility = currentORMTexture.PackingMode == ChannelPackingMode.OGMH
                 ? Visibility.Visible : Visibility.Collapsed;
@@ -308,8 +316,11 @@ namespace AssetProcessor.Controls {
 
             var mode = ((ComboBoxItem)AOProcessingComboBox.SelectedItem).Tag.ToString();
 
+            // None=hide both, BiasedDarkening=show bias, Percentile=show percentile
             AOBiasPanel.Visibility = mode == "BiasedDarkening" ? Visibility.Visible : Visibility.Collapsed;
             AOPercentilePanel.Visibility = mode == "Percentile" ? Visibility.Visible : Visibility.Collapsed;
+
+            UpdateStatus();
         }
 
         private void AOBias_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {

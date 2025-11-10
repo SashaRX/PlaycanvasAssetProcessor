@@ -4323,6 +4323,107 @@ namespace AssetProcessor {
 
             await Task.WhenAll(tasks);
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
+
+            // Детектируем и загружаем локальные ORM текстуры
+            DetectAndLoadORMTextures();
+        }
+
+        /// <summary>
+        /// Детектирует и загружает локальные ORM текстуры (_og.ktx2, _ogm.ktx2, _ogmh.ktx2)
+        /// Эти текстуры не являются частью PlayCanvas проекта, но хранятся локально
+        /// </summary>
+        private void DetectAndLoadORMTextures() {
+            if (string.IsNullOrEmpty(projectFolderPath) || !Directory.Exists(projectFolderPath)) {
+                return;
+            }
+
+            MainWindowHelpers.LogInfo("=== Detecting local ORM textures ===");
+
+            try {
+                // Сканируем все .ktx2 файлы рекурсивно
+                var ktx2Files = Directory.GetFiles(projectFolderPath, "*.ktx2", SearchOption.AllDirectories);
+
+                int ormCount = 0;
+
+                foreach (var ktx2Path in ktx2Files) {
+                    string fileName = Path.GetFileNameWithoutExtension(ktx2Path);
+
+                    // Проверяем паттерны _og/_ogm/_ogmh
+                    ChannelPackingMode? packingMode = null;
+                    string baseName = fileName;
+
+                    if (fileName.EndsWith("_og", StringComparison.OrdinalIgnoreCase)) {
+                        packingMode = ChannelPackingMode.OG;
+                        baseName = fileName.Substring(0, fileName.Length - 3); // Remove "_og"
+                    } else if (fileName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase)) {
+                        packingMode = ChannelPackingMode.OGM;
+                        baseName = fileName.Substring(0, fileName.Length - 4); // Remove "_ogm"
+                    } else if (fileName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase)) {
+                        packingMode = ChannelPackingMode.OGMH;
+                        baseName = fileName.Substring(0, fileName.Length - 5); // Remove "_ogmh"
+                    }
+
+                    if (!packingMode.HasValue) {
+                        continue; // Not an ORM texture
+                    }
+
+                    // Ищем source текстуры по имени base
+                    string directory = Path.GetDirectoryName(ktx2Path) ?? "";
+                    TextureResource? aoTexture = FindTextureByPattern(directory, baseName + "_ao");
+                    TextureResource? glossTexture = FindTextureByPattern(directory, baseName + "_gloss");
+                    TextureResource? metallicTexture = FindTextureByPattern(directory, baseName + "_metallic")
+                                                    ?? FindTextureByPattern(directory, baseName + "_metalic"); // typo variant
+
+                    // Создаем ORMTextureResource
+                    var ormTexture = new ORMTextureResource {
+                        Name = fileName,
+                        Path = ktx2Path,
+                        PackingMode = packingMode.Value,
+                        AOSource = aoTexture,
+                        GlossSource = glossTexture,
+                        MetallicSource = metallicTexture,
+                        Status = "Converted" // Already packed
+                    };
+
+                    // Извлекаем информацию о файле
+                    if (File.Exists(ktx2Path)) {
+                        var fileInfo = new FileInfo(ktx2Path);
+                        ormTexture.CompressedSize = fileInfo.Length;
+                    }
+
+                    Dispatcher.Invoke(() => {
+                        textures.Add(ormTexture);
+                    });
+
+                    ormCount++;
+                    MainWindowHelpers.LogInfo($"  Loaded ORM texture: {fileName} ({packingMode.Value})");
+                }
+
+                if (ormCount > 0) {
+                    MainWindowHelpers.LogInfo($"=== Detected {ormCount} ORM textures ===");
+                    Dispatcher.Invoke(() => {
+                        RecalculateIndices(); // Recalculate indices after adding ORM textures
+                    });
+                } else {
+                    MainWindowHelpers.LogInfo("  No ORM textures found");
+                }
+
+            } catch (Exception ex) {
+                MainWindowHelpers.LogError($"Error detecting ORM textures: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Находит текстуру по паттерну имени в указанной директории
+        /// </summary>
+        private TextureResource? FindTextureByPattern(string directory, string namePattern) {
+            return textures.FirstOrDefault(t => {
+                if (string.IsNullOrEmpty(t.Path)) return false;
+                if (Path.GetDirectoryName(t.Path) != directory) return false;
+
+                string textureName = Path.GetFileNameWithoutExtension(t.Path);
+                return string.Equals(textureName, namePattern, StringComparison.OrdinalIgnoreCase);
+            });
         }
 
         #endregion

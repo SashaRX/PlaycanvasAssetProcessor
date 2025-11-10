@@ -69,7 +69,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// </summary>
         public static GlobalTextureConversionSettings CreateDefaultSettings() {
             return new GlobalTextureConversionSettings {
-                ToktxExecutablePath = "toktx",
+                KtxExecutablePath = "ktx",
                 DefaultOutputDirectory = "output_textures",
                 DefaultPreset = "Balanced",
                 MaxParallelTasks = Math.Max(1, Environment.ProcessorCount / 2),

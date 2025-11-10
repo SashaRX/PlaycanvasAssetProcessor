@@ -294,7 +294,11 @@
                                 CanUserSortColumns="True"
                                 CanUserResizeColumns="True"
                                 CanUserReorderColumns="True"
-                                Background="#FFD6D6D6">
+                                Background="#FFD6D6D6"
+                                VirtualizingPanel.IsVirtualizing="True"
+                                VirtualizingPanel.VirtualizationMode="Recycling"
+                                EnableRowVirtualization="True"
+                                EnableColumnVirtualization="True">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -403,7 +407,11 @@
                               CanUserSortColumns="True"
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
-                              Background="#FFD6D6D6">
+                              Background="#FFD6D6D6"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              EnableRowVirtualization="True"
+                              EnableColumnVirtualization="True">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
@@ -459,7 +467,11 @@
                               CanUserSortColumns="True"
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
-                              Background="#FFD6D6D6">
+                              Background="#FFD6D6D6"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              EnableRowVirtualization="True"
+                              EnableColumnVirtualization="True">
                         <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>

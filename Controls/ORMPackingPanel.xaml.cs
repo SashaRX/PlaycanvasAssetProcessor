@@ -520,7 +520,7 @@ namespace AssetProcessor.Controls {
                     currentORMTexture.Name = Path.GetFileNameWithoutExtension(outputPath);
                     currentORMTexture.Path = outputPath;
                     currentORMTexture.Status = "Converted";  // FIX: Update status to show green color in DataGrid
-                    currentORMTexture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
+                    currentORMTexture.CompressionFormat = compressionSettings.CompressionFormat;
                     currentORMTexture.MipmapCount = result.MipLevels;
 
                     Logger.Info($"ORM texture updated: Status={currentORMTexture.Status}, MipLevels={result.MipLevels}");

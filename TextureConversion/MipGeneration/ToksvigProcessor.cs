@@ -105,96 +105,157 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             var correctedMipmaps = new List<Image<Rgba32>>();
             var varianceMipmaps = captureVariance ? new List<Image<Rgba32>>() : null;
 
-            if (settings.UseEnergyPreserving) {
-                // === Режим 1: Toksvig + Energy-Preserving ===
-                // 1. Применяем Toksvig к базовому уровню
-                // 2. Генерируем мипмапы с Energy-Preserving от Toksvig-corrected базового уровня
+            // Log memory usage before processing
+            long memoryBefore = GC.GetTotalMemory(false);
+            Logger.Info($"Память до обработки: {memoryBefore / (1024 * 1024):F1} MB");
 
-                // Применяем Toksvig только к базовому уровню
-                var (toksvigCorrectedBase, varianceMapBase) = ApplyToksvigToLevel(
-                    glossRoughnessMipmaps[0],
-                    normalMipmaps[0],
-                    settings,
-                    isGloss,
-                    0,
-                    captureVariance);
+            try {
+                if (settings.UseEnergyPreserving) {
+                    Logger.Info($"Начинаем Toksvig коррекцию в режиме Energy-Preserving");
+                    // === Режим 1: Toksvig + Energy-Preserving ===
+                    // 1. Применяем Toksvig к базовому уровню
+                    // 2. Генерируем мипмапы с Energy-Preserving от Toksvig-corrected базового уровня
 
-                correctedMipmaps.Add(toksvigCorrectedBase);
-                if (captureVariance && varianceMapBase != null) {
-                    varianceMipmaps!.Add(varianceMapBase);
-                }
+                    Logger.Info($"Применяем Toksvig к базовому уровню ({glossRoughnessMipmaps[0].Width}x{glossRoughnessMipmaps[0].Height})");
+                    long memoryBeforeLevel = GC.GetTotalMemory(false);
 
-                // Генерируем мипмапы с Energy-Preserving от Toksvig-corrected базового уровня
-                var textureType = isGloss ? TextureType.Gloss : TextureType.Roughness;
-                var mipProfile = MipGenerationProfile.CreateDefault(textureType);
+                    // Применяем Toksvig только к базовому уровню
+                    var (toksvigCorrectedBase, varianceMapBase) = ApplyToksvigToLevel(
+                        glossRoughnessMipmaps[0],
+                        normalMipmaps[0],
+                        settings,
+                        isGloss,
+                        0,
+                        captureVariance);
 
-                // Включаем energy-preserving фильтрацию
-                mipProfile.UseEnergyPreserving = true;
-                mipProfile.IsGloss = isGloss;
+                    long memoryAfterLevel = GC.GetTotalMemory(false);
+                    Logger.Info($"Toksvig коррекция базового уровня завершена. Использовано памяти: {(memoryAfterLevel - memoryBeforeLevel) / (1024 * 1024):F1} MB");
 
-                // Генерируем мипмапы от Toksvig-corrected базового уровня
-                var energyPreservingMips = _mipGenerator.GenerateMipmaps(toksvigCorrectedBase, mipProfile);
-
-                // Добавляем сгенерированные мипы (пропускаем первый, т.к. он уже добавлен)
-                for (int i = 1; i < energyPreservingMips.Count; i++) {
-                    correctedMipmaps.Add(energyPreservingMips[i]);
-
-                    // Для variance создаём пустые карты для остальных уровней
-                    if (captureVariance) {
-                        varianceMipmaps!.Add(new Image<Rgba32>(energyPreservingMips[i].Width, energyPreservingMips[i].Height));
+                    correctedMipmaps.Add(toksvigCorrectedBase);
+                    if (captureVariance && varianceMapBase != null) {
+                        varianceMipmaps!.Add(varianceMapBase);
                     }
-                }
-            } else {
-                // === Режим 2: Только Toksvig (старый режим) ===
-                // Применяем Toksvig к каждому уровню независимо
 
-                for (int level = 0; level < glossRoughnessMipmaps.Count; level++) {
-                    if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
-                        // КРИТИЧНО: НЕ используем Clone() - создаём НОВЫЙ Image с независимым буфером
-                        var original = glossRoughnessMipmaps[level];
-                        var independentCopy = new Image<Rgba32>(
-                            Configuration.Default,
-                            original.Width,
-                            original.Height);
+                    // Генерируем мипмапы с Energy-Preserving от Toksvig-corrected базового уровня
+                    var textureType = isGloss ? TextureType.Gloss : TextureType.Roughness;
+                    var mipProfile = MipGenerationProfile.CreateDefault(textureType);
 
-                        // Копируем пиксели через ProcessPixelRows (ГАРАНТИРОВАННО независимый буфер)
-                        original.ProcessPixelRows(independentCopy, (sourceAccessor, targetAccessor) => {
-                            for (int y = 0; y < sourceAccessor.Height; y++) {
-                                var sourceRow = sourceAccessor.GetRowSpan(y);
-                                var targetRow = targetAccessor.GetRowSpan(y);
-                                sourceRow.CopyTo(targetRow);
-                            }
-                        });
-                        correctedMipmaps.Add(independentCopy);
+                    // Включаем energy-preserving фильтрацию
+                    mipProfile.UseEnergyPreserving = true;
+                    mipProfile.IsGloss = isGloss;
 
-                        // Для variance создаём пустую карту
+                    Logger.Info($"Генерируем Energy-Preserving мипмапы от Toksvig-corrected базового уровня");
+                    long memoryBeforeMips = GC.GetTotalMemory(false);
+
+                    // Генерируем мипмапы от Toksvig-corrected базового уровня
+                    var energyPreservingMips = _mipGenerator.GenerateMipmaps(toksvigCorrectedBase, mipProfile);
+
+                    long memoryAfterMips = GC.GetTotalMemory(false);
+                    Logger.Info($"Сгенерировано {energyPreservingMips.Count} Energy-Preserving мипмапов. Использовано памяти: {(memoryAfterMips - memoryBeforeMips) / (1024 * 1024):F1} MB");
+
+                    // Добавляем сгенерированные мипы (пропускаем первый, т.к. он уже добавлен)
+                    for (int i = 1; i < energyPreservingMips.Count; i++) {
+                        correctedMipmaps.Add(energyPreservingMips[i]);
+
+                        // Для variance создаём пустые карты для остальных уровней
                         if (captureVariance) {
-                            varianceMipmaps!.Add(new Image<Rgba32>(glossRoughnessMipmaps[level].Width, glossRoughnessMipmaps[level].Height));
-                        }
-
-                        Logger.Info($"  Mip{level} ({glossRoughnessMipmaps[level].Width}x{glossRoughnessMipmaps[level].Height}): " +
-                                   $"SKIPPED (minLevel={settings.MinToksvigMipLevel})");
-                    } else {
-                        // Применяем Toksvig коррекцию
-                        var (correctedMip, varianceMap) = ApplyToksvigToLevel(
-                            glossRoughnessMipmaps[level],
-                            normalMipmaps[level],
-                            settings,
-                            isGloss,
-                            level,
-                            captureVariance);
-
-                        correctedMipmaps.Add(correctedMip);
-                        if (captureVariance && varianceMap != null) {
-                            varianceMipmaps!.Add(varianceMap);
+                            varianceMipmaps!.Add(new Image<Rgba32>(energyPreservingMips[i].Width, energyPreservingMips[i].Height));
                         }
                     }
-                }
-            }
+                    Logger.Info($"Energy-Preserving режим завершён успешно");
+                } else {
+                    Logger.Info($"Начинаем Toksvig коррекцию в стандартном режиме");
+                    // === Режим 2: Только Toksvig (старый режим) ===
+                    // Применяем Toksvig к каждому уровню независимо
 
-            // Освобождаем память normal mipmaps
-            foreach (var mip in normalMipmaps) {
-                mip.Dispose();
+                    for (int level = 0; level < glossRoughnessMipmaps.Count; level++) {
+                        if (level < settings.MinToksvigMipLevel || level >= normalMipmaps.Count) {
+                            // КРИТИЧНО: НЕ используем Clone() - создаём НОВЫЙ Image с независимым буфером
+                            var original = glossRoughnessMipmaps[level];
+                            var independentCopy = new Image<Rgba32>(
+                                Configuration.Default,
+                                original.Width,
+                                original.Height);
+
+                            // Копируем пиксели через ProcessPixelRows (ГАРАНТИРОВАННО независимый буфер)
+                            original.ProcessPixelRows(independentCopy, (sourceAccessor, targetAccessor) => {
+                                for (int y = 0; y < sourceAccessor.Height; y++) {
+                                    var sourceRow = sourceAccessor.GetRowSpan(y);
+                                    var targetRow = targetAccessor.GetRowSpan(y);
+                                    sourceRow.CopyTo(targetRow);
+                                }
+                            });
+                            correctedMipmaps.Add(independentCopy);
+
+                            // Для variance создаём пустую карту
+                            if (captureVariance) {
+                                varianceMipmaps!.Add(new Image<Rgba32>(glossRoughnessMipmaps[level].Width, glossRoughnessMipmaps[level].Height));
+                            }
+
+                            Logger.Info($"  Mip{level} ({glossRoughnessMipmaps[level].Width}x{glossRoughnessMipmaps[level].Height}): " +
+                                       $"SKIPPED (minLevel={settings.MinToksvigMipLevel})");
+                        } else {
+                            Logger.Info($"  Применяем Toksvig к Mip{level} ({glossRoughnessMipmaps[level].Width}x{glossRoughnessMipmaps[level].Height})");
+                            long memoryBeforeLevel = GC.GetTotalMemory(false);
+
+                            // Применяем Toksvig коррекцию
+                            var (correctedMip, varianceMap) = ApplyToksvigToLevel(
+                                glossRoughnessMipmaps[level],
+                                normalMipmaps[level],
+                                settings,
+                                isGloss,
+                                level,
+                                captureVariance);
+
+                            long memoryAfterLevel = GC.GetTotalMemory(false);
+                            Logger.Info($"  Mip{level} завершён. Использовано памяти: {(memoryAfterLevel - memoryBeforeLevel) / (1024 * 1024):F1} MB");
+
+                            correctedMipmaps.Add(correctedMip);
+                            if (captureVariance && varianceMap != null) {
+                                varianceMipmaps!.Add(varianceMap);
+                            }
+                        }
+                    }
+                    Logger.Info($"Стандартный режим завершён успешно");
+                }
+            } catch (OutOfMemoryException ex) {
+                Logger.Error(ex, $"❌ OutOfMemoryException во время Toksvig коррекции! Размер текстуры: {glossRoughnessMipmaps[0].Width}x{glossRoughnessMipmaps[0].Height}");
+                Logger.Error($"Память: {GC.GetTotalMemory(false) / (1024 * 1024):F1} MB");
+
+                // Cleanup partial results
+                foreach (var img in correctedMipmaps) {
+                    img?.Dispose();
+                }
+                if (varianceMipmaps != null) {
+                    foreach (var img in varianceMipmaps) {
+                        img?.Dispose();
+                    }
+                }
+
+                throw new InvalidOperationException($"Недостаточно памяти для обработки текстуры {glossRoughnessMipmaps[0].Width}x{glossRoughnessMipmaps[0].Height}", ex);
+            } catch (Exception ex) {
+                Logger.Error(ex, $"❌ Ошибка во время Toksvig коррекции! Режим: {(settings.UseEnergyPreserving ? "Energy-Preserving" : "Standard")}");
+                Logger.Error($"Размер текстуры: {glossRoughnessMipmaps[0].Width}x{glossRoughnessMipmaps[0].Height}, мипмапов: {glossRoughnessMipmaps.Count}");
+
+                // Cleanup partial results
+                foreach (var img in correctedMipmaps) {
+                    img?.Dispose();
+                }
+                if (varianceMipmaps != null) {
+                    foreach (var img in varianceMipmaps) {
+                        img?.Dispose();
+                    }
+                }
+
+                throw;
+            } finally {
+                // Освобождаем память normal mipmaps
+                foreach (var mip in normalMipmaps) {
+                    mip.Dispose();
+                }
+
+                long memoryAfter = GC.GetTotalMemory(false);
+                Logger.Info($"Память после обработки: {memoryAfter / (1024 * 1024):F1} MB, дельта: {(memoryAfter - memoryBefore) / (1024 * 1024):F1} MB");
             }
 
             return (correctedMipmaps, varianceMipmaps);
@@ -229,17 +290,26 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
             // Вычисляем дисперсию normal map в зависимости от режима
             Image<Rgba32> varianceMap;
-            if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
-                // Simplified режим: нормализация + Box 2x2
-                varianceMap = CalculateNormalVarianceSimplified(normalMip);
-            } else {
-                // Classic режим: 3x3 окно без нормализации
-                varianceMap = CalculateNormalVariance(normalMip);
-            }
+            try {
+                Logger.Info($"  Вычисляем дисперсию для уровня {level} ({normalMip.Width}x{normalMip.Height})");
+                if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
+                    // Simplified режим: нормализация + Box 2x2
+                    varianceMap = CalculateNormalVarianceSimplified(normalMip);
+                } else {
+                    // Classic режим: 3x3 окно без нормализации
+                    varianceMap = CalculateNormalVariance(normalMip);
+                }
+                Logger.Info($"  Карта дисперсии создана успешно");
 
-            // Применяем сглаживание дисперсии если включено и это Classic режим
-            if (settings.SmoothVariance && settings.CalculationMode == ToksvigCalculationMode.Classic) {
-                varianceMap = SmoothVariance(varianceMap);
+                // Применяем сглаживание дисперсии если включено и это Classic режим
+                if (settings.SmoothVariance && settings.CalculationMode == ToksvigCalculationMode.Classic) {
+                    Logger.Info($"  Применяем сглаживание дисперсии");
+                    varianceMap = SmoothVariance(varianceMap);
+                    Logger.Info($"  Сглаживание завершено");
+                }
+            } catch (Exception ex) {
+                Logger.Error(ex, $"❌ Ошибка при вычислении дисперсии для уровня {level}!");
+                throw;
             }
 
             // Статистика изменений
@@ -274,67 +344,85 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             int debugPixelCount = 0;
             const int maxDebugPixels = 3;
 
+            // Прогресс-логирование для больших текстур
+            int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;
+            int progressStep = totalPixels > 1000000 ? 512 : int.MaxValue; // Логируем каждые 512 строк для текстур > 1M пикселей
+            int rowsProcessed = 0;
+
+            Logger.Info($"  Начинаем обработку пикселей ({totalPixels:N0} пикселей)");
+
             // Обрабатываем каждый пиксель напрямую
-            for (int y = 0; y < glossRoughnessMip.Height; y++) {
-                for (int x = 0; x < glossRoughnessMip.Width; x++) {
-                    // Читаем оригинальный пиксель
-                    var inputPixel = glossRoughnessMip[x, y];
+            try {
+                for (int y = 0; y < glossRoughnessMip.Height; y++) {
+                    // Progress logging для больших текстур
+                    if (y > 0 && y % progressStep == 0) {
+                        float progress = (float)(y * glossRoughnessMip.Width) / totalPixels * 100f;
+                        Logger.Info($"    Обработка уровня {level}: прогресс {progress:F1}% (строка {y}/{glossRoughnessMip.Height})");
+                    }
 
-                    // Получаем значение дисперсии из R канала varianceMap
-                    float variance = varianceMap[x, y].R / 255.0f;
+                    for (int x = 0; x < glossRoughnessMip.Width; x++) {
+                        // Читаем оригинальный пиксель
+                        var inputPixel = glossRoughnessMip[x, y];
 
-                    // Применяем порог дисперсии (dead zone) в Simplified режиме
-                    if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
-                        if (variance < settings.VarianceThreshold) {
-                            variance = 0.0f;
+                        // Получаем значение дисперсии из R канала varianceMap
+                        float variance = varianceMap[x, y].R / 255.0f;
+
+                        // Применяем порог дисперсии (dead zone) в Simplified режиме
+                        if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
+                            if (variance < settings.VarianceThreshold) {
+                                variance = 0.0f;
+                            }
                         }
+
+                        // Статистика variance
+                        avgVariance += variance;
+                        minVariance = Math.Min(minVariance, variance);
+                        maxVariance = Math.Max(maxVariance, variance);
+
+                        // Берём только R канал (предполагаем что gloss/roughness в R)
+                        float inputValue = inputPixel.R / 255.0f;
+                        minInput = Math.Min(minInput, inputValue);
+                        maxInput = Math.Max(maxInput, inputValue);
+
+                        // Конвертируем в roughness если на входе gloss
+                        float roughness = isGloss ? (1.0f - inputValue) : inputValue;
+
+                        // Применяем Toksvig коррекцию
+                        bool useLinearPower = settings.CalculationMode == ToksvigCalculationMode.Simplified;
+                        float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower, useLinearPower);
+
+                        // Конвертируем обратно в gloss если нужно
+                        float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
+                        minOutput = Math.Min(minOutput, outputValue);
+                        maxOutput = Math.Max(maxOutput, outputValue);
+
+                        // Детальное логирование для первых пикселей (только level 0-1)
+                        if (level <= 1 && debugPixelCount < maxDebugPixels && Math.Abs(outputValue - inputValue) > 0.01f) {
+                            debugPixelCount++;
+                            Logger.Info($"    [{level}] Pixel({x},{y}): in={inputValue:F3}, var={variance:F4}, " +
+                                       $"rough={roughness:F3}→{correctedRoughness:F3}, out={outputValue:F3}, diff={Math.Abs(outputValue - inputValue):F3}");
+                        }
+
+                        // Статистика изменений
+                        float diff = Math.Abs(outputValue - inputValue);
+                        if (diff > 0.001f) {
+                            pixelsChanged++;
+                            totalDifference += diff;
+                            maxDifference = Math.Max(maxDifference, diff);
+                        }
+
+                        // Конвертируем обратно в байты и записываем НАПРЯМУЮ в клонированный image
+                        byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
+                        correctedMip[x, y] = new Rgba32(outputByte, outputByte, outputByte, inputPixel.A);
                     }
-
-                    // Статистика variance
-                    avgVariance += variance;
-                    minVariance = Math.Min(minVariance, variance);
-                    maxVariance = Math.Max(maxVariance, variance);
-
-                    // Берём только R канал (предполагаем что gloss/roughness в R)
-                    float inputValue = inputPixel.R / 255.0f;
-                    minInput = Math.Min(minInput, inputValue);
-                    maxInput = Math.Max(maxInput, inputValue);
-
-                    // Конвертируем в roughness если на входе gloss
-                    float roughness = isGloss ? (1.0f - inputValue) : inputValue;
-
-                    // Применяем Toksvig коррекцию
-                    bool useLinearPower = settings.CalculationMode == ToksvigCalculationMode.Simplified;
-                    float correctedRoughness = ApplyToksvigFormula(roughness, variance, settings.CompositePower, useLinearPower);
-
-                    // Конвертируем обратно в gloss если нужно
-                    float outputValue = isGloss ? (1.0f - correctedRoughness) : correctedRoughness;
-                    minOutput = Math.Min(minOutput, outputValue);
-                    maxOutput = Math.Max(maxOutput, outputValue);
-
-                    // Детальное логирование для первых пикселей (только level 0-1)
-                    if (level <= 1 && debugPixelCount < maxDebugPixels && Math.Abs(outputValue - inputValue) > 0.01f) {
-                        debugPixelCount++;
-                        Logger.Info($"    [{level}] Pixel({x},{y}): in={inputValue:F3}, var={variance:F4}, " +
-                                   $"rough={roughness:F3}→{correctedRoughness:F3}, out={outputValue:F3}, diff={Math.Abs(outputValue - inputValue):F3}");
-                    }
-
-                    // Статистика изменений
-                    float diff = Math.Abs(outputValue - inputValue);
-                    if (diff > 0.001f) {
-                        pixelsChanged++;
-                        totalDifference += diff;
-                        maxDifference = Math.Max(maxDifference, diff);
-                    }
-
-                    // Конвертируем обратно в байты и записываем НАПРЯМУЮ в клонированный image
-                    byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
-                    correctedMip[x, y] = new Rgba32(outputByte, outputByte, outputByte, inputPixel.A);
                 }
+                Logger.Info($"  Обработка пикселей завершена ({totalPixels:N0} пикселей)");
+            } catch (Exception ex) {
+                Logger.Error(ex, $"❌ Ошибка при обработке пикселей на уровне {level}! Последняя обработанная строка: {rowsProcessed}/{glossRoughnessMip.Height}");
+                throw;
             }
 
             // Логируем только важные уровни (0, 1, 2) и если есть изменения
-            int totalPixels = glossRoughnessMip.Width * glossRoughnessMip.Height;
             avgVariance /= totalPixels;
             float avgDifference = pixelsChanged > 0 ? totalDifference / pixelsChanged : 0f;
             float changePercent = (float)pixelsChanged / totalPixels * 100f;

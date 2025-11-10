@@ -2065,6 +2065,36 @@ namespace AssetProcessor {
         }
 
         /// <summary>
+        /// Refreshes the DataGrid and reloads the preview for the currently selected texture.
+        /// Called after ORM packing to update the UI (row colors and preview).
+        /// </summary>
+        public async void RefreshCurrentTexture() {
+            MainWindowHelpers.LogInfo("[RefreshCurrentTexture] Refreshing DataGrid and preview");
+
+            // Refresh DataGrid to update row colors and property bindings
+            TexturesDataGrid.Items.Refresh();
+
+            // Reload the preview by simulating selection changed
+            if (TexturesDataGrid.SelectedItem != null) {
+                textureLoadCancellation?.Cancel();
+                textureLoadCancellation = new CancellationTokenSource();
+
+                // Small delay to allow DataGrid to refresh
+                await Task.Delay(100);
+
+                // Trigger selection changed logic manually
+                var selectedItem = TexturesDataGrid.SelectedItem;
+                MainWindowHelpers.LogInfo($"[RefreshCurrentTexture] Triggering preview reload for: {(selectedItem as TextureResource)?.Name ?? "unknown"}");
+
+                TexturesDataGrid_SelectionChanged(TexturesDataGrid, new SelectionChangedEventArgs(
+                    System.Windows.Controls.Primitives.Selector.SelectionChangedEvent,
+                    new List<object>(),
+                    new List<object> { selectedItem }
+                ));
+            }
+        }
+
+        /// <summary>
         /// NEW METHOD: Load KTX2 directly to D3D11 viewer (native format, all mipmaps).
         /// </summary>
         private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {

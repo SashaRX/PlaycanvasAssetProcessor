@@ -515,6 +515,10 @@ namespace AssetProcessor.Controls {
                     // Обновляем имя ORM текстуры
                     currentORMTexture.Name = Path.GetFileNameWithoutExtension(outputPath);
                     currentORMTexture.Path = outputPath;
+
+                    // Refresh MainWindow to update preview and row color
+                    Logger.Info("Calling MainWindow.RefreshCurrentTexture() to update preview and row color");
+                    mainWindow?.RefreshCurrentTexture();
                 } else {
                     MessageBox.Show($"Packing failed: {result.Error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     StatusText.Text = "✗ Packing failed";

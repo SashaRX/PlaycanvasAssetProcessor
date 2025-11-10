@@ -111,7 +111,7 @@ namespace AssetProcessor.ViewModels {
         private async Task PrimaryActionAsync(CancellationToken cancellationToken = default) {
             switch (ConnectionState) {
                 case ConnectionState.Disconnected:
-                    await ConnectInternalAsync(cancellationToken).ConfigureAwait(false);
+                    await ConnectAsync(cancellationToken).ConfigureAwait(false);
                     break;
 
                 case ConnectionState.UpToDate:
@@ -181,8 +181,6 @@ namespace AssetProcessor.ViewModels {
             FilterTexturesForMaterial(value);
         }
 
-        private async Task ConnectInternalAsync(CancellationToken cancellationToken) {
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(ApiKey)) {
         private string? ResolveApiKey() {
             if (!string.IsNullOrWhiteSpace(ApiKey)) {
                 return ApiKey;
@@ -212,15 +210,17 @@ namespace AssetProcessor.ViewModels {
                 ConnectionStatusMessage = "Connecting...";
                 ConnectionStatusBrush = Brushes.DarkOrange;
 
-                var userId = await playCanvasService.GetUserIdAsync(Username, ApiKey, cancellationToken).ConfigureAwait(false);
+                var userId = await playCanvasService.GetUserIdAsync(Username, resolvedApiKey, cancellationToken);
                 logger.Info($"Retrieved user ID: {userId}");
 
-                var projectsDict = await playCanvasService.GetProjectsAsync(userId, ApiKey, new Dictionary<string, string>(), cancellationToken).ConfigureAwait(false);
+                var projectsDict = await playCanvasService.GetProjectsAsync(userId, resolvedApiKey, new Dictionary<string, string>(), cancellationToken);
 
                 Projects.Clear();
                 foreach (var pair in projectsDict.OrderBy(p => p.Value, StringComparer.OrdinalIgnoreCase)) {
                     Projects.Add(pair);
                 }
+
+                logger.Info($"Retrieved {Projects.Count} projects");
 
                 if (Projects.Count == 0) {
                     ConnectionState = ConnectionState.Disconnected;
@@ -230,12 +230,6 @@ namespace AssetProcessor.ViewModels {
                     StatusMessage = "No projects available for the current user.";
                     return;
                 }
-                var userId = await playCanvasService.GetUserIdAsync(Username, resolvedApiKey, cancellationToken);
-                logger.Info($"Retrieved user ID: {userId}");
-
-                var projectsDict = await playCanvasService.GetProjectsAsync(userId, resolvedApiKey, new Dictionary<string, string>(), cancellationToken);
-                Projects = projectsDict;
-                logger.Info($"Retrieved {Projects.Count} projects");
 
                 IsConnected = true;
                 ConnectionState = ConnectionState.UpToDate;
@@ -281,8 +275,6 @@ namespace AssetProcessor.ViewModels {
             }
         }
 
-        private async Task LoadBranchesAsync(CancellationToken cancellationToken) {
-            if (string.IsNullOrWhiteSpace(SelectedProjectId) || string.IsNullOrWhiteSpace(ApiKey)) {
         [RelayCommand]
         private async Task LoadBranchesAsync(CancellationToken cancellationToken = default) {
             string? resolvedApiKey = ResolveApiKey();
@@ -295,16 +287,15 @@ namespace AssetProcessor.ViewModels {
                 IsBusy = true;
                 StatusMessage = "Loading branches...";
 
-                var branchesList = await playCanvasService.GetBranchesAsync(SelectedProjectId, ApiKey, new List<Branch>(), cancellationToken).ConfigureAwait(false);
                 var branchesList = await playCanvasService.GetBranchesAsync(SelectedProjectId, resolvedApiKey, new List<Branch>(), cancellationToken);
-                Branches = branchesList;
-                logger.Info($"Retrieved {Branches.Count} branches");
 
                 var orderedBranches = branchesList.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase).ToList();
                 Branches.Clear();
                 foreach (var branch in orderedBranches) {
                     Branches.Add(branch);
                 }
+
+                logger.Info($"Retrieved {Branches.Count} branches");
 
                 if (Branches.Count == 0) {
                     StatusMessage = "No branches available for the selected project.";
@@ -339,8 +330,6 @@ namespace AssetProcessor.ViewModels {
             }
         }
 
-        private async Task LoadAssetsAsync(CancellationToken cancellationToken) {
-            if (string.IsNullOrWhiteSpace(SelectedProjectId) || string.IsNullOrWhiteSpace(SelectedBranchId) || string.IsNullOrWhiteSpace(ApiKey)) {
         [RelayCommand]
         private async Task LoadAssetsAsync(CancellationToken cancellationToken = default) {
             string? resolvedApiKey = ResolveApiKey();
@@ -354,7 +343,6 @@ namespace AssetProcessor.ViewModels {
                 StatusMessage = "Loading assets...";
                 logger.Info($"Loading assets for project: {SelectedProjectId}, branch: {SelectedBranchId}");
 
-                var assetsArray = await playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, ApiKey, cancellationToken).ConfigureAwait(false);
                 JArray assetsArray = await playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, resolvedApiKey, cancellationToken);
 
                 Textures.Clear();

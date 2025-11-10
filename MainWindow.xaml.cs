@@ -3697,7 +3697,7 @@ namespace AssetProcessor {
                     if (resource is MaterialResource materialResource) {
                         await localCacheService.DownloadMaterialAsync(materialResource, innerToken => playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, innerToken), ct).ConfigureAwait(false);
                     } else {
-                        await localCacheService.DownloadFileAsync(resource, apiKey, ct).ConfigureAwait(false)
+                        await localCacheService.DownloadFileAsync(resource, apiKey, ct).ConfigureAwait(false);
                     }
                 } catch (OperationCanceledException) {
                     resource.Status = "Error";

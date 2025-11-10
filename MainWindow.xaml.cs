@@ -4472,29 +4472,27 @@ namespace AssetProcessor {
         }
 
         private void RecalculateIndices() {
-            // Используем BeginInvoke с низким приоритетом для неблокирующего обновления
-            Dispatcher.BeginInvoke(() => {
-                int index = 1;
-                foreach (TextureResource texture in viewModel.Textures) {
-                    texture.Index = index++;
-                    // INotifyPropertyChanged автоматически обновит строку в DataGrid
-                }
+            // Синхронное обновление индексов для избежания race condition с DataGrid
+            int index = 1;
+            foreach (TextureResource texture in viewModel.Textures) {
+                texture.Index = index++;
+                // INotifyPropertyChanged автоматически обновит строку в DataGrid
+            }
 
-                index = 1;
-                foreach (ModelResource model in viewModel.Models) {
-                    model.Index = index++;
-                    // INotifyPropertyChanged автоматически обновит строку в DataGrid
-                }
+            index = 1;
+            foreach (ModelResource model in viewModel.Models) {
+                model.Index = index++;
+                // INotifyPropertyChanged автоматически обновит строку в DataGrid
+            }
 
-                index = 1;
-                foreach (MaterialResource material in viewModel.Materials) {
-                    material.Index = index++;
-                    // INotifyPropertyChanged автоматически обновит строку в DataGrid
-                }
+            index = 1;
+            foreach (MaterialResource material in viewModel.Materials) {
+                material.Index = index++;
+                // INotifyPropertyChanged автоматически обновит строку в DataGrid
+            }
 
-                // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
-                // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
-            }, DispatcherPriority.Background);
+            // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
+            // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
         }
 
         private bool IsSupportedTextureFormat(string extension) {

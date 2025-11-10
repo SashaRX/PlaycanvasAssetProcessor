@@ -111,55 +111,66 @@ namespace AssetProcessor.Controls {
             EnableSupercompressionCheckBox.IsChecked = currentORMTexture.EnableSupercompression;
             SupercompressionLevelSlider.Value = currentORMTexture.SupercompressionLevel;
 
+            // CRITICAL: Capture references to local variables BEFORE Dispatcher.BeginInvoke to avoid closure issues
+            var aoSource = currentORMTexture.AOSource;
+            var glossSource = currentORMTexture.GlossSource;
+            var metallicSource = currentORMTexture.MetallicSource;
+            var heightSource = currentORMTexture.HeightSource;
+            var compressionFormat = currentORMTexture.CompressionFormat;
+            var toksvigCalculationMode = currentORMTexture.GlossToksvigCalculationMode;
+            var aoFilterType = currentORMTexture.AOFilterType;
+            var glossFilterType = currentORMTexture.GlossFilterType;
+            var metallicFilterType = currentORMTexture.MetallicFilterType;
+
             // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
             Dispatcher.BeginInvoke(new Action(() => {
                 Logger.Info("=== Dispatcher.BeginInvoke: Setting ComboBox selections ===");
 
                 // Sources - find by ID and set
-                if (currentORMTexture.AOSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.AOSource.ID);
-                    Logger.Info($"  AO: Looking for ID={currentORMTexture.AOSource.ID}, found={found?.Name ?? "null"}");
+                if (aoSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == aoSource.ID);
+                    Logger.Info($"  AO: Looking for ID={aoSource.ID}, found={found?.Name ?? "null"}");
                     if (found != null) {
                         AOSourceComboBox.SelectedItem = found;
                         Logger.Info($"  AO: Set SelectedItem to {found.Name}, result={(AOSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
                     }
                 }
 
-                if (currentORMTexture.GlossSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.GlossSource.ID);
-                    Logger.Info($"  Gloss: Looking for ID={currentORMTexture.GlossSource.ID}, found={found?.Name ?? "null"}");
+                if (glossSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == glossSource.ID);
+                    Logger.Info($"  Gloss: Looking for ID={glossSource.ID}, found={found?.Name ?? "null"}");
                     if (found != null) {
                         GlossSourceComboBox.SelectedItem = found;
                         Logger.Info($"  Gloss: Set SelectedItem to {found.Name}, result={(GlossSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
                     }
                 }
 
-                if (currentORMTexture.MetallicSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.MetallicSource.ID);
-                    Logger.Info($"  Metallic: Looking for ID={currentORMTexture.MetallicSource.ID}, found={found?.Name ?? "null"}");
+                if (metallicSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == metallicSource.ID);
+                    Logger.Info($"  Metallic: Looking for ID={metallicSource.ID}, found={found?.Name ?? "null"}");
                     if (found != null) {
                         MetallicSourceComboBox.SelectedItem = found;
                         Logger.Info($"  Metallic: Set SelectedItem to {found.Name}, result={(MetallicSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
                     }
                 }
 
-                if (currentORMTexture.HeightSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == currentORMTexture.HeightSource.ID);
+                if (heightSource != null) {
+                    var found = availableTextures.FirstOrDefault(t => t.ID == heightSource.ID);
                     if (found != null) HeightSourceComboBox.SelectedItem = found;
                 }
 
                 // Compression settings
-                CompressionFormatComboBox.SelectedItem = currentORMTexture.CompressionFormat;
-                Logger.Info($"  CompressionFormat: Set to {currentORMTexture.CompressionFormat}");
+                CompressionFormatComboBox.SelectedItem = compressionFormat;
+                Logger.Info($"  CompressionFormat: Set to {compressionFormat}");
 
                 // Toksvig calculation mode
-                ToksvigCalculationModeComboBox.SelectedItem = currentORMTexture.GlossToksvigCalculationMode;
-                Logger.Info($"  ToksvigCalculationMode: Set to {currentORMTexture.GlossToksvigCalculationMode}");
+                ToksvigCalculationModeComboBox.SelectedItem = toksvigCalculationMode;
+                Logger.Info($"  ToksvigCalculationMode: Set to {toksvigCalculationMode}");
 
                 // Filter types for each channel
-                AOFilterTypeComboBox.SelectedItem = currentORMTexture.AOFilterType;
-                GlossFilterTypeComboBox.SelectedItem = currentORMTexture.GlossFilterType;
-                MetallicFilterTypeComboBox.SelectedItem = currentORMTexture.MetallicFilterType;
+                AOFilterTypeComboBox.SelectedItem = aoFilterType;
+                GlossFilterTypeComboBox.SelectedItem = glossFilterType;
+                MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
 
                 Logger.Info("=== Dispatcher.BeginInvoke: DONE ===");
             }), System.Windows.Threading.DispatcherPriority.Loaded);

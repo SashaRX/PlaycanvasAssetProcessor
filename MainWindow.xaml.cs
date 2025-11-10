@@ -1,7 +1,7 @@
 using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
-using AssetProcessor.Services.Models;
+using AssetProcessor.Services.viewModel.Models;
 using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
 using Assimp;
@@ -79,7 +79,7 @@ namespace AssetProcessor {
         }
 
         // Коллекции теперь в MainViewModel - удалены дублирующиеся объявления
-        // Textures, Models, Materials, Assets теперь доступны через viewModel
+        // viewModel.Textures, viewModel.Models, viewModel.Materials, Assets теперь доступны через viewModel
 
         private readonly SemaphoreSlim getAssetsSemaphore;
         private readonly SemaphoreSlim downloadSemaphore;
@@ -1863,8 +1863,8 @@ namespace AssetProcessor {
                     MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Setting ORMPanel visibility and initializing...");
                     ORMPanel.Visibility = Visibility.Visible;
 
-                    // Initialize ORM panel with available viewModel.Textures (exclude other ORM viewModel.Textures)
-                    var availableTextures = Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                    // Initialize ORM panel with available viewModel.Textures (exclude other ORM textures)
+                    var.*viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
                     MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] availableTextures count: {availableTextures.Count}");
                     ORMPanel.Initialize(this, availableTextures);
                     ORMPanel.SetORMTexture(ormTexture);
@@ -3359,7 +3359,7 @@ namespace AssetProcessor {
                 hyperlink.DataContext = material;
 
                 if (mapId.HasValue) {
-                    TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                    TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
                         // Сохраняем ID в NavigateUri с пользовательской схемой для последующего извлечения
                         hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
@@ -3437,7 +3437,7 @@ namespace AssetProcessor {
                     logger.Debug("Вкладка текстур активирована через TabControl.");
                 }
 
-                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
                 if (texture != null) {
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                     view?.MoveCurrentTo(texture);
@@ -3449,7 +3449,7 @@ namespace AssetProcessor {
 
                     logger.Info("Текстура {TextureName} (ID {TextureId}) выделена и прокручена в таблице текстур.", texture.Name, texture.ID);
                 } else {
-                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", mapId.Value, Textures.Count);
+                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", mapId.Value, viewModel.Textures.Count);
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
@@ -3516,7 +3516,7 @@ namespace AssetProcessor {
                     logger.Debug("Вкладка текстур активирована через TabControl.");
                 }
 
-                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
                 if (texture != null) {
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                     view?.MoveCurrentTo(texture);
@@ -3528,7 +3528,7 @@ namespace AssetProcessor {
 
                     logger.Info("Текстура {TextureName} (ID {TextureId}) выделена и прокручена в таблице текстур.", texture.Name, texture.ID);
                 } else {
-                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", textureId.Value, Textures.Count);
+                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", textureId.Value, viewModel.Textures.Count);
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
@@ -3576,7 +3576,7 @@ namespace AssetProcessor {
 
             foreach (var textureId in textureIds) {
                 if (textureId.HasValue) {
-                    var texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                    var.*viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
                     if (texture != null) {
                         textureToSelect = texture;
                         break;
@@ -3604,7 +3604,7 @@ namespace AssetProcessor {
 
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
             if (textureId.HasValue) {
-                TextureResource? texture = Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
                 if (texture != null && File.Exists(texture.Path)) {
                     BitmapImage bitmapImage = new(new Uri(texture.Path));
                     imageControl.Source = bitmapImage;
@@ -3675,13 +3675,13 @@ namespace AssetProcessor {
                                                             t.Status == "Hash ERROR" ||
                                                             t.Status == "Error")
                                                 .Cast<BaseResource>()
-                                                .Concat(viewModel.Models.Where(m => m.Status == "On Server" ||
+                                                .Concat(viewModel.viewModel.Models.Where(m => m.Status == "On Server" ||
                                                                           m.Status == "Size Mismatch" ||
                                                                           m.Status == "Corrupted" ||
                                                                           m.Status == "Empty File" ||
                                                                           m.Status == "Hash ERROR" ||
                                                                           m.Status == "Error").Cast<BaseResource>())
-                                                .Concat(viewModel.Materials.Where(m => m.Status == "On Server" ||
+                                                .Concat(viewModel.viewModel.Materials.Where(m => m.Status == "On Server" ||
                                                                              m.Status == "Size Mismatch" ||
                                                                              m.Status == "Corrupted" ||
                                                                              m.Status == "Empty File" ||
@@ -3887,8 +3887,8 @@ namespace AssetProcessor {
                     UpdateConnectionStatus(true);
 
                     viewModel.Textures.Clear(); // Очищаем текущий список текстур
-                    viewModel.Models.Clear(); // Очищаем текущий список моделей
-                    viewModel.Materials.Clear(); // Очищаем текущий список материалов
+                    viewModel.viewModel.Models.Clear(); // Очищаем текущий список моделей
+                    viewModel.viewModel.Materials.Clear(); // Очищаем текущий список материалов
 
                     List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
                     int assetCount = supportedAssets.Count;
@@ -4123,7 +4123,7 @@ namespace AssetProcessor {
                         }
 
 
-                        await Dispatcher.InvokeAsync(() => viewModel.Models.Add(model));
+                        await Dispatcher.InvokeAsync(() => viewModel.viewModel.Models.Add(model));
                     });
                 } catch (FileNotFoundException ex) {
                     MainWindowHelpers.LogError($"File not found: {ex.FileName}");
@@ -4274,7 +4274,7 @@ namespace AssetProcessor {
                     }
 
                     MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
-                    await Dispatcher.InvokeAsync(() => viewModel.Materials.Add(material));
+                    await Dispatcher.InvokeAsync(() => viewModel.viewModel.Materials.Add(material));
                 });
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error processing material: {ex.Message}");
@@ -4320,8 +4320,8 @@ namespace AssetProcessor {
 
         private async Task ProcessAssetsFromJson(JToken assetsResponse) {
             viewModel.Textures.Clear();
-            viewModel.Models.Clear();
-            viewModel.Materials.Clear();
+            viewModel.viewModel.Models.Clear();
+            viewModel.viewModel.Materials.Clear();
 
             List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
             int assetCount = supportedAssets.Count;
@@ -4359,7 +4359,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            MainWindowHelpers.LogInfo("=== Detecting local ORM viewModel.Textures ===");
+            MainWindowHelpers.LogInfo("=== Detecting local ORM textures ===");
 
             try {
                 // Сканируем все .ktx2 файлы рекурсивно
@@ -4422,16 +4422,16 @@ namespace AssetProcessor {
                 }
 
                 if (ormCount > 0) {
-                    MainWindowHelpers.LogInfo($"=== Detected {ormCount} ORM viewModel.Textures ===");
+                    MainWindowHelpers.LogInfo($"=== Detected {ormCount} ORM textures ===");
                     Dispatcher.Invoke(() => {
                         RecalculateIndices(); // Recalculate indices after adding ORM textures
                     });
                 } else {
-                    MainWindowHelpers.LogInfo("  No ORM viewModel.Textures found");
+                    MainWindowHelpers.LogInfo("  No ORM textures found");
                 }
 
             } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error detecting ORM viewModel.Textures: {ex.Message}");
+                MainWindowHelpers.LogError($"Error detecting ORM textures: {ex.Message}");
             }
         }
 
@@ -5070,14 +5070,14 @@ namespace AssetProcessor {
 
                 if (ProcessAllCheckBox.IsChecked == true) {
                     // Process all enabled textures
-                    texturesToProcess = Textures.Where(t => !string.IsNullOrEmpty(t.Path)).ToList();
+                    texturesToProcess = viewModel.Textures.Where(t => !string.IsNullOrEmpty(t.Path)).ToList();
                 } else {
                     // Process selected viewModel.Textures only
                     texturesToProcess = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
                 }
 
                 if (texturesToProcess.Count == 0) {
-                    MessageBox.Show("No viewModel.Textures selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("No textures selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -5339,7 +5339,7 @@ namespace AssetProcessor {
 
         private void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
             MessageBox.Show(
-                "Upload functionality coming soon!\n\nThis will upload converted viewModel.Textures to PlayCanvas.",
+                "Upload functionality coming soon!\n\nThis will upload converted textures to PlayCanvas.",
                 "Coming Soon",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information
@@ -5350,7 +5350,7 @@ namespace AssetProcessor {
             int selectedCount = TexturesDataGrid.SelectedItems.Count;
             SelectedTexturesCountText.Text = selectedCount == 1
                 ? "1 texture"
-                : $"{selectedCount} viewModel.Textures";
+                : $"{selectedCount} textures";
 
             ProcessTexturesButton.IsEnabled = selectedCount > 0 || ProcessAllCheckBox.IsChecked == true;
         }
@@ -5365,8 +5365,8 @@ namespace AssetProcessor {
                 : TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
 
             if (texturesToProcess.Count == 0) {
-                MessageBox.Show("Please select viewModel.Textures first or enable 'Process All'.",
-                    "No Textures Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Please select textures first or enable 'Process All'.",
+                    "No textures Selected", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -5402,8 +5402,8 @@ namespace AssetProcessor {
 
         private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
             try {
-                // Count existing ORM viewModel.Textures to generate unique name
-                int ormCount = Textures.Count(t => t is ORMTextureResource) + 1;
+                // Count existing ORM textures to generate unique name
+                int ormCount = viewModel.Textures.Count(t => t is ORMTextureResource) + 1;
 
                 // Create virtual ORM texture
                 var ormTexture = new ORMTextureResource {
@@ -5414,7 +5414,7 @@ namespace AssetProcessor {
                 };
 
                 // Add to viewModel.Textures collection
-                Textures.Add(ormTexture);
+                viewModel.Textures.Add(ormTexture);
 
                 // Select the newly created ORM texture
                 TexturesDataGrid.SelectedItem = ormTexture;
@@ -5454,7 +5454,7 @@ namespace AssetProcessor {
                 TextureResource? metalnessTexture = null;
 
                 // Debug: Log found textures
-                MainWindowHelpers.LogInfo($"Found viewModel.Textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
+                MainWindowHelpers.LogInfo($"Found textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
 
                 // Smart workflow detection: prefer actual texture presence over UseMetalness flag
                 string workflowInfo = "";
@@ -5491,12 +5491,12 @@ namespace AssetProcessor {
                 // If only one texture or none - don't create ORM
                 if (mode == ChannelPackingMode.None) {
                     // mapType is already set by workflow detection above
-                    MessageBox.Show($"Material '{material.Name}' doesn't have enough viewModel.Textures for ORM packing.\n\n" +
+                    MessageBox.Show($"Material ... textures for ORM packing.\n\n" +
                                   $"{workflowInfo}\n\n" +
                                   $"AO: {(aoTexture != null ? "✓" : "✗")}\n" +
                                   $"Gloss: {(glossTexture != null ? "✓" : "✗")}\n" +
                                   $"{mapType}: {(metalnessTexture != null ? "✓" : "✗")}\n\n" +
-                                  $"At least 2 viewModel.Textures are required.",
+                                  $"At least 2 textures are required.",
                         "Insufficient Textures", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
@@ -5516,7 +5516,7 @@ namespace AssetProcessor {
                 string ormTextureName = baseMaterialName + modeSuffix;
 
                 // Check if ORM texture already exists for this material
-                var existingORM = Textures.OfType<ORMTextureResource>()
+                var.*viewModel.Textures.OfType<ORMTextureResource>()
                     .FirstOrDefault(t => t.Name == ormTextureName);
 
                 if (existingORM != null) {
@@ -5526,7 +5526,7 @@ namespace AssetProcessor {
                         return;
                     }
                     // Remove existing
-                    Textures.Remove(existingORM);
+                    viewModel.Textures.Remove(existingORM);
                 }
 
                 // Create ORM texture
@@ -5541,9 +5541,9 @@ namespace AssetProcessor {
                 };
 
                 // Add to viewModel.Textures collection
-                Textures.Add(ormTexture);
+                viewModel.Textures.Add(ormTexture);
 
-                // Select the newly created ORM texture and switch to Textures tab
+                // Select the newly created ORM texture and switch to viewModel.Textures tab
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItem = ormTexture;
                 TexturesDataGrid.ScrollIntoView(ormTexture);
@@ -5569,7 +5569,7 @@ namespace AssetProcessor {
                 int skipped = 0;
                 var errors = new List<string>();
 
-                foreach (var material in Materials) {
+                foreach (var material in viewModel.Materials) {
                     try {
                         // Find textures
                         TextureResource? aoTexture = FindTextureById(material.AOMapId);
@@ -5609,7 +5609,7 @@ namespace AssetProcessor {
                         string ormTextureName = baseMaterialName + modeSuffix;
 
                         // Check if already exists
-                        var existingORM = Textures.OfType<ORMTextureResource>()
+                        var.*viewModel.Textures.OfType<ORMTextureResource>()
                             .FirstOrDefault(t => t.Name == ormTextureName);
 
                         if (existingORM != null) {
@@ -5628,7 +5628,7 @@ namespace AssetProcessor {
                             Status = "Ready to pack"
                         };
 
-                        Textures.Add(ormTexture);
+                        viewModel.Textures.Add(ormTexture);
                         created++;
                     } catch (Exception ex) {
                         errors.Add($"{material.Name}: {ex.Message}");
@@ -5652,7 +5652,7 @@ namespace AssetProcessor {
                     MessageBoxButton.OK, errors.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error in batch ORM creation: {ex.Message}");
-                MessageBox.Show($"Failed to create ORM viewModel.Textures: {ex.Message}",
+                MessageBox.Show($"Failed to create ORM textures: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -5669,7 +5669,7 @@ namespace AssetProcessor {
                 : (material.Name ?? "unknown");
 
             // Try all possible ORM suffixes
-            var ormTexture = Textures.OfType<ORMTextureResource>()
+            var.*viewModel.Textures.OfType<ORMTextureResource>()
                 .FirstOrDefault(t => t.Name == baseMaterialName + "_og" ||
                                      t.Name == baseMaterialName + "_ogm" ||
                                      t.Name == baseMaterialName + "_ogmh");
@@ -5680,11 +5680,11 @@ namespace AssetProcessor {
                 return;
             }
 
-            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source viewModel.Textures.",
+            var.*viewModel.Textures.",
                 "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes) {
-                Textures.Remove(ormTexture);
+                viewModel.Textures.Remove(ormTexture);
                 MainWindowHelpers.LogInfo($"Deleted ORM texture: {ormTexture.Name}");
             }
         }
@@ -5692,16 +5692,16 @@ namespace AssetProcessor {
         private void DeleteORMFromList_Click(object sender, RoutedEventArgs e) {
             // Get selected texture from TexturesDataGrid
             if (TexturesDataGrid.SelectedItem is not ORMTextureResource ormTexture) {
-                MessageBox.Show("Please select an ORM texture to delete.\n\nThis option only works for ORM viewModel.Textures (textureName_og, textureName_ogm, textureName_ogmh).",
+                MessageBox.Show("Please select an ORM texture to delete.\n\nThis option only works for ORM textures (textureName_og, textureName_ogm, textureName_ogmh).",
                     "Not an ORM Texture", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source viewModel.Textures.",
+            var.*viewModel.Textures.",
                 "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes) {
-                Textures.Remove(ormTexture);
+                viewModel.Textures.Remove(ormTexture);
                 MainWindowHelpers.LogInfo($"Deleted ORM texture '{ormTexture.Name}' from texture list");
             }
         }
@@ -5712,11 +5712,11 @@ namespace AssetProcessor {
             if (mapId == null) return null;
 
             // Debug: Log search
-            var found = Textures.FirstOrDefault(t => t.ID == mapId.Value);
+            var.*viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
             if (found == null) {
-                MainWindowHelpers.LogWarn($"Texture with ID {mapId.Value} not found. Total viewModel.Textures in collection: {Textures.Count}");
+                MainWindowHelpers.LogWarn($"Texture with ID {mapId.Value} not found. Total textures in collection: {viewModel.Textures.Count}");
                 // Log first few texture IDs for debugging
-                var sampleIds = string.Join(", ", Textures.Take(5).Select(t => $"{t.ID}({t.Name})"));
+                var.*viewModel.Textures.Take(5).Select(t => $"{t.ID}({t.Name})"));
                 MainWindowHelpers.LogInfo($"Sample texture IDs: {sampleIds}");
             }
             return found;

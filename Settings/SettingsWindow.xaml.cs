@@ -16,6 +16,9 @@ namespace AssetProcessor {
     public partial class SettingsWindow : Window, INotifyPropertyChanged {
         private GlobalTextureConversionSettings _textureSettings;
         private GlobalModelConversionSettings _modelSettings;
+        private string? _playcanvasApiKey;
+        private bool _isApiKeyVisible;
+        private bool _suppressApiKeyUpdates;
 
         // Event for preview renderer changes
         public event Action<bool>? OnPreviewRendererChanged;
@@ -117,7 +120,18 @@ namespace AssetProcessor {
 
         private void LoadSettings() {
             UsernameTextBox.Text = AppSettings.Default.UserName;
-            PlaycanvasApiKeyTextBox.Text = AppSettings.Default.PlaycanvasApiKey;
+
+            if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out _playcanvasApiKey)) {
+                _playcanvasApiKey = null;
+                MessageBox.Show(
+                    "Не удалось расшифровать сохранённый API-ключ. Проверьте мастер-пароль или удалите ключ и сохраните заново.",
+                    "Ошибка безопасности",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+
+            UpdateApiKeyControls();
+
             ProjectsFolderBox.Text = AppSettings.Default.ProjectsFolderPath;
             GetTexturesSemaphoreSlider.Value = AppSettings.Default.GetTexturesSemaphoreLimit;
             DownloadSemaphoreSlider.Value = AppSettings.Default.DownloadSemaphoreLimit;
@@ -144,13 +158,77 @@ namespace AssetProcessor {
 
         private void CheckAndRemoveWatermarks() {
             RemoveWatermarkIfFilled(UsernameTextBox);
-            RemoveWatermarkIfFilled(PlaycanvasApiKeyTextBox);
         }
 
         private static void RemoveWatermarkIfFilled(TextBox textBox) {
             if (!string.IsNullOrEmpty(textBox.Text)) {
                 textBox.Foreground = SystemColors.ControlTextBrush;
             }
+        }
+
+        private void PlaycanvasApiKeyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e) {
+            if (_suppressApiKeyUpdates || _isApiKeyVisible) {
+                return;
+            }
+
+            _playcanvasApiKey = PlaycanvasApiKeyPasswordBox.Password;
+            SyncApiKeyControls();
+        }
+
+        private void PlaycanvasApiKeyRevealTextBox_TextChanged(object sender, TextChangedEventArgs e) {
+            if (_suppressApiKeyUpdates || !_isApiKeyVisible) {
+                return;
+            }
+
+            _playcanvasApiKey = PlaycanvasApiKeyRevealTextBox.Text;
+            SyncApiKeyControls();
+        }
+
+        private void ToggleApiKeyVisibilityButton_Click(object sender, RoutedEventArgs e) {
+            if (!_isApiKeyVisible) {
+                MessageBoxResult result = MessageBox.Show(
+                    "Показать API-ключ в открытом виде? Убедитесь, что рядом нет посторонних.",
+                    "Подтверждение",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result != MessageBoxResult.Yes) {
+                    return;
+                }
+                _isApiKeyVisible = true;
+            } else {
+                _isApiKeyVisible = false;
+            }
+
+            UpdateApiKeyControls();
+        }
+
+        private void UpdateApiKeyControls() {
+            _suppressApiKeyUpdates = true;
+
+            string currentValue = _playcanvasApiKey ?? string.Empty;
+            PlaycanvasApiKeyPasswordBox.Password = currentValue;
+            PlaycanvasApiKeyRevealTextBox.Text = currentValue;
+
+            PlaycanvasApiKeyPasswordBox.Visibility = _isApiKeyVisible ? Visibility.Collapsed : Visibility.Visible;
+            PlaycanvasApiKeyRevealTextBox.Visibility = _isApiKeyVisible ? Visibility.Visible : Visibility.Collapsed;
+            ToggleApiKeyVisibilityButton.Content = _isApiKeyVisible ? "Скрыть" : "Показать";
+            ApiKeyVisibilityWarningText.Text = _isApiKeyVisible
+                ? "API-ключ показан. Скрывайте значение после проверки."
+                : "Значение ключа скрыто. Нажмите «Показать» для временного просмотра.";
+
+            _suppressApiKeyUpdates = false;
+        }
+
+        private void SyncApiKeyControls() {
+            _suppressApiKeyUpdates = true;
+            string currentValue = _playcanvasApiKey ?? string.Empty;
+            if (_isApiKeyVisible) {
+                PlaycanvasApiKeyRevealTextBox.Text = currentValue;
+            } else {
+                PlaycanvasApiKeyPasswordBox.Password = currentValue;
+            }
+            _suppressApiKeyUpdates = false;
         }
 
         private void SemaphoreLimitSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -187,7 +265,12 @@ namespace AssetProcessor {
 
         private void Save_Click(object sender, RoutedEventArgs e) {
             AppSettings.Default.UserName = UsernameTextBox.Text;
-            AppSettings.Default.PlaycanvasApiKey = PlaycanvasApiKeyTextBox.Text;
+            try {
+                AppSettings.Default.PlaycanvasApiKey = _playcanvasApiKey ?? string.Empty;
+            } catch (InvalidOperationException ex) {
+                MessageBox.Show(ex.Message, "Ошибка сохранения ключа", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             AppSettings.Default.GetTexturesSemaphoreLimit = (int)GetTexturesSemaphoreSlider.Value;
             AppSettings.Default.DownloadSemaphoreLimit = (int)DownloadSemaphoreSlider.Value;
             AppSettings.Default.ProjectsFolderPath = ProjectsFolderBox.Text;

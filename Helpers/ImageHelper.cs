@@ -12,7 +12,8 @@ namespace AssetProcessor.Helpers {
 
             try {
                 using HttpClient client = new();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
+                string apiKey = GetAuthorizationToken();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
                 client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
 
                 HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -63,7 +64,8 @@ namespace AssetProcessor.Helpers {
 
         private static async Task<(int Width, int Height)> GetJpegResolutionFromStream(string url, CancellationToken cancellationToken) {
             using HttpClient client = new();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
+            string apiKey = GetAuthorizationToken();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 500);
 
             HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -82,7 +84,8 @@ namespace AssetProcessor.Helpers {
 
         private static async Task<(int Width, int Height)> GetTiffResolutionAsync(string url, CancellationToken cancellationToken) {
             using HttpClient client = new();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
+            string apiKey = GetAuthorizationToken();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 2047);
 
             HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -174,6 +177,14 @@ namespace AssetProcessor.Helpers {
             }
 
             return (buffer[offset] << 8) | buffer[offset + 1];
+        }
+
+        private static string GetAuthorizationToken() {
+            if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out string? apiKey) || string.IsNullOrWhiteSpace(apiKey)) {
+                throw new InvalidOperationException("Playcanvas API key is unavailable or could not be decrypted.");
+            }
+
+            return apiKey;
         }
     }
 }

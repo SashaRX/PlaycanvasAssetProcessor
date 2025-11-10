@@ -173,8 +173,11 @@
 
                         <TextBlock Text="Processing:" Style="{StaticResource CompactTextStyle}"/>
                         <ComboBox x:Name="MetallicProcessingModeComboBox" Style="{StaticResource CompactComboStyle}"
-                                  ItemsSource="{Binding Source={StaticResource AOProcessingModeValues}}"
-                                  SelectionChanged="MetallicProcessingModeComboBox_SelectionChanged"/>
+                                  SelectionChanged="MetallicProcessingModeComboBox_SelectionChanged">
+                            <ComboBoxItem Content="None" Tag="None" IsSelected="True"/>
+                            <ComboBoxItem Content="Biased Darkening" Tag="BiasedDarkening"/>
+                            <ComboBoxItem Content="Percentile" Tag="Percentile"/>
+                        </ComboBox>
 
                         <StackPanel x:Name="MetallicBiasPanel" Visibility="Collapsed">
                             <TextBlock Text="Bias:" Style="{StaticResource CompactTextStyle}"/>

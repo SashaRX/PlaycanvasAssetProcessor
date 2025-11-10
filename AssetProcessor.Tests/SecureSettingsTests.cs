@@ -29,7 +29,9 @@ public class SecureSettingsTests : IDisposable {
 
     [Fact]
     public void AesEncryption_UsesRandomSalt() {
-        Skip.If(OperatingSystem.IsWindows(), "DPAPI path is used on Windows.");
+        if (OperatingSystem.IsWindows()) {
+            return;
+        }
 
         Environment.SetEnvironmentVariable(MasterPasswordVariable, "UnitTestSecret!");
 
@@ -43,7 +45,9 @@ public class SecureSettingsTests : IDisposable {
 
     [Fact]
     public void AesDecryption_WithWrongMasterPassword_Fails() {
-        Skip.If(OperatingSystem.IsWindows(), "DPAPI path is used on Windows.");
+        if (OperatingSystem.IsWindows()) {
+            return;
+        }
 
         Environment.SetEnvironmentVariable(MasterPasswordVariable, "UnitTestSecret!");
         string cipher = SecureStorageHelper.Protect("test-api-key-123");

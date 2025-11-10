@@ -111,14 +111,30 @@
 
                     <StackPanel x:Name="AOBiasPanel" Visibility="Collapsed" Margin="0,1,0,0">
                         <TextBlock Text="Bias:" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="AOBiasSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0.1" Maximum="1.0" Value="0.5" TickFrequency="0.1"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="AOBiasSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="0.1" Maximum="1.0" Value="0.5" TickFrequency="0.1" IsSnapToTickEnabled="False"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=AOBiasSlider, Path=Value, StringFormat={}{0:F2}}"
+                                      Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                        </Grid>
                     </StackPanel>
 
                     <StackPanel x:Name="AOPercentilePanel" Visibility="Collapsed" Margin="0,1,0,0">
-                        <TextBlock Text="Percentile (%):" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="AOPercentileSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="1" Maximum="50" Value="10" TickFrequency="1"/>
+                        <TextBlock Text="Percentile:" Style="{StaticResource CompactTextStyle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="AOPercentileSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="1" Maximum="50" Value="10" TickFrequency="1" IsSnapToTickEnabled="False"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=AOPercentileSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                      Style="{StaticResource CompactTextStyle}" Width="35" TextAlignment="Right"/>
+                        </Grid>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
@@ -139,17 +155,33 @@
                               Style="{StaticResource CompactCheckStyle}" IsChecked="True"
                               Checked="GlossToksvig_Changed" Unchecked="GlossToksvig_Changed"/>
 
-                    <StackPanel x:Name="GlossToksvigPanel">
+                    <StackPanel x:Name="GlossToksvigPanel" Visibility="Visible">
                         <ComboBox x:Name="ToksvigCalculationModeComboBox" Style="{StaticResource CompactComboStyle}"
                                   ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"/>
 
                         <TextBlock Text="Power:" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="GlossToksvigPowerSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0.5" Maximum="8" Value="4.0" TickFrequency="0.1"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="GlossToksvigPowerSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="0.5" Maximum="8" Value="4.0" TickFrequency="0.1" IsSnapToTickEnabled="False"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=GlossToksvigPowerSlider, Path=Value, StringFormat={}{0:F1}}"
+                                      Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                        </Grid>
 
                         <TextBlock Text="Min Mip:" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="ToksvigMinMipLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0" Maximum="5" Value="0" TickFrequency="1"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigMinMipLevelSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="0" Maximum="5" Value="0" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigMinMipLevelSlider, Path=Value, StringFormat={}{0:F0}}"
+                                      Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                        </Grid>
 
                         <CheckBox x:Name="ToksvigEnergyPreservingCheckBox" Content="Energy-Preserving"
                                   Style="{StaticResource CompactCheckStyle}" IsChecked="True"/>
@@ -232,13 +264,29 @@
 
                     <!-- ETC1S -->
                     <StackPanel x:Name="ETC1SPanel">
-                        <TextBlock Text="Compress Level (0-5):" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="CompressLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0" Maximum="5" Value="1" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <TextBlock Text="Compress Level:" Style="{StaticResource CompactTextStyle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="CompressLevelSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="0" Maximum="5" Value="1" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=CompressLevelSlider, Path=Value, StringFormat={}{0:F0}}"
+                                      Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                        </Grid>
 
-                        <TextBlock Text="Quality (1-255):" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="QualityLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="1" Maximum="255" Value="128" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                        <TextBlock Text="Quality:" Style="{StaticResource CompactTextStyle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="QualityLevelSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="1" Maximum="255" Value="128" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=QualityLevelSlider, Path=Value, StringFormat={}{0:F0}}"
+                                      Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                        </Grid>
 
                         <CheckBox x:Name="PerceptualCheckBox" Content="Perceptual" Style="{StaticResource CompactCheckStyle}"/>
                     </StackPanel>
@@ -246,15 +294,31 @@
                     <!-- UASTC -->
                     <StackPanel x:Name="UASTCPanel" Visibility="Collapsed">
                         <TextBlock Text="Quality:" Style="{StaticResource CompactTextStyle}"/>
-                        <Slider x:Name="UASTCQualitySlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="0" Maximum="4" Value="2" TickFrequency="1"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="UASTCQualitySlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                    Minimum="0" Maximum="4" Value="2" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value, StringFormat={}{0:F0}}"
+                                      Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                        </Grid>
 
                         <CheckBox x:Name="EnableRDOCheckBox" Content="RDO" Style="{StaticResource CompactCheckStyle}"
                                   Checked="EnableRDO_Changed" Unchecked="EnableRDO_Changed"/>
                         <StackPanel x:Name="RDOPanel" Visibility="Collapsed">
                             <TextBlock Text="Lambda:" Style="{StaticResource CompactTextStyle}"/>
-                            <Slider x:Name="RDOLambdaSlider" Style="{StaticResource CompactSliderStyle}"
-                                    Minimum="0.001" Maximum="10.0" Value="1.0"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="RDOLambdaSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                        Minimum="0.001" Maximum="10.0" Value="1.0" IsSnapToTickEnabled="False"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ElementName=RDOLambdaSlider, Path=Value, StringFormat={}{0:F3}}"
+                                          Style="{StaticResource CompactTextStyle}" Width="35" TextAlignment="Right"/>
+                            </Grid>
                         </StackPanel>
 
                         <CheckBox x:Name="EnableSupercompressionCheckBox" Content="Supercompression (Zstd)"
@@ -262,8 +326,16 @@
                                   Checked="EnableSupercompression_Changed" Unchecked="EnableSupercompression_Changed"/>
                         <StackPanel x:Name="SupercompressionPanel" Visibility="Collapsed">
                             <TextBlock Text="Level:" Style="{StaticResource CompactTextStyle}"/>
-                            <Slider x:Name="SupercompressionLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                    Minimum="1" Maximum="22" Value="3" TickFrequency="1"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="SupercompressionLevelSlider" Grid.Column="0" Style="{StaticResource CompactSliderStyle}"
+                                        Minimum="1" Maximum="22" Value="3" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ElementName=SupercompressionLevelSlider, Path=Value, StringFormat={}{0:F0}}"
+                                          Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                            </Grid>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

@@ -86,6 +86,7 @@
     <!-- Serialization and Logging -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="Polly" Version="8.5.1" />
 
     <!-- MVVM Helpers -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />

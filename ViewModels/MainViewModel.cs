@@ -1,10 +1,11 @@
 using AssetProcessor.Exceptions;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
+using AssetProcessor.Services.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Newtonsoft.Json.Linq;
 using NLog;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace AssetProcessor.ViewModels {
@@ -141,7 +142,10 @@ namespace AssetProcessor.ViewModels {
                 StatusMessage = "Loading assets...";
                 logger.Info($"Loading assets for project: {SelectedProjectId}, branch: {SelectedBranchId}");
 
-                JArray assetsArray = await playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, ApiKey, cancellationToken);
+                List<PlayCanvasAssetSummary> assetsArray = [];
+                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, ApiKey, cancellationToken)) {
+                    assetsArray.Add(asset);
+                }
 
                 // Clear existing collections
                 Textures.Clear();
@@ -150,17 +154,19 @@ namespace AssetProcessor.ViewModels {
                 Assets.Clear();
 
                 // Parse and categorize assets
-                foreach (JToken asset in assetsArray) {
-                    var type = asset["type"]?.ToString();
-                    var id = asset["id"]?.ToString();
-                    var name = asset["name"]?.ToString();
+                foreach (PlayCanvasAssetSummary asset in assetsArray) {
+                    string? type = asset.Type;
+                    int id = asset.Id;
+                    string? name = asset.Name;
 
-                    if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(id)) continue;
+                    if (string.IsNullOrEmpty(type) || id == 0) {
+                        continue;
+                    }
 
                     switch (type.ToLower()) {
                         case "texture":
                             var texture = new TextureResource {
-                                ID = int.TryParse(id, out var texId) ? texId : 0,
+                                ID = id,
                                 Name = name,
                                 Type = type,
                                 Status = "Ready"
@@ -171,7 +177,7 @@ namespace AssetProcessor.ViewModels {
 
                         case "model":
                             var model = new ModelResource {
-                                ID = int.TryParse(id, out var modelId) ? modelId : 0,
+                                ID = id,
                                 Name = name,
                                 Type = type,
                                 Status = "Ready"
@@ -182,7 +188,7 @@ namespace AssetProcessor.ViewModels {
 
                         case "material":
                             var material = new MaterialResource {
-                                ID = int.TryParse(id, out var matId) ? matId : 0,
+                                ID = id,
                                 Name = name,
                                 Type = type,
                                 Status = "Ready"

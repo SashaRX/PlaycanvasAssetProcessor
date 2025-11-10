@@ -1,6 +1,7 @@
 using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
+using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
 using Assimp;
@@ -2844,7 +2845,14 @@ namespace AssetProcessor {
                 JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
 
                 // Получаем серверный JSON
-                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                List<PlayCanvasAssetSummary> serverSummaries = [];
+                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None)) {
+                    serverSummaries.Add(asset);
+                }
+                JArray serverData = new();
+                foreach (PlayCanvasAssetSummary asset in serverSummaries) {
+                    serverData.Add(JToken.Parse(asset.ToJsonString()));
+                }
 
                 // Сравниваем hash или количество ассетов
                 string localHash = ComputeHash(localJson);
@@ -3593,7 +3601,7 @@ namespace AssetProcessor {
                 try {
                     using PlayCanvasService playCanvasService = new();
                     string apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
+                    PlayCanvasAssetDetail materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
 
                     // Изменение: заменяем последнюю папку на файл с расширением .json
@@ -3602,7 +3610,7 @@ namespace AssetProcessor {
 
                     Directory.CreateDirectory(directoryPath);
 
-                    await File.WriteAllTextAsync(materialPath, materialJson.ToString(), default);
+                    await File.WriteAllTextAsync(materialPath, materialJson.ToJsonString(), default);
                     materialResource.Status = "Downloaded";
                     break;
                 } catch (IOException ex) {
@@ -3712,7 +3720,14 @@ namespace AssetProcessor {
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
                 MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
-                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                List<PlayCanvasAssetSummary> assetSummaries = [];
+                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken)) {
+                    assetSummaries.Add(asset);
+                }
+                JArray assetsResponse = new();
+                foreach (PlayCanvasAssetSummary asset in assetSummaries) {
+                    assetsResponse.Add(JToken.Parse(asset.ToJsonString()));
+                }
                 if (assetsResponse != null) {
                     MainWindowHelpers.LogInfo("Assets received from server, processing...");
                     // Строим иерархию папок из списка ассетов
@@ -4085,10 +4100,10 @@ namespace AssetProcessor {
 
                     using PlayCanvasService playCanvasService = new();
                     string apiKey = AppSettings.Default.PlaycanvasApiKey;
-                    JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
+                    PlayCanvasAssetDetail materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 
-                    //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
-                    //    material.TextureIds.AddRange(from textureId in materialJson["textures"]!
+                    //if (materialJson != null && materialJson.Raw.TryGetProperty("textures", out JsonElement texturesElement) && texturesElement.ValueKind == JsonValueKind.Array) {
+                    //    material.TextureIds.AddRange(from textureId in texturesElement.EnumerateArray()
                     //                                 select (int)textureId);
                     //}
 
@@ -4484,7 +4499,14 @@ namespace AssetProcessor {
 
                     // Получаем данные с сервера для сравнения hash
                     MainWindowHelpers.LogInfo("Fetching assets from server to check hash...");
-                    JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                    List<PlayCanvasAssetSummary> serverSummaries = [];
+                    await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None)) {
+                        serverSummaries.Add(asset);
+                    }
+                    JArray serverData = new();
+                    foreach (PlayCanvasAssetSummary asset in serverSummaries) {
+                        serverData.Add(JToken.Parse(asset.ToJsonString()));
+                    }
                     string serverHash = ComputeHash(serverData.ToString());
                     MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
 

@@ -1,10 +1,12 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
+using AssetProcessor.Services.Models;
 using AssetProcessor.ViewModels;
-using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AssetProcessor.Tests;
@@ -58,9 +60,13 @@ public class MainViewModelTests {
     }
 
     private sealed class FakePlayCanvasService : IPlayCanvasService {
-        public Task<JObject> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken) => Task.FromResult(new JObject());
+        public Task<PlayCanvasAssetDetail> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken) =>
+            Task.FromResult(new PlayCanvasAssetDetail(0, string.Empty, null, default));
 
-        public Task<JArray> GetAssetsAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken) => Task.FromResult(new JArray());
+        public async IAsyncEnumerable<PlayCanvasAssetSummary> GetAssetsAsync(string projectId, string branchId, string apiKey, [EnumeratorCancellation] CancellationToken cancellationToken) {
+            await Task.CompletedTask;
+            yield break;
+        }
 
         public Task<List<Branch>> GetBranchesAsync(string projectId, string apiKey, List<Branch> branches, CancellationToken cancellationToken) => Task.FromResult(new List<Branch>());
 

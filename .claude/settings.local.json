@@ -33,7 +33,9 @@
       "Bash(AssetProcessor.Tests/SecureSettingsTests.cs)",
       "Bash(powershell -Command \"dotnet build D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\\AssetProcessor.csproj --configuration Release 2>&1 | Select-Object -Last 30\":*)",
       "Bash(powershell:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(MainWindow.xaml)",
+      "Bash(MainWindow.xaml.cs)"
     ],
     "deny": [],
     "ask": []

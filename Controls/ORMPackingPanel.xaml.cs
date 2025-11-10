@@ -397,19 +397,32 @@ namespace AssetProcessor.Controls {
                     return;
                 }
 
-                // Создаем диалог сохранения
-                var saveDialog = new Microsoft.Win32.SaveFileDialog {
-                    Filter = "KTX2 files (*.ktx2)|*.ktx2",
-                    FileName = $"{(currentORMTexture.Name ?? "orm_texture").Replace("[ORM Texture - Not Packed]", "packed_orm")}.ktx2"
-                };
+                // Генерируем путь для сохранения - в той же папке, что и исходные текстуры
+                string? outputDir = null;
+                if (!string.IsNullOrEmpty(currentORMTexture.AOSource?.Path)) {
+                    outputDir = Path.GetDirectoryName(currentORMTexture.AOSource.Path);
+                } else if (!string.IsNullOrEmpty(currentORMTexture.GlossSource?.Path)) {
+                    outputDir = Path.GetDirectoryName(currentORMTexture.GlossSource.Path);
+                } else if (!string.IsNullOrEmpty(currentORMTexture.MetallicSource?.Path)) {
+                    outputDir = Path.GetDirectoryName(currentORMTexture.MetallicSource.Path);
+                }
 
-                if (saveDialog.ShowDialog() != true) {
-                    StatusText.Text = "Canceled";
+                if (string.IsNullOrEmpty(outputDir)) {
+                    MessageBox.Show("Cannot determine output directory - no source textures specified", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                // Создаем пайплайн и упаковываем
-                var pipeline = new TextureConversionPipeline();
+                var fileName = currentORMTexture.Name?.Replace("[ORM Texture - Not Packed]", "").Trim() ?? "orm_packed";
+                var outputPath = Path.Combine(outputDir, $"{fileName}.ktx2");
+
+                // Загружаем настройки для получения ktxPath
+                var globalSettings = TextureConversionSettingsManager.LoadSettings();
+                var ktxPath = string.IsNullOrWhiteSpace(globalSettings.KtxExecutablePath)
+                    ? (string.IsNullOrWhiteSpace(globalSettings.ToktxExecutablePath) ? "ktx" : globalSettings.ToktxExecutablePath)
+                    : globalSettings.KtxExecutablePath;
+
+                // Создаем пайплайн с ktxPath
+                var pipeline = new TextureConversionPipeline(ktxPath);
 
                 // Create compression settings based on selected format
                 var compressionSettings = currentORMTexture.CompressionFormat == CompressionFormat.UASTC
@@ -418,8 +431,14 @@ namespace AssetProcessor.Controls {
 
                 // Apply user settings
                 compressionSettings.CompressionFormat = currentORMTexture.CompressionFormat;
+                compressionSettings.CompressLevel = currentORMTexture.CompressLevel; // ETC1S compress level
                 compressionSettings.QualityLevel = currentORMTexture.QualityLevel;
                 compressionSettings.UASTCQuality = currentORMTexture.UASTCQuality;
+                compressionSettings.EnableRDO = currentORMTexture.EnableRDO;
+                compressionSettings.RDOLambda = currentORMTexture.RDOLambda;
+                compressionSettings.Perceptual = currentORMTexture.Perceptual;
+                compressionSettings.EnableSupercompression = currentORMTexture.EnableSupercompression;
+                compressionSettings.SupercompressionLevel = currentORMTexture.SupercompressionLevel;
                 compressionSettings.ColorSpace = ColorSpace.Linear; // КРИТИЧНО для ORM!
 
                 // Mipmap settings
@@ -430,7 +449,7 @@ namespace AssetProcessor.Controls {
 
                 var result = await pipeline.ConvertPackedTextureAsync(
                     packingSettings,
-                    saveDialog.FileName,
+                    outputPath,
                     compressionSettings
                 );
 
@@ -442,8 +461,8 @@ namespace AssetProcessor.Controls {
                     StatusText.Foreground = System.Windows.Media.Brushes.Green;
 
                     // Обновляем имя ORM текстуры
-                    currentORMTexture.Name = Path.GetFileNameWithoutExtension(saveDialog.FileName);
-                    currentORMTexture.Path = saveDialog.FileName;
+                    currentORMTexture.Name = Path.GetFileNameWithoutExtension(outputPath);
+                    currentORMTexture.Path = outputPath;
                 } else {
                     MessageBox.Show($"Packing failed: {result.Error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     StatusText.Text = "✗ Packing failed";

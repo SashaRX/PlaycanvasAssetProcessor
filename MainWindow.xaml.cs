@@ -19,6 +19,7 @@ using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,6 +75,43 @@ namespace AssetProcessor {
                 .Replace("\r", "")   // Удаляем \r
                 .Replace("\n", "")   // Удаляем \n (КРИТИЧНО! Ломает toktx и File.Exists)
                 .Trim();             // Удаляем пробелы по краям
+        }
+
+        private string? ResolveStoredApiKey() {
+            try {
+                string? decrypted = AppSettings.Default.GetDecryptedPlaycanvasApiKey();
+                return string.IsNullOrWhiteSpace(decrypted) ? null : decrypted;
+            } catch (CryptographicException ex) {
+                logger.Error(ex, "Не удалось расшифровать сохранённый API-ключ.");
+                ShowApiKeyDecryptionError();
+                return null;
+            }
+        }
+
+        private bool TryGetStoredApiKey(out string apiKey) {
+            apiKey = string.Empty;
+            string? decrypted = ResolveStoredApiKey();
+            if (string.IsNullOrWhiteSpace(decrypted)) {
+                return false;
+            }
+
+            apiKey = decrypted;
+            return true;
+        }
+
+        private void ShowApiKeyDecryptionError() {
+            void ShowDialog() => MessageBox.Show(
+                this,
+                "Не удалось расшифровать сохранённый API-ключ. Проверьте мастер-пароль или сохраните ключ заново.",
+                "Ошибка безопасности",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            if (!Dispatcher.CheckAccess()) {
+                Dispatcher.Invoke(ShowDialog);
+            } else {
+                ShowDialog();
+            }
         }
 
         private ObservableCollection<TextureResource> textures = [];
@@ -1823,7 +1861,13 @@ namespace AssetProcessor {
                 // Обновляем ветки для выбранного проекта
                 isBranchInitializationInProgress = true;
                 try {
-                    List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, AppSettings.Default.PlaycanvasApiKey, [], CancellationToken.None);
+                    if (!TryGetStoredApiKey(out string apiKey)) {
+                        MessageBox.Show("Playcanvas API key недоступен. Проверьте настройки.");
+                        logger.Warn("Не удалось получить API-ключ при загрузке веток.");
+                        return;
+                    }
+
+                    List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, apiKey, [], CancellationToken.None);
                     if (branches != null && branches.Count > 0) {
                         Branches.Clear();
                         foreach (Branch branch in branches) {
@@ -2719,7 +2763,8 @@ namespace AssetProcessor {
         private async void Connect(object? sender, RoutedEventArgs? e) {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+            string? storedApiKey = ResolveStoredApiKey();
+            if (string.IsNullOrEmpty(storedApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
                 SettingsWindow settingsWindow = new();
                 // Subscribe to preview renderer changes
@@ -2731,14 +2776,14 @@ namespace AssetProcessor {
             } else {
                 try {
                     userName = AppSettings.Default.UserName.ToLower();
-                    userID = await playCanvasService.GetUserIdAsync(userName, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                    userID = await playCanvasService.GetUserIdAsync(userName, storedApiKey, cancellationToken);
                     if (string.IsNullOrEmpty(userID)) {
                         throw new Exception("User ID is null or empty");
                     } else {
                         await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userID}"));
                     }
 
-                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, storedApiKey, [], cancellationToken);
                     if (projectsDict != null && projectsDict.Count > 0) {
                         string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
 
@@ -2843,8 +2888,14 @@ namespace AssetProcessor {
                 string localJson = await File.ReadAllTextAsync(assetsListPath);
                 JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
 
+                string? apiKey = ResolveStoredApiKey();
+                if (string.IsNullOrEmpty(apiKey)) {
+                    MainWindowHelpers.LogWarn("Не удалось получить API-ключ для проверки обновлений.");
+                    return false;
+                }
+
                 // Получаем серверный JSON
-                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey, CancellationToken.None);
 
                 // Сравниваем hash или количество ассетов
                 string localHash = ComputeHash(localJson);
@@ -2879,7 +2930,12 @@ namespace AssetProcessor {
             try {
                 isBranchInitializationInProgress = true;
 
-                List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                if (!TryGetStoredApiKey(out string apiKey)) {
+                    logger.Warn("Не удалось получить API-ключ при загрузке веток проекта.");
+                    return;
+                }
+
+                List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, apiKey, [], cancellationToken);
                 if (branchesList != null && branchesList.Count > 0) {
                     Branches.Clear();
                     foreach (Branch branch in branchesList) {
@@ -3585,14 +3641,19 @@ namespace AssetProcessor {
 
         }
 
-        private static async Task DownloadMaterialByIdAsync(MaterialResource materialResource) {
+        private async Task DownloadMaterialByIdAsync(MaterialResource materialResource) {
             const int maxRetries = 5;
             const int delayMilliseconds = 2000;
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
+                    string? apiKey = ResolveStoredApiKey();
+                    if (string.IsNullOrEmpty(apiKey)) {
+                        materialResource.Status = "Error";
+                        MainWindowHelpers.LogError("API-ключ отсутствует. Загрузка материала невозможна.");
+                        return;
+                    }
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey, default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
 
@@ -3621,7 +3682,7 @@ namespace AssetProcessor {
             }
         }
 
-        private static async Task DownloadFileAsync(BaseResource resource) {
+        private async Task DownloadFileAsync(BaseResource resource) {
             if (resource == null || string.IsNullOrEmpty(resource.Path)) { // Если путь к файлу не указан, создаем его в папке проекта
                 return;
             }
@@ -3632,7 +3693,13 @@ namespace AssetProcessor {
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     using HttpClient client = new();
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppSettings.Default.PlaycanvasApiKey);
+                    string? apiKey = ResolveStoredApiKey();
+                    if (string.IsNullOrEmpty(apiKey)) {
+                        resource.Status = "Error";
+                        MainWindowHelpers.LogError("API-ключ отсутствует. Загрузка ресурса невозможна.");
+                        return;
+                    }
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
                     HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
 
@@ -3711,8 +3778,13 @@ namespace AssetProcessor {
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
+                if (!TryGetStoredApiKey(out string apiKey)) {
+                    MessageBox.Show("Не удалось получить Playcanvas API key.");
+                    return;
+                }
+
                 MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
-                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                JArray assetsResponse = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey, cancellationToken);
                 if (assetsResponse != null) {
                     MainWindowHelpers.LogInfo("Assets received from server, processing...");
                     // Строим иерархию папок из списка ассетов
@@ -4084,7 +4156,12 @@ namespace AssetProcessor {
                     }
 
                     using PlayCanvasService playCanvasService = new();
-                    string apiKey = AppSettings.Default.PlaycanvasApiKey;
+                    string? apiKey = ResolveStoredApiKey();
+                    if (string.IsNullOrEmpty(apiKey)) {
+                        material.Status = "Error";
+                        MainWindowHelpers.LogError("API-ключ отсутствует. Не удалось получить материал.");
+                        return;
+                    }
                     JObject materialJson = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
 
                     //if (materialJson != null && materialJson["textures"] != null && materialJson["textures"]?.Type == JTokenType.Array) {
@@ -4429,8 +4506,8 @@ namespace AssetProcessor {
                 logger.Info("=== InitializeOnStartup: Starting ===");
                 MainWindowHelpers.LogInfo("=== Initializing on startup ===");
 
-                // Проверяем наличие API ключа и username
-                if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
+                bool hasApiKey = TryGetStoredApiKey(out _);
+                if (!hasApiKey ||
                     string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                     logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
                     MainWindowHelpers.LogInfo("No API key or username - showing Connect button");
@@ -4484,7 +4561,13 @@ namespace AssetProcessor {
 
                     // Получаем данные с сервера для сравнения hash
                     MainWindowHelpers.LogInfo("Fetching assets from server to check hash...");
-                    JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, AppSettings.Default.PlaycanvasApiKey, CancellationToken.None);
+                    string? apiKey = ResolveStoredApiKey();
+                    if (string.IsNullOrEmpty(apiKey)) {
+                        MainWindowHelpers.LogError("API-ключ отсутствует. Невозможно сравнить хэши.");
+                        UpdateConnectionButton(ConnectionState.Disconnected);
+                        return;
+                    }
+                    JArray serverData = await playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey, CancellationToken.None);
                     string serverHash = ComputeHash(serverData.ToString());
                     MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
 
@@ -4532,15 +4615,21 @@ namespace AssetProcessor {
 
                 CancellationToken cancellationToken = new();
 
+                string? apiKey = ResolveStoredApiKey();
+                if (string.IsNullOrEmpty(apiKey)) {
+                    UpdateConnectionButton(ConnectionState.Disconnected);
+                    return;
+                }
+
                 logger.Info($"LoadLastSettings: Getting user ID for {userName}");
-                userID = await playCanvasService.GetUserIdAsync(userName, AppSettings.Default.PlaycanvasApiKey, cancellationToken);
+                userID = await playCanvasService.GetUserIdAsync(userName, apiKey, cancellationToken);
                 if (string.IsNullOrEmpty(userID)) {
                     throw new Exception("User ID is null or empty");
                 } else {
                     UpdateConnectionStatus(true, $"by userID: {userID}");
                 }
                 logger.Info($"LoadLastSettings: Getting projects for user {userID}");
-                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, apiKey, [], cancellationToken);
 
                 if (projectsDict != null && projectsDict.Count > 0) {
                     logger.Info($"LoadLastSettings: Found {projectsDict.Count} projects");
@@ -4565,7 +4654,7 @@ namespace AssetProcessor {
                     if (ProjectsComboBox.SelectedItem != null) {
                         string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                         logger.Info($"LoadLastSettings: Getting branches for project {projectId}");
-                        List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, AppSettings.Default.PlaycanvasApiKey, [], cancellationToken);
+                        List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, apiKey, [], cancellationToken);
 
                         if (branchesList != null && branchesList.Count > 0) {
                             logger.Info($"LoadLastSettings: Found {branchesList.Count} branches");

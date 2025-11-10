@@ -309,8 +309,8 @@
                                     <Style.Triggers>
                                         <!-- Color ORM textures with pink/purple background (like Normal maps) -->
                                         <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
-                                            <Setter Property="Background" Value="#963c12"/>
-                                            <Setter Property="BorderBrush" Value="#7a2f0e"/>
+                                            <Setter Property="Background" Value="#C96391"/>
+                                            <Setter Property="BorderBrush" Value="#A04070"/>
                                             <Setter Property="BorderThickness" Value="2,0,2,0"/>
                                         </DataTrigger>
                                     </Style.Triggers>

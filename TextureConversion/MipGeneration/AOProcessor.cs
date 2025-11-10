@@ -69,19 +69,21 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         }
 
         /// <summary>
-        /// Применяет biased darkening: lerp(mean, min, bias)
+        /// Применяет biased darkening: сохраняет тёмные области (окклюзию), слегка затемняет светлые
+        /// Новый алгоритм: если пиксель темнее среднего - сохраняем, если светлее - затемняем к среднему
         /// </summary>
         private Image<Rgba32> ApplyBiasedDarkening(Image<Rgba32> mip, float bias, int level) {
             var stats = CalculateStatistics(mip);
 
-            // Вычисляем целевое значение: lerp(mean, min, bias)
-            // bias = 0.0 -> mean (светлее)
-            // bias = 1.0 -> min (темнее)
-            float targetValue = Lerp(stats.Mean, stats.Min, bias);
+            // Вычисляем порог затемнения на основе bias:
+            // bias = 0.0 -> threshold = mean (не затемняем)
+            // bias = 0.5 -> threshold = между mean и (mean+max)/2
+            // bias = 1.0 -> threshold = max (затемняем всё)
+            float threshold = Lerp(stats.Mean, (stats.Mean + stats.Max) / 2.0f, bias);
 
             Logger.Info($"  Mip{level} ({mip.Width}x{mip.Height}): " +
-                       $"min={stats.Min:F3}, mean={stats.Mean:F3}, max={stats.Max:F3} -> " +
-                       $"target={targetValue:F3} (bias={bias:F2})");
+                       $"min={stats.Min:F3}, mean={stats.Mean:F3}, max={stats.Max:F3}, " +
+                       $"threshold={threshold:F3} (bias={bias:F2})");
 
             // Создаем новое изображение
             var processed = new Image<Rgba32>(mip.Width, mip.Height);
@@ -92,10 +94,16 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                     var pixel = mip[x, y];
                     float value = pixel.R / 255.0f;
 
-                    // Lerp между текущим значением и целевым (сохраняем вариацию)
-                    float newValue = Lerp(value, targetValue, bias * 0.5f);
-                    newValue = Math.Clamp(newValue, 0.0f, 1.0f);
+                    float newValue;
+                    if (value < stats.Mean) {
+                        // Тёмные области (окклюзия) - сохраняем как есть или слегка затемняем
+                        newValue = Lerp(value, stats.Min, bias * 0.3f);
+                    } else {
+                        // Светлые области - затемняем к порогу
+                        newValue = Lerp(value, stats.Mean, bias * 0.7f);
+                    }
 
+                    newValue = Math.Clamp(newValue, 0.0f, 1.0f);
                     byte byteValue = (byte)(newValue * 255);
                     processed[x, y] = new Rgba32(byteValue, byteValue, byteValue, pixel.A);
                 }

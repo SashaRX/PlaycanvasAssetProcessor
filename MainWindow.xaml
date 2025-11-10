@@ -30,6 +30,7 @@
         <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
         <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
+        <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
 
 
         <Style TargetType="Expander">
@@ -94,6 +95,8 @@
             <MenuItem Header="Process Texture" Click="ProcessSelectedTextures_Click"/>
             <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
             <Separator/>
+            <MenuItem Header="Delete ORM Texture" Click="DeleteORMFromList_Click"/>
+            <Separator/>
             <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
             <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
             <Separator/>
@@ -109,6 +112,14 @@
             <MenuItem Header="Copy Path" Click="CopyModelPath_Click"/>
             <Separator/>
             <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
+        </ContextMenu>
+
+        <!-- ContextMenu для строк материалов -->
+        <ContextMenu x:Key="MaterialRowContextMenu">
+            <MenuItem Header="Create ORM Texture" Click="CreateORMFromMaterial_Click" FontWeight="Bold"/>
+            <MenuItem Header="Create ORM for All Materials" Click="CreateORMForAllMaterials_Click"/>
+            <Separator/>
+            <MenuItem Header="Delete ORM Texture" Click="DeleteORMTexture_Click"/>
         </ContextMenu>
 
     </Window.Resources>
@@ -214,6 +225,11 @@
                         <Button x:Name="AutoDetectAllButton" Content="Auto-detect All" Width="110"
                                 Click="AutoDetectAllButton_Click"
                                 ToolTip="Automatically detect presets for all textures based on filenames"/>
+
+                        <Button x:Name="CreateORMButton" Content="Create ORM" Width="90" Margin="5,0,0,0"
+                                Click="CreateORMButton_Click"
+                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
+                                ToolTip="Create virtual ORM texture for channel packing (AO+Gloss+Metallic)"/>
                     </StackPanel>
 
                     <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"
@@ -291,6 +307,14 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
+                                    <Style.Triggers>
+                                        <!-- Color ORM textures with green background -->
+                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
+                                            <Setter Property="Background" Value="#7fc149"/>
+                                            <Setter Property="BorderBrush" Value="#5fa030"/>
+                                            <Setter Property="BorderThickness" Value="2,0,2,0"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
@@ -449,6 +473,11 @@
                                 </MenuItem>
                             </ContextMenu>
                         </DataGrid.ContextMenu>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40"/>
                             <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
@@ -481,6 +510,7 @@
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -682,6 +712,12 @@
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
                                                                      SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
                         </Expander>
+
+                        <!-- ORM Packing Panel (only visible when ORM texture is selected) -->
+                        <controls:ORMPackingPanel Grid.Row="3"
+                                                  x:Name="ORMPanel"
+                                                  Visibility="Collapsed"
+                                                  Margin="0,2,0,0"/>
                     </Grid>
                 </Border>
             </ScrollViewer>
@@ -811,6 +847,18 @@
                             <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " Margin="4,0,4,0" FontWeight="Bold" />
                             <TextBlock x:Name="MaterialNameTextBlock" Text="Name: " Margin="4,0,4,0" FontWeight="Bold" />
                         </StackPanel>
+
+                        <!-- ORM Texture Creation -->
+                        <Button x:Name="CreateORMFromMaterialButton"
+                                Content="Create ORM Texture"
+                                Click="CreateORMFromMaterial_Click"
+                                Margin="4,8,4,8"
+                                Padding="8,4"
+                                Background="#FF4CAF50"
+                                Foreground="White"
+                                FontWeight="Bold"
+                                HorizontalAlignment="Stretch"
+                                ToolTip="Create packed ORM texture from material maps (AO+Gloss+Metallic)"/>
 
                         <Expander x:Name="AOExpander" Header="Ambient Occlusion" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White" IsExpanded="True" Margin="2,2,2,3">
                             <StackPanel>

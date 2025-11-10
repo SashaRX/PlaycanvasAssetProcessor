@@ -33,16 +33,6 @@ namespace AssetProcessor {
             }
         }
 
-        public string ToktxExecutablePath {
-            get => _textureSettings.ToktxExecutablePath;
-            set {
-                if (_textureSettings.ToktxExecutablePath != value) {
-                    _textureSettings.ToktxExecutablePath = value;
-                    OnPropertyChanged(nameof(ToktxExecutablePath));
-                }
-            }
-        }
-
         public string KtxExecutablePath {
             get => _textureSettings.KtxExecutablePath;
             set {
@@ -137,7 +127,6 @@ namespace AssetProcessor {
             DownloadSemaphoreSlider.Value = AppSettings.Default.DownloadSemaphoreLimit;
             GetTexturesSemaphoreTextBlock.Text = AppSettings.Default.GetTexturesSemaphoreLimit.ToString();
             DownloadSemaphoreTextBlock.Text = AppSettings.Default.DownloadSemaphoreLimit.ToString();
-            ToktxExecutableBox.Text = _textureSettings.ToktxExecutablePath;
             KtxExecutableBox.Text = _textureSettings.KtxExecutablePath;
 
             // Load model conversion settings
@@ -282,7 +271,6 @@ namespace AssetProcessor {
             NLog.LogManager.GetCurrentClassLogger().Info($"[Settings] Save_Click: After Save() UseD3D11Preview = {AppSettings.Default.UseD3D11Preview}");
 
             // Save texture conversion settings
-            _textureSettings.ToktxExecutablePath = ToktxExecutableBox.Text;
             _textureSettings.KtxExecutablePath = KtxExecutableBox.Text;
             TextureConversionSettingsManager.SaveSettings(_textureSettings);
 
@@ -292,85 +280,6 @@ namespace AssetProcessor {
             ModelConversionSettingsManager.SaveSettings(_modelSettings);
 
             this.Close();
-        }
-
-        private void SelectToktxExecutable(object sender, RoutedEventArgs e) {
-            OpenFileDialog fileDialog = new() {
-                Title = "Select toktx executable",
-                Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
-                CheckFileExists = true
-            };
-
-            if (fileDialog.ShowDialog() == true) {
-                ToktxExecutablePath = fileDialog.FileName;
-                ToktxExecutableBox.Text = fileDialog.FileName;
-            }
-        }
-
-        private async void TestToktx_Click(object sender, RoutedEventArgs e) {
-            if (ToktxStatusText != null) {
-                ToktxStatusText.Text = "Testing...";
-                ToktxStatusText.Foreground = new SolidColorBrush(Colors.Gray);
-            }
-
-            try {
-                var path = string.IsNullOrWhiteSpace(ToktxExecutableBox.Text) ? "toktx" : ToktxExecutableBox.Text;
-
-                // Получаем версию toktx
-                ProcessStartInfo startInfo = new() {
-                    FileName = path,
-                    Arguments = "--version",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(startInfo);
-                if (process == null) {
-                    if (ToktxStatusText != null) {
-                        ToktxStatusText.Text = "✗ toktx not found";
-                        ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
-                    return;
-                }
-
-                string stdout = await process.StandardOutput.ReadToEndAsync();
-                string stderr = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                // Логируем для отладки
-                System.Diagnostics.Debug.WriteLine($"toktx --version ExitCode: {process.ExitCode}");
-                System.Diagnostics.Debug.WriteLine($"toktx --version stdout: '{stdout}'");
-                System.Diagnostics.Debug.WriteLine($"toktx --version stderr: '{stderr}'");
-
-                if (ToktxStatusText != null) {
-                    // toktx --version выводит версию в stdout
-                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
-                    if (hasOutput || process.ExitCode == 0) {
-                        // Извлекаем версию из stdout (формат: "toktx v4.0" или "toktx v4.3.2" или "toktx v4.4.1~5")
-                        string version = "unknown";
-                        string output = stdout + stderr; // Проверяем оба потока
-                        if (!string.IsNullOrWhiteSpace(output)) {
-                            // Ищем версию: v4.4.1~5 или v4.3.2 или просто 4.0
-                            var match = System.Text.RegularExpressions.Regex.Match(output, @"(v\d+\.\d+(?:\.\d+)?(?:~\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                            if (match.Success) {
-                                version = match.Groups[1].Value.Trim();
-                            }
-                        }
-                        ToktxStatusText.Text = $"✓ toktx {version}";
-                        ToktxStatusText.Foreground = new SolidColorBrush(Colors.Green);
-                    } else {
-                        ToktxStatusText.Text = $"✗ Exit code: {process.ExitCode}";
-                        ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
-                }
-            } catch (Exception ex) {
-                if (ToktxStatusText != null) {
-                    ToktxStatusText.Text = $"✗ Error: {ex.Message}";
-                    ToktxStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                }
-            }
         }
 
         private void SelectKtxExecutable(object sender, RoutedEventArgs e) {

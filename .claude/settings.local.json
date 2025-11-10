@@ -38,7 +38,13 @@
       "Bash(MainWindow.xaml.cs)",
       "Bash(git rm:*)",
       "Bash(git branch:*)",
-      "Bash(Select-String -Pattern \"Log files cleaned|Build succeeded|Build FAILED\" -Context 0,2)"
+      "Bash(Select-String -Pattern \"Log files cleaned|Build succeeded|Build FAILED\" -Context 0,2)",
+      "Bash(git push:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet nuget search:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(git merge-base:*)",
+      "Bash(xargs git log --oneline -1)"
     ],
     "deny": [],
     "ask": []

@@ -206,12 +206,7 @@ namespace AssetProcessor.TextureConversion.Settings {
     /// </summary>
     public class GlobalTextureConversionSettings {
         /// <summary>
-        /// Путь к toktx исполняемому файлу (KTX-Software)
-        /// </summary>
-        public string ToktxExecutablePath { get; set; } = "toktx";
-
-        /// <summary>
-        /// Путь к ktx исполняемому файлу (KTX-Software) для извлечения мипмапов
+        /// Путь к ktx исполняемому файлу (KTX-Software)
         /// </summary>
         public string KtxExecutablePath { get; set; } = "ktx";
 

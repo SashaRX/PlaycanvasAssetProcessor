@@ -32,13 +32,11 @@ namespace AssetProcessor.TextureConversion.Core {
 
         /// <summary>
         /// Нижняя граница диапазона (после анализа перцентилей)
-        /// Для AverageLuminance - одно значение, для PerChannel - среднее по каналам
         /// </summary>
         public float RangeLow { get; set; }
 
         /// <summary>
         /// Верхняя граница диапазона (после анализа перцентилей)
-        /// Для AverageLuminance - одно значение, для PerChannel - среднее по каналам
         /// </summary>
         public float RangeHigh { get; set; }
 
@@ -89,8 +87,8 @@ namespace AssetProcessor.TextureConversion.Core {
             return new HistogramResult {
                 Success = true,
                 Mode = HistogramMode.Off,
-                Scale = [1.0f],
-                Offset = [0.0f],
+                Scale = new[] { 1.0f },
+                Offset = new[] { 0.0f },
                 RangeLow = 0.0f,
                 RangeHigh = 1.0f
             };

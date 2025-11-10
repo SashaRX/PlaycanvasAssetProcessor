@@ -211,6 +211,22 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
             int level,
             bool captureVariance) {
 
+            // Критичная валидация размеров
+            if (glossRoughnessMip.Width != normalMip.Width || glossRoughnessMip.Height != normalMip.Height) {
+                Logger.Error($"[ToksvigProcessor] Dimension mismatch at level {level}: " +
+                           $"Gloss={glossRoughnessMip.Width}x{glossRoughnessMip.Height}, " +
+                           $"Normal={normalMip.Width}x{normalMip.Height}. Returning original gloss map.");
+
+                // Возвращаем оригинал без коррекции
+                var uncorrected = new Image<Rgba32>(Configuration.Default, glossRoughnessMip.Width, glossRoughnessMip.Height);
+                glossRoughnessMip.ProcessPixelRows(uncorrected, (sourceAccessor, targetAccessor) => {
+                    for (int y = 0; y < sourceAccessor.Height; y++) {
+                        sourceAccessor.GetRowSpan(y).CopyTo(targetAccessor.GetRowSpan(y));
+                    }
+                });
+                return (uncorrected, null);
+            }
+
             // Вычисляем дисперсию normal map в зависимости от режима
             Image<Rgba32> varianceMap;
             if (settings.CalculationMode == ToksvigCalculationMode.Simplified) {
@@ -398,6 +414,17 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// 4. Вычисляет дисперсию по формуле (1 - |N̄|) / |N̄|
         /// </summary>
         private float CalculateLocalVarianceBox2x2Normalized(Image<Rgba32> normalMip, int centerX, int centerY) {
+            // Валидация входных параметров
+            if (normalMip == null || normalMip.Width == 0 || normalMip.Height == 0) {
+                Logger.Error($"[ToksvigProcessor] Invalid normalMip: Width={normalMip?.Width}, Height={normalMip?.Height}");
+                return 0.0f;
+            }
+
+            if (centerX < 0 || centerX >= normalMip.Width || centerY < 0 || centerY >= normalMip.Height) {
+                Logger.Error($"[ToksvigProcessor] Invalid center coordinates: ({centerX}, {centerY}) for image {normalMip.Width}x{normalMip.Height}");
+                return 0.0f;
+            }
+
             // Собираем нормализованные нормали в окне 2x2
             var normals = new List<Vector3>();
 
@@ -454,6 +481,17 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// Вычисляет локальную дисперсию нормалей в окне 3x3 (по методу Unreal Engine Toksvig)
         /// </summary>
         private float CalculateLocalVariance(Image<Rgba32> normalMip, int centerX, int centerY) {
+            // Валидация входных параметров
+            if (normalMip == null || normalMip.Width == 0 || normalMip.Height == 0) {
+                Logger.Error($"[ToksvigProcessor] Invalid normalMip: Width={normalMip?.Width}, Height={normalMip?.Height}");
+                return 0.0f;
+            }
+
+            if (centerX < 0 || centerX >= normalMip.Width || centerY < 0 || centerY >= normalMip.Height) {
+                Logger.Error($"[ToksvigProcessor] Invalid center coordinates: ({centerX}, {centerY}) for image {normalMip.Width}x{normalMip.Height}");
+                return 0.0f;
+            }
+
             // Собираем нормали в окне 3x3
             var normals = new List<Vector3>();
 

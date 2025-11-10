@@ -100,7 +100,7 @@ namespace AssetProcessor.ViewModels {
                 logger.Info($"Retrieved user ID: {userId}");
 
                 var projectsDict = await playCanvasService.GetProjectsAsync(userId, resolvedApiKey, new Dictionary<string, string>(), cancellationToken);
-                Projects = projectsDict;
+                Projects = new ObservableCollection<KeyValuePair<string, string>>(projectsDict);
                 logger.Info($"Retrieved {Projects.Count} projects");
 
                 IsConnected = true;
@@ -137,7 +137,7 @@ namespace AssetProcessor.ViewModels {
                 logger.Info($"Loading branches for project: {SelectedProjectId}");
 
                 var branchesList = await playCanvasService.GetBranchesAsync(SelectedProjectId, resolvedApiKey, new List<Branch>(), cancellationToken);
-                Branches = branchesList;
+                Branches = new ObservableCollection<Branch>(branchesList);
                 logger.Info($"Retrieved {Branches.Count} branches");
 
                 StatusMessage = $"Loaded {Branches.Count} branches.";

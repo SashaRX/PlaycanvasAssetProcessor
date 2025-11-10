@@ -4860,9 +4860,9 @@ namespace AssetProcessor {
                 ProgressBar.Maximum = texturesToProcess.Count;
                 ProgressBar.Value = 0;
 
-                // Используем KtxExecutablePath, но fallback на ToktxExecutablePath для обратной совместимости
+                // Используем KtxExecutablePath из настроек
                 var ktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.KtxExecutablePath)
-                    ? (string.IsNullOrWhiteSpace(globalTextureSettings.ToktxExecutablePath) ? "ktx" : globalTextureSettings.ToktxExecutablePath)
+                    ? "ktx"
                     : globalTextureSettings.KtxExecutablePath;
 
                 var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(ktxPath);

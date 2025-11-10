@@ -419,7 +419,7 @@ namespace AssetProcessor.Controls {
                 // Загружаем настройки для получения ktxPath
                 var globalSettings = TextureConversionSettingsManager.LoadSettings();
                 var ktxPath = string.IsNullOrWhiteSpace(globalSettings.KtxExecutablePath)
-                    ? (string.IsNullOrWhiteSpace(globalSettings.ToktxExecutablePath) ? "ktx" : globalSettings.ToktxExecutablePath)
+                    ? "ktx"
                     : globalSettings.KtxExecutablePath;
 
                 // Создаем пайплайн с ktxPath

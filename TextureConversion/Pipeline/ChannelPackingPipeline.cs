@@ -261,6 +261,39 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// <summary>
         /// Упаковывает один уровень мипмапа из всех каналов в RGBA
         /// </summary>
+        private byte GetChannelValue(
+            List<Image<Rgba32>> mips,
+            int level,
+            int x,
+            int y,
+            int targetWidth,
+            int targetHeight,
+            float defaultValue) {
+
+            // Если нет мипмапов на этом уровне, используем последний доступный
+            int actualLevel = Math.Min(level, mips.Count - 1);
+            var mip = mips[actualLevel];
+
+            // Масштабируем координаты если размер не совпадает
+            int mipWidth = mip.Width;
+            int mipHeight = mip.Height;
+
+            if (mipWidth != targetWidth || mipHeight != targetHeight) {
+                // Масштабируем координаты
+                int scaledX = (int)((float)x * mipWidth / targetWidth);
+                int scaledY = (int)((float)y * mipHeight / targetHeight);
+
+                // Проверяем границы
+                scaledX = Math.Clamp(scaledX, 0, mipWidth - 1);
+                scaledY = Math.Clamp(scaledY, 0, mipHeight - 1);
+
+                return mip[scaledX, scaledY].R;
+            }
+
+            // Размер совпадает, берем напрямую
+            return mip[x, y].R;
+        }
+
         private Image<Rgba32> PackMipmapLevel(
             ChannelPackingSettings packingSettings,
             Dictionary<ChannelType, List<Image<Rgba32>>> channelMipmaps,
@@ -279,12 +312,12 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             // RGB = AO, A = Gloss
                             if (packingSettings.RedChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.AmbientOcclusion, out var aoMips)) {
-                                byte aoValue = aoMips[level][x, y].R;
+                                byte aoValue = GetChannelValue(aoMips, level, x, y, width, height, packingSettings.RedChannel.DefaultValue);
                                 r = g = b = aoValue; // RGB все заполнены AO
                             }
                             if (packingSettings.AlphaChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.Gloss, out var glossMips)) {
-                                a = glossMips[level][x, y].R;
+                                a = GetChannelValue(glossMips, level, x, y, width, height, packingSettings.AlphaChannel.DefaultValue);
                             }
                             break;
 
@@ -293,23 +326,23 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             // R = AO
                             if (packingSettings.RedChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.AmbientOcclusion, out var aoMips2)) {
-                                r = aoMips2[level][x, y].R;
+                                r = GetChannelValue(aoMips2, level, x, y, width, height, packingSettings.RedChannel.DefaultValue);
                             }
                             // G = Gloss
                             if (packingSettings.GreenChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.Gloss, out var glossMips2)) {
-                                g = glossMips2[level][x, y].R;
+                                g = GetChannelValue(glossMips2, level, x, y, width, height, packingSettings.GreenChannel.DefaultValue);
                             }
                             // B = Metallic
                             if (packingSettings.BlueChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.Metallic, out var metallicMips)) {
-                                b = metallicMips[level][x, y].R;
+                                b = GetChannelValue(metallicMips, level, x, y, width, height, packingSettings.BlueChannel.DefaultValue);
                             }
                             // A = Height (только для OGMH)
                             if (packingSettings.Mode == ChannelPackingMode.OGMH &&
                                 packingSettings.AlphaChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.Height, out var heightMips)) {
-                                a = heightMips[level][x, y].R;
+                                a = GetChannelValue(heightMips, level, x, y, width, height, packingSettings.AlphaChannel.DefaultValue);
                             }
                             break;
                     }

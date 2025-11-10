@@ -136,7 +136,7 @@ namespace AssetProcessor {
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly PlayCanvasService playCanvasService = new();
+        private readonly IPlayCanvasService playCanvasService;
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
@@ -230,7 +230,9 @@ namespace AssetProcessor {
             get { return branches; }
         }
 
-        public MainWindow() {
+        public MainWindow(IPlayCanvasService playCanvasService) {
+            this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
+
             InitializeComponent();
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();

@@ -5,18 +5,39 @@ using System.Net.Http.Headers;
 
 namespace AssetProcessor.Helpers {
     public static class ImageHelper {
+        private static IHttpClientFactory? _httpClientFactory;
+
+        public static void Initialize(IHttpClientFactory httpClientFactory) {
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        }
+
         public static async Task<(int Width, int Height)> GetImageResolutionAsync(string url, CancellationToken cancellationToken) {
+            if (_httpClientFactory == null) {
+                throw new InvalidOperationException("ImageHelper has not been initialized. Call Initialize() first.");
+            }
+
+            HttpClient client = _httpClientFactory.CreateClient("ImageHelper");
+            return await GetImageResolutionAsync(client, url, cancellationToken);
+        }
+
+        private static async Task<(int Width, int Height)> GetImageResolutionAsync(HttpClient client, string url, CancellationToken cancellationToken) {
+            if (client == null) {
+                throw new ArgumentNullException(nameof(client));
+            }
+
             if (string.IsNullOrEmpty(url)) {
                 throw new ArgumentException("URL cannot be null or empty", nameof(url));
             }
 
             try {
-                using HttpClient client = new();
                 string apiKey = GetAuthorizationToken();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-                client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 24);
 
-                HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                // Create a request message instead of modifying the shared client
+                using HttpRequestMessage request = new(HttpMethod.Get, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                request.Headers.Range = new RangeHeaderValue(0, 24);
+
+                HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
                 byte[] buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
@@ -34,7 +55,7 @@ namespace AssetProcessor.Helpers {
                 }
                 // JPEG format
                 else if (buffer[0] == 0xFF && buffer[1] == 0xD8) {
-                    return await GetJpegResolutionFromStream(url, cancellationToken);
+                    return await GetJpegResolutionFromStream(client, url, cancellationToken);
                 }
                 // BMP format
                 else if (buffer[0] == 0x42 && buffer[1] == 0x4D) {
@@ -51,7 +72,7 @@ namespace AssetProcessor.Helpers {
                 // TIFF format
                 else if ((buffer[0] == 0x49 && buffer[1] == 0x49 && buffer[2] == 0x2A && buffer[3] == 0x00) ||
                          (buffer[0] == 0x4D && buffer[1] == 0x4D && buffer[2] == 0x00 && buffer[3] == 0x2A)) {
-                    return await GetTiffResolutionAsync(url, cancellationToken);
+                    return await GetTiffResolutionAsync(client, url, cancellationToken);
                 }
 
                 throw new Exception("Image format not supported or not a PNG/JPEG/BMP/GIF/TIFF");
@@ -62,13 +83,14 @@ namespace AssetProcessor.Helpers {
             }
         }
 
-        private static async Task<(int Width, int Height)> GetJpegResolutionFromStream(string url, CancellationToken cancellationToken) {
-            using HttpClient client = new();
+        private static async Task<(int Width, int Height)> GetJpegResolutionFromStream(HttpClient client, string url, CancellationToken cancellationToken) {
             string apiKey = GetAuthorizationToken();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 500);
 
-            HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using HttpRequestMessage request = new(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Headers.Range = new RangeHeaderValue(0, 500);
+
+            HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             byte[] buffer = await response.Content.ReadAsByteArrayAsync(cancellationToken);
@@ -82,13 +104,14 @@ namespace AssetProcessor.Helpers {
             return (image.Width, image.Height);
         }
 
-        private static async Task<(int Width, int Height)> GetTiffResolutionAsync(string url, CancellationToken cancellationToken) {
-            using HttpClient client = new();
+        private static async Task<(int Width, int Height)> GetTiffResolutionAsync(HttpClient client, string url, CancellationToken cancellationToken) {
             string apiKey = GetAuthorizationToken();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            client.DefaultRequestHeaders.Range = new RangeHeaderValue(0, 2047);
 
-            HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using HttpRequestMessage request = new(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Headers.Range = new RangeHeaderValue(0, 2047);
+
+            HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             await using Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);

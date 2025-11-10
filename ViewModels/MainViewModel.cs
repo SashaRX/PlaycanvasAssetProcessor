@@ -41,10 +41,10 @@ namespace AssetProcessor.ViewModels {
         private string? statusMessage;
 
         [ObservableProperty]
-        private Dictionary<string, string> projects = new();
+        private ObservableCollection<KeyValuePair<string, string>> projects = [];
 
         [ObservableProperty]
-        private List<Branch> branches = [];
+        private ObservableCollection<Branch> branches = [];
 
         [ObservableProperty]
         private string? selectedProjectId;

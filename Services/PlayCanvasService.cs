@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -278,33 +279,25 @@ namespace AssetProcessor.Services {
                 JsonElement resultElement;
                 int itemsCount;
 
-                try {
-                    using HttpResponseMessage response = await GetAsync(url, cancellationToken);
-                    if (!response.IsSuccessStatusCode) {
-                        throw new PlayCanvasApiException(
-                            $"Failed to get assets for project ID '{projectId}' and branch ID '{branchId}'",
-                            url,
-                            (int)response.StatusCode);
-                    }
+                using HttpResponseMessage response = await GetAsync(url, cancellationToken);
+                if (!response.IsSuccessStatusCode) {
+                    throw new PlayCanvasApiException(
+                        $"Failed to get assets for project ID '{projectId}' and branch ID '{branchId}'",
+                        url,
+                        (int)response.StatusCode);
+                }
 
-                    using JsonDocument document = await ReadJsonAsync(response, url, cancellationToken);
-                    if (!document.RootElement.TryGetProperty("result", out resultElement) || resultElement.ValueKind != JsonValueKind.Array) {
-                        throw new PlayCanvasApiException("Assets array is null in API response", url);
-                    }
+                using JsonDocument document = await ReadJsonAsync(response, url, cancellationToken);
+                if (!document.RootElement.TryGetProperty("result", out resultElement) || resultElement.ValueKind != JsonValueKind.Array) {
+                    throw new PlayCanvasApiException("Assets array is null in API response", url);
+                }
 
-                    itemsCount = 0;
-                    foreach (JsonElement assetElement in resultElement.EnumerateArray()) {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        PlayCanvasAssetSummary asset = ParseAsset(assetElement, url);
-                        itemsCount++;
-                        yield return asset;
-                    }
-                } catch (HttpRequestException ex) {
-                    throw new NetworkException(
-                        $"Network error while fetching assets for project ID '{projectId}'",
-                        $"https://playcanvas.com/api/projects/{projectId}/assets",
-                        0,
-                        ex);
+                itemsCount = 0;
+                foreach (JsonElement assetElement in resultElement.EnumerateArray()) {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    PlayCanvasAssetSummary asset = ParseAsset(assetElement, url);
+                    itemsCount++;
+                    yield return asset;
                 }
 
                 if (itemsCount < DefaultPageSize) {

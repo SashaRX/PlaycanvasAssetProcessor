@@ -26,11 +26,32 @@
                     <GroupBox Header="Playcanvas:" Background="#7FFF8A3C" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" BorderBrush="#FFFF8A3C">
                         <StackPanel>
                             <Label Content="Playcanvas API Key:" />
-                            <TextBox x:Name="PlaycanvasApiKeyTextBox" Background="#FFD6A27B" ToolTip="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd">
-                                <behaviors:Interaction.Behaviors>
-                                    <local:TextBoxWatermarkBehavior Watermark="Playcanvas API Key: o12PWdvxh56CMtw8jlvlF8jUytt1RjGd"/>
-                                </behaviors:Interaction.Behaviors>
-                            </TextBox>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <PasswordBox x:Name="PlaycanvasApiKeyPasswordBox"
+                                             Grid.Column="0"
+                                             Background="#FFD6A27B"
+                                             PasswordChanged="PlaycanvasApiKeyPasswordBox_PasswordChanged"/>
+                                <TextBox x:Name="PlaycanvasApiKeyRevealTextBox"
+                                         Grid.Column="0"
+                                         Background="#FFD6A27B"
+                                         Visibility="Collapsed"
+                                         TextChanged="PlaycanvasApiKeyRevealTextBox_TextChanged"/>
+                                <Button x:Name="ToggleApiKeyVisibilityButton"
+                                        Grid.Column="1"
+                                        Content="Показать"
+                                        Margin="6,0,0,0"
+                                        Padding="8,2"
+                                        Click="ToggleApiKeyVisibilityButton_Click"/>
+                            </Grid>
+                            <TextBlock x:Name="ApiKeyVisibilityWarningText"
+                                       Margin="0,4,0,0"
+                                       FontSize="10"
+                                       Foreground="Gray"
+                                       Text="Значение ключа скрыто. Нажмите «Показать» для временного просмотра."/>
 
                             <Label Content="User Name:" />
                             <TextBox x:Name="UsernameTextBox" Background="#FFD6A27B" ToolTip="Usr name in Playcanvas">

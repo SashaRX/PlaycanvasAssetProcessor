@@ -1876,13 +1876,19 @@ namespace AssetProcessor {
                     ConversionSettingsExpander.Visibility = Visibility.Collapsed;
                 }
 
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel is null: {ORMPanel == null}");
                 if (ORMPanel != null) {
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Setting ORMPanel visibility and initializing...");
                     ORMPanel.Visibility = Visibility.Visible;
 
                     // Initialize ORM panel with available textures (exclude other ORM textures)
                     var availableTextures = Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] availableTextures count: {availableTextures.Count}");
                     ORMPanel.Initialize(this, availableTextures);
                     ORMPanel.SetORMTexture(ormTexture);
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel initialized and texture set");
+                } else {
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ERROR: ORMPanel is NULL! Cannot initialize ORM settings.");
                 }
 
                 // Don't load preview for virtual textures

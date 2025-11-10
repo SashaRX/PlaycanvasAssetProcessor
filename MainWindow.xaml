@@ -283,6 +283,8 @@
                                         <!-- Color ORM textures with green background -->
                                         <DataTrigger Binding="{Binding Name, Converter={StaticResource ORMTextureColorConverter}}" Value="True">
                                             <Setter Property="Background" Value="#7fc149"/>
+                                            <Setter Property="BorderBrush" Value="#5fa030"/>
+                                            <Setter Property="BorderThickness" Value="2,0,2,0"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

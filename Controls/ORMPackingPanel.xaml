@@ -43,6 +43,8 @@
             <Setter Property="FontSize" Value="8"/>
             <Setter Property="Margin" Value="0,0,0,1"/>
             <Setter Property="Padding" Value="2,1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
         <Style x:Key="CompactSliderStyle" TargetType="Slider">
@@ -178,9 +180,14 @@
 
                     <!-- ETC1S -->
                     <StackPanel x:Name="ETC1SPanel">
-                        <TextBlock Text="Quality:" Style="{StaticResource CompactTextStyle}"/>
+                        <TextBlock Text="Compress Level (0-5):" Style="{StaticResource CompactTextStyle}"/>
+                        <Slider x:Name="CompressLevelSlider" Style="{StaticResource CompactSliderStyle}"
+                                Minimum="0" Maximum="5" Value="1" TickFrequency="1" IsSnapToTickEnabled="True"/>
+
+                        <TextBlock Text="Quality (1-255):" Style="{StaticResource CompactTextStyle}"/>
                         <Slider x:Name="QualityLevelSlider" Style="{StaticResource CompactSliderStyle}"
-                                Minimum="1" Maximum="255" Value="128" TickFrequency="1"/>
+                                Minimum="1" Maximum="255" Value="128" TickFrequency="1" IsSnapToTickEnabled="True"/>
+
                         <CheckBox x:Name="PerceptualCheckBox" Content="Perceptual" Style="{StaticResource CompactCheckStyle}"/>
                     </StackPanel>
 

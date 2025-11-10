@@ -29,7 +29,9 @@ namespace AssetProcessor.Controls {
             mainWindow = window;
             availableTextures = textures;
 
-            // Заполняем ComboBox источниками
+            Logger.Info($"Initialize: availableTextures count = {availableTextures.Count}");
+
+            // Обновляем ComboBox источниками (но не сбрасываем выбранные значения!)
             RefreshSourceLists();
         }
 
@@ -63,11 +65,7 @@ namespace AssetProcessor.Controls {
             MetallicSourceComboBox.ItemsSource = availableTextures;
             HeightSourceComboBox.ItemsSource = availableTextures;
 
-            // Set to -1 (no selection) by default
-            AOSourceComboBox.SelectedIndex = -1;
-            GlossSourceComboBox.SelectedIndex = -1;
-            MetallicSourceComboBox.SelectedIndex = -1;
-            HeightSourceComboBox.SelectedIndex = -1;
+            // NOTE: DO NOT reset SelectedIndex here! LoadORMSettings will set it via Dispatcher.BeginInvoke
         }
 
         /// <summary>
@@ -101,7 +99,8 @@ namespace AssetProcessor.Controls {
             ToksvigEnergyPreservingCheckBox.IsChecked = currentORMTexture.GlossToksvigEnergyPreserving;
             ToksvigSmoothVarianceCheckBox.IsChecked = currentORMTexture.GlossToksvigSmoothVariance;
 
-            // Compression quality settings
+            // Compression settings
+            CompressLevelSlider.Value = currentORMTexture.CompressLevel;
             QualityLevelSlider.Value = currentORMTexture.QualityLevel;
             UASTCQualitySlider.Value = currentORMTexture.UASTCQuality;
 
@@ -231,6 +230,7 @@ namespace AssetProcessor.Controls {
             if (CompressionFormatComboBox.SelectedItem != null) {
                 currentORMTexture.CompressionFormat = (CompressionFormat)CompressionFormatComboBox.SelectedItem;
             }
+            currentORMTexture.CompressLevel = (int)CompressLevelSlider.Value;
             currentORMTexture.QualityLevel = (int)QualityLevelSlider.Value;
             currentORMTexture.UASTCQuality = (int)UASTCQualitySlider.Value;
 

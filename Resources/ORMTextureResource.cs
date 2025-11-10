@@ -27,6 +27,7 @@ namespace AssetProcessor.Resources {
 
         // Compression settings
         private CompressionFormat compressionFormat = CompressionFormat.ETC1S;
+        private int compressLevel = 1;   // ETC1S compress level (0-5)
         private int qualityLevel = 128;  // ETC1S quality (1-255)
         private int uastcQuality = 2;    // UASTC quality (0-4)
 
@@ -243,6 +244,17 @@ namespace AssetProcessor.Resources {
             set {
                 compressionFormat = value;
                 OnPropertyChanged(nameof(CompressionFormat));
+            }
+        }
+
+        /// <summary>
+        /// Уровень сжатия для ETC1S (0-5)
+        /// </summary>
+        public int CompressLevel {
+            get => compressLevel;
+            set {
+                compressLevel = value;
+                OnPropertyChanged(nameof(CompressLevel));
             }
         }
 

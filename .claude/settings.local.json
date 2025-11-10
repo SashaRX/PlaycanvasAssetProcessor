@@ -26,7 +26,10 @@
       "Bash(git merge:*)",
       "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build FAILED\" -Context 0,2)",
       "Bash(dir:*)",
-      "Bash(git clean:*)"
+      "Bash(git clean:*)",
+      "Bash(git diff:*)",
+      "Bash(Select-Object -First 200)",
+      "Bash(dotnet restore:*)"
     ],
     "deny": [],
     "ask": []

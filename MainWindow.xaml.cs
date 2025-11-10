@@ -2965,7 +2965,7 @@ namespace AssetProcessor {
 
                 string? apiKey = ResolveStoredApiKey();
                 if (string.IsNullOrEmpty(apiKey)) {
-                    MainWindowHelpers.LogWarn("Не удалось получить API-ключ для проверки обновлений.");
+                    MainWindowHelpers.LogError("Не удалось получить API-ключ для проверки обновлений.");
                     return false;
                 }
 

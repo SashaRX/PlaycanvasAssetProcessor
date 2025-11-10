@@ -46,7 +46,15 @@ namespace AssetProcessor.Services {
             return Policy<HttpResponseMessage>
                 .Handle<HttpRequestException>()
                 .OrResult(response => (int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests)
-                .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)));
+                .WaitAndRetryAsync(
+                    3,
+                    attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)),
+                    onRetryAsync: async (outcome, timespan, retryCount, context) => {
+                        // Dispose the failed response to free the socket immediately
+                        // Without this, failed responses are not disposed until GC, which can exhaust the connection pool
+                        outcome.Result?.Dispose();
+                        await Task.CompletedTask;
+                    });
         }
 
         private Task<HttpResponseMessage> GetAsync(string url, CancellationToken cancellationToken) {

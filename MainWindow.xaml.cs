@@ -1864,7 +1864,7 @@ namespace AssetProcessor {
                     ORMPanel.Visibility = Visibility.Visible;
 
                     // Initialize ORM panel with available viewModel.Textures (exclude other ORM textures)
-                    var.*viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                    var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
                     MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] availableTextures count: {availableTextures.Count}");
                     ORMPanel.Initialize(this, availableTextures);
                     ORMPanel.SetORMTexture(ormTexture);
@@ -3576,7 +3576,7 @@ namespace AssetProcessor {
 
             foreach (var textureId in textureIds) {
                 if (textureId.HasValue) {
-                    var.*viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                    var texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
                     if (texture != null) {
                         textureToSelect = texture;
                         break;
@@ -5516,7 +5516,7 @@ namespace AssetProcessor {
                 string ormTextureName = baseMaterialName + modeSuffix;
 
                 // Check if ORM texture already exists for this material
-                var.*viewModel.Textures.OfType<ORMTextureResource>()
+                var existingORM = viewModel.Textures.OfType<ORMTextureResource>()
                     .FirstOrDefault(t => t.Name == ormTextureName);
 
                 if (existingORM != null) {
@@ -5609,7 +5609,7 @@ namespace AssetProcessor {
                         string ormTextureName = baseMaterialName + modeSuffix;
 
                         // Check if already exists
-                        var.*viewModel.Textures.OfType<ORMTextureResource>()
+                        var existingORM = viewModel.Textures.OfType<ORMTextureResource>()
                             .FirstOrDefault(t => t.Name == ormTextureName);
 
                         if (existingORM != null) {
@@ -5669,7 +5669,7 @@ namespace AssetProcessor {
                 : (material.Name ?? "unknown");
 
             // Try all possible ORM suffixes
-            var.*viewModel.Textures.OfType<ORMTextureResource>()
+            var ormTexture = viewModel.Textures.OfType<ORMTextureResource>()
                 .FirstOrDefault(t => t.Name == baseMaterialName + "_og" ||
                                      t.Name == baseMaterialName + "_ogm" ||
                                      t.Name == baseMaterialName + "_ogmh");
@@ -5680,7 +5680,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            var.*viewModel.Textures.",
+            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source textures.",
                 "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes) {
@@ -5697,7 +5697,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            var.*viewModel.Textures.",
+            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source textures.",
                 "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes) {
@@ -5712,11 +5712,11 @@ namespace AssetProcessor {
             if (mapId == null) return null;
 
             // Debug: Log search
-            var.*viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
+            var found = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
             if (found == null) {
                 MainWindowHelpers.LogWarn($"Texture with ID {mapId.Value} not found. Total textures in collection: {viewModel.Textures.Count}");
                 // Log first few texture IDs for debugging
-                var.*viewModel.Textures.Take(5).Select(t => $"{t.ID}({t.Name})"));
+                var sampleIds = viewModel.Textures.Take(5).Select(t => $"{t.ID}({t.Name}");
                 MainWindowHelpers.LogInfo($"Sample texture IDs: {sampleIds}");
             }
             return found;

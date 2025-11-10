@@ -238,6 +238,8 @@ namespace AssetProcessor.Controls {
             currentORMTexture.GlossToksvigEnergyPreserving = ToksvigEnergyPreservingCheckBox.IsChecked ?? true;
             currentORMTexture.GlossToksvigSmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true;
 
+            Logger.Info($"[SaveORMSettings] Gloss Toksvig: Enabled={currentORMTexture.GlossToksvigEnabled}, Power={currentORMTexture.GlossToksvigPower}, CheckBoxState={GlossToksvigCheckBox.IsChecked}");
+
             // Toksvig calculation mode - handle null case
             if (ToksvigCalculationModeComboBox.SelectedItem != null) {
                 currentORMTexture.GlossToksvigCalculationMode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem;
@@ -422,6 +424,8 @@ namespace AssetProcessor.Controls {
 
             SaveORMSettings();
 
+            Logger.Info($"[PackConvert_Click] Gloss Toksvig settings AFTER SaveORMSettings: Enabled={currentORMTexture.GlossToksvigEnabled}, Power={currentORMTexture.GlossToksvigPower}");
+
             try {
                 PackConvertButton.IsEnabled = false;
                 StatusText.Text = "Packing channels...";
@@ -512,9 +516,14 @@ namespace AssetProcessor.Controls {
                     StatusText.Text = "✓ Packing complete";
                     StatusText.Foreground = System.Windows.Media.Brushes.Green;
 
-                    // Обновляем имя ORM текстуры
+                    // Обновляем имя ORM текстуры и устанавливаем Status = "Converted"
                     currentORMTexture.Name = Path.GetFileNameWithoutExtension(outputPath);
                     currentORMTexture.Path = outputPath;
+                    currentORMTexture.Status = "Converted";  // FIX: Update status to show green color in DataGrid
+                    currentORMTexture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
+                    currentORMTexture.MipmapCount = result.MipLevels;
+
+                    Logger.Info($"ORM texture updated: Status={currentORMTexture.Status}, MipLevels={result.MipLevels}");
 
                     // Refresh MainWindow to update preview and row color
                     Logger.Info("Calling MainWindow.RefreshCurrentTexture() to update preview and row color");
@@ -573,6 +582,8 @@ namespace AssetProcessor.Controls {
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
                     glossChannel.AOProcessingMode = AOProcessingMode.None; // AO processing only for AO channel
 
+                    Logger.Info($"  Gloss channel settings: ApplyToksvig={glossChannel.ApplyToksvig}, GlossToksvigEnabled={currentORMTexture.GlossToksvigEnabled}");
+
                     // Set filter via MipProfile
                     if (glossChannel.MipProfile == null) {
                         glossChannel.MipProfile = MipGenerationProfile.CreateDefault(TextureType.Gloss);
@@ -589,6 +600,9 @@ namespace AssetProcessor.Controls {
                             SmoothVariance = currentORMTexture.GlossToksvigSmoothVariance,
                             VarianceThreshold = 0.002f
                         };
+                        Logger.Info($"  Toksvig settings created: Power={glossChannel.ToksvigSettings.CompositePower}, Mode={glossChannel.ToksvigSettings.CalculationMode}");
+                    } else {
+                        Logger.Warn("  Toksvig is DISABLED - checkbox not checked!");
                     }
                 }
             }

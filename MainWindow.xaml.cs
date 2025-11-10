@@ -4185,6 +4185,25 @@ namespace AssetProcessor {
                 // КРИТИЧНО: Применяем SanitizePath к пути текстуры!
                 string texturePath = SanitizePath(GetResourcePath(cleanFileName, parentId));
 
+                // Extract resolution from variants (eliminates HTTP request!)
+                int[] resolution = new int[2];
+                JToken? variants = asset["file"]?["variants"];
+                if (variants != null && variants.Type == JTokenType.Object) {
+                    // Try common variant formats in order: webp, jpg, png, original
+                    foreach (string variantName in new[] { "webp", "jpg", "png", "original" }) {
+                        JToken? variant = variants[variantName];
+                        if (variant != null && variant.Type == JTokenType.Object) {
+                            int? width = variant["width"]?.Type == JTokenType.Integer ? (int?)variant["width"] : null;
+                            int? height = variant["height"]?.Type == JTokenType.Integer ? (int?)variant["height"] : null;
+                            if (width.HasValue && height.HasValue) {
+                                resolution[0] = width.Value;
+                                resolution[1] = height.Value;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 TextureResource texture = new() {
                     ID = asset["id"]?.Type == JTokenType.Integer ? (int)(asset["id"] ?? 0) : 0,
                     Index = index,
@@ -4193,7 +4212,7 @@ namespace AssetProcessor {
                     Url = fileUrl.Split('?')[0],  // Удаляем параметры запроса
                     Path = texturePath,
                     Extension = extension,
-                    Resolution = new int[2],
+                    Resolution = resolution,
                     ResizeResolution = new int[2],
                     Status = "On Server",
                     Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
@@ -4208,14 +4227,17 @@ namespace AssetProcessor {
 
                     switch (texture.Status) {
                         case "Downloaded":
-                            (int width, int height)? resolution = MainWindowHelpers.GetLocalImageResolution(texture.Path);
-                            if (resolution.HasValue) {
-                                texture.Resolution[0] = resolution.Value.width;
-                                texture.Resolution[1] = resolution.Value.height;
+                            (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path);
+                            if (localResolution.HasValue) {
+                                texture.Resolution[0] = localResolution.Value.width;
+                                texture.Resolution[1] = localResolution.Value.height;
                             }
                             break;
                         case "On Server":
-                            await MainWindowHelpers.UpdateTextureResolutionAsync(texture, cancellationToken);
+                            // Only fetch resolution via HTTP if not available from API variants
+                            if (texture.Resolution[0] == 0 || texture.Resolution[1] == 0) {
+                                await MainWindowHelpers.UpdateTextureResolutionAsync(texture, cancellationToken);
+                            }
                             break;
                         case "Size Mismatch":
                             break;

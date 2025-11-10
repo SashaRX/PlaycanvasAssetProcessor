@@ -178,8 +178,16 @@ namespace AssetProcessor.Settings {
                 out bool wasProtected);
 
             if (success && !string.IsNullOrEmpty(apiKey) && !wasProtected) {
-                this[nameof(PlaycanvasApiKey)] = SecureStorageHelper.Protect(apiKey);
-                Save();
+                // Attempt to migrate legacy plaintext API key to encrypted storage
+                try {
+                    this[nameof(PlaycanvasApiKey)] = SecureStorageHelper.Protect(apiKey);
+                    Save();
+                } catch (InvalidOperationException) {
+                    // Master password not set on Linux/macOS - cannot encrypt yet
+                    // Continue with plaintext key and let user configure later
+                } catch (CryptographicException) {
+                    // Encryption failed - continue with plaintext key
+                }
             }
 
             return success;

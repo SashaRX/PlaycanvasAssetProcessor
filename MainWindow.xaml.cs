@@ -1,7 +1,7 @@
 using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
-using AssetProcessor.Services.viewModel.Models;
+using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
 using Assimp;

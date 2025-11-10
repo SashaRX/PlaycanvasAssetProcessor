@@ -41,8 +41,14 @@
     <ItemGroup>
       <LogFilesToDelete Include="$(ProjectDir)file.txt" />
       <LogFilesToDelete Include="$(ProjectDir)internal-nlog.txt" />
+      <LogFilesToDelete Include="$(ProjectDir)error_log.txt" />
+      <LogFilesToDelete Include="$(ProjectDir)info_log.txt" />
+      <LogFilesToDelete Include="$(ProjectDir)warning_log.txt" />
       <LogFilesToDelete Include="$(OutputPath)file.txt" />
       <LogFilesToDelete Include="$(OutputPath)internal-nlog.txt" />
+      <LogFilesToDelete Include="$(OutputPath)error_log.txt" />
+      <LogFilesToDelete Include="$(OutputPath)info_log.txt" />
+      <LogFilesToDelete Include="$(OutputPath)warning_log.txt" />
     </ItemGroup>
     <Delete Files="@(LogFilesToDelete)" ContinueOnError="true" />
     <Message Text="Log files cleaned before build" Importance="normal" />

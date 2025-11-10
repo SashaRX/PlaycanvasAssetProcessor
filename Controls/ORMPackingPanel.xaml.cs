@@ -114,6 +114,16 @@ namespace AssetProcessor.Controls {
             ToksvigEnergyPreservingCheckBox.IsChecked = currentORMTexture.GlossToksvigEnergyPreserving;
             ToksvigSmoothVarianceCheckBox.IsChecked = currentORMTexture.GlossToksvigSmoothVariance;
 
+            // Metallic settings
+            MetallicProcessingModeComboBox.SelectedIndex = currentORMTexture.MetallicProcessingMode switch {
+                AOProcessingMode.None => 0,
+                AOProcessingMode.BiasedDarkening => 1,
+                AOProcessingMode.Percentile => 2,
+                _ => 0
+            };
+            MetallicBiasSlider.Value = currentORMTexture.MetallicBias;
+            MetallicPercentileSlider.Value = currentORMTexture.MetallicPercentile;
+
             // Compression settings
             CompressLevelSlider.Value = currentORMTexture.CompressLevel;
             QualityLevelSlider.Value = currentORMTexture.QualityLevel;
@@ -197,6 +207,8 @@ namespace AssetProcessor.Controls {
                 AOProcessingComboBox == null || AOBiasSlider == null ||
                 AOPercentileSlider == null ||
                 GlossToksvigCheckBox == null || GlossToksvigPowerSlider == null ||
+                MetallicProcessingModeComboBox == null || MetallicBiasSlider == null ||
+                MetallicPercentileSlider == null ||
                 CompressionFormatComboBox == null || QualityLevelSlider == null ||
                 UASTCQualitySlider == null || ToksvigCalculationModeComboBox == null ||
                 ToksvigMinMipLevelSlider == null || ToksvigEnergyPreservingCheckBox == null ||
@@ -230,6 +242,16 @@ namespace AssetProcessor.Controls {
             if (ToksvigCalculationModeComboBox.SelectedItem != null) {
                 currentORMTexture.GlossToksvigCalculationMode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem;
             }
+
+            // Metallic settings
+            currentORMTexture.MetallicProcessingMode = MetallicProcessingModeComboBox.SelectedIndex switch {
+                0 => AOProcessingMode.None,
+                1 => AOProcessingMode.BiasedDarkening,
+                2 => AOProcessingMode.Percentile,
+                _ => AOProcessingMode.None
+            };
+            currentORMTexture.MetallicBias = (float)MetallicBiasSlider.Value;
+            currentORMTexture.MetallicPercentile = (float)MetallicPercentileSlider.Value;
 
             // Compression settings
             if (CompressionFormatComboBox.SelectedItem != null) {
@@ -324,6 +346,20 @@ namespace AssetProcessor.Controls {
             // None=hide both, BiasedDarkening=show bias, Percentile=show percentile
             AOBiasPanel.Visibility = mode == "BiasedDarkening" ? Visibility.Visible : Visibility.Collapsed;
             AOPercentilePanel.Visibility = mode == "Percentile" ? Visibility.Visible : Visibility.Collapsed;
+
+            UpdateStatus();
+        }
+
+        private void MetallicProcessingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Early return if controls not initialized yet
+            if (MetallicBiasPanel == null || MetallicPercentilePanel == null) return;
+            if (MetallicProcessingModeComboBox.SelectedItem == null) return;
+
+            var mode = ((ComboBoxItem)MetallicProcessingModeComboBox.SelectedItem).Tag.ToString();
+
+            // None=hide both, BiasedDarkening=show bias, Percentile=show percentile
+            MetallicBiasPanel.Visibility = mode == "BiasedDarkening" ? Visibility.Visible : Visibility.Collapsed;
+            MetallicPercentilePanel.Visibility = mode == "Percentile" ? Visibility.Visible : Visibility.Collapsed;
 
             UpdateStatus();
         }
@@ -557,7 +593,9 @@ namespace AssetProcessor.Controls {
             if (settings.BlueChannel != null) {
                 settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.Path;
                 settings.BlueChannel.DefaultValue = 0.0f; // Non-metallic by default
-                settings.BlueChannel.AOProcessingMode = AOProcessingMode.None; // AO processing only for AO channel
+                settings.BlueChannel.AOProcessingMode = currentORMTexture.MetallicProcessingMode;
+                settings.BlueChannel.AOBias = currentORMTexture.MetallicBias;
+                settings.BlueChannel.AOPercentile = currentORMTexture.MetallicPercentile;
 
                 // Set filter via MipProfile
                 if (settings.BlueChannel.MipProfile == null) {

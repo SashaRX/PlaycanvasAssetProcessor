@@ -171,7 +171,38 @@
                         <ComboBox x:Name="MetallicFilterTypeComboBox" Style="{StaticResource CompactComboStyle}"
                                   ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
 
-                        <TextBlock Text="Processing: None (Binary values)" Style="{StaticResource CompactTextStyle}" Foreground="Gray"/>
+                        <TextBlock Text="Processing:" Style="{StaticResource CompactTextStyle}"/>
+                        <ComboBox x:Name="MetallicProcessingModeComboBox" Style="{StaticResource CompactComboStyle}"
+                                  ItemsSource="{Binding Source={StaticResource AOProcessingModeValues}}"
+                                  SelectionChanged="MetallicProcessingModeComboBox_SelectionChanged"/>
+
+                        <StackPanel x:Name="MetallicBiasPanel" Visibility="Collapsed">
+                            <TextBlock Text="Bias:" Style="{StaticResource CompactTextStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="MetallicBiasSlider" Grid.Column="0" Minimum="0.0" Maximum="1.0" Value="0.5"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="False" Style="{StaticResource CompactSliderStyle}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ElementName=MetallicBiasSlider, Path=Value, StringFormat={}{0:F2}}"
+                                          Style="{StaticResource CompactTextStyle}" Width="28" TextAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel x:Name="MetallicPercentilePanel" Visibility="Collapsed">
+                            <TextBlock Text="Percentile:" Style="{StaticResource CompactTextStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="MetallicPercentileSlider" Grid.Column="0" Minimum="0.0" Maximum="50.0" Value="10.0"
+                                        TickFrequency="1.0" IsSnapToTickEnabled="False" Style="{StaticResource CompactSliderStyle}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ElementName=MetallicPercentileSlider, Path=Value, StringFormat={}{0:F1}%}"
+                                          Style="{StaticResource CompactTextStyle}" Width="35" TextAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>

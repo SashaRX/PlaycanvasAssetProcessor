@@ -145,7 +145,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         }
 
         /// <summary>
-        /// Применяет специфичную для канала обработку (Toksvig для Gloss, AO processing для AO)
+        /// Применяет специфичную для канала обработку (Toksvig для Gloss, AO processing для AO и Metallic)
         /// </summary>
         private async Task<List<Image<Rgba32>>> ApplyChannelSpecificProcessingAsync(
             ChannelSourceSettings channelSettings,
@@ -166,6 +166,25 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 case ChannelType.AmbientOcclusion:
                     if (channelSettings.AOProcessingMode != AOProcessingMode.None) {
                         Logger.Info($"  Applying AO processing: {channelSettings.AOProcessingMode}");
+                        var processedMipmaps = _aoProcessor.ProcessAOMipmaps(
+                            mipmaps,
+                            channelSettings.AOProcessingMode,
+                            channelSettings.AOBias,
+                            channelSettings.AOPercentile
+                        );
+
+                        // Освобождаем старые мипмапы
+                        foreach (var mip in mipmaps) {
+                            mip.Dispose();
+                        }
+
+                        return processedMipmaps;
+                    }
+                    break;
+
+                case ChannelType.Metallic:
+                    if (channelSettings.AOProcessingMode != AOProcessingMode.None) {
+                        Logger.Info($"  Applying Metallic processing: {channelSettings.AOProcessingMode}");
                         var processedMipmaps = _aoProcessor.ProcessAOMipmaps(
                             mipmaps,
                             channelSettings.AOProcessingMode,

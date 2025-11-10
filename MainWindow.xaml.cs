@@ -1912,18 +1912,19 @@ namespace AssetProcessor {
                         bool ktxLoaded = false;
 
                         if (isUsingD3D11Renderer) {
-                            // D3D11 MODE: Load KTX2 natively
+                            // D3D11 MODE: Try native KTX2 loading
                             MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Loading packed ORM to D3D11: {ormTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
 
-                            if (ktxLoaded) {
-                                // Also calculate histogram from the packed file
-                                await LoadSourcePreviewAsync(ormTexture, cancellationToken, loadToViewer: false);
+                            if (!ktxLoaded) {
+                                // Fallback: Try extracting PNG from KTX2 using ktx extract
+                                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
+                                Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                                ktxLoaded = await ktxPreviewTask;
                             }
                         } else {
                             // WPF MODE: Extract PNG from KTX2
                             Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
-                            await LoadSourcePreviewAsync(ormTexture, cancellationToken, loadToViewer: true);
                             ktxLoaded = await ktxPreviewTask;
                         }
 
@@ -1932,12 +1933,10 @@ namespace AssetProcessor {
                                 if (cancellationToken.IsCancellationRequested) return;
 
                                 isKtxPreviewAvailable = false;
+                                TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
 
-                                if (!isUserPreviewSelection && currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
-                                    SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: false);
-                                } else {
-                                    UpdatePreviewSourceControls();
-                                }
+                                // Show error message
+                                MainWindowHelpers.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
                             });
                         }
                     } catch (OperationCanceledException) {

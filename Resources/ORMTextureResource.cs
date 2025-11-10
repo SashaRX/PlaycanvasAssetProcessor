@@ -22,6 +22,11 @@ namespace AssetProcessor.Resources {
         private float aoBias = 0.5f;
         private float aoPercentile = 10.0f;
 
+        // Metallic settings
+        private AOProcessingMode metallicProcessingMode = AOProcessingMode.None;
+        private float metallicBias = 0.5f;
+        private float metallicPercentile = 10.0f;
+
         // Gloss settings
         private bool glossToksvigEnabled = true;
         private float glossToksvigPower = 4.0f;
@@ -172,6 +177,39 @@ namespace AssetProcessor.Resources {
             set {
                 aoPercentile = value;
                 OnPropertyChanged(nameof(AOPercentile));
+            }
+        }
+
+        /// <summary>
+        /// Режим обработки Metallic мипмапов
+        /// </summary>
+        public AOProcessingMode MetallicProcessingMode {
+            get => metallicProcessingMode;
+            set {
+                metallicProcessingMode = value;
+                OnPropertyChanged(nameof(MetallicProcessingMode));
+            }
+        }
+
+        /// <summary>
+        /// Bias для Metallic обработки (0.3-0.7)
+        /// </summary>
+        public float MetallicBias {
+            get => metallicBias;
+            set {
+                metallicBias = value;
+                OnPropertyChanged(nameof(MetallicBias));
+            }
+        }
+
+        /// <summary>
+        /// Percentile для Metallic обработки
+        /// </summary>
+        public float MetallicPercentile {
+            get => metallicPercentile;
+            set {
+                metallicPercentile = value;
+                OnPropertyChanged(nameof(MetallicPercentile));
             }
         }
 

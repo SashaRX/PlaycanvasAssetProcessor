@@ -98,8 +98,10 @@ namespace AssetProcessor.TextureConversion.Core {
                 return false;
             }
 
-            if (AOProcessingMode != AOProcessingMode.None && ChannelType != ChannelType.AmbientOcclusion) {
-                error = "AO processing can only be applied to AmbientOcclusion channel";
+            if (AOProcessingMode != AOProcessingMode.None &&
+                ChannelType != ChannelType.AmbientOcclusion &&
+                ChannelType != ChannelType.Metallic) {
+                error = "AO processing can only be applied to AmbientOcclusion or Metallic channels";
                 return false;
             }
 

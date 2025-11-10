@@ -26,8 +26,14 @@
       "Bash(git merge:*)",
       "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build FAILED\" -Context 0,2)",
       "Bash(dir:*)",
-      "Bash(git clean:*)",
-      "Bash(powershell:*)"
+      "Bash(Helpers/SecureStorageHelper.cs)",
+      "Bash(Settings/AppSettings.cs)",
+      "Bash(Settings/SettingsWindow.xaml.cs)",
+      "Bash(Settings/SettingsWindow.xaml)",
+      "Bash(AssetProcessor.Tests/SecureSettingsTests.cs)",
+      "Bash(powershell -Command \"dotnet build D:\\sourceProject\\repos\\PlaycanvasAssetProcessor\\AssetProcessor.csproj --configuration Release 2>&1 | Select-Object -Last 30\":*)",
+      "Bash(powershell:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

@@ -19,6 +19,12 @@ namespace AssetProcessor.Exceptions {
             StatusCode = statusCode;
         }
 
+        public PlayCanvasApiException(string message, string apiEndpoint, int statusCode, Exception innerException)
+            : base(message, innerException) {
+            ApiEndpoint = apiEndpoint;
+            StatusCode = statusCode;
+        }
+
         public override string ToString() {
             var baseMessage = base.ToString();
             if (ApiEndpoint != null) {

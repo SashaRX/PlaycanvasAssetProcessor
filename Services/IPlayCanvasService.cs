@@ -1,4 +1,4 @@
-using Newtonsoft.Json.Linq;
+using AssetProcessor.Services.Models;
 
 namespace AssetProcessor.Services {
     /// <summary>
@@ -21,13 +21,13 @@ namespace AssetProcessor.Services {
         Task<List<Branch>> GetBranchesAsync(string projectId, string apiKey, List<Branch> branches, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Gets all assets for a project and branch
+        /// Streams assets for a project and branch using PlayCanvas pagination
         /// </summary>
-        Task<JArray> GetAssetsAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken);
+        IAsyncEnumerable<PlayCanvasAssetSummary> GetAssetsAsync(string projectId, string branchId, string apiKey, CancellationToken cancellationToken);
 
         /// <summary>
         /// Gets a specific asset by ID
         /// </summary>
-        Task<JObject> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken);
+        Task<PlayCanvasAssetDetail> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken);
     }
 }

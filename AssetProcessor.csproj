@@ -36,6 +36,18 @@
     <!-- См. https://aka.ms/dotnet-illink/wpf -->
   </PropertyGroup>
 
+  <!-- Удаление log файлов перед сборкой -->
+  <Target Name="CleanLogFiles" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <LogFilesToDelete Include="$(ProjectDir)file.txt" />
+      <LogFilesToDelete Include="$(ProjectDir)internal-nlog.txt" />
+      <LogFilesToDelete Include="$(OutputPath)file.txt" />
+      <LogFilesToDelete Include="$(OutputPath)internal-nlog.txt" />
+    </ItemGroup>
+    <Delete Files="@(LogFilesToDelete)" ContinueOnError="true" />
+    <Message Text="Log files cleaned before build" Importance="normal" />
+  </Target>
+
   <!-- Автоматическое получение Git информации при сборке -->
   <Target Name="GetGitInfo" BeforeTargets="CoreCompile">
     <Exec Command="git rev-parse --abbrev-ref HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true">

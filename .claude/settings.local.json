@@ -36,7 +36,9 @@
       "Bash(git checkout:*)",
       "Bash(MainWindow.xaml)",
       "Bash(MainWindow.xaml.cs)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git branch:*)",
+      "Bash(Select-String -Pattern \"Log files cleaned|Build succeeded|Build FAILED\" -Context 0,2)"
     ],
     "deny": [],
     "ask": []

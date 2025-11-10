@@ -2071,19 +2071,27 @@ namespace AssetProcessor {
         public async void RefreshCurrentTexture() {
             MainWindowHelpers.LogInfo("[RefreshCurrentTexture] Refreshing DataGrid and preview");
 
-            // Refresh DataGrid to update row colors and property bindings
-            TexturesDataGrid.Items.Refresh();
+            // Save the selected item
+            var selectedItem = TexturesDataGrid.SelectedItem;
+
+            // Force complete DataGrid refresh by rebinding ItemsSource
+            // This ensures DataTriggers are re-evaluated
+            var itemsSource = TexturesDataGrid.ItemsSource;
+            TexturesDataGrid.ItemsSource = null;
+            TexturesDataGrid.ItemsSource = itemsSource;
+
+            // Restore selection
+            TexturesDataGrid.SelectedItem = selectedItem;
 
             // Reload the preview by simulating selection changed
-            if (TexturesDataGrid.SelectedItem != null) {
+            if (selectedItem != null) {
                 textureLoadCancellation?.Cancel();
                 textureLoadCancellation = new CancellationTokenSource();
 
-                // Small delay to allow DataGrid to refresh
+                // Small delay to allow DataGrid to rebind
                 await Task.Delay(100);
 
                 // Trigger selection changed logic manually
-                var selectedItem = TexturesDataGrid.SelectedItem;
                 MainWindowHelpers.LogInfo($"[RefreshCurrentTexture] Triggering preview reload for: {(selectedItem as TextureResource)?.Name ?? "unknown"}");
 
                 TexturesDataGrid_SelectionChanged(TexturesDataGrid, new SelectionChangedEventArgs(

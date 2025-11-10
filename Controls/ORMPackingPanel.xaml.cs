@@ -121,7 +121,7 @@ namespace AssetProcessor.Controls {
                     Logger.Info($"  AO: Looking for ID={currentORMTexture.AOSource.ID}, found={found?.Name ?? "null"}");
                     if (found != null) {
                         AOSourceComboBox.SelectedItem = found;
-                        Logger.Info($"  AO: Set SelectedItem to {found.Name}, result={AOSourceComboBox.SelectedItem?.Name ?? "null"}");
+                        Logger.Info($"  AO: Set SelectedItem to {found.Name}, result={(AOSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
                     }
                 }
 
@@ -130,7 +130,7 @@ namespace AssetProcessor.Controls {
                     Logger.Info($"  Gloss: Looking for ID={currentORMTexture.GlossSource.ID}, found={found?.Name ?? "null"}");
                     if (found != null) {
                         GlossSourceComboBox.SelectedItem = found;
-                        Logger.Info($"  Gloss: Set SelectedItem to {found.Name}, result={GlossSourceComboBox.SelectedItem?.Name ?? "null"}");
+                        Logger.Info($"  Gloss: Set SelectedItem to {found.Name}, result={(GlossSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
                     }
                 }
 
@@ -139,7 +139,7 @@ namespace AssetProcessor.Controls {
                     Logger.Info($"  Metallic: Looking for ID={currentORMTexture.MetallicSource.ID}, found={found?.Name ?? "null"}");
                     if (found != null) {
                         MetallicSourceComboBox.SelectedItem = found;
-                        Logger.Info($"  Metallic: Set SelectedItem to {found.Name}, result={MetallicSourceComboBox.SelectedItem?.Name ?? "null"}");
+                        Logger.Info($"  Metallic: Set SelectedItem to {found.Name}, result={(MetallicSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
                     }
                 }
 
@@ -455,7 +455,12 @@ namespace AssetProcessor.Controls {
                 settings.RedChannel.AOProcessingMode = currentORMTexture.AOProcessingMode;
                 settings.RedChannel.AOBias = currentORMTexture.AOBias;
                 settings.RedChannel.AOPercentile = currentORMTexture.AOPercentile;
-                settings.RedChannel.Filter = currentORMTexture.AOFilterType;
+
+                // Set filter via MipProfile
+                if (settings.RedChannel.MipProfile == null) {
+                    settings.RedChannel.MipProfile = MipGenerationProfile.CreateDefault(TextureType.AmbientOcclusion);
+                }
+                settings.RedChannel.MipProfile.Filter = currentORMTexture.AOFilterType;
             }
 
             // Gloss channel (Green or Alpha)
@@ -465,7 +470,12 @@ namespace AssetProcessor.Controls {
                     glossChannel.SourcePath = currentORMTexture.GlossSource?.Path;
                     glossChannel.DefaultValue = 0.5f; // Medium gloss
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
-                    glossChannel.Filter = currentORMTexture.GlossFilterType;
+
+                    // Set filter via MipProfile
+                    if (glossChannel.MipProfile == null) {
+                        glossChannel.MipProfile = MipGenerationProfile.CreateDefault(TextureType.Gloss);
+                    }
+                    glossChannel.MipProfile.Filter = currentORMTexture.GlossFilterType;
 
                     if (glossChannel.ApplyToksvig) {
                         glossChannel.ToksvigSettings = new ToksvigSettings {
@@ -485,7 +495,12 @@ namespace AssetProcessor.Controls {
             if (settings.BlueChannel != null) {
                 settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.Path;
                 settings.BlueChannel.DefaultValue = 0.0f; // Non-metallic by default
-                settings.BlueChannel.Filter = currentORMTexture.MetallicFilterType;
+
+                // Set filter via MipProfile
+                if (settings.BlueChannel.MipProfile == null) {
+                    settings.BlueChannel.MipProfile = MipGenerationProfile.CreateDefault(TextureType.Metallic);
+                }
+                settings.BlueChannel.MipProfile.Filter = currentORMTexture.MetallicFilterType;
             }
 
             // Height channel (Alpha in OGMH mode)

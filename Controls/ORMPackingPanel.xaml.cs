@@ -79,6 +79,20 @@ namespace AssetProcessor.Controls {
             Logger.Info($"  GlossSource: {currentORMTexture.GlossSource?.Name ?? "null"} (ID={currentORMTexture.GlossSource?.ID})");
             Logger.Info($"  MetallicSource: {currentORMTexture.MetallicSource?.Name ?? "null"} (ID={currentORMTexture.MetallicSource?.ID})");
 
+            // CRITICAL: Capture references IMMEDIATELY before UI changes trigger SaveORMSettings
+            var aoSource = currentORMTexture.AOSource;
+            var glossSource = currentORMTexture.GlossSource;
+            var metallicSource = currentORMTexture.MetallicSource;
+            var heightSource = currentORMTexture.HeightSource;
+            var compressionFormat = currentORMTexture.CompressionFormat;
+            var toksvigCalculationMode = currentORMTexture.GlossToksvigCalculationMode;
+            var aoFilterType = currentORMTexture.AOFilterType;
+            var glossFilterType = currentORMTexture.GlossFilterType;
+            var metallicFilterType = currentORMTexture.MetallicFilterType;
+
+            Logger.Info($"  Captured aoSource: {aoSource?.Name ?? "null"} (ID={aoSource?.ID})");
+            Logger.Info($"  Captured glossSource: {glossSource?.Name ?? "null"} (ID={glossSource?.ID})");
+
             // Packing mode
             PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
 
@@ -115,18 +129,8 @@ namespace AssetProcessor.Controls {
             EnableSupercompressionCheckBox.IsChecked = currentORMTexture.EnableSupercompression;
             SupercompressionLevelSlider.Value = currentORMTexture.SupercompressionLevel;
 
-            // CRITICAL: Capture references to local variables BEFORE Dispatcher.BeginInvoke to avoid closure issues
-            var aoSource = currentORMTexture.AOSource;
-            var glossSource = currentORMTexture.GlossSource;
-            var metallicSource = currentORMTexture.MetallicSource;
-            var heightSource = currentORMTexture.HeightSource;
-            var compressionFormat = currentORMTexture.CompressionFormat;
-            var toksvigCalculationMode = currentORMTexture.GlossToksvigCalculationMode;
-            var aoFilterType = currentORMTexture.AOFilterType;
-            var glossFilterType = currentORMTexture.GlossFilterType;
-            var metallicFilterType = currentORMTexture.MetallicFilterType;
-
             // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
+            // Variables were captured at the TOP of this method to avoid SaveORMSettings overwriting them
             Dispatcher.BeginInvoke(new Action(() => {
                 Logger.Info("=== Dispatcher.BeginInvoke: Setting ComboBox selections ===");
 

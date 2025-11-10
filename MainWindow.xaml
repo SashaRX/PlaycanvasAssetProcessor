@@ -316,6 +316,12 @@
                                     </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
@@ -333,7 +339,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Background="{Binding Status, Converter={StaticResource StatusToBackgroundConverter}}"/>
+                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -428,7 +434,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Background="{Binding Status, Converter={StaticResource StatusToBackgroundConverter}}"/>
+                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

@@ -283,7 +283,6 @@
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
-                                ItemsSource="{Binding FilteredTextures}"
                                 AutoGenerateColumns="False"
                                 SelectionChanged="TexturesDataGrid_SelectionChanged"
                                 LoadingRow="TexturesDataGrid_LoadingRow"

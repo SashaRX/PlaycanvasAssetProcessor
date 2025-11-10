@@ -83,12 +83,15 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 var packedMipmaps = new List<Image<Rgba32>>();
 
                 for (int level = 0; level < mipCount; level++) {
+                    int mipWidth = Math.Max(1, finalWidth >> level);
+                    int mipHeight = Math.Max(1, finalHeight >> level);
+
                     var packedMip = PackMipmapLevel(
                         packingSettings,
                         channelMipmaps,
                         level,
-                        finalWidth >> level,
-                        finalHeight >> level
+                        mipWidth,
+                        mipHeight
                     );
                     packedMipmaps.Add(packedMip);
                     Logger.Info($"  ✓ Mip{level} packed: {packedMip.Width}x{packedMip.Height}");

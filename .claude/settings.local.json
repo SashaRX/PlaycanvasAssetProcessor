@@ -35,7 +35,8 @@
       "Bash(powershell:*)",
       "Bash(git checkout:*)",
       "Bash(MainWindow.xaml)",
-      "Bash(MainWindow.xaml.cs)"
+      "Bash(MainWindow.xaml.cs)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

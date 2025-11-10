@@ -77,18 +77,6 @@ namespace AssetProcessor {
                 .Trim();             // Удаляем пробелы по краям
         }
 
-        /// <summary>
-        /// Получает расшифрованный PlayCanvas API ключ из настроек.
-        /// Используется для всех вызовов PlayCanvas API для корректной работы с зашифрованным хранилищем.
-        /// </summary>
-        private static string? GetDecryptedApiKey() {
-            if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out string? apiKey)) {
-                logger.Error("Не удалось расшифровать PlayCanvas API ключ из настроек");
-                return null;
-            }
-            return apiKey;
-        }
-
         private ObservableCollection<TextureResource> textures = [];
         public ObservableCollection<TextureResource> Textures {
             get { return textures; }
@@ -223,6 +211,18 @@ namespace AssetProcessor {
         }
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        /// <summary>
+        /// Получает расшифрованный PlayCanvas API ключ из настроек.
+        /// Используется для всех вызовов PlayCanvas API для корректной работы с зашифрованным хранилищем.
+        /// </summary>
+        private static string? GetDecryptedApiKey() {
+            if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out string? apiKey)) {
+                logger.Error("Не удалось расшифровать PlayCanvas API ключ из настроек");
+                return null;
+            }
+            return apiKey;
+        }
 
         private readonly ObservableCollection<Branch> branches = [];
         public ObservableCollection<Branch> Branches {
@@ -2863,8 +2863,8 @@ namespace AssetProcessor {
                 JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
 
                 // Получаем серверный JSON
-                string? apiKey = GetDecryptedApiKey();
                 List<PlayCanvasAssetSummary> serverSummaries = [];
+                string? apiKey = GetDecryptedApiKey();
                 await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", CancellationToken.None)) {
                     serverSummaries.Add(asset);
                 }
@@ -3741,8 +3741,8 @@ namespace AssetProcessor {
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
                 MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
-                string? apiKey = GetDecryptedApiKey();
                 List<PlayCanvasAssetSummary> assetSummaries = [];
+                string? apiKey = GetDecryptedApiKey();
                 await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", cancellationToken)) {
                     assetSummaries.Add(asset);
                 }
@@ -4521,9 +4521,9 @@ namespace AssetProcessor {
 
                     // Получаем данные с сервера для сравнения hash
                     MainWindowHelpers.LogInfo("Fetching assets from server to check hash...");
-                    string? apiKey = GetDecryptedApiKey();
                     List<PlayCanvasAssetSummary> serverSummaries = [];
-                    await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", CancellationToken.None)) {
+                    string? apiKey = GetDecryptedApiKey();
+                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", CancellationToken.None)) {
                         serverSummaries.Add(asset);
                     }
                     JArray serverData = new();
@@ -5304,6 +5304,17 @@ namespace AssetProcessor {
         private void ModelConversionSettingsPanel_ProcessRequested(object sender, EventArgs e) {
             // When user clicks "Process Selected Model" button in the settings panel
             ProcessSelectedModel_Click(sender, new RoutedEventArgs());
+        }
+
+        private void ModelPreviewGridSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+            // Сохраняем текущую высоту ModelPreviewRow в настройки
+            if (ModelPreviewRow != null) {
+                double currentHeight = ModelPreviewRow.ActualHeight;
+                if (currentHeight > 0 && currentHeight >= 200 && currentHeight <= 800) {
+                    AppSettings.Default.ModelPreviewRowHeight = currentHeight;
+                    AppSettings.Default.Save();
+                }
+            }
         }
 
         #endregion

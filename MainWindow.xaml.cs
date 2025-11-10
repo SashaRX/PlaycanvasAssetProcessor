@@ -4523,26 +4523,29 @@ namespace AssetProcessor {
         }
 
         private void RecalculateIndices() {
-            Dispatcher.Invoke(() => {
+            // Используем BeginInvoke с низким приоритетом для неблокирующего обновления
+            Dispatcher.BeginInvoke(() => {
                 int index = 1;
                 foreach (TextureResource texture in textures) {
                     texture.Index = index++;
+                    // INotifyPropertyChanged автоматически обновит строку в DataGrid
                 }
-                TexturesDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
 
                 index = 1;
                 foreach (ModelResource model in models) {
                     model.Index = index++;
+                    // INotifyPropertyChanged автоматически обновит строку в DataGrid
                 }
-                ModelsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
 
                 index = 1;
-
                 foreach (MaterialResource material in materials) {
                     material.Index = index++;
+                    // INotifyPropertyChanged автоматически обновит строку в DataGrid
                 }
-                MaterialsDataGrid.Items.Refresh(); // Обновляем DataGrid, чтобы отразить изменения индексов
-            });
+
+                // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
+                // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
+            }, DispatcherPriority.Background);
         }
 
         private bool IsSupportedTextureFormat(string extension) {

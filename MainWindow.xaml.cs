@@ -226,6 +226,9 @@ namespace AssetProcessor {
             TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
 
             DataContext = viewModel;
+
+            // Force layout update to prevent overlapping rows issue with virtualization
+            TexturesDataGrid.UpdateLayout();
             this.Closing += MainWindow_Closing;
             //LoadLastSettings();
 

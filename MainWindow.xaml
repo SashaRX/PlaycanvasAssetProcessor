@@ -291,9 +291,9 @@
                                 CanUserReorderColumns="True"
                                 Background="#FFD6D6D6"
                                 VirtualizingPanel.IsVirtualizing="True"
-                                VirtualizingPanel.VirtualizationMode="Recycling"
+                                VirtualizingPanel.VirtualizationMode="Standard"
                                 EnableRowVirtualization="True"
-                                EnableColumnVirtualization="True">
+                                EnableColumnVirtualization="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>

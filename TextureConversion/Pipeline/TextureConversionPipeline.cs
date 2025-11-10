@@ -30,7 +30,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         }
 
         /// <summary>
-        /// Конвертирует текстуру в KTX2 формат с генерацией мипмапов используя toktx
+        /// Конвертирует текстуру в KTX2 формат с генерацией мипмапов используя ktx create
         /// </summary>
         /// <param name="inputPath">Путь к входной текстуре</param>
         /// <param name="outputPath">Путь к выходному файлу (.ktx2)</param>
@@ -81,14 +81,14 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                         Logger.Info($"Mipmap level {i}: {mipmaps[i].Width}x{mipmaps[i].Height}");
                     }
                 } else {
-                    // АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ: toktx сам сгенерирует мипмапы с --genmipmap
+                    // АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ: ktx create сам сгенерирует мипмапы с --generate-mipmap
                     Logger.Info("=== AUTOMATIC MIPMAP GENERATION (UseCustomMipmaps=false) ===");
-                    Logger.Info("Will pass only source image to toktx, it will generate mipmaps automatically with --genmipmap");
-                    Logger.Info("This allows --normal_mode and --normalize flags to work correctly");
+                    Logger.Info("Will pass only source image to ktx create, it will generate mipmaps automatically with --generate-mipmap");
+                    Logger.Info("This allows --normal-mode and --normalize flags to work correctly");
 
                     // Создаем список с ОДНИМ изображением (клон оригинала)
                     mipmaps = new List<Image<Rgba32>> { sourceImage.Clone() };
-                    Logger.Info($"Created single-image list for toktx: {mipmaps[0].Width}x{mipmaps[0].Height}");
+                    Logger.Info($"Created single-image list for ktx create: {mipmaps[0].Width}x{mipmaps[0].Height}");
                 }
 
                 // Применяем Toksvig коррекцию если включена (для gloss/roughness текстур)
@@ -200,7 +200,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 // Флаг: были ли сохранены debug mipmaps для Toksvig (чтобы избежать дублирования)
                 bool toksvigDebugMipmapsSaved = result.ToksvigApplied && !compressionSettings.RemoveTemporaryMipmaps;
 
-                // ВСЕГДА сохраняем все мипмапы во временную директорию для toktx
+                // ВСЕГДА сохраняем все мипмапы во временную директорию для ktx create
                 var tempMipmapDir = Path.Combine(Path.GetTempPath(), "TexTool_Mipmaps", Guid.NewGuid().ToString());
                 Directory.CreateDirectory(tempMipmapDir);
                 Logger.Info($"Создана временная директория для мипмапов: {tempMipmapDir}");
@@ -208,8 +208,8 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 var tempMipmapPaths = new List<string>();
 
                 try {
-                    // Сохраняем все мипмапы как временные PNG для toktx
-                    Logger.Info($"Сохраняем {mipmaps.Count} мипмапов для toktx...");
+                    // Сохраняем все мипмапы как временные PNG для ktx create
+                    Logger.Info($"Сохраняем {mipmaps.Count} мипмапов для ktx create...");
                     for (int i = 0; i < mipmaps.Count; i++) {
                         var mipPath = Path.Combine(tempMipmapDir, $"{fileName}_mip{i}.png");
                         Logger.Info($"Сохраняем mipmap level {i} ({mipmaps[i].Width}x{mipmaps[i].Height}) в: {mipPath}");

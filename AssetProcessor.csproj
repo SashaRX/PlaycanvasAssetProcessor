@@ -79,9 +79,6 @@
 
   <ItemGroup>
     <None Remove="colorPicker.png" />
-    <!-- Exclude Unity Editor script from WPF project compilation -->
-    <Compile Remove="PlayCanvasImporterWindow.cs" />
-    <None Include="PlayCanvasImporterWindow.cs" />
     <!-- Exclude test files from main project compilation -->
     <Compile Remove="AssetProcessor.Tests\**\*.cs" />
     <None Include="AssetProcessor.Tests\**\*.cs" />

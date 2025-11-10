@@ -1,7 +1,7 @@
 namespace AssetProcessor.TextureConversion.Core {
     /// <summary>
-    /// Типы фильтров для toktx --filter (генерация мипмапов через toktx --genmipmap)
-    /// Эти фильтры используются когда toktx сам генерирует мипмапы
+    /// Типы фильтров для ktx create --mipmap-filter (генерация мипмапов через ktx create --generate-mipmap)
+    /// Эти фильтры используются когда ktx create сам генерирует мипмапы
     /// </summary>
     public enum ToktxFilterType {
         /// <summary>

@@ -134,7 +134,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         }
 
         /// <summary>
-        /// Генерирует CLI аргументы для toktx на основе текущих настроек
+        /// Генерирует CLI аргументы для ktx create на основе текущих настроек
         /// </summary>
         /// <param name="outputPath">Путь к выходному файлу</param>
         /// <param name="inputPaths">Пути к входным файлам (мипмапы)</param>
@@ -142,7 +142,7 @@ namespace AssetProcessor.TextureConversion.Settings {
         public List<string> GenerateToktxArguments(string outputPath, List<string> inputPaths) {
             var args = new List<string>();
 
-            Logger.Info("=== GENERATING TOKTX CLI ARGUMENTS ===");
+            Logger.Info("=== GENERATING KTX CREATE CLI ARGUMENTS ===");
 
             // Обрабатываем параметры по порядку секций
             foreach (var group in _parameterGroups.OrderBy(g => g.Order)) {
@@ -172,7 +172,7 @@ namespace AssetProcessor.TextureConversion.Settings {
                                 args.Add("--threads");
                                 args.Add(_globalSettings.ThreadCount.ToString());
                             }
-                            // Если ThreadCount == 0, не добавляем флаг (toktx использует автоопределение)
+                            // Если ThreadCount == 0, не добавляем флаг (ktx create использует автоопределение)
                         } else {
                             args.Add("--threads");
                             args.Add(threadsValue!);

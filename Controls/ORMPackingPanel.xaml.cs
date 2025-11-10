@@ -2,6 +2,7 @@ using AssetProcessor.Resources;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.MipGeneration;
 using AssetProcessor.TextureConversion.Pipeline;
+using AssetProcessor.TextureConversion.Settings;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -431,14 +432,29 @@ namespace AssetProcessor.Controls {
 
                 // Apply user settings
                 compressionSettings.CompressionFormat = currentORMTexture.CompressionFormat;
-                compressionSettings.CompressLevel = currentORMTexture.CompressLevel; // ETC1S compress level
+                compressionSettings.CompressionLevel = currentORMTexture.CompressLevel; // ETC1S compress level (0-5)
                 compressionSettings.QualityLevel = currentORMTexture.QualityLevel;
                 compressionSettings.UASTCQuality = currentORMTexture.UASTCQuality;
-                compressionSettings.EnableRDO = currentORMTexture.EnableRDO;
-                compressionSettings.RDOLambda = currentORMTexture.RDOLambda;
-                compressionSettings.Perceptual = currentORMTexture.Perceptual;
-                compressionSettings.EnableSupercompression = currentORMTexture.EnableSupercompression;
-                compressionSettings.SupercompressionLevel = currentORMTexture.SupercompressionLevel;
+
+                // RDO settings (different for UASTC vs ETC1S)
+                if (currentORMTexture.CompressionFormat == CompressionFormat.UASTC) {
+                    compressionSettings.UseUASTCRDO = currentORMTexture.EnableRDO;
+                    compressionSettings.UASTCRDOQuality = currentORMTexture.RDOLambda;
+                } else {
+                    compressionSettings.UseETC1SRDO = currentORMTexture.EnableRDO;
+                    compressionSettings.ETC1SRDOLambda = currentORMTexture.RDOLambda;
+                }
+
+                compressionSettings.PerceptualMode = currentORMTexture.Perceptual;
+
+                // Supercompression
+                if (currentORMTexture.EnableSupercompression) {
+                    compressionSettings.KTX2Supercompression = KTX2SupercompressionType.Zstandard;
+                    compressionSettings.KTX2ZstdLevel = currentORMTexture.SupercompressionLevel;
+                } else {
+                    compressionSettings.KTX2Supercompression = KTX2SupercompressionType.None;
+                }
+
                 compressionSettings.ColorSpace = ColorSpace.Linear; // КРИТИЧНО для ORM!
 
                 // Mipmap settings

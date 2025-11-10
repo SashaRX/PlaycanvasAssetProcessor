@@ -6,6 +6,11 @@ namespace AssetProcessor.Resources {
     /// Виртуальная ORM текстура для упаковки каналов
     /// </summary>
     public class ORMTextureResource : TextureResource {
+        /// <summary>
+        /// Флаг для определения ORM текстуры в UI (переопределяет базовый класс)
+        /// </summary>
+        public override bool IsORMTexture => true;
+
         private ChannelPackingMode packingMode = ChannelPackingMode.OGM;
         private TextureResource? aoSource;
         private TextureResource? glossSource;

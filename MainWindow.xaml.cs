@@ -1867,6 +1867,11 @@ namespace AssetProcessor {
             // Update selection count in central control box
             UpdateSelectedTexturesCount();
 
+            // Отменяем предыдущую загрузку, если она еще выполняется
+            textureLoadCancellation?.Cancel();
+            textureLoadCancellation = new CancellationTokenSource();
+            CancellationToken cancellationToken = textureLoadCancellation.Token;
+
             // Check if selected item is an ORM texture (virtual texture for packing)
             if (TexturesDataGrid.SelectedItem is ORMTextureResource ormTexture) {
                 MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected ORM texture: {ormTexture.Name}");
@@ -1891,17 +1896,73 @@ namespace AssetProcessor {
                     MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ERROR: ORMPanel is NULL! Cannot initialize ORM settings.");
                 }
 
-                // Don't load preview for virtual textures
-                ResetPreviewState();
-                ClearD3D11Viewer();
+                // Load preview and histogram for packed ORM textures
+                if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture is packed, loading preview from: {ormTexture.Path}");
+
+                    // Update texture info
+                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+
+                    // Load the packed KTX2 file for preview and histogram
+                    try {
+                        // Debounce
+                        await Task.Delay(50, cancellationToken);
+
+                        bool ktxLoaded = false;
+
+                        if (isUsingD3D11Renderer) {
+                            // D3D11 MODE: Load KTX2 natively
+                            MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Loading packed ORM to D3D11: {ormTexture.Name}");
+                            ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
+
+                            if (ktxLoaded) {
+                                // Also calculate histogram from the packed file
+                                await LoadSourcePreviewAsync(ormTexture, cancellationToken, loadToViewer: false);
+                            }
+                        } else {
+                            // WPF MODE: Extract PNG from KTX2
+                            Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                            await LoadSourcePreviewAsync(ormTexture, cancellationToken, loadToViewer: true);
+                            ktxLoaded = await ktxPreviewTask;
+                        }
+
+                        if (!ktxLoaded) {
+                            await Dispatcher.InvokeAsync(() => {
+                                if (cancellationToken.IsCancellationRequested) return;
+
+                                isKtxPreviewAvailable = false;
+
+                                if (!isUserPreviewSelection && currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                                    SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: false);
+                                } else {
+                                    UpdatePreviewSourceControls();
+                                }
+                            });
+                        }
+                    } catch (OperationCanceledException) {
+                        MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Cancelled for ORM: {ormTexture.Name}");
+                    } catch (Exception ex) {
+                        MainWindowHelpers.LogError($"Error loading packed ORM texture {ormTexture.Name}: {ex.Message}");
+                        ResetPreviewState();
+                        ClearD3D11Viewer();
+                    }
+                } else {
+                    // Not packed yet - clear preview
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture not packed yet, clearing preview");
+                    ResetPreviewState();
+                    ClearD3D11Viewer();
+
+                    // Show info that it's not packed yet
+                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+                    TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
+                    TextureSizeTextBlock.Text = "Size: N/A";
+                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+                    TextureFormatTextBlock.Text = "Format: Not packed";
+                }
 
                 return; // Exit early for ORM textures
             }
-
-            // Отменяем предыдущую загрузку, если она еще выполняется
-            textureLoadCancellation?.Cancel();
-            textureLoadCancellation = new CancellationTokenSource();
-            CancellationToken cancellationToken = textureLoadCancellation.Token;
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
                 MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");

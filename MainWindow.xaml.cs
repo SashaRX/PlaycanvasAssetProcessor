@@ -3675,13 +3675,13 @@ namespace AssetProcessor {
                                                             t.Status == "Hash ERROR" ||
                                                             t.Status == "Error")
                                                 .Cast<BaseResource>()
-                                                .Concat(viewModel.viewModel.Models.Where(m => m.Status == "On Server" ||
+                                                .Concat(viewModel.Models.Where(m => m.Status == "On Server" ||
                                                                           m.Status == "Size Mismatch" ||
                                                                           m.Status == "Corrupted" ||
                                                                           m.Status == "Empty File" ||
                                                                           m.Status == "Hash ERROR" ||
                                                                           m.Status == "Error").Cast<BaseResource>())
-                                                .Concat(viewModel.viewModel.Materials.Where(m => m.Status == "On Server" ||
+                                                .Concat(viewModel.Materials.Where(m => m.Status == "On Server" ||
                                                                              m.Status == "Size Mismatch" ||
                                                                              m.Status == "Corrupted" ||
                                                                              m.Status == "Empty File" ||
@@ -3887,8 +3887,8 @@ namespace AssetProcessor {
                     UpdateConnectionStatus(true);
 
                     viewModel.Textures.Clear(); // Очищаем текущий список текстур
-                    viewModel.viewModel.Models.Clear(); // Очищаем текущий список моделей
-                    viewModel.viewModel.Materials.Clear(); // Очищаем текущий список материалов
+                    viewModel.Models.Clear(); // Очищаем текущий список моделей
+                    viewModel.Materials.Clear(); // Очищаем текущий список материалов
 
                     List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
                     int assetCount = supportedAssets.Count;
@@ -4123,7 +4123,7 @@ namespace AssetProcessor {
                         }
 
 
-                        await Dispatcher.InvokeAsync(() => viewModel.viewModel.Models.Add(model));
+                        await Dispatcher.InvokeAsync(() => viewModel.Models.Add(model));
                     });
                 } catch (FileNotFoundException ex) {
                     MainWindowHelpers.LogError($"File not found: {ex.FileName}");
@@ -4274,7 +4274,7 @@ namespace AssetProcessor {
                     }
 
                     MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
-                    await Dispatcher.InvokeAsync(() => viewModel.viewModel.Materials.Add(material));
+                    await Dispatcher.InvokeAsync(() => viewModel.Materials.Add(material));
                 });
             } catch (Exception ex) {
                 MainWindowHelpers.LogError($"Error processing material: {ex.Message}");
@@ -4320,8 +4320,8 @@ namespace AssetProcessor {
 
         private async Task ProcessAssetsFromJson(JToken assetsResponse) {
             viewModel.Textures.Clear();
-            viewModel.viewModel.Models.Clear();
-            viewModel.viewModel.Materials.Clear();
+            viewModel.Models.Clear();
+            viewModel.Materials.Clear();
 
             List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
             int assetCount = supportedAssets.Count;

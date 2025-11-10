@@ -48,6 +48,17 @@ namespace AssetProcessor.Controls {
 
             // Загружаем настройки из ORM текстуры
             LoadORMSettings();
+
+            // Disable Source ComboBoxes if ORM texture is already packed (Status = "Converted")
+            bool isConverted = ormTexture.Status == "Converted";
+            AOSourceComboBox.IsEnabled = !isConverted;
+            GlossSourceComboBox.IsEnabled = !isConverted;
+            MetallicSourceComboBox.IsEnabled = !isConverted;
+            HeightSourceComboBox.IsEnabled = !isConverted;
+
+            if (isConverted) {
+                Logger.Info($"[ORMPackingPanel] ORM texture '{ormTexture.Name}' is already packed. Source ComboBoxes disabled.");
+            }
         }
 
         /// <summary>
@@ -601,6 +612,11 @@ namespace AssetProcessor.Controls {
                             VarianceThreshold = 0.002f
                         };
                         Logger.Info($"  Toksvig settings created: Power={glossChannel.ToksvigSettings.CompositePower}, Mode={glossChannel.ToksvigSettings.CalculationMode}");
+
+                        // Validation warning for suboptimal Toksvig settings
+                        if (currentORMTexture.GlossToksvigPower < 2.0f) {
+                            Logger.Warn($"⚠ Toksvig Power={currentORMTexture.GlossToksvigPower:F2} is low. Recommended: 4.0+ for strong anti-aliasing. Low power may result in noisy/sparkly gloss.");
+                        }
                     } else {
                         Logger.Warn("  Toksvig is DISABLED - checkbox not checked!");
                     }
@@ -620,6 +636,15 @@ namespace AssetProcessor.Controls {
                     settings.BlueChannel.MipProfile = MipGenerationProfile.CreateDefault(TextureType.Metallic);
                 }
                 settings.BlueChannel.MipProfile.Filter = currentORMTexture.MetallicFilterType;
+
+                // Validation warnings for Metallic channel
+                if (currentORMTexture.MetallicProcessingMode != AOProcessingMode.None) {
+                    Logger.Warn($"⚠ Metallic processing mode is {currentORMTexture.MetallicProcessingMode}. Recommended: None. Percentile/BiasedDarkening can introduce noise in binary metal/non-metal data.");
+                }
+
+                if (currentORMTexture.MetallicFilterType != FilterType.Box) {
+                    Logger.Warn($"⚠ Metallic filter is {currentORMTexture.MetallicFilterType}. Recommended: Box. Other filters may introduce ringing artifacts in binary metallic maps.");
+                }
             }
 
             // Height channel (Alpha in OGMH mode)

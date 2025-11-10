@@ -496,6 +496,7 @@ namespace AssetProcessor.Controls {
                     glossChannel.SourcePath = currentORMTexture.GlossSource?.Path;
                     glossChannel.DefaultValue = 0.5f; // Medium gloss
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
+                    glossChannel.AOProcessingMode = AOProcessingMode.None; // AO processing only for AO channel
 
                     // Set filter via MipProfile
                     if (glossChannel.MipProfile == null) {
@@ -521,6 +522,7 @@ namespace AssetProcessor.Controls {
             if (settings.BlueChannel != null) {
                 settings.BlueChannel.SourcePath = currentORMTexture.MetallicSource?.Path;
                 settings.BlueChannel.DefaultValue = 0.0f; // Non-metallic by default
+                settings.BlueChannel.AOProcessingMode = AOProcessingMode.None; // AO processing only for AO channel
 
                 // Set filter via MipProfile
                 if (settings.BlueChannel.MipProfile == null) {
@@ -533,6 +535,7 @@ namespace AssetProcessor.Controls {
             if (settings.AlphaChannel != null && currentORMTexture.PackingMode == ChannelPackingMode.OGMH) {
                 settings.AlphaChannel.SourcePath = currentORMTexture.HeightSource?.Path;
                 settings.AlphaChannel.DefaultValue = 0.5f; // Middle height
+                settings.AlphaChannel.AOProcessingMode = AOProcessingMode.None; // AO processing only for AO channel
             }
 
             return settings;

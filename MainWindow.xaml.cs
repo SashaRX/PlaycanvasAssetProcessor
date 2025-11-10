@@ -160,14 +160,7 @@ namespace AssetProcessor {
         private bool isBranchInitializationInProgress;
         private bool isProjectInitializationInProgress;
 
-        private ObservableCollection<KeyValuePair<string, string>> projects = [];
-        public ObservableCollection<KeyValuePair<string, string>> Projects {
-            get { return projects; }
-            set {
-                projects = value;
-                OnPropertyChanged(nameof(Projects));
-            }
-        }
+        // Projects и Branches теперь в MainViewModel - удалены дублирующиеся объявления
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -181,11 +174,6 @@ namespace AssetProcessor {
                 return null;
             }
             return apiKey;
-        }
-
-        private readonly ObservableCollection<Branch> branches = [];
-        public ObservableCollection<Branch> Branches {
-            get { return branches; }
         }
 
         private readonly MainViewModel viewModel;
@@ -1803,13 +1791,13 @@ namespace AssetProcessor {
                     string? apiKey = GetDecryptedApiKey();
                     List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, apiKey ?? "", [], CancellationToken.None);
                     if (branches != null && branches.Count > 0) {
-                        Branches.Clear();
+                        viewModel.Branches.Clear();
                         foreach (Branch branch in branches) {
-                            Branches.Add(branch);
+                            viewModel.Branches.Add(branch);
                         }
                         BranchesComboBox.SelectedIndex = 0;
                     } else {
-                        Branches.Clear();
+                        viewModel.Branches.Clear();
                         BranchesComboBox.SelectedIndex = -1;
                     }
                 } finally {
@@ -2862,9 +2850,9 @@ namespace AssetProcessor {
                     if (projectsDict != null && projectsDict.Count > 0) {
                         string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
 
-                        Projects.Clear();
+                        viewModel.Projects.Clear();
                         foreach (KeyValuePair<string, string> project in projectsDict) {
-                            Projects.Add(project);
+                            viewModel.Projects.Add(project);
                         }
 
                         // Устанавливаем флаг чтобы избежать двойной загрузки через SelectionChanged
@@ -3010,9 +2998,9 @@ namespace AssetProcessor {
                 string? apiKey = GetDecryptedApiKey();
                 List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, apiKey ?? "", [], cancellationToken);
                 if (branchesList != null && branchesList.Count > 0) {
-                    Branches.Clear();
+                    viewModel.Branches.Clear();
                     foreach (Branch branch in branchesList) {
-                        Branches.Add(branch);
+                        viewModel.Branches.Add(branch);
                     }
 
                     string lastSelectedBranchName = AppSettings.Default.LastSelectedBranchName;
@@ -3027,7 +3015,7 @@ namespace AssetProcessor {
                         BranchesComboBox.SelectedIndex = 0;
                     }
                 } else {
-                    Branches.Clear();
+                    viewModel.Branches.Clear();
                     BranchesComboBox.SelectedIndex = -1;
                 }
             } catch (Exception ex) {
@@ -4841,9 +4829,9 @@ namespace AssetProcessor {
 
                 if (projectsDict != null && projectsDict.Count > 0) {
                     logger.Info($"LoadLastSettings: Found {projectsDict.Count} projects");
-                    Projects.Clear();
+                    viewModel.Projects.Clear();
                     foreach (KeyValuePair<string, string> project in projectsDict) {
-                        Projects.Add(project);
+                        viewModel.Projects.Add(project);
                     }
 
                     isProjectInitializationInProgress = true;
@@ -4866,9 +4854,9 @@ namespace AssetProcessor {
 
                         if (branchesList != null && branchesList.Count > 0) {
                             logger.Info($"LoadLastSettings: Found {branchesList.Count} branches");
-                            Branches.Clear();
+                            viewModel.Branches.Clear();
                             foreach (Branch branch in branchesList) {
-                                Branches.Add(branch);
+                                viewModel.Branches.Add(branch);
                             }
 
                             isBranchInitializationInProgress = true;

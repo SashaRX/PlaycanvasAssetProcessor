@@ -3,7 +3,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:AssetProcessor"
-    xmlns:settings="clr-namespace:AssetProcessor.Settings"
     xmlns:controls="clr-namespace:AssetProcessor.Controls"
     xmlns:help ="clr-namespace:AssetProcessor.Helpers"
     xmlns:viewer="clr-namespace:AssetProcessor.TextureViewer"
@@ -12,16 +11,10 @@
     xmlns:helix="http://helix-toolkit.org/wpf"
     xmlns:oxy="http://oxyplot.org/wpf"
     xmlns:resources="clr-namespace:AssetProcessor.Resources"
-    xmlns:viewModels="clr-namespace:AssetProcessor.ViewModels"
-    xmlns:infra="clr-namespace:AssetProcessor.Infrastructure"
     av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
     Title="MainWindow" Height="684" Width="942">
-
-    <Window.DataContext>
-        <infra:ServiceProviderExtension ServiceType="{x:Type viewModels:MainViewModel}" />
-    </Window.DataContext>
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -116,11 +109,7 @@
         <!-- Статусная строка -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock x:Name="ConnectionStatusTextBlock"
-                           Text="{Binding ConnectionStatusMessage}"
-                           Foreground="{Binding ConnectionStatusBrush}"
-                           VerticalAlignment="Center"
-                           Width="320"/>
+                <TextBlock x:Name="ConnectionStatusTextBlock" Text="Disconnected" VerticalAlignment="Center" Width="320"/>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
                 <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="Gray" FontSize="10" MinWidth="200" TextAlignment="Right"/>
@@ -140,12 +129,12 @@
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <!-- Dynamic Action Button -->
                     <Button x:Name="DynamicConnectionButton"
-                            Content="{Binding ConnectionButtonContent}"
-                            Command="{Binding PrimaryActionCommand}"
+                            Content="Connect"
                             Margin="0,2,0,4"
                             Height="24"
                             FontWeight="Bold"
-                            ToolTip="{Binding ConnectionButtonToolTip}"/>
+                            Click="DynamicConnectionButton_Click"
+                            ToolTip="Connect to PlayCanvas"/>
 
                     <!-- Project and Branch Selection -->
                     <StackPanel Orientation="Horizontal">
@@ -153,7 +142,6 @@
                                   ItemsSource="{Binding Projects}"
                                   DisplayMemberPath="Value"
                                   SelectedValuePath="Key"
-                                  SelectedValue="{Binding SelectedProjectId, Mode=TwoWay}"
                                   SelectionChanged="ProjectsComboBox_SelectionChanged"
                                   Margin="0,0,4,0"
                                   Width="160"
@@ -173,7 +161,6 @@
                                   ItemsSource="{Binding Branches}"
                                   DisplayMemberPath="Name"
                                   SelectedValuePath="Id"
-                                  SelectedValue="{Binding SelectedBranchId, Mode=TwoWay}"
                                   SelectionChanged="BranchesComboBox_SelectionChanged"
                                   Width="160"
                                   Height="20"
@@ -256,16 +243,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
-                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,10,0" VerticalAlignment="Center" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
-                            <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="10,0,5,0"/>
-                            <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
-                                    Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, Mode=TwoWay}"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
-                            <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
-                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
-                        </StackPanel>
+                        <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="4,2,4,2" Grid.Row="0" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
                                 ItemsSource="{Binding FilteredTextures}"
                                 AutoGenerateColumns="False"
@@ -276,13 +254,7 @@
                                 CanUserAddRows="False"
                                 CanUserDeleteRows="False"
                                 CanUserSortColumns="True"
-                                CanUserResizeColumns="True"
-                                CanUserReorderColumns="True"
                                 Background="#FFD6D6D6">
-                            <DataGrid.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
-                                                ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
-                            </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureColumnHeaderContextMenu}"/>
@@ -294,18 +266,18 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
-                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
-                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="200" MinWidth="100"/>
-                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="70" MinWidth="50"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="80" MinWidth="60"/>
-                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="90" MinWidth="70"/>
-                                <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="100" MinWidth="80" SortMemberPath="ResolutionArea"/>
-                                <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="120" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>
-                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="100" MinWidth="80"/>
-                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="70" MinWidth="60"/>
-                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="120" MinWidth="90"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
+                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
+                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
+                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="auto" MinWidth="20"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="35"/>
+                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="auto" MinWidth="45"/>
+                                <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResolutionArea"/>
+                                <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="auto" MinWidth="75" SortMemberPath="ResizeResolutionArea"/>
+                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="auto" MinWidth="60"/>
+                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="auto" MinWidth="50"/>
+                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="auto" MinWidth="80"/>
+                                <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -357,46 +329,27 @@
                 </TabItem>
                 <TabItem Header="Models">
                     <Grid Background="#FFE5E5E5">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
-                            <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
-                                    Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, Mode=TwoWay}"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
-                            <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
-                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
-                        </StackPanel>
-                        <DataGrid x:Name="ModelsDataGrid" Grid.Row="1"
+                        <DataGrid x:Name="ModelsDataGrid"
                               AutoGenerateColumns="False"
                               SelectionChanged="ModelsDataGrid_SelectionChanged"
                               IsReadOnly="True"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
-                              CanUserResizeColumns="True"
-                              CanUserReorderColumns="True"
                               Background="#FFD6D6D6">
-                            <DataGrid.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
-                                                ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
-                            </DataGrid.LayoutTransform>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
-                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="80" MinWidth="60" />
-                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="250" MinWidth="120"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60"/>
-                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100" MinWidth="80"/>
-                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="80" MinWidth="60"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
+                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="Auto" />
+                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="auto" MinWidth="80"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="auto" MinWidth="35"/>
+                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100"/>
+                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="auto" MinWidth="50"/>
+                                <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -411,21 +364,7 @@
                     </Grid>
                 </TabItem>
                 <TabItem x:Name="MaterialsTabItem" Header="Materials">
-                    <Grid Background="#FFE5E5E5">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
-                            <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
-                                    Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
-                            <TextBlock Text="{Binding ElementName=MaterialsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
-                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
-                        </StackPanel>
-                    <DataGrid x:Name="MaterialsDataGrid" Grid.Row="1"
+                    <DataGrid x:Name="MaterialsDataGrid"
                               AutoGenerateColumns="False"
                               ItemsSource="{Binding Materials}"
                               SelectionChanged="MaterialsDataGrid_SelectionChanged"
@@ -433,13 +372,7 @@
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
-                              CanUserResizeColumns="True"
-                              CanUserReorderColumns="True"
                               Background="#FFD6D6D6">
-                        <DataGrid.LayoutTransform>
-                            <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
-                                            ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
-                        </DataGrid.LayoutTransform>
                         <DataGrid.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Columns Visibility">
@@ -450,10 +383,10 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40"/>
-                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="300" MinWidth="150"/>
-                            <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
+                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="Auto"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="auto" MinWidth="80"/>
+                            <DataGridTemplateColumn Header="Status/Progress" Width="*" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>
@@ -465,7 +398,6 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-                    </Grid>
                 </TabItem>
                 <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
                     <controls:LogViewerControl x:Name="LogViewer"/>
@@ -690,9 +622,9 @@
                 <Border x:Name="ModelViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="800" />
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" MinHeight="150" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <!-- Model Preview Section -->
@@ -700,7 +632,8 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
+                                    <RowDefinition x:Name="ModelPreviewContentRow" Height="300" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <!-- Model Info Panel (ABOVE viewport) -->
@@ -730,37 +663,26 @@
                                 </Border>
 
                                 <!-- 3D Viewport -->
-                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
+                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
                                     <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true">
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>
                                 </Border>
+
+                                <GridSplitter Grid.Row="2"
+                                              Height="6"
+                                              Margin="0,4,0,4"
+                                              Background="#FFE0E0E0"
+                                              HorizontalAlignment="Stretch"
+                                              ResizeDirection="Rows"
+                                              ResizeBehavior="PreviousAndNext"
+                                              ShowsPreview="False"
+                                              Cursor="SizeNS" />
                             </Grid>
                         </Expander>
 
-                        <!-- GridSplitter between Model Preview and bottom section -->
-                        <GridSplitter x:Name="ModelPreviewGridSplitter"
-                                      Grid.Row="1"
-                                      Height="6"
-                                      Margin="0,4,0,4"
-                                      Background="#FFE0E0E0"
-                                      HorizontalAlignment="Stretch"
-                                      VerticalAlignment="Center"
-                                      ResizeDirection="Rows"
-                                      ResizeBehavior="PreviousAndNext"
-                                      ShowsPreview="False"
-                                      Cursor="SizeNS"
-                                      DragCompleted="ModelPreviewGridSplitter_DragCompleted" />
-
-                        <!-- Bottom section: UV Maps + Settings -->
-                        <Grid Grid.Row="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
                         <!-- UV Maps Section -->
-                        <Expander Grid.Row="0" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="1" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
                             <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="137" MaxHeight="300">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -792,12 +714,11 @@
                         </Expander>
 
                         <!-- Model Conversion Settings Panel -->
-                        <Expander Grid.Row="1" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
+                        <Expander Grid.Row="2" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
                                   Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
                             <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
                                                                    ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>
                         </Expander>
-                        </Grid>
                     </Grid>
                 </Border>
             </ScrollViewer>

@@ -305,19 +305,32 @@ namespace AssetProcessor {
         }
 
         // Track mouse position on Grid to detect if over D3D11 viewer
-        // MouseMove fires continuously, so we always have up-to-date position
+        // CRITICAL: GetPosition(HwndHost) НЕ РАБОТАЕТ - возвращает позицию внутри HwndHost даже когда мышь снаружи
+        // РЕШЕНИЕ: Получаем позицию относительно Grid и проверяем bounds D3D11TextureViewer
         private void TexturePreviewViewport_MouseMove(object sender, MouseEventArgs e) {
-            if (D3D11TextureViewer == null || !isUsingD3D11Renderer) {
+            if (D3D11TextureViewer == null || !isUsingD3D11Renderer || sender is not Grid grid) {
                 isMouseOverD3D11Viewer = false;
                 return;
             }
 
-            // Get mouse position relative to D3D11TextureViewer
-            Point mousePos = e.GetPosition(D3D11TextureViewer);
+            try {
+                // Получаем позицию мыши относительно Grid
+                Point mousePosInGrid = e.GetPosition(grid);
 
-            // Check if within bounds
-            isMouseOverD3D11Viewer = mousePos.X >= 0 && mousePos.X < D3D11TextureViewer.ActualWidth &&
-                                     mousePos.Y >= 0 && mousePos.Y < D3D11TextureViewer.ActualHeight;
+                // Получаем bounds D3D11TextureViewer относительно Grid
+                GeneralTransform transform = D3D11TextureViewer.TransformToAncestor(grid);
+                Point viewerTopLeft = transform.Transform(new Point(0, 0));
+                Point viewerBottomRight = transform.Transform(new Point(D3D11TextureViewer.ActualWidth, D3D11TextureViewer.ActualHeight));
+
+                // Проверяем, находится ли мышь в пределах D3D11TextureViewer
+                isMouseOverD3D11Viewer = mousePosInGrid.X >= viewerTopLeft.X &&
+                                         mousePosInGrid.X < viewerBottomRight.X &&
+                                         mousePosInGrid.Y >= viewerTopLeft.Y &&
+                                         mousePosInGrid.Y < viewerBottomRight.Y;
+            } catch {
+                // Если transform не работает (например, контрол не в визуальном дереве), считаем что мышь снаружи
+                isMouseOverD3D11Viewer = false;
+            }
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl

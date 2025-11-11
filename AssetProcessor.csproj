@@ -79,9 +79,6 @@
 
   <ItemGroup>
     <None Remove="colorPicker.png" />
-    <!-- Exclude Unity Editor script from WPF project compilation -->
-    <Compile Remove="PlayCanvasImporterWindow.cs" />
-    <None Include="PlayCanvasImporterWindow.cs" />
     <!-- Exclude test files from main project compilation -->
     <Compile Remove="AssetProcessor.Tests\**\*.cs" />
     <None Include="AssetProcessor.Tests\**\*.cs" />
@@ -109,6 +106,7 @@
     <!-- MVVM Helpers -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageReference Include="Vortice.D3DCompiler" Version="3.6.2" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.6.2" />
   </ItemGroup>

@@ -1,5 +1,10 @@
 ﻿namespace AssetProcessor.Resources {
     public class TextureResource : BaseResource {
+        /// <summary>
+        /// Флаг для определения ORM текстуры в UI (переопределяется в ORMTextureResource)
+        /// </summary>
+        public virtual bool IsORMTexture => false;
+
         private int[] resolution = new int[2];
         private int[] resizeResolution = new int[2];
         private string? groupName;

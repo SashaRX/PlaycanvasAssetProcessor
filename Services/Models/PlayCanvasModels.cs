@@ -22,17 +22,21 @@ namespace AssetProcessor.Services.Models {
     }
 
     public sealed class PlayCanvasAssetFileInfo {
-        public PlayCanvasAssetFileInfo(long? size, string? hash, string? filename, string? url) {
+        public PlayCanvasAssetFileInfo(long? size, string? hash, string? filename, string? url, int? width, int? height) {
             Size = size;
             Hash = hash;
             Filename = filename;
             Url = url;
+            Width = width;
+            Height = height;
         }
 
         public long? Size { get; }
         public string? Hash { get; }
         public string? Filename { get; }
         public string? Url { get; }
+        public int? Width { get; }
+        public int? Height { get; }
     }
 
     public sealed class PlayCanvasAssetSummary {

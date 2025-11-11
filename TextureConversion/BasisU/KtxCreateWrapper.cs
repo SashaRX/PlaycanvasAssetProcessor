@@ -248,7 +248,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // ktx create требует явного указания формата
             args.Add("--format");
-            args.Add(settings.ColorSpace == ColorSpace.SRGB ? "R8G8B8A8_SRGB" : "R8G8B8A8_UNORM");
+            bool isSRGB = settings.ColorSpace == ColorSpace.SRGB;
+            args.Add(isSRGB ? "R8G8B8A8_SRGB" : "R8G8B8A8_UNORM");
+
+            // КРИТИЧНО: Указываем transfer function входных PNG файлов
+            // Без этого ktx create по умолчанию думает что PNG = sRGB и конвертирует в linear,
+            // что ОСВЕТЛЯЕТ linear данные (AO, Gloss, Metallic, Normal maps)
+            args.Add("--assign-oetf");
+            args.Add(isSRGB ? "srgb" : "linear");
 
             // ============================================
             // КОДИРОВАНИЕ (обязательный если хотим Basis)
@@ -325,14 +332,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             if (settings.ConvertToNormalMap) {
                 args.Add("--normal-mode");
-
-                // КРИТИЧНО: Указываем что вход уже linear (не sRGB)
-                // Без этого ktx create видит PNG как sRGB и конвертирует sRGB→Linear,
-                // что ОСВЕТЛЯЕТ текстуру (из-за gamma removal)
-                args.Add("--assign-oetf");
-                args.Add("linear");
-
-                Logger.Info("Normal map mode: --normal-mode with --assign-oetf linear");
+                Logger.Info("Normal map mode: --normal-mode enabled");
             }
 
             // ============================================

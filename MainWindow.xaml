@@ -14,14 +14,10 @@
     xmlns:resources="clr-namespace:AssetProcessor.Resources"
     xmlns:viewModels="clr-namespace:AssetProcessor.ViewModels"
     xmlns:infra="clr-namespace:AssetProcessor.Infrastructure"
-    av:DataContext="{av:DesignInstance Type=resources:TextureResource}"
+    av:DataContext="{av:DesignInstance Type=viewModels:MainViewModel}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
     Title="MainWindow" Height="684" Width="942">
-
-    <Window.DataContext>
-        <infra:ServiceProviderExtension ServiceType="{x:Type viewModels:MainViewModel}" />
-    </Window.DataContext>
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -30,6 +26,7 @@
         <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
         <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
+        <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
 
 
         <Style TargetType="Expander">
@@ -94,6 +91,8 @@
             <MenuItem Header="Process Texture" Click="ProcessSelectedTextures_Click"/>
             <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
             <Separator/>
+            <MenuItem Header="Delete ORM Texture" Click="DeleteORMFromList_Click"/>
+            <Separator/>
             <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
             <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
             <Separator/>
@@ -109,6 +108,14 @@
             <MenuItem Header="Copy Path" Click="CopyModelPath_Click"/>
             <Separator/>
             <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
+        </ContextMenu>
+
+        <!-- ContextMenu для строк материалов -->
+        <ContextMenu x:Key="MaterialRowContextMenu">
+            <MenuItem Header="Create ORM Texture" Click="CreateORMFromMaterial_Click" FontWeight="Bold"/>
+            <MenuItem Header="Create ORM for All Materials" Click="CreateORMForAllMaterials_Click"/>
+            <Separator/>
+            <MenuItem Header="Delete ORM Texture" Click="DeleteORMTexture_Click"/>
         </ContextMenu>
 
     </Window.Resources>
@@ -214,6 +221,11 @@
                         <Button x:Name="AutoDetectAllButton" Content="Auto-detect All" Width="110"
                                 Click="AutoDetectAllButton_Click"
                                 ToolTip="Automatically detect presets for all textures based on filenames"/>
+
+                        <Button x:Name="CreateORMButton" Content="Create ORM" Width="90" Margin="5,0,0,0"
+                                Click="CreateORMButton_Click"
+                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
+                                ToolTip="Create virtual ORM texture for channel packing (AO+Gloss+Metallic)"/>
                     </StackPanel>
 
                     <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"
@@ -262,12 +274,12 @@
                             <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                                    ToolTip="Adjust table scale (50% - 200%)"
+                                    ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
-                                ItemsSource="{Binding FilteredTextures}"
                                 AutoGenerateColumns="False"
                                 SelectionChanged="TexturesDataGrid_SelectionChanged"
                                 LoadingRow="TexturesDataGrid_LoadingRow"
@@ -278,7 +290,11 @@
                                 CanUserSortColumns="True"
                                 CanUserResizeColumns="True"
                                 CanUserReorderColumns="True"
-                                Background="#FFD6D6D6">
+                                Background="#FFD6D6D6"
+                                VirtualizingPanel.IsVirtualizing="True"
+                                VirtualizingPanel.VirtualizationMode="Standard"
+                                EnableRowVirtualization="True"
+                                EnableColumnVirtualization="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -291,8 +307,40 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
+                                    <Style.Triggers>
+                                        <!-- Color ORM textures with pink/purple background (только для НЕвыбранных) -->
+                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
+                                            <Setter Property="Background" Value="#C96391"/>
+                                            <Setter Property="BorderBrush" Value="#A04070"/>
+                                            <Setter Property="BorderThickness" Value="2,0,2,0"/>
+                                        </DataTrigger>
+                                        <!-- ВСЕ выделенные текстуры: СИНИЙ ФОН (одинаково для всех!) -->
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                                            <Setter Property="Background" Value="#3399FF"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <!-- Make cells transparent by default -->
+                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="False">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </DataTrigger>
+                                        <!-- For ORM textures, cells should also be pink/purple (только для НЕвыбранных) -->
+                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
+                                            <Setter Property="Background" Value="#C96391"/>
+                                        </DataTrigger>
+                                        <!-- ВСЕ выделенные: СИНИЙ ФОН + белый текст (одинаково для всех!) -->
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                            <Setter Property="Background" Value="#3399FF"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
@@ -310,7 +358,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Background="{Binding Status, Converter={StaticResource StatusToBackgroundConverter}}"/>
+                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -366,7 +414,8 @@
                             <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                                    ToolTip="Adjust table scale (50% - 200%)"
+                                    ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
@@ -379,7 +428,11 @@
                               CanUserSortColumns="True"
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
-                              Background="#FFD6D6D6">
+                              Background="#FFD6D6D6"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Standard"
+                              EnableRowVirtualization="True"
+                              EnableColumnVirtualization="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
@@ -387,8 +440,27 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
+                                    <Style.Triggers>
+                                        <!-- Стандартное выделение (синий фон) -->
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                                            <Setter Property="Background" Value="#3399FF"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <!-- Синее выделение при выборе -->
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                            <Setter Property="Background" Value="#3399FF"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="80" MinWidth="60" />
@@ -401,7 +473,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Background="{Binding Status, Converter={StaticResource StatusToBackgroundConverter}}"/>
+                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -421,7 +493,8 @@
                             <Slider x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                                    ToolTip="Adjust table scale (50% - 200%)"
+                                    ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=MaterialsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
@@ -435,11 +508,39 @@
                               CanUserSortColumns="True"
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
-                              Background="#FFD6D6D6">
+                              Background="#FFD6D6D6"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Standard"
+                              EnableRowVirtualization="True"
+                              EnableColumnVirtualization="False">
                         <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
                         </DataGrid.LayoutTransform>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>
+                                <Style.Triggers>
+                                    <!-- Стандартное выделение (синий фон) -->
+                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                                        <Setter Property="Background" Value="#3399FF"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <!-- Синее выделение при выборе -->
+                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                        <Setter Property="Background" Value="#3399FF"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.CellStyle>
                         <DataGrid.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Columns Visibility">
@@ -458,7 +559,7 @@
                                     <DataTemplate>
                                         <Grid>
                                             <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Background="{Binding Status, Converter={StaticResource StatusToBackgroundConverter}}"/>
+                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                         </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -481,6 +582,7 @@
                 <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -682,6 +784,12 @@
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
                                                                      SettingsChanged="ConversionSettingsPanel_SettingsChanged"/>
                         </Expander>
+
+                        <!-- ORM Packing Panel (only visible when ORM texture is selected) -->
+                        <controls:ORMPackingPanel Grid.Row="3"
+                                                  x:Name="ORMPanel"
+                                                  Visibility="Collapsed"
+                                                  Margin="0,2,0,0"/>
                     </Grid>
                 </Border>
             </ScrollViewer>
@@ -811,6 +919,18 @@
                             <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " Margin="4,0,4,0" FontWeight="Bold" />
                             <TextBlock x:Name="MaterialNameTextBlock" Text="Name: " Margin="4,0,4,0" FontWeight="Bold" />
                         </StackPanel>
+
+                        <!-- ORM Texture Creation -->
+                        <Button x:Name="CreateORMFromMaterialButton"
+                                Content="Create ORM Texture"
+                                Click="CreateORMFromMaterial_Click"
+                                Margin="4,8,4,8"
+                                Padding="8,4"
+                                Background="#FF4CAF50"
+                                Foreground="White"
+                                FontWeight="Bold"
+                                HorizontalAlignment="Stretch"
+                                ToolTip="Create packed ORM texture from material maps (AO+Gloss+Metallic)"/>
 
                         <Expander x:Name="AOExpander" Header="Ambient Occlusion" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White" IsExpanded="True" Margin="2,2,2,3">
                             <StackPanel>

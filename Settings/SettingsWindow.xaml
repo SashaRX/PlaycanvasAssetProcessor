@@ -83,41 +83,9 @@
             <TabItem Header="Texture Conversion">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <GroupBox Header="KTX-Software Tools" Margin="0,0,0,6">
+                        <GroupBox Header="KTX-Software Tool" Margin="0,0,0,6">
                             <StackPanel Margin="2">
                                 <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
-
-                                <!-- toktx -->
-                                <TextBlock Text="toktx:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
-                                <Grid Margin="0,0,0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="50"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBox x:Name="ToktxExecutableBox"
-                                             Grid.Column="0"
-                                             Text="{Binding ToktxExecutablePath, UpdateSourceTrigger=PropertyChanged}"
-                                             VerticalContentAlignment="Center"
-                                             Height="22"
-                                             Margin="0,0,4,0"
-                                             FontSize="10"/>
-
-                                    <Button Grid.Column="1"
-                                            Content="Browse"
-                                            Click="SelectToktxExecutable"
-                                            Height="22"
-                                            Margin="0,0,4,0"
-                                            FontSize="10"/>
-
-                                    <Button Grid.Column="2"
-                                            Content="Test"
-                                            Click="TestToktx_Click"
-                                            Height="22"
-                                            FontSize="10"/>
-                                </Grid>
-                                <TextBlock x:Name="ToktxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
 
                                 <!-- ktx -->
                                 <TextBlock Text="ktx:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>

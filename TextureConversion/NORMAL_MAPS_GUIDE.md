@@ -1,43 +1,42 @@
 # Normal Maps - Руководство по настройке
 
-## Два режима работы с toktx
+## Два режима работы с ktx create
 
-### 1️⃣ Single Image Mode (toktx генерирует мипмапы)
+### 1️⃣ Single Image Mode (ktx create генерирует мипмапы)
 
 **Когда использовать:**
-- Когда нужно чтобы toktx сам сгенерировал мипмапы из одного изображения
+- Когда нужно чтобы ktx create сам сгенерировал мипмапы из одного изображения
 - Когда нужна быстрая конвертация без pre-processing
 
-**Флаги toktx:**
-- `--genmipmap` - toktx генерирует мипмапы
-- `--normal_mode` - ✅ **МОЖНО** использовать (конвертирует XYZ → X+Y формат)
+**Флаги ktx create:**
+- `--generate-mipmap` - ktx create генерирует мипмапы
+- `--normal-mode` - ✅ **МОЖНО** использовать (конвертирует XYZ → X+Y формат)
 - `--normalize` - ✅ **МОЖНО** использовать (нормализует входные нормали)
-- `--filter <type>` - фильтр для генерации мипмапов
+- `--mipmap-filter <type>` - фильтр для генерации мипмапов
 
 **Настройки в TexTool:**
 ```
-GenerateMipmaps = true (но мипмапы генерирует toktx, не MipGenerator)
+GenerateMipmaps = true (но мипмапы генерирует ktx create, не MipGenerator)
 ConvertToNormalMap = true  ✅ Работает
 NormalizeVectors = true    ✅ Работает
 ToktxMipFilter = Kaiser    ✅ Работает
 ```
 
-**Недостаток:** toktx НЕ умеет нормализовать нормали в процессе генерации мипмапов!
+**Недостаток:** ktx create НЕ умеет нормализовать нормали в процессе генерации мипмапов!
 
 ---
 
-### 2️⃣ Pre-Generated Mipmaps Mode (MipGenerator + toktx)
+### 2️⃣ Pre-Generated Mipmaps Mode (MipGenerator + ktx create)
 
 **Когда использовать:**
 - Когда нужна правильная нормализация нормалей в мипмапах (критично для normal maps!)
 - Когда нужен Toksvig anti-aliasing для gloss maps
 - Когда нужны специальные фильтры или обработка
 
-**Флаги toktx:**
-- `--mipmap` - используются готовые мипмапы
-- `--levels N` - количество уровней мипмапов
-- `--normal_mode` - ❌ **НЕ использовать** (конвертация должна быть сделана в MipGenerator)
-- `--normalize` - ❌ **НЕ использовать** (несовместимо с --mipmap)
+**Флаги ktx create:**
+- Без `--generate-mipmap` - используются готовые мипмапы
+- `--normal-mode` - ❌ **НЕ использовать** (конвертация должна быть сделана в MipGenerator)
+- `--normalize` - ❌ **НЕ использовать** (несовместимо с pre-generated mipmaps)
 
 **Настройки в TexTool:**
 ```
@@ -69,8 +68,8 @@ ApplyGammaCorrection = false       ✅ Правильно для linear данн
 **Почему это правильно:**
 1. **MipGenerator** генерирует мипмапы с нормализацией нормалей (`NormalizeNormals = true`)
 2. Каждый мипмап имеет **правильные единичные нормали**
-3. **toktx** получает готовые мипмапы и просто упаковывает их в KTX2
-4. Флаги `--normal_mode` и `--normalize` не нужны и могут вызывать конфликты
+3. **ktx create** получает готовые мипмапы и просто упаковывает их в KTX2
+4. Флаги `--normal-mode` и `--normalize` не нужны и могут вызывать конфликты
 
 ---
 
@@ -78,18 +77,18 @@ ApplyGammaCorrection = false       ✅ Правильно для linear данн
 
 ### ❌ Старая конфигурация (вызывала ошибку):
 ```
-ConvertToNormalMap = true   → --normal_mode (конфликт!)
+ConvertToNormalMap = true   → --normal-mode (конфликт!)
 NormalizeVectors = true     → --normalize (конфликт!)
-+ используются pre-generated mipmaps (--mipmap --levels N)
++ используются pre-generated mipmaps
 ```
 
-**Результат:** toktx exited with code 1 ❌
+**Результат:** ktx create exited with code 1 ❌
 
 ### ✅ Новая конфигурация (работает):
 ```
 ConvertToNormalMap = false  → флаг не добавляется
 NormalizeVectors = false    → флаг не добавляется
-+ используются pre-generated mipmaps (--mipmap --levels N)
++ используются pre-generated mipmaps
 ```
 
 **Результат:** Успешная упаковка ✅
@@ -117,13 +116,13 @@ NormalizeVectors = false    → флаг не добавляется
 
 ## Дополнительная информация
 
-**Документация toktx:**
-https://github.khronos.org/KTX-Software/ktxtools/toktx.html
+**Документация ktx:**
+https://github.khronos.org/KTX-Software/ktxtools/ktx.html
 
 **Ключевые моменты из документации:**
-- `--normal_mode` - "only valid for linear textures with two or more components"
+- `--normal-mode` - "only valid for linear textures with two or more components"
 - `--normalize` - "normalizes input normals to unit length"
-- `--mipmap` - "mutually exclusive with --automipmap and --genmipmap"
+- `--generate-mipmap` - автоматическая генерация мипмапов
 - Для ASTC и ETC1S кодировщики имеют специальные настройки для normal maps
 
 **Восстановление Z компонента в шейдере:**

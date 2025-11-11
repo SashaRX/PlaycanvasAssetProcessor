@@ -157,7 +157,27 @@ namespace AssetProcessor.Services {
                 ? urlElement.GetString()
                 : null;
 
-            return new PlayCanvasAssetFileInfo(size, hash, filename, url);
+            // Extract width and height from variants (eliminates 500+ HTTP requests!)
+            int? width = null;
+            int? height = null;
+            if (fileElement.TryGetProperty("variants", out JsonElement variantsElement) && variantsElement.ValueKind == JsonValueKind.Object) {
+                // Try common variant formats in order: webp, jpg, png, original
+                foreach (string variantName in new[] { "webp", "jpg", "png", "original" }) {
+                    if (variantsElement.TryGetProperty(variantName, out JsonElement variantElement) && variantElement.ValueKind == JsonValueKind.Object) {
+                        if (variantElement.TryGetProperty("width", out JsonElement widthElement) && widthElement.ValueKind == JsonValueKind.Number && widthElement.TryGetInt32(out int w)) {
+                            width = w;
+                        }
+                        if (variantElement.TryGetProperty("height", out JsonElement heightElement) && heightElement.ValueKind == JsonValueKind.Number && heightElement.TryGetInt32(out int h)) {
+                            height = h;
+                        }
+                        if (width.HasValue && height.HasValue) {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return new PlayCanvasAssetFileInfo(size, hash, filename, url, width, height);
         }
 
         private void AddAuthorizationHeader(string? apiKey) {

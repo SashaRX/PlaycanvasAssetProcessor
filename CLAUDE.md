@@ -312,10 +312,6 @@ Adjust based on connection speed (higher for fast connections, lower for slow/un
 
 The project captures git branch and commit info during build (AssetProcessor.csproj:17-32) using MSBuild targets. This information is made available to the compiler via `CompilerVisibleProperty`.
 
-### Unity Editor Integration
-
-`PlayCanvasImporterWindow.cs` is excluded from WPF compilation (AssetProcessor.csproj:42-43) as it's meant for Unity Editor only. It imports PlayCanvas JSON scenes into Unity.
-
 ### NuGet Package Sources
 
 The project uses a local `nuget.config` to avoid global PackageSourceMapping conflicts. If package restore fails:

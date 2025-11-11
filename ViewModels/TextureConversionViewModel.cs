@@ -44,9 +44,9 @@ namespace AssetProcessor.ViewModels {
         public TextureConversionViewModel() {
             _globalSettings = TextureConversionSettingsManager.LoadSettings();
             _outputDirectory = _globalSettings.DefaultOutputDirectory;
-            // Используем KtxExecutablePath, но fallback на ToktxExecutablePath для обратной совместимости
+            // Используем KtxExecutablePath из настроек
             _ktxPath = string.IsNullOrWhiteSpace(_globalSettings.KtxExecutablePath)
-                ? (string.IsNullOrWhiteSpace(_globalSettings.ToktxExecutablePath) ? "ktx" : _globalSettings.ToktxExecutablePath)
+                ? "ktx"
                 : _globalSettings.KtxExecutablePath;
 
             // Загружаем сохраненные текстуры

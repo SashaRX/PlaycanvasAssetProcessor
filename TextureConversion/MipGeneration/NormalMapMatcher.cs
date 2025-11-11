@@ -52,6 +52,12 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
 
             foreach (var pattern in patterns.Distinct()) {
                 var candidatePath = Path.Combine(directory, pattern + extension);
+
+                // CRITICAL: Skip if candidate is the same as input (avoid using gloss as normal map!)
+                if (string.Equals(candidatePath, roughnessGlossPath, StringComparison.OrdinalIgnoreCase)) {
+                    continue;
+                }
+
                 if (File.Exists(candidatePath)) {
                     // Опционально проверяем размеры
                     if (validateDimensions) {
@@ -62,6 +68,8 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                             if (sourceImage.Width == normalImage.Width && sourceImage.Height == normalImage.Height) {
                                 Logger.Info($"Найдена normal map: {candidatePath}");
                                 return candidatePath;
+                            } else {
+                                Logger.Debug($"Normal map candidate {candidatePath} has different dimensions: {normalImage.Width}x{normalImage.Height} vs {sourceImage.Width}x{sourceImage.Height}");
                             }
                         } catch {
                             // Игнорируем ошибки загрузки

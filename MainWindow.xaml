@@ -650,7 +650,8 @@
                                           ClipToBounds="True"
                                           SizeChanged="TexturePreviewViewport_SizeChanged"
                                           PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel"
-                                          MouseMove="TexturePreviewViewport_MouseMove">
+                                          MouseMove="TexturePreviewViewport_MouseMove"
+                                          MouseLeave="TexturePreviewViewport_MouseLeave">
                                         <!-- D3D11 Texture Viewer (GPU-accelerated, default) -->
                                         <!-- HwndHost does NOT receive WPF MouseWheel events - handle on parent Grid -->
                                         <viewer:D3D11TextureViewerControl x:Name="D3D11TextureViewer"

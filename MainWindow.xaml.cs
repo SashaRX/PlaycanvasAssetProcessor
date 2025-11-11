@@ -333,6 +333,11 @@ namespace AssetProcessor {
             }
         }
 
+        // Гарантированно сбрасываем флаг когда мышь покидает Grid
+        private void TexturePreviewViewport_MouseLeave(object sender, MouseEventArgs e) {
+            isMouseOverD3D11Viewer = false;
+        }
+
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl
 
         /// <summary>

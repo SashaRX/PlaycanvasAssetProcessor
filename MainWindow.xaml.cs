@@ -227,8 +227,16 @@ namespace AssetProcessor {
 
             DataContext = viewModel;
 
-            // Force layout update to prevent overlapping rows issue with virtualization
-            TexturesDataGrid.UpdateLayout();
+            // Subscribe to collection changes to force layout update when data is loaded
+            // This fixes alignment issues with Recycling virtualization and Width="*" columns
+            viewModel.Textures.CollectionChanged += (s, e) => {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add ||
+                    e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset) {
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() => {
+                        ForceDataGridLayout(TexturesDataGrid);
+                    }));
+                }
+            };
             this.Closing += MainWindow_Closing;
             //LoadLastSettings();
 
@@ -291,15 +299,16 @@ namespace AssetProcessor {
         }
 
         private void TexturePreviewViewport_MouseEnter(object sender, MouseEventArgs e) {
-            // Focus the Grid when mouse enters so MouseWheel events are received
-            TexturePreviewViewport?.Focus();
+            // Don't focus the Grid - let mouse wheel events be handled based on actual mouse position
+            // Removed: TexturePreviewViewport?.Focus();
         }
 
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             // Only handle zoom if D3D11 renderer is active (not in WPF mode)
             if (isUsingD3D11Renderer && D3D11TextureViewer != null) {
-                // Check if mouse is actually over the D3D11TextureViewer control
+                // CRITICAL: Always check if mouse is actually over the D3D11TextureViewer control
+                // This must be checked on EVERY event, not just once, to handle mouse leaving the control
                 Point mousePos = e.GetPosition(D3D11TextureViewer);
                 bool isMouseOverViewer = mousePos.X >= 0 && mousePos.Y >= 0 &&
                                         mousePos.X <= D3D11TextureViewer.ActualWidth &&
@@ -309,6 +318,7 @@ namespace AssetProcessor {
                     D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
                     e.Handled = true;
                 }
+                // If mouse is NOT over viewer, don't handle the event - let it bubble up for scrolling
             }
         }
 
@@ -2708,11 +2718,39 @@ namespace AssetProcessor {
                 dataView.SortDescriptions.Add(new SortDescription("Status", direction));
                 e.Column.SortDirection = direction;
 
-                // Force layout update after sorting to fix alignment issues with Recycling virtualization
-                // Use Loaded priority to ensure the DataGrid has finished re-virtualizing rows
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() => {
-                    TexturesDataGrid?.UpdateLayout();
+                // Force aggressive layout update after sorting to fix alignment issues with Recycling virtualization
+                // Recycling mode caches container sizes, so we need to force full remeasure
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() => {
+                    ForceDataGridLayout(TexturesDataGrid);
                 }));
+            }
+        }
+
+        /// <summary>
+        /// Forces a complete layout recalculation for DataGrid with Recycling virtualization.
+        /// Recycling mode aggressively caches container sizes, causing misalignment with Width="*" columns.
+        /// </summary>
+        private void ForceDataGridLayout(DataGrid? dataGrid) {
+            if (dataGrid == null) return;
+
+            // Step 1: Invalidate measure and arrange (forces size recalculation)
+            dataGrid.InvalidateMeasure();
+            dataGrid.InvalidateArrange();
+
+            // Step 2: Update layout immediately
+            dataGrid.UpdateLayout();
+
+            // Step 3: Find and update the internal ScrollViewer (contains the virtualized panel)
+            if (VisualTreeHelper.GetChildrenCount(dataGrid) > 0) {
+                Border? border = VisualTreeHelper.GetChild(dataGrid, 0) as Border;
+                if (border != null && VisualTreeHelper.GetChildrenCount(border) > 0) {
+                    ScrollViewer? scrollViewer = VisualTreeHelper.GetChild(border, 0) as ScrollViewer;
+                    if (scrollViewer != null) {
+                        scrollViewer.InvalidateMeasure();
+                        scrollViewer.InvalidateArrange();
+                        scrollViewer.UpdateLayout();
+                    }
+                }
             }
         }
 
@@ -3134,10 +3172,10 @@ namespace AssetProcessor {
                 if (columnIndex >= 0 && columnIndex < TexturesDataGrid.Columns.Count) {
                     TexturesDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
 
-                    // Force layout update to fix alignment issues with Recycling virtualization
+                    // Force aggressive layout update - column visibility changes affect Width="*" columns
                     // This was the workaround users were doing manually - now automated
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() => {
-                        TexturesDataGrid?.UpdateLayout();
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() => {
+                        ForceDataGridLayout(TexturesDataGrid);
                     }));
                 }
             }

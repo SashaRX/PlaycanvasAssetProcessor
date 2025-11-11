@@ -238,6 +238,11 @@ public class D3D11TextureViewerControl : HwndHost {
         int clientWidth = clientRect.right - clientRect.left;
         int clientHeight = clientRect.bottom - clientRect.top;
 
+        // Ignore wheel events if the cursor is outside the client bounds
+        if (pt.x < 0 || pt.y < 0 || pt.x >= clientWidth || pt.y >= clientHeight) {
+            return;
+        }
+
         // Get D3D11 viewport size (this is what the renderer uses for aspect ratio!)
         int viewportWidth = renderer.ViewportWidth;
         int viewportHeight = renderer.ViewportHeight;

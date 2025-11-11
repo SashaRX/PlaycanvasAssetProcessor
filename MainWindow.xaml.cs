@@ -297,11 +297,25 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // Only handle zoom if D3D11 renderer is active (not in WPF mode)
-            if (isUsingD3D11Renderer) {
-                D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
-                e.Handled = true;
+            if (!isUsingD3D11Renderer) {
+                return;
             }
+
+            if (sender is FrameworkElement element) {
+                Point position = e.GetPosition(element);
+                if (position.X < 0 || position.Y < 0 || position.X > element.ActualWidth || position.Y > element.ActualHeight) {
+                    return;
+                }
+
+                if (!element.IsMouseOver) {
+                    return;
+                }
+            } else if (TexturePreviewViewport is FrameworkElement viewport && !viewport.IsMouseOver) {
+                return;
+            }
+
+            D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
+            e.Handled = true;
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl

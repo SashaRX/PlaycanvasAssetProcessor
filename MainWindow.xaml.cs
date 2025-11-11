@@ -298,9 +298,17 @@ namespace AssetProcessor {
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             // Only handle zoom if D3D11 renderer is active (not in WPF mode)
-            if (isUsingD3D11Renderer) {
-                D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
-                e.Handled = true;
+            if (isUsingD3D11Renderer && D3D11TextureViewer != null) {
+                // Check if mouse is actually over the D3D11TextureViewer control
+                Point mousePos = e.GetPosition(D3D11TextureViewer);
+                bool isMouseOverViewer = mousePos.X >= 0 && mousePos.Y >= 0 &&
+                                        mousePos.X <= D3D11TextureViewer.ActualWidth &&
+                                        mousePos.Y <= D3D11TextureViewer.ActualHeight;
+
+                if (isMouseOverViewer) {
+                    D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
+                    e.Handled = true;
+                }
             }
         }
 
@@ -2699,6 +2707,12 @@ namespace AssetProcessor {
                 dataView.SortDescriptions.Clear();
                 dataView.SortDescriptions.Add(new SortDescription("Status", direction));
                 e.Column.SortDirection = direction;
+
+                // Force layout update after sorting to fix alignment issues with Recycling virtualization
+                // Use Loaded priority to ensure the DataGrid has finished re-virtualizing rows
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() => {
+                    TexturesDataGrid?.UpdateLayout();
+                }));
             }
         }
 
@@ -3119,6 +3133,12 @@ namespace AssetProcessor {
 
                 if (columnIndex >= 0 && columnIndex < TexturesDataGrid.Columns.Count) {
                     TexturesDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+
+                    // Force layout update to fix alignment issues with Recycling virtualization
+                    // This was the workaround users were doing manually - now automated
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() => {
+                        TexturesDataGrid?.UpdateLayout();
+                    }));
                 }
             }
         }

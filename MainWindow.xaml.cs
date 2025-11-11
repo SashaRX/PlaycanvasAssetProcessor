@@ -3130,9 +3130,34 @@ namespace AssetProcessor {
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             // Принудительно обновляем layout DataGrid-ов для пересчёта Width="*" колонок при изменении ScaleTransform
-            TexturesDataGrid?.UpdateLayout();
-            ModelsDataGrid?.UpdateLayout();
-            MaterialsDataGrid?.UpdateLayout();
+            ForceDataGridReflow(TexturesDataGrid);
+            ForceDataGridReflow(ModelsDataGrid);
+            ForceDataGridReflow(MaterialsDataGrid);
+        }
+
+        /// <summary>
+        /// Пересчитывает layout DataGrid с учётом ScaleTransform, принудительно обновляя "звёздочные" колонки.
+        /// </summary>
+        private static void ForceDataGridReflow(DataGrid? dataGrid) {
+            if (dataGrid == null || !dataGrid.IsLoaded) {
+                return;
+            }
+
+            dataGrid.Dispatcher.InvokeAsync(() => {
+                // Сброс измерений и размещения, чтобы WPF пересчитал доступное пространство
+                dataGrid.InvalidateMeasure();
+                dataGrid.InvalidateArrange();
+
+                foreach (var column in dataGrid.Columns.Where(c => c.Width.IsStar)) {
+                    double starValue = column.Width.Value;
+
+                    // Временный сброс ширины, чтобы заставить движок заново вычислить растяжение
+                    column.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
+                    column.Width = new DataGridLength(starValue, DataGridLengthUnitType.Star);
+                }
+
+                dataGrid.UpdateLayout();
+            }, DispatcherPriority.Render);
         }
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {

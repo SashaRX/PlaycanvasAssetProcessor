@@ -3144,20 +3144,41 @@ namespace AssetProcessor {
             }
 
             dataGrid.Dispatcher.InvokeAsync(() => {
-                // Сброс измерений и размещения, чтобы WPF пересчитал доступное пространство
+                // Сбрасываем измерения, чтобы новая ScaleTransform корректно распределила доступное пространство
                 dataGrid.InvalidateMeasure();
                 dataGrid.InvalidateArrange();
+                dataGrid.UpdateLayout();
 
-                foreach (var column in dataGrid.Columns.Where(c => c.Width.IsStar)) {
-                    double starValue = column.Width.Value;
+                var starColumns = dataGrid.Columns
+                    .Where(c => c.Visibility == Visibility.Visible && c.Width.IsStar)
+                    .Select(c => new {
+                        Column = c,
+                        StarValue = c.Width.Value,
+                        DisplayIndex = c.DisplayIndex
+                    })
+                    .ToList();
 
-                    // Временный сброс ширины, чтобы заставить движок заново вычислить растяжение
-                    column.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
-                    column.Width = new DataGridLength(starValue, DataGridLengthUnitType.Star);
+                if (starColumns.Count == 0) {
+                    return;
+                }
+
+                // Полностью скрываем "звёздочные" колонки и возвращаем их обратно —
+                // это повторяет ручной workaround (скрыть/показать колонку),
+                // который гарантированно заставляет DataGrid пересчитать размеры шапки и строк.
+                foreach (var entry in starColumns) {
+                    entry.Column.Visibility = Visibility.Collapsed;
                 }
 
                 dataGrid.UpdateLayout();
-            }, DispatcherPriority.Render);
+
+                foreach (var entry in starColumns) {
+                    entry.Column.Visibility = Visibility.Visible;
+                    entry.Column.DisplayIndex = entry.DisplayIndex;
+                    entry.Column.Width = new DataGridLength(entry.StarValue, DataGridLengthUnitType.Star);
+                }
+
+                dataGrid.UpdateLayout();
+            }, DispatcherPriority.Background);
         }
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {

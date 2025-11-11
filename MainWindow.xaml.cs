@@ -294,7 +294,7 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // Use MouseEnter/MouseLeave tracking instead of GetPosition (more reliable for HwndHost)
+        // Use MouseMove to continuously track if mouse is over D3D11TextureViewer
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             // Only process if D3D11 renderer is active AND mouse is over D3D11TextureViewer
             if (isUsingD3D11Renderer && D3D11TextureViewer != null && isMouseOverD3D11Viewer) {
@@ -304,13 +304,20 @@ namespace AssetProcessor {
             // If mouse is NOT over D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
         }
 
-        // Track mouse enter/leave for D3D11 viewer to properly scope zoom behavior
-        private void D3D11TextureViewer_MouseEnter(object sender, MouseEventArgs e) {
-            isMouseOverD3D11Viewer = true;
-        }
+        // Track mouse position on Grid to detect if over D3D11 viewer
+        // MouseMove fires continuously, so we always have up-to-date position
+        private void TexturePreviewViewport_MouseMove(object sender, MouseEventArgs e) {
+            if (D3D11TextureViewer == null || !isUsingD3D11Renderer) {
+                isMouseOverD3D11Viewer = false;
+                return;
+            }
 
-        private void D3D11TextureViewer_MouseLeave(object sender, MouseEventArgs e) {
-            isMouseOverD3D11Viewer = false;
+            // Get mouse position relative to D3D11TextureViewer
+            Point mousePos = e.GetPosition(D3D11TextureViewer);
+
+            // Check if within bounds
+            isMouseOverD3D11Viewer = mousePos.X >= 0 && mousePos.X < D3D11TextureViewer.ActualWidth &&
+                                     mousePos.Y >= 0 && mousePos.Y < D3D11TextureViewer.ActualHeight;
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl

@@ -649,13 +649,12 @@
                                           Background="#FF333333"
                                           ClipToBounds="True"
                                           SizeChanged="TexturePreviewViewport_SizeChanged"
-                                          PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel">
+                                          PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel"
+                                          MouseMove="TexturePreviewViewport_MouseMove">
                                         <!-- D3D11 Texture Viewer (GPU-accelerated, default) -->
                                         <!-- HwndHost does NOT receive WPF MouseWheel events - handle on parent Grid -->
                                         <viewer:D3D11TextureViewerControl x:Name="D3D11TextureViewer"
-                                                                           Visibility="Visible"
-                                                                           MouseEnter="D3D11TextureViewer_MouseEnter"
-                                                                           MouseLeave="D3D11TextureViewer_MouseLeave" />
+                                                                           Visibility="Visible" />
 
                                         <!-- WPF Image Viewer (software fallback, legacy mode) -->
                                         <Image x:Name="WpfTexturePreviewImage"

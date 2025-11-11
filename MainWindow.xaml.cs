@@ -297,6 +297,18 @@ namespace AssetProcessor {
             if (!isUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
                 return; // Let event bubble for scrolling
             }
+            D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
+            e.Handled = true;
+        }
+
+        private void TexturePreviewViewport_MouseEnter(object sender, MouseEventArgs e) {
+            if (TexturePreviewViewport == null) {
+                return;
+            }
+
+            // Устанавливаем фокус на viewport для получения событий клавиатуры
+            TexturePreviewViewport.Focus();
+        }
 
         private void TexturePreviewViewport_MouseLeave(object sender, MouseEventArgs e) {
             if (TexturePreviewViewport == null) {

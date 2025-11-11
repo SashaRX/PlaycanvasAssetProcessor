@@ -141,8 +141,6 @@ namespace AssetProcessor {
         // Legacy PNG extraction removed
         // Track which preview renderer is currently active
         private bool isUsingD3D11Renderer = true;
-        // Track if mouse is currently over D3D11 viewer (for zoom scope)
-        private bool isMouseOverD3D11Viewer = false;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private sealed class KtxPreviewCacheEntry {
@@ -294,48 +292,36 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // Use MouseMove to continuously track if mouse is over D3D11TextureViewer
+        // CRITICAL: Проверяем bounds ПРЯМО ЗДЕСЬ при каждом wheel event, не полагаемся на флаг!
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // Only process if D3D11 renderer is active AND mouse is over D3D11TextureViewer
-            if (isUsingD3D11Renderer && D3D11TextureViewer != null && isMouseOverD3D11Viewer) {
-                D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
-                e.Handled = true; // Prevent event from bubbling to other scrollers
-            }
-            // If mouse is NOT over D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
-        }
-
-        // Track mouse position on Grid to detect if over D3D11 viewer
-        // CRITICAL: GetPosition(HwndHost) НЕ РАБОТАЕТ - возвращает позицию внутри HwndHost даже когда мышь снаружи
-        // РЕШЕНИЕ: Получаем позицию относительно Grid и проверяем bounds D3D11TextureViewer
-        private void TexturePreviewViewport_MouseMove(object sender, MouseEventArgs e) {
-            if (D3D11TextureViewer == null || !isUsingD3D11Renderer || sender is not Grid grid) {
-                isMouseOverD3D11Viewer = false;
-                return;
+            if (!isUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
+                return; // Let event bubble for scrolling
             }
 
             try {
-                // Получаем позицию мыши относительно Grid
+                // Получаем СВЕЖУЮ позицию мыши относительно Grid
                 Point mousePosInGrid = e.GetPosition(grid);
 
-                // Получаем bounds D3D11TextureViewer относительно Grid
+                // Получаем АКТУАЛЬНЫЕ bounds D3D11TextureViewer относительно Grid
                 GeneralTransform transform = D3D11TextureViewer.TransformToAncestor(grid);
                 Point viewerTopLeft = transform.Transform(new Point(0, 0));
                 Point viewerBottomRight = transform.Transform(new Point(D3D11TextureViewer.ActualWidth, D3D11TextureViewer.ActualHeight));
 
-                // Проверяем, находится ли мышь в пределах D3D11TextureViewer
-                isMouseOverD3D11Viewer = mousePosInGrid.X >= viewerTopLeft.X &&
-                                         mousePosInGrid.X < viewerBottomRight.X &&
-                                         mousePosInGrid.Y >= viewerTopLeft.Y &&
-                                         mousePosInGrid.Y < viewerBottomRight.Y;
-            } catch {
-                // Если transform не работает (например, контрол не в визуальном дереве), считаем что мышь снаружи
-                isMouseOverD3D11Viewer = false;
-            }
-        }
+                // Проверяем bounds ПРЯМО СЕЙЧАС
+                bool isMouseInsideViewer = mousePosInGrid.X >= viewerTopLeft.X &&
+                                           mousePosInGrid.X < viewerBottomRight.X &&
+                                           mousePosInGrid.Y >= viewerTopLeft.Y &&
+                                           mousePosInGrid.Y < viewerBottomRight.Y;
 
-        // Гарантированно сбрасываем флаг когда мышь покидает Grid
-        private void TexturePreviewViewport_MouseLeave(object sender, MouseEventArgs e) {
-            isMouseOverD3D11Viewer = false;
+                // Обрабатываем zoom ТОЛЬКО если мышь действительно внутри
+                if (isMouseInsideViewer) {
+                    D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
+                    e.Handled = true; // Prevent event from bubbling to other scrollers
+                }
+            } catch {
+                // Если transform не работает - игнорируем и даём event bubble
+            }
+            // If mouse is NOT inside D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl

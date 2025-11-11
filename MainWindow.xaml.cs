@@ -292,15 +292,17 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // CRITICAL: Проверяем bounds ПРЯМО ЗДЕСЬ при каждом wheel event, не полагаемся на флаг!
+        // CRITICAL: e.GetPosition() ТОЖЕ БАГОВАННЫЙ для HwndHost! Используем Mouse.GetPosition()!
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             if (!isUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
                 return; // Let event bubble for scrolling
             }
 
             try {
-                // Получаем СВЕЖУЮ позицию мыши относительно Grid
-                Point mousePosInGrid = e.GetPosition(grid);
+                // КРИТИЧНО: Используем Mouse.GetPosition(grid) вместо e.GetPosition(grid)!!!
+                // e.GetPosition() возвращает СТАРУЮ позицию после первого wheel в HwndHost
+                // Mouse.GetPosition() использует Win32 GetCursorPos - всегда РЕАЛЬНАЯ позиция
+                Point mousePosInGrid = Mouse.GetPosition(grid);
 
                 // Получаем АКТУАЛЬНЫЕ bounds D3D11TextureViewer относительно Grid
                 GeneralTransform transform = D3D11TextureViewer.TransformToAncestor(grid);

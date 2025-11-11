@@ -292,14 +292,25 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // and check IsMouseOver to see if mouse is actually over the control
+        // and check if mouse position is actually inside the D3D11TextureViewer bounds
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // Only process if D3D11 renderer is active AND mouse is over the D3D11TextureViewer
-            if (isUsingD3D11Renderer && D3D11TextureViewer != null && D3D11TextureViewer.IsMouseOver) {
+            // Only process if D3D11 renderer is active
+            if (!isUsingD3D11Renderer || D3D11TextureViewer == null) {
+                return; // Let event bubble for scrolling
+            }
+
+            // Get mouse position relative to D3D11TextureViewer control
+            Point mousePos = e.GetPosition(D3D11TextureViewer);
+
+            // Check if mouse is actually within the bounds of D3D11TextureViewer
+            bool isWithinBounds = mousePos.X >= 0 && mousePos.X < D3D11TextureViewer.ActualWidth &&
+                                  mousePos.Y >= 0 && mousePos.Y < D3D11TextureViewer.ActualHeight;
+
+            if (isWithinBounds) {
                 D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
                 e.Handled = true; // Prevent event from bubbling to other scrollers
             }
-            // If mouse is NOT over D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
+            // If mouse is NOT within D3D11TextureViewer bounds, event will bubble up normally (e.g., for scrolling lists)
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl
@@ -4539,6 +4550,13 @@ namespace AssetProcessor {
 
             // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
             // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
+
+            // Force DataGrid layout update to ensure Width="*" columns fill available space
+            Dispatcher.InvokeAsync(() => {
+                TexturesDataGrid?.UpdateLayout();
+                ModelsDataGrid?.UpdateLayout();
+                MaterialsDataGrid?.UpdateLayout();
+            }, DispatcherPriority.Loaded);
         }
 
         private bool IsSupportedTextureFormat(string extension) {

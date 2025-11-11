@@ -4402,6 +4402,18 @@ namespace AssetProcessor {
                     if (File.Exists(ktx2Path)) {
                         var fileInfo = new FileInfo(ktx2Path);
                         ormTexture.CompressedSize = fileInfo.Length;
+
+                        // Извлекаем метаданные из KTX2: resolution и mipmap count
+                        try {
+                            var ktxInfo = await GetKtx2InfoAsync(ktx2Path);
+                            if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
+                                ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
+                                ormTexture.MipmapCount = ktxInfo.MipLevels;
+                                MainWindowHelpers.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips");
+                            }
+                        } catch (Exception ex) {
+                            MainWindowHelpers.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
+                        }
                     }
 
                     Dispatcher.Invoke(() => {
@@ -5709,6 +5721,34 @@ namespace AssetProcessor {
                 MainWindowHelpers.LogInfo($"Sample texture IDs: {sampleIds}");
             }
             return found;
+        }
+
+        // Reads KTX2 file header to extract metadata (width, height, mip levels)
+        private async Task<(int Width, int Height, int MipLevels)> GetKtx2InfoAsync(string ktx2Path) {
+            return await Task.Run(() => {
+                using var stream = File.OpenRead(ktx2Path);
+                using var reader = new BinaryReader(stream);
+
+                // KTX2 header structure:
+                // Bytes 0-11: identifier (12 bytes) - skip
+                // Bytes 12-15: vkFormat (uint32) - skip
+                // Bytes 16-19: typeSize (uint32) - skip
+                // Bytes 20-23: pixelWidth (uint32)
+                // Bytes 24-27: pixelHeight (uint32)
+                // Bytes 28-31: pixelDepth (uint32) - skip
+                // Bytes 32-35: layerCount (uint32) - skip
+                // Bytes 36-39: faceCount (uint32) - skip
+                // Bytes 40-43: levelCount (uint32)
+
+                reader.BaseStream.Seek(20, SeekOrigin.Begin);
+                int width = (int)reader.ReadUInt32();
+                int height = (int)reader.ReadUInt32();
+
+                reader.BaseStream.Seek(40, SeekOrigin.Begin);
+                int mipLevels = (int)reader.ReadUInt32();
+
+                return (width, height, mipLevels);
+            });
         }
 
         private ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {

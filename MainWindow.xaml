@@ -649,7 +649,10 @@
                                           Background="#FF333333"
                                           ClipToBounds="True"
                                           SizeChanged="TexturePreviewViewport_SizeChanged"
-                                          PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel">
+                                          MouseWheel="D3D11TextureViewer_PreviewMouseWheel"
+                                          MouseEnter="TexturePreviewViewport_MouseEnter"
+                                          MouseLeave="TexturePreviewViewport_MouseLeave"
+                                          Focusable="True">
                                         <!-- D3D11 Texture Viewer (GPU-accelerated, default) -->
                                         <!-- HwndHost does NOT receive WPF MouseWheel events - handle on parent Grid -->
                                         <!-- Bounds check happens directly in PreviewMouseWheel - no need for MouseMove/MouseLeave -->

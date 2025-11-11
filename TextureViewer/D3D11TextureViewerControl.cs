@@ -181,8 +181,10 @@ public class D3D11TextureViewerControl : HwndHost {
 
         switch (uMsg) {
             case WM_MOUSEWHEEL:
-                HandleMouseWheel(wParam, lParam);
-                return IntPtr.Zero;
+                if (HandleMouseWheel(wParam, lParam)) {
+                    return IntPtr.Zero;
+                }
+                break;
 
             case WM_MBUTTONDOWN:
                 HandleMiddleButtonDown(lParam);
@@ -213,8 +215,10 @@ public class D3D11TextureViewerControl : HwndHost {
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
     }
 
-    private void HandleMouseWheel(IntPtr wParam, IntPtr lParam) {
-        if (renderer == null) return;
+    private bool HandleMouseWheel(IntPtr wParam, IntPtr lParam) {
+        if (renderer == null) {
+            return false;
+        }
 
         // Extract wheel delta from wParam (high word)
         short delta = (short)((long)wParam >> 16);
@@ -232,11 +236,16 @@ public class D3D11TextureViewerControl : HwndHost {
         RECT clientRect;
         if (!GetClientRect(hwndHost, out clientRect)) {
             logger.Error("Failed to get client rect");
-            return;
+            return false;
         }
 
         int clientWidth = clientRect.right - clientRect.left;
         int clientHeight = clientRect.bottom - clientRect.top;
+
+        // Ignore wheel events if the cursor is outside the client bounds
+        if (pt.x < 0 || pt.y < 0 || pt.x >= clientWidth || pt.y >= clientHeight) {
+            return false;
+        }
 
         // Get D3D11 viewport size (this is what the renderer uses for aspect ratio!)
         int viewportWidth = renderer.ViewportWidth;
@@ -247,7 +256,7 @@ public class D3D11TextureViewerControl : HwndHost {
             zoom *= delta > 0 ? 1.1f : 0.9f;
             zoom = Math.Clamp(zoom, 0.125f, 16.0f);
             renderer.SetZoom(zoom);
-            return;
+            return true;
         }
 
         // CRITICAL: Scale mouse coordinates from client rect space to viewport space
@@ -264,7 +273,7 @@ public class D3D11TextureViewerControl : HwndHost {
             zoom *= delta > 0 ? 1.1f : 0.9f;
             zoom = Math.Clamp(zoom, 0.125f, 16.0f);
             renderer.SetZoom(zoom);
-            return;
+            return true;
         }
 
         // Calculate aspect ratios (MUST match D3D11TextureRenderer.UpdateConstantBuffer!)
@@ -324,6 +333,8 @@ public class D3D11TextureViewerControl : HwndHost {
 
         renderer.SetZoom(zoom);
         renderer.SetPan(panX, panY);
+
+        return true;
     }
 
     private void HandleMiddleButtonDown(IntPtr lParam) {

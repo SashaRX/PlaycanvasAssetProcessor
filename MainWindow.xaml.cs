@@ -298,32 +298,44 @@ namespace AssetProcessor {
                 return; // Let event bubble for scrolling
             }
 
-            try {
-                // КРИТИЧНО: Используем Mouse.GetPosition(grid) вместо e.GetPosition(grid)!!!
-                // e.GetPosition() возвращает СТАРУЮ позицию после первого wheel в HwndHost
-                // Mouse.GetPosition() использует Win32 GetCursorPos - всегда РЕАЛЬНАЯ позиция
-                Point mousePosInGrid = Mouse.GetPosition(grid);
-
-                // Получаем АКТУАЛЬНЫЕ bounds D3D11TextureViewer относительно Grid
-                GeneralTransform transform = D3D11TextureViewer.TransformToAncestor(grid);
-                Point viewerTopLeft = transform.Transform(new Point(0, 0));
-                Point viewerBottomRight = transform.Transform(new Point(D3D11TextureViewer.ActualWidth, D3D11TextureViewer.ActualHeight));
-
-                // Проверяем bounds ПРЯМО СЕЙЧАС
-                bool isMouseInsideViewer = mousePosInGrid.X >= viewerTopLeft.X &&
-                                           mousePosInGrid.X < viewerBottomRight.X &&
-                                           mousePosInGrid.Y >= viewerTopLeft.Y &&
-                                           mousePosInGrid.Y < viewerBottomRight.Y;
-
-                // Обрабатываем zoom ТОЛЬКО если мышь действительно внутри
-                if (isMouseInsideViewer) {
-                    D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
-                    e.Handled = true; // Prevent event from bubbling to other scrollers
-                }
-            } catch {
-                // Если transform не работает - игнорируем и даём event bubble
+        private void TexturePreviewViewport_MouseLeave(object sender, MouseEventArgs e) {
+            if (TexturePreviewViewport == null) {
+                return;
             }
-            // If mouse is NOT inside D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
+
+            if (!TexturePreviewViewport.IsKeyboardFocusWithin) {
+                return;
+            }
+
+            DependencyObject focusScope = FocusManager.GetFocusScope(TexturePreviewViewport);
+            if (focusScope != null) {
+                FocusManager.SetFocusedElement(focusScope, null);
+            }
+
+            Keyboard.ClearFocus();
+        }
+
+        // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
+        private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (!isUsingD3D11Renderer) {
+                return;
+            }
+
+            if (sender is FrameworkElement element) {
+                Point position = e.GetPosition(element);
+                if (position.X < 0 || position.Y < 0 || position.X > element.ActualWidth || position.Y > element.ActualHeight) {
+                    return;
+                }
+
+                if (!element.IsMouseOver) {
+                    return;
+                }
+            } else if (TexturePreviewViewport is FrameworkElement viewport && !viewport.IsMouseOver) {
+                return;
+            }
+
+            D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
+            e.Handled = true;
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl
@@ -3118,9 +3130,55 @@ namespace AssetProcessor {
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             // Принудительно обновляем layout DataGrid-ов для пересчёта Width="*" колонок при изменении ScaleTransform
-            TexturesDataGrid?.UpdateLayout();
-            ModelsDataGrid?.UpdateLayout();
-            MaterialsDataGrid?.UpdateLayout();
+            ForceDataGridReflow(TexturesDataGrid);
+            ForceDataGridReflow(ModelsDataGrid);
+            ForceDataGridReflow(MaterialsDataGrid);
+        }
+
+        /// <summary>
+        /// Пересчитывает layout DataGrid с учётом ScaleTransform, принудительно обновляя "звёздочные" колонки.
+        /// </summary>
+        private static void ForceDataGridReflow(DataGrid? dataGrid) {
+            if (dataGrid == null || !dataGrid.IsLoaded) {
+                return;
+            }
+
+            dataGrid.Dispatcher.InvokeAsync(() => {
+                // Сбрасываем измерения, чтобы новая ScaleTransform корректно распределила доступное пространство
+                dataGrid.InvalidateMeasure();
+                dataGrid.InvalidateArrange();
+                dataGrid.UpdateLayout();
+
+                var starColumns = dataGrid.Columns
+                    .Where(c => c.Visibility == Visibility.Visible && c.Width.IsStar)
+                    .Select(c => new {
+                        Column = c,
+                        StarValue = c.Width.Value,
+                        DisplayIndex = c.DisplayIndex
+                    })
+                    .ToList();
+
+                if (starColumns.Count == 0) {
+                    return;
+                }
+
+                // Полностью скрываем "звёздочные" колонки и возвращаем их обратно —
+                // это повторяет ручной workaround (скрыть/показать колонку),
+                // который гарантированно заставляет DataGrid пересчитать размеры шапки и строк.
+                foreach (var entry in starColumns) {
+                    entry.Column.Visibility = Visibility.Collapsed;
+                }
+
+                dataGrid.UpdateLayout();
+
+                foreach (var entry in starColumns) {
+                    entry.Column.Visibility = Visibility.Visible;
+                    entry.Column.DisplayIndex = entry.DisplayIndex;
+                    entry.Column.Width = new DataGridLength(entry.StarValue, DataGridLengthUnitType.Star);
+                }
+
+                dataGrid.UpdateLayout();
+            }, DispatcherPriority.Background);
         }
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {

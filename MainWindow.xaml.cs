@@ -4338,14 +4338,14 @@ namespace AssetProcessor {
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
 
             // Детектируем и загружаем локальные ORM текстуры
-            DetectAndLoadORMTextures();
+            await DetectAndLoadORMTextures();
         }
 
         /// <summary>
         /// Детектирует и загружает локальные ORM текстуры (_og.ktx2, _ogm.ktx2, _ogmh.ktx2)
         /// Эти текстуры не являются частью PlayCanvas проекта, но хранятся локально
         /// </summary>
-        private void DetectAndLoadORMTextures() {
+        private async Task DetectAndLoadORMTextures() {
             if (string.IsNullOrEmpty(projectFolderPath) || !Directory.Exists(projectFolderPath)) {
                 return;
             }

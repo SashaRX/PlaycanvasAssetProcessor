@@ -308,6 +308,12 @@
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
                                     <Style.Triggers>
+                                        <!-- Color ORM textures with pink/purple background (базовый цвет для НЕвыбранных) -->
+                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
+                                            <Setter Property="Background" Value="#C96391"/>
+                                            <Setter Property="BorderBrush" Value="#A04070"/>
+                                            <Setter Property="BorderThickness" Value="2,0,2,0"/>
+                                        </DataTrigger>
                                         <!-- ОБЫЧНЫЕ текстуры: стандартное выделение (синий фон) -->
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
@@ -316,13 +322,7 @@
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Background" Value="#3399FF"/>
                                         </MultiDataTrigger>
-                                        <!-- Color ORM textures with pink/purple background -->
-                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
-                                            <Setter Property="Background" Value="#C96391"/>
-                                            <Setter Property="BorderBrush" Value="#A04070"/>
-                                            <Setter Property="BorderThickness" Value="2,0,2,0"/>
-                                        </DataTrigger>
-                                        <!-- ORM текстуры: светло-розовое выделение -->
+                                        <!-- ORM текстуры: светло-розовое выделение (ПОСЛЕДНИЙ - высший приоритет!) -->
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
                                                 <Condition Binding="{Binding IsORMTexture}" Value="True"/>
@@ -342,7 +342,7 @@
                                         <DataTrigger Binding="{Binding IsORMTexture}" Value="False">
                                             <Setter Property="Background" Value="Transparent"/>
                                         </DataTrigger>
-                                        <!-- For ORM textures, cells should also be pink/purple -->
+                                        <!-- For ORM textures, cells should also be pink/purple (базовый цвет) -->
                                         <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
                                             <Setter Property="Background" Value="#C96391"/>
                                         </DataTrigger>
@@ -355,7 +355,7 @@
                                             <Setter Property="Background" Value="#3399FF"/>
                                             <Setter Property="Foreground" Value="White"/>
                                         </MultiDataTrigger>
-                                        <!-- ORM текстуры: розовое выделение (светлее розовый) -->
+                                        <!-- ORM текстуры: светло-розовое выделение (ПОСЛЕДНИЙ - высший приоритет!) -->
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
                                                 <Condition Binding="{Binding IsORMTexture}" Value="True"/>

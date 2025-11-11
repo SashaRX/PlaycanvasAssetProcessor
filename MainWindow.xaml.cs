@@ -3094,6 +3094,16 @@ namespace AssetProcessor {
             }
         }
 
+        /// <summary>
+        /// Обработчик изменения масштаба таблиц - принудительно обновляет layout для корректного растяжения колонок
+        /// </summary>
+        private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            // Принудительно обновляем layout DataGrid-ов для пересчёта Width="*" колонок при изменении ScaleTransform
+            TexturesDataGrid?.UpdateLayout();
+            ModelsDataGrid?.UpdateLayout();
+            MaterialsDataGrid?.UpdateLayout();
+        }
+
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
                 int columnIndex = columnTag switch {

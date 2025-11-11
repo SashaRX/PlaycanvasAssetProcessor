@@ -274,7 +274,8 @@
                             <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                                    ToolTip="Adjust table scale (50% - 200%)"
+                                    ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
@@ -439,7 +440,8 @@
                             <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                                    ToolTip="Adjust table scale (50% - 200%)"
+                                    ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
@@ -498,7 +500,8 @@
                             <Slider x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                    ToolTip="Adjust table scale (50% - 200%)"/>
+                                    ToolTip="Adjust table scale (50% - 200%)"
+                                    ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=MaterialsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>

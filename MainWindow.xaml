@@ -292,7 +292,7 @@
                                 CanUserReorderColumns="True"
                                 Background="#FFD6D6D6"
                                 VirtualizingPanel.IsVirtualizing="True"
-                                VirtualizingPanel.VirtualizationMode="Standard"
+                                VirtualizingPanel.VirtualizationMode="Recycling"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False">
                             <DataGrid.LayoutTransform>
@@ -430,7 +430,7 @@
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Standard"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False">
                             <DataGrid.LayoutTransform>
@@ -510,7 +510,7 @@
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Standard"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False">
                         <DataGrid.LayoutTransform>

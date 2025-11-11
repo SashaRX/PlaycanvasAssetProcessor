@@ -292,9 +292,11 @@
                                 CanUserReorderColumns="True"
                                 Background="#FFD6D6D6"
                                 VirtualizingPanel.IsVirtualizing="True"
-                                VirtualizingPanel.VirtualizationMode="Recycling"
+                                VirtualizingPanel.VirtualizationMode="Standard"
                                 EnableRowVirtualization="True"
-                                EnableColumnVirtualization="False">
+                                EnableColumnVirtualization="False"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -430,9 +432,11 @@
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.VirtualizationMode="Standard"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="False">
+                              EnableColumnVirtualization="False"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
@@ -510,9 +514,11 @@
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.VirtualizationMode="Standard"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="False">
+                              EnableColumnVirtualization="False"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              HorizontalScrollBarVisibility="Disabled">
                         <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
@@ -645,13 +651,11 @@
                                     <Grid x:Name="TexturePreviewViewport"
                                           Background="#FF333333"
                                           ClipToBounds="True"
-                                          SizeChanged="TexturePreviewViewport_SizeChanged"
-                                          MouseWheel="D3D11TextureViewer_PreviewMouseWheel"
-                                          MouseEnter="TexturePreviewViewport_MouseEnter"
-                                          Focusable="True">
+                                          SizeChanged="TexturePreviewViewport_SizeChanged">
                                         <!-- D3D11 Texture Viewer (GPU-accelerated, default) -->
                                         <viewer:D3D11TextureViewerControl x:Name="D3D11TextureViewer"
-                                                                           Visibility="Visible" />
+                                                                           Visibility="Visible"
+                                                                           MouseWheel="D3D11TextureViewer_MouseWheel" />
 
                                         <!-- WPF Image Viewer (software fallback, legacy mode) -->
                                         <Image x:Name="WpfTexturePreviewImage"

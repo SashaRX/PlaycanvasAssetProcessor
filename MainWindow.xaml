@@ -378,7 +378,7 @@
                                 <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="100" MinWidth="80"/>
                                 <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="70" MinWidth="60"/>
                                 <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="120" MinWidth="90"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="200" MinWidth="150" SortMemberPath="Status">
+                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -473,7 +473,7 @@
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60"/>
                                 <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100" MinWidth="80"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="80" MinWidth="60"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="200" MinWidth="150" SortMemberPath="Status">
+                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>

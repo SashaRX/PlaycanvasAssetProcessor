@@ -95,6 +95,7 @@ namespace AssetProcessor {
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
+        private readonly IHttpClientFactory httpClientFactory;
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
@@ -178,8 +179,9 @@ namespace AssetProcessor {
 
         private readonly MainViewModel viewModel;
 
-        public MainWindow(IPlayCanvasService playCanvasService, MainViewModel viewModel) {
+        public MainWindow(IPlayCanvasService playCanvasService, IHttpClientFactory httpClientFactory, MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
+            this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 
             InitializeComponent();
@@ -227,8 +229,6 @@ namespace AssetProcessor {
 
             DataContext = viewModel;
 
-            // Force layout update to prevent overlapping rows issue with virtualization
-            TexturesDataGrid.UpdateLayout();
             this.Closing += MainWindow_Closing;
             //LoadLastSettings();
 
@@ -290,10 +290,13 @@ namespace AssetProcessor {
             // D3D11TextureViewerControl will handle resize automatically via OnRenderSizeChanged
         }
 
-        private void TexturePreviewViewport_MouseEnter(object sender, MouseEventArgs e) {
-            // Focus the Grid when mouse enters so MouseWheel events are received
-            TexturePreviewViewport?.Focus();
-        }
+        // Mouse wheel zoom handler for D3D11 viewer
+        // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
+        // CRITICAL: e.GetPosition() ТОЖЕ БАГОВАННЫЙ для HwndHost! Используем Mouse.GetPosition()!
+        private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (!isUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
+                return; // Let event bubble for scrolling
+            }
 
         private void TexturePreviewViewport_MouseLeave(object sender, MouseEventArgs e) {
             if (TexturePreviewViewport == null) {
@@ -941,9 +944,6 @@ namespace AssetProcessor {
         // Removed: Old TexturePreviewViewport_SizeChanged and TexturePreviewImage_SizeChanged (now handled by D3D11)
 
         // LEGACY: Mouse wheel zoom removed
-        private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // Disabled for fallback mode
-        }
 
         // LEGACY: Zoom/Pan controls removed - fallback to simple preview
         // private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -3790,10 +3790,10 @@ namespace AssetProcessor {
 
                         if (resource is MaterialResource materialResource) {
                             // Обработка загрузки материалов по ID
-                            await DownloadMaterialByIdAsync(materialResource);
+                            await DownloadMaterialByIdAsync(materialResource, playCanvasService);
                         } else {
                             // Обработка загрузки файлов (текстур и моделей)
-                            await DownloadFileAsync(resource);
+                            await DownloadFileAsync(resource, httpClientFactory);
                         }
                         break;
                     } catch (Exception ex) {
@@ -3810,13 +3810,12 @@ namespace AssetProcessor {
 
         }
 
-        private static async Task DownloadMaterialByIdAsync(MaterialResource materialResource) {
+        private static async Task DownloadMaterialByIdAsync(MaterialResource materialResource, IPlayCanvasService playCanvasService) {
             const int maxRetries = 5;
             const int delayMilliseconds = 2000;
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    using PlayCanvasService playCanvasService = new();
                     string? apiKey = GetDecryptedApiKey();
                     PlayCanvasAssetDetail materialJson = await playCanvasService.GetAssetByIdAsync(materialResource.ID.ToString(), apiKey ?? "", default)
                         ?? throw new Exception($"Failed to get material JSON for ID: {materialResource.ID}");
@@ -3846,7 +3845,7 @@ namespace AssetProcessor {
             }
         }
 
-        private static async Task DownloadFileAsync(BaseResource resource) {
+        private static async Task DownloadFileAsync(BaseResource resource, IHttpClientFactory httpClientFactory) {
             if (resource == null || string.IsNullOrEmpty(resource.Path)) { // Если путь к файлу не указан, создаем его в папке проекта
                 return;
             }
@@ -3856,7 +3855,7 @@ namespace AssetProcessor {
 
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    using HttpClient client = new();
+                    HttpClient client = httpClientFactory.CreateClient("Downloads");
                     string? apiKey = GetDecryptedApiKey();
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey ?? "");
 
@@ -3978,17 +3977,30 @@ namespace AssetProcessor {
                         ProgressTextBlock.Text = $"0/{assetCount}";
                     });
 
+                    // Create throttled progress to batch UI updates (reduces Dispatcher calls from thousands to dozens)
+                    int processedCount = 0;
+                    var progress = new Progress<int>(increment => {
+                        int newCount = Interlocked.Add(ref processedCount, increment);
+                        Dispatcher.InvokeAsync(() => {
+                            ProgressBar.Value = newCount;
+                            ProgressTextBlock.Text = $"{newCount}/{assetCount}";
+                        });
+                    });
+                    using var throttledProgress = new ThrottledProgress<int>(progress, intervalMs: 100);
+
                     IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
                     {
                         await ProcessAsset(asset, 0, cancellationToken);  // Передаем аргумент cancellationToken
-                        await Dispatcher.InvokeAsync(() =>
-                        {
-                            ProgressBar.Value++;
-                            ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
-                        });
+                        throttledProgress.Report(1); // Report increment, will be batched
                     }));
 
                     await Task.WhenAll(tasks);
+
+                    // Final flush to ensure progress shows 100%
+                    await Dispatcher.InvokeAsync(() => {
+                        ProgressBar.Value = assetCount;
+                        ProgressTextBlock.Text = $"{assetCount}/{assetCount}";
+                    });
 
                     RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
                     MainWindowHelpers.LogInfo("=== TryConnect COMPLETED ===");
@@ -4411,17 +4423,31 @@ namespace AssetProcessor {
                 ProgressTextBlock.Text = $"0/{assetCount}";
             });
 
+            // Create throttled progress to batch UI updates (reduces Dispatcher calls from thousands to dozens)
+            int processedCount = 0;
+            var progress = new Progress<int>(increment => {
+                int newCount = Interlocked.Add(ref processedCount, increment);
+                Dispatcher.InvokeAsync(() => {
+                    ProgressBar.Value = newCount;
+                    ProgressTextBlock.Text = $"{newCount}/{assetCount}";
+                });
+            });
+            using var throttledProgress = new ThrottledProgress<int>(progress, intervalMs: 100);
+
             IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
             {
                 await ProcessAsset(asset, 0, CancellationToken.None); // Используем токен отмены по умолчанию
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    ProgressBar.Value++;
-                    ProgressTextBlock.Text = $"{ProgressBar.Value}/{assetCount}";
-                });
+                throttledProgress.Report(1); // Report increment, will be batched
             }));
 
             await Task.WhenAll(tasks);
+
+            // Final flush to ensure progress shows 100%
+            await Dispatcher.InvokeAsync(() => {
+                ProgressBar.Value = assetCount;
+                ProgressTextBlock.Text = $"{assetCount}/{assetCount}";
+            });
+
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
 
             // Детектируем и загружаем локальные ORM текстуры
@@ -4595,6 +4621,13 @@ namespace AssetProcessor {
 
             // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
             // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
+
+            // Force DataGrid layout update to ensure Width="*" columns fill available space
+            Dispatcher.InvokeAsync(() => {
+                TexturesDataGrid?.UpdateLayout();
+                ModelsDataGrid?.UpdateLayout();
+                MaterialsDataGrid?.UpdateLayout();
+            }, DispatcherPriority.Loaded);
         }
 
         private bool IsSupportedTextureFormat(string extension) {

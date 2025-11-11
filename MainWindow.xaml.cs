@@ -288,14 +288,16 @@ namespace AssetProcessor {
             // D3D11TextureViewerControl will handle resize automatically via OnRenderSizeChanged
         }
 
-        // Mouse wheel zoom handler for D3D11 viewer - now attached directly to the control
-        private void D3D11TextureViewer_MouseWheel(object sender, MouseWheelEventArgs e) {
-            // Event is attached directly to D3D11TextureViewer, so no position checking needed
-            // Only process if D3D11 renderer is active (not in WPF fallback mode)
-            if (isUsingD3D11Renderer && D3D11TextureViewer != null) {
+        // Mouse wheel zoom handler for D3D11 viewer
+        // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
+        // and check IsMouseOver to see if mouse is actually over the control
+        private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            // Only process if D3D11 renderer is active AND mouse is over the D3D11TextureViewer
+            if (isUsingD3D11Renderer && D3D11TextureViewer != null && D3D11TextureViewer.IsMouseOver) {
                 D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
-                e.Handled = true; // Prevent event from bubbling to parent scrollers
+                e.Handled = true; // Prevent event from bubbling to other scrollers
             }
+            // If mouse is NOT over D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl
@@ -904,9 +906,6 @@ namespace AssetProcessor {
         // Removed: Old TexturePreviewViewport_SizeChanged and TexturePreviewImage_SizeChanged (now handled by D3D11)
 
         // LEGACY: Mouse wheel zoom removed
-        private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // Disabled for fallback mode
-        }
 
         // LEGACY: Zoom/Pan controls removed - fallback to simple preview
         // private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {

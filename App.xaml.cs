@@ -45,6 +45,14 @@ namespace AssetProcessor {
                     MaxConnectionsPerServer = 50
                 });
 
+            // Configure named HttpClient for downloads
+            services.AddHttpClient("Downloads")
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+                    MaxConnectionsPerServer = 50
+                });
+
             services.AddSingleton<MainViewModel>();
             services.AddTransient<MainWindow>();
         }

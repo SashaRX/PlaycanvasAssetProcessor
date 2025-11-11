@@ -294,7 +294,8 @@
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.VirtualizationMode="Standard"
                                 EnableRowVirtualization="True"
-                                EnableColumnVirtualization="False">
+                                EnableColumnVirtualization="False"
+                                ScrollViewer.CanContentScroll="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -432,7 +433,8 @@
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Standard"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="False">
+                              EnableColumnVirtualization="False"
+                              ScrollViewer.CanContentScroll="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
@@ -512,7 +514,8 @@
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Standard"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="False">
+                              EnableColumnVirtualization="False"
+                              ScrollViewer.CanContentScroll="False">
                         <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
@@ -646,10 +649,10 @@
                                           Background="#FF333333"
                                           ClipToBounds="True"
                                           SizeChanged="TexturePreviewViewport_SizeChanged"
-                                          MouseWheel="D3D11TextureViewer_PreviewMouseWheel"
-                                          MouseEnter="TexturePreviewViewport_MouseEnter"
-                                          Focusable="True">
+                                          PreviewMouseWheel="TexturePreviewViewport_PreviewMouseWheel">
                                         <!-- D3D11 Texture Viewer (GPU-accelerated, default) -->
+                                        <!-- HwndHost does NOT receive WPF MouseWheel events - handle on parent Grid -->
+                                        <!-- Bounds check happens directly in PreviewMouseWheel - no need for MouseMove/MouseLeave -->
                                         <viewer:D3D11TextureViewerControl x:Name="D3D11TextureViewer"
                                                                            Visibility="Visible" />
 

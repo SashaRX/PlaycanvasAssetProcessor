@@ -295,6 +295,23 @@ namespace AssetProcessor {
             TexturePreviewViewport?.Focus();
         }
 
+        private void TexturePreviewViewport_MouseLeave(object sender, MouseEventArgs e) {
+            if (TexturePreviewViewport == null) {
+                return;
+            }
+
+            if (!TexturePreviewViewport.IsKeyboardFocusWithin) {
+                return;
+            }
+
+            DependencyObject focusScope = FocusManager.GetFocusScope(TexturePreviewViewport);
+            if (focusScope != null) {
+                FocusManager.SetFocusedElement(focusScope, null);
+            }
+
+            Keyboard.ClearFocus();
+        }
+
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             if (!isUsingD3D11Renderer) {

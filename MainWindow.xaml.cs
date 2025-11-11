@@ -141,6 +141,8 @@ namespace AssetProcessor {
         // Legacy PNG extraction removed
         // Track which preview renderer is currently active
         private bool isUsingD3D11Renderer = true;
+        // Track if mouse is currently over D3D11 viewer (for zoom scope)
+        private bool isMouseOverD3D11Viewer = false;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private sealed class KtxPreviewCacheEntry {
@@ -292,25 +294,23 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // and check if mouse position is actually inside the D3D11TextureViewer bounds
+        // Use MouseEnter/MouseLeave tracking instead of GetPosition (more reliable for HwndHost)
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // Only process if D3D11 renderer is active
-            if (!isUsingD3D11Renderer || D3D11TextureViewer == null) {
-                return; // Let event bubble for scrolling
-            }
-
-            // Get mouse position relative to D3D11TextureViewer control
-            Point mousePos = e.GetPosition(D3D11TextureViewer);
-
-            // Check if mouse is actually within the bounds of D3D11TextureViewer
-            bool isWithinBounds = mousePos.X >= 0 && mousePos.X < D3D11TextureViewer.ActualWidth &&
-                                  mousePos.Y >= 0 && mousePos.Y < D3D11TextureViewer.ActualHeight;
-
-            if (isWithinBounds) {
+            // Only process if D3D11 renderer is active AND mouse is over D3D11TextureViewer
+            if (isUsingD3D11Renderer && D3D11TextureViewer != null && isMouseOverD3D11Viewer) {
                 D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
                 e.Handled = true; // Prevent event from bubbling to other scrollers
             }
-            // If mouse is NOT within D3D11TextureViewer bounds, event will bubble up normally (e.g., for scrolling lists)
+            // If mouse is NOT over D3D11TextureViewer, event will bubble up normally (e.g., for scrolling lists)
+        }
+
+        // Track mouse enter/leave for D3D11 viewer to properly scope zoom behavior
+        private void D3D11TextureViewer_MouseEnter(object sender, MouseEventArgs e) {
+            isMouseOverD3D11Viewer = true;
+        }
+
+        private void D3D11TextureViewer_MouseLeave(object sender, MouseEventArgs e) {
+            isMouseOverD3D11Viewer = false;
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl

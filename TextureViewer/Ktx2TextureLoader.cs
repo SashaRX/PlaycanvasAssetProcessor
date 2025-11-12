@@ -19,6 +19,12 @@ public static class Ktx2TextureLoader {
     public static TextureData LoadFromFile(string filePath) {
         logger.Info($"Loading KTX2 texture from: {filePath}");
 
+        // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
+        if (!LibKtxNative.LoadKtxDll()) {
+            logger.Error("Failed to load ktx.dll. Cannot load KTX2 files.");
+            throw new DllNotFoundException("Unable to load ktx.dll. Please ensure KTX-Software is installed and ktx.dll is available.");
+        }
+
         // Create texture from file with Key-Value Data support
         uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
                           (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
@@ -204,6 +210,12 @@ public static class Ktx2TextureLoader {
     /// </summary>
     public static TextureData LoadFromMemory(byte[] data) {
         logger.Debug($"Loading KTX2 texture from memory ({data.Length} bytes)");
+
+        // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
+        if (!LibKtxNative.LoadKtxDll()) {
+            logger.Error("Failed to load ktx.dll. Cannot load KTX2 files.");
+            throw new DllNotFoundException("Unable to load ktx.dll. Please ensure KTX-Software is installed and ktx.dll is available.");
+        }
 
         IntPtr dataPtr = Marshal.AllocHGlobal(data.Length);
         try {

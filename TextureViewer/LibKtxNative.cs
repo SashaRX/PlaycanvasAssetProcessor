@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using NLog;
 
 namespace AssetProcessor.TextureViewer;
 
@@ -9,6 +11,8 @@ namespace AssetProcessor.TextureViewer;
 /// Requires ktx.dll or libktx.dll to be available.
 /// </summary>
 internal static class LibKtxNative {
+    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+    
     // Try different DLL names (ktx.dll from vcpkg, libktx.dll from official builds)
     private const string DllName = "ktx";
 
@@ -35,31 +39,116 @@ internal static class LibKtxNative {
             searchPaths.Add(Path.Combine(ktxDirectory, "ktx.dll"));
         }
 
-        // 3. Пробуем загрузить из каждого места
+        // 3. В директории bin установки KTX-Software (стандартные пути)
+        var ktxSoftwarePaths = new[] {
+            @"C:\Program Files\KTX-Software\bin\ktx.dll",
+            @"C:\Program Files (x86)\KTX-Software\bin\ktx.dll",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "KTX-Software", "bin", "ktx.dll"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "KTX-Software", "bin", "ktx.dll")
+        };
+        searchPaths.AddRange(ktxSoftwarePaths);
+
+        // 4. В директории, где находится ktx.exe (если он в PATH)
+        try {
+            var ktxExePath = FindKtxExecutable();
+            if (!string.IsNullOrEmpty(ktxExePath)) {
+                var ktxExeDir = Path.GetDirectoryName(ktxExePath);
+                if (!string.IsNullOrEmpty(ktxExeDir)) {
+                    searchPaths.Add(Path.Combine(ktxExeDir, "ktx.dll"));
+                    // Также пробуем libktx.dll (альтернативное имя)
+                    searchPaths.Add(Path.Combine(ktxExeDir, "libktx.dll"));
+                }
+            }
+        } catch {
+            // Игнорируем ошибки поиска ktx.exe
+        }
+
+        // 5. Пробуем загрузить из каждого места
         foreach (var ktxDllPath in searchPaths) {
-            Console.WriteLine($"[LibKtxNative] Checking: {ktxDllPath}");
+            logger.Debug($"[LibKtxNative] Checking: {ktxDllPath}");
 
             if (!File.Exists(ktxDllPath)) {
-                Console.WriteLine($"[LibKtxNative]   File not found");
+                logger.Debug($"[LibKtxNative]   File not found");
                 continue;
             }
 
-            Console.WriteLine($"[LibKtxNative]   File exists, attempting LoadLibrary...");
+            logger.Debug($"[LibKtxNative]   File exists, attempting LoadLibrary...");
+            
+            // Добавляем директорию в путь поиска DLL для P/Invoke
+            var dllDirectory = Path.GetDirectoryName(ktxDllPath);
+            if (!string.IsNullOrEmpty(dllDirectory)) {
+                SetDllDirectory(dllDirectory);
+                logger.Debug($"[LibKtxNative]   Added to DLL search path: {dllDirectory}");
+            }
+            
             _ktxHandle = LoadLibrary(ktxDllPath);
 
             if (_ktxHandle != IntPtr.Zero) {
-                Console.WriteLine($"[LibKtxNative]   ✓ Loaded successfully (handle: 0x{_ktxHandle:X})");
+                logger.Info($"[LibKtxNative]   ✓ Loaded successfully from: {ktxDllPath} (handle: 0x{_ktxHandle:X})");
                 _dllLoaded = true;
                 _loadedFrom = ktxDllPath;
                 return true;
             } else {
                 var error = Marshal.GetLastWin32Error();
-                Console.WriteLine($"[LibKtxNative]   ✗ LoadLibrary failed (Win32 error: {error})");
+                logger.Warn($"[LibKtxNative]   ✗ LoadLibrary failed for {ktxDllPath} (Win32 error: {error})");
+                // Сбрасываем SetDllDirectory при ошибке
+                SetDllDirectory(null);
             }
         }
 
-        Console.WriteLine($"[LibKtxNative] Failed to load ktx.dll from any location");
+        logger.Error($"[LibKtxNative] Failed to load ktx.dll from any location. Searched in:");
+        logger.Error($"  - Executable directory: {exeDirectory}");
+        if (!string.IsNullOrEmpty(ktxDirectory)) {
+            logger.Error($"  - Specified directory: {ktxDirectory}");
+        }
+        logger.Error($"  - Standard KTX-Software installation paths");
+        logger.Error($"  - Directory containing ktx.exe (if found)");
+        logger.Error($"Please ensure KTX-Software is installed and ktx.dll is available in one of these locations.");
         return false;
+    }
+
+    /// <summary>
+    /// Находит путь к ktx.exe в системе
+    /// </summary>
+    private static string? FindKtxExecutable() {
+        var searchPaths = new[] {
+            "ktx.exe",
+            "ktx",
+            @"C:\Program Files\KTX-Software\bin\ktx.exe",
+            @"C:\Program Files (x86)\KTX-Software\bin\ktx.exe"
+        };
+
+        foreach (var path in searchPaths) {
+            try {
+                if (Path.IsPathRooted(path)) {
+                    if (File.Exists(path)) {
+                        return path;
+                    }
+                } else {
+                    // Пробуем найти в PATH
+                    var psi = new System.Diagnostics.ProcessStartInfo {
+                        FileName = path,
+                        Arguments = "--version",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using var process = System.Diagnostics.Process.Start(psi);
+                    if (process != null) {
+                        process.WaitForExit();
+                        if (process.ExitCode == 0 || process.ExitCode == 1) {
+                            return path;
+                        }
+                    }
+                }
+            } catch {
+                // Продолжаем поиск
+            }
+        }
+
+        return null;
     }
 
     private static string? _loadedFrom = null;
@@ -80,6 +169,10 @@ internal static class LibKtxNative {
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool FreeLibrary(IntPtr hModule);
+
+    // SetDllDirectory для добавления директории в путь поиска DLL
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool SetDllDirectory(string? lpPathName);
 
     #region Enums
 

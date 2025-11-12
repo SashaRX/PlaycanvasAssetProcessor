@@ -2829,7 +2829,14 @@ namespace AssetProcessor {
                         var contextMenuSetter = originalRowStyle.Setters.OfType<Setter>()
                             .FirstOrDefault(s => s.Property == DataGridRow.ContextMenuProperty);
                         if (contextMenuSetter != null) {
+                            // Если ContextMenu задан через Setter, используем его значение
                             simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuSetter.Value));
+                        } else {
+                            // Если ContextMenu не найден в Setters, пытаемся получить из ресурсов
+                            var contextMenuResource = dataGrid.TryFindResource("TextureRowContextMenu");
+                            if (contextMenuResource != null) {
+                                simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuResource));
+                            }
                         }
                         dataGrid.RowStyle = simpleRowStyle;
                         

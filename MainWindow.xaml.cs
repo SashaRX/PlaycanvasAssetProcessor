@@ -2936,16 +2936,23 @@ namespace AssetProcessor {
         /// </summary>
         private async Task CheckProjectState() {
             try {
+                logger.Info("CheckProjectState: Starting");
+                MainWindowHelpers.LogInfo("CheckProjectState: Starting project state check");
+                
                 if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
+                    logger.Warn("CheckProjectState: projectFolderPath or projectName is empty");
+                    MainWindowHelpers.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
                 // Проверяем наличие assets_list.json
                 string assetsListPath = Path.Combine(projectFolderPath, "assets_list.json");
+                logger.Info($"CheckProjectState: Checking for assets_list.json at {assetsListPath}");
 
                 if (!File.Exists(assetsListPath)) {
                     // Проект не скачан - нужна загрузка
+                    logger.Info("CheckProjectState: Project not downloaded yet - assets_list.json not found");
                     MainWindowHelpers.LogInfo("Project not downloaded yet - assets_list.json not found");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
@@ -2958,18 +2965,22 @@ namespace AssetProcessor {
 
                 // Проверяем hash для определения обновлений
                 MainWindowHelpers.LogInfo("Checking for updates...");
+                logger.Info("CheckProjectState: Checking for updates on server");
                 bool hasUpdates = await CheckForUpdates();
 
                 if (hasUpdates) {
                     // Есть обновления на сервере
-                    logger.Info("CheckProjectState: Updates available on server");
+                    logger.Info("CheckProjectState: Updates available on server - setting button to Download");
+                    MainWindowHelpers.LogInfo("CheckProjectState: Updates available on server");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
                     // Проект актуален
-                    logger.Info("CheckProjectState: Project is up to date");
+                    logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
+                    MainWindowHelpers.LogInfo("CheckProjectState: Project is up to date - setting button to Refresh");
                     UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {
+                logger.Error(ex, "Error in CheckProjectState");
                 MainWindowHelpers.LogError($"Error checking project state: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
@@ -3756,8 +3767,11 @@ namespace AssetProcessor {
 
         #region Download
 
-        private async void Download(object? sender, RoutedEventArgs? e) {
+        private async Task Download(object? sender, RoutedEventArgs? e) {
             try {
+                logger.Info("Download: Starting download process");
+                MainWindowHelpers.LogInfo("Download: Starting download process");
+                
                 List<BaseResource> selectedResources = [.. viewModel.Textures.Where(t => t.Status == "On Server" ||
                                                             t.Status == "Size Mismatch" ||
                                                             t.Status == "Corrupted" ||
@@ -3779,12 +3793,26 @@ namespace AssetProcessor {
                                                                              m.Status == "Error").Cast<BaseResource>())
                                                 .OrderBy(r => r.Name)];
 
+                logger.Info($"Download: Found {selectedResources.Count} resources to download");
+                MainWindowHelpers.LogInfo($"Download: Found {selectedResources.Count} resources to download");
+                
+                if (selectedResources.Count == 0) {
+                    logger.Info("Download: No resources to download");
+                    MainWindowHelpers.LogInfo("Download: No resources to download - all files are already downloaded");
+                    return;
+                }
+
                 IEnumerable<Task> downloadTasks = selectedResources.Select(resource => DownloadResourceAsync(resource));
                 await Task.WhenAll(downloadTasks);
 
-                // Пересчитываем индексы после завершения загрузки
-                RecalculateIndices();
+                logger.Info("Download: All downloads completed");
+                MainWindowHelpers.LogInfo("Download: All downloads completed");
+
+                // НЕ вызываем RecalculateIndices() здесь, так как после этого будет вызван
+                // CheckProjectState() -> LoadAssetsFromJsonFileAsync() -> ProcessAssetsFromJson(),
+                // который уже вызовет RecalculateIndices() в конце. Это предотвращает множественную перерисовку.
             } catch (Exception ex) {
+                logger.Error(ex, "Error in Download");
                 MessageBox.Show($"Error: {ex.Message}");
                 MainWindowHelpers.LogError($"Error: {ex}");
             }
@@ -4015,6 +4043,7 @@ namespace AssetProcessor {
                     });
 
                     RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
+                    DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
                     MainWindowHelpers.LogInfo("=== TryConnect COMPLETED ===");
                 } else {
                     UpdateConnectionStatus(false, "Failed to connect");
@@ -4461,6 +4490,7 @@ namespace AssetProcessor {
             });
 
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
+            DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
 
             // Детектируем и загружаем локальные ORM текстуры
             await DetectAndLoadORMTextures();
@@ -4553,6 +4583,7 @@ namespace AssetProcessor {
                     MainWindowHelpers.LogInfo($"=== Detected {ormCount} ORM textures ===");
                     Dispatcher.Invoke(() => {
                         RecalculateIndices(); // Recalculate indices after adding ORM textures
+                        DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
                     });
                 } else {
                     MainWindowHelpers.LogInfo("  No ORM textures found");
@@ -4634,11 +4665,26 @@ namespace AssetProcessor {
             // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
             // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
 
-            // Force DataGrid layout update to ensure Width="*" columns fill available space
+            // UpdateLayout() вызывается только один раз в конце через DeferUpdateLayout()
+            // чтобы избежать множественных перерисовок при последовательных вызовах RecalculateIndices()
+        }
+
+        private bool _layoutUpdatePending = false;
+
+        /// <summary>
+        /// Отложенное обновление layout DataGrid для предотвращения множественных перерисовок
+        /// </summary>
+        private void DeferUpdateLayout() {
+            if (_layoutUpdatePending) {
+                return; // Уже запланировано обновление
+            }
+
+            _layoutUpdatePending = true;
             Dispatcher.InvokeAsync(() => {
                 TexturesDataGrid?.UpdateLayout();
                 ModelsDataGrid?.UpdateLayout();
                 MaterialsDataGrid?.UpdateLayout();
+                _layoutUpdatePending = false;
             }, DispatcherPriority.Loaded);
         }
 
@@ -4666,10 +4712,18 @@ namespace AssetProcessor {
         /// Обновляет текст и состояние динамической кнопки подключения
         /// </summary>
         private void UpdateConnectionButton(ConnectionState newState) {
+            logger.Info($"UpdateConnectionButton: Changing state from {currentConnectionState} to {newState}");
+            MainWindowHelpers.LogInfo($"UpdateConnectionButton: Changing state to {newState}");
             currentConnectionState = newState;
 
             Dispatcher.Invoke(() => {
                 bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+                logger.Info($"UpdateConnectionButton: hasSelection={hasSelection}, DynamicConnectionButton is null: {DynamicConnectionButton == null}");
+
+                if (DynamicConnectionButton == null) {
+                    logger.Warn("UpdateConnectionButton: DynamicConnectionButton is null!");
+                    return;
+                }
 
                 switch (currentConnectionState) {
                     case ConnectionState.Disconnected:
@@ -4677,6 +4731,7 @@ namespace AssetProcessor {
                         DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
                         DynamicConnectionButton.IsEnabled = true;
                         DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)); // Grey
+                        logger.Info("UpdateConnectionButton: Set to Connect");
                         break;
 
                     case ConnectionState.UpToDate:
@@ -4684,6 +4739,8 @@ namespace AssetProcessor {
                         DynamicConnectionButton.ToolTip = "Check for updates from PlayCanvas server";
                         DynamicConnectionButton.IsEnabled = hasSelection;
                         DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
+                        logger.Info($"UpdateConnectionButton: Set to Refresh (enabled={hasSelection})");
+                        MainWindowHelpers.LogInfo($"UpdateConnectionButton: Button set to Refresh, enabled={hasSelection}");
                         break;
 
                     case ConnectionState.NeedsDownload:
@@ -4691,6 +4748,8 @@ namespace AssetProcessor {
                         DynamicConnectionButton.ToolTip = "Download assets from PlayCanvas (list + files)";
                         DynamicConnectionButton.IsEnabled = hasSelection;
                         DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
+                        logger.Info($"UpdateConnectionButton: Set to Download (enabled={hasSelection})");
+                        MainWindowHelpers.LogInfo($"UpdateConnectionButton: Button set to Download, enabled={hasSelection}");
                         break;
                 }
             });
@@ -4700,21 +4759,36 @@ namespace AssetProcessor {
         /// Обработчик клика по динамической кнопке подключения
         /// </summary>
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
-            switch (currentConnectionState) {
-                case ConnectionState.Disconnected:
-                    // Подключаемся к PlayCanvas и загружаем список проектов
-                    ConnectToPlayCanvas();
-                    break;
+            logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
+            MainWindowHelpers.LogInfo($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
+            
+            try {
+                switch (currentConnectionState) {
+                    case ConnectionState.Disconnected:
+                        // Подключаемся к PlayCanvas и загружаем список проектов
+                        logger.Info("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
+                        MainWindowHelpers.LogInfo("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
+                        ConnectToPlayCanvas();
+                        break;
 
-                case ConnectionState.UpToDate:
-                    // Проверяем наличие обновлений на сервере
-                    await RefreshFromServer();
-                    break;
+                    case ConnectionState.UpToDate:
+                        // Проверяем наличие обновлений на сервере
+                        logger.Info("DynamicConnectionButton_Click: Calling RefreshFromServer");
+                        MainWindowHelpers.LogInfo("DynamicConnectionButton_Click: Calling RefreshFromServer");
+                        await RefreshFromServer();
+                        break;
 
-                case ConnectionState.NeedsDownload:
-                    // Скачиваем список ассетов + файлы
-                    await DownloadFromServer();
-                    break;
+                    case ConnectionState.NeedsDownload:
+                        // Скачиваем список ассетов + файлы
+                        logger.Info("DynamicConnectionButton_Click: Calling DownloadFromServer");
+                        MainWindowHelpers.LogInfo("DynamicConnectionButton_Click: Calling DownloadFromServer");
+                        await DownloadFromServer();
+                        break;
+                }
+            } catch (Exception ex) {
+                logger.Error(ex, "Error in DynamicConnectionButton_Click");
+                MainWindowHelpers.LogError($"Error in DynamicConnectionButton_Click: {ex}");
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -4757,25 +4831,53 @@ namespace AssetProcessor {
         /// </summary>
         private async Task DownloadFromServer() {
             try {
+                logger.Info("DownloadFromServer: Starting download");
+                MainWindowHelpers.LogInfo("DownloadFromServer: Starting download from server");
                 CancelButton.IsEnabled = true;
                 DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
                     // Загружаем список ассетов (assets_list.json) с сервера
+                    logger.Info("DownloadFromServer: Loading assets list from server");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Loading assets list from server");
                     await TryConnect(cancellationTokenSource.Token);
 
                     // Теперь скачиваем файлы (текстуры, модели, материалы)
-                    Download(null, null);
+                    logger.Info("DownloadFromServer: Starting file downloads");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Starting file downloads");
+                    await Download(null, null);
+                    logger.Info("DownloadFromServer: File downloads completed");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: File downloads completed");
 
-                    // После успешной загрузки переключаем на Refresh
-                    UpdateConnectionButton(ConnectionState.UpToDate);
+                    // После успешной загрузки обновляем статус кнопки без перезагрузки данных
+                    // НЕ вызываем CheckProjectState(), так как он перезагрузит данные из JSON и сбросит статусы
+                    // Вместо этого просто проверяем наличие обновлений на сервере
+                    logger.Info("DownloadFromServer: Checking for updates on server after download");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Checking for updates on server after download");
+                    bool hasUpdates = await CheckForUpdates();
+                    
+                    if (hasUpdates) {
+                        logger.Info("DownloadFromServer: Updates still available - setting button to Download");
+                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    } else {
+                        logger.Info("DownloadFromServer: Project is up to date - setting button to Refresh");
+                        MainWindowHelpers.LogInfo("DownloadFromServer: Project is up to date - setting button to Refresh");
+                        UpdateConnectionButton(ConnectionState.UpToDate);
+                    }
+                    logger.Info("DownloadFromServer: Button state updated");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Button state updated");
+                } else {
+                    logger.Warn("DownloadFromServer: cancellationTokenSource is null!");
+                    MainWindowHelpers.LogError("DownloadFromServer: cancellationTokenSource is null!");
                 }
             } catch (Exception ex) {
+                logger.Error(ex, "Error in DownloadFromServer");
                 MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 MainWindowHelpers.LogError($"Error in DownloadFromServer: {ex}");
             } finally {
                 CancelButton.IsEnabled = false;
                 DynamicConnectionButton.IsEnabled = true;
+                logger.Info("DownloadFromServer: Completed");
             }
         }
 

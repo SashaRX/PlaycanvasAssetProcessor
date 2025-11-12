@@ -147,12 +147,12 @@
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <!-- Dynamic Action Button -->
                     <Button x:Name="DynamicConnectionButton"
-                            Content="{Binding ConnectionButtonContent}"
-                            Command="{Binding PrimaryActionCommand}"
+                            Content="Connect"
+                            Click="DynamicConnectionButton_Click"
                             Margin="0,2,0,4"
                             Height="24"
                             FontWeight="Bold"
-                            ToolTip="{Binding ConnectionButtonToolTip}"/>
+                            ToolTip="Connect to PlayCanvas and load projects"/>
 
                     <!-- Project and Branch Selection -->
                     <StackPanel Orientation="Horizontal">

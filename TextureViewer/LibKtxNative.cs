@@ -18,6 +18,13 @@ internal static class LibKtxNative {
 
     private static bool _dllLoaded = false;
     private static IntPtr _ktxHandle = IntPtr.Zero;
+    private static bool _hasKtxTexture2Destroy = false;
+    
+    // Делегаты для динамической загрузки функций
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void KtxTextureDestroyDelegate(IntPtr texture);
+    private static KtxTextureDestroyDelegate? _ktxTexture2DestroyDelegate;
+    private static KtxTextureDestroyDelegate? _ktxTextureDestroyDelegate;
 
     /// <summary>
     /// Загружает ktx.dll из указанной директории или рядом с exe
@@ -85,6 +92,26 @@ internal static class LibKtxNative {
 
             if (_ktxHandle != IntPtr.Zero) {
                 logger.Info($"[LibKtxNative]   ✓ Loaded successfully from: {ktxDllPath} (handle: 0x{_ktxHandle:X})");
+                
+                // Проверяем наличие функций и создаем делегаты
+                IntPtr procAddr2 = GetProcAddress(_ktxHandle, "ktxTexture2_Destroy");
+                IntPtr procAddr1 = GetProcAddress(_ktxHandle, "ktxTexture_Destroy");
+                
+                if (procAddr2 != IntPtr.Zero) {
+                    _hasKtxTexture2Destroy = true;
+                    _ktxTexture2DestroyDelegate = Marshal.GetDelegateForFunctionPointer<KtxTextureDestroyDelegate>(procAddr2);
+                    logger.Debug("[LibKtxNative]   ktxTexture2_Destroy found and loaded");
+                } else {
+                    logger.Debug("[LibKtxNative]   ktxTexture2_Destroy not found");
+                }
+                
+                if (procAddr1 != IntPtr.Zero) {
+                    _ktxTextureDestroyDelegate = Marshal.GetDelegateForFunctionPointer<KtxTextureDestroyDelegate>(procAddr1);
+                    logger.Debug("[LibKtxNative]   ktxTexture_Destroy found and loaded");
+                } else {
+                    logger.Warn("[LibKtxNative]   ktxTexture_Destroy not found - texture cleanup may fail!");
+                }
+                
                 _dllLoaded = true;
                 _loadedFrom = ktxDllPath;
                 return true;
@@ -173,6 +200,10 @@ internal static class LibKtxNative {
     // SetDllDirectory для добавления директории в путь поиска DLL
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool SetDllDirectory(string? lpPathName);
+
+    // GetProcAddress для проверки наличия функции в DLL
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
+    private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
 
     #region Enums
 
@@ -414,9 +445,24 @@ internal static class LibKtxNative {
 
     /// <summary>
     /// Destroy a KTX2 texture and free memory.
+    /// Uses dynamically loaded function delegates to avoid EntryPointNotFoundException.
     /// </summary>
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void ktxTexture2_Destroy(IntPtr texture);
+    public static void ktxTexture2_Destroy(IntPtr texture) {
+        if (texture == IntPtr.Zero) {
+            return;
+        }
+        
+        if (_ktxTexture2DestroyDelegate != null) {
+            _ktxTexture2DestroyDelegate(texture);
+        } else if (_ktxTextureDestroyDelegate != null) {
+            // Fallback to base class destroy method (ktxTexture2 inherits from ktxTexture)
+            logger.Debug("Using ktxTexture_Destroy (ktxTexture2_Destroy not available)");
+            _ktxTextureDestroyDelegate(texture);
+        } else {
+            logger.Error("Neither ktxTexture2_Destroy nor ktxTexture_Destroy available - cannot free texture memory!");
+            // Memory leak warning, but we can't do anything about it
+        }
+    }
 
     /// <summary>
     /// Check if texture needs transcoding (is Basis Universal compressed).

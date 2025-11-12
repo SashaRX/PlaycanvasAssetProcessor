@@ -292,7 +292,7 @@
                                 CanUserReorderColumns="True"
                                 Background="#FFD6D6D6"
                                 VirtualizingPanel.IsVirtualizing="True"
-                                VirtualizingPanel.VirtualizationMode="Standard"
+                                VirtualizingPanel.VirtualizationMode="Recycling"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="False">
@@ -309,15 +309,28 @@
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
                                     <Style.Triggers>
+                                        <!-- ВСЕ выделенные текстуры: СИНИЙ ФОН (приоритет выше, чем TextureType) -->
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                                            <Setter Property="Background" Value="#3399FF"/>
+                                        </DataTrigger>
                                         <!-- Color ORM textures with pink/purple background (только для НЕвыбранных) -->
                                         <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
                                             <Setter Property="Background" Value="#C96391"/>
                                             <Setter Property="BorderBrush" Value="#A04070"/>
                                             <Setter Property="BorderThickness" Value="2,0,2,0"/>
                                         </DataTrigger>
-                                        <!-- ВСЕ выделенные текстуры: СИНИЙ ФОН (одинаково для всех!) -->
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
-                                            <Setter Property="Background" Value="#3399FF"/>
+                                        <!-- Color by TextureType (только для НЕвыбранных и НЕ ORM) -->
+                                        <DataTrigger Binding="{Binding TextureType}" Value="Normal">
+                                            <Setter Property="Background" Value="#8080FF"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding TextureType}" Value="Albedo">
+                                            <Setter Property="Background" Value="#9C7F25"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding TextureType}" Value="Gloss">
+                                            <Setter Property="Background" Value="#808080"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding TextureType}" Value="AO">
+                                            <Setter Property="Background" Value="#FFFFFF"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -423,6 +436,7 @@
                         <DataGrid x:Name="ModelsDataGrid" Grid.Row="1"
                               AutoGenerateColumns="False"
                               SelectionChanged="ModelsDataGrid_SelectionChanged"
+                              Sorting="ModelsDataGrid_Sorting"
                               IsReadOnly="True"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
@@ -504,6 +518,7 @@
                               AutoGenerateColumns="False"
                               ItemsSource="{Binding Materials}"
                               SelectionChanged="MaterialsDataGrid_SelectionChanged"
+                              Sorting="MaterialsDataGrid_Sorting"
                               IsReadOnly="True"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"

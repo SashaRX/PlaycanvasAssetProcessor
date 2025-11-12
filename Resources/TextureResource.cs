@@ -7,6 +7,8 @@
 
         private int[] resolution = new int[2];
         private int[] resizeResolution = new int[2];
+        private int? resolutionArea = 0; // Кэшированное значение для быстрой сортировки (инициализировано как 0, так как resolution = [0,0])
+        private int? resizeResolutionArea = 0; // Кэшированное значение для быстрой сортировки (инициализировано как 0, так как resizeResolution = [0,0])
         private string? groupName;
         private string? textureType;
         private string? compressionFormat;
@@ -23,6 +25,8 @@
             get => resolution;
             set {
                 resolution = value;
+                // Кэшируем вычисляемое значение для быстрой сортировки
+                resolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : null;
                 OnPropertyChanged(nameof(Resolution));
                 OnPropertyChanged(nameof(ResolutionArea));
             }
@@ -32,6 +36,8 @@
             get => resizeResolution;
             set {
                 resizeResolution = value;
+                // Кэшируем вычисляемое значение для быстрой сортировки
+                resizeResolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : null;
                 OnPropertyChanged(nameof(ResizeResolution));
                 OnPropertyChanged(nameof(ResizeResolutionArea));
             }
@@ -140,8 +146,15 @@
             }
         }
 
-        public int? ResolutionArea => Resolution[0] * Resolution[1];
-        public int? ResizeResolutionArea => ResizeResolution[0] * ResizeResolution[1];
+        /// <summary>
+        /// Кэшированное значение площади разрешения для быстрой сортировки
+        /// </summary>
+        public int? ResolutionArea => resolutionArea;
+        
+        /// <summary>
+        /// Кэшированное значение площади разрешения после изменения размера для быстрой сортировки
+        /// </summary>
+        public int? ResizeResolutionArea => resizeResolutionArea;
 
         public static string DetermineTextureType(string textureName) {
             if (string.IsNullOrEmpty(textureName))

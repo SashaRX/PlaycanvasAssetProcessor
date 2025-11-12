@@ -12,6 +12,7 @@ using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -112,6 +113,9 @@ namespace AssetProcessor {
         private bool isKtxPreviewActive;
         private int currentMipLevel;
         private bool isUpdatingMipLevel;
+        private bool isSorting = false; // Флаг для отслеживания процесса сортировки
+        private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации
+        private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // Отслеживание текстур, для которых уже запущена проверка CompressedSize
         private List<KtxMipLevel>? currentKtxMipmaps;
         private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
         private enum TexturePreviewSourceMode {
@@ -2706,20 +2710,25 @@ namespace AssetProcessor {
             }
         }
 
+        // Кэшированный конвертер для избежания создания нового экземпляра при каждой перерисовке строки
+        private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
+
         private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
+            // Пропускаем инициализацию во время сортировки для ускорения
+            if (isSorting) {
+                return;
+            }
+
             if (e?.Row?.DataContext is TextureResource texture) {
                 // Initialize conversion settings for the texture if not already set
+                // Проверяем только один раз, чтобы не вызывать тяжелые операции при каждой перерисовке
                 if (string.IsNullOrEmpty(texture.CompressionFormat)) {
                     InitializeTextureConversionSettings(texture);
                 }
 
-                // Устанавливаем цвет фона в зависимости от типа текстуры
-                if (!string.IsNullOrEmpty(texture.TextureType)) {
-                    var backgroundBrush = new TextureTypeToBackgroundConverter().Convert(texture.TextureType, typeof(System.Windows.Media.Brush), null!, CultureInfo.InvariantCulture) as System.Windows.Media.Brush;
-                    e.Row.Background = backgroundBrush ?? System.Windows.Media.Brushes.Transparent;
-                } else {
-                    e.Row.Background = System.Windows.Media.Brushes.Transparent;
-                }
+                // НЕ устанавливаем цвет фона здесь - он уже установлен через Style в XAML
+                // Это предотвращает лишние операции при каждой перерисовке строки во время сортировки
+                // Цвет фона управляется через DataTrigger в DataGrid.RowStyle
             }
         }
 
@@ -2734,14 +2743,142 @@ namespace AssetProcessor {
             isViewerVisible = !isViewerVisible;
         }
 
+        /// <summary>
+        /// Оптимизированный обработчик сортировки для TexturesDataGrid
+        /// </summary>
         private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            if (e.Column.SortMemberPath == "Status") {
+            OptimizeDataGridSorting(TexturesDataGrid, e);
+        }
+
+        /// <summary>
+        /// Оптимизированный обработчик сортировки для ModelsDataGrid
+        /// </summary>
+        private void ModelsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+            OptimizeDataGridSorting(ModelsDataGrid, e);
+        }
+
+        /// <summary>
+        /// Оптимизированный обработчик сортировки для MaterialsDataGrid
+        /// </summary>
+        private void MaterialsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+            OptimizeDataGridSorting(MaterialsDataGrid, e);
+        }
+
+        /// <summary>
+        /// Универсальный оптимизированный метод сортировки для DataGrid
+        /// Использует DeferRefresh для отложенного обновления UI во время сортировки
+        /// </summary>
+        private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
+            try {
+                if (dataGrid == null || e == null || e.Column == null) {
+                    return;
+                }
+
                 e.Handled = true;
-                ICollectionView dataView = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending ? ListSortDirection.Descending : ListSortDirection.Ascending;
-                dataView.SortDescriptions.Clear();
-                dataView.SortDescriptions.Add(new SortDescription("Status", direction));
-                e.Column.SortDirection = direction;
+                
+                if (dataGrid.ItemsSource == null) {
+                    return;
+                }
+
+                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+                if (dataView == null) {
+                    return;
+                }
+                
+                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending 
+                    ? ListSortDirection.Descending 
+                    : ListSortDirection.Ascending;
+                
+                string sortMemberPath = e.Column.SortMemberPath;
+                if (string.IsNullOrEmpty(sortMemberPath)) {
+                    // Если SortMemberPath не указан, пытаемся извлечь имя свойства из Binding
+                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
+                        sortMemberPath = binding.Path?.Path ?? "";
+                    }
+                    
+                    // Если все еще пусто, не сортируем эту колонку
+                    if (string.IsNullOrEmpty(sortMemberPath)) {
+                        e.Handled = false; // Разрешаем стандартную сортировку DataGrid
+                        return;
+                    }
+                }
+                
+                // Устанавливаем флаг сортировки, чтобы LoadingRow не выполнял тяжелые операции
+                isSorting = true;
+                
+                // Сохраняем оригинальные стили и LayoutTransform для TexturesDataGrid
+                // Это нужно для временного отключения DataTrigger и LayoutTransform во время сортировки
+                Style? originalRowStyle = null;
+                System.Windows.Media.Transform? originalLayoutTransform = null;
+                bool isTexturesGrid = dataGrid == TexturesDataGrid;
+                
+                if (isTexturesGrid) {
+                    originalRowStyle = dataGrid.RowStyle;
+                    originalLayoutTransform = dataGrid.LayoutTransform;
+                }
+                
+                try {
+                    // Отключаем обновления визуального дерева для максимальной производительности
+                    dataGrid.BeginInit();
+                    
+                    // Для TexturesDataGrid временно упрощаем стили и отключаем LayoutTransform
+                    // Это критично для производительности - предотвращает вычисление DataTrigger для каждой строки
+                    if (isTexturesGrid && originalRowStyle != null) {
+                        // Создаем упрощенный стиль без DataTrigger (только ContextMenu)
+                        var simpleRowStyle = new Style(typeof(DataGridRow));
+                        var contextMenuSetter = originalRowStyle.Setters.OfType<Setter>()
+                            .FirstOrDefault(s => s.Property == DataGridRow.ContextMenuProperty);
+                        if (contextMenuSetter != null) {
+                            simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuSetter.Value));
+                        }
+                        dataGrid.RowStyle = simpleRowStyle;
+                        
+                        // Отключаем LayoutTransform для предотвращения пересчета трансформаций
+                        dataGrid.LayoutTransform = null;
+                    }
+                    
+                    try {
+                        // Используем DeferRefresh для отложенного обновления - это критично
+                        // DeferRefresh предотвращает множественные обновления UI во время сортировки
+                        using (dataView.DeferRefresh()) {
+                            dataView.SortDescriptions.Clear();
+                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
+                        }
+                        
+                        e.Column.SortDirection = direction;
+                    } finally {
+                        // Восстанавливаем оригинальные стили и LayoutTransform СИНХРОННО перед EndInit
+                        // Это предотвращает мерцание, так как все изменения применяются за один раз
+                        if (isTexturesGrid) {
+                            if (originalRowStyle != null) {
+                                dataGrid.RowStyle = originalRowStyle;
+                            }
+                            if (originalLayoutTransform != null) {
+                                dataGrid.LayoutTransform = originalLayoutTransform;
+                            }
+                        }
+                        
+                        dataGrid.EndInit();
+                        
+                        // Сбрасываем флаг асинхронно с низким приоритетом
+                        Dispatcher.BeginInvoke(() => {
+                            isSorting = false;
+                        }, System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                } finally {
+                    // Дополнительная защита на случай ошибки
+                    if (isSorting) {
+                        Dispatcher.BeginInvoke(() => {
+                            isSorting = false;
+                        }, System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                }
+            } catch (Exception ex) {
+                logger.Error(ex, "Error in OptimizeDataGridSorting");
+                MainWindowHelpers.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
+                // Не обрабатываем событие, позволяем DataGrid использовать стандартную сортировку
+                e.Handled = false;
+                isSorting = false;
             }
         }
 
@@ -5240,7 +5377,9 @@ namespace AssetProcessor {
         }
 
         // Initialize compression format and preset for texture without updating UI panel
+        // Оптимизировано: использует кэшированный PresetManager и откладывает проверку файлов
         private void InitializeTextureConversionSettings(TextureResource texture) {
+            // Быстрая инициализация без проверки файлов - это ускоряет перерисовку таблицы
             var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
             var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
                 MapTextureTypeToCore(textureType));
@@ -5249,33 +5388,54 @@ namespace AssetProcessor {
             texture.CompressionFormat = compression.CompressionFormat.ToString();
 
             // Auto-detect preset by filename if not already set
+            // Используем кэшированный PresetManager для избежания создания нового при каждой инициализации
             if (string.IsNullOrEmpty(texture.PresetName)) {
-                var presetManager = new TextureConversion.Settings.PresetManager();
-                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+                var matchedPreset = cachedPresetManager.FindPresetByFileName(texture.Name ?? "");
                 texture.PresetName = matchedPreset?.Name ?? "";
             }
 
-            // Check if compressed file (.ktx2 or .basis) already exists and set CompressedSize
-            if (!string.IsNullOrEmpty(texture.Path) && File.Exists(texture.Path)) {
-                var sourceDir = Path.GetDirectoryName(texture.Path);
-                var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
+            // Проверку файлов откладываем - она выполняется асинхронно и не блокирует UI
+            // Это критично для производительности при перерисовке таблицы
+            if (!string.IsNullOrEmpty(texture.Path) && texture.CompressedSize == 0) {
+                // Используем TryAdd для атомарной проверки и установки флага
+                // Это предотвращает race condition при множественных вызовах метода для одной текстуры
+                var lockObject = new object();
+                if (texturesBeingChecked.TryAdd(texture.Path, lockObject)) {
+                    // Проверяем файлы только если CompressedSize еще не установлен
+                    // Используем асинхронную проверку чтобы не блокировать UI
+                    Task.Run(() => {
+                        try {
+                            if (File.Exists(texture.Path)) {
+                                var sourceDir = Path.GetDirectoryName(texture.Path);
+                                var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
 
-                if (!string.IsNullOrEmpty(sourceDir) && !string.IsNullOrEmpty(sourceFileName)) {
-                    // Check for .ktx2 file first
-                    var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
-                    if (File.Exists(ktx2Path)) {
-                        var fileInfo = new FileInfo(ktx2Path);
-                        texture.CompressedSize = fileInfo.Length;
-                    } else {
-                        // Check for .basis file as fallback
-                        var basisPath = Path.Combine(sourceDir, sourceFileName + ".basis");
-                        if (File.Exists(basisPath)) {
-                            var fileInfo = new FileInfo(basisPath);
-                            texture.CompressedSize = fileInfo.Length;
-                        } else {
-                            texture.CompressedSize = 0;
+                                if (!string.IsNullOrEmpty(sourceDir) && !string.IsNullOrEmpty(sourceFileName)) {
+                                    // Check for .ktx2 file first
+                                    var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
+                                    if (File.Exists(ktx2Path)) {
+                                        var fileInfo = new FileInfo(ktx2Path);
+                                        Dispatcher.InvokeAsync(() => {
+                                            texture.CompressedSize = fileInfo.Length;
+                                        });
+                                    } else {
+                                        // Check for .basis file as fallback
+                                        var basisPath = Path.Combine(sourceDir, sourceFileName + ".basis");
+                                        if (File.Exists(basisPath)) {
+                                            var fileInfo = new FileInfo(basisPath);
+                                            Dispatcher.InvokeAsync(() => {
+                                                texture.CompressedSize = fileInfo.Length;
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        } catch {
+                            // Игнорируем ошибки при проверке файлов - это не критично для отображения
+                        } finally {
+                            // Удаляем текстуру из словаря после завершения проверки
+                            texturesBeingChecked.TryRemove(texture.Path, out _);
                         }
-                    }
+                    });
                 }
             }
         }

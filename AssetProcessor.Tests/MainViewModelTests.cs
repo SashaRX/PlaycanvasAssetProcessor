@@ -4,6 +4,7 @@ using AssetProcessor.Services.Models;
 using AssetProcessor.ViewModels;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -47,7 +48,8 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService()) {
+        var httpClientFactory = new FakeHttpClientFactory();
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), httpClientFactory) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -76,6 +78,12 @@ public class MainViewModelTests {
 
         public void Dispose() {
             // No resources to dispose in fake implementation
+        }
+    }
+
+    private sealed class FakeHttpClientFactory : IHttpClientFactory {
+        public HttpClient CreateClient(string name) {
+            return new HttpClient();
         }
     }
 }

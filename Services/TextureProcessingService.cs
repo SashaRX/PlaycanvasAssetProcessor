@@ -4,6 +4,7 @@ using AssetProcessor.Services.Models;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using AssetProcessor.Settings;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -360,12 +361,90 @@ public sealed class TextureProcessingService : ITextureProcessingService {
             return null;
         }
 
-        var parentDirectory = Directory.GetParent(directory);
-        if (parentDirectory == null) {
+        GlobalTextureConversionSettings? settings;
+        try {
+            settings = TextureConversionSettingsManager.LoadSettings();
+        } catch (Exception ex) {
+            Logger.Debug(ex, "Не удалось загрузить глобальные настройки конвертации при поиске каталога KTX.");
             return null;
         }
 
-        var candidate = Path.Combine(parentDirectory.FullName, "ktx_output");
+        var configuredDirectory = settings?.DefaultOutputDirectory;
+        if (string.IsNullOrWhiteSpace(configuredDirectory)) {
+            return null;
+        }
+
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (Path.IsPathRooted(configuredDirectory)) {
+            AddCandidate(configuredDirectory);
+        } else {
+            AddCandidate(Path.Combine(directory, configuredDirectory));
+
+            var projectRoot = TryResolveProjectRoot(directory);
+            if (!string.IsNullOrEmpty(projectRoot)) {
+                AddCandidate(Path.Combine(projectRoot, configuredDirectory));
+            }
+        }
+
+        foreach (var candidate in candidates) {
+            var normalized = TryGetFullPath(candidate) ?? candidate;
+            if (Directory.Exists(normalized)) {
+                return normalized;
+            }
+        }
+
+        return null;
+
+        void AddCandidate(string? path) {
+            if (!string.IsNullOrWhiteSpace(path)) {
+                candidates.Add(path);
+            }
+        }
+    }
+
+    private static string? TryResolveProjectRoot(string sourceDirectory) {
+        var projectsFolder = AppSettings.Default.ProjectsFolderPath;
+        if (string.IsNullOrWhiteSpace(projectsFolder)) {
+            return null;
+        }
+
+        string? normalizedProjectsFolder = TryGetFullPath(projectsFolder)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string? normalizedSource = TryGetFullPath(sourceDirectory)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (string.IsNullOrEmpty(normalizedProjectsFolder) || string.IsNullOrEmpty(normalizedSource)) {
+            return null;
+        }
+
+        if (!normalizedSource.StartsWith(normalizedProjectsFolder, StringComparison.OrdinalIgnoreCase)) {
+            return null;
+        }
+
+        var relative = normalizedSource.Length == normalizedProjectsFolder.Length
+            ? string.Empty
+            : normalizedSource.Substring(normalizedProjectsFolder.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (string.IsNullOrEmpty(relative)) {
+            return null;
+        }
+
+        var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+        var segments = relative.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0) {
+            return null;
+        }
+
+        var candidate = Path.Combine(normalizedProjectsFolder, segments[0]);
         return Directory.Exists(candidate) ? candidate : null;
+    }
+
+    private static string? TryGetFullPath(string path) {
+        try {
+            return Path.GetFullPath(path);
+        } catch (Exception ex) when (
+            ex is ArgumentException or NotSupportedException or PathTooLongException) {
+            Logger.Debug(ex, $"Не удалось нормализовать путь '{path}'.");
+            return null;
+        }
     }
 }

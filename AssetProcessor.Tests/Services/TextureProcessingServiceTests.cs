@@ -3,8 +3,10 @@ using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
+using AssetProcessor.Settings;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -50,6 +52,41 @@ public class TextureProcessingServiceTests {
             Assert.Equal("TestPreset", texture.PresetName);
         } finally {
             tempDir.Delete(true);
+        }
+    }
+
+    [Fact]
+    public void GetExistingKtx2Path_UsesConfiguredOutputDirectory() {
+        var tempRoot = Directory.CreateTempSubdirectory();
+        string originalProjectsPath = AppSettings.Default.ProjectsFolderPath;
+
+        try {
+            string projectsFolder = Path.Combine(tempRoot.FullName, "projects");
+            Directory.CreateDirectory(projectsFolder);
+            AppSettings.Default.ProjectsFolderPath = projectsFolder;
+
+            string projectRoot = Path.Combine(projectsFolder, "SampleProject");
+            string sourceDirectory = Path.Combine(projectRoot, "content", "textures");
+            Directory.CreateDirectory(sourceDirectory);
+
+            string sourcePath = Path.Combine(sourceDirectory, "brick_albedo.png");
+            File.WriteAllBytes(sourcePath, new byte[] { 0x1 });
+
+            string outputDirectory = Path.Combine(projectRoot, TextureConversionSettingsManager.CreateDefaultSettings().DefaultOutputDirectory);
+            Directory.CreateDirectory(outputDirectory);
+
+            string expectedKtxPath = Path.Combine(outputDirectory, "brick_albedo.ktx2");
+            File.WriteAllBytes(expectedKtxPath, new byte[] { 0x2, 0x3 });
+
+            var method = typeof(TextureProcessingService).GetMethod("GetExistingKtx2Path", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(method);
+
+            string? resolvedPath = (string?)method!.Invoke(null, new object?[] { sourcePath });
+
+            Assert.Equal(expectedKtxPath, resolvedPath);
+        } finally {
+            AppSettings.Default.ProjectsFolderPath = originalProjectsPath;
+            tempRoot.Delete(true);
         }
     }
 

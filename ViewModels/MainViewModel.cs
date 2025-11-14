@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -17,6 +18,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AssetProcessor.ViewModels {
     /// <summary>
@@ -26,7 +28,14 @@ namespace AssetProcessor.ViewModels {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         private readonly IPlayCanvasService playCanvasService;
         private readonly IHttpClientFactory httpClientFactory;
+        private readonly ITextureProcessingService textureProcessingService;
         private readonly SemaphoreSlim downloadSemaphore;
+
+        public event EventHandler<TextureProcessingCompletedEventArgs>? TextureProcessingCompleted;
+
+        public event EventHandler<TexturePreviewLoadedEventArgs>? TexturePreviewLoaded;
+
+        public ITextureConversionSettingsProvider? ConversionSettingsProvider { get; set; }
 
         [ObservableProperty]
         private ObservableCollection<TextureResource> textures = [];
@@ -73,9 +82,19 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private ObservableCollection<TextureResource> filteredTextures = [];
 
-        public MainViewModel(IPlayCanvasService playCanvasService, IHttpClientFactory httpClientFactory) {
+        [ObservableProperty]
+        private bool processAllTextures;
+
+        [ObservableProperty]
+        private bool isTextureProcessing;
+
+        [ObservableProperty]
+        private TextureResource? selectedTexture;
+
+        public MainViewModel(IPlayCanvasService playCanvasService, IHttpClientFactory httpClientFactory, ITextureProcessingService textureProcessingService) {
             this.playCanvasService = playCanvasService;
             this.httpClientFactory = httpClientFactory;
+            this.textureProcessingService = textureProcessingService;
             downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
             logger.Info("MainViewModel initialized");
         }
@@ -604,5 +623,127 @@ namespace AssetProcessor.ViewModels {
         partial void OnSelectedMaterialChanged(MaterialResource? value) {
             FilterTexturesForMaterial(value);
         }
+
+        partial void OnIsTextureProcessingChanged(bool value) {
+            ProcessTexturesCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnProcessAllTexturesChanged(bool value) {
+            ProcessTexturesCommand.NotifyCanExecuteChanged();
+        }
+
+        [RelayCommand(CanExecute = nameof(CanProcessTextures))]
+        private async Task ProcessTexturesAsync(IList? selectedItems) {
+            if (IsTextureProcessing) {
+                return;
+            }
+
+            if (ConversionSettingsProvider == null) {
+                StatusMessage = "Панель настроек конвертации недоступна.";
+                return;
+            }
+
+            var texturesToProcess = ProcessAllTextures
+                ? Textures.Where(t => !string.IsNullOrEmpty(t.Path)).ToList()
+                : selectedItems?.OfType<TextureResource>().Where(t => !string.IsNullOrEmpty(t.Path)).ToList()
+                    ?? new List<TextureResource>();
+
+            if (texturesToProcess.Count == 0) {
+                StatusMessage = "Нет текстур для обработки.";
+                return;
+            }
+
+            try {
+                IsTextureProcessing = true;
+                StatusMessage = $"Конвертация {texturesToProcess.Count} текстур...";
+
+                var result = await textureProcessingService.ProcessTexturesAsync(new TextureProcessingRequest {
+                    Textures = texturesToProcess,
+                    SettingsProvider = ConversionSettingsProvider,
+                    SelectedTexture = SelectedTexture
+                }, CancellationToken.None);
+
+                StatusMessage = $"Конвертация завершена. Успехов: {result.SuccessCount}, ошибок: {result.ErrorCount}.";
+                TextureProcessingCompleted?.Invoke(this, new TextureProcessingCompletedEventArgs(result));
+            } catch (OperationCanceledException) {
+                StatusMessage = "Конвертация отменена.";
+            } catch (Exception ex) {
+                StatusMessage = $"Ошибка конвертации: {ex.Message}";
+                logger.Error(ex, "Ошибка при обработке текстур");
+            } finally {
+                IsTextureProcessing = false;
+            }
+        }
+
+        private bool CanProcessTextures(IList? selectedItems) {
+            if (IsTextureProcessing) {
+                return false;
+            }
+
+            if (ProcessAllTextures) {
+                return Textures.Any(t => !string.IsNullOrEmpty(t.Path));
+            }
+
+            if (selectedItems == null) {
+                return false;
+            }
+
+            return selectedItems.OfType<TextureResource>().Any(t => !string.IsNullOrEmpty(t.Path));
+        }
+
+        [RelayCommand]
+        private void AutoDetectPresets(IList? selectedItems) {
+            if (ConversionSettingsProvider == null) {
+                StatusMessage = "Панель настроек конвертации недоступна.";
+                return;
+            }
+
+            var texturesToProcess = ProcessAllTextures
+                ? Textures.ToList()
+                : selectedItems?.OfType<TextureResource>().ToList() ?? new List<TextureResource>();
+
+            if (texturesToProcess.Count == 0) {
+                StatusMessage = "Нет текстур для автоопределения.";
+                return;
+            }
+
+            var result = textureProcessingService.AutoDetectPresets(texturesToProcess, ConversionSettingsProvider);
+            StatusMessage = $"Auto-detect: найдено {result.MatchedCount}, не найдено {result.NotMatchedCount}.";
+        }
+
+        [RelayCommand]
+        private async Task LoadKtxPreviewAsync(TextureResource? texture) {
+            if (texture == null) {
+                return;
+            }
+
+            try {
+                var preview = await textureProcessingService.LoadKtxPreviewAsync(texture, CancellationToken.None);
+                if (preview != null) {
+                    TexturePreviewLoaded?.Invoke(this, new TexturePreviewLoadedEventArgs(texture, preview));
+                }
+            } catch (Exception ex) {
+                logger.Warn(ex, "Не удалось загрузить превью KTX2");
+            }
+        }
+    }
+
+    public sealed class TextureProcessingCompletedEventArgs : EventArgs {
+        public TextureProcessingCompletedEventArgs(TextureProcessingResult result) {
+            Result = result;
+        }
+
+        public TextureProcessingResult Result { get; }
+    }
+
+    public sealed class TexturePreviewLoadedEventArgs : EventArgs {
+        public TexturePreviewLoadedEventArgs(TextureResource texture, TexturePreviewResult preview) {
+            Texture = texture;
+            Preview = preview;
+        }
+
+        public TextureResource Texture { get; }
+
+        public TexturePreviewResult Preview { get; }
     }
 }

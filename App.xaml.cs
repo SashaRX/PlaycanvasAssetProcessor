@@ -53,10 +53,13 @@ namespace AssetProcessor {
                     MaxConnectionsPerServer = 50
                 });
 
+            services.AddSingleton<ITextureProcessingService, TextureProcessingService>();
+
             services.AddSingleton<MainViewModel>(sp => {
                 var playCanvasService = sp.GetRequiredService<IPlayCanvasService>();
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                return new MainViewModel(playCanvasService, httpClientFactory);
+                var textureProcessingService = sp.GetRequiredService<ITextureProcessingService>();
+                return new MainViewModel(playCanvasService, httpClientFactory, textureProcessingService);
             });
             services.AddTransient<MainWindow>();
         }

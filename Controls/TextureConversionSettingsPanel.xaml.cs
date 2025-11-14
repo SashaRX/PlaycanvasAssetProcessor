@@ -2,12 +2,13 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using AssetProcessor.Services;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using NLog;
 
 namespace AssetProcessor.Controls {
-    public partial class TextureConversionSettingsPanel : UserControl {
+    public partial class TextureConversionSettingsPanel : UserControl, ITextureConversionSettingsProvider {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private bool _isLoading = false;
         private readonly PresetManager _presetManager = new();
@@ -609,6 +610,9 @@ namespace AssetProcessor.Controls {
                 return null;
             }
         }
+
+        ToksvigSettings ITextureConversionSettingsProvider.GetToksvigSettings(string texturePath) =>
+            GetToksvigSettingsWithAutoDetect(texturePath);
 
         // ============================================
         // SETTINGS LOADERS

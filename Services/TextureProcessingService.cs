@@ -5,8 +5,11 @@ using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
 using NLog;
+using System;
 using System.Globalization;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AssetProcessor.Services;
 

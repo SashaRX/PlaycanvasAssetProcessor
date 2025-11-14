@@ -6,6 +6,7 @@ using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
 using NLog;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -87,20 +88,23 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                 MainWindowHelpers.LogInfo($"  Output Path: {outputPath}");
                 MainWindowHelpers.LogInfo("========================");
 
-                var mipmapOutputDir = request.SettingsProvider.SaveSeparateMipmaps
+                var saveSeparateMipmaps = request.SettingsProvider.SaveSeparateMipmaps;
+                var mipmapOutputDir = saveSeparateMipmaps
                     ? Path.Combine(sourceDir, "mipmaps", sourceFileName)
                     : null;
 
                 var toksvigSettings = request.SettingsProvider.GetToksvigSettings(texture.Path);
 
-                var result = await pipeline.ConvertTextureAsync(
-                    texture.Path,
-                    outputPath,
-                    mipProfile,
-                    compressionSettings,
-                    toksvigSettings,
-                    request.SettingsProvider.SaveSeparateMipmaps,
-                    mipmapOutputDir);
+                var result = await Task.Run(
+                    async () => await pipeline.ConvertTextureAsync(
+                        texture.Path,
+                        outputPath,
+                        mipProfile,
+                        compressionSettings,
+                        toksvigSettings,
+                        saveSeparateMipmaps,
+                        mipmapOutputDir),
+                    cancellationToken);
 
                 if (!result.Success) {
                     texture.Status = "Error";

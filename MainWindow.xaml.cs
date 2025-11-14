@@ -6,12 +6,14 @@ using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
 using Assimp;
 using HelixToolkit.Wpf;
+using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -196,6 +198,10 @@ namespace AssetProcessor {
             // Инициализация ConversionSettings
             InitializeConversionSettings();
 
+            viewModel.ConversionSettingsProvider = ConversionSettingsPanel;
+            viewModel.TextureProcessingCompleted += ViewModel_TextureProcessingCompleted;
+            viewModel.TexturePreviewLoaded += ViewModel_TexturePreviewLoaded;
+
             // Подписка на события панели настроек конвертации
             ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
             ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
@@ -249,22 +255,13 @@ namespace AssetProcessor {
         }
 
         private void ConversionSettingsPanel_AutoDetectRequested(object? sender, EventArgs e) {
-            var selectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
-            if (selectedTexture != null && !string.IsNullOrEmpty(selectedTexture.Name)) {
-                bool found = ConversionSettingsPanel.AutoDetectPresetByFileName(selectedTexture.Name);
-                if (found) {
-                    MainWindowHelpers.LogInfo($"Auto-detected preset for '{selectedTexture.Name}'");
-                } else {
-                    MainWindowHelpers.LogInfo($"No matching preset found for '{selectedTexture.Name}'");
-                }
-            } else {
-                MessageBox.Show("Please select a texture first.", "No Texture Selected", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+            viewModel.AutoDetectPresetsCommand.Execute(TexturesDataGrid.SelectedItems);
         }
 
-        private void ConversionSettingsPanel_ConvertRequested(object? sender, EventArgs e) {
-            // Вызываем основную функцию конвертации
-            ProcessTexturesButton_Click(sender ?? this, new RoutedEventArgs());
+        private async void ConversionSettingsPanel_ConvertRequested(object? sender, EventArgs e) {
+            if (viewModel.ProcessTexturesCommand is IAsyncRelayCommand<IList?> command) {
+                await command.ExecuteAsync(TexturesDataGrid.SelectedItems);
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -1881,6 +1878,8 @@ namespace AssetProcessor {
 
             // Update selection count in central control box
             UpdateSelectedTexturesCount();
+            viewModel.SelectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
+            viewModel.ProcessTexturesCommand.NotifyCanExecuteChanged();
 
             // Отменяем предыдущую загрузку, если она еще выполняется
             textureLoadCancellation?.Cancel();
@@ -5465,278 +5464,103 @@ namespace AssetProcessor {
 
         #region Central Control Box Handlers
 
-        private async void ProcessTexturesButton_Click(object sender, RoutedEventArgs e) {
+        private async void ViewModel_TextureProcessingCompleted(object? sender, TextureProcessingCompletedEventArgs e) {
             try {
-                // Get viewModel.Textures to process
-                var texturesToProcess = new List<TextureResource>();
+                await Dispatcher.InvokeAsync(() => {
+                    TexturesDataGrid.Items.Refresh();
+                    ProgressBar.Value = 0;
+                    ProgressBar.Maximum = e.Result.SuccessCount + e.Result.ErrorCount;
+                    ProgressTextBlock.Text = $"Completed: {e.Result.SuccessCount} success, {e.Result.ErrorCount} errors";
+                });
 
-                if (ProcessAllCheckBox.IsChecked == true) {
-                    // Process all enabled textures
-                    texturesToProcess = viewModel.Textures.Where(t => !string.IsNullOrEmpty(t.Path)).ToList();
-                } else {
-                    // Process selected viewModel.Textures only
-                    texturesToProcess = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+                string resultMessage = BuildProcessingSummaryMessage(e.Result);
+                MessageBoxImage icon = e.Result.ErrorCount == 0 && e.Result.SuccessCount > 0
+                    ? MessageBoxImage.Information
+                    : MessageBoxImage.Warning;
+
+                MessageBox.Show(resultMessage, "Processing Complete", MessageBoxButton.OK, icon);
+
+                if (e.Result.PreviewTexture != null && viewModel.LoadKtxPreviewCommand is IAsyncRelayCommand<TextureResource?> command) {
+                    await Dispatcher.InvokeAsync(async () => {
+                        await command.ExecuteAsync(e.Result.PreviewTexture);
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
+                    });
                 }
-
-                if (texturesToProcess.Count == 0) {
-                    MessageBox.Show("No textures selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                // Load global settings
-                if (globalTextureSettings == null) {
-                    globalTextureSettings = TextureConversionSettingsManager.LoadSettings();
-                }
-
-                // Disable buttons during processing
-                ProcessTexturesButton.IsEnabled = false;
-                UploadTexturesButton.IsEnabled = false;
-
-                int successCount = 0;
-                int errorCount = 0;
-                var errorMessages = new List<string>();
-
-                ProgressBar.Maximum = texturesToProcess.Count;
-                ProgressBar.Value = 0;
-
-                // Используем KtxExecutablePath из настроек
-                var ktxPath = string.IsNullOrWhiteSpace(globalTextureSettings.KtxExecutablePath)
-                    ? "ktx"
-                    : globalTextureSettings.KtxExecutablePath;
-
-                var pipeline = new TextureConversion.Pipeline.TextureConversionPipeline(ktxPath);
-
-                foreach (var texture in texturesToProcess) {
-                    try {
-                        if (string.IsNullOrEmpty(texture.Path)) {
-                            var errorMsg = $"{texture.Name ?? "Unknown"}: Empty file path";
-                            MainWindowHelpers.LogError($"Skipping texture with empty path: {texture.Name ?? "Unknown"}");
-                            errorMessages.Add(errorMsg);
-                            errorCount++;
-                            continue;
-                        }
-
-                        ProgressTextBlock.Text = $"Processing {texture.Name}...";
-                        MainWindowHelpers.LogInfo($"Processing texture: {texture.Name}");
-
-                        // Автоматически определяем тип текстуры по имени файла
-                        var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
-                        texture.TextureType = textureType; // Сохраняем определённый тип
-
-                        // Создаём профиль мипмапов на основе типа текстуры
-                        var mipProfile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
-                            MapTextureTypeToCore(textureType));
-
-                        // Используем глобальные настройки из TextureConversionSettingsPanel
-                        var compressionSettingsData = ConversionSettingsPanel.GetCompressionSettings();
-
-                        // Получаем настройки histogram analysis из UI
-                        var histogramSettings = ConversionSettingsPanel.GetHistogramSettings();
-                        compressionSettingsData.HistogramAnalysis = histogramSettings;
-
-                        var compressionSettings = compressionSettingsData.ToCompressionSettings(globalTextureSettings!); // Already checked for null above
-
-                        // Save converted file in the same directory as source file
-                        var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
-                        // Use Path.GetFileNameWithoutExtension from the actual file path, not the display name
-                        var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
-                        var extension = compressionSettings.OutputFormat == TextureConversion.Core.OutputFormat.KTX2
-                            ? ".ktx2"
-                            : ".basis";
-                        var outputPath = Path.Combine(sourceDir, sourceFileName + extension);
-
-                        MainWindowHelpers.LogInfo($"=== CONVERSION START ===");
-                        MainWindowHelpers.LogInfo($"  Texture Name: {texture.Name}");
-                        MainWindowHelpers.LogInfo($"  Source Path: {texture.Path}");
-                        MainWindowHelpers.LogInfo($"  Source Dir: {sourceDir}");
-                        MainWindowHelpers.LogInfo($"  Source FileName: {sourceFileName}");
-                        MainWindowHelpers.LogInfo($"  Extension: {extension}");
-                        MainWindowHelpers.LogInfo($"  Expected Output: {outputPath}");
-                        MainWindowHelpers.LogInfo($"========================");
-
-                        var mipmapOutputDir = ConversionSettingsPanel.SaveSeparateMipmaps
-                            ? Path.Combine(sourceDir, "mipmaps", sourceFileName)
-                            : null;
-
-                        // Получаем настройки Toksvig из панели настроек с автопоиском normal map
-                        var toksvigSettings = ConversionSettingsPanel.GetToksvigSettingsWithAutoDetect(texture.Path);
-
-                        var result = await pipeline.ConvertTextureAsync(
-                            texture.Path,
-                            outputPath,
-                            mipProfile,
-                            compressionSettings,
-                            toksvigSettings,
-                            ConversionSettingsPanel.SaveSeparateMipmaps,
-                            mipmapOutputDir
-                        );
-
-                        if (result.Success) {
-                            texture.CompressionFormat = compressionSettings.CompressionFormat.ToString();
-                            texture.MipmapCount = result.MipLevels;
-                            texture.Status = "Converted";
-
-                            // Сохраняем информацию о Toksvig коррекции
-                            if (result.ToksvigApplied) {
-                                texture.ToksvigEnabled = true;
-                                texture.NormalMapPath = result.NormalMapUsed;
-                            }
-
-                            // Сохраняем имя пресета, если оно не установлено
-                            if (string.IsNullOrEmpty(texture.PresetName) || texture.PresetName == "(Auto)") {
-                                // Пытаемся определить пресет по имени файла
-                                var presetManager = new TextureConversion.Settings.PresetManager();
-                                var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
-                                if (matchedPreset != null) {
-                                    texture.PresetName = matchedPreset.Name;
-                                } else {
-                                    // Используем имя выбранного в панели пресета
-                                    var selectedPreset = ConversionSettingsPanel.PresetName;
-                                    texture.PresetName = string.IsNullOrEmpty(selectedPreset) ? "(Custom)" : selectedPreset;
-                                }
-                            }
-
-                            // Записываем размер сжатого файла
-                            MainWindowHelpers.LogInfo($"=== CHECKING OUTPUT FILE ===");
-                            MainWindowHelpers.LogInfo($"  Expected path: {outputPath}");
-                            MainWindowHelpers.LogInfo($"  File.Exists check...");
-
-                            // Ждем немного, чтобы файл точно был записан на диск
-                            await Task.Delay(300);
-
-                            // Обновляем FileInfo для получения актуальных данных
-                            bool fileFound = false;
-                            long fileSize = 0;
-                            string actualPath = outputPath;
-
-                            // Проверка 1: Ожидаемый путь
-                            if (File.Exists(outputPath)) {
-                                var fileInfo = new FileInfo(outputPath);
-                                fileInfo.Refresh(); // Обновляем информацию о файле
-                                fileSize = fileInfo.Length;
-                                fileFound = true;
-                                MainWindowHelpers.LogInfo($"  ✓ Found at expected path! Size: {fileSize} bytes");
-                            } else {
-                                MainWindowHelpers.LogInfo($"  ✗ NOT found at expected path");
-
-                                // Проверка 2: Поиск всех файлов в директории с нужным расширением
-                                MainWindowHelpers.LogInfo($"  Searching directory: {sourceDir}");
-                                if (Directory.Exists(sourceDir)) {
-                                    var allFiles = Directory.GetFiles(sourceDir, $"*{extension}");
-                                    MainWindowHelpers.LogInfo($"  Found {allFiles.Length} {extension} files in directory");
-
-                                    foreach (var file in allFiles) {
-                                        MainWindowHelpers.LogInfo($"    - {Path.GetFileName(file)} ({new FileInfo(file).Length} bytes)");
-                                    }
-
-                                    // Ищем файл по базовому имени (без учёта регистра)
-                                    var matchingFile = allFiles.FirstOrDefault(f =>
-                                        Path.GetFileNameWithoutExtension(f).Equals(sourceFileName, StringComparison.OrdinalIgnoreCase));
-
-                                    if (matchingFile != null) {
-                                        actualPath = matchingFile;
-                                        var fileInfo = new FileInfo(matchingFile);
-                                        fileSize = fileInfo.Length;
-                                        fileFound = true;
-                                        MainWindowHelpers.LogInfo($"  ✓ Found matching file: {matchingFile} ({fileSize} bytes)");
-                                    }
-                                }
-                            }
-
-                            if (fileFound && fileSize > 0) {
-                                texture.CompressedSize = fileSize;
-                                MainWindowHelpers.LogInfo($"  ✓ CompressedSize set to: {texture.CompressedSize} bytes ({fileSize / 1024.0:F1} KB)");
-                                MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name}");
-                                MainWindowHelpers.LogInfo($"  Mipmaps: {result.MipLevels}, Size: {fileSize / 1024.0:F1} KB, Path: {actualPath}");
-                            } else {
-                                MainWindowHelpers.LogError($"  ✗ OUTPUT FILE NOT FOUND OR EMPTY!");
-                                MainWindowHelpers.LogError($"  Expected: {outputPath}");
-                                MainWindowHelpers.LogError($"  Please check basisu conversion output");
-                                texture.CompressedSize = 0;
-                            }
-                            MainWindowHelpers.LogInfo($"============================");
-
-                            successCount++;
-
-                            // Если это текущая выбранная текстура - перезагружаем preview и переключаемся на KTX2
-                            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture && selectedTexture == texture) {
-                                MainWindowHelpers.LogInfo($"Текущая текстура сконвертирована, перезагружаем preview...");
-
-                                // Перезагружаем KTX2 preview (DIRECT LOAD - with histogram metadata!)
-                                await Dispatcher.InvokeAsync(async () => {
-                                    try {
-                                        // CRITICAL: Use TryLoadKtx2ToD3D11Async (NOT TryLoadKtx2PreviewAsync)!
-                                        // TryLoadKtx2ToD3D11Async loads KTX2 directly with metadata
-                                        // TryLoadKtx2PreviewAsync extracts to PNG (loses histogram metadata)
-                                        bool ktx2Loaded = await TryLoadKtx2ToD3D11Async(texture, CancellationToken.None);
-                                        if (ktx2Loaded) {
-                                            // Автоматически переключаемся на KTX2 preview
-                                            SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
-                                            MainWindowHelpers.LogInfo("✓ KTX2 loaded directly to D3D11 with histogram metadata");
-                                        }
-                                    } catch (Exception ex) {
-                                        MainWindowHelpers.LogError($"Ошибка при загрузке KTX2 preview: {ex.Message}");
-                                    }
-                                });
-                            }
-                        } else {
-                            texture.Status = "Error";
-                            errorCount++;
-                            var errorMsg = $"{texture.Name}: {result.Error ?? "Unknown error"}";
-                            errorMessages.Add(errorMsg);
-                            MainWindowHelpers.LogError($"✗ Failed to convert {texture.Name}: {result.Error}");
-                        }
-                    } catch (Exception ex) {
-                        texture.Status = "Error";
-                        errorCount++;
-                        var errorMsg = $"{texture.Name}: {ex.Message}";
-                        errorMessages.Add(errorMsg);
-                        MainWindowHelpers.LogError($"✗ Exception processing {texture.Name}: {ex.Message}\n{ex.StackTrace}");
-                    }
-
-                    ProgressBar.Value++;
-                }
-
-                // Force DataGrid to refresh and display updated CompressedSize values
-                TexturesDataGrid.Items.Refresh();
-
-                ProgressTextBlock.Text = $"Completed: {successCount} success, {errorCount} errors";
-
-                // Build result message
-                var resultMessage = $"Processing completed!\n\nSuccess: {successCount}\nErrors: {errorCount}";
-
-                if (errorCount > 0 && errorMessages.Count > 0) {
-                    resultMessage += "\n\nError details:";
-                    var errorsToShow = errorMessages.Take(10).ToList();
-                    foreach (var error in errorsToShow) {
-                        resultMessage += $"\n• {error}";
-                    }
-                    if (errorMessages.Count > 10) {
-                        resultMessage += $"\n... and {errorMessages.Count - 10} more errors (see log file for details)";
-                    }
-                } else if (successCount > 0) {
-                    resultMessage += "\n\nConverted files saved next to source images.";
-                }
-
-                MessageBox.Show(
-                    resultMessage,
-                    "Processing Complete",
-                    MessageBoxButton.OK,
-                    successCount == texturesToProcess.Count ? MessageBoxImage.Information : MessageBoxImage.Warning
-                );
-
             } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error during batch processing: {ex.Message}");
-                MessageBox.Show($"Error during processing:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            } finally {
-                // Принудительно обновляем DataGrid для отображения изменений
-                TexturesDataGrid.Items.Refresh();
-
-                ProcessTexturesButton.IsEnabled = true;
-                UploadTexturesButton.IsEnabled = false; // Keep disabled until upload is implemented
-                ProgressBar.Value = 0;
-                ProgressTextBlock.Text = "";
+                logger.Error(ex, "Ошибка при обработке результатов конвертации");
             }
+        }
+
+        private async void ViewModel_TexturePreviewLoaded(object? sender, TexturePreviewLoadedEventArgs e) {
+            try {
+                await Dispatcher.InvokeAsync(() => {
+                    currentLoadedTexturePath = e.Texture.Path;
+                    currentLoadedKtx2Path = e.Preview.KtxPath;
+                    isKtxPreviewAvailable = true;
+                    isKtxPreviewActive = true;
+                    currentKtxMipmaps?.Clear();
+                    currentMipLevel = 0;
+
+                    if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
+                    } else {
+                        UpdatePreviewSourceControls();
+                    }
+
+                    if (D3D11TextureViewer?.Renderer == null) {
+                        logger.Warn("D3D11 viewer или renderer отсутствует");
+                        return;
+                    }
+
+                    D3D11TextureViewer.Renderer.LoadTexture(e.Preview.TextureData);
+                    UpdateHistogramCorrectionButtonState();
+
+                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
+                    if (TextureFormatTextBlock != null) {
+                        string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
+                        string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
+                            ? " (sRGB)"
+                            : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
+                                ? " (Linear)"
+                                : string.Empty;
+                        string histInfo = hasHistogram ? " + Histogram" : string.Empty;
+                        TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
+                    }
+
+                    D3D11TextureViewer.Renderer.Render();
+
+                    if (e.Preview.ShouldEnableNormalReconstruction && D3D11TextureViewer.Renderer != null) {
+                        currentActiveChannelMask = "Normal";
+                        D3D11TextureViewer.Renderer.SetChannelMask(0x20);
+                        D3D11TextureViewer.Renderer.Render();
+                        UpdateChannelButtonsState();
+                        if (!string.IsNullOrWhiteSpace(e.Preview.AutoEnableReason)) {
+                            MainWindowHelpers.LogInfo($"Auto-enabled Normal reconstruction mode for {e.Preview.AutoEnableReason}");
+                        }
+                    }
+                });
+            } catch (Exception ex) {
+                logger.Error(ex, "Ошибка при обновлении превью KTX2");
+            }
+        }
+
+        private static string BuildProcessingSummaryMessage(TextureProcessingResult result) {
+            var resultMessage = $"Processing completed!\n\nSuccess: {result.SuccessCount}\nErrors: {result.ErrorCount}";
+
+            if (result.ErrorCount > 0 && result.ErrorMessages.Count > 0) {
+                resultMessage += "\n\nError details:";
+                var errorsToShow = result.ErrorMessages.Take(10).ToList();
+                foreach (var error in errorsToShow) {
+                    resultMessage += $"\n• {error}";
+                }
+                if (result.ErrorMessages.Count > 10) {
+                    resultMessage += $"\n... and {result.ErrorMessages.Count - 10} more errors (see log file for details)";
+                }
+            } else if (result.SuccessCount > 0) {
+                resultMessage += "\n\nConverted files saved next to source images.";
+            }
+
+            return resultMessage;
         }
 
         private void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
@@ -5754,52 +5578,6 @@ namespace AssetProcessor {
                 ? "1 texture"
                 : $"{selectedCount} textures";
 
-            ProcessTexturesButton.IsEnabled = selectedCount > 0 || ProcessAllCheckBox.IsChecked == true;
-        }
-
-        private void ProcessAllCheckBox_Changed(object sender, RoutedEventArgs e) {
-            UpdateSelectedTexturesCount();
-        }
-
-        private void AutoDetectAllButton_Click(object sender, RoutedEventArgs e) {
-            var texturesToProcess = ProcessAllCheckBox.IsChecked == true
-                ? viewModel.Textures.ToList()
-                : TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
-
-            if (texturesToProcess.Count == 0) {
-                MessageBox.Show("Please select textures first or enable 'Process All'.",
-                    "No textures Selected", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            int matchedCount = 0;
-            int notMatchedCount = 0;
-
-            foreach (var texture in texturesToProcess) {
-                if (!string.IsNullOrEmpty(texture.Name)) {
-                    bool found = ConversionSettingsPanel.AutoDetectPresetByFileName(texture.Name);
-                    if (found) {
-                        // Get the detected preset name and store it
-                        var presetManager = new TextureConversion.Settings.PresetManager();
-                        var matchedPreset = presetManager.FindPresetByFileName(texture.Name);
-                        if (matchedPreset != null) {
-                            texture.PresetName = matchedPreset.Name;
-                            matchedCount++;
-                        }
-                    } else {
-                        notMatchedCount++;
-                    }
-                }
-            }
-
-            // Refresh DataGrid to show updated PresetName values
-            TexturesDataGrid.Items.Refresh();
-
-            MainWindowHelpers.LogInfo($"Auto-detect completed: {matchedCount} matched, {notMatchedCount} not matched");
-            MessageBox.Show($"Auto-detect completed:\n\n" +
-                          $"✓ Matched: {matchedCount}\n" +
-                          $"✗ Not matched: {notMatchedCount}",
-                "Auto-detect Results", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
@@ -6173,8 +5951,10 @@ namespace AssetProcessor {
         }
 
         // Context menu handlers for texture rows
-        private void ProcessSelectedTextures_Click(object sender, RoutedEventArgs e) {
-            ProcessTexturesButton_Click(sender, e);
+        private async void ProcessSelectedTextures_Click(object sender, RoutedEventArgs e) {
+            if (viewModel.ProcessTexturesCommand is IAsyncRelayCommand<IList?> command) {
+                await command.ExecuteAsync(TexturesDataGrid.SelectedItems);
+            }
         }
 
         private void UploadTexture_Click(object sender, RoutedEventArgs e) {

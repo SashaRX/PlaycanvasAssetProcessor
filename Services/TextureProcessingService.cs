@@ -6,6 +6,7 @@ using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
 using NLog;
 using System.Globalization;
+using System.IO;
 
 namespace AssetProcessor.Services;
 

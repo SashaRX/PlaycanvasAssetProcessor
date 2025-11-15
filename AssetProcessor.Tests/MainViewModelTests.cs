@@ -4,14 +4,15 @@ using AssetProcessor.Services.Models;
 using AssetProcessor.ViewModels;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
-using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.TextureConversion.Settings;
+using Newtonsoft.Json.Linq;
+using Xunit;
 
 namespace AssetProcessor.Tests;
 
@@ -39,9 +40,8 @@ public class MainViewModelTests {
 
     [Fact]
     public async Task ProcessTexturesCommand_RaisesCompletionEvent() {
-        var httpClientFactory = new FakeHttpClientFactory();
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), httpClientFactory, service) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "Texture1", Path = "file.png" }
             }
@@ -76,8 +76,7 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var httpClientFactory = new FakeHttpClientFactory();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), httpClientFactory, new FakeTextureProcessingService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -159,9 +158,22 @@ public class MainViewModelTests {
         }
     }
 
-    private sealed class FakeHttpClientFactory : IHttpClientFactory {
-        public HttpClient CreateClient(string name) {
-            return new HttpClient();
-        }
+    private sealed class DummyLocalCacheService : ILocalCacheService {
+        public Task<ResourceDownloadResult> DownloadFileAsync(BaseResource resource, string apiKey, CancellationToken cancellationToken) =>
+            Task.FromResult(new ResourceDownloadResult(true, "Downloaded", 1));
+
+        public Task DownloadMaterialAsync(MaterialResource materialResource, Func<CancellationToken, Task<JObject>> fetchMaterialJsonAsync, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) =>
+            Path.Combine(projectsRoot, projectName, fileName ?? string.Empty);
+
+        public Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) =>
+            Task.FromResult<JArray?>(null);
+
+        public string SanitizePath(string? path) => path ?? string.Empty;
+
+        public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
     }
 }

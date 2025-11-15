@@ -176,7 +176,7 @@ public class LocalCacheService : ILocalCacheService {
     }
 
     private async Task WriteTextAsync(string path, string content, CancellationToken cancellationToken) {
-        await using Stream stream = fileSystem.FileStream.Create(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        await using Stream stream = fileSystem.File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
         using StreamWriter writer = new(stream);
         await writer.WriteAsync(content.AsMemory(), cancellationToken).ConfigureAwait(false);
     }
@@ -184,7 +184,7 @@ public class LocalCacheService : ILocalCacheService {
     private async Task<Stream> OpenFileStreamWithRetryAsync(string path, CancellationToken cancellationToken, int maxRetries = 5, int delayMilliseconds = 2000) {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                return fileSystem.FileStream.Create(path, FileMode.Create, FileAccess.Write, FileShare.None);
+                return fileSystem.File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
             } catch (IOException) when (attempt < maxRetries) {
                 await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
             }

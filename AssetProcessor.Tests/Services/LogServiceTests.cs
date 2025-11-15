@@ -1,0 +1,40 @@
+using AssetProcessor.Services;
+using System.IO.Abstractions.TestingHelpers;
+using Xunit;
+
+namespace AssetProcessor.Tests.Services;
+
+public class LogServiceTests {
+    [Fact]
+    public void LogInfo_WritesMessageToInfoFile() {
+        MockFileSystem fileSystem = new();
+        LogService service = new(fileSystem);
+
+        service.LogInfo("Test info");
+
+        string content = fileSystem.File.ReadAllText("info_log.txt");
+        Assert.Contains("Test info", content);
+    }
+
+    [Fact]
+    public void LogWarn_WritesMessageToWarningFile() {
+        MockFileSystem fileSystem = new();
+        LogService service = new(fileSystem);
+
+        service.LogWarn("Test warn");
+
+        string content = fileSystem.File.ReadAllText("warning_log.txt");
+        Assert.Contains("Test warn", content);
+    }
+
+    [Fact]
+    public void LogError_WritesMessageToErrorFile() {
+        MockFileSystem fileSystem = new();
+        LogService service = new(fileSystem);
+
+        service.LogError("Test error");
+
+        string content = fileSystem.File.ReadAllText("error_log.txt");
+        Assert.Contains("Test error", content);
+    }
+}

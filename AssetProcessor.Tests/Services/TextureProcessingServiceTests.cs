@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO.Abstractions.TestingHelpers;
 using Xunit;
 
 namespace AssetProcessor.Tests.Services;
@@ -34,7 +35,8 @@ public class TextureProcessingServiceTests {
                 };
             });
 
-            var service = new TextureProcessingService(new FakePipelineFactory(pipeline));
+            var logService = new LogService(new MockFileSystem());
+            var service = new TextureProcessingService(new FakePipelineFactory(pipeline), logService);
 
             var result = await service.ProcessTexturesAsync(new TextureProcessingRequest {
                 Textures = textures,

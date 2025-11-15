@@ -1,4 +1,5 @@
 using AssetProcessor.Helpers;
+using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -42,43 +43,7 @@ using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
 
 namespace AssetProcessor {
-    public enum ColorChannel {
-        RGB,
-        R,
-        G,
-        B,
-        A,
-    }
-
-    public enum UVChannel {
-        UV0,
-        UV1
-    }
-
-    public enum ConnectionState {
-        Disconnected,    // Не подключены - кнопка "Connect"
-        UpToDate,        // Проект загружен, актуален - кнопка "Refresh" (проверить обновления)
-        NeedsDownload    // Нужно скачать (первый раз ИЛИ есть обновления) - кнопка "Download"
-    }
-
     public partial class MainWindow : Window, INotifyPropertyChanged {
-
-        /// <summary>
-        /// КРИТИЧНО: Универсальный sanitizer для всех путей файлов и папок.
-        /// Удаляет символы новой строки (\r, \n) и лишние пробелы, которые могут приходить из PlayCanvas API.
-        /// ВСЕГДА применяйте этот метод к путям перед File/Directory операциями!
-        /// </summary>
-        private static string SanitizePath(string? path) {
-            if (string.IsNullOrWhiteSpace(path)) {
-                return string.Empty;
-            }
-
-            return path
-                .Replace("\r", "")   // Удаляем \r
-                .Replace("\n", "")   // Удаляем \n (КРИТИЧНО! Ломает toktx и File.Exists)
-                .Trim();             // Удаляем пробелы по краям
-        }
-
         // Коллекции теперь в MainViewModel - удалены дублирующиеся объявления
         // viewModel.Textures, viewModel.Models, viewModel.Materials, Assets теперь доступны через viewModel
 
@@ -150,18 +115,6 @@ namespace AssetProcessor {
         private bool isUsingD3D11Renderer = true;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        private sealed class KtxPreviewCacheEntry {
-            public required DateTime LastWriteTimeUtc { get; init; }
-            public required List<KtxMipLevel> Mipmaps { get; init; }
-        }
-
-        private sealed class KtxMipLevel {
-            public required int Level { get; init; }
-            public required BitmapSource Bitmap { get; init; }
-            public required int Width { get; init; }
-            public required int Height { get; init; }
-        }
-
         private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
         private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
         private readonly object ignoredAssetTypesLock = new();
@@ -220,17 +173,17 @@ namespace AssetProcessor {
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
             // Заполнение ComboBox для Color Channel
-            PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
-            PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
-            PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
-            PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
-            PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
 
             // Заполнение ComboBox для UV Channel
-            PopulateComboBox<UVChannel>(MaterialDiffuseUVChannelComboBox);
-            PopulateComboBox<UVChannel>(MaterialSpecularUVChannelComboBox);
-            PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
-            PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialDiffuseUVChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialSpecularUVChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
+            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
 
             LoadModel(path: MainWindowHelpers.MODEL_PATH);
 
@@ -879,7 +832,7 @@ namespace AssetProcessor {
 
             // КРИТИЧНО: Применяем SanitizePath к входному пути!
             // Без этого File.Exists() не найдёт файл если путь содержит \n
-            sourcePath = SanitizePath(sourcePath);
+            sourcePath = PathSanitizer.SanitizePath(sourcePath);
 
             string? directory = Path.GetDirectoryName(sourcePath);
             if (string.IsNullOrEmpty(directory)) {

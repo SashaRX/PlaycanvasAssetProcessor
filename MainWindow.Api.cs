@@ -90,7 +90,7 @@ namespace AssetProcessor {
 
                     JToken folder = foldersById[folderId];
                     // КРИТИЧНО: Используем SanitizePath для очистки имени папки от \r, \n и пробелов!
-                    string folderName = SanitizePath(folder["name"]?.ToString());
+                    string folderName = PathSanitizer.SanitizePath(folder["name"]?.ToString());
                     int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
 
                     string fullPath;
@@ -104,7 +104,7 @@ namespace AssetProcessor {
                     }
 
                     // КРИТИЧНО: Применяем SanitizePath к финальному пути для гарантии
-                    fullPath = SanitizePath(fullPath);
+                    fullPath = PathSanitizer.SanitizePath(fullPath);
 
                     folderPaths[folderId] = fullPath;
                     return fullPath;
@@ -278,12 +278,12 @@ namespace AssetProcessor {
             try {
                 // КРИТИЧНО: Используем SanitizePath для очистки имени файла от \r, \n и пробелов!
                 string rawFileName = asset["name"]?.ToString() ?? "Unknown";
-                string cleanFileName = SanitizePath(rawFileName);
+                string cleanFileName = PathSanitizer.SanitizePath(rawFileName);
                 string textureName = cleanFileName.Split('.')[0];
                 int? parentId = asset["parent"]?.Type == JTokenType.Integer ? (int?)asset["parent"] : null;
 
                 // КРИТИЧНО: Применяем SanitizePath к пути текстуры!
-                string texturePath = SanitizePath(GetResourcePath(cleanFileName, parentId));
+                string texturePath = PathSanitizer.SanitizePath(GetResourcePath(cleanFileName, parentId));
 
                 // Extract resolution from variants (eliminates HTTP request!)
                 int[] resolution = new int[2];

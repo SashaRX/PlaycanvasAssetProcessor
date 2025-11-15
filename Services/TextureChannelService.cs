@@ -64,7 +64,7 @@ public sealed class TextureChannelService : ITextureChannelService {
             int endY = chunk == numberOfChunks - 1 ? height : startY + chunkHeight;
 
             for (int y = startY; y < endY; y++) {
-                Span<Rgba32> pixelRow = image.Frames.RootFrame.GetPixelRowSpan(y);
+                Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
                 for (int x = 0; x < width; x++) {
                     pixelRow[x] = transform(pixelRow[x]);
                 }

@@ -28,8 +28,7 @@ public sealed class DownloadService : IDownloadService {
                 destinationPath,
                 FileMode.Create,
                 FileAccess.Write,
-                FileShare.None,
-                bufferSize: 4096);
+                FileShare.None);
 
             await response.Content.CopyToAsync(destinationStream, cancellationToken).ConfigureAwait(false);
             return true;

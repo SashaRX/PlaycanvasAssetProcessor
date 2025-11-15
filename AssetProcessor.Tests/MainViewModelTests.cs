@@ -36,7 +36,6 @@ public class MainViewModelTests {
         var filteredIds = viewModel.FilteredTextures.Select(texture => texture.ID).ToList();
 
         Assert.Equal(new[] { 1, 2, 3 }, filteredIds.OrderBy(id => id));
-        Assert.Equal(3, viewModel.FilteredTextures.Count);
         Assert.DoesNotContain(viewModel.Textures.First(texture => texture.ID == 4), viewModel.FilteredTextures);
     }
 
@@ -89,7 +88,7 @@ public class MainViewModelTests {
 
             Assert.NotNull(projectSync.LastDownloadRequest);
             Assert.Equal("Sample Project", projectSync.LastDownloadRequest!.ProjectName);
-            Assert.Equal(1, projectSync.LastDownloadRequest!.Resources.Count);
+            Assert.Single(projectSync.LastDownloadRequest!.Resources);
             Assert.Single(localCache.DownloadedResources);
             BaseResource downloaded = localCache.DownloadedResources.Single();
             Assert.Equal("Downloaded 1 assets. Failed: 0", viewModel.StatusMessage);

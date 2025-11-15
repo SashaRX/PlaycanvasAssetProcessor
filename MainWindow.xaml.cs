@@ -99,9 +99,6 @@ namespace AssetProcessor {
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
         private readonly IHttpClientFactory httpClientFactory;
-        private readonly IHistogramService histogramService;
-        private readonly ITextureChannelService textureChannelService;
-        private readonly ILogService logService;
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
@@ -188,18 +185,9 @@ namespace AssetProcessor {
 
         private readonly MainViewModel viewModel;
 
-        public MainWindow(
-            IPlayCanvasService playCanvasService,
-            IHttpClientFactory httpClientFactory,
-            IHistogramService histogramService,
-            ITextureChannelService textureChannelService,
-            ILogService logService,
-            MainViewModel viewModel) {
+        public MainWindow(IPlayCanvasService playCanvasService, IHttpClientFactory httpClientFactory, MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-            this.histogramService = histogramService ?? throw new ArgumentNullException(nameof(histogramService));
-            this.textureChannelService = textureChannelService ?? throw new ArgumentNullException(nameof(textureChannelService));
-            this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 
             InitializeComponent();
@@ -1322,7 +1310,7 @@ namespace AssetProcessor {
                         });
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
-                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(originalBitmapSource, channel);
+                        BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
                         Dispatcher.Invoke(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
                         });
@@ -1334,7 +1322,7 @@ namespace AssetProcessor {
 
             // WPF mode: use bitmap filtering
             if (originalBitmapSource != null) {
-                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(originalBitmapSource, channel);
+                BitmapSource filteredBitmap = await MainWindowHelpers.ApplyChannelFilterAsync(originalBitmapSource, channel);
 
                 // Обновляем UI в основном потоке
                 Dispatcher.Invoke(() => {
@@ -1440,7 +1428,7 @@ namespace AssetProcessor {
 
 
             // Обработка изображения и заполнение гистограммы
-            histogramService.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
+            MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
 
             // Calculate combined histogram for statistics (luminance)
             int[] combinedHistogram = new int[256];
@@ -1450,14 +1438,14 @@ namespace AssetProcessor {
             }
 
             // Calculate statistics
-            var stats = histogramService.CalculateStatistics(combinedHistogram);
+            var stats = MainWindowHelpers.CalculateHistogramStatistics(combinedHistogram);
 
             if (!isGray) {
-                histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
-                histogramService.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
-                histogramService.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
+                MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
+                MainWindowHelpers.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
+                MainWindowHelpers.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
             } else {
-                histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
+                MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
             }
 
             histogramModel.Axes.Add(new LinearAxis {
@@ -1492,7 +1480,7 @@ namespace AssetProcessor {
                 int[] blueHistogram = new int[256];
 
                 // Обработка изображения и заполнение гистограммы
-                histogramService.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
+                MainWindowHelpers.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
 
                 // Calculate combined histogram for statistics
                 int[] combinedHistogram = new int[256];
@@ -1501,14 +1489,14 @@ namespace AssetProcessor {
                 }
 
                 // Calculate statistics
-                var stats = histogramService.CalculateStatistics(combinedHistogram);
+                var stats = MainWindowHelpers.CalculateHistogramStatistics(combinedHistogram);
 
                 if (!isGray) {
-                    histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
-                    histogramService.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
-                    histogramService.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
                 } else {
-                    histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
+                    MainWindowHelpers.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
                 }
 
                 histogramModel.Axes.Add(new LinearAxis {
@@ -1533,7 +1521,7 @@ namespace AssetProcessor {
             });
         }
 
-        private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
+        private void UpdateHistogramStatisticsUI(MainWindowHelpers.HistogramStatistics stats) {
             HistogramMinTextBlock.Text = $"{stats.Min:F0}";
             HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
             HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
@@ -1824,24 +1812,24 @@ namespace AssetProcessor {
         }
 
         private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            logService.LogInfo($"=== ProjectsComboBox_SelectionChanged CALLED, isProjectInitializationInProgress={isProjectInitializationInProgress} ===");
+            MainWindowHelpers.LogInfo($"=== ProjectsComboBox_SelectionChanged CALLED, isProjectInitializationInProgress={isProjectInitializationInProgress} ===");
 
             if (isProjectInitializationInProgress) {
-                logService.LogInfo("Skipping ProjectsComboBox_SelectionChanged - initialization in progress");
+                MainWindowHelpers.LogInfo("Skipping ProjectsComboBox_SelectionChanged - initialization in progress");
                 return;
             }
 
             if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
                 projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-                logService.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
+                MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
 
                 // Проверяем наличие JSON-файла
-                logService.LogInfo("Calling LoadAssetsFromJsonFileAsync from ProjectsComboBox_SelectionChanged");
+                MainWindowHelpers.LogInfo("Calling LoadAssetsFromJsonFileAsync from ProjectsComboBox_SelectionChanged");
                 bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
                 if (!jsonLoaded) {
                     // Если JSON-файл не найден, просто логируем (без MessageBox)
-                    logService.LogInfo($"No local data found for project '{projectName}'. User can connect to server to download.");
+                    MainWindowHelpers.LogInfo($"No local data found for project '{projectName}'. User can connect to server to download.");
                 }
 
                 // Обновляем ветки для выбранного проекта
@@ -1886,7 +1874,7 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
+            MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
 
             // Update selection count in central control box
             UpdateSelectedTexturesCount();
@@ -1900,31 +1888,31 @@ namespace AssetProcessor {
 
             // Check if selected item is an ORM texture (virtual texture for packing)
             if (TexturesDataGrid.SelectedItem is ORMTextureResource ormTexture) {
-                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected ORM texture: {ormTexture.Name}");
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected ORM texture: {ormTexture.Name}");
 
                 // Hide conversion settings panel, show ORM panel
                 if (ConversionSettingsExpander != null) {
                     ConversionSettingsExpander.Visibility = Visibility.Collapsed;
                 }
 
-                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel is null: {ORMPanel == null}");
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel is null: {ORMPanel == null}");
                 if (ORMPanel != null) {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Setting ORMPanel visibility and initializing...");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Setting ORMPanel visibility and initializing...");
                     ORMPanel.Visibility = Visibility.Visible;
 
                     // Initialize ORM panel with available viewModel.Textures (exclude other ORM textures)
                     var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] availableTextures count: {availableTextures.Count}");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] availableTextures count: {availableTextures.Count}");
                     ORMPanel.Initialize(this, availableTextures);
                     ORMPanel.SetORMTexture(ormTexture);
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel initialized and texture set");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel initialized and texture set");
                 } else {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ERROR: ORMPanel is NULL! Cannot initialize ORM settings.");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ERROR: ORMPanel is NULL! Cannot initialize ORM settings.");
                 }
 
                 // Load preview and histogram for packed ORM textures
                 if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture is packed, loading preview from: {ormTexture.Path}");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture is packed, loading preview from: {ormTexture.Path}");
 
                     // Update texture info
                     TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
@@ -1939,12 +1927,12 @@ namespace AssetProcessor {
 
                         if (isUsingD3D11Renderer) {
                             // D3D11 MODE: Try native KTX2 loading
-                            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Loading packed ORM to D3D11: {ormTexture.Name}");
+                            MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Loading packed ORM to D3D11: {ormTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
 
                             if (!ktxLoaded) {
                                 // Fallback: Try extracting PNG from KTX2 using ktx extract
-                                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
+                                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
                                 Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
                                 ktxLoaded = await ktxPreviewTask;
                             }
@@ -1962,19 +1950,19 @@ namespace AssetProcessor {
                                 TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
 
                                 // Show error message
-                                logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
+                                MainWindowHelpers.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
                             });
                         }
                     } catch (OperationCanceledException) {
-                        logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Cancelled for ORM: {ormTexture.Name}");
+                        MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Cancelled for ORM: {ormTexture.Name}");
                     } catch (Exception ex) {
-                        logService.LogError($"Error loading packed ORM texture {ormTexture.Name}: {ex.Message}");
+                        MainWindowHelpers.LogError($"Error loading packed ORM texture {ormTexture.Name}: {ex.Message}");
                         ResetPreviewState();
                         ClearD3D11Viewer();
                     }
                 } else {
                     // Not packed yet - clear preview
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture not packed yet, clearing preview");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture not packed yet, clearing preview");
                     ResetPreviewState();
                     ClearD3D11Viewer();
 
@@ -1990,7 +1978,7 @@ namespace AssetProcessor {
             }
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
-                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
+                MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
 
                 // Show conversion settings panel, hide ORM panel (for regular viewModel.Textures)
                 if (ConversionSettingsExpander != null) {
@@ -2004,7 +1992,7 @@ namespace AssetProcessor {
                 ClearD3D11Viewer();
 
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Path is valid, entering main load block");
+                    MainWindowHelpers.LogInfo($"[TexturesDataGrid_SelectionChanged] Path is valid, entering main load block");
                     try {
                         // Обновляем информацию о текстуре сразу
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
@@ -2024,16 +2012,16 @@ namespace AssetProcessor {
 
                         // Debounce: wait a bit to see if user is still scrolling
                         await Task.Delay(50, cancellationToken);
-                        logService.LogInfo($"[TextureSelection] Debounce completed for: {selectedTexture.Name}");
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Debounce completed for: {selectedTexture.Name}");
 
                         // Load conversion settings for this texture
-                        logService.LogInfo($"[TextureSelection] Loading conversion settings for: {selectedTexture.Name}");
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Loading conversion settings for: {selectedTexture.Name}");
                         LoadTextureConversionSettings(selectedTexture);
-                        logService.LogInfo($"[TextureSelection] Conversion settings loaded for: {selectedTexture.Name}");
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Conversion settings loaded for: {selectedTexture.Name}");
 
                         // Check cancellation before starting heavy operations
                         cancellationToken.ThrowIfCancellationRequested();
-                        logService.LogInfo($"[TextureSelection] Starting texture load for: {selectedTexture.Name}");
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Starting texture load for: {selectedTexture.Name}");
 
                         // FIXED: Separate D3D11 native KTX2 loading from PNG extraction
                         // to prevent conflicts
@@ -2041,22 +2029,22 @@ namespace AssetProcessor {
 
                         if (isUsingD3D11Renderer) {
                             // D3D11 MODE: Try D3D11 native KTX2 loading (always use native when D3D11 is active)
-                            logService.LogInfo($"[TextureSelection] Attempting KTX2 load for: {selectedTexture.Name}");
+                            MainWindowHelpers.LogInfo($"[TextureSelection] Attempting KTX2 load for: {selectedTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
-                            logService.LogInfo($"[TextureSelection] KTX2 load result for {selectedTexture.Name}: {ktxLoaded}");
+                            MainWindowHelpers.LogInfo($"[TextureSelection] KTX2 load result for {selectedTexture.Name}: {ktxLoaded}");
 
                             if (ktxLoaded) {
                                 // KTX2 loaded successfully to D3D11, still load source for histogram/info
                                 // If user is in Source mode, show the PNG; otherwise just load for histogram
                                 bool showInViewer = (currentPreviewSourceMode == TexturePreviewSourceMode.Source);
-                                logService.LogInfo($"[TextureSelection] Loading source preview for {selectedTexture.Name}, showInViewer: {showInViewer}");
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Loading source preview for {selectedTexture.Name}, showInViewer: {showInViewer}");
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: showInViewer);
-                                logService.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
                             } else {
                                 // No KTX2 or failed, fallback to source preview
-                                logService.LogInfo($"[TextureSelection] No KTX2, loading source preview for: {selectedTexture.Name}");
+                                MainWindowHelpers.LogInfo($"[TextureSelection] No KTX2, loading source preview for: {selectedTexture.Name}");
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
-                                logService.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
+                                MainWindowHelpers.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
                             }
                         } else {
                             // WPF MODE: Use PNG extraction for mipmaps (old method)
@@ -2081,10 +2069,10 @@ namespace AssetProcessor {
                             });
                         }
                     } catch (OperationCanceledException) {
-                        logService.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
+                        MainWindowHelpers.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
                         // Загрузка была отменена - это нормально
                     } catch (Exception ex) {
-                        logService.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
+                        MainWindowHelpers.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
                     }
                 }
             }
@@ -2095,7 +2083,7 @@ namespace AssetProcessor {
         /// Called after ORM packing to update the UI (row colors and preview).
         /// </summary>
         public async void RefreshCurrentTexture() {
-            logService.LogInfo("[RefreshCurrentTexture] Refreshing DataGrid and preview");
+            MainWindowHelpers.LogInfo("[RefreshCurrentTexture] Refreshing DataGrid and preview");
 
             // Save the selected item
             var selectedItem = TexturesDataGrid.SelectedItem;
@@ -2118,7 +2106,7 @@ namespace AssetProcessor {
                 await Task.Delay(100);
 
                 // Trigger selection changed logic manually
-                logService.LogInfo($"[RefreshCurrentTexture] Triggering preview reload for: {(selectedItem as TextureResource)?.Name ?? "unknown"}");
+                MainWindowHelpers.LogInfo($"[RefreshCurrentTexture] Triggering preview reload for: {(selectedItem as TextureResource)?.Name ?? "unknown"}");
 
                 TexturesDataGrid_SelectionChanged(TexturesDataGrid, new SelectionChangedEventArgs(
                     System.Windows.Controls.Primitives.Selector.SelectionChangedEvent,
@@ -2287,7 +2275,7 @@ namespace AssetProcessor {
 
             BitmapImage? thumbnailImage = LoadOptimizedImage(texturePath, ThumbnailSize);
             if (thumbnailImage == null) {
-                logService.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
+                MainWindowHelpers.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
                 return;
             }
 
@@ -2716,7 +2704,7 @@ namespace AssetProcessor {
                 bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
                 return bitmapImage;
             } catch (Exception ex) {
-                logService.LogError($"Error loading optimized image from {path}: {ex.Message}");
+                MainWindowHelpers.LogError($"Error loading optimized image from {path}: {ex.Message}");
                 return null;
             }
         }
@@ -2893,7 +2881,7 @@ namespace AssetProcessor {
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in OptimizeDataGridSorting");
-                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
+                MainWindowHelpers.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
                 // Не обрабатываем событие, позволяем DataGrid использовать стандартную сортировку
                 e.Handled = false;
                 isSorting = false;
@@ -3014,7 +3002,7 @@ namespace AssetProcessor {
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error in Get ListAssets: {ex.Message}");
-                logService.LogError($"Error in Get List Assets: {ex}");
+                MainWindowHelpers.LogError($"Error in Get List Assets: {ex}");
             } finally {
                 CancelButton.IsEnabled = false;
             }
@@ -3092,11 +3080,11 @@ namespace AssetProcessor {
         private async Task CheckProjectState() {
             try {
                 logger.Info("CheckProjectState: Starting");
-                logService.LogInfo("CheckProjectState: Starting project state check");
+                MainWindowHelpers.LogInfo("CheckProjectState: Starting project state check");
                 
                 if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
                     logger.Warn("CheckProjectState: projectFolderPath or projectName is empty");
-                    logService.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
+                    MainWindowHelpers.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
@@ -3108,35 +3096,35 @@ namespace AssetProcessor {
                 if (!File.Exists(assetsListPath)) {
                     // Проект не скачан - нужна загрузка
                     logger.Info("CheckProjectState: Project not downloaded yet - assets_list.json not found");
-                    logService.LogInfo("Project not downloaded yet - assets_list.json not found");
+                    MainWindowHelpers.LogInfo("Project not downloaded yet - assets_list.json not found");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
                 // Проект скачан, загружаем локальные данные
-                logService.LogInfo("Project found, loading local assets...");
+                MainWindowHelpers.LogInfo("Project found, loading local assets...");
                 logger.Info("CheckProjectState: Loading local assets...");
                 await LoadAssetsFromJsonFileAsync();
 
                 // Проверяем hash для определения обновлений
-                logService.LogInfo("Checking for updates...");
+                MainWindowHelpers.LogInfo("Checking for updates...");
                 logger.Info("CheckProjectState: Checking for updates on server");
                 bool hasUpdates = await CheckForUpdates();
 
                 if (hasUpdates) {
                     // Есть обновления на сервере
                     logger.Info("CheckProjectState: Updates available on server - setting button to Download");
-                    logService.LogInfo("CheckProjectState: Updates available on server");
+                    MainWindowHelpers.LogInfo("CheckProjectState: Updates available on server");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
                     // Проект актуален
                     logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
-                    logService.LogInfo("CheckProjectState: Project is up to date - setting button to Refresh");
+                    MainWindowHelpers.LogInfo("CheckProjectState: Project is up to date - setting button to Refresh");
                     UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in CheckProjectState");
-                logService.LogError($"Error checking project state: {ex.Message}");
+                MainWindowHelpers.LogError($"Error checking project state: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
         }
@@ -3181,14 +3169,14 @@ namespace AssetProcessor {
                 bool hasChanges = localHash != serverHash;
 
                 if (hasChanges) {
-                    logService.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
+                    MainWindowHelpers.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
                 } else {
-                    logService.LogInfo("Project is up to date");
+                    MainWindowHelpers.LogInfo("Project is up to date");
                 }
 
                 return hasChanges;
             } catch (Exception ex) {
-                logService.LogError($"Error checking for updates: {ex.Message}");
+                MainWindowHelpers.LogError($"Error checking for updates: {ex.Message}");
                 return false;
             }
         }
@@ -3244,7 +3232,7 @@ namespace AssetProcessor {
                 projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
                 projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
 
-                logService.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
+                MainWindowHelpers.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
             }
         }
 
@@ -3925,7 +3913,7 @@ namespace AssetProcessor {
         private async Task Download(object? sender, RoutedEventArgs? e) {
             try {
                 logger.Info("Download: Starting download process");
-                logService.LogInfo("Download: Starting download process");
+                MainWindowHelpers.LogInfo("Download: Starting download process");
                 
                 List<BaseResource> selectedResources = [.. viewModel.Textures.Where(t => t.Status == "On Server" ||
                                                             t.Status == "Size Mismatch" ||
@@ -3949,11 +3937,11 @@ namespace AssetProcessor {
                                                 .OrderBy(r => r.Name)];
 
                 logger.Info($"Download: Found {selectedResources.Count} resources to download");
-                logService.LogInfo($"Download: Found {selectedResources.Count} resources to download");
+                MainWindowHelpers.LogInfo($"Download: Found {selectedResources.Count} resources to download");
                 
                 if (selectedResources.Count == 0) {
                     logger.Info("Download: No resources to download");
-                    logService.LogInfo("Download: No resources to download - all files are already downloaded");
+                    MainWindowHelpers.LogInfo("Download: No resources to download - all files are already downloaded");
                     return;
                 }
 
@@ -3961,7 +3949,7 @@ namespace AssetProcessor {
                 await Task.WhenAll(downloadTasks);
 
                 logger.Info("Download: All downloads completed");
-                logService.LogInfo("Download: All downloads completed");
+                MainWindowHelpers.LogInfo("Download: All downloads completed");
 
                 // НЕ вызываем RecalculateIndices() здесь, так как после этого будет вызван
                 // CheckProjectState() -> LoadAssetsFromJsonFileAsync() -> ProcessAssetsFromJson(),
@@ -3969,7 +3957,7 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 logger.Error(ex, "Error in Download");
                 MessageBox.Show($"Error: {ex.Message}");
-                logService.LogError($"Error: {ex}");
+                MainWindowHelpers.LogError($"Error: {ex}");
             }
         }
 
@@ -3992,7 +3980,7 @@ namespace AssetProcessor {
                         }
                         break;
                     } catch (Exception ex) {
-                        logService.LogError($"Error downloading resource: {ex.Message}");
+                        MainWindowHelpers.LogError($"Error downloading resource: {ex.Message}");
                         resource.Status = "Error";
                         if (attempt == maxRetries) {
                             break;
@@ -4027,14 +4015,14 @@ namespace AssetProcessor {
                 } catch (IOException ex) {
                     if (attempt == maxRetries) {
                         materialResource.Status = "Error";
-                        logService.LogError($"Error downloading material after {maxRetries} attempts: {ex.Message}");
+                        MainWindowHelpers.LogError($"Error downloading material after {maxRetries} attempts: {ex.Message}");
                     } else {
-                        logService.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                        MainWindowHelpers.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
                         await Task.Delay(delayMilliseconds);
                     }
                 } catch (Exception ex) {
                     materialResource.Status = "Error";
-                    logService.LogError($"Error downloading material: {ex.Message}");
+                    MainWindowHelpers.LogError($"Error downloading material: {ex.Message}");
                     break;
                 }
             }
@@ -4072,9 +4060,9 @@ namespace AssetProcessor {
                         }
                     }
 
-                    logService.LogInfo($"File downloaded successfully: {resource.Path}");
+                    MainWindowHelpers.LogInfo($"File downloaded successfully: {resource.Path}");
                     if (!File.Exists(resource.Path)) {
-                        logService.LogError($"File was expected but not found: {resource.Path}");
+                        MainWindowHelpers.LogError($"File was expected but not found: {resource.Path}");
                         resource.Status = "Error";
                         return;
                     }
@@ -4083,7 +4071,7 @@ namespace AssetProcessor {
                     FileInfo fileInfo = new(resource.Path);
                     long fileSizeInBytes = fileInfo.Length;
                     long resourceSizeInBytes = resource.Size;
-                    logService.LogInfo($"File size after download: {fileSizeInBytes}");
+                    MainWindowHelpers.LogInfo($"File size after download: {fileSizeInBytes}");
 
                     double tolerance = 0.05;
                     double lowerBound = resourceSizeInBytes * (1 - tolerance);
@@ -4102,14 +4090,14 @@ namespace AssetProcessor {
                 } catch (IOException ex) {
                     if (attempt == maxRetries) {
                         resource.Status = "Error";
-                        logService.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
+                        MainWindowHelpers.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
                     } else {
-                        logService.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                        MainWindowHelpers.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
                         await Task.Delay(delayMilliseconds);
                     }
                 } catch (Exception ex) {
                     resource.Status = "Error";
-                    logService.LogError($"Error downloading resource: {ex.Message}");
+                    MainWindowHelpers.LogError($"Error downloading resource: {ex.Message}");
                     break;
                 }
             }
@@ -4121,7 +4109,7 @@ namespace AssetProcessor {
 
         private async Task TryConnect(CancellationToken cancellationToken) {
             try {
-                logService.LogInfo("=== TryConnect CALLED ===");
+                MainWindowHelpers.LogInfo("=== TryConnect CALLED ===");
 
                 if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
                     MessageBox.Show("Please select a project and a branch");
@@ -4131,7 +4119,7 @@ namespace AssetProcessor {
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
-                logService.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
+                MainWindowHelpers.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
                 List<PlayCanvasAssetSummary> assetSummaries = [];
                 string? apiKey = GetDecryptedApiKey();
                 await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", cancellationToken)) {
@@ -4142,7 +4130,7 @@ namespace AssetProcessor {
                     assetsResponse.Add(JToken.Parse(asset.ToJsonString()));
                 }
                 if (assetsResponse != null) {
-                    logService.LogInfo("Assets received from server, processing...");
+                    MainWindowHelpers.LogInfo("Assets received from server, processing...");
                     // Строим иерархию папок из списка ассетов
                     BuildFolderHierarchyFromAssets(assetsResponse);
                     // Сохраняем JSON-ответ в файл
@@ -4199,13 +4187,13 @@ namespace AssetProcessor {
 
                     RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
                     DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
-                    logService.LogInfo("=== TryConnect COMPLETED ===");
+                    MainWindowHelpers.LogInfo("=== TryConnect COMPLETED ===");
                 } else {
                     UpdateConnectionStatus(false, "Failed to connect");
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error in TryConnect: {ex.Message}");
-                logService.LogError($"Error in TryConnect: {ex}");
+                MainWindowHelpers.LogError($"Error in TryConnect: {ex}");
             }
         }
 
@@ -4262,9 +4250,9 @@ namespace AssetProcessor {
                     BuildFolderPath(folderId);
                 }
 
-                logService.LogInfo($"Built folder hierarchy with {folderPaths.Count} folders from assets list");
+                MainWindowHelpers.LogInfo($"Built folder hierarchy with {folderPaths.Count} folders from assets list");
             } catch (Exception ex) {
-                logService.LogError($"Error building folder hierarchy from assets: {ex.Message}");
+                MainWindowHelpers.LogError($"Error building folder hierarchy from assets: {ex.Message}");
                 // Продолжаем работу даже если не удалось загрузить папки
             }
         }
@@ -4280,13 +4268,13 @@ namespace AssetProcessor {
                 string jsonString = jsonResponse.ToString(Formatting.Indented);
                 await File.WriteAllTextAsync(jsonFilePath, jsonString);
 
-                logService.LogInfo($"Assets list saved to {jsonFilePath}");
+                MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
             } catch (ArgumentNullException ex) {
-                logService.LogError($"Argument error: {ex.Message}");
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
             } catch (ArgumentException ex) {
-                logService.LogError($"Argument error: {ex.Message}");
+                MainWindowHelpers.LogError($"Argument error: {ex.Message}");
             } catch (Exception ex) {
-                logService.LogError($"Error saving assets list to JSON: {ex.Message}");
+                MainWindowHelpers.LogError($"Error saving assets list to JSON: {ex.Message}");
             }
         }
 
@@ -4296,12 +4284,12 @@ namespace AssetProcessor {
 
                 string? type = asset["type"]?.ToString() ?? string.Empty;
                 string? assetPath = asset["path"]?.ToString() ?? string.Empty;
-                logService.LogInfo($"Processing {type}, API path: {assetPath}");
+                MainWindowHelpers.LogInfo($"Processing {type}, API path: {assetPath}");
 
                 if (!string.IsNullOrEmpty(type) && ignoredAssetTypes.Contains(type)) {
                     lock (ignoredAssetTypesLock) {
                         if (reportedIgnoredAssetTypes.Add(type)) {
-                            logService.LogInfo($"Asset type '{type}' is currently ignored (stub handler).");
+                            MainWindowHelpers.LogInfo($"Asset type '{type}' is currently ignored (stub handler).");
                         }
                     }
                     return;
@@ -4315,7 +4303,7 @@ namespace AssetProcessor {
 
                 JToken? file = asset["file"];
                 if (file == null || file.Type != JTokenType.Object) {
-                    logService.LogError("Invalid asset file format");
+                    MainWindowHelpers.LogError("Invalid asset file format");
                     return;
                 }
 
@@ -4337,11 +4325,11 @@ namespace AssetProcessor {
                         await ProcessModelAsset(asset, index, fileUrl, extension, cancellationToken);
                         break;
                     default:
-                        logService.LogError($"Unsupported asset type or format: {type} - {extension}");
+                        MainWindowHelpers.LogError($"Unsupported asset type or format: {type} - {extension}");
                         break;
                 }
             } catch (Exception ex) {
-                logService.LogError($"Error in ProcessAsset: {ex}");
+                MainWindowHelpers.LogError($"Error in ProcessAsset: {ex}");
             } finally {
                 getAssetsSemaphore.Release();
             }
@@ -4373,18 +4361,18 @@ namespace AssetProcessor {
                     };
 
                     await MainWindowHelpers.VerifyAndProcessResourceAsync(model, async () => {
-                        logService.LogInfo($"Adding model to list: {model.Name}");
+                        MainWindowHelpers.LogInfo($"Adding model to list: {model.Name}");
 
                         switch (model.Status) {
                             case "Downloaded":
                                 if (File.Exists(model.Path)) {
                                     AssimpContext context = new();
-                                    logService.LogInfo($"Attempting to import file: {model.Path}");
+                                    MainWindowHelpers.LogInfo($"Attempting to import file: {model.Path}");
                                     Scene scene = context.ImportFile(model.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                                    logService.LogInfo($"Import result: {scene != null}");
+                                    MainWindowHelpers.LogInfo($"Import result: {scene != null}");
 
                                     if (scene == null || scene.Meshes == null || scene.MeshCount <= 0) {
-                                        logService.LogError("Scene is null or has no meshes.");
+                                        MainWindowHelpers.LogError("Scene is null or has no meshes.");
                                         return;
                                     }
 
@@ -4409,12 +4397,12 @@ namespace AssetProcessor {
                         }
 
 
-                    await Dispatcher.InvokeAsync(() => viewModel.Models.Add(model));
-                }, logService);
+                        await Dispatcher.InvokeAsync(() => viewModel.Models.Add(model));
+                    });
                 } catch (FileNotFoundException ex) {
-                    logService.LogError($"File not found: {ex.FileName}");
+                    MainWindowHelpers.LogError($"File not found: {ex.FileName}");
                 } catch (Exception ex) {
-                    logService.LogError($"Error processing model: {ex.Message}");
+                    MainWindowHelpers.LogError($"Error processing model: {ex.Message}");
                 }
             } else {
                 throw new ArgumentException($"'{nameof(fileUrl)}' cannot be null or empty.", nameof(fileUrl));
@@ -4470,11 +4458,11 @@ namespace AssetProcessor {
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {
-                    logService.LogInfo($"Adding texture to list: {texture.Name}");
+                    MainWindowHelpers.LogInfo($"Adding texture to list: {texture.Name}");
 
                     switch (texture.Status) {
                         case "Downloaded":
-                            (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path, logService);
+                            (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path);
                             if (localResolution.HasValue) {
                                 texture.Resolution[0] = localResolution.Value.width;
                                 texture.Resolution[1] = localResolution.Value.height;
@@ -4483,7 +4471,7 @@ namespace AssetProcessor {
                         case "On Server":
                             // Only fetch resolution via HTTP if not available from API variants
                             if (texture.Resolution[0] == 0 || texture.Resolution[1] == 0) {
-                                await MainWindowHelpers.UpdateTextureResolutionAsync(texture, logService, cancellationToken);
+                                await MainWindowHelpers.UpdateTextureResolutionAsync(texture, cancellationToken);
                             }
                             break;
                         case "Size Mismatch":
@@ -4503,9 +4491,9 @@ namespace AssetProcessor {
                         ProgressBar.Value++;
                         ProgressTextBlock.Text = $"{ProgressBar.Value}/{viewModel.Textures.Count}";
                     });
-                }, logService);
+                });
             } catch (Exception ex) {
-                logService.LogError($"Error processing texture: {ex.Message}");
+                MainWindowHelpers.LogError($"Error processing texture: {ex.Message}");
             }
         }
 
@@ -4528,7 +4516,7 @@ namespace AssetProcessor {
                 };
 
                 await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {
-                    logService.LogInfo($"Processing material: {material.Name}, Status: {material.Status}");
+                    MainWindowHelpers.LogInfo($"Processing material: {material.Name}, Status: {material.Status}");
 
                     // Load full material data to get MapIds
                     if (material.Status == "Downloaded" && !string.IsNullOrEmpty(material.Path) && File.Exists(material.Path)) {
@@ -4547,23 +4535,23 @@ namespace AssetProcessor {
                                 material.OpacityMapId = detailedMaterial.OpacityMapId;
                                 material.UseMetalness = detailedMaterial.UseMetalness;
 
-                                logService.LogInfo($"Loaded MapIds for '{material.Name}': " +
+                                MainWindowHelpers.LogInfo($"Loaded MapIds for '{material.Name}': " +
                                     $"AO={material.AOMapId?.ToString() ?? "null"}, Gloss={material.GlossMapId?.ToString() ?? "null"}, " +
                                     $"Metalness={material.MetalnessMapId?.ToString() ?? "null"}, Specular={material.SpecularMapId?.ToString() ?? "null"}");
                             }
                         } catch (Exception ex) {
-                            logService.LogWarn($"Failed to parse material JSON for '{material.Name}': {ex.Message}");
+                            MainWindowHelpers.LogWarn($"Failed to parse material JSON for '{material.Name}': {ex.Message}");
                         }
                     } else {
                         // Material not downloaded yet - MapIds will be unavailable until download
-                        logService.LogInfo($"Material '{material.Name}' not downloaded, MapIds unavailable (Status: {material.Status})");
+                        MainWindowHelpers.LogInfo($"Material '{material.Name}' not downloaded, MapIds unavailable (Status: {material.Status})");
                     }
 
-                    logService.LogInfo($"Adding material to list: {material.Name}");
+                    MainWindowHelpers.LogInfo($"Adding material to list: {material.Name}");
                     await Dispatcher.InvokeAsync(() => viewModel.Materials.Add(material));
-                }, logService);
+                });
             } catch (Exception ex) {
-                logService.LogError($"Error processing material: {ex.Message}");
+                MainWindowHelpers.LogError($"Error processing material: {ex.Message}");
             }
         }
 
@@ -4577,7 +4565,7 @@ namespace AssetProcessor {
 
         private async Task<bool> LoadAssetsFromJsonFileAsync() {
             try {
-                logService.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
+                MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
 
                 if (String.IsNullOrEmpty(projectFolderPath) || String.IsNullOrEmpty(projectName)) {
                     throw new Exception("Project folder path or name is null or empty");
@@ -4585,7 +4573,7 @@ namespace AssetProcessor {
 
                 string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
                 if (File.Exists(jsonFilePath)) {
-                    logService.LogInfo($"Loading from JSON file: {jsonFilePath}");
+                    MainWindowHelpers.LogInfo($"Loading from JSON file: {jsonFilePath}");
                     string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
                     JArray assetsResponse = JArray.Parse(jsonContent);
 
@@ -4593,7 +4581,7 @@ namespace AssetProcessor {
                     BuildFolderHierarchyFromAssets(assetsResponse);
 
                     await ProcessAssetsFromJson(assetsResponse);
-                    logService.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
+                    MainWindowHelpers.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
                     return true;
                 }
             } catch (JsonReaderException ex) {
@@ -4660,7 +4648,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            logService.LogInfo("=== Detecting local ORM textures ===");
+            MainWindowHelpers.LogInfo("=== Detecting local ORM textures ===");
 
             try {
                 // Сканируем все .ktx2 файлы рекурсивно
@@ -4719,10 +4707,10 @@ namespace AssetProcessor {
                             if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
                                 ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
                                 ormTexture.MipmapCount = ktxInfo.MipLevels;
-                                logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips");
+                                MainWindowHelpers.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips");
                             }
                         } catch (Exception ex) {
-                            logService.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
+                            MainWindowHelpers.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
                         }
                     }
 
@@ -4731,21 +4719,21 @@ namespace AssetProcessor {
                     });
 
                     ormCount++;
-                    logService.LogInfo($"  Loaded ORM texture: {fileName} ({packingMode.Value})");
+                    MainWindowHelpers.LogInfo($"  Loaded ORM texture: {fileName} ({packingMode.Value})");
                 }
 
                 if (ormCount > 0) {
-                    logService.LogInfo($"=== Detected {ormCount} ORM textures ===");
+                    MainWindowHelpers.LogInfo($"=== Detected {ormCount} ORM textures ===");
                     Dispatcher.Invoke(() => {
                         RecalculateIndices(); // Recalculate indices after adding ORM textures
                         DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
                     });
                 } else {
-                    logService.LogInfo("  No ORM textures found");
+                    MainWindowHelpers.LogInfo("  No ORM textures found");
                 }
 
             } catch (Exception ex) {
-                logService.LogError($"Error detecting ORM textures: {ex.Message}");
+                MainWindowHelpers.LogError($"Error detecting ORM textures: {ex.Message}");
             }
         }
 
@@ -4784,7 +4772,7 @@ namespace AssetProcessor {
                 if (!string.IsNullOrEmpty(folderPath)) {
                     // Создаем полный путь с иерархией папок из PlayCanvas
                     pathSourceFolder = Path.Combine(pathSourceFolder, folderPath);
-                    logService.LogInfo($"Using folder hierarchy: {folderPath}");
+                    MainWindowHelpers.LogInfo($"Using folder hierarchy: {folderPath}");
                 }
             }
 
@@ -4793,7 +4781,7 @@ namespace AssetProcessor {
             }
 
             string fullPath = Path.Combine(pathSourceFolder, fileName ?? "Unknown");
-            logService.LogInfo($"Generated resource path: {fullPath}");
+            MainWindowHelpers.LogInfo($"Generated resource path: {fullPath}");
             return fullPath;
         }
 
@@ -4868,7 +4856,7 @@ namespace AssetProcessor {
         /// </summary>
         private void UpdateConnectionButton(ConnectionState newState) {
             logger.Info($"UpdateConnectionButton: Changing state from {currentConnectionState} to {newState}");
-            logService.LogInfo($"UpdateConnectionButton: Changing state to {newState}");
+            MainWindowHelpers.LogInfo($"UpdateConnectionButton: Changing state to {newState}");
             currentConnectionState = newState;
 
             Dispatcher.Invoke(() => {
@@ -4895,7 +4883,7 @@ namespace AssetProcessor {
                         DynamicConnectionButton.IsEnabled = hasSelection;
                         DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
                         logger.Info($"UpdateConnectionButton: Set to Refresh (enabled={hasSelection})");
-                        logService.LogInfo($"UpdateConnectionButton: Button set to Refresh, enabled={hasSelection}");
+                        MainWindowHelpers.LogInfo($"UpdateConnectionButton: Button set to Refresh, enabled={hasSelection}");
                         break;
 
                     case ConnectionState.NeedsDownload:
@@ -4904,7 +4892,7 @@ namespace AssetProcessor {
                         DynamicConnectionButton.IsEnabled = hasSelection;
                         DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
                         logger.Info($"UpdateConnectionButton: Set to Download (enabled={hasSelection})");
-                        logService.LogInfo($"UpdateConnectionButton: Button set to Download, enabled={hasSelection}");
+                        MainWindowHelpers.LogInfo($"UpdateConnectionButton: Button set to Download, enabled={hasSelection}");
                         break;
                 }
             });
@@ -4915,34 +4903,34 @@ namespace AssetProcessor {
         /// </summary>
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
-            logService.LogInfo($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
+            MainWindowHelpers.LogInfo($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
             
             try {
                 switch (currentConnectionState) {
                     case ConnectionState.Disconnected:
                         // Подключаемся к PlayCanvas и загружаем список проектов
                         logger.Info("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
-                        logService.LogInfo("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
+                        MainWindowHelpers.LogInfo("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
                         ConnectToPlayCanvas();
                         break;
 
                     case ConnectionState.UpToDate:
                         // Проверяем наличие обновлений на сервере
                         logger.Info("DynamicConnectionButton_Click: Calling RefreshFromServer");
-                        logService.LogInfo("DynamicConnectionButton_Click: Calling RefreshFromServer");
+                        MainWindowHelpers.LogInfo("DynamicConnectionButton_Click: Calling RefreshFromServer");
                         await RefreshFromServer();
                         break;
 
                     case ConnectionState.NeedsDownload:
                         // Скачиваем список ассетов + файлы
                         logger.Info("DynamicConnectionButton_Click: Calling DownloadFromServer");
-                        logService.LogInfo("DynamicConnectionButton_Click: Calling DownloadFromServer");
+                        MainWindowHelpers.LogInfo("DynamicConnectionButton_Click: Calling DownloadFromServer");
                         await DownloadFromServer();
                         break;
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in DynamicConnectionButton_Click");
-                logService.LogError($"Error in DynamicConnectionButton_Click: {ex}");
+                MainWindowHelpers.LogError($"Error in DynamicConnectionButton_Click: {ex}");
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -4975,7 +4963,7 @@ namespace AssetProcessor {
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                logService.LogError($"Error in RefreshFromServer: {ex}");
+                MainWindowHelpers.LogError($"Error in RefreshFromServer: {ex}");
             } finally {
                 DynamicConnectionButton.IsEnabled = true;
             }
@@ -4987,28 +4975,28 @@ namespace AssetProcessor {
         private async Task DownloadFromServer() {
             try {
                 logger.Info("DownloadFromServer: Starting download");
-                logService.LogInfo("DownloadFromServer: Starting download from server");
+                MainWindowHelpers.LogInfo("DownloadFromServer: Starting download from server");
                 CancelButton.IsEnabled = true;
                 DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
                     // Загружаем список ассетов (assets_list.json) с сервера
                     logger.Info("DownloadFromServer: Loading assets list from server");
-                    logService.LogInfo("DownloadFromServer: Loading assets list from server");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Loading assets list from server");
                     await TryConnect(cancellationTokenSource.Token);
 
                     // Теперь скачиваем файлы (текстуры, модели, материалы)
                     logger.Info("DownloadFromServer: Starting file downloads");
-                    logService.LogInfo("DownloadFromServer: Starting file downloads");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Starting file downloads");
                     await Download(null, null);
                     logger.Info("DownloadFromServer: File downloads completed");
-                    logService.LogInfo("DownloadFromServer: File downloads completed");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: File downloads completed");
 
                     // После успешной загрузки обновляем статус кнопки без перезагрузки данных
                     // НЕ вызываем CheckProjectState(), так как он перезагрузит данные из JSON и сбросит статусы
                     // Вместо этого просто проверяем наличие обновлений на сервере
                     logger.Info("DownloadFromServer: Checking for updates on server after download");
-                    logService.LogInfo("DownloadFromServer: Checking for updates on server after download");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Checking for updates on server after download");
                     bool hasUpdates = await CheckForUpdates();
                     
                     if (hasUpdates) {
@@ -5016,19 +5004,19 @@ namespace AssetProcessor {
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     } else {
                         logger.Info("DownloadFromServer: Project is up to date - setting button to Refresh");
-                        logService.LogInfo("DownloadFromServer: Project is up to date - setting button to Refresh");
+                        MainWindowHelpers.LogInfo("DownloadFromServer: Project is up to date - setting button to Refresh");
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     }
                     logger.Info("DownloadFromServer: Button state updated");
-                    logService.LogInfo("DownloadFromServer: Button state updated");
+                    MainWindowHelpers.LogInfo("DownloadFromServer: Button state updated");
                 } else {
                     logger.Warn("DownloadFromServer: cancellationTokenSource is null!");
-                    logService.LogError("DownloadFromServer: cancellationTokenSource is null!");
+                    MainWindowHelpers.LogError("DownloadFromServer: cancellationTokenSource is null!");
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in DownloadFromServer");
                 MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                logService.LogError($"Error in DownloadFromServer: {ex}");
+                MainWindowHelpers.LogError($"Error in DownloadFromServer: {ex}");
             } finally {
                 CancelButton.IsEnabled = false;
                 DynamicConnectionButton.IsEnabled = true;
@@ -5101,26 +5089,26 @@ namespace AssetProcessor {
         private async Task InitializeOnStartup() {
             try {
                 logger.Info("=== InitializeOnStartup: Starting ===");
-                logService.LogInfo("=== Initializing on startup ===");
+                MainWindowHelpers.LogInfo("=== Initializing on startup ===");
 
                 // Проверяем наличие API ключа и username
                 if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
                     string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                     logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
-                    logService.LogInfo("No API key or username - showing Connect button");
+                    MainWindowHelpers.LogInfo("No API key or username - showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
 
                 // Подключаемся к серверу и загружаем список проектов
                 logger.Info("InitializeOnStartup: Connecting to PlayCanvas server...");
-                logService.LogInfo("Connecting to PlayCanvas server...");
+                MainWindowHelpers.LogInfo("Connecting to PlayCanvas server...");
                 await LoadLastSettings();
                 logger.Info("InitializeOnStartup: LoadLastSettings completed");
 
             } catch (Exception ex) {
                 logger.Error(ex, "Error during startup initialization");
-                logService.LogError($"Error during startup initialization: {ex.Message}");
+                MainWindowHelpers.LogError($"Error during startup initialization: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.Disconnected);
             }
         }
@@ -5132,11 +5120,11 @@ namespace AssetProcessor {
         private async Task SmartLoadAssets() {
             try {
                 logger.Info("=== SmartLoadAssets: Starting ===");
-                logService.LogInfo("=== SmartLoadAssets: Checking for updates ===");
+                MainWindowHelpers.LogInfo("=== SmartLoadAssets: Checking for updates ===");
 
                 if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
                     logger.Warn($"SmartLoadAssets: No project or branch selected (Project={ProjectsComboBox.SelectedItem != null}, Branch={BranchesComboBox.SelectedItem != null})");
-                    logService.LogInfo("No project or branch selected");
+                    MainWindowHelpers.LogInfo("No project or branch selected");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
@@ -5149,15 +5137,15 @@ namespace AssetProcessor {
                 bool localFileExists = File.Exists(assetsListPath);
 
                 if (localFileExists) {
-                    logService.LogInfo($"Local assets_list.json found: {assetsListPath}");
+                    MainWindowHelpers.LogInfo($"Local assets_list.json found: {assetsListPath}");
 
                     // Получаем hash локального JSON
                     string localJson = await File.ReadAllTextAsync(assetsListPath);
                     string localHash = ComputeHash(localJson);
-                    logService.LogInfo($"Local hash: {localHash.Substring(0, 16)}...");
+                    MainWindowHelpers.LogInfo($"Local hash: {localHash.Substring(0, 16)}...");
 
                     // Получаем данные с сервера для сравнения hash
-                    logService.LogInfo("Fetching assets from server to check hash...");
+                    MainWindowHelpers.LogInfo("Fetching assets from server to check hash...");
                     List<PlayCanvasAssetSummary> serverSummaries = [];
                     string? apiKey = GetDecryptedApiKey();
                 await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", CancellationToken.None)) {
@@ -5168,35 +5156,35 @@ namespace AssetProcessor {
                         serverData.Add(JToken.Parse(asset.ToJsonString()));
                     }
                     string serverHash = ComputeHash(serverData.ToString());
-                    logService.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
+                    MainWindowHelpers.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
 
                     // Загружаем локальные данные в любом случае
                     logger.Info("SmartLoadAssets: Loading local assets...");
-                    logService.LogInfo("Loading local assets...");
+                    MainWindowHelpers.LogInfo("Loading local assets...");
                     await LoadAssetsFromJsonFileAsync();
 
                     if (localHash == serverHash) {
                         // Hash совпадают - проект актуален
                         logger.Info("SmartLoadAssets: Hashes match! Project is up to date.");
-                        logService.LogInfo("Hashes match! Project is up to date.");
+                        MainWindowHelpers.LogInfo("Hashes match! Project is up to date.");
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     } else {
                         // Hash отличаются - есть обновления на сервере
                         logger.Info("SmartLoadAssets: Hashes differ! Updates available on server.");
-                        logService.LogInfo("Hashes differ! Updates available on server.");
+                        MainWindowHelpers.LogInfo("Hashes differ! Updates available on server.");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     }
                     logger.Info("SmartLoadAssets: Assets loaded successfully");
                 } else {
                     // Локального файла нет - нужна загрузка
                     logger.Info("SmartLoadAssets: No local assets_list.json found - need to download");
-                    logService.LogInfo("No local assets_list.json found - need to download");
+                    MainWindowHelpers.LogInfo("No local assets_list.json found - need to download");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 }
 
             } catch (Exception ex) {
                 logger.Error(ex, "Error in SmartLoadAssets");
-                logService.LogError($"Error in SmartLoadAssets: {ex.Message}");
+                MainWindowHelpers.LogError($"Error in SmartLoadAssets: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
         }
@@ -5308,17 +5296,17 @@ namespace AssetProcessor {
         }
 
         private void ConversionSettingsPanel_SettingsChanged(object? sender, EventArgs e) {
-            logService.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event triggered");
+            MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event triggered");
 
             if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
-                logService.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Updating settings for texture: {selectedTexture.Name}");
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Updating settings for texture: {selectedTexture.Name}");
                 UpdateTextureConversionSettings(selectedTexture);
-                logService.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Settings updated for texture: {selectedTexture.Name}");
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Settings updated for texture: {selectedTexture.Name}");
             } else {
-                logService.LogInfo($"[ConversionSettingsPanel_SettingsChanged] No texture selected, skipping update");
+                MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] No texture selected, skipping update");
             }
 
-            logService.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event handler completed");
+            MainWindowHelpers.LogInfo($"[ConversionSettingsPanel_SettingsChanged] Event handler completed");
         }
 
         private void UpdateTextureConversionSettings(TextureResource texture) {
@@ -5329,14 +5317,14 @@ namespace AssetProcessor {
                 texture.CompressionFormat = compression.CompressionFormat.ToString();
                 texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
 
-                logService.LogInfo($"Updated conversion settings for {texture.Name}");
+                MainWindowHelpers.LogInfo($"Updated conversion settings for {texture.Name}");
             } catch (Exception ex) {
-                logService.LogError($"Error updating conversion settings: {ex.Message}");
+                MainWindowHelpers.LogError($"Error updating conversion settings: {ex.Message}");
             }
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
-            logService.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
 
             // КРИТИЧНО: Устанавливаем путь текущей текстуры для auto-detect normal map!
             ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
@@ -5348,36 +5336,36 @@ namespace AssetProcessor {
             // Это позволяет автоматически выбирать правильный preset для каждой текстуры
             var presetManager = new TextureConversion.Settings.PresetManager();
             var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
-            logService.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");
 
             if (matchedPreset != null) {
                 // Нашли preset по имени файла (например "gloss" → "Gloss (Linear + Toksvig)")
                 texture.PresetName = matchedPreset.Name;
-                logService.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
+                MainWindowHelpers.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
 
                 // Проверяем наличие preset в dropdown
                 var dropdownItems = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().ToList();
-                logService.LogInfo($"[LoadTextureConversionSettings] Dropdown contains {dropdownItems.Count} items: {string.Join(", ", dropdownItems)}");
+                MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Dropdown contains {dropdownItems.Count} items: {string.Join(", ", dropdownItems)}");
 
                 bool presetExistsInDropdown = dropdownItems.Contains(matchedPreset.Name);
-                logService.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
+                MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
 
                 // КРИТИЧНО: Устанавливаем preset БЕЗ триггера событий чтобы не блокировать загрузку текстуры!
                 if (presetExistsInDropdown) {
-                    logService.LogInfo($"[LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: {matchedPreset.Name}");
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: {matchedPreset.Name}");
                     ConversionSettingsPanel.SetPresetSilently(matchedPreset.Name);
                 } else {
-                    logService.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom SILENTLY");
+                    MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom SILENTLY");
                     ConversionSettingsPanel.SetPresetSilently("Custom");
                 }
             } else {
                 // Preset не найден по имени файла - используем "Custom"
                 texture.PresetName = "";
-                logService.LogInfo($"No preset matched for '{texture.Name}', using Custom SILENTLY");
+                MainWindowHelpers.LogInfo($"No preset matched for '{texture.Name}', using Custom SILENTLY");
                 ConversionSettingsPanel.SetPresetSilently("Custom");
             }
 
-            logService.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");
+            MainWindowHelpers.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");
 
             // Загружаем default настройки для типа текстуры (если Custom)
             if (string.IsNullOrEmpty(texture.PresetName)) {
@@ -5547,7 +5535,7 @@ namespace AssetProcessor {
                         D3D11TextureViewer.Renderer.Render();
                         UpdateChannelButtonsState();
                         if (!string.IsNullOrWhiteSpace(e.Preview.AutoEnableReason)) {
-                            logService.LogInfo($"Auto-enabled Normal reconstruction mode for {e.Preview.AutoEnableReason}");
+                            MainWindowHelpers.LogInfo($"Auto-enabled Normal reconstruction mode for {e.Preview.AutoEnableReason}");
                         }
                     }
                 });
@@ -5612,9 +5600,9 @@ namespace AssetProcessor {
                 TexturesDataGrid.SelectedItem = ormTexture;
                 TexturesDataGrid.ScrollIntoView(ormTexture);
 
-                logService.LogInfo($"Created new ORM texture: {ormTexture.Name}");
+                MainWindowHelpers.LogInfo($"Created new ORM texture: {ormTexture.Name}");
             } catch (Exception ex) {
-                logService.LogError($"Error creating ORM texture: {ex.Message}");
+                MainWindowHelpers.LogError($"Error creating ORM texture: {ex.Message}");
                 MessageBox.Show($"Failed to create ORM texture: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -5637,7 +5625,7 @@ namespace AssetProcessor {
 
             try {
                 // Debug: Log material map IDs
-                logService.LogInfo($"Material '{material.Name}': AOMapId={material.AOMapId?.ToString() ?? "null"}, GlossMapId={material.GlossMapId?.ToString() ?? "null"}, " +
+                MainWindowHelpers.LogInfo($"Material '{material.Name}': AOMapId={material.AOMapId?.ToString() ?? "null"}, GlossMapId={material.GlossMapId?.ToString() ?? "null"}, " +
                     $"MetalnessMapId={material.MetalnessMapId?.ToString() ?? "null"}, SpecularMapId={material.SpecularMapId?.ToString() ?? "null"}, UseMetalness={material.UseMetalness}");
 
                 // Find viewModel.Textures by map IDs
@@ -5646,7 +5634,7 @@ namespace AssetProcessor {
                 TextureResource? metalnessTexture = null;
 
                 // Debug: Log found textures
-                logService.LogInfo($"Found textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
+                MainWindowHelpers.LogInfo($"Found textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
 
                 // Smart workflow detection: prefer actual texture presence over UseMetalness flag
                 string workflowInfo = "";
@@ -5656,23 +5644,23 @@ namespace AssetProcessor {
                 TextureResource? metalnessCandidate = FindTextureById(material.MetalnessMapId);
                 TextureResource? specularCandidate = FindTextureById(material.SpecularMapId);
 
-                logService.LogInfo($"Texture candidates: Metalness={metalnessCandidate?.Name ?? "null"}, Specular={specularCandidate?.Name ?? "null"}");
+                MainWindowHelpers.LogInfo($"Texture candidates: Metalness={metalnessCandidate?.Name ?? "null"}, Specular={specularCandidate?.Name ?? "null"}");
 
                 if (metalnessCandidate != null) {
                     // Metalness texture exists - use PBR workflow
                     metalnessTexture = metalnessCandidate;
                     workflowInfo = "Workflow: Metalness (PBR)";
                     mapType = "Metallic";
-                    logService.LogInfo($"Metalness workflow detected: Metallic={metalnessTexture.Name}");
+                    MainWindowHelpers.LogInfo($"Metalness workflow detected: Metallic={metalnessTexture.Name}");
                 } else if (specularCandidate != null) {
                     // Only Specular texture exists - use legacy workflow
                     metalnessTexture = specularCandidate;
                     workflowInfo = "Workflow: Specular (Legacy)\nNote: Specular map will be used as Metallic";
                     mapType = "Specular";
-                    logService.LogInfo($"Specular workflow detected: Specular={metalnessTexture.Name}");
+                    MainWindowHelpers.LogInfo($"Specular workflow detected: Specular={metalnessTexture.Name}");
                 } else {
                     // No metallic/specular texture found
-                    logService.LogWarn($"No metallic or specular texture found for material '{material.Name}' (MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId})");
+                    MainWindowHelpers.LogWarn($"No metallic or specular texture found for material '{material.Name}' (MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId})");
                     workflowInfo = material.UseMetalness ? "Workflow: Metalness (PBR)" : "Workflow: Specular (Legacy)";
                     mapType = material.UseMetalness ? "Metallic" : "Specular";
                 }
@@ -5740,7 +5728,7 @@ namespace AssetProcessor {
                 TexturesDataGrid.SelectedItem = ormTexture;
                 TexturesDataGrid.ScrollIntoView(ormTexture);
 
-                logService.LogInfo($"Created ORM texture '{ormTexture.Name}' with mode {mode}");
+                MainWindowHelpers.LogInfo($"Created ORM texture '{ormTexture.Name}' with mode {mode}");
                 MessageBox.Show($"Created ORM texture:\n\n" +
                               $"Name: {ormTexture.Name}\n" +
                               $"Mode: {mode}\n" +
@@ -5749,7 +5737,7 @@ namespace AssetProcessor {
                               $"Metallic: {metalnessTexture?.Name ?? "None"}",
                     "ORM Texture Created", MessageBoxButton.OK, MessageBoxImage.Information);
             } catch (Exception ex) {
-                logService.LogError($"Error creating ORM from material: {ex.Message}");
+                MainWindowHelpers.LogError($"Error creating ORM from material: {ex.Message}");
                 MessageBox.Show($"Failed to create ORM texture: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -5839,11 +5827,11 @@ namespace AssetProcessor {
                     }
                 }
 
-                logService.LogInfo($"Batch ORM creation: {created} created, {skipped} skipped, {errors.Count} errors");
+                MainWindowHelpers.LogInfo($"Batch ORM creation: {created} created, {skipped} skipped, {errors.Count} errors");
                 MessageBox.Show(message, "Batch ORM Creation Complete",
                     MessageBoxButton.OK, errors.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
             } catch (Exception ex) {
-                logService.LogError($"Error in batch ORM creation: {ex.Message}");
+                MainWindowHelpers.LogError($"Error in batch ORM creation: {ex.Message}");
                 MessageBox.Show($"Failed to create ORM textures: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -5877,7 +5865,7 @@ namespace AssetProcessor {
 
             if (result == MessageBoxResult.Yes) {
                 viewModel.Textures.Remove(ormTexture);
-                logService.LogInfo($"Deleted ORM texture: {ormTexture.Name}");
+                MainWindowHelpers.LogInfo($"Deleted ORM texture: {ormTexture.Name}");
             }
         }
 
@@ -5894,7 +5882,7 @@ namespace AssetProcessor {
 
             if (result == MessageBoxResult.Yes) {
                 viewModel.Textures.Remove(ormTexture);
-                logService.LogInfo($"Deleted ORM texture '{ormTexture.Name}' from texture list");
+                MainWindowHelpers.LogInfo($"Deleted ORM texture '{ormTexture.Name}' from texture list");
             }
         }
 
@@ -5906,10 +5894,10 @@ namespace AssetProcessor {
             // Debug: Log search
             var found = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
             if (found == null) {
-                logService.LogWarn($"Texture with ID {mapId.Value} not found. Total textures in collection: {viewModel.Textures.Count}");
+                MainWindowHelpers.LogWarn($"Texture with ID {mapId.Value} not found. Total textures in collection: {viewModel.Textures.Count}");
                 // Log first few texture IDs for debugging
                 var sampleIds = viewModel.Textures.Take(5).Select(t => $"{t.ID}({t.Name}");
-                logService.LogInfo($"Sample texture IDs: {sampleIds}");
+                MainWindowHelpers.LogInfo($"Sample texture IDs: {sampleIds}");
             }
             return found;
         }
@@ -6032,9 +6020,9 @@ namespace AssetProcessor {
                 var outputDir = Path.Combine(sourceDir, "glb");
                 Directory.CreateDirectory(outputDir);
 
-                logService.LogInfo($"Processing model: {selectedModel.Name}");
-                logService.LogInfo($"  Source: {selectedModel.Path}");
-                logService.LogInfo($"  Output: {outputDir}");
+                MainWindowHelpers.LogInfo($"Processing model: {selectedModel.Name}");
+                MainWindowHelpers.LogInfo($"  Source: {selectedModel.Path}");
+                MainWindowHelpers.LogInfo($"  Output: {outputDir}");
 
                 // Load FBX2glTF and gltfpack paths from global settings
                 var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
@@ -6045,8 +6033,8 @@ namespace AssetProcessor {
                     ? "gltfpack.exe"
                     : modelConversionSettings.GltfPackExecutablePath;
 
-                logService.LogInfo($"  FBX2glTF: {fbx2glTFPath}");
-                logService.LogInfo($"  gltfpack: {gltfPackPath}");
+                MainWindowHelpers.LogInfo($"  FBX2glTF: {fbx2glTFPath}");
+                MainWindowHelpers.LogInfo($"  gltfpack: {gltfPackPath}");
 
                 var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
 
@@ -6055,20 +6043,20 @@ namespace AssetProcessor {
                 var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
 
                 if (result.Success) {
-                    logService.LogInfo($"✓ Model processed successfully");
-                    logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
-                    logService.LogInfo($"  Manifest: {result.ManifestPath}");
+                    MainWindowHelpers.LogInfo($"✓ Model processed successfully");
+                    MainWindowHelpers.LogInfo($"  LOD files: {result.LodFiles.Count}");
+                    MainWindowHelpers.LogInfo($"  Manifest: {result.ManifestPath}");
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
                     var errors = string.Join("\n", result.Errors);
-                    logService.LogError($"✗ Model processing failed:\n{errors}");
+                    MainWindowHelpers.LogError($"✗ Model processing failed:\n{errors}");
                     MessageBox.Show($"Model processing failed:\n\n{errors}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
 
                 ProgressTextBlock.Text = "Ready";
             } catch (Exception ex) {
-                logService.LogError($"Error processing model: {ex.Message}");
+                MainWindowHelpers.LogError($"Error processing model: {ex.Message}");
                 MessageBox.Show($"Error processing model: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 ProgressTextBlock.Text = "Ready";
             }

@@ -4,7 +4,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -14,14 +13,14 @@ namespace AssetProcessor.Tests;
 public class LocalCacheServiceTests {
     [Fact]
     public void SanitizePath_RemovesNewLinesAndTrims() {
-        LocalCacheService service = CreateService();
+        LocalCacheService service = new();
         string sanitized = service.SanitizePath("  sample\n");
         Assert.Equal("sample", sanitized);
     }
 
     [Fact]
     public void GetResourcePath_CreatesDirectoriesAndBuildsPath() {
-        LocalCacheService service = CreateService();
+        LocalCacheService service = new();
         string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try {
             Dictionary<int, string> folders = new() { [1] = "Folder" };
@@ -38,7 +37,7 @@ public class LocalCacheServiceTests {
 
     [Fact]
     public async Task DownloadMaterialAsync_WritesJsonFile() {
-        LocalCacheService service = CreateService();
+        LocalCacheService service = new();
         string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(root);
         try {
@@ -59,19 +58,5 @@ public class LocalCacheServiceTests {
                 Directory.Delete(root, true);
             }
         }
-    }
-
-    private static LocalCacheService CreateService() {
-        return new LocalCacheService(new StubHttpClientFactory(), new TestLogService());
-    }
-
-    private sealed class StubHttpClientFactory : IHttpClientFactory {
-        public HttpClient CreateClient(string name) => new();
-    }
-
-    private sealed class TestLogService : ILogService {
-        public void LogError(string? message) { }
-        public void LogInfo(string message) { }
-        public void LogWarn(string message) { }
     }
 }

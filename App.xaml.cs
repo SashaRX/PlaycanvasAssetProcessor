@@ -4,7 +4,6 @@ using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.IO.Abstractions;
 using System.Net.Http;
 using System.Windows;
 
@@ -54,12 +53,6 @@ namespace AssetProcessor {
                     MaxConnectionsPerServer = 50
                 });
 
-            services.AddSingleton<IFileSystem, FileSystem>();
-            services.AddSingleton<ILogService, LogService>();
-            services.AddSingleton<IHistogramService, HistogramService>();
-            services.AddSingleton<ITextureChannelService, TextureChannelService>();
-            services.AddSingleton<IDownloadService, DownloadService>();
-            services.AddSingleton<LocalCacheService>();
             services.AddSingleton<ITextureProcessingService, TextureProcessingService>();
 
             services.AddSingleton<MainViewModel>(sp => {

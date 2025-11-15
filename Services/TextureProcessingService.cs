@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using AssetProcessor.TextureConversion.Core;
@@ -19,15 +20,13 @@ public sealed class TextureProcessingService : ITextureProcessingService {
     private static readonly TextureConversion.Settings.PresetManager CachedPresetManager = new();
 
     private readonly ITextureConversionPipelineFactory pipelineFactory;
-    private readonly ILogService logService;
 
-    public TextureProcessingService(ILogService logService)
-        : this(new TextureConversionPipelineFactory(), logService) {
+    public TextureProcessingService()
+        : this(new TextureConversionPipelineFactory()) {
     }
 
-    public TextureProcessingService(ITextureConversionPipelineFactory pipelineFactory, ILogService logService) {
+    public TextureProcessingService(ITextureConversionPipelineFactory pipelineFactory) {
         this.pipelineFactory = pipelineFactory ?? throw new ArgumentNullException(nameof(pipelineFactory));
-        this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
     }
 
     public async Task<TextureProcessingResult> ProcessTexturesAsync(TextureProcessingRequest request, CancellationToken cancellationToken) {
@@ -66,7 +65,7 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                     errorCount++;
                     var errorMsg = $"{texture.Name ?? "Unknown"}: Empty file path";
                     errorMessages.Add(errorMsg);
-                    logService.LogError($"Skipping texture with empty path: {texture.Name ?? "Unknown"}");
+                    MainWindowHelpers.LogError($"Skipping texture with empty path: {texture.Name ?? "Unknown"}");
                     continue;
                 }
 
@@ -84,11 +83,11 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                 var extension = compressionSettings.OutputFormat == OutputFormat.KTX2 ? ".ktx2" : ".basis";
                 var outputPath = Path.Combine(sourceDir, sourceFileName + extension);
 
-                logService.LogInfo("=== CONVERSION START ===");
-                logService.LogInfo($"  Texture Name: {texture.Name}");
-                logService.LogInfo($"  Source Path: {texture.Path}");
-                logService.LogInfo($"  Output Path: {outputPath}");
-                logService.LogInfo("========================");
+                MainWindowHelpers.LogInfo("=== CONVERSION START ===");
+                MainWindowHelpers.LogInfo($"  Texture Name: {texture.Name}");
+                MainWindowHelpers.LogInfo($"  Source Path: {texture.Path}");
+                MainWindowHelpers.LogInfo($"  Output Path: {outputPath}");
+                MainWindowHelpers.LogInfo("========================");
 
                 var saveSeparateMipmaps = request.SettingsProvider.SaveSeparateMipmaps;
                 var mipmapOutputDir = saveSeparateMipmaps
@@ -113,7 +112,7 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                     errorCount++;
                     var errorMsg = $"{texture.Name}: {result.Error ?? "Unknown error"}";
                     errorMessages.Add(errorMsg);
-                    logService.LogError($"✗ Failed to convert {texture.Name}: {result.Error}");
+                    MainWindowHelpers.LogError($"✗ Failed to convert {texture.Name}: {result.Error}");
                     continue;
                 }
 
@@ -141,11 +140,11 @@ public sealed class TextureProcessingService : ITextureProcessingService {
 
                 if (fileFound && fileSize > 0) {
                     texture.CompressedSize = fileSize;
-                    logService.LogInfo($"✓ Successfully converted {texture.Name}");
-                    logService.LogInfo($"  Mipmaps: {result.MipLevels}, Size: {fileSize / 1024.0:F1} KB, Path: {actualPath}");
+                    MainWindowHelpers.LogInfo($"✓ Successfully converted {texture.Name}");
+                    MainWindowHelpers.LogInfo($"  Mipmaps: {result.MipLevels}, Size: {fileSize / 1024.0:F1} KB, Path: {actualPath}");
                 } else {
-                    logService.LogError("✗ OUTPUT FILE NOT FOUND OR EMPTY!");
-                    logService.LogError($"  Expected: {outputPath}");
+                    MainWindowHelpers.LogError("✗ OUTPUT FILE NOT FOUND OR EMPTY!");
+                    MainWindowHelpers.LogError($"  Expected: {outputPath}");
                     texture.CompressedSize = 0;
                 }
 
@@ -162,7 +161,7 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                 errorCount++;
                 var errorMsg = $"{texture.Name}: {ex.Message}";
                 errorMessages.Add(errorMsg);
-                logService.LogError($"✗ Exception processing {texture.Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                MainWindowHelpers.LogError($"✗ Exception processing {texture.Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
             }
         }
 

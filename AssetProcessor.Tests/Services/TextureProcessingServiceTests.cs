@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO.Abstractions.TestingHelpers;
 using Xunit;
 
 namespace AssetProcessor.Tests.Services;
@@ -34,7 +35,8 @@ public class TextureProcessingServiceTests {
                 };
             });
 
-            var service = new TextureProcessingService(new FakePipelineFactory(pipeline), new FakeLogService());
+            var logService = new LogService(new MockFileSystem());
+            var service = new TextureProcessingService(new FakePipelineFactory(pipeline), logService);
 
             var result = await service.ProcessTexturesAsync(new TextureProcessingRequest {
                 Textures = textures,
@@ -98,14 +100,6 @@ public class TextureProcessingServiceTests {
         }
 
         public ITextureConversionPipeline Create(string ktxExecutablePath) => pipeline;
-    }
-
-    private sealed class FakeLogService : AssetProcessor.Services.ILogService {
-        public void LogInfo(string message) { }
-
-        public void LogWarn(string message) { }
-
-        public void LogError(string? message) { }
     }
 
     private sealed class FakePipeline : ITextureConversionPipeline {

@@ -34,7 +34,7 @@ public class TextureProcessingServiceTests {
                 };
             });
 
-            var service = new TextureProcessingService(new FakePipelineFactory(pipeline));
+            var service = new TextureProcessingService(new FakePipelineFactory(pipeline), new FakeLogService());
 
             var result = await service.ProcessTexturesAsync(new TextureProcessingRequest {
                 Textures = textures,
@@ -98,6 +98,14 @@ public class TextureProcessingServiceTests {
         }
 
         public ITextureConversionPipeline Create(string ktxExecutablePath) => pipeline;
+    }
+
+    private sealed class FakeLogService : ILogService {
+        public void LogInfo(string message) { }
+
+        public void LogWarn(string message) { }
+
+        public void LogError(string? message) { }
     }
 
     private sealed class FakePipeline : ITextureConversionPipeline {

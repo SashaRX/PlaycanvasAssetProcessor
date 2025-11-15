@@ -201,8 +201,9 @@ public class LocalCacheService : ILocalCacheService {
             return "Empty File";
         }
 
-        if (!string.IsNullOrEmpty(resource.Hash) && await VerifyFileHashAsync(resource.Path!, resource.Hash, cancellationToken).ConfigureAwait(false)) {
-            return "Downloaded";
+        if (!string.IsNullOrEmpty(resource.Hash)) {
+            bool hashMatches = await VerifyFileHashAsync(resource.Path!, resource.Hash, cancellationToken).ConfigureAwait(false);
+            return hashMatches ? "Downloaded" : "Corrupted";
         }
 
         const double tolerance = 0.05;

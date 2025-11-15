@@ -94,6 +94,29 @@ public class LocalCacheServiceTests {
     }
 
     [Fact]
+    public async Task DownloadFileAsync_ReturnsCorrupted_WhenHashMismatchEvenIfSizeMatches() {
+        const string expectedContent = "texture-data";
+        string expectedHash = ComputeHash(expectedContent);
+        byte[] actualBytes = Encoding.UTF8.GetBytes("texture-datz"); // одинаковый размер, но иное содержимое
+
+        BaseResource resource = new TextureResource {
+            Url = "https://example.com/file",
+            Path = "c:/cache/file.bin",
+            Hash = expectedHash,
+            Size = actualBytes.Length
+        };
+
+        SuccessAfterRetriesHandler handler = new(successAttempt: 1, contentBytes: actualBytes);
+        LocalCacheService service = CreateService(handler, out MockFileSystem fileSystem);
+        fileSystem.Directory.CreateDirectory("c:/cache");
+
+        ResourceDownloadResult result = await service.DownloadFileAsync(resource, "api", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Corrupted", resource.Status);
+    }
+
+    [Fact]
     public async Task DownloadFileAsync_RetriesUntilSuccess() {
         byte[] content = Encoding.UTF8.GetBytes("retry");
         SuccessAfterRetriesHandler handler = new(successAttempt: 3, contentBytes: content);

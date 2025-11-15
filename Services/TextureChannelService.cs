@@ -2,40 +2,54 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Advanced;
 using System.IO;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace AssetProcessor.Services;
 
 public sealed class TextureChannelService : ITextureChannelService {
-    public async Task<BitmapSource> ApplyChannelFilterAsync(BitmapSource source, string channel) {
+    public Task<BitmapSource> ApplyChannelFilterAsync(BitmapSource source, string channel) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrEmpty(channel);
 
+        BitmapSource frozenSource = source.Clone();
+        if (frozenSource is Freezable freezable && !freezable.IsFrozen) {
+            freezable.Freeze();
+        }
+
+        return Task.Run(() => ApplyChannelFilterInternal(frozenSource, channel));
+    }
+
+    private static BitmapSource ApplyChannelFilterInternal(BitmapSource source, string channel) {
         using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(source));
 
-        await Task.Run(() => {
-            switch (channel) {
-                case "R":
-                    ProcessChannel(image, pixel => new Rgba32(pixel.R, pixel.R, pixel.R, pixel.A));
-                    break;
-                case "G":
-                    ProcessChannel(image, pixel => new Rgba32(pixel.G, pixel.G, pixel.G, pixel.A));
-                    break;
-                case "B":
-                    ProcessChannel(image, pixel => new Rgba32(pixel.B, pixel.B, pixel.B, pixel.A));
-                    break;
-                case "A":
-                    ProcessChannel(image, pixel => new Rgba32(pixel.A, pixel.A, pixel.A, pixel.A));
-                    break;
-            }
-        }).ConfigureAwait(false);
+        switch (channel) {
+            case "R":
+                ProcessChannel(image, pixel => new Rgba32(pixel.R, pixel.R, pixel.R, pixel.A));
+                break;
+            case "G":
+                ProcessChannel(image, pixel => new Rgba32(pixel.G, pixel.G, pixel.G, pixel.A));
+                break;
+            case "B":
+                ProcessChannel(image, pixel => new Rgba32(pixel.B, pixel.B, pixel.B, pixel.A));
+                break;
+            case "A":
+                ProcessChannel(image, pixel => new Rgba32(pixel.A, pixel.A, pixel.A, pixel.A));
+                break;
+        }
 
-        return BitmapToBitmapSource(image);
+        BitmapImage bitmapImage = BitmapToBitmapSource(image);
+        if (!bitmapImage.IsFrozen) {
+            bitmapImage.Freeze();
+        }
+
+        return bitmapImage;
     }
 
     private static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
         PngBitmapEncoder encoder = new();
-        encoder.Frames.Add(BitmapFrame.Create((BitmapSource)bitmapSource.Clone()));
+        encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
         using MemoryStream stream = new();
         encoder.Save(stream);
         return stream.ToArray();
@@ -45,12 +59,17 @@ public sealed class TextureChannelService : ITextureChannelService {
         using MemoryStream memoryStream = new();
         image.SaveAsBmp(memoryStream);
         memoryStream.Seek(0, SeekOrigin.Begin);
-        BitmapImage bitmapImage = new();
-        bitmapImage.BeginInit();
-        bitmapImage.StreamSource = memoryStream;
-        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        bitmapImage.EndInit();
-        return bitmapImage;
+        MemoryStream copyStream = new(memoryStream.ToArray());
+        try {
+            BitmapImage bitmapImage = new();
+            bitmapImage.BeginInit();
+            bitmapImage.StreamSource = copyStream;
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.EndInit();
+            return bitmapImage;
+        } finally {
+            copyStream.Dispose();
+        }
     }
 
     private static void ProcessChannel(Image<Rgba32> image, Func<Rgba32, Rgba32> transform) {

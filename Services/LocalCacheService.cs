@@ -1,4 +1,5 @@
 using AssetProcessor.Resources;
+// cspell:ignore Newtonsoft
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -13,16 +14,10 @@ using System.Security.Cryptography;
 
 namespace AssetProcessor.Services;
 
-public class LocalCacheService : ILocalCacheService {
-    private readonly IHttpClientFactory httpClientFactory;
-    private readonly IFileSystem fileSystem;
-    private readonly ILogService logService;
-
-    public LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem fileSystem, ILogService logService) {
-        this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-        this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
-    }
+public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem fileSystem, ILogService logService) : ILocalCacheService {
+    private readonly IHttpClientFactory httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+    private readonly IFileSystem fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+    private readonly ILogService logService = logService ?? throw new ArgumentNullException(nameof(logService));
 
     public string SanitizePath(string? path) {
         if (string.IsNullOrWhiteSpace(path)) {

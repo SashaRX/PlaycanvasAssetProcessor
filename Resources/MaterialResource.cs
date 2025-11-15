@@ -1,4 +1,6 @@
-﻿namespace AssetProcessor.Resources {
+﻿using AssetProcessor.Infrastructure.Enums;
+
+namespace AssetProcessor.Resources {
 
     public class MaterialResource : BaseResource {
         public string? Shader { get; set; }

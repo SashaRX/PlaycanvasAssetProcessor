@@ -1047,12 +1047,5 @@ namespace AssetProcessor {
             HistogramPixelsTextBlock.Text = $"{stats.TotalPixels:N0}";
         }
 
-        private static void PopulateComboBox<T>(ComboBox comboBox) {
-            var items = new List<string>();
-            foreach (object? value in Enum.GetValues(typeof(T))) {
-                items.Add(value.ToString() ?? "");
-            }
-            comboBox.ItemsSource = items;
-        }
     }
 }

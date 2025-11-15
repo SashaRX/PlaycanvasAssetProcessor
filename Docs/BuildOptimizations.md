@@ -60,7 +60,8 @@
 error NETSDK1168: WPF не поддерживается и не рекомендуется использовать с включенной обрезкой.
 ```
 
-Подробнее: https://aka.ms/dotnet-illink/wpf
+Подробнее: https://aka.ms/dotnet-illink/wpf и официальная документация по ограничениям trimming:
+https://learn.microsoft.com/dotnet/core/deploying/trimming/trimming-options#unsupported-frameworks
 
 **Причины:**
 - WPF активно использует рефлексию для XAML
@@ -71,6 +72,18 @@ error NETSDK1168: WPF не поддерживается и не рекоменд
 **Альтернативы:**
 - Для консольных или ASP.NET приложений trimming работает отлично
 - Для WPF приложений нужно использовать другие методы оптимизации (RuntimeIdentifier, удаление неиспользуемых зависимостей)
+
+## Рекомендуемые параметры публикации
+
+Для WPF приложения рекомендуется выполнять публикацию в режиме Release без trimming и с явным указанием платформы. Это гарантирует
+сохранение всех XAML- и binding-типа зависимостей, необходимых в рантайме. Базовые параметры команды:
+
+- `--configuration Release` — включает оптимизации компилятора.
+- `--runtime win-x64` — исключает неиспользуемые платформы из публикации.
+- `--self-contained false` — уменьшает размер дистрибутива, полагаясь на установленный .NET Runtime.
+- `-p:PublishTrimmed=false` — фиксирует отключенный trimming даже при переопределении свойств в CI.
+
+Подробное описание параметров `dotnet publish`: https://learn.microsoft.com/dotnet/core/tools/dotnet-publish.
 
 ## Ограничения и компромиссы
 
@@ -176,12 +189,14 @@ dotnet build AssetProcessor.csproj --configuration Release
 
 **Публикация (для single-file executable):**
 ```bash
-dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false
+# ⚠️ Не добавляйте -p:PublishTrimmed=true — WPF не поддерживает trimming
+dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false -p:PublishTrimmed=false
 ```
 
 **Публикация с самостоятельной сборкой (включает .NET runtime):**
 ```bash
-dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained true
+# ⚠️ Не добавляйте -p:PublishTrimmed=true — WPF не поддерживает trimming
+dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishTrimmed=false
 ```
 
 ⚠️ **Внимание:** Self-contained сборка будет значительно больше (~150+ МБ), так как включает весь .NET runtime. Используйте `--self-contained false` для зависимости от установленного .NET 9 runtime на целевой системе.

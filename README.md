@@ -75,8 +75,17 @@ dotnet build TexTool.sln --configuration Debug
 dotnet build TexTool.sln --configuration Release
 
 # Публикация single-file приложения
-dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false
+# ⚠️ Не добавляйте -p:PublishTrimmed=true — WPF не поддерживает trimming
+dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false -p:PublishTrimmed=false
 ```
+
+## Ограничения сборки
+
+WPF не поддерживает trimming исполняемого файла. Свойство `<PublishTrimmed>false</PublishTrimmed>` оставлено в проекте по умолчанию,
+поскольку XAML и система привязок активно используют рефлексию и динамически создают типы во время выполнения. Включение trimming
+приводит к ошибке `NETSDK1168` и к потере необходимых типов, поэтому при публикации используйте стандартные параметры без
+дополнительных флагов обрезки. Подробнее см. официальную документацию:
+https://learn.microsoft.com/dotnet/core/deploying/trimming/trimming-options#unsupported-frameworks.
 
 **Оптимизации Release сборки:**
 - **RuntimeIdentifier=win-x64**: включаются только Windows x64 библиотеки

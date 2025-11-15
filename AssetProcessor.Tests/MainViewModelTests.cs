@@ -36,14 +36,13 @@ public class MainViewModelTests {
         var filteredIds = viewModel.FilteredTextures.Select(texture => texture.ID).ToList();
 
         Assert.Equal(new[] { 1, 2, 3 }, filteredIds.OrderBy(id => id));
-        Assert.Equal(3, viewModel.FilteredTextures.Count);
         Assert.DoesNotContain(viewModel.Textures.First(texture => texture.ID == 4), viewModel.FilteredTextures);
     }
 
     [Fact]
     public async Task ProcessTexturesCommand_RaisesCompletionEvent() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "Texture1", Path = "file.png" }
             }
@@ -72,7 +71,8 @@ public class MainViewModelTests {
             AppSettings.Default.ProjectsFolderPath = tempDir.FullName;
 
             var localCache = new RecordingLocalCacheService();
-            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache) {
+            var projectSync = new TestProjectSyncService(localCache);
+            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync) {
                 ApiKey = "token",
                 SelectedProjectId = "proj1",
                 SelectedBranchId = "branch1",
@@ -86,6 +86,9 @@ public class MainViewModelTests {
 
             await viewModel.DownloadAssetsCommand.ExecuteAsync(null);
 
+            Assert.NotNull(projectSync.LastDownloadRequest);
+            Assert.Equal("Sample Project", projectSync.LastDownloadRequest!.ProjectName);
+            Assert.Single(projectSync.LastDownloadRequest!.Resources);
             Assert.Single(localCache.DownloadedResources);
             BaseResource downloaded = localCache.DownloadedResources.Single();
             Assert.Equal("Downloaded 1 assets. Failed: 0", viewModel.StatusMessage);
@@ -102,7 +105,7 @@ public class MainViewModelTests {
     [Fact]
     public void AutoDetectPresetsCommand_UpdatesStatusMessage() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService()) {
             ConversionSettingsProvider = new StubSettingsProvider(),
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "rock_albedo.png", Path = "c:/tex/rock_albedo.png" }
@@ -133,7 +136,7 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -273,5 +276,72 @@ public class MainViewModelTests {
 
         public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) =>
             Task.CompletedTask;
+    }
+
+    private sealed class TestProjectSyncService : IProjectSyncService {
+        private readonly ILocalCacheService? localCache;
+
+        public TestProjectSyncService(ILocalCacheService? localCache = null) {
+            this.localCache = localCache;
+        }
+
+        public ProjectDownloadRequest? LastDownloadRequest { get; private set; }
+
+        public ResourceDownloadBatchResult? OverrideDownloadResult { get; set; }
+
+        public Task<ProjectSyncResult> SyncProjectAsync(ProjectSyncRequest request, IProgress<ProjectSyncProgress>? progress, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public async Task<ResourceDownloadBatchResult> DownloadAsync(ProjectDownloadRequest request, IProgress<ResourceDownloadProgress>? progress, CancellationToken cancellationToken) {
+            LastDownloadRequest = request;
+
+            if (localCache != null) {
+                int completed = 0;
+                int total = request.Resources.Count;
+
+                foreach (BaseResource resource in request.Resources) {
+                    resource.Path ??= BuildPath(resource, request.ProjectName, request.ProjectsRoot, request.FolderPaths);
+                    await localCache.DownloadFileAsync(resource, request.ApiKey, cancellationToken);
+                    completed++;
+                    progress?.Report(new ResourceDownloadProgress(resource, completed, total));
+                }
+
+                return OverrideDownloadResult ?? new ResourceDownloadBatchResult(total, 0, total);
+            }
+
+            int count = request.Resources.Count;
+            return OverrideDownloadResult ?? new ResourceDownloadBatchResult(count, 0, count);
+        }
+
+        public Task<ResourceDownloadResult> DownloadResourceAsync(ResourceDownloadContext context, CancellationToken cancellationToken) {
+            if (localCache == null) {
+                return Task.FromResult(new ResourceDownloadResult(true, "Skipped", 1));
+            }
+
+            context.Resource.Path ??= BuildPath(context.Resource, context.ProjectName, context.ProjectsRoot, context.FolderPaths);
+            return localCache.DownloadFileAsync(context.Resource, context.ApiKey, cancellationToken);
+        }
+
+        public async Task<ResourceDownloadResult> DownloadMaterialByIdAsync(MaterialDownloadContext context, CancellationToken cancellationToken) {
+            if (localCache == null) {
+                return new ResourceDownloadResult(true, "Skipped", 1);
+            }
+
+            context.Resource.Path ??= BuildPath(context.Resource, context.ProjectName, context.ProjectsRoot, context.FolderPaths);
+            await localCache.DownloadMaterialAsync(context.Resource, _ => Task.FromResult(new JObject()), cancellationToken);
+            return new ResourceDownloadResult(true, "Material downloaded", 1);
+        }
+
+        public Task<ResourceDownloadResult> DownloadFileAsync(ResourceDownloadContext context, CancellationToken cancellationToken) =>
+            DownloadResourceAsync(context, cancellationToken);
+
+        private string BuildPath(BaseResource resource, string projectName, string projectsRoot, IReadOnlyDictionary<int, string> folderPaths) {
+            if (localCache == null) {
+                return resource.Path ?? string.Empty;
+            }
+
+            string fileName = string.IsNullOrEmpty(resource.Name) ? $"asset_{resource.ID}" : resource.Name!;
+            return localCache.GetResourcePath(projectsRoot, projectName, folderPaths, fileName, resource.Parent);
+        }
     }
 }

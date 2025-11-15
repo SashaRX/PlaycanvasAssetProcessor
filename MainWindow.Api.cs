@@ -45,93 +45,22 @@ namespace AssetProcessor {
     public partial class MainWindow {
         private async Task TryConnect(CancellationToken cancellationToken) {
             try {
-                logService.LogInfo("=== TryConnect CALLED ===");
+                await viewModel.SyncProjectCommand.ExecuteAsync(cancellationToken);
 
-                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
-                    MessageBox.Show("Please select a project and a branch");
-                    return;
+                if (!string.IsNullOrEmpty(viewModel.CurrentProjectName)) {
+                    projectName = viewModel.CurrentProjectName;
+                    projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
                 }
 
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-
-                logService.LogInfo($"Fetching assets from server for project: {selectedProjectId}, branch: {selectedBranchId}");
-                List<PlayCanvasAssetSummary> assetSummaries = [];
-                string? apiKey = GetDecryptedApiKey();
-                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", cancellationToken)) {
-                    assetSummaries.Add(asset);
-                }
-                JArray assetsResponse = new();
-                foreach (PlayCanvasAssetSummary asset in assetSummaries) {
-                    assetsResponse.Add(JToken.Parse(asset.ToJsonString()));
-                }
-                if (assetsResponse != null) {
-                    logService.LogInfo("Assets received from server, processing...");
-                    // Строим иерархию папок из списка ассетов
-                    BuildFolderHierarchyFromAssets(assetsResponse);
-                    // Сохраняем JSON-ответ в файл
-
-                    if (!string.IsNullOrEmpty(projectFolderPath) && !string.IsNullOrEmpty(projectName)) {
-                        string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
-                        await SaveJsonResponseToFile(assetsResponse, projectFolderPath, projectName);
-                        if (!File.Exists(jsonFilePath)) {
-                            MessageBox.Show($"Failed to save the JSON file to {jsonFilePath}. Please check your permissions.");
-                        }
-                    }
-
-
-                    UpdateConnectionStatus(true);
-
-                    viewModel.Textures.Clear(); // Очищаем текущий список текстур
-                    viewModel.Models.Clear(); // Очищаем текущий список моделей
-                    viewModel.Materials.Clear(); // Очищаем текущий список материалов
-
-                    List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
-                    int assetCount = supportedAssets.Count;
-
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        ProgressBar.Value = 0;
-                        ProgressBar.Maximum = assetCount;
-                        ProgressTextBlock.Text = $"0/{assetCount}";
-                    });
-
-                    // Create throttled progress to batch UI updates (reduces Dispatcher calls from thousands to dozens)
-                    int processedCount = 0;
-                    var progress = new Progress<int>(increment => {
-                        int newCount = Interlocked.Add(ref processedCount, increment);
-                        Dispatcher.InvokeAsync(() => {
-                            ProgressBar.Value = newCount;
-                            ProgressTextBlock.Text = $"{newCount}/{assetCount}";
-                        });
-                    });
-                    using var throttledProgress = new ThrottledProgress<int>(progress, intervalMs: 100);
-
-                    IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
-                    {
-                        await ProcessAsset(asset, 0, cancellationToken);  // Передаем аргумент cancellationToken
-                        throttledProgress.Report(1); // Report increment, will be batched
-                    }));
-
-                    await Task.WhenAll(tasks);
-
-                    // Final flush to ensure progress shows 100%
-                    await Dispatcher.InvokeAsync(() => {
-                        ProgressBar.Value = assetCount;
-                        ProgressTextBlock.Text = $"{assetCount}/{assetCount}";
-                    });
-
-                    RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
-                    DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
-                    logService.LogInfo("=== TryConnect COMPLETED ===");
-                } else {
-                    UpdateConnectionStatus(false, "Failed to connect");
+                if (viewModel.FolderPaths != null) {
+                    folderPaths = new Dictionary<int, string>(viewModel.FolderPaths);
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error in TryConnect: {ex.Message}");
                 logService.LogError($"Error in TryConnect: {ex}");
             }
         }
+
 
         private void BuildFolderHierarchyFromAssets(JArray assetsResponse) {
             try {

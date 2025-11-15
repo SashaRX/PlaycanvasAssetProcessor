@@ -136,8 +136,19 @@
 
         <!-- Прогресс -->
         <Grid DockPanel.Dock="Bottom" HorizontalAlignment="Stretch">
-            <ProgressBar x:Name="ProgressBar" Height="16" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
-            <TextBlock x:Name="ProgressTextBlock" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" FontWeight="Bold"/>
+            <ProgressBar x:Name="ProgressBar"
+                         Height="16"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Center"
+                         Minimum="0"
+                         Maximum="{Binding ProgressMaximum}"
+                         Value="{Binding ProgressValue}"/>
+            <TextBlock x:Name="ProgressTextBlock"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="Black"
+                       FontWeight="Bold"
+                       Text="{Binding ProgressText}"/>
         </Grid>
 
         <!-- Панель управления внизу -->

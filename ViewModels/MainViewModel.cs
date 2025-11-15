@@ -27,7 +27,7 @@ namespace AssetProcessor.ViewModels {
         private readonly IPlayCanvasService playCanvasService;
         private readonly ITextureProcessingService textureProcessingService;
         private readonly ILocalCacheService localCacheService;
-        private readonly SemaphoreSlim downloadSemaphore;
+        private readonly IProjectSyncService projectSyncService;
 
         public event EventHandler<TextureProcessingCompletedEventArgs>? TextureProcessingCompleted;
 
@@ -49,6 +49,15 @@ namespace AssetProcessor.ViewModels {
 
         [ObservableProperty]
         private bool isDownloadButtonEnabled;
+
+        [ObservableProperty]
+        private double progressValue;
+
+        [ObservableProperty]
+        private double progressMaximum;
+
+        [ObservableProperty]
+        private string? progressText;
 
         [ObservableProperty]
         private bool isConnected;
@@ -89,11 +98,21 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private TextureResource? selectedTexture;
 
-        public MainViewModel(IPlayCanvasService playCanvasService, ITextureProcessingService textureProcessingService, ILocalCacheService localCacheService) {
+        [ObservableProperty]
+        private IReadOnlyDictionary<int, string> folderPaths = new Dictionary<int, string>();
+
+        [ObservableProperty]
+        private string? currentProjectName;
+
+        public MainViewModel(
+            IPlayCanvasService playCanvasService,
+            ITextureProcessingService textureProcessingService,
+            ILocalCacheService localCacheService,
+            IProjectSyncService projectSyncService) {
             this.playCanvasService = playCanvasService;
             this.textureProcessingService = textureProcessingService;
             this.localCacheService = localCacheService;
-            downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
+            this.projectSyncService = projectSyncService;
             logger.Info("MainViewModel initialized");
         }
 
@@ -179,77 +198,54 @@ namespace AssetProcessor.ViewModels {
         }
 
         [RelayCommand]
-        private async Task LoadAssetsAsync(CancellationToken cancellationToken = default) {
+        private async Task SyncProjectAsync(CancellationToken cancellationToken = default) {
             string? resolvedApiKey = ResolveApiKey();
             if (string.IsNullOrEmpty(SelectedProjectId) || string.IsNullOrEmpty(SelectedBranchId) || string.IsNullOrEmpty(resolvedApiKey)) {
                 StatusMessage = "Please select a project and branch first";
                 return;
             }
 
+            KeyValuePair<string, string> selectedProject = Projects.FirstOrDefault(p => p.Key == SelectedProjectId);
+            if (selectedProject.Equals(default(KeyValuePair<string, string>))) {
+                StatusMessage = "Project not found";
+                return;
+            }
+
+            string projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
+            CurrentProjectName = projectName;
+
             try {
-                StatusMessage = "Loading assets...";
-                logger.Info($"Loading assets for project: {SelectedProjectId}, branch: {SelectedBranchId}");
+                StatusMessage = "Synchronizing project assets...";
+                ProgressText = null;
+                ProgressValue = 0;
+                ProgressMaximum = 0;
 
-                List<PlayCanvasAssetSummary> assetsArray = [];
-                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(SelectedProjectId, SelectedBranchId, resolvedApiKey, cancellationToken)) {
-                    assetsArray.Add(asset);
-                }
+                ProjectSyncRequest request = new(
+                    SelectedProjectId,
+                    SelectedBranchId,
+                    resolvedApiKey,
+                    projectName,
+                    AppSettings.Default.ProjectsFolderPath);
 
-                // Clear existing collections
-                Textures.Clear();
-                Models.Clear();
-                Materials.Clear();
-                Assets.Clear();
+                Progress<ProjectSyncProgress> syncProgress = new(progress => {
+                    ProgressMaximum = Math.Max(ProgressMaximum, Math.Max(progress.Total, progress.Processed));
+                    ProgressValue = progress.Processed;
+                    ProgressText = progress.Total > 0
+                        ? $"{progress.Processed}/{progress.Total}"
+                        : $"{progress.Processed}";
+                });
 
-                // Parse and categorize assets
-                foreach (PlayCanvasAssetSummary asset in assetsArray) {
-                    string? type = asset.Type;
-                    int id = asset.Id;
-                    string? name = asset.Name;
+                ProjectSyncResult result = await projectSyncService.SyncProjectAsync(request, syncProgress, cancellationToken);
 
-                    if (string.IsNullOrEmpty(type) || id == 0) {
-                        continue;
-                    }
+                FolderPaths = result.FolderPaths;
+                PopulateResources(result);
 
-                    switch (type.ToLower()) {
-                        case "texture":
-                            var texture = new TextureResource {
-                                ID = id,
-                                Name = name,
-                                Type = type,
-                                Status = "Ready"
-                            };
-                            Textures.Add(texture);
-                            Assets.Add(texture);
-                            break;
+                ProgressMaximum = Assets.Count;
+                ProgressValue = Assets.Count;
+                ProgressText = $"{Assets.Count}/{Assets.Count}";
 
-                        case "model":
-                            var model = new ModelResource {
-                                ID = id,
-                                Name = name,
-                                Type = type,
-                                Status = "Ready"
-                            };
-                            Models.Add(model);
-                            Assets.Add(model);
-                            break;
-
-                        case "material":
-                            var material = new MaterialResource {
-                                ID = id,
-                                Name = name,
-                                Type = type,
-                                Status = "Ready"
-                            };
-                            Materials.Add(material);
-                            Assets.Add(material);
-                            break;
-                    }
-                }
-
-                IsDownloadButtonEnabled = Assets.Count > 0;
                 StatusMessage = $"Loaded {Assets.Count} assets ({Textures.Count} textures, {Models.Count} models, {Materials.Count} materials).";
-                logger.Info($"Loaded {Assets.Count} total assets");
+                logger.Info($"Project synchronized: {Assets.Count} assets loaded");
             } catch (PlayCanvasApiException ex) {
                 StatusMessage = $"Failed to load assets: {ex.Message}";
                 logger.Error(ex, "Error loading assets");
@@ -258,6 +254,7 @@ namespace AssetProcessor.ViewModels {
                 logger.Error(ex, "Network error loading assets");
             }
         }
+
 
         [RelayCommand]
         private async Task DownloadAssetsAsync(CancellationToken cancellationToken = default) {
@@ -273,224 +270,157 @@ namespace AssetProcessor.ViewModels {
                 return;
             }
 
-            if (string.IsNullOrEmpty(SelectedProjectId) || string.IsNullOrEmpty(SelectedBranchId)) {
-                StatusMessage = "Please select a project and branch first";
+            if (string.IsNullOrEmpty(SelectedProjectId)) {
+                StatusMessage = "Please select a project first";
                 return;
             }
 
-            // Get project name for folder structure
-            var selectedProject = Projects.FirstOrDefault(p => p.Key == SelectedProjectId);
+            KeyValuePair<string, string> selectedProject = Projects.FirstOrDefault(p => p.Key == SelectedProjectId);
             if (selectedProject.Equals(default(KeyValuePair<string, string>))) {
                 StatusMessage = "Project not found";
                 return;
             }
 
-            string projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
-            string projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+            string effectiveProjectName = CurrentProjectName ?? MainWindowHelpers.CleanProjectName(selectedProject.Value);
+            CurrentProjectName = effectiveProjectName;
 
             try {
-                StatusMessage = $"Downloading {Assets.Count} assets...";
-                logger.Info($"Starting download of {Assets.Count} assets");
-
-                // Filter assets that need downloading
-                var assetsToDownload = Assets.Where(a => 
-                    string.IsNullOrEmpty(a.Status) || 
-                    a.Status == "Ready" || 
-                    a.Status == "On Server" ||
-                    a.Status == "Error"
-                ).ToList();
+                List<BaseResource> assetsToDownload = Assets
+                    .Where(a => string.IsNullOrEmpty(a.Status) ||
+                                a.Status == "Ready" ||
+                                a.Status == "On Server" ||
+                                a.Status == "Error" ||
+                                a.Status == "Size Mismatch" ||
+                                a.Status == "Corrupted" ||
+                                a.Status == "Empty File" ||
+                                a.Status == "Hash ERROR")
+                    .ToList();
 
                 if (assetsToDownload.Count == 0) {
                     StatusMessage = "No assets need downloading";
                     return;
                 }
 
-                int downloadedCount = 0;
-                int failedCount = 0;
+                StatusMessage = $"Downloading {assetsToDownload.Count} assets...";
+                ProgressMaximum = assetsToDownload.Count;
+                ProgressValue = 0;
+                ProgressText = $"0/{assetsToDownload.Count}";
 
-                // Download assets in parallel with semaphore limit
-                var downloadTasks = assetsToDownload.Select(async asset => {
-                    await downloadSemaphore.WaitAsync(cancellationToken);
-                    try {
-                        if (asset is MaterialResource material) {
-                            await DownloadMaterialAsync(material, resolvedApiKey, projectFolderPath, cancellationToken);
-                        } else if (!string.IsNullOrEmpty(asset.Url)) {
-                            await DownloadFileAsync(asset, resolvedApiKey, projectFolderPath, cancellationToken);
-                        } else {
-                            // Need to get asset details first to get URL
-                            await DownloadAssetWithDetailsAsync(asset, resolvedApiKey, projectFolderPath, cancellationToken);
-                        }
+                ProjectDownloadRequest downloadRequest = new(
+                    assetsToDownload,
+                    resolvedApiKey,
+                    effectiveProjectName,
+                    AppSettings.Default.ProjectsFolderPath,
+                    FolderPaths);
 
-                        // Check status after download to determine success/failure
-                        if (asset.Status == "Downloaded") {
-                            Interlocked.Increment(ref downloadedCount);
-                        } else {
-                            // Any other status (Error, Empty File, Size Mismatch, etc.) is considered a failure
-                            Interlocked.Increment(ref failedCount);
-                        }
-                    } catch (Exception ex) {
-                        logger.Error(ex, $"Failed to download asset {asset.Name}");
-                        asset.Status = "Error";
-                        Interlocked.Increment(ref failedCount);
-                    } finally {
-                        downloadSemaphore.Release();
-                    }
+                int currentProgress = 0;
+                Progress<ResourceDownloadProgress> downloadProgress = new(progress => {
+                    currentProgress = Math.Max(currentProgress, progress.Completed);
+                    ProgressValue = currentProgress;
+                    ProgressText = $"{currentProgress}/{ProgressMaximum}";
                 });
 
-                await Task.WhenAll(downloadTasks);
+                ResourceDownloadBatchResult result = await projectSyncService.DownloadAsync(downloadRequest, downloadProgress, cancellationToken);
 
-                StatusMessage = $"Downloaded {downloadedCount} assets. Failed: {failedCount}";
-                logger.Info($"Download completed: {downloadedCount} succeeded, {failedCount} failed");
+                ProgressValue = ProgressMaximum;
+                ProgressText = $"{result.Succeeded}/{result.Total}";
+
+                StatusMessage = $"Downloaded {result.Succeeded} assets. Failed: {result.Failed}";
+                logger.Info($"Download completed: {result.Succeeded} succeeded, {result.Failed} failed");
+            } catch (OperationCanceledException) {
+                StatusMessage = "Download cancelled";
+                logger.Warn("Download operation cancelled by user");
             } catch (Exception ex) {
                 StatusMessage = $"Download error: {ex.Message}";
                 logger.Error(ex, "Error during download operation");
             }
         }
 
-        private async Task DownloadAssetWithDetailsAsync(BaseResource resource, string apiKey, string projectFolderPath, CancellationToken cancellationToken) {
-            try {
-                // Get asset details to obtain URL and file information
-                var assetDetail = await playCanvasService.GetAssetByIdAsync(resource.ID.ToString(), apiKey, cancellationToken);
-                if (assetDetail == null) {
-                    resource.Status = "Error";
-                    logger.Warn($"Failed to get details for asset {resource.ID}");
-                    return;
+        private void PopulateResources(ProjectSyncResult result) {
+            ArgumentNullException.ThrowIfNull(result);
+
+            Textures.Clear();
+            Models.Clear();
+            Materials.Clear();
+            Assets.Clear();
+
+            Uri baseUri = new("https://playcanvas.com");
+
+            foreach (PlayCanvasAssetSummary asset in result.Assets) {
+                if (string.IsNullOrEmpty(asset.Type) || asset.Id == 0) {
+                    continue;
                 }
 
-                // Parse JSON to extract file URL
-                using JsonDocument doc = JsonDocument.Parse(assetDetail.ToJsonString());
-                JsonElement root = doc.RootElement;
+                string sanitizedName = localCacheService.SanitizePath(asset.Name);
+                string fileName = localCacheService.SanitizePath(asset.File?.Filename ?? sanitizedName ?? $"asset_{asset.Id}");
 
-                // Extract file information
-                if (root.TryGetProperty("file", out JsonElement fileElement)) {
-                    if (fileElement.TryGetProperty("url", out JsonElement urlElement)) {
-                        string? relativeUrl = urlElement.GetString();
-                        if (!string.IsNullOrEmpty(relativeUrl)) {
-                            resource.Url = new Uri(new Uri("https://playcanvas.com"), relativeUrl).ToString();
-                        }
-                    }
-
-                    if (fileElement.TryGetProperty("hash", out JsonElement hashElement)) {
-                        resource.Hash = hashElement.GetString();
-                    }
-
-                    if (fileElement.TryGetProperty("size", out JsonElement sizeElement)) {
-                        if (sizeElement.ValueKind == JsonValueKind.Number && sizeElement.TryGetInt32(out int size)) {
-                            resource.Size = size;
-                        }
-                    }
+                if (string.Equals(asset.Type, "material", StringComparison.OrdinalIgnoreCase) && !fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) {
+                    fileName = string.IsNullOrEmpty(fileName) ? $"material_{asset.Id}.json" : $"{fileName}.json";
                 }
 
-                // Set file path
-                if (string.IsNullOrEmpty(resource.Path)) {
-                    string? fileName = resource.Name;
-                    if (string.IsNullOrEmpty(fileName)) {
-                        fileName = root.TryGetProperty("name", out JsonElement nameElement) 
-                            ? nameElement.GetString() 
-                            : $"asset_{resource.ID}";
-                    }
+                string resourcePath = localCacheService.GetResourcePath(
+                    AppSettings.Default.ProjectsFolderPath,
+                    result.ProjectName,
+                    result.FolderPaths,
+                    fileName,
+                    asset.Parent);
 
-                    // Ensure fileName is not null
-                    if (string.IsNullOrEmpty(fileName)) {
-                        fileName = $"asset_{resource.ID}";
-                    }
-
-                    // Determine extension from URL or type
-                    string extension = "";
-                    if (!string.IsNullOrEmpty(resource.Url)) {
-                        extension = Path.GetExtension(new Uri(resource.Url).LocalPath);
-                    }
-
-                    if (string.IsNullOrEmpty(extension)) {
-                        extension = resource.Type?.ToLower() == "texture" ? ".png" : ".fbx";
-                    }
-
-                    if (!fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) {
-                        fileName += extension;
-                    }
-
-                    resource.Path = Path.Combine(projectFolderPath, fileName);
-                    Directory.CreateDirectory(projectFolderPath);
+                string? url = asset.File?.Url;
+                if (!string.IsNullOrEmpty(url) && Uri.TryCreate(url, UriKind.Relative, out Uri? relative)) {
+                    url = new Uri(baseUri, relative).ToString();
                 }
 
-                // Download the file
-                if (!string.IsNullOrEmpty(resource.Url)) {
-                    await DownloadFileAsync(resource, apiKey, projectFolderPath, cancellationToken);
-                } else {
-                    resource.Status = "Error";
-                    logger.Warn($"No URL found for asset {resource.ID}");
-                }
-            } catch (Exception ex) {
-                resource.Status = "Error";
-                logger.Error(ex, $"Error downloading asset with details {resource.ID}");
-                throw;
-            }
-        }
+                switch (asset.Type.ToLowerInvariant()) {
+                    case "texture":
+                        TextureResource texture = new() {
+                            ID = asset.Id,
+                            Name = sanitizedName,
+                            Type = asset.Type,
+                            Status = "On Server",
+                            Url = url,
+                            Path = resourcePath,
+                            Size = (int)(asset.File?.Size ?? 0),
+                            Hash = asset.File?.Hash,
+                            Parent = asset.Parent,
+                            Extension = Path.GetExtension(resourcePath)
+                        };
+                        Textures.Add(texture);
+                        Assets.Add(texture);
+                        break;
 
-        private async Task DownloadFileAsync(BaseResource resource, string apiKey, string projectFolderPath, CancellationToken cancellationToken) {
-            if (string.IsNullOrEmpty(resource.Url) || string.IsNullOrEmpty(resource.Path)) {
-                resource.Status = "Error";
-                logger.Warn($"Missing URL or Path for resource {resource.Name}");
-                return;
-            }
+                    case "model":
+                        ModelResource model = new() {
+                            ID = asset.Id,
+                            Name = sanitizedName,
+                            Type = asset.Type,
+                            Status = "On Server",
+                            Url = url,
+                            Path = resourcePath,
+                            Size = (int)(asset.File?.Size ?? 0),
+                            Hash = asset.File?.Hash,
+                            Parent = asset.Parent,
+                            Extension = Path.GetExtension(resourcePath)
+                        };
+                        Models.Add(model);
+                        Assets.Add(model);
+                        break;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(resource.Path) ?? projectFolderPath);
-
-            ResourceDownloadResult result = await localCacheService.DownloadFileAsync(resource, apiKey, cancellationToken);
-
-            if (!result.IsSuccess) {
-                string message = result.ErrorMessage ?? $"Download finished with status {result.Status}";
-                logger.Warn($"Download for resource {resource.Name} completed with status {result.Status} after {result.Attempts} attempts. {message}");
-            } else {
-                logger.Info($"File downloaded successfully: {resource.Path}");
-            }
-        }
-
-        private async Task DownloadMaterialAsync(MaterialResource material, string apiKey, string projectFolderPath, CancellationToken cancellationToken) {
-            const int maxRetries = 5;
-            const int delayMilliseconds = 2000;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    material.Status = "Downloading";
-                    material.DownloadProgress = 0;
-
-                    var materialDetail = await playCanvasService.GetAssetByIdAsync(material.ID.ToString(), apiKey, cancellationToken);
-                    if (materialDetail == null) {
-                        throw new Exception($"Failed to get material JSON for ID: {material.ID}");
-                    }
-
-                    // Set file path
-                    if (string.IsNullOrEmpty(material.Path)) {
-                        string directoryPath = projectFolderPath;
-                        string materialPath = Path.Combine(directoryPath, $"{material.Name}.json");
-                        material.Path = materialPath;
-                    }
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(material.Path) ?? projectFolderPath);
-                    await File.WriteAllTextAsync(material.Path, materialDetail.ToJsonString(), cancellationToken);
-                    
-                    material.Status = "Downloaded";
-                    material.DownloadProgress = 100;
-                    logger.Info($"Material downloaded successfully: {material.Path}");
-                    return;
-                } catch (IOException ex) {
-                    if (attempt == maxRetries) {
-                        material.Status = "Error";
-                        logger.Error(ex, $"Error downloading material after {maxRetries} attempts");
-                        return;
-                    }
-                    logger.Warn($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying...");
-                    await Task.Delay(delayMilliseconds, cancellationToken);
-                } catch (Exception ex) {
-                    material.Status = "Error";
-                    logger.Error(ex, $"Error downloading material: {ex.Message}");
-                    if (attempt == maxRetries) {
-                        return;
-                    }
-                    await Task.Delay(delayMilliseconds, cancellationToken);
+                    case "material":
+                        MaterialResource material = new() {
+                            ID = asset.Id,
+                            Name = sanitizedName,
+                            Type = asset.Type,
+                            Status = "On Server",
+                            Path = resourcePath,
+                            Parent = asset.Parent
+                        };
+                        Materials.Add(material);
+                        Assets.Add(material);
+                        break;
                 }
             }
+
+            IsDownloadButtonEnabled = Assets.Count > 0;
         }
 
         /// <summary>

@@ -24,11 +24,7 @@ public sealed class DownloadService : IDownloadService {
             using HttpResponseMessage response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            await using Stream destinationStream = fileSystem.FileStream.Create(
-                destinationPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None);
+            await using Stream destinationStream = fileSystem.File.Create(destinationPath);
 
             await response.Content.CopyToAsync(destinationStream, cancellationToken).ConfigureAwait(false);
             return true;

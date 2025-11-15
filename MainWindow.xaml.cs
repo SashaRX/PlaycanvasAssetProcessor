@@ -3985,10 +3985,10 @@ namespace AssetProcessor {
 
                         if (resource is MaterialResource materialResource) {
                             // Обработка загрузки материалов по ID
-                            await DownloadMaterialByIdAsync(materialResource, playCanvasService);
+                            await DownloadMaterialByIdAsync(materialResource);
                         } else {
                             // Обработка загрузки файлов (текстур и моделей)
-                            await DownloadFileAsync(resource, httpClientFactory);
+                            await DownloadFileAsync(resource);
                         }
                         break;
                     } catch (Exception ex) {
@@ -4005,7 +4005,7 @@ namespace AssetProcessor {
 
         }
 
-        private static async Task DownloadMaterialByIdAsync(MaterialResource materialResource, IPlayCanvasService playCanvasService) {
+        private async Task DownloadMaterialByIdAsync(MaterialResource materialResource) {
             const int maxRetries = 5;
             const int delayMilliseconds = 2000;
 
@@ -4040,7 +4040,7 @@ namespace AssetProcessor {
             }
         }
 
-        private static async Task DownloadFileAsync(BaseResource resource, IHttpClientFactory httpClientFactory) {
+        private async Task DownloadFileAsync(BaseResource resource) {
             if (resource == null || string.IsNullOrEmpty(resource.Path)) { // Если путь к файлу не указан, создаем его в папке проекта
                 return;
             }
@@ -4269,7 +4269,7 @@ namespace AssetProcessor {
             }
         }
 
-        private static async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
+        private async Task SaveJsonResponseToFile(JToken jsonResponse, string projectFolderPath, string projectName) {
             try {
                 string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
 

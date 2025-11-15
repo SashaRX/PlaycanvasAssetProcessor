@@ -1,5 +1,6 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.IO;
 using System.Windows.Media.Imaging;
 
 namespace AssetProcessor.Services;
@@ -62,7 +63,7 @@ public sealed class TextureChannelService : ITextureChannelService {
             int endY = chunk == numberOfChunks - 1 ? height : startY + chunkHeight;
 
             for (int y = startY; y < endY; y++) {
-                Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
+                Span<Rgba32> pixelRow = image.Frames.RootFrame.GetPixelRowSpan(y);
                 for (int x = 0; x < width; x++) {
                     pixelRow[x] = transform(pixelRow[x]);
                 }

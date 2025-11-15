@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

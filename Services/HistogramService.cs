@@ -3,6 +3,7 @@ using OxyPlot;
 using OxyPlot.Series;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.IO;
 using System.Windows.Media.Imaging;
 
 namespace AssetProcessor.Services;
@@ -37,7 +38,7 @@ public sealed class HistogramService : IHistogramService {
 
         Parallel.For(0, image.Height, () => (Red: new int[256], Green: new int[256], Blue: new int[256]),
             (y, _, localHistograms) => {
-                Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
+                Span<Rgba32> pixelRow = image.Frames.RootFrame.GetPixelRowSpan(y);
                 for (int x = 0; x < pixelRow.Length; x++) {
                     Rgba32 pixel = pixelRow[x];
                     localHistograms.Red[pixel.R]++;

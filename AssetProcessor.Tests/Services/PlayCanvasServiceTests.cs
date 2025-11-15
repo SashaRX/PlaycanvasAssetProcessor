@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -52,6 +53,50 @@ public class PlayCanvasServiceTests {
         Assert.Single(handler.Requests);
         Assert.Equal("Bearer", handler.Requests[0].Headers.Authorization?.Scheme);
         Assert.Equal("token", handler.Requests[0].Headers.Authorization?.Parameter);
+    }
+
+    [Fact]
+    public async Task GetUserIdAsync_WhenApiReturnsError_ThrowsPlayCanvasApiException() {
+        QueueMessageHandler handler = new();
+        handler.EnqueueResponse(new HttpResponseMessage(HttpStatusCode.Unauthorized) {
+            Content = new StringContent("{\"error\":\"invalid\"}", Encoding.UTF8, "application/json")
+        });
+
+        using HttpClient client = new(handler);
+        using PlayCanvasService service = new(client, Policy.NoOpAsync<HttpResponseMessage>());
+
+        await Assert.ThrowsAsync<PlayCanvasApiException>(() => service.GetUserIdAsync("user", "api-key", CancellationToken.None));
+        Assert.Single(handler.Requests);
+        Assert.Equal("Bearer", handler.Requests[0].Headers.Authorization?.Scheme);
+        Assert.Equal("api-key", handler.Requests[0].Headers.Authorization?.Parameter);
+    }
+
+    [Fact]
+    public async Task GetAssetsAsync_RetriesWhenPolicyHandlesFailure() {
+        QueueMessageHandler handler = new();
+        handler.EnqueueResponse(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        handler.EnqueueResponse(CreateAssetsResponse(GenerateAssets(1, 1)));
+
+        int retryCount = 0;
+        AsyncPolicy<HttpResponseMessage> policy = Policy<HttpResponseMessage>
+            .HandleResult(response => !response.IsSuccessStatusCode)
+            .RetryAsync(1, onRetryAsync: (outcome, _, _) => {
+                outcome.Result?.Dispose();
+                Interlocked.Increment(ref retryCount);
+                return Task.CompletedTask;
+            });
+
+        using HttpClient client = new(handler);
+        using PlayCanvasService service = new(client, policy);
+
+        List<int> receivedIds = [];
+        await foreach (PlayCanvasAssetSummary asset in service.GetAssetsAsync("123", "main", "token", CancellationToken.None)) {
+            receivedIds.Add(asset.Id);
+        }
+
+        Assert.Equal(new[] { 1 }, receivedIds);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(1, retryCount);
     }
 
     private static HttpResponseMessage CreateAssetsResponse(IEnumerable<object> assets) {

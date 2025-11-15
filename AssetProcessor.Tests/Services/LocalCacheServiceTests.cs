@@ -173,6 +173,43 @@ public class LocalCacheServiceTests {
         Assert.Equal(5, result.Attempts);
     }
 
+    [Fact]
+    public async Task DownloadFileAsync_WhenContentEmpty_ReturnsEmptyFileStatus() {
+        SuccessAfterRetriesHandler handler = new(successAttempt: 1, contentBytes: Array.Empty<byte>());
+        LocalCacheService service = CreateService(handler, out MockFileSystem fileSystem);
+        fileSystem.Directory.CreateDirectory("c:/cache");
+
+        BaseResource resource = new TextureResource {
+            Url = "https://example.com/file",
+            Path = "c:/cache/file.bin"
+        };
+
+        ResourceDownloadResult result = await service.DownloadFileAsync(resource, "api", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Empty File", resource.Status);
+        Assert.True(fileSystem.File.Exists(resource.Path!));
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenSizeUnknownUsesTransferredBytes() {
+        byte[] content = Encoding.UTF8.GetBytes("size-data");
+        SuccessAfterRetriesHandler handler = new(successAttempt: 1, contentBytes: content);
+        LocalCacheService service = CreateService(handler, out MockFileSystem fileSystem);
+        fileSystem.Directory.CreateDirectory("c:/cache");
+
+        BaseResource resource = new TextureResource {
+            Url = "https://example.com/file",
+            Path = "c:/cache/file.bin"
+        };
+
+        ResourceDownloadResult result = await service.DownloadFileAsync(resource, "api", CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Downloaded", resource.Status);
+        Assert.Equal(content.Length, resource.Size);
+    }
+
     private static LocalCacheService CreateService(out MockFileSystem fileSystem) {
         return CreateService(handler: null, out fileSystem);
     }

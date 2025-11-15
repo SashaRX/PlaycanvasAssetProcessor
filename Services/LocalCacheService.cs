@@ -13,6 +13,14 @@ using System.Threading.Tasks;
 namespace AssetProcessor.Services;
 
 public class LocalCacheService {
+    private readonly IHttpClientFactory httpClientFactory;
+    private readonly ILogService logService;
+
+    public LocalCacheService(IHttpClientFactory httpClientFactory, ILogService logService) {
+        this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
+    }
+
     public string SanitizePath(string? path) {
         if (string.IsNullOrWhiteSpace(path)) {
             return string.Empty;
@@ -54,7 +62,7 @@ public class LocalCacheService {
 
         string jsonString = jsonResponse.ToString(Formatting.Indented);
         await File.WriteAllTextAsync(jsonFilePath, jsonString, cancellationToken).ConfigureAwait(false);
-        MainWindowHelpers.LogInfo($"Assets list saved to {jsonFilePath}");
+        logService.LogInfo($"Assets list saved to {jsonFilePath}");
     }
 
     public async Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) {
@@ -99,7 +107,7 @@ public class LocalCacheService {
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                using HttpClient client = new();
+                HttpClient client = httpClientFactory.CreateClient("Downloads");
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
                 using HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
@@ -123,7 +131,7 @@ public class LocalCacheService {
 
                 if (!File.Exists(resource.Path)) {
                     resource.Status = "Error";
-                    MainWindowHelpers.LogError($"File was expected but not found: {resource.Path}");
+                    logService.LogError($"File was expected but not found: {resource.Path}");
                     return;
                 }
 
@@ -151,17 +159,17 @@ public class LocalCacheService {
             } catch (IOException ex) {
                 if (attempt == maxRetries) {
                     resource.Status = "Error";
-                    MainWindowHelpers.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
+                    logService.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
                 } else {
-                    MainWindowHelpers.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                    logService.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
                     await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
                 }
             } catch (Exception ex) when (attempt < maxRetries) {
-                MainWindowHelpers.LogError($"Attempt {attempt} failed: {ex.Message}. Retrying in {delayMilliseconds}ms...");
+                logService.LogError($"Attempt {attempt} failed: {ex.Message}. Retrying in {delayMilliseconds}ms...");
                 await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
             } catch (Exception ex) {
                 resource.Status = "Error";
-                MainWindowHelpers.LogError($"Error downloading resource: {ex.Message}");
+                logService.LogError($"Error downloading resource: {ex.Message}");
                 return;
             }
         }

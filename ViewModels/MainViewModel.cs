@@ -379,7 +379,7 @@ namespace AssetProcessor.ViewModels {
                             Status = "On Server",
                             Url = url,
                             Path = resourcePath,
-                            Size = (int?)(asset.File?.Size ?? 0),
+                            Size = (int)(asset.File?.Size ?? 0),
                             Hash = asset.File?.Hash,
                             Parent = asset.Parent,
                             Extension = Path.GetExtension(resourcePath)
@@ -396,7 +396,7 @@ namespace AssetProcessor.ViewModels {
                             Status = "On Server",
                             Url = url,
                             Path = resourcePath,
-                            Size = (int?)(asset.File?.Size ?? 0),
+                            Size = (int)(asset.File?.Size ?? 0),
                             Hash = asset.File?.Hash,
                             Parent = asset.Parent,
                             Extension = Path.GetExtension(resourcePath)

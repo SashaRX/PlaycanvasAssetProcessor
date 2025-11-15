@@ -59,14 +59,14 @@ namespace AssetProcessor {
             services.AddSingleton<IHistogramService, HistogramService>();
             services.AddSingleton<ITextureChannelService, TextureChannelService>();
             services.AddSingleton<IDownloadService, DownloadService>();
-            services.AddSingleton<LocalCacheService>();
+            services.AddSingleton<ILocalCacheService, LocalCacheService>();
             services.AddSingleton<ITextureProcessingService, TextureProcessingService>();
 
             services.AddSingleton<MainViewModel>(sp => {
                 var playCanvasService = sp.GetRequiredService<IPlayCanvasService>();
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var textureProcessingService = sp.GetRequiredService<ITextureProcessingService>();
-                return new MainViewModel(playCanvasService, httpClientFactory, textureProcessingService);
+                var localCacheService = sp.GetRequiredService<ILocalCacheService>();
+                return new MainViewModel(playCanvasService, textureProcessingService, localCacheService);
             });
             services.AddTransient<MainWindow>();
         }

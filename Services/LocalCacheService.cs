@@ -1,4 +1,3 @@
-using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -9,15 +8,19 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO.Abstractions;
+using System.Security.Cryptography;
 
 namespace AssetProcessor.Services;
 
-public class LocalCacheService {
+public class LocalCacheService : ILocalCacheService {
     private readonly IHttpClientFactory httpClientFactory;
+    private readonly IFileSystem fileSystem;
     private readonly ILogService logService;
 
-    public LocalCacheService(IHttpClientFactory httpClientFactory, ILogService logService) {
+    public LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem fileSystem, ILogService logService) {
         this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
     }
 
@@ -43,8 +46,8 @@ public class LocalCacheService {
             targetFolder = Path.Combine(targetFolder, folderPath);
         }
 
-        if (!Directory.Exists(targetFolder)) {
-            Directory.CreateDirectory(targetFolder);
+        if (!fileSystem.Directory.Exists(targetFolder)) {
+            fileSystem.Directory.CreateDirectory(targetFolder);
         }
 
         return Path.Combine(targetFolder, fileName ?? "Unknown");
@@ -56,12 +59,12 @@ public class LocalCacheService {
 
         string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
 
-        if (!Directory.Exists(projectFolderPath)) {
-            Directory.CreateDirectory(projectFolderPath);
+        if (!fileSystem.Directory.Exists(projectFolderPath)) {
+            fileSystem.Directory.CreateDirectory(projectFolderPath);
         }
 
         string jsonString = jsonResponse.ToString(Formatting.Indented);
-        await File.WriteAllTextAsync(jsonFilePath, jsonString, cancellationToken).ConfigureAwait(false);
+        await WriteTextAsync(jsonFilePath, jsonString, cancellationToken).ConfigureAwait(false);
         logService.LogInfo($"Assets list saved to {jsonFilePath}");
     }
 
@@ -69,12 +72,14 @@ public class LocalCacheService {
         ArgumentException.ThrowIfNullOrEmpty(projectFolderPath);
 
         string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
-        if (!File.Exists(jsonFilePath)) {
+        if (!fileSystem.File.Exists(jsonFilePath)) {
             return null;
         }
 
-        string jsonContent = await File.ReadAllTextAsync(jsonFilePath, cancellationToken).ConfigureAwait(false);
-        return JArray.Parse(jsonContent);
+        using Stream stream = fileSystem.File.OpenRead(jsonFilePath);
+        using StreamReader reader = new(stream);
+        string jsonContent = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        return string.IsNullOrWhiteSpace(jsonContent) ? null : JArray.Parse(jsonContent);
     }
 
     public async Task DownloadMaterialAsync(MaterialResource materialResource, Func<CancellationToken, Task<JObject>> fetchMaterialJsonAsync, CancellationToken cancellationToken) {
@@ -86,20 +91,20 @@ public class LocalCacheService {
             throw new InvalidOperationException("Material path must have a directory.");
         }
 
-        Directory.CreateDirectory(directoryPath);
+        fileSystem.Directory.CreateDirectory(directoryPath);
         JObject materialJson = await fetchMaterialJsonAsync(cancellationToken).ConfigureAwait(false);
 
         string materialPath = Path.Combine(directoryPath, $"{materialResource.Name}.json");
-        await File.WriteAllTextAsync(materialPath, materialJson.ToString(), cancellationToken).ConfigureAwait(false);
+        await WriteTextAsync(materialPath, materialJson.ToString(), cancellationToken).ConfigureAwait(false);
         materialResource.Status = "Downloaded";
     }
 
-    public async Task DownloadFileAsync(BaseResource resource, string apiKey, CancellationToken cancellationToken) {
+    public async Task<ResourceDownloadResult> DownloadFileAsync(BaseResource resource, string apiKey, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(resource);
         ArgumentException.ThrowIfNullOrEmpty(apiKey);
 
         if (string.IsNullOrEmpty(resource.Path)) {
-            return;
+            return new ResourceDownloadResult(false, "Error", 0, "Resource path is missing");
         }
 
         const int maxRetries = 5;
@@ -110,6 +115,9 @@ public class LocalCacheService {
                 HttpClient client = httpClientFactory.CreateClient("Downloads");
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
+                resource.Status = "Downloading";
+                resource.DownloadProgress = 0;
+
                 using HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode) {
                     throw new HttpRequestException($"Failed to download resource: {response.StatusCode}");
@@ -118,48 +126,38 @@ public class LocalCacheService {
                 long totalBytes = response.Content.Headers.ContentLength ?? 0L;
                 byte[] buffer = new byte[8192];
 
-                using Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                await using FileStream fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None).ConfigureAwait(false);
+                await using Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                string? directoryPath = Path.GetDirectoryName(resource.Path);
+                if (!string.IsNullOrEmpty(directoryPath)) {
+                    fileSystem.Directory.CreateDirectory(directoryPath);
+                }
+
+                await using Stream fileStream = await OpenFileStreamWithRetryAsync(resource.Path, cancellationToken).ConfigureAwait(false);
 
                 int bytesRead;
                 while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0) {
                     await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
                     if (totalBytes > 0) {
-                        resource.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
+                        resource.DownloadProgress = Math.Round((double)fileStream.Position / totalBytes * 100, 2);
                     }
                 }
 
-                if (!File.Exists(resource.Path)) {
+                if (!fileSystem.File.Exists(resource.Path)) {
+                    string message = $"File was expected but not found: {resource.Path}";
                     resource.Status = "Error";
-                    logService.LogError($"File was expected but not found: {resource.Path}");
-                    return;
+                    logService.LogError(message);
+                    return new ResourceDownloadResult(false, resource.Status, attempt, message);
                 }
 
-                FileInfo fileInfo = new(resource.Path);
-                long fileSizeInBytes = fileInfo.Length;
-                long resourceSizeInBytes = resource.Size;
-
-                if (fileInfo.Length == 0) {
-                    resource.Status = "Empty File";
-                } else if (!string.IsNullOrEmpty(resource.Hash) && FileHelper.VerifyFileHash(resource.Path, resource.Hash)) {
-                    resource.Status = "Downloaded";
-                } else {
-                    double tolerance = 0.05;
-                    double lowerBound = resourceSizeInBytes * (1 - tolerance);
-                    double upperBound = resourceSizeInBytes * (1 + tolerance);
-
-                    if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                        resource.Status = "Size Mismatch";
-                    } else {
-                        resource.Status = "Corrupted";
-                    }
-                }
-
-                return;
+                string status = await DetermineStatusAsync(resource, totalBytes, cancellationToken).ConfigureAwait(false);
+                resource.Status = status;
+                resource.DownloadProgress = 100;
+                return new ResourceDownloadResult(string.Equals(status, "Downloaded", StringComparison.OrdinalIgnoreCase), status, attempt);
             } catch (IOException ex) {
                 if (attempt == maxRetries) {
                     resource.Status = "Error";
                     logService.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
+                    return new ResourceDownloadResult(false, resource.Status, attempt, ex.Message);
                 } else {
                     logService.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
                     await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
@@ -170,8 +168,72 @@ public class LocalCacheService {
             } catch (Exception ex) {
                 resource.Status = "Error";
                 logService.LogError($"Error downloading resource: {ex.Message}");
-                return;
+                return new ResourceDownloadResult(false, resource.Status, attempt, ex.Message);
             }
         }
+
+        return new ResourceDownloadResult(false, resource.Status ?? "Error", maxRetries);
+    }
+
+    private async Task WriteTextAsync(string path, string content, CancellationToken cancellationToken) {
+        await using Stream stream = fileSystem.File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        using StreamWriter writer = new(stream);
+        await writer.WriteAsync(content.AsMemory(), cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Stream> OpenFileStreamWithRetryAsync(string path, CancellationToken cancellationToken, int maxRetries = 5, int delayMilliseconds = 2000) {
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return fileSystem.File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            } catch (IOException) when (attempt < maxRetries) {
+                await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        throw new IOException($"Failed to open file after {maxRetries} attempts: {path}");
+    }
+
+    private async Task<string> DetermineStatusAsync(BaseResource resource, long totalBytes, CancellationToken cancellationToken) {
+        IFileInfo fileInfo = fileSystem.FileInfo.New(resource.Path!);
+        long fileSizeInBytes = fileInfo.Length;
+
+        if (fileSizeInBytes == 0) {
+            return "Empty File";
+        }
+
+        if (!string.IsNullOrEmpty(resource.Hash)) {
+            bool hashMatches = await VerifyFileHashAsync(resource.Path!, resource.Hash, cancellationToken).ConfigureAwait(false);
+            return hashMatches ? "Downloaded" : "Corrupted";
+        }
+
+        const double tolerance = 0.05;
+
+        if (resource.Size > 0) {
+            double lowerBound = resource.Size * (1 - tolerance);
+            double upperBound = resource.Size * (1 + tolerance);
+            return fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound ? "Downloaded" : "Size Mismatch";
+        }
+
+        if (totalBytes > 0) {
+            double lowerBound = totalBytes * (1 - tolerance);
+            double upperBound = totalBytes * (1 + tolerance);
+            if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                resource.Size = (int)totalBytes;
+                return "Downloaded";
+            }
+
+            return "Size Mismatch";
+        }
+
+        resource.Size = (int)fileSizeInBytes;
+        return "Downloaded";
+    }
+
+    private async Task<bool> VerifyFileHashAsync(string path, string expectedHash, CancellationToken cancellationToken) {
+        await using Stream stream = fileSystem.File.OpenRead(path);
+        using MD5 md5 = MD5.Create();
+        byte[] hash = await md5.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
+        string fileHash = Convert.ToHexStringLower(hash);
+        return fileHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase);
     }
 }

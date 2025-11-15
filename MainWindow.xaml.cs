@@ -21,8 +21,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -98,10 +96,10 @@ namespace AssetProcessor {
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
-        private readonly IHttpClientFactory httpClientFactory;
         private readonly IHistogramService histogramService;
         private readonly ITextureChannelService textureChannelService;
         private readonly ILogService logService;
+        private readonly ILocalCacheService localCacheService;
         private Dictionary<int, string> folderPaths = new();
         private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
@@ -190,16 +188,16 @@ namespace AssetProcessor {
 
         public MainWindow(
             IPlayCanvasService playCanvasService,
-            IHttpClientFactory httpClientFactory,
             IHistogramService histogramService,
             ITextureChannelService textureChannelService,
             ILogService logService,
+            ILocalCacheService localCacheService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
-            this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             this.histogramService = histogramService ?? throw new ArgumentNullException(nameof(histogramService));
             this.textureChannelService = textureChannelService ?? throw new ArgumentNullException(nameof(textureChannelService));
             this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
+            this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 
             InitializeComponent();
@@ -4041,77 +4039,31 @@ namespace AssetProcessor {
         }
 
         private async Task DownloadFileAsync(BaseResource resource) {
-            if (resource == null || string.IsNullOrEmpty(resource.Path)) { // Если путь к файлу не указан, создаем его в папке проекта
+            if (resource == null || string.IsNullOrEmpty(resource.Path)) {
                 return;
             }
 
-            const int maxRetries = 5;
-            const int delayMilliseconds = 2000;
+            string? apiKey = GetDecryptedApiKey();
+            if (string.IsNullOrEmpty(apiKey)) {
+                resource.Status = "Error";
+                logService.LogError("API key is missing for download operation.");
+                return;
+            }
 
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    HttpClient client = httpClientFactory.CreateClient("Downloads");
-                    string? apiKey = GetDecryptedApiKey();
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey ?? "");
-
-                    HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead);
-
-                    if (!response.IsSuccessStatusCode) {
-                        throw new Exception($"Failed to download resource: {response.StatusCode}");
-                    }
-
-                    long totalBytes = response.Content.Headers.ContentLength ?? 0L;
-                    byte[] buffer = new byte[8192];
-                    int bytesRead = 0;
-
-                    using (Stream stream = await response.Content.ReadAsStreamAsync())
-                    using (FileStream fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None)) {
-                        while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
-                            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                            resource.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
-                        }
-                    }
-
+            try {
+                ResourceDownloadResult result = await localCacheService.DownloadFileAsync(resource, apiKey, cancellationTokenSource.Token);
+                if (!result.IsSuccess) {
+                    string message = result.ErrorMessage ?? $"Download finished with status {result.Status}";
+                    logService.LogWarn($"Download for {resource.Name} completed with status {result.Status} after {result.Attempts} attempts. {message}");
+                } else {
                     logService.LogInfo($"File downloaded successfully: {resource.Path}");
-                    if (!File.Exists(resource.Path)) {
-                        logService.LogError($"File was expected but not found: {resource.Path}");
-                        resource.Status = "Error";
-                        return;
-                    }
-
-                    // Дополнительное логирование размера файла
-                    FileInfo fileInfo = new(resource.Path);
-                    long fileSizeInBytes = fileInfo.Length;
-                    long resourceSizeInBytes = resource.Size;
-                    logService.LogInfo($"File size after download: {fileSizeInBytes}");
-
-                    double tolerance = 0.05;
-                    double lowerBound = resourceSizeInBytes * (1 - tolerance);
-                    double upperBound = resourceSizeInBytes * (1 + tolerance);
-
-                    if (fileInfo.Length == 0) {
-                        resource.Status = "Empty File";
-                    } else if (!string.IsNullOrEmpty(resource.Hash) && FileHelper.VerifyFileHash(resource.Path, resource.Hash)) {
-                        resource.Status = "Downloaded";
-                    } else if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                        resource.Status = "Size Mismatch";
-                    } else {
-                        resource.Status = "Corrupted";
-                    }
-                    break;
-                } catch (IOException ex) {
-                    if (attempt == maxRetries) {
-                        resource.Status = "Error";
-                        logService.LogError($"Error downloading resource after {maxRetries} attempts: {ex.Message}");
-                    } else {
-                        logService.LogError($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying in {delayMilliseconds}ms...");
-                        await Task.Delay(delayMilliseconds);
-                    }
-                } catch (Exception ex) {
-                    resource.Status = "Error";
-                    logService.LogError($"Error downloading resource: {ex.Message}");
-                    break;
                 }
+            } catch (OperationCanceledException) {
+                resource.Status = "Cancelled";
+                logService.LogWarn($"Download cancelled for {resource.Name}");
+            } catch (Exception ex) {
+                resource.Status = "Error";
+                logService.LogError($"Error downloading resource: {ex.Message}");
             }
         }
 
@@ -4775,24 +4727,8 @@ namespace AssetProcessor {
                 throw new Exception("Project name is null or empty");
             }
 
-            string pathProjectFolder = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-            string pathSourceFolder = pathProjectFolder;
-
-            // Если указан parent ID (ID папки), используем построенную иерархию
-            if (parentId.HasValue && folderPaths.ContainsKey(parentId.Value)) {
-                string folderPath = folderPaths[parentId.Value];
-                if (!string.IsNullOrEmpty(folderPath)) {
-                    // Создаем полный путь с иерархией папок из PlayCanvas
-                    pathSourceFolder = Path.Combine(pathSourceFolder, folderPath);
-                    logService.LogInfo($"Using folder hierarchy: {folderPath}");
-                }
-            }
-
-            if (!Directory.Exists(pathSourceFolder)) {
-                Directory.CreateDirectory(pathSourceFolder);
-            }
-
-            string fullPath = Path.Combine(pathSourceFolder, fileName ?? "Unknown");
+            string sanitizedFileName = localCacheService.SanitizePath(fileName);
+            string fullPath = localCacheService.GetResourcePath(AppSettings.Default.ProjectsFolderPath, projectName, folderPaths, sanitizedFileName, parentId);
             logService.LogInfo($"Generated resource path: {fullPath}");
             return fullPath;
         }

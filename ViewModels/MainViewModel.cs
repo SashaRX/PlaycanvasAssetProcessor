@@ -13,8 +13,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
@@ -27,8 +25,8 @@ namespace AssetProcessor.ViewModels {
     public partial class MainViewModel : ObservableObject {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         private readonly IPlayCanvasService playCanvasService;
-        private readonly IHttpClientFactory httpClientFactory;
         private readonly ITextureProcessingService textureProcessingService;
+        private readonly ILocalCacheService localCacheService;
         private readonly SemaphoreSlim downloadSemaphore;
 
         public event EventHandler<TextureProcessingCompletedEventArgs>? TextureProcessingCompleted;
@@ -91,10 +89,10 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private TextureResource? selectedTexture;
 
-        public MainViewModel(IPlayCanvasService playCanvasService, IHttpClientFactory httpClientFactory, ITextureProcessingService textureProcessingService) {
+        public MainViewModel(IPlayCanvasService playCanvasService, ITextureProcessingService textureProcessingService, ILocalCacheService localCacheService) {
             this.playCanvasService = playCanvasService;
-            this.httpClientFactory = httpClientFactory;
             this.textureProcessingService = textureProcessingService;
+            this.localCacheService = localCacheService;
             downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
             logger.Info("MainViewModel initialized");
         }
@@ -436,105 +434,15 @@ namespace AssetProcessor.ViewModels {
                 return;
             }
 
-            const int maxRetries = 5;
-            const int delayMilliseconds = 2000;
+            Directory.CreateDirectory(Path.GetDirectoryName(resource.Path) ?? projectFolderPath);
 
-            for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    resource.Status = "Downloading";
-                    resource.DownloadProgress = 0;
+            ResourceDownloadResult result = await localCacheService.DownloadFileAsync(resource, apiKey, cancellationToken);
 
-                    HttpClient client = httpClientFactory.CreateClient("Downloads");
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-                    HttpResponseMessage response = await client.GetAsync(resource.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-
-                    if (!response.IsSuccessStatusCode) {
-                        throw new Exception($"Failed to download resource: {response.StatusCode}");
-                    }
-
-                    long totalBytes = response.Content.Headers.ContentLength ?? 0L;
-                    byte[] buffer = new byte[8192];
-                    int bytesRead = 0;
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(resource.Path) ?? projectFolderPath);
-
-                    using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                    using FileStream fileStream = await FileHelper.OpenFileStreamWithRetryAsync(resource.Path, FileMode.Create, FileAccess.Write, FileShare.None);
-                    
-                    while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0) {
-                        await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                        if (totalBytes > 0) {
-                            resource.DownloadProgress = (double)fileStream.Length / totalBytes * 100;
-                        }
-                    }
-
-                    // Verify download
-                    if (!File.Exists(resource.Path)) {
-                        resource.Status = "Error";
-                        logger.Error($"File was expected but not found: {resource.Path}");
-                        return;
-                    }
-
-                    FileInfo fileInfo = new(resource.Path);
-                    if (fileInfo.Length == 0) {
-                        resource.Status = "Empty File";
-                    } else if (!string.IsNullOrEmpty(resource.Hash) && FileHelper.VerifyFileHash(resource.Path, resource.Hash)) {
-                        resource.Status = "Downloaded";
-                    } else {
-                        // Size check with tolerance - only if Size is known and > 0
-                        if (resource.Size > 0) {
-                            double tolerance = 0.05;
-                            double lowerBound = resource.Size * (1 - tolerance);
-                            double upperBound = resource.Size * (1 + tolerance);
-
-                            if (fileInfo.Length >= lowerBound && fileInfo.Length <= upperBound) {
-                                resource.Status = "Downloaded";
-                            } else {
-                                resource.Status = "Size Mismatch";
-                            }
-                        } else {
-                            // Size not available - use ContentLength from response if available
-                            if (totalBytes > 0) {
-                                double tolerance = 0.05;
-                                double lowerBound = totalBytes * (1 - tolerance);
-                                double upperBound = totalBytes * (1 + tolerance);
-
-                                if (fileInfo.Length >= lowerBound && fileInfo.Length <= upperBound) {
-                                    resource.Status = "Downloaded";
-                                    // Update resource.Size for future reference
-                                    resource.Size = (int)totalBytes;
-                                } else {
-                                    resource.Status = "Size Mismatch";
-                                }
-                            } else {
-                                // No size information available - assume download succeeded if file is not empty
-                                resource.Status = "Downloaded";
-                                // Update resource.Size with actual file size
-                                resource.Size = (int)fileInfo.Length;
-                            }
-                        }
-                    }
-
-                    resource.DownloadProgress = 100;
-                    logger.Info($"File downloaded successfully: {resource.Path}");
-                    return;
-                } catch (IOException ex) {
-                    if (attempt == maxRetries) {
-                        resource.Status = "Error";
-                        logger.Error(ex, $"Error downloading resource after {maxRetries} attempts");
-                        return;
-                    }
-                    logger.Warn($"Attempt {attempt} failed with IOException: {ex.Message}. Retrying...");
-                    await Task.Delay(delayMilliseconds, cancellationToken);
-                } catch (Exception ex) {
-                    resource.Status = "Error";
-                    logger.Error(ex, $"Error downloading resource: {ex.Message}");
-                    if (attempt == maxRetries) {
-                        return;
-                    }
-                    await Task.Delay(delayMilliseconds, cancellationToken);
-                }
+            if (!result.IsSuccess) {
+                string message = result.ErrorMessage ?? $"Download finished with status {result.Status}";
+                logger.Warn($"Download for resource {resource.Name} completed with status {result.Status} after {result.Attempts} attempts. {message}");
+            } else {
+                logger.Info($"File downloaded successfully: {resource.Path}");
             }
         }
 

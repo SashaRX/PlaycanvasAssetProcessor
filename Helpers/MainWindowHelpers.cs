@@ -2,8 +2,6 @@
 using AssetProcessor.Resources;
 using HelixToolkit.Wpf;
 using Newtonsoft.Json.Linq;
-using OxyPlot;
-using OxyPlot.Series;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.PixelFormats;
@@ -14,6 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using AssetProcessor.Services;
 
 
 namespace AssetProcessor.Helpers {
@@ -25,8 +24,6 @@ namespace AssetProcessor.Helpers {
 
         public static readonly string baseUrl = "https://playcanvas.com";
 
-        public static readonly object logLock = new();
-
         public static string CleanProjectName(string input) {
             Regex bracketsRegex = BracketsRegex();
             string[] parts = input.Split(',');
@@ -34,63 +31,6 @@ namespace AssetProcessor.Helpers {
                 return bracketsRegex.Replace(parts[1], "").Trim();
             }
             return input;
-        }
-
-        public static void AddSeriesToModel(PlotModel model, int[] histogram, OxyColor color) {
-            OxyColor colorWithAlpha = OxyColor.FromAColor(100, color);
-            AreaSeries series = new(){Color = color, Fill = colorWithAlpha, StrokeThickness = 1 };
-
-            double[] smoothedHistogram = MovingAverage(histogram, 32);
-
-            for (int i = 0; i < 256; i++) {
-                series.Points.Add(new DataPoint(i, smoothedHistogram[i]));
-                series.Points2.Add(new DataPoint(i, 0));
-            }
-
-            model.Series.Add(series);
-        }
-
-        public static async Task<BitmapSource> ApplyChannelFilterAsync(BitmapSource source, string channel) {
-            using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(source));
-
-            await Task.Run(() => {
-                switch (channel) {
-                    case "R":
-                        ProcessChannel(image, (pixel) => new Rgba32(pixel.R, pixel.R, pixel.R, pixel.A));
-                        break;
-                    case "G":
-                        ProcessChannel(image, (pixel) => new Rgba32(pixel.G, pixel.G, pixel.G, pixel.A));
-                        break;
-                    case "B":
-                        ProcessChannel(image, (pixel) => new Rgba32(pixel.B, pixel.B, pixel.B, pixel.A));
-                        break;
-                    case "A":
-                        ProcessChannel(image, (pixel) => new Rgba32(pixel.A, pixel.A, pixel.A, pixel.A));
-                        break;
-                }
-            });
-
-            return BitmapToBitmapSource(image);
-        }
-
-        public static byte[] BitmapSourceToArray(BitmapSource bitmapSource) {
-            PngBitmapEncoder encoder = new(); // Или любой другой доступный энкодер
-            encoder.Frames.Add(BitmapFrame.Create((BitmapSource)bitmapSource.Clone()));
-            using MemoryStream stream = new();
-            encoder.Save(stream);
-            return stream.ToArray();
-        }
-
-        public static BitmapImage BitmapToBitmapSource(Image<Rgba32> image) {
-            using MemoryStream memoryStream = new();
-            image.SaveAsBmp(memoryStream);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            BitmapImage bitmapImage = new();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = memoryStream;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-            return bitmapImage;
         }
 
         public static GeometryModel3D CreateArrowModel(Point3D start, Point3D end, double thickness, double coneHeight, double coneRadius, System.Windows.Media.Color color) {
@@ -186,32 +126,6 @@ namespace AssetProcessor.Helpers {
             return null; // Возвращаем пустое изображение, если файл не существует или путь пуст
         }
 
-        public static async Task<bool> DownloadFileAsync(string url, string destinationPath, CancellationToken cancellationToken) {
-            try {
-                using HttpClient client = new();
-                HttpResponseMessage response = await client.GetAsync(url, cancellationToken);
-                response.EnsureSuccessStatusCode();
-                using FileStream fs = new(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await response.Content.CopyToAsync(fs, cancellationToken);
-                return true;
-            } catch (Exception ex) {
-                LogError($"Error downloading file from {url}: {ex.Message}");
-                return false;
-            }
-        }
-
-        public static bool FileExistsWithLogging(string filePath) {
-            try {
-                LogInfo($"Checking if file exists: {filePath}");
-                bool exists = File.Exists(filePath);
-                LogInfo($"File exists: {exists}");
-                return exists;
-            } catch (Exception ex) {
-                LogError($"Exception while checking file existence: {filePath}, Exception: {ex.Message}");
-                return false;
-            }
-        }
-
         public static string? GetFileExtension(string fileUrl) {
             return Path.GetExtension(fileUrl.Split('?')[0])?.ToLowerInvariant();
         }
@@ -221,175 +135,23 @@ namespace AssetProcessor.Helpers {
             return !string.IsNullOrEmpty(relativeUrl) ? new Uri(new Uri(baseUrl), relativeUrl).ToString() : string.Empty;
         }
 
-        public static void LogError(string? message) {
-            string logFilePath = "error_log.txt";
-            lock (logLock) {
-                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
-                // Вывод сообщения в консоль IDE
-                System.Diagnostics.Debug.WriteLine($"{DateTime.Now}: {message}");
-            }
-        }
-
-        public static void LogInfo(string message) {
-            string logFilePath = "info_log.txt";
-            lock (logLock) {
-                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
-            }
-        }
-
-        public static void LogWarn(string message) {
-            string logFilePath = "warning_log.txt";
-            lock (logLock) {
-                File.AppendAllText(logFilePath, $"{DateTime.Now}: {message}\n");
-                // Output to IDE console for visibility
-                System.Diagnostics.Debug.WriteLine($"{DateTime.Now}: WARNING: {message}");
-            }
-        }
-
-        public static double[] MovingAverage(int[] values, int windowSize) {
-            double[] result = new double[values.Length];
-            double sum = 0;
-            for (int i = 0; i < values.Length; i++) {
-                sum += values[i];
-                if (i >= windowSize) {
-                    sum -= values[i - windowSize];
-                }
-                result[i] = sum / Math.Min(windowSize, i + 1);
-            }
-            return result;
-        }
-
-        public static void ProcessChannel(Image<Rgba32> image, Func<Rgba32, Rgba32> transform) {
-            int width = image.Width;
-            int height = image.Height;
-            int numberOfChunks = Environment.ProcessorCount; // Количество потоков для параллельной обработки
-            int chunkHeight = height / numberOfChunks;
-
-            Parallel.For(0, numberOfChunks, chunk => {
-                int startY = chunk * chunkHeight;
-                int endY = (chunk == numberOfChunks - 1) ? height : startY + chunkHeight;
-
-                for (int y = startY; y < endY; y++) {
-                    Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
-                    for (int x = 0; x < width; x++) {
-                        pixelRow[x] = transform(pixelRow[x]);
-                    }
-                }
-            });
-        }
-
-        public static void ProcessImage(BitmapSource bitmapSource, int[] redHistogram, int[] greenHistogram, int[] blueHistogram) {
-            using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(BitmapSourceToArray(bitmapSource));
-
-            // Create thread-local histograms to avoid race conditions
-            object lockObject = new();
-
-            Parallel.For(0, image.Height, () => {
-                // Thread-local initialization
-                return (Red: new int[256], Green: new int[256], Blue: new int[256]);
-            },
-            (y, loopState, localHistograms) => {
-                // Process each row with thread-local histograms
-                Span<Rgba32> pixelRow = image.Frames.RootFrame.DangerousGetPixelRowMemory(y).Span;
-                for (int x = 0; x < pixelRow.Length; x++) {
-                    Rgba32 pixel = pixelRow[x];
-                    localHistograms.Red[pixel.R]++;
-                    localHistograms.Green[pixel.G]++;
-                    localHistograms.Blue[pixel.B]++;
-                }
-                return localHistograms;
-            },
-            localHistograms => {
-                // Merge thread-local histograms into global histograms
-                lock (lockObject) {
-                    for (int i = 0; i < 256; i++) {
-                        redHistogram[i] += localHistograms.Red[i];
-                        greenHistogram[i] += localHistograms.Green[i];
-                        blueHistogram[i] += localHistograms.Blue[i];
-                    }
-                }
-            });
-        }
-
-        public class HistogramStatistics {
-            public double Min { get; set; }
-            public double Max { get; set; }
-            public double Mean { get; set; }
-            public double Median { get; set; }
-            public double StdDev { get; set; }
-            public long TotalPixels { get; set; }
-        }
-
-        public static HistogramStatistics CalculateHistogramStatistics(int[] histogram) {
-            long totalPixels = 0;
-            double weightedSum = 0;
-            int min = -1;
-            int max = -1;
-
-            // Calculate total pixels, weighted sum, min, and max
-            for (int i = 0; i < histogram.Length; i++) {
-                long count = histogram[i];
-                if (count > 0) {
-                    if (min == -1) min = i;
-                    max = i;
-                    totalPixels += count;
-                    weightedSum += i * count;
-                }
-            }
-
-            if (totalPixels == 0) {
-                return new HistogramStatistics {
-                    Min = 0, Max = 0, Mean = 0, Median = 0, StdDev = 0, TotalPixels = 0
-                };
-            }
-
-            // Calculate mean
-            double mean = weightedSum / totalPixels;
-
-            // Calculate median
-            long halfPixels = totalPixels / 2;
-            long accumulatedPixels = 0;
-            int median = 0;
-            for (int i = 0; i < histogram.Length; i++) {
-                accumulatedPixels += histogram[i];
-                if (accumulatedPixels >= halfPixels) {
-                    median = i;
-                    break;
-                }
-            }
-
-            // Calculate standard deviation
-            double varianceSum = 0;
-            for (int i = 0; i < histogram.Length; i++) {
-                if (histogram[i] > 0) {
-                    double diff = i - mean;
-                    varianceSum += diff * diff * histogram[i];
-                }
-            }
-            double stdDev = Math.Sqrt(varianceSum / totalPixels);
-
-            return new HistogramStatistics {
-                Min = min,
-                Max = max,
-                Mean = mean,
-                Median = median,
-                StdDev = stdDev,
-                TotalPixels = totalPixels
-            };
-        }
-
-        public static (int width, int height)? GetLocalImageResolution(string imagePath) {
+        public static (int width, int height)? GetLocalImageResolution(string imagePath, ILogService logService) {
+            ArgumentNullException.ThrowIfNull(logService);
             try {
                 using Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(imagePath);
                 return (image.Width, image.Height);
             } catch (Exception ex) {
-                MainWindowHelpers.LogError($"Error loading image for resolution: {ex.Message}");
+                logService.LogError($"Error loading image for resolution: {ex.Message}");
                 return null;
             }
         }
 
-        public static async Task UpdateTextureResolutionAsync(TextureResource texture, CancellationToken cancellationToken) {
+        public static async Task UpdateTextureResolutionAsync(
+            TextureResource texture,
+            ILogService logService,
+            CancellationToken cancellationToken) {
             ArgumentNullException.ThrowIfNull(texture);
+            ArgumentNullException.ThrowIfNull(logService);
 
             if (string.IsNullOrEmpty(texture.Url)) {
                 texture.Resolution = new int[2];
@@ -401,20 +163,22 @@ namespace AssetProcessor.Helpers {
                 string absoluteUrl = new Uri(new Uri(baseUrl), texture.Url).ToString(); // Ensure the URL is absolute
                 (int Width, int Height) = await ImageHelper.GetImageResolutionAsync(absoluteUrl, cancellationToken);
                 texture.Resolution = [Width, Height];
-                LogError($"Successfully retrieved resolution for {absoluteUrl}: {Width}x{Height}");
+                logService.LogInfo($"Successfully retrieved resolution for {absoluteUrl}: {Width}x{Height}");
             } catch (Exception ex) {
                 texture.Resolution = new int[2];
                 texture.Status = "Error";
-                LogError($"Exception in UpdateTextureResolutionAsync for {texture.Url}: {ex.Message}");
+                logService.LogError($"Exception in UpdateTextureResolutionAsync for {texture.Url}: {ex.Message}");
             }
         }
 
         public static async Task VerifyAndProcessResourceAsync<TResource>(
             TResource resource,
-            Func<Task> processResourceAsync)
+            Func<Task> processResourceAsync,
+            ILogService logService)
             where TResource : BaseResource {
             ArgumentNullException.ThrowIfNull(resource);
             ArgumentNullException.ThrowIfNull(processResourceAsync);
+            ArgumentNullException.ThrowIfNull(logService);
 
             try {
                 if (resource != null) {
@@ -425,12 +189,12 @@ namespace AssetProcessor.Helpers {
                     return;
                 }
 
-                if (!FileExistsWithLogging(resource.Path)) {
-                    LogInfo($"{resource.Name} not found on disk: {resource.Path}");
+                if (!FileExistsWithLogging(resource.Path, logService)) {
+                    logService.LogInfo($"{resource.Name} not found on disk: {resource.Path}");
                     resource.Status = "On Server";
                 } else {
                     FileInfo fileInfo = new(resource.Path);
-                    LogInfo($"{resource.Name} found on disk: {resource.Path}");
+                    logService.LogInfo($"{resource.Name} found on disk: {resource.Path}");
 
                     if (fileInfo.Length == 0) {
                         resource.Status = "Empty File";
@@ -448,20 +212,34 @@ namespace AssetProcessor.Helpers {
                             if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
                                 if (!string.IsNullOrEmpty(resource.Hash) && !FileHelper.IsFileIntact(resource.Path, resource.Hash, resource.Size)) {
                                     resource.Status = "Hash ERROR";
-                                    LogError($"{resource.Name} hash mismatch for file: {resource.Path}, expected hash: {resource.Hash}");
+                                    logService.LogError($"{resource.Name} hash mismatch for file: {resource.Path}, expected hash: {resource.Hash}");
                                 } else {
                                     resource.Status = "Downloaded";
                                 }
                             } else {
                                 resource.Status = "Size Mismatch";
-                                LogError($"{resource.Name} size mismatch: fileSizeInBytes: {fileSizeInBytes} and resourceSizeInBytes: {resourceSizeInBytes}");
+                                logService.LogError($"{resource.Name} size mismatch: fileSizeInBytes: {fileSizeInBytes} and resourceSizeInBytes: {resourceSizeInBytes}");
                             }
                         }
                     }
                 }
                 await processResourceAsync();
             } catch (Exception ex) {
-                LogError($"Error processing resource: {ex.Message}");
+                logService.LogError($"Error processing resource: {ex.Message}");
+            }
+        }
+
+        private static bool FileExistsWithLogging(string filePath, ILogService logService) {
+            ArgumentNullException.ThrowIfNull(logService);
+
+            try {
+                logService.LogInfo($"Checking if file exists: {filePath}");
+                bool exists = File.Exists(filePath);
+                logService.LogInfo($"File exists: {exists}");
+                return exists;
+            } catch (Exception ex) {
+                logService.LogError($"Exception while checking file existence: {filePath}, Exception: {ex.Message}");
+                return false;
             }
         }
 

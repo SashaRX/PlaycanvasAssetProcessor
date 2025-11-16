@@ -1412,12 +1412,17 @@ namespace AssetProcessor {
 
                 // Reload current texture to D3D11 based on current preview source mode
                 if (currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2 && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
-                    // Reload KTX2
-                    try {
-                        await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
-                        logger.Info($"Reloaded KTX2 to D3D11 viewer: {currentLoadedKtx2Path}");
-                    } catch (Exception ex) {
-                        logger.Error(ex, "Failed to reload KTX2 to D3D11 viewer");
+                    // Проверяем, не загружается ли уже этот файл
+                    if (IsKtx2Loading(currentLoadedKtx2Path)) {
+                        logger.Info($"KTX2 file already loading, skipping reload in SwitchPreviewRenderer: {currentLoadedKtx2Path}");
+                    } else {
+                        // Reload KTX2
+                        try {
+                            await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
+                            logger.Info($"Reloaded KTX2 to D3D11 viewer: {currentLoadedKtx2Path}");
+                        } catch (Exception ex) {
+                            logger.Error(ex, "Failed to reload KTX2 to D3D11 viewer");
+                        }
                     }
                 } else if (currentPreviewSourceMode == TexturePreviewSourceMode.Source && originalFileBitmapSource != null) {
                     // Reload Source (PNG) to D3D11
@@ -3118,8 +3123,24 @@ namespace AssetProcessor {
             }
         }
 
+        private int _isLoadingTexture = 0; // 0 = false, 1 = true (используем int для Interlocked)
+
         private async void ViewModel_TexturePreviewLoaded(object? sender, TexturePreviewLoadedEventArgs e) {
+            // Атомарная проверка и установка флага для защиты от повторной загрузки
+            // Используем CompareExchange для атомарной проверки и установки, чтобы избежать TOCTOU
+            // Пытаемся установить флаг в 1, если он был 0 (атомарная операция)
+            int wasLoading = Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
+            if (wasLoading != 0) {
+                logger.Warn("Texture loading already in progress, skipping duplicate load");
+                // Важно: НЕ сбрасываем флаг, так как другой поток его установил и должен сбросить
+                // в своем finally блоке. Сброс флага, которым мы не владеем, нарушает взаимное исключение.
+                return;
+            }
+
             try {
+
+                // Обновляем UI свойства в UI потоке с высоким приоритетом
+                bool rendererAvailable = false;
                 await Dispatcher.InvokeAsync(() => {
                     currentLoadedTexturePath = e.Texture.Path;
                     currentLoadedKtx2Path = e.Preview.KtxPath;
@@ -3134,40 +3155,80 @@ namespace AssetProcessor {
                         UpdatePreviewSourceControls();
                     }
 
-                    if (D3D11TextureViewer?.Renderer == null) {
+                    // Проверяем доступность renderer в UI потоке
+                    rendererAvailable = D3D11TextureViewer?.Renderer != null;
+                    if (!rendererAvailable) {
                         logger.Warn("D3D11 viewer или renderer отсутствует");
+                    }
+                });
+
+                if (!rendererAvailable) {
+                    return;
+                }
+
+                // Даем UI потоку возможность обработать другие сообщения перед тяжелыми операциями
+                await Task.Yield();
+
+                // Выполняем LoadTexture в UI потоке, но с более низким приоритетом
+                // чтобы не блокировать другие UI операции
+                await Dispatcher.InvokeAsync(() => {
+                    try {
+                        if (D3D11TextureViewer?.Renderer == null) {
+                            logger.Warn("D3D11 renderer стал null во время загрузки");
+                            return;
+                        }
+                        D3D11TextureViewer.Renderer.LoadTexture(e.Preview.TextureData);
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Ошибка при загрузке текстуры в D3D11");
                         return;
                     }
+                }, System.Windows.Threading.DispatcherPriority.Background);
 
-                    D3D11TextureViewer.Renderer.LoadTexture(e.Preview.TextureData);
-                    UpdateHistogramCorrectionButtonState();
+                // Еще раз даем UI потоку возможность обработать другие сообщения
+                await Task.Yield();
 
-                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-                    if (TextureFormatTextBlock != null) {
-                        string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
-                        string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
-                            ? " (sRGB)"
-                            : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
-                                ? " (Linear)"
-                                : string.Empty;
-                        string histInfo = hasHistogram ? " + Histogram" : string.Empty;
-                        TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
-                    }
-
-                    D3D11TextureViewer.Renderer.Render();
-
-                    if (e.Preview.ShouldEnableNormalReconstruction && D3D11TextureViewer.Renderer != null) {
-                        currentActiveChannelMask = "Normal";
-                        D3D11TextureViewer.Renderer.SetChannelMask(0x20);
-                        D3D11TextureViewer.Renderer.Render();
-                        UpdateChannelButtonsState();
-                        if (!string.IsNullOrWhiteSpace(e.Preview.AutoEnableReason)) {
-                            logService.LogInfo($"Auto-enabled Normal reconstruction mode for {e.Preview.AutoEnableReason}");
+                // Обновляем UI и выполняем Render
+                await Dispatcher.InvokeAsync(() => {
+                    try {
+                        if (D3D11TextureViewer?.Renderer == null) {
+                            logger.Warn("D3D11 renderer стал null во время обновления UI");
+                            return;
                         }
+
+                        UpdateHistogramCorrectionButtonState();
+
+                        bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
+                        if (TextureFormatTextBlock != null) {
+                            string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
+                            string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
+                                ? " (sRGB)"
+                                : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
+                                    ? " (Linear)"
+                                    : string.Empty;
+                            string histInfo = hasHistogram ? " + Histogram" : string.Empty;
+                            TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
+                        }
+
+                        D3D11TextureViewer.Renderer.Render();
+
+                        if (e.Preview.ShouldEnableNormalReconstruction && D3D11TextureViewer.Renderer != null) {
+                            currentActiveChannelMask = "Normal";
+                            D3D11TextureViewer.Renderer.SetChannelMask(0x20);
+                            D3D11TextureViewer.Renderer.Render();
+                            UpdateChannelButtonsState();
+                            if (!string.IsNullOrWhiteSpace(e.Preview.AutoEnableReason)) {
+                                logService.LogInfo($"Auto-enabled Normal reconstruction mode for {e.Preview.AutoEnableReason}");
+                            }
+                        }
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Ошибка при обновлении UI после загрузки текстуры");
                     }
                 });
             } catch (Exception ex) {
                 logger.Error(ex, "Ошибка при обновлении превью KTX2");
+            } finally {
+                // Атомарно сбрасываем флаг
+                Interlocked.Exchange(ref _isLoadingTexture, 0);
             }
         }
 

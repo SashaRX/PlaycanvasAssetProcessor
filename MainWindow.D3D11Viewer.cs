@@ -127,7 +127,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Loads texture data into the D3D11 viewer.
         /// </summary>
-        private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
+        private async Task LoadTextureToD3D11ViewerAsync(BitmapSource bitmap, bool isSRGB) {
             logger.Info($"LoadTextureToD3D11Viewer called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}, isSRGB={isSRGB}");
 
             if (bitmap == null) {
@@ -147,15 +147,24 @@ namespace AssetProcessor {
             logger.Info("Render loop disabled");
 
             try {
-                // Convert BitmapSource to TextureData
+                // Выполняем тяжелые операции (конвертация формата и копирование пикселей) в фоновом потоке
                 int width = bitmap.PixelWidth;
                 int height = bitmap.PixelHeight;
                 int stride = width * 4; // RGBA8
                 byte[] pixels = new byte[stride * height];
 
-                // Convert to BGRA32 (which is actually RGBA in memory)
-                var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
-                convertedBitmap.CopyPixels(pixels, stride, 0);
+                // Freeze bitmap для безопасного доступа из другого потока
+                if (!bitmap.IsFrozen) {
+                    bitmap.Freeze();
+                }
+
+                // Конвертация и копирование пикселей в фоновом потоке
+                await Task.Run(() => {
+                    // Convert to BGRA32 (which is actually RGBA in memory)
+                    var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+                    convertedBitmap.Freeze(); // Freeze для безопасного доступа
+                    convertedBitmap.CopyPixels(pixels, stride, 0);
+                });
 
                 var mipLevel = new MipLevel {
                     Level = 0,
@@ -179,28 +188,33 @@ namespace AssetProcessor {
                 };
 
                 logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
-                logger.Info($"D3D11TextureViewer.Renderer is null: {D3D11TextureViewer.Renderer == null}");
 
-                if (D3D11TextureViewer.Renderer != null) {
+                // Даем UI потоку возможность обработать другие сообщения перед тяжелой операцией
+                await Task.Yield();
+
+                // LoadTexture должен быть вызван в UI потоке (требует D3D11 контекст)
+                // Используем Background приоритет, чтобы не блокировать другие UI операции
+                await Dispatcher.InvokeAsync(() => {
+                    if (D3D11TextureViewer?.Renderer == null) {
+                        logger.Error("D3D11TextureViewer.Renderer is null!");
+                        return;
+                    }
+
                     logger.Info("Calling LoadTexture on renderer...");
                     D3D11TextureViewer.Renderer.LoadTexture(textureData);
                     logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
 
                     // Update format info in UI
-                    Dispatcher.Invoke(() => {
-                        if (TextureFormatTextBlock != null) {
-                            string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
-                            TextureFormatTextBlock.Text = $"Format: {formatInfo}";
-                        }
+                    if (TextureFormatTextBlock != null) {
+                        string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                        TextureFormatTextBlock.Text = $"Format: {formatInfo}";
+                    }
 
-                        // Update histogram correction button state (PNG has no metadata)
-                        UpdateHistogramCorrectionButtonState();
-                    });
+                    // Update histogram correction button state (PNG has no metadata)
+                    UpdateHistogramCorrectionButtonState();
+                }, System.Windows.Threading.DispatcherPriority.Background);
 
-                    // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
-                } else {
-                    logger.Error("D3D11TextureViewer.Renderer is null!");
-                }
+                // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
             } catch (Exception ex) {
                 logger.Error(ex, "Failed to load texture to D3D11 viewer");
             } finally {
@@ -209,9 +223,47 @@ namespace AssetProcessor {
                 logger.Info("Render loop re-enabled");
 
                 // Force immediate render to update viewport with current zoom/pan
-                D3D11TextureViewer?.Renderer?.Render();
-                logger.Info("Forced render to apply current zoom/pan");
+                await Dispatcher.InvokeAsync(() => {
+                    D3D11TextureViewer?.Renderer?.Render();
+                    logger.Info("Forced render to apply current zoom/pan");
+                });
             }
+        }
+
+        /// <summary>
+        /// Синхронная обертка для обратной совместимости (вызывает асинхронный метод).
+        /// </summary>
+        private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
+            // Запускаем асинхронную загрузку без ожидания, чтобы не блокировать вызывающий поток
+            _ = Task.Run(async () => {
+                try {
+                    await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB);
+                } catch (Exception ex) {
+                    logger.Error(ex, "Error in async LoadTextureToD3D11Viewer");
+                }
+            });
+        }
+
+        private int _isLoadingKtx2 = 0; // 0 = false, 1 = true (используем int для Interlocked)
+        private string? _currentLoadingKtx2Path = null; // Путь к загружаемому файлу
+
+        /// <summary>
+        /// Проверяет, загружается ли уже KTX2 файл (любой или конкретный).
+        /// </summary>
+        private bool IsKtx2Loading(string? ktxPath = null) {
+            int isLoading = Volatile.Read(ref _isLoadingKtx2);
+            if (isLoading == 0) {
+                return false;
+            }
+
+            // Если указан конкретный путь, проверяем, не тот ли это файл
+            if (ktxPath != null) {
+                string? currentPath = Volatile.Read(ref _currentLoadingKtx2Path);
+                return string.Equals(currentPath, ktxPath, StringComparison.OrdinalIgnoreCase);
+            }
+
+            // Если путь не указан, просто проверяем, идет ли загрузка любого файла
+            return true;
         }
 
         /// <summary>
@@ -222,6 +274,32 @@ namespace AssetProcessor {
                 logger.Warn("D3D11 viewer or renderer is null");
                 return false;
             }
+
+            // Атомарная проверка и установка флага для защиты от повторной загрузки
+            // Используем CompareExchange для атомарной проверки и установки, чтобы избежать TOCTOU
+            // Пытаемся установить флаг в 1, если он был 0 (атомарная операция)
+            int wasLoadingBefore = Interlocked.CompareExchange(ref _isLoadingKtx2, 1, 0);
+            
+            // Флаг, указывающий, действительно ли мы начали загрузку
+            // Это нужно для правильного сброса флагов в finally блоке
+            bool loadStarted = false;
+            
+            if (wasLoadingBefore != 0) {
+                // Уже идет загрузка - проверяем путь для более информативного сообщения
+                string? currentPath = Volatile.Read(ref _currentLoadingKtx2Path);
+                if (currentPath != null && string.Equals(currentPath, ktxPath, StringComparison.OrdinalIgnoreCase)) {
+                    logger.Warn($"KTX2 file already loading: {ktxPath}, skipping duplicate load");
+                } else {
+                    logger.Warn($"Another KTX2 file is loading: {currentPath}, skipping load of: {ktxPath}");
+                }
+                // Важно: не сбрасываем флаг, так как другой поток его установил и должен сбросить
+                return false;
+            }
+
+            // Успешно установили флаг загрузки атомарно - устанавливаем путь и флаг начала загрузки
+            // Установка пути не требует атомарности, так как флаг уже защищает от одновременного доступа
+            Interlocked.Exchange(ref _currentLoadingKtx2Path, ktxPath);
+            loadStarted = true;
 
             try {
                 // Use Ktx2TextureLoader to load the KTX2 file
@@ -275,6 +353,14 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");
                 return false;
+            } finally {
+                // Атомарно сбрасываем флаг только если мы действительно начали загрузку
+                // Если мы вернулись раньше из-за обнаружения race condition, флаги уже восстановлены
+                // и не должны быть сброшены здесь, иначе это позволит другим потокам обойти защиту
+                if (loadStarted) {
+                    Interlocked.Exchange(ref _isLoadingKtx2, 0);
+                    Interlocked.Exchange(ref _currentLoadingKtx2Path, null);
+                }
             }
         }
 

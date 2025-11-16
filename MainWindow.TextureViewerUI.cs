@@ -641,7 +641,25 @@ namespace AssetProcessor {
                         logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                     }
                 } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
-                    // New method: Reload KTX2 natively to D3D11 (only if not already loaded)
+                    // New method: Reload KTX2 natively to D3D11 (only if not already loaded or loading)
+                    // Проверяем, не загружается ли уже этот файл через LoadKtx2ToD3D11ViewerAsync
+                    if (IsKtx2Loading(currentLoadedKtx2Path)) {
+                        logger.Info($"KTX2 file already loading via LoadKtx2ToD3D11ViewerAsync, skipping reload in SetPreviewSourceMode: {currentLoadedKtx2Path}");
+                        return; // Выходим, не вызывая LoadKtx2ToD3D11ViewerAsync
+                    }
+
+                    // Проверяем, не загружена ли уже текстура в renderer (включая загрузку через ViewModel_TexturePreviewLoaded)
+                    if (D3D11TextureViewer?.Renderer != null) {
+                        string? currentTexturePath = D3D11TextureViewer.Renderer.GetCurrentTexturePath();
+                        if (currentTexturePath != null && string.Equals(currentTexturePath, currentLoadedKtx2Path, StringComparison.OrdinalIgnoreCase)) {
+                            logger.Info($"KTX2 already loaded in D3D11 renderer, skipping reload in SetPreviewSourceMode: {currentLoadedKtx2Path}");
+                            // Обновляем UI, но не перезагружаем текстуру
+                            UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
+                            UpdateHistogramCorrectionButtonState();
+                            return;
+                        }
+                    }
+
                     _ = Task.Run(async () => {
                         try {
                             await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);

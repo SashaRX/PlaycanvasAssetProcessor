@@ -3094,13 +3094,24 @@ namespace AssetProcessor {
                     ? MessageBoxImage.Information
                     : MessageBoxImage.Warning;
 
-                MessageBox.Show(resultMessage, "Processing Complete", MessageBoxButton.OK, icon);
+                // Показываем MessageBox в UI потоке
+                await Dispatcher.InvokeAsync(() => {
+                    MessageBox.Show(resultMessage, "Processing Complete", MessageBoxButton.OK, icon);
+                });
 
+                // Загружаем превью после показа MessageBox, чтобы не блокировать UI
                 if (e.Result.PreviewTexture != null && viewModel.LoadKtxPreviewCommand is IAsyncRelayCommand<TextureResource?> command) {
-                    await Dispatcher.InvokeAsync(async () => {
+                    try {
+                        // Выполняем команду напрямую (она уже async и не блокирует UI)
                         await command.ExecuteAsync(e.Result.PreviewTexture);
-                        SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
-                    });
+                        
+                        // Обновляем UI в UI потоке после загрузки
+                        await Dispatcher.InvokeAsync(() => {
+                            SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
+                        });
+                    } catch (Exception ex) {
+                        logger.Warn(ex, "Ошибка при загрузке превью KTX2");
+                    }
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Ошибка при обработке результатов конвертации");

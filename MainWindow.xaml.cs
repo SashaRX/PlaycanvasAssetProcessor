@@ -1,4 +1,4 @@
-using AssetProcessor.Helpers;
+﻿using AssetProcessor.Helpers;
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
@@ -3111,9 +3111,7 @@ namespace AssetProcessor {
                         await command.ExecuteAsync(e.Result.PreviewTexture);
                         
                         // Обновляем UI в UI потоке после загрузки
-                        await Dispatcher.InvokeAsync(() => {
-                            SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
-                        });
+                        // Preview loading event will switch the viewer to KTX2 mode after the texture is loaded.
                     } catch (Exception ex) {
                         logger.Warn(ex, "Ошибка при загрузке превью KTX2");
                     }
@@ -3807,3 +3805,4 @@ namespace AssetProcessor {
         #endregion
     }
 }
+

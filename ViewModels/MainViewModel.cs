@@ -28,6 +28,8 @@ namespace AssetProcessor.ViewModels {
         private readonly ITextureProcessingService textureProcessingService;
         private readonly ILocalCacheService localCacheService;
         private readonly IProjectSyncService projectSyncService;
+        private readonly IAssetDownloadCoordinator assetDownloadCoordinator;
+        private readonly SynchronizationContext? synchronizationContext;
 
         public event EventHandler<TextureProcessingCompletedEventArgs>? TextureProcessingCompleted;
 
@@ -108,12 +110,31 @@ namespace AssetProcessor.ViewModels {
             IPlayCanvasService playCanvasService,
             ITextureProcessingService textureProcessingService,
             ILocalCacheService localCacheService,
-            IProjectSyncService projectSyncService) {
+            IProjectSyncService projectSyncService,
+            IAssetDownloadCoordinator assetDownloadCoordinator) {
             this.playCanvasService = playCanvasService;
             this.textureProcessingService = textureProcessingService;
             this.localCacheService = localCacheService;
             this.projectSyncService = projectSyncService;
+            this.assetDownloadCoordinator = assetDownloadCoordinator;
+            synchronizationContext = SynchronizationContext.Current;
+
+            assetDownloadCoordinator.ResourceStatusChanged += OnResourceStatusChanged;
             logger.Info("MainViewModel initialized");
+        }
+
+        private void OnResourceStatusChanged(object? sender, ResourceStatusChangedEventArgs e) {
+            if (e?.Resource == null) {
+                return;
+            }
+
+            void UpdateStatus() => StatusMessage = $"{e.Resource.Name}: {e.Status ?? "Pending"}";
+
+            if (synchronizationContext != null) {
+                synchronizationContext.Post(_ => UpdateStatus(), null);
+            } else {
+                UpdateStatus();
+            }
         }
 
         private string? ResolveApiKey() {
@@ -285,48 +306,38 @@ namespace AssetProcessor.ViewModels {
             CurrentProjectName = effectiveProjectName;
 
             try {
-                List<BaseResource> assetsToDownload = Assets
-                    .Where(a => string.IsNullOrEmpty(a.Status) ||
-                                a.Status == "Ready" ||
-                                a.Status == "On Server" ||
-                                a.Status == "Error" ||
-                                a.Status == "Size Mismatch" ||
-                                a.Status == "Corrupted" ||
-                                a.Status == "Empty File" ||
-                                a.Status == "Hash ERROR")
-                    .ToList();
-
-                if (assetsToDownload.Count == 0) {
-                    StatusMessage = "No assets need downloading";
-                    return;
-                }
-
-                StatusMessage = $"Downloading {assetsToDownload.Count} assets...";
-                ProgressMaximum = assetsToDownload.Count;
-                ProgressValue = 0;
-                ProgressText = $"0/{assetsToDownload.Count}";
-
-                ProjectDownloadRequest downloadRequest = new(
-                    assetsToDownload,
+                AssetDownloadContext context = new(
+                    Assets,
                     resolvedApiKey,
                     effectiveProjectName,
                     AppSettings.Default.ProjectsFolderPath,
                     FolderPaths);
 
-                int currentProgress = 0;
-                Progress<ResourceDownloadProgress> downloadProgress = new(progress => {
-                    currentProgress = Math.Max(currentProgress, progress.Completed);
-                    ProgressValue = currentProgress;
-                    ProgressText = $"{currentProgress}/{ProgressMaximum}";
+                ProgressValue = 0;
+                ProgressMaximum = 0;
+                ProgressText = null;
+                StatusMessage = "Preparing downloads...";
+
+                Progress<AssetDownloadProgress> uiProgress = new(progress => {
+                    ProgressMaximum = progress.Total;
+                    ProgressValue = progress.Completed;
+                    ProgressText = progress.Total > 0 ? $"{progress.Completed}/{progress.Total}" : null;
                 });
 
-                ResourceDownloadBatchResult result = await projectSyncService.DownloadAsync(downloadRequest, downloadProgress, cancellationToken);
+                AssetDownloadResult result = await assetDownloadCoordinator.DownloadAssetsAsync(context, uiProgress, cancellationToken);
 
-                ProgressValue = ProgressMaximum;
-                ProgressText = $"{result.Succeeded}/{result.Total}";
+                if (result.BatchResult.Total == 0) {
+                    ProgressMaximum = 0;
+                    ProgressValue = 0;
+                    ProgressText = null;
+                } else {
+                    ProgressMaximum = result.BatchResult.Total;
+                    ProgressValue = result.BatchResult.Succeeded;
+                    ProgressText = $"{result.BatchResult.Succeeded}/{result.BatchResult.Total}";
+                }
 
-                StatusMessage = $"Downloaded {result.Succeeded} assets. Failed: {result.Failed}";
-                logger.Info($"Download completed: {result.Succeeded} succeeded, {result.Failed} failed");
+                StatusMessage = result.Message;
+                logger.Info(result.Message);
             } catch (OperationCanceledException) {
                 StatusMessage = "Download cancelled";
                 logger.Warn("Download operation cancelled by user");

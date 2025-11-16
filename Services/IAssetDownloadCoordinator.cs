@@ -10,6 +10,6 @@ public interface IAssetDownloadCoordinator {
 
     Task<AssetDownloadResult> DownloadAssetsAsync(
         AssetDownloadContext context,
-        IProgress<AssetDownloadProgress>? progress,
+        AssetDownloadOptions? options,
         CancellationToken cancellationToken);
 }

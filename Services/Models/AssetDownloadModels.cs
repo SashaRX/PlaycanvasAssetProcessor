@@ -13,6 +13,10 @@ public sealed record AssetDownloadContext(
 
 public sealed record AssetDownloadProgress(int Completed, int Total, BaseResource? Resource);
 
+public sealed record AssetDownloadOptions(
+    Action<AssetDownloadProgress>? ProgressCallback = null,
+    Action<BaseResource>? ResourceStatusCallback = null);
+
 public sealed record AssetDownloadResult(bool IsSuccess, string Message, ResourceDownloadBatchResult BatchResult);
 
 public sealed class ResourceStatusChangedEventArgs : EventArgs {

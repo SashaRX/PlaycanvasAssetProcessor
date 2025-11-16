@@ -34,7 +34,7 @@ public sealed class AssetDownloadCoordinator : IAssetDownloadCoordinator {
 
     public async Task<AssetDownloadResult> DownloadAssetsAsync(
         AssetDownloadContext context,
-        IProgress<AssetDownloadProgress>? progress,
+        AssetDownloadOptions? options,
         CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentException.ThrowIfNullOrEmpty(context.ApiKey);
@@ -43,6 +43,8 @@ public sealed class AssetDownloadCoordinator : IAssetDownloadCoordinator {
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        options ??= new AssetDownloadOptions();
+
         List<BaseResource> pendingResources = PrepareResources(context);
         if (pendingResources.Count == 0) {
             logger.Info("AssetDownloadCoordinator: no assets require download");
@@ -50,62 +52,62 @@ public sealed class AssetDownloadCoordinator : IAssetDownloadCoordinator {
         }
 
         int total = pendingResources.Count;
-        progress?.Report(new AssetDownloadProgress(0, total, null));
+        ReportProgress(options.ProgressCallback, 0, total, null);
 
-        int overallCompleted = 0;
-        int attempt = 0;
+        try {
+            int overallCompleted = 0;
+            int attempt = 0;
 
-        List<BaseResource> remaining = pendingResources;
-        while (remaining.Count > 0 && attempt < MaxRetryAttempts) {
-            cancellationToken.ThrowIfCancellationRequested();
-            attempt++;
+            List<BaseResource> remaining = pendingResources;
+            while (remaining.Count > 0 && attempt < MaxRetryAttempts) {
+                cancellationToken.ThrowIfCancellationRequested();
+                attempt++;
 
-            logger.Info($"AssetDownloadCoordinator: starting attempt {attempt} for {remaining.Count} assets");
-            ProjectDownloadRequest request = new(
-                remaining,
-                context.ApiKey,
-                context.ProjectName,
-                context.ProjectsRoot,
-                context.FolderPaths);
+                logger.Info($"AssetDownloadCoordinator: starting attempt {attempt} for {remaining.Count} assets");
+                ProjectDownloadRequest request = new(
+                    remaining,
+                    context.ApiKey,
+                    context.ProjectName,
+                    context.ProjectsRoot,
+                    context.FolderPaths);
 
-            int attemptCompleted = 0;
-            IProgress<ResourceDownloadProgress> internalProgress = new Progress<ResourceDownloadProgress>(progressUpdate => {
-                if (progressUpdate == null) {
-                    return;
-                }
+                int attemptCompleted = 0;
+                IProgress<ResourceDownloadProgress> internalProgress = new Progress<ResourceDownloadProgress>(progressUpdate => {
+                    if (progressUpdate == null) {
+                        return;
+                    }
 
-                int delta = Math.Max(0, progressUpdate.Completed - attemptCompleted);
-                attemptCompleted = progressUpdate.Completed;
-                overallCompleted = Math.Min(total, overallCompleted + delta);
+                    int delta = Math.Max(0, progressUpdate.Completed - attemptCompleted);
+                    attemptCompleted = progressUpdate.Completed;
+                    overallCompleted = Math.Min(total, overallCompleted + delta);
 
-                progress?.Report(new AssetDownloadProgress(overallCompleted, total, progressUpdate.Resource));
-                OnResourceStatusChanged(progressUpdate.Resource);
-            });
+                    ReportProgress(options.ProgressCallback, overallCompleted, total, progressUpdate.Resource);
+                    NotifyResourceStatus(progressUpdate.Resource, options.ResourceStatusCallback);
+                });
 
-            try {
                 await projectSyncService.DownloadAsync(request, internalProgress, cancellationToken).ConfigureAwait(false);
-            } catch (OperationCanceledException) {
-                logger.Warn("AssetDownloadCoordinator: download cancelled");
-                throw;
-            } catch (Exception ex) {
-                logger.Error(ex, "AssetDownloadCoordinator: unexpected error during download");
-                return BuildResult(pendingResources, false, $"Download error: {ex.Message}");
+
+                remaining = remaining.Where(RequiresDownload).ToList();
+                if (remaining.Count > 0 && attempt < MaxRetryAttempts) {
+                    TimeSpan delay = TimeSpan.FromMilliseconds(BaseRetryDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
+                    logger.Warn($"AssetDownloadCoordinator: retrying {remaining.Count} assets after {delay.TotalMilliseconds}ms delay");
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                }
             }
 
-            remaining = remaining.Where(RequiresDownload).ToList();
-            if (remaining.Count > 0 && attempt < MaxRetryAttempts) {
-                TimeSpan delay = TimeSpan.FromMilliseconds(BaseRetryDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
-                logger.Warn($"AssetDownloadCoordinator: retrying {remaining.Count} assets after {delay.TotalMilliseconds}ms delay");
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-            }
+            bool success = remaining.Count == 0 && pendingResources.All(r => string.Equals(r.Status, "Downloaded", StringComparison.OrdinalIgnoreCase));
+            string message = success
+                ? $"Downloaded {pendingResources.Count} assets"
+                : $"Downloaded {pendingResources.Count - remaining.Count} assets. Failed: {remaining.Count}";
+
+            return BuildResult(pendingResources, success, message);
+        } catch (OperationCanceledException) {
+            logger.Warn("AssetDownloadCoordinator: download cancelled");
+            throw;
+        } catch (Exception ex) {
+            logger.Error(ex, "AssetDownloadCoordinator: unexpected error during download");
+            return BuildResult(pendingResources, false, $"Download error: {ex.Message}");
         }
-
-        bool success = remaining.Count == 0 && pendingResources.All(r => string.Equals(r.Status, "Downloaded", StringComparison.OrdinalIgnoreCase));
-        string message = success
-            ? $"Downloaded {pendingResources.Count} assets"
-            : $"Downloaded {pendingResources.Count - remaining.Count} assets. Failed: {remaining.Count}";
-
-        return BuildResult(pendingResources, success, message);
     }
 
     private AssetDownloadResult BuildResult(List<BaseResource> resources, bool success, string message) {
@@ -146,11 +148,16 @@ public sealed class AssetDownloadCoordinator : IAssetDownloadCoordinator {
         return DownloadableStatuses.Contains(resource.Status);
     }
 
-    private void OnResourceStatusChanged(BaseResource? resource) {
+    private void NotifyResourceStatus(BaseResource? resource, Action<BaseResource>? callback) {
         if (resource == null) {
             return;
         }
 
+        callback?.Invoke(resource);
         ResourceStatusChanged?.Invoke(this, new ResourceStatusChangedEventArgs(resource, resource.Status));
+    }
+
+    private static void ReportProgress(Action<AssetDownloadProgress>? callback, int completed, int total, BaseResource? resource) {
+        callback?.Invoke(new AssetDownloadProgress(completed, total, resource));
     }
 }

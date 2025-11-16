@@ -31,7 +31,7 @@ public class AssetDownloadCoordinatorTests {
             "C:/Projects",
             new Dictionary<int, string>());
 
-        await coordinator.DownloadAssetsAsync(context, progress: null, CancellationToken.None);
+        await coordinator.DownloadAssetsAsync(context, options: null, CancellationToken.None);
 
         Assert.NotNull(syncService.LastRequest);
         Assert.Equal(2, syncService.LastRequest!.Resources.Count);
@@ -45,7 +45,7 @@ public class AssetDownloadCoordinatorTests {
         AssetDownloadCoordinator coordinator = new(syncService, cacheService, LogManager.CreateNullLogger());
 
         List<AssetDownloadProgress> events = new();
-        Progress<AssetDownloadProgress> progress = new(events.Add);
+        AssetDownloadOptions options = new(progress => events.Add(progress), resource => { });
 
         List<BaseResource> assets = new() {
             new TextureResource { ID = 1, Name = "one", Status = "Ready" },
@@ -59,7 +59,7 @@ public class AssetDownloadCoordinatorTests {
             "C:/Projects",
             new Dictionary<int, string>());
 
-        AssetDownloadResult result = await coordinator.DownloadAssetsAsync(context, progress, CancellationToken.None);
+        AssetDownloadResult result = await coordinator.DownloadAssetsAsync(context, options, CancellationToken.None);
 
         Assert.Equal(2, result.BatchResult.Total);
         Assert.Equal(3, events.Count); // initial + two updates
@@ -87,7 +87,7 @@ public class AssetDownloadCoordinatorTests {
         using CancellationTokenSource cts = new();
         cts.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => coordinator.DownloadAssetsAsync(context, progress: null, cts.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => coordinator.DownloadAssetsAsync(context, options: null, cts.Token));
     }
 
     private sealed class StubProjectSyncService : IProjectSyncService {

@@ -196,16 +196,17 @@ public class MainViewModelTests {
 
         public event EventHandler<ResourceStatusChangedEventArgs>? ResourceStatusChanged;
 
-        public Task<AssetDownloadResult> DownloadAssetsAsync(AssetDownloadContext context, IProgress<AssetDownloadProgress>? progress, CancellationToken cancellationToken) {
+        public Task<AssetDownloadResult> DownloadAssetsAsync(AssetDownloadContext context, AssetDownloadOptions? options, CancellationToken cancellationToken) {
             LastContext = context;
 
-            progress?.Report(new AssetDownloadProgress(0, context.Resources.Count, null));
+            options?.ProgressCallback?.Invoke(new AssetDownloadProgress(0, context.Resources.Count, null));
             BaseResource? first = context.Resources.FirstOrDefault();
             if (first != null) {
                 ResourceStatusChanged?.Invoke(this, new ResourceStatusChangedEventArgs(first, first.Status));
+                options?.ResourceStatusCallback?.Invoke(first);
             }
 
-            progress?.Report(new AssetDownloadProgress(context.Resources.Count, context.Resources.Count, first));
+            options?.ProgressCallback?.Invoke(new AssetDownloadProgress(context.Resources.Count, context.Resources.Count, first));
             return Task.FromResult(ResultToReturn);
         }
     }

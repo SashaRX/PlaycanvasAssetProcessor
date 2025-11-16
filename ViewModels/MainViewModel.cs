@@ -119,21 +119,37 @@ namespace AssetProcessor.ViewModels {
             this.assetDownloadCoordinator = assetDownloadCoordinator;
             synchronizationContext = SynchronizationContext.Current;
 
-            assetDownloadCoordinator.ResourceStatusChanged += OnResourceStatusChanged;
             logger.Info("MainViewModel initialized");
         }
 
-        private void OnResourceStatusChanged(object? sender, ResourceStatusChangedEventArgs e) {
-            if (e?.Resource == null) {
+        private void UpdateResourceStatusMessage(BaseResource resource) {
+            if (resource == null) {
                 return;
             }
 
-            void UpdateStatus() => StatusMessage = $"{e.Resource.Name}: {e.Status ?? "Pending"}";
+            void UpdateStatus() => StatusMessage = $"{resource.Name}: {resource.Status ?? "Pending"}";
+            PostToUi(UpdateStatus);
+        }
+
+        private void UpdateProgress(AssetDownloadProgress progress) {
+            void UpdateValues() {
+                ProgressMaximum = progress.Total;
+                ProgressValue = progress.Completed;
+                ProgressText = progress.Total > 0 ? $"{progress.Completed}/{progress.Total}" : null;
+            }
+
+            PostToUi(UpdateValues);
+        }
+
+        private void PostToUi(Action updateAction) {
+            if (updateAction == null) {
+                return;
+            }
 
             if (synchronizationContext != null) {
-                synchronizationContext.Post(_ => UpdateStatus(), null);
+                synchronizationContext.Post(_ => updateAction(), null);
             } else {
-                UpdateStatus();
+                updateAction();
             }
         }
 
@@ -313,38 +329,50 @@ namespace AssetProcessor.ViewModels {
                     AppSettings.Default.ProjectsFolderPath,
                     FolderPaths);
 
-                ProgressValue = 0;
-                ProgressMaximum = 0;
-                ProgressText = null;
+                ResetProgress();
                 StatusMessage = "Preparing downloads...";
 
-                Progress<AssetDownloadProgress> uiProgress = new(progress => {
-                    ProgressMaximum = progress.Total;
-                    ProgressValue = progress.Completed;
-                    ProgressText = progress.Total > 0 ? $"{progress.Completed}/{progress.Total}" : null;
-                });
+                AssetDownloadOptions downloadOptions = new(
+                    progress => UpdateProgress(progress),
+                    resource => UpdateResourceStatusMessage(resource));
 
-                AssetDownloadResult result = await assetDownloadCoordinator.DownloadAssetsAsync(context, uiProgress, cancellationToken);
+                AssetDownloadResult result = await assetDownloadCoordinator.DownloadAssetsAsync(context, downloadOptions, cancellationToken);
 
-                if (result.BatchResult.Total == 0) {
-                    ProgressMaximum = 0;
-                    ProgressValue = 0;
-                    ProgressText = null;
-                } else {
-                    ProgressMaximum = result.BatchResult.Total;
-                    ProgressValue = result.BatchResult.Succeeded;
-                    ProgressText = $"{result.BatchResult.Succeeded}/{result.BatchResult.Total}";
-                }
+                ApplyBatchResultProgress(result.BatchResult);
 
                 StatusMessage = result.Message;
-                logger.Info(result.Message);
+                if (result.IsSuccess) {
+                    logger.Info(result.Message);
+                } else {
+                    logger.Warn(result.Message);
+                }
             } catch (OperationCanceledException) {
                 StatusMessage = "Download cancelled";
                 logger.Warn("Download operation cancelled by user");
+                ResetProgress(); // Reset progress on cancellation
             } catch (Exception ex) {
+                // Handle any other exceptions to prevent unhandled exceptions and UI inconsistency
                 StatusMessage = $"Download error: {ex.Message}";
                 logger.Error(ex, "Error during download operation");
+                ResetProgress(); // Reset progress on error to restore UI to consistent state
             }
+        }
+
+        private void ResetProgress() {
+            ProgressValue = 0;
+            ProgressMaximum = 0;
+            ProgressText = null;
+        }
+
+        private void ApplyBatchResultProgress(ResourceDownloadBatchResult batchResult) {
+            if (batchResult.Total == 0) {
+                ResetProgress();
+                return;
+            }
+
+            ProgressMaximum = batchResult.Total;
+            ProgressValue = batchResult.Succeeded;
+            ProgressText = $"{batchResult.Succeeded}/{batchResult.Total}";
         }
 
         private void PopulateResources(ProjectSyncResult result) {

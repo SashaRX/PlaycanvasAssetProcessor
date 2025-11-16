@@ -3,6 +3,7 @@ using AssetProcessor.Services;
 using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using NLog;
 using System;
 using System.IO.Abstractions;
 using System.Net.Http;
@@ -62,13 +63,18 @@ namespace AssetProcessor {
             services.AddSingleton<ILocalCacheService, LocalCacheService>();
             services.AddSingleton<ITextureProcessingService, TextureProcessingService>();
             services.AddSingleton<IProjectSyncService, ProjectSyncService>();
+            services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(
+                sp.GetRequiredService<IProjectSyncService>(),
+                sp.GetRequiredService<ILocalCacheService>(),
+                LogManager.GetLogger(nameof(AssetDownloadCoordinator))));
 
             services.AddSingleton<MainViewModel>(sp => {
                 var playCanvasService = sp.GetRequiredService<IPlayCanvasService>();
                 var textureProcessingService = sp.GetRequiredService<ITextureProcessingService>();
                 var localCacheService = sp.GetRequiredService<ILocalCacheService>();
                 var projectSyncService = sp.GetRequiredService<IProjectSyncService>();
-                return new MainViewModel(playCanvasService, textureProcessingService, localCacheService, projectSyncService);
+                var assetDownloadCoordinator = sp.GetRequiredService<IAssetDownloadCoordinator>();
+                return new MainViewModel(playCanvasService, textureProcessingService, localCacheService, projectSyncService, assetDownloadCoordinator);
             });
             services.AddTransient<MainWindow>();
         }

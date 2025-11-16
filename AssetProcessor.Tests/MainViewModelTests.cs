@@ -42,7 +42,7 @@ public class MainViewModelTests {
     [Fact]
     public async Task ProcessTexturesCommand_RaisesCompletionEvent() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "Texture1", Path = "file.png" }
             }
@@ -72,7 +72,11 @@ public class MainViewModelTests {
 
             var localCache = new RecordingLocalCacheService();
             var projectSync = new TestProjectSyncService(localCache);
-            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync) {
+            var coordinator = new TestAssetDownloadCoordinator {
+                ResultToReturn = new AssetDownloadResult(true, "Downloaded 1 assets. Failed: 0", new ResourceDownloadBatchResult(1, 0, 1))
+            };
+
+            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator) {
                 ApiKey = "token",
                 SelectedProjectId = "proj1",
                 SelectedBranchId = "branch1",
@@ -86,16 +90,10 @@ public class MainViewModelTests {
 
             await viewModel.DownloadAssetsCommand.ExecuteAsync(null);
 
-            Assert.NotNull(projectSync.LastDownloadRequest);
-            Assert.Equal("Sample Project", projectSync.LastDownloadRequest!.ProjectName);
-            Assert.Single(projectSync.LastDownloadRequest!.Resources);
-            Assert.Single(localCache.DownloadedResources);
-            BaseResource downloaded = localCache.DownloadedResources.Single();
+            Assert.NotNull(coordinator.LastContext);
+            Assert.Equal("Sample Project", coordinator.LastContext!.ProjectName);
+            Assert.Single(coordinator.LastContext.Resources);
             Assert.Equal("Downloaded 1 assets. Failed: 0", viewModel.StatusMessage);
-            Assert.False(string.IsNullOrEmpty(downloaded.Path));
-            Assert.True(File.Exists(downloaded.Path!));
-            Assert.Equal("Downloaded", downloaded.Status);
-            Assert.Contains("Sample Project", downloaded.Path!, StringComparison.OrdinalIgnoreCase);
         } finally {
             AppSettings.Default.ProjectsFolderPath = originalProjectsPath;
             tempDir.Delete(true);
@@ -105,7 +103,7 @@ public class MainViewModelTests {
     [Fact]
     public void AutoDetectPresetsCommand_UpdatesStatusMessage() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator()) {
             ConversionSettingsProvider = new StubSettingsProvider(),
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "rock_albedo.png", Path = "c:/tex/rock_albedo.png" }
@@ -136,7 +134,7 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -189,6 +187,26 @@ public class MainViewModelTests {
                 PreviewTexture = request.SelectedTexture,
                 PreviewTexturePath = null
             });
+        }
+    }
+
+    private sealed class TestAssetDownloadCoordinator : IAssetDownloadCoordinator {
+        public AssetDownloadContext? LastContext { get; private set; }
+        public AssetDownloadResult ResultToReturn { get; set; } = new(true, "OK", new ResourceDownloadBatchResult(0, 0, 0));
+
+        public event EventHandler<ResourceStatusChangedEventArgs>? ResourceStatusChanged;
+
+        public Task<AssetDownloadResult> DownloadAssetsAsync(AssetDownloadContext context, IProgress<AssetDownloadProgress>? progress, CancellationToken cancellationToken) {
+            LastContext = context;
+
+            progress?.Report(new AssetDownloadProgress(0, context.Resources.Count, null));
+            BaseResource? first = context.Resources.FirstOrDefault();
+            if (first != null) {
+                ResourceStatusChanged?.Invoke(this, new ResourceStatusChangedEventArgs(first, first.Status));
+            }
+
+            progress?.Report(new AssetDownloadProgress(context.Resources.Count, context.Resources.Count, first));
+            return Task.FromResult(ResultToReturn);
         }
     }
 

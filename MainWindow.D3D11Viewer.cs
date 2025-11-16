@@ -147,7 +147,6 @@ namespace AssetProcessor {
             if (wasLoadingBefore != 0) {
                 logger.Warn("Texture loading already in progress, waiting for previous load to complete (max 500ms)");
                 // Wait for previous load to complete, but with a timeout
-                // If previous load takes too long, we'll proceed anyway (it will be ignored
                 // Use Task.Delay without cancellation token to avoid hanging
                 int waitCount = 0;
                 const int maxWaitCount = 10; // 10 * 50ms = 500ms max wait
@@ -156,17 +155,19 @@ namespace AssetProcessor {
                     waitCount++;
                 }
                 
-                if (Volatile.Read(ref _isLoadingTexture) == 1) {
-                    logger.Warn("Previous texture load is taking too long, proceeding with new load anyway (previous result will be ignored)");
-                    // Previous load is stuck - we'll proceed and ignore its result
-                    // Flag is already set to 1, so we can proceed
-                } else {
-                    logger.Info("Previous texture load completed, proceeding with new load");
-                    // Try to set flag again (in case it was reset between check and now)
-                    Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
+                // Try to acquire the lock after waiting
+                int acquiredLock = Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
+                if (acquiredLock != 0) {
+                    // Still cannot acquire lock - previous load is stuck or another load started
+                    // Skip this load to avoid race conditions and prevent hanging
+                    logger.Warn("Cannot acquire texture loading lock after waiting (previous load may be stuck), skipping this load to prevent race condition");
+                    return;
                 }
+                
+                logger.Info("Successfully acquired texture loading lock after waiting");
             }
 
+            // Only set loadStarted to true if we successfully acquired the lock
             loadStarted = true;
 
             try {

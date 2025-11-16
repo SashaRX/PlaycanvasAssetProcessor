@@ -349,6 +349,12 @@ namespace AssetProcessor.ViewModels {
             } catch (OperationCanceledException) {
                 StatusMessage = "Download cancelled";
                 logger.Warn("Download operation cancelled by user");
+                ResetProgress(); // Reset progress on cancellation
+            } catch (Exception ex) {
+                // Handle any other exceptions to prevent unhandled exceptions and UI inconsistency
+                StatusMessage = $"Download error: {ex.Message}";
+                logger.Error(ex, "Error during download operation");
+                ResetProgress(); // Reset progress on error to restore UI to consistent state
             }
         }
 

@@ -142,9 +142,7 @@ namespace AssetProcessor.ViewModels {
                         mipmapDir = Path.Combine(OutputDirectory, "mipmaps", outputFileName);
                     }
 
-                    // TODO: Add Toksvig support for batch processing
-                    // For now, Toksvig is only available through the main window UI panel
-                    ToksvigSettings? toksvigSettings = null;
+                    var toksvigSettings = texture.BuildToksvigSettings();
 
                     var result = await pipeline.ConvertTextureAsync(
                         texture.TexturePath,
@@ -210,9 +208,7 @@ namespace AssetProcessor.ViewModels {
                     mipmapDir = Path.Combine(OutputDirectory, "mipmaps", outputFileName);
                 }
 
-                // TODO: Add Toksvig support for single texture conversion
-                // For now, Toksvig is only available through the main window UI panel
-                ToksvigSettings? toksvigSettings = null;
+                var toksvigSettings = SelectedTexture.BuildToksvigSettings();
 
                 var result = await pipeline.ConvertTextureAsync(
                     SelectedTexture.TexturePath,
@@ -357,7 +353,8 @@ namespace AssetProcessor.ViewModels {
                 MipProfile = MipProfileSettings.FromMipGenerationProfile(profile),
                 Compression = CompressionSettingsData.FromCompressionSettings(compression),
                 IsEnabled = true,
-                SaveSeparateMipmaps = false
+                SaveSeparateMipmaps = false,
+                ToksvigSettings = ToksvigSettings.CreateDefault()
             };
         }
     }
@@ -384,6 +381,30 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private bool _saveSeparateMipmaps;
 
+        [ObservableProperty]
+        private bool _toksvigEnabled;
+
+        [ObservableProperty]
+        private ToksvigCalculationMode _toksvigCalculationMode = ToksvigCalculationMode.Classic;
+
+        [ObservableProperty]
+        private float _toksvigCompositePower = 1.0f;
+
+        [ObservableProperty]
+        private int _toksvigMinMipLevel;
+
+        [ObservableProperty]
+        private bool _toksvigSmoothVariance = true;
+
+        [ObservableProperty]
+        private bool _toksvigUseEnergyPreserving = true;
+
+        [ObservableProperty]
+        private float _toksvigVarianceThreshold = 0.002f;
+
+        [ObservableProperty]
+        private string _toksvigNormalMapPath = string.Empty;
+
         public string TextureName => Path.GetFileName(TexturePath);
 
         public TextureItemViewModel() { }
@@ -395,6 +416,7 @@ namespace AssetProcessor.ViewModels {
             Compression = settings.Compression;
             IsEnabled = settings.IsEnabled;
             SaveSeparateMipmaps = settings.SaveSeparateMipmaps;
+            ApplyToksvigSettings(settings.ToksvigSettings ?? ToksvigSettings.CreateDefault());
         }
 
         public TextureConversionSettings ToSettings() {
@@ -404,8 +426,33 @@ namespace AssetProcessor.ViewModels {
                 MipProfile = MipProfile,
                 Compression = Compression,
                 IsEnabled = IsEnabled,
-                SaveSeparateMipmaps = SaveSeparateMipmaps
+                SaveSeparateMipmaps = SaveSeparateMipmaps,
+                ToksvigSettings = BuildToksvigSettings()
             };
+        }
+
+        public ToksvigSettings BuildToksvigSettings() {
+            return new ToksvigSettings {
+                Enabled = ToksvigEnabled,
+                CalculationMode = ToksvigCalculationMode,
+                CompositePower = ToksvigCompositePower,
+                MinToksvigMipLevel = ToksvigMinMipLevel,
+                SmoothVariance = ToksvigSmoothVariance,
+                UseEnergyPreserving = ToksvigUseEnergyPreserving,
+                VarianceThreshold = ToksvigVarianceThreshold,
+                NormalMapPath = string.IsNullOrWhiteSpace(ToksvigNormalMapPath) ? null : ToksvigNormalMapPath
+            };
+        }
+
+        public void ApplyToksvigSettings(ToksvigSettings settings) {
+            ToksvigEnabled = settings.Enabled;
+            ToksvigCalculationMode = settings.CalculationMode;
+            ToksvigCompositePower = settings.CompositePower;
+            ToksvigMinMipLevel = settings.MinToksvigMipLevel;
+            ToksvigSmoothVariance = settings.SmoothVariance;
+            ToksvigUseEnergyPreserving = settings.UseEnergyPreserving;
+            ToksvigVarianceThreshold = settings.VarianceThreshold;
+            ToksvigNormalMapPath = settings.NormalMapPath ?? string.Empty;
         }
     }
 }

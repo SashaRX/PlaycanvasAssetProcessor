@@ -34,6 +34,11 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// Включена ли обработка этой текстуры
         /// </summary>
         public bool IsEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Настройки Toksvig для данной текстуры
+        /// </summary>
+        public ToksvigSettings ToksvigSettings { get; set; } = ToksvigSettings.CreateDefault();
     }
 
     /// <summary>

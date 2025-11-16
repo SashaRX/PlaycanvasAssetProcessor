@@ -153,7 +153,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 }
 
                 // Генерируем аргументы для ktx create
-                var args = GenerateKtxCreateArguments(mipmapPaths, outputPath, settings, kvdBinaryFiles);
+                var args = BuildKtxCreateArguments(mipmapPaths, outputPath, settings, kvdBinaryFiles);
 
                 Logger.Info($"ktx create command: {_ktxExecutablePath} {args}");
 
@@ -232,7 +232,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// <summary>
         /// Генерирует аргументы командной строки для ktx create
         /// </summary>
-        private string GenerateKtxCreateArguments(
+        internal string BuildKtxCreateArguments(
             List<string> mipmapPaths,
             string outputPath,
             CompressionSettings settings,

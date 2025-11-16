@@ -2,6 +2,7 @@ using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.TextureConversion.Pipeline;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.Settings;
 using System.Collections.Generic;

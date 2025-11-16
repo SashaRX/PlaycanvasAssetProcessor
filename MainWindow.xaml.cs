@@ -49,20 +49,17 @@ namespace AssetProcessor {
 
         private readonly SemaphoreSlim getAssetsSemaphore;
         private readonly SemaphoreSlim downloadSemaphore;
-        private string? projectFolderPath = string.Empty;
-        private string? userName = string.Empty;
-        private string? userID = string.Empty;
-        private string? projectName = string.Empty;
         private bool? isViewerVisible = true;
-        private BitmapSource? originalBitmapSource;
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
         private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
-        private readonly IHistogramService histogramService;
+        private readonly IHistogramCoordinator histogramCoordinator;
         private readonly ITextureChannelService textureChannelService;
+        private readonly ITexturePreviewService texturePreviewService;
+        private readonly IProjectSelectionService projectSelectionService;
         private readonly ILogService logService;
         private readonly ILocalCacheService localCacheService;
         private Dictionary<int, string> folderPaths = new();
@@ -78,48 +75,19 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = 512.0;
         private const double DefaultPreviewContentHeight = 300.0;
-        private bool isKtxPreviewActive;
-        private int currentMipLevel;
-        private bool isUpdatingMipLevel;
         private bool isSorting = false; // Флаг для отслеживания процесса сортировки
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // Отслеживание текстур, для которых уже запущена проверка CompressedSize
-        private List<KtxMipLevel>? currentKtxMipmaps;
         private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
-        private enum TexturePreviewSourceMode {
-            Source,
-            Ktx2
-        }
-
-        private TexturePreviewSourceMode currentPreviewSourceMode = TexturePreviewSourceMode.Source;
-        private bool isSourcePreviewAvailable;
-        private bool isKtxPreviewAvailable;
-        private bool isUserPreviewSelection;
-        private bool isUpdatingPreviewSourceControls;
-        // Current loaded texture paths for preview renderer switching
-        private string? currentLoadedTexturePath;
-        private string? currentLoadedKtx2Path;
-        private TextureResource? currentSelectedTexture; // Currently selected texture for sRGB detection
-        private string? currentActiveChannelMask; // Current active RGBA mask (null = no mask, "R"/"G"/"B"/"A" = active mask)
-        // Legacy fields removed - zoom/pan now handled natively by D3D11TextureViewerControl
-        private BitmapSource? originalFileBitmapSource;
-        private double previewReferenceWidth;
-        private double previewReferenceHeight;
-
-        // D3D11 Texture Viewer state (zoom/pan now handled in control itself)
-        private bool isD3D11RenderLoopEnabled = true;
-
-        // KTX2 preview mode: always use D3D11 native when D3D11 renderer is active
-        // Legacy PNG extraction removed
-        // Track which preview renderer is currently active
-        private bool isUsingD3D11Renderer = true;
         private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
         private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
         private readonly object ignoredAssetTypesLock = new();
-        private bool isBranchInitializationInProgress;
-        private bool isProjectInitializationInProgress;
+        private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
+        private string? ProjectName => projectSelectionService.ProjectName;
+        private string? UserId => projectSelectionService.UserId;
+        private string? UserName => projectSelectionService.UserName;
 
         // Projects и Branches теперь в MainViewModel - удалены дублирующиеся объявления
 
@@ -141,14 +109,18 @@ namespace AssetProcessor {
 
         public MainWindow(
             IPlayCanvasService playCanvasService,
-            IHistogramService histogramService,
+            IHistogramCoordinator histogramCoordinator,
             ITextureChannelService textureChannelService,
+            ITexturePreviewService texturePreviewService,
+            IProjectSelectionService projectSelectionService,
             ILogService logService,
             ILocalCacheService localCacheService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
-            this.histogramService = histogramService ?? throw new ArgumentNullException(nameof(histogramService));
+            this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
             this.textureChannelService = textureChannelService ?? throw new ArgumentNullException(nameof(textureChannelService));
+            this.texturePreviewService = texturePreviewService ?? throw new ArgumentNullException(nameof(texturePreviewService));
+            this.projectSelectionService = projectSelectionService ?? throw new ArgumentNullException(nameof(projectSelectionService));
             this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
             this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
@@ -190,7 +162,7 @@ namespace AssetProcessor {
             getAssetsSemaphore = new SemaphoreSlim(AppSettings.Default.GetTexturesSemaphoreLimit);
             downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
 
-            projectFolderPath = AppSettings.Default.ProjectsFolderPath;
+            projectSelectionService.InitializeProjectsFolder(AppSettings.Default.ProjectsFolderPath);
             UpdateConnectionStatus(false);
 
             TexturesDataGrid.ItemsSource = viewModel.Textures;
@@ -233,7 +205,27 @@ namespace AssetProcessor {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        
+        private void HandlePreviewRendererChanged(bool useD3D11) {
+            _ = SwitchPreviewRendererAsync(useD3D11);
+        }
+
+        private Task SwitchPreviewRendererAsync(bool useD3D11) {
+            TexturePreviewContext context = new() {
+                D3D11TextureViewer = D3D11TextureViewer,
+                WpfTexturePreviewImage = WpfTexturePreviewImage,
+                IsKtx2Loading = IsKtx2Loading,
+                LoadKtx2ToD3D11ViewerAsync = LoadKtx2ToD3D11ViewerAsync,
+                IsSRGBTexture = IsSRGBTexture,
+                LoadTextureToD3D11Viewer = LoadTextureToD3D11Viewer,
+                PrepareForWpfDisplay = PrepareForWPFDisplay,
+                ShowMipmapControls = ShowMipmapControls,
+                LogInfo = message => logger.Info(message),
+                LogError = (exception, message) => logger.Error(exception, message),
+                LogWarn = message => logger.Warn(message)
+            };
+
+            return texturePreviewService.SwitchRendererAsync(context, useD3D11);
+        }
 
 
         
@@ -282,62 +274,38 @@ namespace AssetProcessor {
         }
 
         private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            logService.LogInfo($"=== ProjectsComboBox_SelectionChanged CALLED, isProjectInitializationInProgress={isProjectInitializationInProgress} ===");
-
-            if (isProjectInitializationInProgress) {
+            if (projectSelectionService.IsProjectInitializationInProgress) {
                 logService.LogInfo("Skipping ProjectsComboBox_SelectionChanged - initialization in progress");
                 return;
             }
 
-            if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
-                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-                logService.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
+            if (ProjectsComboBox.SelectedItem is not KeyValuePair<string, string> selectedProject) {
+                return;
+            }
 
-                // Проверяем наличие JSON-файла
-                logService.LogInfo("Calling LoadAssetsFromJsonFileAsync from ProjectsComboBox_SelectionChanged");
-                bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
-                if (!jsonLoaded) {
-                    // Если JSON-файл не найден, просто логируем (без MessageBox)
-                    logService.LogInfo($"No local data found for project '{projectName}'. User can connect to server to download.");
-                }
+            projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
 
-                // Обновляем ветки для выбранного проекта
-                isBranchInitializationInProgress = true;
-                try {
-                    string? apiKey = GetDecryptedApiKey();
-                    List<Branch> branches = await playCanvasService.GetBranchesAsync(selectedProject.Key, apiKey ?? "", [], CancellationToken.None);
-                    if (branches != null && branches.Count > 0) {
-                        viewModel.Branches.Clear();
-                        foreach (Branch branch in branches) {
-                            viewModel.Branches.Add(branch);
-                        }
-                        BranchesComboBox.SelectedIndex = 0;
-                    } else {
-                        viewModel.Branches.Clear();
-                        BranchesComboBox.SelectedIndex = -1;
-                    }
-                } finally {
-                    isBranchInitializationInProgress = false;
-                }
+            logService.LogInfo("Calling LoadAssetsFromJsonFileAsync from ProjectsComboBox_SelectionChanged");
+            bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
+            if (!jsonLoaded) {
+                logService.LogInfo($"No local data found for project '{ProjectName}'. User can connect to server to download.");
+            }
 
-                SaveCurrentSettings();
+            await LoadBranchesAsync(selectedProject.Key, CancellationToken.None);
+            SaveCurrentSettings();
 
-                // Проверяем состояние проекта если уже подключены
-                if (currentConnectionState != ConnectionState.Disconnected) {
-                    await CheckProjectState();
-                }
+            if (currentConnectionState != ConnectionState.Disconnected) {
+                await CheckProjectState();
             }
         }
 
         private async void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
             SaveCurrentSettings();
 
-            if (isBranchInitializationInProgress) {
+            if (projectSelectionService.IsBranchInitializationInProgress) {
                 return;
             }
 
-            // Проверяем состояние проекта если уже подключены
             if (currentConnectionState != ConnectionState.Disconnected) {
                 await CheckProjectState();
             }
@@ -395,7 +363,7 @@ namespace AssetProcessor {
 
                         bool ktxLoaded = false;
 
-                        if (isUsingD3D11Renderer) {
+                        if (texturePreviewService.IsUsingD3D11Renderer) {
                             // D3D11 MODE: Try native KTX2 loading
                             logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Loading packed ORM to D3D11: {ormTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
@@ -416,7 +384,7 @@ namespace AssetProcessor {
                             await Dispatcher.InvokeAsync(() => {
                                 if (cancellationToken.IsCancellationRequested) return;
 
-                                isKtxPreviewAvailable = false;
+                                texturePreviewService.IsKtxPreviewAvailable = false;
                                 TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
 
                                 // Show error message
@@ -497,7 +465,7 @@ namespace AssetProcessor {
                         // to prevent conflicts
                         bool ktxLoaded = false;
 
-                        if (isUsingD3D11Renderer) {
+                        if (texturePreviewService.IsUsingD3D11Renderer) {
                             // D3D11 MODE: Try D3D11 native KTX2 loading (always use native when D3D11 is active)
                             logService.LogInfo($"[TextureSelection] Attempting KTX2 load for: {selectedTexture.Name}");
                             ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
@@ -506,7 +474,7 @@ namespace AssetProcessor {
                             if (ktxLoaded) {
                                 // KTX2 loaded successfully to D3D11, still load source for histogram/info
                                 // If user is in Source mode, show the PNG; otherwise just load for histogram
-                                bool showInViewer = (currentPreviewSourceMode == TexturePreviewSourceMode.Source);
+                                bool showInViewer = (texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source);
                                 logService.LogInfo($"[TextureSelection] Loading source preview for {selectedTexture.Name}, showInViewer: {showInViewer}");
                                 await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: showInViewer);
                                 logService.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
@@ -529,9 +497,9 @@ namespace AssetProcessor {
                                     return;
                                 }
 
-                                isKtxPreviewAvailable = false;
+                                texturePreviewService.IsKtxPreviewAvailable = false;
 
-                                if (!isUserPreviewSelection && currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                                if (!texturePreviewService.IsUserPreviewSelection && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
                                     SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: false);
                                 } else {
                                     UpdatePreviewSourceControls();
@@ -589,7 +557,9 @@ namespace AssetProcessor {
         /// <summary>
         /// NEW METHOD: Load KTX2 directly to D3D11 viewer (native format, all mipmaps).
         /// </summary>
-        private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {
+        
+
+private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {
             string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
             if (ktxPath == null) {
                 logger.Info($"KTX2 file not found for: {selectedTexture.Path}");
@@ -614,19 +584,19 @@ namespace AssetProcessor {
                     }
 
                     // Save current loaded texture paths for preview renderer switching
-                    currentLoadedTexturePath = selectedTexture.Path;
-                    currentLoadedKtx2Path = ktxPath;
+                    texturePreviewService.CurrentLoadedTexturePath = selectedTexture.Path;
+                    texturePreviewService.CurrentLoadedKtx2Path = ktxPath;
 
                     // Mark KTX2 preview as available
-                    isKtxPreviewAvailable = true;
-                    isKtxPreviewActive = true;
+                    texturePreviewService.IsKtxPreviewAvailable = true;
+                    texturePreviewService.IsKtxPreviewActive = true;
 
                     // Clear old mipmap data (we're using D3D11 native mipmaps now)
-                    currentKtxMipmaps?.Clear();
-                    currentMipLevel = 0;
+                    texturePreviewService.CurrentKtxMipmaps?.Clear();
+                    texturePreviewService.CurrentMipLevel = 0;
 
                     // Update UI to show KTX2 is active
-                    if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();
@@ -646,7 +616,9 @@ namespace AssetProcessor {
         /// OLD METHOD: Extract KTX2 mipmaps to PNG files and load them.
         /// Used when useD3D11NativeKtx2 = false.
         /// </summary>
-        private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
+        
+
+private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
             string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
             if (ktxPath == null) {
                 logger.Info($"KTX2 file not found for: {selectedTexture.Path}");
@@ -670,11 +642,14 @@ namespace AssetProcessor {
                         return;
                     }
 
-                    currentKtxMipmaps = mipmaps;
-                    currentMipLevel = 0;
-                    isKtxPreviewAvailable = true;
+                    texturePreviewService.CurrentKtxMipmaps.Clear();
+                    foreach (var mipmap in mipmaps) {
+                        texturePreviewService.CurrentKtxMipmaps.Add(mipmap);
+                    }
+                    texturePreviewService.CurrentMipLevel = 0;
+                    texturePreviewService.IsKtxPreviewAvailable = true;
 
-                    if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();
@@ -690,15 +665,303 @@ namespace AssetProcessor {
             }
         }
 
+        private string? GetExistingKtx2Path(string? sourcePath) {
+            if (string.IsNullOrEmpty(sourcePath)) {
+                return null;
+            }
+
+            sourcePath = PathSanitizer.SanitizePath(sourcePath);
+
+            string? directory = Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrEmpty(directory)) {
+                return null;
+            }
+
+            string baseName = Path.GetFileNameWithoutExtension(sourcePath);
+            string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
+
+            foreach (var extension in new[] { ".ktx2", ".ktx" }) {
+                string directPath = Path.Combine(directory, baseName + extension);
+                if (File.Exists(directPath)) {
+                    return directPath;
+                }
+
+                if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                    !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                    string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + extension);
+                    if (File.Exists(normalizedDirectPath)) {
+                        return normalizedDirectPath;
+                    }
+                }
+            }
+
+            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
+            if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
+                return sameDirectoryMatch;
+            }
+
+            string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory);
+            if (!string.IsNullOrEmpty(defaultOutputRoot)) {
+                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
+                if (!string.IsNullOrEmpty(outputMatch)) {
+                    return outputMatch;
+                }
+            }
+
+            return null;
+        }
+
+        private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
+            try {
+                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
+            } catch (Exception ex) {
+                logger.Debug(ex, "Не удалось загрузить глобальные настройки текстур для вычисления к пути поиска KTX2.");
+                return null;
+            }
+
+            string? configuredDirectory = globalTextureSettings?.DefaultOutputDirectory;
+            if (string.IsNullOrWhiteSpace(configuredDirectory)) {
+                return null;
+            }
+
+            List<string> candidates = new();
+
+            if (Path.IsPathRooted(configuredDirectory)) {
+                candidates.Add(configuredDirectory);
+            } else {
+                candidates.Add(Path.Combine(sourceDirectory, configuredDirectory));
+
+                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
+                    candidates.Add(Path.Combine(ProjectFolderPath!, configuredDirectory));
+                }
+            }
+
+            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase)) {
+                if (Directory.Exists(candidate)) {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private string? TryFindKtx2InDirectory(string directory, string baseName, string normalizedBaseName, SearchOption searchOption) {
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
+                return null;
+            }
+
+            string? bestMatch = null;
+            DateTime bestTime = DateTime.MinValue;
+            int bestScore = -1;
+
+            try {
+                foreach (var pattern in new[] { "*.ktx2", "*.ktx" }) {
+                    foreach (string file in Directory.EnumerateFiles(directory, pattern, searchOption)) {
+                        DateTime writeTime = File.GetLastWriteTimeUtc(file);
+
+                        int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
+                        if (score < 0) {
+                            continue;
+                        }
+
+                        if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
+                            bestScore = score;
+                            bestTime = writeTime;
+                            bestMatch = file;
+                        }
+                    }
+                }
+            } catch (UnauthorizedAccessException ex) {
+                logger.Debug(ex, $"Нет доступа к каталогу {directory} при поиске KTX2.");
+                return null;
+            } catch (DirectoryNotFoundException) {
+                return null;
+            } catch (IOException ex) {
+                logger.Debug(ex, $"Ошибка при перечислении каталога {directory} для поиска KTX2.");
+                return null;
+            }
+
+            return bestMatch;
+        }
+
+        private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {
+            if (string.IsNullOrWhiteSpace(candidateName)) {
+                return -1;
+            }
+
+            if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
+                return 500;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
+                candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                return 450;
+            }
+
+            return -1;
+        }
+
+        private async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            FileInfo fileInfo = new(ktxPath);
+            DateTime lastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
+
+            if (ktxPreviewCache.TryGetValue(ktxPath, out KtxPreviewCacheEntry? cacheEntry) && cacheEntry.LastWriteTimeUtc == lastWriteTimeUtc) {
+                return cacheEntry.Mipmaps;
+            }
+
+            return await ExtractKtxMipmapsAsync(ktxPath, lastWriteTimeUtc, cancellationToken);
+        }
+
+        private async Task<List<KtxMipLevel>> ExtractKtxMipmapsAsync(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string ktxToolPath = GetKtxToolExecutablePath();
+            string tempDirectory = Path.Combine(Path.GetTempPath(), "PlaycanvasAssetProcessor", "Preview", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDirectory);
+
+            try {
+                if (!string.IsNullOrEmpty(Path.GetDirectoryName(ktxToolPath)) && !File.Exists(ktxToolPath)) {
+                    throw new FileNotFoundException($"Не найден исполняемый файл ktx по пути '{ktxToolPath}'. Установите KTX-Software и настройте PATH.", ktxToolPath);
+                }
+
+                string outputBaseName = Path.Combine(tempDirectory, "mip");
+
+                ProcessStartInfo startInfo = new() {
+                    FileName = ktxToolPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                startInfo.ArgumentList.Add("extract");
+                startInfo.ArgumentList.Add("--level");
+                startInfo.ArgumentList.Add("all");
+                startInfo.ArgumentList.Add("--transcode");
+                startInfo.ArgumentList.Add("rgba8");
+                startInfo.ArgumentList.Add(ktxPath);
+                startInfo.ArgumentList.Add(outputBaseName);
+
+                string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
+                logger.Info($"Executing command: {commandLine}");
+                logger.Info($"Working directory: {tempDirectory}");
+                logger.Info($"Input file exists: {File.Exists(ktxPath)}");
+                logger.Info($"Input file size: {new FileInfo(ktxPath).Length} bytes");
+                logger.Info($"Output base path: {outputBaseName}");
+                logger.Info($"Output directory exists: {Directory.Exists(tempDirectory)}");
+
+                using Process process = new() { StartInfo = startInfo };
+                try {
+                    if (!process.Start()) {
+                        throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2.");
+                    }
+                } catch (Win32Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2. Установите KTX-Software и добавьте в PATH.", ex);
+                } catch (Exception ex) {
+                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2.", ex);
+                }
+
+                string stdOutput = await process.StandardOutput.ReadToEndAsync();
+                string stdError = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync(cancellationToken);
+
+                if (process.ExitCode != 0) {
+                    logger.Warn($"ktx exit code: {process.ExitCode}, stderr: {stdError}, stdout: {stdOutput}");
+                    throw new InvalidOperationException($"ktx exited with code {process.ExitCode}. Details logged.");
+                }
+
+                List<KtxMipLevel> mipmaps = new();
+                int level = 0;
+                while (true) {
+                    string pngPath = $"{outputBaseName}_level{level}.png";
+                    if (!File.Exists(pngPath)) {
+                        break;
+                    }
+
+                    mipmaps.Add(CreateMipLevel(pngPath, level));
+                    level++;
+                }
+
+                mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));
+                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
+                    LastWriteTimeUtc = lastWriteTimeUtc,
+                    Mipmaps = mipmaps
+                };
+
+                return mipmaps;
+            } finally {
+                try {
+                    Directory.Delete(tempDirectory, true);
+                } catch (Exception ex) {
+                    logger.Debug(ex, $"Не удалось удалить временный каталог: {tempDirectory}");
+                }
+            }
+        }
+
+        private KtxMipLevel CreateMipLevel(string filePath, int level) {
+            BitmapImage bitmap = new();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(filePath);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return new KtxMipLevel {
+                Level = level,
+                Bitmap = bitmap,
+                Width = bitmap.PixelWidth,
+                Height = bitmap.PixelHeight
+            };
+        }
+
+        private string GetBasisuExecutablePath() {
+            return "basisu";
+        }
+
+        private string GetKtxToolExecutablePath() {
+            var settings = TextureConversionSettingsManager.LoadSettings();
+            return string.IsNullOrWhiteSpace(settings.KtxExecutablePath) ? "ktx" : settings.KtxExecutablePath;
+        }
+
+        private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
+            try {
+                BitmapImage bitmapImage = new();
+                bitmapImage.BeginInit();
+                bitmapImage.UriSource = new Uri(path);
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+
+                using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
+                    var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+                    int width = decoder.Frames[0].PixelWidth;
+                    int height = decoder.Frames[0].PixelHeight;
+
+                    if (width > maxSize || height > maxSize) {
+                        double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
+                        bitmapImage.DecodePixelWidth = (int)(width * scale);
+                        bitmapImage.DecodePixelHeight = (int)(height * scale);
+                    }
+                }
+
+                bitmapImage.EndInit();
+                bitmapImage.Freeze();
+                return bitmapImage;
+            } catch (Exception ex) {
+                logService.LogError($"Error loading optimized image from {path}: {ex.Message}");
+                return null;
+            }
+        }
+
         private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
             // Reset channel masks when loading new texture
             // BUT: Don't reset if Normal mode was auto-enabled for normal maps
-            if (currentActiveChannelMask != "Normal") {
-                currentActiveChannelMask = null;
+            if (texturePreviewService.CurrentActiveChannelMask != "Normal") {
+                texturePreviewService.CurrentActiveChannelMask = null;
                 Dispatcher.Invoke(() => {
                     UpdateChannelButtonsState();
                     // Reset D3D11 renderer mask
-                    if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                    if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                         D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
                         D3D11TextureViewer.Renderer.RestoreOriginalGamma();
                     }
@@ -708,7 +971,7 @@ namespace AssetProcessor {
             }
 
             // Store currently selected texture for sRGB detection
-            currentSelectedTexture = selectedTexture;
+            texturePreviewService.CurrentSelectedTexture = selectedTexture;
 
             string? texturePath = selectedTexture.Path;
             if (string.IsNullOrEmpty(texturePath)) {
@@ -722,14 +985,14 @@ namespace AssetProcessor {
                     }
 
                     // Save current loaded texture path for preview renderer switching
-                    currentLoadedTexturePath = texturePath;
+                    texturePreviewService.CurrentLoadedTexturePath = texturePath;
 
-                    originalFileBitmapSource = cachedImage;
-                    isSourcePreviewAvailable = true;
+                    texturePreviewService.OriginalFileBitmapSource = cachedImage;
+                    texturePreviewService.IsSourcePreviewAvailable = true;
 
                     // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
-                    if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
-                        originalBitmapSource = cachedImage;
+                    if (loadToViewer && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                        texturePreviewService.OriginalBitmapSource = cachedImage;
                         ShowOriginalImage();
                     }
 
@@ -755,14 +1018,14 @@ namespace AssetProcessor {
                 }
 
                 // Save current loaded texture path for preview renderer switching
-                currentLoadedTexturePath = texturePath;
+                texturePreviewService.CurrentLoadedTexturePath = texturePath;
 
-                originalFileBitmapSource = thumbnailImage;
-                isSourcePreviewAvailable = true;
+                texturePreviewService.OriginalFileBitmapSource = thumbnailImage;
+                texturePreviewService.IsSourcePreviewAvailable = true;
 
                 // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
-                if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
-                    originalBitmapSource = thumbnailImage;
+                if (loadToViewer && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                    texturePreviewService.OriginalBitmapSource = thumbnailImage;
                     ShowOriginalImage();
                 }
 
@@ -803,12 +1066,12 @@ namespace AssetProcessor {
                             }
                         }
 
-                        originalFileBitmapSource = bitmapImage;
-                        isSourcePreviewAvailable = true;
+                        texturePreviewService.OriginalFileBitmapSource = bitmapImage;
+                        texturePreviewService.IsSourcePreviewAvailable = true;
 
                         // Only show in viewer if loadToViewer=true (not when KTX2 is already loaded)
-                        if (loadToViewer && currentPreviewSourceMode == TexturePreviewSourceMode.Source) {
-                            originalBitmapSource = bitmapImage;
+                        if (loadToViewer && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source) {
+                            texturePreviewService.OriginalBitmapSource = bitmapImage;
                             ShowOriginalImage();
                             // НЕ применяем fitZoom для full resolution - это обновление кэша, зум уже установлен
                         }
@@ -825,893 +1088,10 @@ namespace AssetProcessor {
             }
         }
 
-        private string? GetExistingKtx2Path(string? sourcePath) {
-            if (string.IsNullOrEmpty(sourcePath)) {
-                return null;
-            }
+        
 
-            // КРИТИЧНО: Применяем SanitizePath к входному пути!
-            // Без этого File.Exists() не найдёт файл если путь содержит \n
-            sourcePath = PathSanitizer.SanitizePath(sourcePath);
 
-            string? directory = Path.GetDirectoryName(sourcePath);
-            if (string.IsNullOrEmpty(directory)) {
-                return null;
-            }
-
-            string baseName = Path.GetFileNameWithoutExtension(sourcePath);
-            string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
-
-            // Ищем .ktx2 и .ktx файлы
-            foreach (var extension in new[] { ".ktx2", ".ktx" }) {
-                string directPath = Path.Combine(directory, baseName + extension);
-                if (File.Exists(directPath)) {
-                    return directPath;
-                }
-
-                if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                    !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-                    string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + extension);
-                    if (File.Exists(normalizedDirectPath)) {
-                        return normalizedDirectPath;
-                    }
-                }
-            }
-
-            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
-            if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
-                return sameDirectoryMatch;
-            }
-
-            string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory);
-            if (!string.IsNullOrEmpty(defaultOutputRoot)) {
-                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
-                if (!string.IsNullOrEmpty(outputMatch)) {
-                    return outputMatch;
-                }
-            }
-
-            return null;
-        }
-
-        private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
-            try {
-                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
-            } catch (Exception ex) {
-                logger.Debug(ex, "Не удалось загрузить настройки конвертации для определения каталога KTX2.");
-                return null;
-            }
-
-            string? configuredDirectory = globalTextureSettings?.DefaultOutputDirectory;
-            if (string.IsNullOrWhiteSpace(configuredDirectory)) {
-                return null;
-            }
-
-            List<string> candidates = new();
-
-            if (Path.IsPathRooted(configuredDirectory)) {
-                candidates.Add(configuredDirectory);
-            } else {
-                candidates.Add(Path.Combine(sourceDirectory, configuredDirectory));
-
-                if (!string.IsNullOrEmpty(projectFolderPath)) {
-                    candidates.Add(Path.Combine(projectFolderPath!, configuredDirectory));
-                }
-            }
-
-            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase)) {
-                if (Directory.Exists(candidate)) {
-                    return candidate;
-                }
-            }
-
-            return null;
-        }
-
-        private string? TryFindKtx2InDirectory(string directory, string baseName, string normalizedBaseName, SearchOption searchOption) {
-            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
-                return null;
-            }
-
-            string? bestMatch = null;
-            DateTime bestTime = DateTime.MinValue;
-            int bestScore = -1;
-
-            try {
-                // Ищем как .ktx2 так и .ktx файлы
-                foreach (var pattern in new[] { "*.ktx2", "*.ktx" }) {
-                    foreach (string file in Directory.EnumerateFiles(directory, pattern, searchOption)) {
-                        DateTime writeTime = File.GetLastWriteTimeUtc(file);
-
-                        int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
-                        if (score < 0) {
-                            continue;
-                        }
-
-                        if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
-                            bestScore = score;
-                            bestTime = writeTime;
-                            bestMatch = file;
-                        }
-                    }
-                }
-            } catch (UnauthorizedAccessException ex) {
-                logger.Debug(ex, $"Нет доступа к каталогу {directory} для поиска KTX2.");
-                return null;
-            } catch (DirectoryNotFoundException) {
-                return null;
-            } catch (IOException ex) {
-                logger.Debug(ex, $"Ошибка при сканировании каталога {directory} для поиска KTX2.");
-                return null;
-            }
-
-            // Возвращаем ТОЛЬКО точное совпадение, НЕ возвращаем самый новый файл!
-            // Если нет совпадения - вернём null, а не случайный ktx2 файл
-            return bestMatch;
-        }
-
-        private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {
-            if (string.IsNullOrWhiteSpace(candidateName)) {
-                return -1;
-            }
-
-            // ТОЛЬКО точные совпадения полного имени файла (без расширения)
-            // texture_gloss.ktx2 должен матчить ТОЛЬКО texture_gloss.png
-            // НЕ должен матчить texture_normal.ktx2 или texture.ktx2
-
-            // 1. Точное совпадение полного имени - наивысший приоритет
-            if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-                return 500;
-            }
-
-            // 2. Точное совпадение нормализованного имени (без суффикса типа)
-            // Например: texture_gloss.png → нормализуется в "texture"
-            // Матчит texture.ktx2, но НЕ матчит texture_normal.ktx2
-            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-                return 450;
-            }
-
-            // УБРАНЫ все fallback на частичные совпадения!
-            // Больше НЕ ищем файлы которые просто "содержат" baseName
-            // Это предотвращает ложные совпадения типа texture_normal при поиске texture_gloss
-
-            return -1;
-        }
-
-        private async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            FileInfo fileInfo = new(ktxPath);
-            DateTime lastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
-
-            if (ktxPreviewCache.TryGetValue(ktxPath, out KtxPreviewCacheEntry? cacheEntry) && cacheEntry.LastWriteTimeUtc == lastWriteTimeUtc) {
-                return cacheEntry.Mipmaps;
-            }
-
-            return await ExtractKtxMipmapsAsync(ktxPath, lastWriteTimeUtc, cancellationToken);
-        }
-
-        private async Task<List<KtxMipLevel>> ExtractKtxMipmapsAsync(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Используем ktx (из KTX-Software) вместо basisu для извлечения мипмапов из KTX2
-            string ktxToolPath = GetKtxToolExecutablePath();
-            string tempDirectory = Path.Combine(Path.GetTempPath(), "PlaycanvasAssetProcessor", "Preview", Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempDirectory);
-
-            try {
-                if (!string.IsNullOrEmpty(Path.GetDirectoryName(ktxToolPath)) && !File.Exists(ktxToolPath)) {
-                    throw new FileNotFoundException($"Не удалось найти исполняемый файл ktx по пути '{ktxToolPath}'. Убедитесь что KTX-Software установлен.", ktxToolPath);
-                }
-
-                // ktx v4.0 синтаксис: ktx extract [options] <input-file> <output>
-                // Когда используется --level all, output интерпретируется как ДИРЕКТОРИЯ
-                // ktx создаст файлы: output/output_level0.png, output/output_level1.png, ...
-                // Поэтому передаём tempDirectory напрямую как output path
-                string outputBaseName = Path.Combine(tempDirectory, "mip");
-
-                ProcessStartInfo startInfo = new() {
-                    FileName = ktxToolPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                // ktx extract --level all --transcode rgba8 input.ktx2 output_base_name
-                // --level all: извлекает все уровни мипмапов
-                // --transcode rgba8: декодирует Basis/UASTC в RGBA8 перед извлечением
-                // Создаст файлы: output_base_name_level0.png, output_base_name_level1.png, ...
-                startInfo.ArgumentList.Add("extract");
-                startInfo.ArgumentList.Add("--level");
-                startInfo.ArgumentList.Add("all");
-                startInfo.ArgumentList.Add("--transcode");
-                startInfo.ArgumentList.Add("rgba8");
-                startInfo.ArgumentList.Add(ktxPath);
-                startInfo.ArgumentList.Add(outputBaseName);
-
-                // Логируем точную команду для диагностики
-                string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
-                logger.Info($"Executing command: {commandLine}");
-                logger.Info($"Working directory: {tempDirectory}");
-                logger.Info($"Input file exists: {File.Exists(ktxPath)}");
-                logger.Info($"Input file size: {new FileInfo(ktxPath).Length} bytes");
-                logger.Info($"Output base path: {outputBaseName}");
-                logger.Info($"Output directory exists: {Directory.Exists(tempDirectory)}");
-
-                using Process process = new() { StartInfo = startInfo };
-                try {
-                    if (!process.Start()) {
-                        throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2.");
-                    }
-                } catch (Win32Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2. Проверьте что KTX-Software установлен и доступен в PATH.", ex);
-                } catch (Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения предпросмотра KTX2.", ex);
-                }
-
-                string standardOutput = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-                string standardError = await process.StandardError.ReadToEndAsync(cancellationToken);
-                await process.WaitForExitAsync(cancellationToken);
-
-                // Логируем результат даже при успехе для диагностики
-                logger.Info($"ktx extract completed. ExitCode={process.ExitCode}, StdOut={standardOutput}, StdErr={standardError}");
-
-                if (process.ExitCode != 0) {
-                    logger.Warn($"ktx exited with code {process.ExitCode} while processing {ktxPath}");
-                    throw new InvalidOperationException($"ktx exited with code {process.ExitCode} while preparing preview.");
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // ktx extract создаёт поддиректорию с именем outputBaseName
-                // Файлы будут в формате: mip/mip_level0.png, mip/mip_level1.png, ...
-                string extractedDirectory = outputBaseName;
-
-                // Логируем какие файлы были созданы
-                string[] allFiles = Directory.Exists(extractedDirectory)
-                    ? Directory.GetFiles(extractedDirectory, "*.*", SearchOption.TopDirectoryOnly)
-                    : Array.Empty<string>();
-                logger.Info($"Files in {extractedDirectory}: {string.Join(", ", allFiles.Select(Path.GetFileName))}");
-
-                string[] pngFiles = Directory.Exists(extractedDirectory)
-                    ? Directory.GetFiles(extractedDirectory, "*.png", SearchOption.TopDirectoryOnly)
-                    : Array.Empty<string>();
-                if (pngFiles.Length == 0) {
-                    logger.Warn($"ktx did not create PNG files. Total files in directory: {allFiles.Length}");
-                    logger.Warn($"Directory exists: {Directory.Exists(extractedDirectory)}");
-                    throw new InvalidOperationException("ktx did not generate PNG files for KTX2 preview.");
-                }
-
-                List<KtxMipLevel> mipmaps = pngFiles
-                    .Select(path => new { Path = path, Level = ParseMipLevelFromFile(path) })
-                    .OrderBy(entry => entry.Level)
-                    .Select(entry => CreateMipLevel(entry.Path, entry.Level))
-                    .ToList();
-
-                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
-                    LastWriteTimeUtc = lastWriteTimeUtc,
-                    Mipmaps = mipmaps
-                };
-
-                return mipmaps;
-            } finally {
-                try {
-                    Directory.Delete(tempDirectory, true);
-                } catch (Exception cleanupEx) {
-                    logger.Debug(cleanupEx, $"Не удалось удалить временную директорию предпросмотра: {tempDirectory}");
-                }
-            }
-        }
-
-        private static int ParseMipLevelFromFile(string filePath) {
-            string fileName = Path.GetFileNameWithoutExtension(filePath);
-            Match match = MipLevelRegex.Match(fileName);
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int level)) {
-                return level;
-            }
-
-            Match fallback = Regex.Match(fileName, @"(\d+)$");
-            if (fallback.Success && int.TryParse(fallback.Value, out int fallbackLevel)) {
-                return fallbackLevel;
-            }
-
-            return 0;
-        }
-
-        private KtxMipLevel CreateMipLevel(string filePath, int level) {
-            BitmapImage bitmap = new();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(filePath);
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            return new KtxMipLevel {
-                Level = level,
-                Bitmap = bitmap,
-                Width = bitmap.PixelWidth,
-                Height = bitmap.PixelHeight
-            };
-        }
-
-        private string GetBasisuExecutablePath() {
-            // KTX2 preview отключён - мы используем только toktx для создания KTX2, а не для preview
-            // basisu больше не используется в проекте
-            return "basisu"; // Возвращаем значение по умолчанию, но метод больше не должен вызываться
-        }
-
-        private string GetKtxToolExecutablePath() {
-            // Используем утилиту ktx из KTX-Software для извлечения мипмапов из KTX2
-            // Загружаем путь из настроек, если не указан - используем "ktx" из PATH
-            var settings = TextureConversionSettingsManager.LoadSettings();
-            return string.IsNullOrWhiteSpace(settings.KtxExecutablePath) ? "ktx" : settings.KtxExecutablePath;
-        }
-
-        private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
-            try {
-                BitmapImage bitmapImage = new();
-                bitmapImage.BeginInit();
-                bitmapImage.UriSource = new Uri(path);
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-
-                // Определяем размер изображения
-                using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
-                    var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
-                    int width = decoder.Frames[0].PixelWidth;
-                    int height = decoder.Frames[0].PixelHeight;
-
-                    // Всегда масштабируем до maxSize или меньше для максимальной производительности
-                    if (width > maxSize || height > maxSize) {
-                        double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
-                        bitmapImage.DecodePixelWidth = (int)(width * scale);
-                        bitmapImage.DecodePixelHeight = (int)(height * scale);
-                    }
-                }
-
-                bitmapImage.EndInit();
-                bitmapImage.Freeze(); // Замораживаем изображение для безопасного использования в другом потоке
-                return bitmapImage;
-            } catch (Exception ex) {
-                logService.LogError($"Error loading optimized image from {path}: {ex.Message}");
-                return null;
-            }
-        }
-
-        // Кэшированный конвертер для избежания создания нового экземпляра при каждой перерисовке строки
-        private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
-
-        private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            // Пропускаем инициализацию во время сортировки для ускорения
-            if (isSorting) {
-                return;
-            }
-
-            if (e?.Row?.DataContext is TextureResource texture) {
-                // Initialize conversion settings for the texture if not already set
-                // Проверяем только один раз, чтобы не вызывать тяжелые операции при каждой перерисовке
-                if (string.IsNullOrEmpty(texture.CompressionFormat)) {
-                    InitializeTextureConversionSettings(texture);
-                }
-
-                // НЕ устанавливаем цвет фона здесь - он уже установлен через Style в XAML
-                // Это предотвращает лишние операции при каждой перерисовке строки во время сортировки
-                // Цвет фона управляется через DataTrigger в DataGrid.RowStyle
-            }
-        }
-
-        private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
-            if (isViewerVisible == true) {
-                ToggleViewButton.Content = "►";
-                PreviewColumn.Width = new GridLength(0);
-            } else {
-                ToggleViewButton.Content = "◄";
-                PreviewColumn.Width = new GridLength(300); // Вернуть исходную ширину
-            }
-            isViewerVisible = !isViewerVisible;
-        }
-
-        /// <summary>
-        /// Оптимизированный обработчик сортировки для TexturesDataGrid
-        /// </summary>
-        private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            OptimizeDataGridSorting(TexturesDataGrid, e);
-        }
-
-        /// <summary>
-        /// Оптимизированный обработчик сортировки для ModelsDataGrid
-        /// </summary>
-        private void ModelsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            OptimizeDataGridSorting(ModelsDataGrid, e);
-        }
-
-        /// <summary>
-        /// Оптимизированный обработчик сортировки для MaterialsDataGrid
-        /// </summary>
-        private void MaterialsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            OptimizeDataGridSorting(MaterialsDataGrid, e);
-        }
-
-        /// <summary>
-        /// Универсальный оптимизированный метод сортировки для DataGrid
-        /// Использует DeferRefresh для отложенного обновления UI во время сортировки
-        /// </summary>
-        private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            try {
-                if (dataGrid == null || e == null || e.Column == null) {
-                    return;
-                }
-
-                e.Handled = true;
-                
-                if (dataGrid.ItemsSource == null) {
-                    return;
-                }
-
-                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-                if (dataView == null) {
-                    return;
-                }
-                
-                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending 
-                    ? ListSortDirection.Descending 
-                    : ListSortDirection.Ascending;
-                
-                string sortMemberPath = e.Column.SortMemberPath;
-                if (string.IsNullOrEmpty(sortMemberPath)) {
-                    // Если SortMemberPath не указан, пытаемся извлечь имя свойства из Binding
-                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
-                        sortMemberPath = binding.Path?.Path ?? "";
-                    }
-                    
-                    // Если все еще пусто, не сортируем эту колонку
-                    if (string.IsNullOrEmpty(sortMemberPath)) {
-                        e.Handled = false; // Разрешаем стандартную сортировку DataGrid
-                        return;
-                    }
-                }
-                
-                // Устанавливаем флаг сортировки, чтобы LoadingRow не выполнял тяжелые операции
-                isSorting = true;
-                
-                // Сохраняем оригинальные стили и LayoutTransform для TexturesDataGrid
-                // Это нужно для временного отключения DataTrigger и LayoutTransform во время сортировки
-                Style? originalRowStyle = null;
-                System.Windows.Media.Transform? originalLayoutTransform = null;
-                bool isTexturesGrid = dataGrid == TexturesDataGrid;
-                
-                if (isTexturesGrid) {
-                    originalRowStyle = dataGrid.RowStyle;
-                    originalLayoutTransform = dataGrid.LayoutTransform;
-                }
-                
-                try {
-                    // Отключаем обновления визуального дерева для максимальной производительности
-                    dataGrid.BeginInit();
-                    
-                    // Для TexturesDataGrid временно упрощаем стили и отключаем LayoutTransform
-                    // Это критично для производительности - предотвращает вычисление DataTrigger для каждой строки
-                    if (isTexturesGrid && originalRowStyle != null) {
-                        // Создаем упрощенный стиль без DataTrigger (только ContextMenu)
-                        var simpleRowStyle = new Style(typeof(DataGridRow));
-                        var contextMenuSetter = originalRowStyle.Setters.OfType<Setter>()
-                            .FirstOrDefault(s => s.Property == DataGridRow.ContextMenuProperty);
-                        if (contextMenuSetter != null) {
-                            // Если ContextMenu задан через Setter, используем его значение
-                            simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuSetter.Value));
-                        } else {
-                            // Если ContextMenu не найден в Setters, пытаемся получить из ресурсов
-                            var contextMenuResource = dataGrid.TryFindResource("TextureRowContextMenu");
-                            if (contextMenuResource != null) {
-                                simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuResource));
-                            }
-                        }
-                        dataGrid.RowStyle = simpleRowStyle;
-                        
-                        // Отключаем LayoutTransform для предотвращения пересчета трансформаций
-                        dataGrid.LayoutTransform = null;
-                    }
-                    
-                    try {
-                        // Используем DeferRefresh для отложенного обновления - это критично
-                        // DeferRefresh предотвращает множественные обновления UI во время сортировки
-                        using (dataView.DeferRefresh()) {
-                            dataView.SortDescriptions.Clear();
-                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
-                        }
-                        
-                        e.Column.SortDirection = direction;
-                    } finally {
-                        // Восстанавливаем оригинальные стили и LayoutTransform СИНХРОННО перед EndInit
-                        // Это предотвращает мерцание, так как все изменения применяются за один раз
-                        if (isTexturesGrid) {
-                            if (originalRowStyle != null) {
-                                dataGrid.RowStyle = originalRowStyle;
-                            }
-                            if (originalLayoutTransform != null) {
-                                dataGrid.LayoutTransform = originalLayoutTransform;
-                            }
-                        }
-                        
-                        dataGrid.EndInit();
-                        
-                        // Сбрасываем флаг асинхронно с низким приоритетом
-                        Dispatcher.BeginInvoke(() => {
-                            isSorting = false;
-                        }, System.Windows.Threading.DispatcherPriority.Background);
-                    }
-                } finally {
-                    // Дополнительная защита на случай ошибки
-                    if (isSorting) {
-                        Dispatcher.BeginInvoke(() => {
-                            isSorting = false;
-                        }, System.Windows.Threading.DispatcherPriority.Background);
-                    }
-                }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in OptimizeDataGridSorting");
-                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
-                // Не обрабатываем событие, позволяем DataGrid использовать стандартную сортировку
-                e.Handled = false;
-                isSorting = false;
-            }
-        }
-
-        private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
-            // Отменяем все активные операции перед закрытием
-            try {
-                cancellationTokenSource?.Cancel();
-                textureLoadCancellation?.Cancel();
-
-                // Даём задачам немного времени на корректную отмену
-                System.Threading.Thread.Sleep(100);
-
-                cancellationTokenSource?.Dispose();
-                textureLoadCancellation?.Dispose();
-
-                // Освобождаем PlayCanvasService
-                playCanvasService?.Dispose();
-            } catch (Exception ex) {
-                logger.Error(ex, "Error canceling operations during window closing");
-            }
-
-            SaveCurrentSettings();
-        }
-
-        private void CancelButton_Click(object? sender, RoutedEventArgs e) {
-            cancellationTokenSource?.Cancel();
-            cancellationTokenSource = new CancellationTokenSource();
-        }
-
-        private void Setting(object? sender, RoutedEventArgs e) {
-            SettingsWindow settingsWindow = new();
-            // Subscribe to preview renderer changes
-            settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
-            settingsWindow.ShowDialog();
-            // Unsubscribe after window closes
-            settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
-        }
-
-        private void HandlePreviewRendererChanged(bool useD3D11) {
-            SwitchPreviewRenderer(useD3D11);
-        }
-
-        private async void SwitchPreviewRenderer(bool useD3D11) {
-            if (useD3D11) {
-                // Switch to D3D11 renderer
-                isUsingD3D11Renderer = true;
-                D3D11TextureViewer.Visibility = Visibility.Visible;
-                WpfTexturePreviewImage.Visibility = Visibility.Collapsed;
-                logger.Info("Switched to D3D11 preview renderer");
-
-                // Show mipmap controls if KTX2 is available
-                if (isKtxPreviewAvailable && currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
-                    ShowMipmapControls();
-                }
-
-                // Reload current texture to D3D11 based on current preview source mode
-                if (currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2 && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
-                    // Проверяем, не загружается ли уже этот файл
-                    if (IsKtx2Loading(currentLoadedKtx2Path)) {
-                        logger.Info($"KTX2 file already loading, skipping reload in SwitchPreviewRenderer: {currentLoadedKtx2Path}");
-                    } else {
-                        // Reload KTX2
-                        try {
-                            await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
-                            logger.Info($"Reloaded KTX2 to D3D11 viewer: {currentLoadedKtx2Path}");
-                        } catch (Exception ex) {
-                            logger.Error(ex, "Failed to reload KTX2 to D3D11 viewer");
-                        }
-                    }
-                } else if (currentPreviewSourceMode == TexturePreviewSourceMode.Source && originalFileBitmapSource != null) {
-                    // Reload Source (PNG) to D3D11
-                    try {
-                        bool isSRGB = IsSRGBTexture(currentSelectedTexture);
-                        LoadTextureToD3D11Viewer(originalFileBitmapSource, isSRGB);
-                        logger.Info($"Reloaded Source PNG to D3D11 viewer, sRGB={isSRGB}");
-                    } catch (Exception ex) {
-                        logger.Error(ex, "Failed to reload Source PNG to D3D11 viewer");
-                    }
-                }
-            } else {
-                // Switch to WPF Image renderer (legacy mode)
-                isUsingD3D11Renderer = false;
-                D3D11TextureViewer.Visibility = Visibility.Collapsed;
-                WpfTexturePreviewImage.Visibility = Visibility.Visible;
-                logger.Info("Switched to WPF preview renderer");
-
-                // Show mipmap controls if KTX2 is available (WPF uses PNG extraction)
-                if (isKtxPreviewAvailable) {
-                    ShowMipmapControls();
-                }
-
-                // Load current texture to WPF Image
-                if (!string.IsNullOrEmpty(currentLoadedTexturePath) && File.Exists(currentLoadedTexturePath)) {
-                    try {
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.UriSource = new Uri(currentLoadedTexturePath, UriKind.Absolute);
-                        bitmap.EndInit();
-                        bitmap.Freeze();
-
-                        WpfTexturePreviewImage.Source = PrepareForWPFDisplay(bitmap);
-                        logger.Info($"Loaded source texture to WPF Image: {currentLoadedTexturePath}");
-                    } catch (Exception ex) {
-                        logger.Error(ex, "Failed to load texture to WPF Image");
-                        WpfTexturePreviewImage.Source = null;
-                    }
-                } else {
-                    logger.Warn("No source texture path available for WPF preview");
-                    WpfTexturePreviewImage.Source = null;
-                }
-            }
-        }
-
-        private async void GetListAssets(object sender, RoutedEventArgs e) {
-            try {
-                CancelButton.IsEnabled = true;
-                if (cancellationTokenSource != null) {
-                    await TryConnect(cancellationTokenSource.Token);
-                }
-            } catch (Exception ex) {
-                MessageBox.Show($"Error in Get ListAssets: {ex.Message}");
-                logService.LogError($"Error in Get List Assets: {ex}");
-            } finally {
-                CancelButton.IsEnabled = false;
-            }
-        }
-
-        private async void Connect(object? sender, RoutedEventArgs? e) {
-            CancellationToken cancellationToken = cancellationTokenSource.Token;
-
-            if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
-                MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
-                SettingsWindow settingsWindow = new();
-                // Subscribe to preview renderer changes
-                settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
-                settingsWindow.ShowDialog();
-                // Unsubscribe after window closes
-                settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
-                return; // Прерываем выполнение Connect, если данные не заполнены
-            } else {
-                try {
-                    string? apiKey = GetDecryptedApiKey();
-                    if (string.IsNullOrEmpty(apiKey)) {
-                        throw new Exception("Failed to decrypt API key");
-                    }
-
-                    userName = AppSettings.Default.UserName.ToLower();
-                    userID = await playCanvasService.GetUserIdAsync(userName, apiKey, cancellationToken);
-                    if (string.IsNullOrEmpty(userID)) {
-                        throw new Exception("User ID is null or empty");
-                    } else {
-                        await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userID}"));
-                    }
-
-                    Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, apiKey, [], cancellationToken);
-                    if (projectsDict != null && projectsDict.Count > 0) {
-                        string lastSelectedProjectId = AppSettings.Default.LastSelectedProjectId;
-
-                        viewModel.Projects.Clear();
-                        foreach (KeyValuePair<string, string> project in projectsDict) {
-                            viewModel.Projects.Add(project);
-                        }
-
-                        // Устанавливаем флаг чтобы избежать двойной загрузки через SelectionChanged
-                        isProjectInitializationInProgress = true;
-                        try {
-                            if (!string.IsNullOrEmpty(lastSelectedProjectId) && projectsDict.ContainsKey(lastSelectedProjectId)) {
-                                ProjectsComboBox.SelectedValue = lastSelectedProjectId;
-                            } else {
-                                ProjectsComboBox.SelectedIndex = 0;
-                            }
-                        } finally {
-                            isProjectInitializationInProgress = false;
-                        }
-
-                        if (ProjectsComboBox.SelectedItem != null) {
-                            string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                            await LoadBranchesAsync(projectId, cancellationToken);
-                            UpdateProjectPath(projectId);
-                        }
-
-                        // Проверяем состояние проекта (скачан ли, нужно ли обновить)
-                        await CheckProjectState();
-                    } else {
-                        throw new Exception("Project list is empty");
-                    }
-                } catch (Exception ex) {
-                    MessageBox.Show($"Error: {ex.Message}");
-                    UpdateConnectionButton(ConnectionState.Disconnected);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Проверяет состояние проекта (скачан ли, есть ли обновления)
-        /// </summary>
-        private async Task CheckProjectState() {
-            try {
-                logger.Info("CheckProjectState: Starting");
-                logService.LogInfo("CheckProjectState: Starting project state check");
-                
-                if (string.IsNullOrEmpty(projectFolderPath) || string.IsNullOrEmpty(projectName)) {
-                    logger.Warn("CheckProjectState: projectFolderPath or projectName is empty");
-                    logService.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
-                }
-
-                // Проверяем наличие assets_list.json
-                string assetsListPath = Path.Combine(projectFolderPath, "assets_list.json");
-                logger.Info($"CheckProjectState: Checking for assets_list.json at {assetsListPath}");
-
-                if (!File.Exists(assetsListPath)) {
-                    // Проект не скачан - нужна загрузка
-                    logger.Info("CheckProjectState: Project not downloaded yet - assets_list.json not found");
-                    logService.LogInfo("Project not downloaded yet - assets_list.json not found");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
-                }
-
-                // Проект скачан, загружаем локальные данные
-                logService.LogInfo("Project found, loading local assets...");
-                logger.Info("CheckProjectState: Loading local assets...");
-                await LoadAssetsFromJsonFileAsync();
-
-                // Проверяем hash для определения обновлений
-                logService.LogInfo("Checking for updates...");
-                logger.Info("CheckProjectState: Checking for updates on server");
-                bool hasUpdates = await CheckForUpdates();
-
-                if (hasUpdates) {
-                    // Есть обновления на сервере
-                    logger.Info("CheckProjectState: Updates available on server - setting button to Download");
-                    logService.LogInfo("CheckProjectState: Updates available on server");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                } else {
-                    // Проект актуален
-                    logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
-                    logService.LogInfo("CheckProjectState: Project is up to date - setting button to Refresh");
-                    UpdateConnectionButton(ConnectionState.UpToDate);
-                }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in CheckProjectState");
-                logService.LogError($"Error checking project state: {ex.Message}");
-                UpdateConnectionButton(ConnectionState.NeedsDownload);
-            }
-        }
-
-        /// <summary>
-        /// Проверяет наличие обновлений на сервере
-        /// </summary>
-        /// <returns>true если есть обновления, false если все актуально</returns>
-        private async Task<bool> CheckForUpdates() {
-            try {
-                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
-                    return false;
-                }
-
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-                string assetsListPath = Path.Combine(projectFolderPath ?? "", "assets_list.json");
-
-                if (!File.Exists(assetsListPath)) {
-                    return true; // Файл не существует = нужно скачать
-                }
-
-                // Получаем локальный JSON
-                string localJson = await File.ReadAllTextAsync(assetsListPath);
-                JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
-
-                // Получаем серверный JSON
-                List<PlayCanvasAssetSummary> serverSummaries = [];
-                string? apiKey = GetDecryptedApiKey();
-                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", CancellationToken.None)) {
-                    serverSummaries.Add(asset);
-                }
-                JArray serverData = new();
-                foreach (PlayCanvasAssetSummary asset in serverSummaries) {
-                    serverData.Add(JToken.Parse(asset.ToJsonString()));
-                }
-
-                // Сравниваем hash или количество ассетов
-                string localHash = ComputeHash(localJson);
-                string serverHash = ComputeHash(serverData.ToString());
-
-                bool hasChanges = localHash != serverHash;
-
-                if (hasChanges) {
-                    logService.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
-                } else {
-                    logService.LogInfo("Project is up to date");
-                }
-
-                return hasChanges;
-            } catch (Exception ex) {
-                logService.LogError($"Error checking for updates: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Вычисляет MD5 hash для строки (для сравнения JSON)
-        /// </summary>
-        private string ComputeHash(string input) {
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
-            byte[] hashBytes = md5.ComputeHash(inputBytes);
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-        }
-
-        private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken) {
-            try {
-                isBranchInitializationInProgress = true;
-
-                string? apiKey = GetDecryptedApiKey();
-                List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, apiKey ?? "", [], cancellationToken);
-                if (branchesList != null && branchesList.Count > 0) {
-                    viewModel.Branches.Clear();
-                    foreach (Branch branch in branchesList) {
-                        viewModel.Branches.Add(branch);
-                    }
-
-                    string lastSelectedBranchName = AppSettings.Default.LastSelectedBranchName;
-                    if (!string.IsNullOrEmpty(lastSelectedBranchName)) {
-                        Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == lastSelectedBranchName);
-                        if (selectedBranch != null) {
-                            BranchesComboBox.SelectedValue = selectedBranch.Id;
-                        } else {
-                            BranchesComboBox.SelectedIndex = 0;
-                        }
-                    } else {
-                        BranchesComboBox.SelectedIndex = 0;
-                    }
-                } else {
-                    viewModel.Branches.Clear();
-                    BranchesComboBox.SelectedIndex = -1;
-                }
-            } catch (Exception ex) {
-                MessageBox.Show($"Error loading branches: {ex.Message}");
-            } finally {
-                isBranchInitializationInProgress = false;
-            }
-        }
-
-        private void UpdateProjectPath(string projectId) {
-            ArgumentNullException.ThrowIfNull(projectId);
-
-            if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                projectName = MainWindowHelpers.CleanProjectName(selectedProject.Value);
-                projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-
-                logService.LogInfo($"Updated Project Folder Path: {projectFolderPath}");
-            }
-        }
-
-        private void AboutMenu(object? sender, RoutedEventArgs e) {
+private void AboutMenu(object? sender, RoutedEventArgs e) {
             MessageBox.Show("AssetProcessor v1.0\n\nDeveloped by: SashaRX\n\n2021");
         }
 
@@ -1747,7 +1127,168 @@ namespace AssetProcessor {
             }
         }
 
-        #endregion
+                private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
+
+private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
+            // Пропускаем инициализацию во время сортировки для ускорения
+            if (isSorting) {
+                return;
+            }
+
+            if (e?.Row?.DataContext is TextureResource texture) {
+                // Initialize conversion settings for the texture if not already set
+                // Проверяем только один раз, чтобы не вызывать тяжелые операции при каждой перерисовке
+                if (string.IsNullOrEmpty(texture.CompressionFormat)) {
+                    InitializeTextureConversionSettings(texture);
+                }
+
+                // НЕ устанавливаем цвет фона здесь - он уже установлен через Style в XAML
+                // Это предотвращает лишние операции при каждой перерисовке строки во время сортировки
+                // Цвет фона управляется через DataTrigger в DataGrid.RowStyle
+            }
+        }
+
+        
+
+
+private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
+            if (isViewerVisible == true) {
+                ToggleViewButton.Content = "►";
+                PreviewColumn.Width = new GridLength(0);
+            } else {
+                ToggleViewButton.Content = "◄";
+                PreviewColumn.Width = new GridLength(300); // Вернуть исходную ширину
+            }
+            isViewerVisible = !isViewerVisible;
+        }
+
+        /// <summary>
+        /// Оптимизированный обработчик сортировки для TexturesDataGrid
+        /// </summary>
+        
+
+
+private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+            OptimizeDataGridSorting(TexturesDataGrid, e);
+        }
+
+        /// <summary>
+        /// Оптимизированный обработчик сортировки для ModelsDataGrid
+        /// </summary>
+        
+
+
+        private void ModelsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+            OptimizeDataGridSorting(ModelsDataGrid, e);
+        }
+
+        private void MaterialsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+            OptimizeDataGridSorting(MaterialsDataGrid, e);
+        }
+
+        private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
+            try {
+                if (dataGrid == null || e == null || e.Column == null) {
+                    return;
+                }
+
+                e.Handled = true;
+
+                if (dataGrid.ItemsSource == null) {
+                    return;
+                }
+
+                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+                if (dataView == null) {
+                    return;
+                }
+
+                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending
+                    : ListSortDirection.Ascending;
+
+                string sortMemberPath = e.Column.SortMemberPath;
+                if (string.IsNullOrEmpty(sortMemberPath)) {
+                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
+                        sortMemberPath = binding.Path?.Path ?? "";
+                    }
+
+                    if (string.IsNullOrEmpty(sortMemberPath)) {
+                        e.Handled = false;
+                        return;
+                    }
+                }
+
+                isSorting = true;
+
+                Style? originalRowStyle = null;
+                System.Windows.Media.Transform? originalLayoutTransform = null;
+                bool isTexturesGrid = dataGrid == TexturesDataGrid;
+
+                if (isTexturesGrid) {
+                    originalRowStyle = dataGrid.RowStyle;
+                    originalLayoutTransform = dataGrid.LayoutTransform;
+                }
+
+                try {
+                    dataGrid.BeginInit();
+
+                    if (isTexturesGrid && originalRowStyle != null) {
+                        var simpleRowStyle = new Style(typeof(DataGridRow));
+                        var contextMenuSetter = originalRowStyle.Setters.OfType<Setter>()
+                            .FirstOrDefault(s => s.Property == DataGridRow.ContextMenuProperty);
+                        if (contextMenuSetter != null) {
+                            simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuSetter.Value));
+                        } else {
+                            var contextMenuResource = dataGrid.TryFindResource("TextureRowContextMenu");
+                            if (contextMenuResource != null) {
+                                simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuResource));
+                            }
+                        }
+                        dataGrid.RowStyle = simpleRowStyle;
+
+                        dataGrid.LayoutTransform = null;
+                    }
+
+                    try {
+                        using (dataView.DeferRefresh()) {
+                            dataView.SortDescriptions.Clear();
+                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
+                        }
+
+                        e.Column.SortDirection = direction;
+                    } finally {
+                        if (isTexturesGrid) {
+                            if (originalRowStyle != null) {
+                                dataGrid.RowStyle = originalRowStyle;
+                            }
+                            if (originalLayoutTransform != null) {
+                                dataGrid.LayoutTransform = originalLayoutTransform;
+                            }
+                        }
+
+                        dataGrid.EndInit();
+
+                        Dispatcher.BeginInvoke(() => {
+                            isSorting = false;
+                        }, System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                } finally {
+                    if (isSorting) {
+                        Dispatcher.BeginInvoke(() => {
+                            isSorting = false;
+                        }, System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                }
+            } catch (Exception ex) {
+                logger.Error(ex, "Error in OptimizeDataGridSorting");
+                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
+                e.Handled = false;
+                isSorting = false;
+            }
+        }
+
+#endregion
 
         #region Column Visibility Management
 
@@ -2392,16 +1933,16 @@ namespace AssetProcessor {
         #region Helper Methods
 
         private string GetResourcePath(string? fileName, int? parentId = null) {
-            if (string.IsNullOrEmpty(projectFolderPath)) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) {
                 throw new Exception("Project folder path is null or empty");
             }
 
-            if (string.IsNullOrEmpty(projectName)) {
+            if (string.IsNullOrEmpty(ProjectName)) {
                 throw new Exception("Project name is null or empty");
             }
 
             string sanitizedFileName = localCacheService.SanitizePath(fileName);
-            string fullPath = localCacheService.GetResourcePath(AppSettings.Default.ProjectsFolderPath, projectName, folderPaths, sanitizedFileName, parentId);
+            string fullPath = localCacheService.GetResourcePath(AppSettings.Default.ProjectsFolderPath, ProjectName, folderPaths, sanitizedFileName, parentId);
             logService.LogInfo($"Generated resource path: {fullPath}");
             return fullPath;
         }
@@ -2645,6 +2186,191 @@ namespace AssetProcessor {
             }
         }
 
+        private async void Connect(object? sender, RoutedEventArgs? e) {
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+                MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
+                SettingsWindow settingsWindow = new();
+                settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
+                settingsWindow.ShowDialog();
+                settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
+                return;
+            }
+
+            try {
+                string? apiKey = GetDecryptedApiKey();
+                if (string.IsNullOrEmpty(apiKey)) {
+                    throw new Exception("Failed to decrypt API key");
+                }
+
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(AppSettings.Default.UserName, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                if (string.IsNullOrEmpty(projectsResult.UserId)) {
+                    throw new Exception("User ID is null or empty");
+                }
+
+                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}"));
+
+                if (projectsResult.Projects.Count == 0) {
+                    throw new Exception("Project list is empty");
+                }
+
+                viewModel.Projects.Clear();
+                foreach (KeyValuePair<string, string> project in projectsResult.Projects) {
+                    viewModel.Projects.Add(project);
+                }
+
+                projectSelectionService.SetProjectInitializationInProgress(true);
+                try {
+                    if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
+                        ProjectsComboBox.SelectedValue = projectsResult.SelectedProjectId;
+                    } else {
+                        ProjectsComboBox.SelectedIndex = 0;
+                    }
+                } finally {
+                    projectSelectionService.SetProjectInitializationInProgress(false);
+                }
+
+                if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
+                    await LoadBranchesAsync(selectedProject.Key, cancellationToken, apiKey);
+                    UpdateProjectPath();
+                }
+
+                await CheckProjectState();
+            } catch (Exception ex) {
+                MessageBox.Show($"Error: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.Disconnected);
+            }
+        }
+
+        private async Task CheckProjectState() {
+            try {
+                logger.Info("CheckProjectState: Starting");
+                logService.LogInfo("CheckProjectState: Starting project state check");
+
+                if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
+                    logger.Warn("CheckProjectState: projectFolderPath or projectName is empty");
+                    logService.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    return;
+                }
+
+                string assetsListPath = Path.Combine(ProjectFolderPath!, "assets_list.json");
+                logger.Info($"CheckProjectState: Checking for assets_list.json at {assetsListPath}");
+
+                if (!File.Exists(assetsListPath)) {
+                    logger.Info("CheckProjectState: Project not downloaded yet - assets_list.json not found");
+                    logService.LogInfo("Project not downloaded yet - assets_list.json not found");
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    return;
+                }
+
+                logService.LogInfo("Project found, loading local assets...");
+                logger.Info("CheckProjectState: Loading local assets...");
+                await LoadAssetsFromJsonFileAsync();
+
+                logService.LogInfo("Checking for updates...");
+                logger.Info("CheckProjectState: Checking for updates on server");
+                bool hasUpdates = await CheckForUpdates();
+
+                if (hasUpdates) {
+                    logger.Info("CheckProjectState: Updates available on server - setting button to Download");
+                    logService.LogInfo("CheckProjectState: Updates available on server");
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                } else {
+                    logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
+                    logService.LogInfo("CheckProjectState: Project is up to date - setting button to Refresh");
+                    UpdateConnectionButton(ConnectionState.UpToDate);
+                }
+            } catch (Exception ex) {
+                logger.Error(ex, "Error in CheckProjectState");
+                logService.LogError($"Error checking project state: {ex.Message}");
+                UpdateConnectionButton(ConnectionState.NeedsDownload);
+            }
+        }
+
+        private async Task<bool> CheckForUpdates() {
+            try {
+                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                    return false;
+                }
+
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+                string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
+
+                if (!File.Exists(assetsListPath)) {
+                    return true;
+                }
+
+                string localJson = await File.ReadAllTextAsync(assetsListPath);
+                JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
+
+                List<PlayCanvasAssetSummary> serverSummaries = [];
+                string? apiKey = GetDecryptedApiKey();
+                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? string.Empty, CancellationToken.None)) {
+                    serverSummaries.Add(asset);
+                }
+                JArray serverData = new();
+                foreach (PlayCanvasAssetSummary asset in serverSummaries) {
+                    serverData.Add(JToken.Parse(asset.ToJsonString()));
+                }
+
+                string localHash = ComputeHash(localJson);
+                string serverHash = ComputeHash(serverData.ToString());
+
+                bool hasChanges = localHash != serverHash;
+
+                if (hasChanges) {
+                    logService.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
+                } else {
+                    logService.LogInfo("Project is up to date");
+                }
+
+                return hasChanges;
+            } catch (Exception ex) {
+                logService.LogError($"Error checking for updates: {ex.Message}");
+                return false;
+            }
+        }
+
+        private string ComputeHash(string input) {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
+            byte[] hashBytes = md5.ComputeHash(inputBytes);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+        }
+
+        private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
+            try {
+                string resolvedApiKey = apiKey ?? GetDecryptedApiKey() ?? string.Empty;
+                BranchSelectionResult result = await projectSelectionService.LoadBranchesAsync(projectId, resolvedApiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
+
+                viewModel.Branches.Clear();
+                foreach (Branch branch in result.Branches) {
+                    viewModel.Branches.Add(branch);
+                }
+
+                if (result.Branches.Count > 0) {
+                    if (!string.IsNullOrEmpty(result.SelectedBranchId)) {
+                        BranchesComboBox.SelectedValue = result.SelectedBranchId;
+                    } else {
+                        BranchesComboBox.SelectedIndex = 0;
+                    }
+                } else {
+                    BranchesComboBox.SelectedIndex = -1;
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"Error loading branches: {ex.Message}");
+            }
+        }
+
+        private void UpdateProjectPath() {
+            if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
+                projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
+            }
+        }
+
         private void SaveCurrentSettings() {
             if (ProjectsComboBox.SelectedItem != null) {
                 AppSettings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
@@ -2653,6 +2379,36 @@ namespace AssetProcessor {
                 AppSettings.Default.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
             }
             AppSettings.Default.Save();
+        }
+
+        private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
+            try {
+                cancellationTokenSource?.Cancel();
+                textureLoadCancellation?.Cancel();
+
+                System.Threading.Thread.Sleep(100);
+
+                cancellationTokenSource?.Dispose();
+                textureLoadCancellation?.Dispose();
+
+                playCanvasService?.Dispose();
+            } catch (Exception ex) {
+                logger.Error(ex, "Error canceling operations during window closing");
+            }
+
+            SaveCurrentSettings();
+        }
+
+        private void CancelButton_Click(object? sender, RoutedEventArgs e) {
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource = new CancellationTokenSource();
+        }
+
+        private void Setting(object? sender, RoutedEventArgs e) {
+            SettingsWindow settingsWindow = new();
+            settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
+            settingsWindow.ShowDialog();
+            settingsWindow.OnPreviewRendererChanged -= HandlePreviewRendererChanged;
         }
 
         /// <summary>
@@ -2752,7 +2508,7 @@ namespace AssetProcessor {
 
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-                string assetsListPath = Path.Combine(projectFolderPath ?? "", "assets_list.json");
+                string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
 
                 // Проверяем наличие локального JSON
                 bool localFileExists = File.Exists(assetsListPath);
@@ -2813,13 +2569,9 @@ namespace AssetProcessor {
         /// <summary>
         /// Загружает последние настройки и подключается к серверу (старый метод)
         /// </summary>
-        private async Task LoadLastSettings() {
+                private async Task LoadLastSettings() {
             try {
                 logger.Info("LoadLastSettings: Starting");
-                userName = AppSettings.Default.UserName.ToLower();
-                if (string.IsNullOrEmpty(userName)) {
-                    throw new Exception("Username is null or empty");
-                }
 
                 string? apiKey = GetDecryptedApiKey();
                 if (string.IsNullOrEmpty(apiKey)) {
@@ -2828,83 +2580,62 @@ namespace AssetProcessor {
 
                 CancellationToken cancellationToken = new();
 
-                logger.Info($"LoadLastSettings: Getting user ID for {userName}");
-                userID = await playCanvasService.GetUserIdAsync(userName, apiKey, cancellationToken);
-                if (string.IsNullOrEmpty(userID)) {
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(AppSettings.Default.UserName, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                if (string.IsNullOrEmpty(projectsResult.UserId)) {
                     throw new Exception("User ID is null or empty");
-                } else {
-                    UpdateConnectionStatus(true, $"by userID: {userID}");
                 }
-                logger.Info($"LoadLastSettings: Getting projects for user {userID}");
-                Dictionary<string, string> projectsDict = await playCanvasService.GetProjectsAsync(userID, apiKey, [], cancellationToken);
 
-                if (projectsDict != null && projectsDict.Count > 0) {
-                    logger.Info($"LoadLastSettings: Found {projectsDict.Count} projects");
+                UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}");
+
+                if (projectsResult.Projects.Count > 0) {
                     viewModel.Projects.Clear();
-                    foreach (KeyValuePair<string, string> project in projectsDict) {
+                    foreach (KeyValuePair<string, string> project in projectsResult.Projects) {
                         viewModel.Projects.Add(project);
                     }
 
-                    isProjectInitializationInProgress = true;
+                    projectSelectionService.SetProjectInitializationInProgress(true);
                     try {
-                        if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedProjectId) && projectsDict.ContainsKey(AppSettings.Default.LastSelectedProjectId)) {
-                            ProjectsComboBox.SelectedValue = AppSettings.Default.LastSelectedProjectId;
-                            logger.Info($"LoadLastSettings: Selected last project: {AppSettings.Default.LastSelectedProjectId}");
+                        if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
+                            ProjectsComboBox.SelectedValue = projectsResult.SelectedProjectId;
+                            logger.Info($"LoadLastSettings: Selected project: {projectsResult.SelectedProjectId}");
                         } else {
                             ProjectsComboBox.SelectedIndex = 0;
                             logger.Info("LoadLastSettings: Selected first project");
                         }
                     } finally {
-                        isProjectInitializationInProgress = false;
+                        projectSelectionService.SetProjectInitializationInProgress(false);
                     }
 
-                    if (ProjectsComboBox.SelectedItem != null) {
-                        string projectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                        logger.Info($"LoadLastSettings: Getting branches for project {projectId}");
-                        List<Branch> branchesList = await playCanvasService.GetBranchesAsync(projectId, apiKey, [], cancellationToken);
-
-                        if (branchesList != null && branchesList.Count > 0) {
-                            logger.Info($"LoadLastSettings: Found {branchesList.Count} branches");
-                            viewModel.Branches.Clear();
-                            foreach (Branch branch in branchesList) {
-                                viewModel.Branches.Add(branch);
-                            }
-
-                            isBranchInitializationInProgress = true;
-                            try {
-                                if (!string.IsNullOrEmpty(AppSettings.Default.LastSelectedBranchName)) {
-                                    Branch? selectedBranch = branchesList.FirstOrDefault(b => b.Name == AppSettings.Default.LastSelectedBranchName);
-                                    if (selectedBranch != null) {
-                                        BranchesComboBox.SelectedValue = selectedBranch.Id;
-                                        logger.Info($"LoadLastSettings: Selected last branch: {selectedBranch.Name}");
-                                    } else {
-                                        BranchesComboBox.SelectedIndex = 0;
-                                        logger.Info("LoadLastSettings: Last branch not found, selected first branch");
-                                    }
-                                } else {
-                                    BranchesComboBox.SelectedIndex = 0;
-                                    logger.Info("LoadLastSettings: No last branch, selected first branch");
-                                }
-                            } finally {
-                                isBranchInitializationInProgress = false;
-                            }
+                    if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
+                        BranchSelectionResult branchesResult = await projectSelectionService.LoadBranchesAsync(selectedProject.Key, apiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
+                        viewModel.Branches.Clear();
+                        foreach (Branch branch in branchesResult.Branches) {
+                            viewModel.Branches.Add(branch);
                         }
 
-                        // Загружаем данные с проверкой hash
-                        projectName = MainWindowHelpers.CleanProjectName(((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Value);
-                        projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
-                        logger.Info($"LoadLastSettings: Project folder path set to: {projectFolderPath}");
+                        if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
+                            BranchesComboBox.SelectedValue = branchesResult.SelectedBranchId;
+                            logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
+                        } else if (branchesResult.Branches.Count > 0) {
+                            BranchesComboBox.SelectedIndex = 0;
+                            logger.Info("LoadLastSettings: Selected first branch");
+                        } else {
+                            BranchesComboBox.SelectedIndex = -1;
+                        }
 
-                        // Умная загрузка: проверяем hash и загружаем локально если актуально
+                        projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
+                        logger.Info($"LoadLastSettings: Project folder path set to: {ProjectFolderPath}");
+
+                        // ����� ����㧪�: �஢��塞 hash � ����㦠�� �����쭮 �᫨ ���㠫쭮
                         await SmartLoadAssets();
                     }
                 }
             } catch (Exception ex) {
-                logger.Error(ex, "Error loading last settings");
+                logger.Error(ex, "Failed to load last settings");
                 MessageBox.Show($"Error loading last settings: {ex.Message}");
             }
         }
-        #endregion
+#endregion
 
         #region Texture Conversion Settings Handlers
 
@@ -3140,14 +2871,14 @@ namespace AssetProcessor {
                 // Обновляем UI свойства в UI потоке с высоким приоритетом
                 bool rendererAvailable = false;
                 await Dispatcher.InvokeAsync(() => {
-                    currentLoadedTexturePath = e.Texture.Path;
-                    currentLoadedKtx2Path = e.Preview.KtxPath;
-                    isKtxPreviewAvailable = true;
-                    isKtxPreviewActive = true;
-                    currentKtxMipmaps?.Clear();
-                    currentMipLevel = 0;
+                    texturePreviewService.CurrentLoadedTexturePath = e.Texture.Path;
+                    texturePreviewService.CurrentLoadedKtx2Path = e.Preview.KtxPath;
+                    texturePreviewService.IsKtxPreviewAvailable = true;
+                    texturePreviewService.IsKtxPreviewActive = true;
+                    texturePreviewService.CurrentKtxMipmaps?.Clear();
+                    texturePreviewService.CurrentMipLevel = 0;
 
-                    if (!isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();
@@ -3210,7 +2941,7 @@ namespace AssetProcessor {
                         D3D11TextureViewer.Renderer.Render();
 
                         if (e.Preview.ShouldEnableNormalReconstruction && D3D11TextureViewer.Renderer != null) {
-                            currentActiveChannelMask = "Normal";
+                            texturePreviewService.CurrentActiveChannelMask = "Normal";
                             D3D11TextureViewer.Renderer.SetChannelMask(0x20);
                             D3D11TextureViewer.Renderer.Render();
                             UpdateChannelButtonsState();
@@ -3805,4 +3536,15 @@ namespace AssetProcessor {
         #endregion
     }
 }
+
+
+
+
+
+
+
+
+
+
+
 

@@ -10,7 +10,7 @@ internal sealed class KtxPreviewCacheEntry {
     public required List<KtxMipLevel> Mipmaps { get; init; }
 }
 
-internal sealed class KtxMipLevel {
+public sealed class KtxMipLevel {
     public required int Level { get; init; }
 
     public required BitmapSource Bitmap { get; init; }

@@ -1,4 +1,4 @@
-using AssetProcessor.Helpers;
+﻿using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -76,16 +76,16 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Synchronize channel button GUI state with currentActiveChannelMask.
+        /// Synchronize channel button GUI state with texturePreviewService.CurrentActiveChannelMask.
         /// </summary>
         private void UpdateChannelButtonsState() {
             isUpdatingChannelButtons = true;
             try {
-                RChannelButton.IsChecked = currentActiveChannelMask == "R";
-                GChannelButton.IsChecked = currentActiveChannelMask == "G";
-                BChannelButton.IsChecked = currentActiveChannelMask == "B";
-                AChannelButton.IsChecked = currentActiveChannelMask == "A";
-                NormalButton.IsChecked = currentActiveChannelMask == "Normal";
+                RChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "R";
+                GChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "G";
+                BChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "B";
+                AChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "A";
+                NormalButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "Normal";
             } finally {
                 isUpdatingChannelButtons = false;
             }
@@ -95,17 +95,17 @@ namespace AssetProcessor {
         /// Clears active channel mask without forcing texture reloads in D3D11 mode.
         /// </summary>
         private void HandleChannelMaskCleared() {
-            currentActiveChannelMask = null;
+            texturePreviewService.CurrentActiveChannelMask = null;
             UpdateChannelButtonsState();
 
-            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+            if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                 D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
                 D3D11TextureViewer.Renderer.RestoreOriginalGamma();
                 D3D11TextureViewer.Renderer.Render();
                 logger.Info("Cleared D3D11 channel mask without reloading texture");
 
                 // Refresh histogram using best available bitmap reference
-                BitmapSource? histogramSource = originalBitmapSource ?? originalFileBitmapSource;
+                BitmapSource? histogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
                 if (histogramSource != null) {
                     UpdateHistogram(histogramSource);
                 }
@@ -122,8 +122,8 @@ namespace AssetProcessor {
             logger.Info("Fit/Reset: Reset zoom/pan");
 
             // Reset channel masks without reloading texture or changing Source/KTX mode
-            currentActiveChannelMask = null;
-            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+            texturePreviewService.CurrentActiveChannelMask = null;
+            if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                 D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF); // All channels
                 D3D11TextureViewer.Renderer.RestoreOriginalGamma(); // Restore original gamma (before mask override)
                 D3D11TextureViewer.Renderer.Render(); // Force redraw
@@ -197,44 +197,36 @@ namespace AssetProcessor {
         private void ResetPreviewState() {
             CancelPendingD3DPreviewLoad();
             // Zoom/pan state now handled by D3D11TextureViewerControl
-            isKtxPreviewActive = false;
-            currentMipLevel = 0;
-            currentKtxMipmaps = null;
-            originalBitmapSource = null;
-            originalFileBitmapSource = null;
-            currentPreviewSourceMode = TexturePreviewSourceMode.Source;
-            isSourcePreviewAvailable = false;
-            isKtxPreviewAvailable = false;
-            isUserPreviewSelection = false;
+            texturePreviewService.ResetPreviewState();
             ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
         }
 
         private void ClearPreviewReferenceSize() {
-            previewReferenceWidth = 0;
-            previewReferenceHeight = 0;
+            texturePreviewService.PreviewReferenceWidth = 0;
+            texturePreviewService.PreviewReferenceHeight = 0;
         }
 
         private void SetPreviewReferenceSize(BitmapSource bitmap) {
             (double width, double height) = GetImageSizeInDips(bitmap);
 
-            previewReferenceWidth = double.IsFinite(width) && width > 0 ? width : 0;
-            previewReferenceHeight = double.IsFinite(height) && height > 0 ? height : 0;
+            texturePreviewService.PreviewReferenceWidth = double.IsFinite(width) && width > 0 ? width : 0;
+            texturePreviewService.PreviewReferenceHeight = double.IsFinite(height) && height > 0 ? height : 0;
         }
 
         private void EnsurePreviewReferenceSize(BitmapSource bitmap) {
-            if (previewReferenceWidth <= 0 || previewReferenceHeight <= 0) {
+            if (texturePreviewService.PreviewReferenceWidth <= 0 || texturePreviewService.PreviewReferenceHeight <= 0) {
                 SetPreviewReferenceSize(bitmap);
             }
         }
 
         private double GetScaleMultiplier(double imageWidth, double imageHeight) {
-            double multiplierX = (previewReferenceWidth > 0 && imageWidth > 0)
-                ? previewReferenceWidth / imageWidth
+            double multiplierX = (texturePreviewService.PreviewReferenceWidth > 0 && imageWidth > 0)
+                ? texturePreviewService.PreviewReferenceWidth / imageWidth
                 : double.NaN;
-            double multiplierY = (previewReferenceHeight > 0 && imageHeight > 0)
-                ? previewReferenceHeight / imageHeight
+            double multiplierY = (texturePreviewService.PreviewReferenceHeight > 0 && imageHeight > 0)
+                ? texturePreviewService.PreviewReferenceHeight / imageHeight
                 : double.NaN;
 
             double multiplier = double.IsFinite(multiplierX) && multiplierX > 0 ? multiplierX : double.NaN;
@@ -284,12 +276,12 @@ namespace AssetProcessor {
 
             try {
                 // Determine if texture is sRGB based on texture type
-                bool isSRGB = IsSRGBTexture(currentSelectedTexture);
+                bool isSRGB = IsSRGBTexture(texturePreviewService.CurrentSelectedTexture);
                 logger.Info("Getting bitmap dimensions...");
                 int w = bitmap.PixelWidth;
                 int h = bitmap.PixelHeight;
                 logger.Info($"Bitmap dimensions: {w}x{h}");
-                logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={currentSelectedTexture?.TextureType})");
+                logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={texturePreviewService.CurrentSelectedTexture?.TextureType})");
                 LoadTextureToD3D11Viewer(bitmap, isSRGB);
                 logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
             } catch (Exception ex) {
@@ -423,16 +415,16 @@ namespace AssetProcessor {
                 return;
             }
 
-            isUpdatingPreviewSourceControls = true;
+            texturePreviewService.IsUpdatingPreviewSourceControls = true;
 
             try {
-                PreviewSourceOriginalRadioButton.IsEnabled = isSourcePreviewAvailable;
-                PreviewSourceKtxRadioButton.IsEnabled = isKtxPreviewAvailable;
+                PreviewSourceOriginalRadioButton.IsEnabled = texturePreviewService.IsSourcePreviewAvailable;
+                PreviewSourceKtxRadioButton.IsEnabled = texturePreviewService.IsKtxPreviewAvailable;
 
-                PreviewSourceOriginalRadioButton.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Source;
-                PreviewSourceKtxRadioButton.IsChecked = currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
+                PreviewSourceOriginalRadioButton.IsChecked = texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source;
+                PreviewSourceKtxRadioButton.IsChecked = texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
             } finally {
-                isUpdatingPreviewSourceControls = false;
+                texturePreviewService.IsUpdatingPreviewSourceControls = false;
             }
         }
 
@@ -583,7 +575,7 @@ namespace AssetProcessor {
         // Removed: UpdatePreviewWidthText (PreviewWidthSlider was removed)
 
         private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
-            if (isUpdatingPreviewSourceControls) {
+            if (texturePreviewService.IsUpdatingPreviewSourceControls) {
                 return;
             }
 
@@ -596,34 +588,34 @@ namespace AssetProcessor {
 
         private void SetPreviewSourceMode(TexturePreviewSourceMode mode, bool initiatedByUser) {
             if (initiatedByUser) {
-                isUserPreviewSelection = true;
+                texturePreviewService.IsUserPreviewSelection = true;
             }
 
-            if (mode == TexturePreviewSourceMode.Ktx2 && !isKtxPreviewAvailable) {
+            if (mode == TexturePreviewSourceMode.Ktx2 && !texturePreviewService.IsKtxPreviewAvailable) {
                 UpdatePreviewSourceControls();
                 return;
             }
 
-            if (mode == TexturePreviewSourceMode.Source && !isSourcePreviewAvailable) {
+            if (mode == TexturePreviewSourceMode.Source && !texturePreviewService.IsSourcePreviewAvailable) {
                 UpdatePreviewSourceControls();
                 return;
             }
 
-            currentPreviewSourceMode = mode;
+            texturePreviewService.CurrentPreviewSourceMode = mode;
 
             if (mode == TexturePreviewSourceMode.Source) {
-                isKtxPreviewActive = false;
+                texturePreviewService.IsKtxPreviewActive = false;
                 HideMipmapControls();
 
-                if (originalFileBitmapSource != null) {
-                    originalBitmapSource = originalFileBitmapSource;
-                    _ = UpdateHistogramAsync(originalBitmapSource);
+                if (texturePreviewService.OriginalFileBitmapSource != null) {
+                    texturePreviewService.OriginalBitmapSource = texturePreviewService.OriginalFileBitmapSource;
+                    _ = UpdateHistogramAsync(texturePreviewService.OriginalBitmapSource);
                     // Preserve channel mask when switching from KTX to Source
                     ShowOriginalImage(preserveMask: true);
 
                     // Update format text for Source mode
                     if (TextureFormatTextBlock != null) {
-                        bool isSRGB = IsSRGBTexture(currentSelectedTexture);
+                        bool isSRGB = IsSRGBTexture(texturePreviewService.CurrentSelectedTexture);
                         string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
                         TextureFormatTextBlock.Text = $"Format: {formatInfo}";
                     }
@@ -631,25 +623,25 @@ namespace AssetProcessor {
                     ClearD3D11Viewer();
                 }
             } else if (mode == TexturePreviewSourceMode.Ktx2) {
-                isKtxPreviewActive = true;
+                texturePreviewService.IsKtxPreviewActive = true;
 
                 // Update histogram from source image (KTX2 is compressed, use source for histogram)
-                if (originalFileBitmapSource != null) {
-                    _ = UpdateHistogramAsync(originalFileBitmapSource);
+                if (texturePreviewService.OriginalFileBitmapSource != null) {
+                    _ = UpdateHistogramAsync(texturePreviewService.OriginalFileBitmapSource);
                 }
 
                 // Save current mask before switching
-                string? savedMask = currentActiveChannelMask;
+                string? savedMask = texturePreviewService.CurrentActiveChannelMask;
 
                 // FIXED: Check if we're using D3D11 native KTX2 (no extracted mipmaps)
                 // or old PNG extraction method
-                if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
+                if (texturePreviewService.CurrentKtxMipmaps != null && texturePreviewService.CurrentKtxMipmaps.Count > 0) {
                     // Old method: extracted PNG mipmaps available (WPF mode)
-                    UpdateMipmapControls(currentKtxMipmaps);
-                    SetCurrentMipLevel(currentMipLevel);
+                    UpdateMipmapControls(texturePreviewService.CurrentKtxMipmaps);
+                    SetCurrentMipLevel(texturePreviewService.CurrentMipLevel);
                 } else if (D3D11TextureViewer?.Renderer != null &&
-                           D3D11TextureViewer.Renderer.GetCurrentTexturePath() == currentLoadedKtx2Path &&
-                           !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
+                           D3D11TextureViewer.Renderer.GetCurrentTexturePath() == texturePreviewService.CurrentLoadedKtx2Path &&
+                           !string.IsNullOrEmpty(texturePreviewService.CurrentLoadedKtx2Path)) {
                     // CRITICAL: KTX2 is ALREADY loaded in D3D11 (check path match to prevent PNG confusion)
                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                     logger.Info($"KTX2 already loaded in D3D11 - {D3D11TextureViewer.Renderer.MipCount} mip levels available");
@@ -659,26 +651,26 @@ namespace AssetProcessor {
 
                     // Restore channel mask if already loaded
                     // BUT: Don't restore if auto-enable already set Normal mode for normal maps
-                    if (savedMask != null && currentActiveChannelMask != "Normal") {
-                        currentActiveChannelMask = savedMask;
+                    if (savedMask != null && texturePreviewService.CurrentActiveChannelMask != "Normal") {
+                        texturePreviewService.CurrentActiveChannelMask = savedMask;
                         _ = FilterChannelAsync(savedMask);
                         logger.Info($"Restored channel mask '{savedMask}' for already loaded KTX2");
-                    } else if (currentActiveChannelMask == "Normal") {
+                    } else if (texturePreviewService.CurrentActiveChannelMask == "Normal") {
                         logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                     }
-                } else if (isUsingD3D11Renderer && !string.IsNullOrEmpty(currentLoadedKtx2Path)) {
+                } else if (texturePreviewService.IsUsingD3D11Renderer && !string.IsNullOrEmpty(texturePreviewService.CurrentLoadedKtx2Path)) {
                     // New method: Reload KTX2 natively to D3D11 (only if not already loaded or loading)
                     // Проверяем, не загружается ли уже этот файл через LoadKtx2ToD3D11ViewerAsync
-                    if (IsKtx2Loading(currentLoadedKtx2Path)) {
-                        logger.Info($"KTX2 file already loading via LoadKtx2ToD3D11ViewerAsync, skipping reload in SetPreviewSourceMode: {currentLoadedKtx2Path}");
+                    if (IsKtx2Loading(texturePreviewService.CurrentLoadedKtx2Path)) {
+                        logger.Info($"KTX2 file already loading via LoadKtx2ToD3D11ViewerAsync, skipping reload in SetPreviewSourceMode: {texturePreviewService.CurrentLoadedKtx2Path}");
                         return; // Выходим, не вызывая LoadKtx2ToD3D11ViewerAsync
                     }
 
                     // Проверяем, не загружена ли уже текстура в renderer (включая загрузку через ViewModel_TexturePreviewLoaded)
                     if (D3D11TextureViewer?.Renderer != null) {
                         string? currentTexturePath = D3D11TextureViewer.Renderer.GetCurrentTexturePath();
-                        if (currentTexturePath != null && string.Equals(currentTexturePath, currentLoadedKtx2Path, StringComparison.OrdinalIgnoreCase)) {
-                            logger.Info($"KTX2 already loaded in D3D11 renderer, skipping reload in SetPreviewSourceMode: {currentLoadedKtx2Path}");
+                        if (currentTexturePath != null && string.Equals(currentTexturePath, texturePreviewService.CurrentLoadedKtx2Path, StringComparison.OrdinalIgnoreCase)) {
+                            logger.Info($"KTX2 already loaded in D3D11 renderer, skipping reload in SetPreviewSourceMode: {texturePreviewService.CurrentLoadedKtx2Path}");
                             // Обновляем UI, но не перезагружаем текстуру
                             UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                             UpdateHistogramCorrectionButtonState();
@@ -688,7 +680,7 @@ namespace AssetProcessor {
 
                     _ = Task.Run(async () => {
                         try {
-                            await LoadKtx2ToD3D11ViewerAsync(currentLoadedKtx2Path);
+                            await LoadKtx2ToD3D11ViewerAsync(texturePreviewService.CurrentLoadedKtx2Path);
                             await Dispatcher.InvokeAsync(() => {
                                 if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
                                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
@@ -696,11 +688,11 @@ namespace AssetProcessor {
 
                                     // Restore channel mask after KTX2 load
                                     // BUT: Don't restore if auto-enable already set Normal mode for normal maps
-                                    if (savedMask != null && currentActiveChannelMask != "Normal") {
-                                        currentActiveChannelMask = savedMask;
+                                    if (savedMask != null && texturePreviewService.CurrentActiveChannelMask != "Normal") {
+                                        texturePreviewService.CurrentActiveChannelMask = savedMask;
                                         _ = FilterChannelAsync(savedMask);
                                         logger.Info($"Restored channel mask '{savedMask}' after switching to KTX2 mode");
-                                    } else if (currentActiveChannelMask == "Normal") {
+                                    } else if (texturePreviewService.CurrentActiveChannelMask == "Normal") {
                                         logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                                     }
                                 }
@@ -723,11 +715,11 @@ namespace AssetProcessor {
             }
 
             if (MipmapLevelSlider != null) {
-                isUpdatingMipLevel = true;
+                texturePreviewService.IsUpdatingMipLevel = true;
                 MipmapLevelSlider.Value = 0;
                 MipmapLevelSlider.Maximum = 0;
                 MipmapLevelSlider.IsEnabled = false;
-                isUpdatingMipLevel = false;
+                texturePreviewService.IsUpdatingMipLevel = false;
             }
 
             if (MipmapInfoTextBlock != null) {
@@ -745,12 +737,12 @@ namespace AssetProcessor {
             }
         }
 
-        private void UpdateMipmapControls(IReadOnlyList<KtxMipLevel> mipmaps) {
+        private void UpdateMipmapControls(IList<KtxMipLevel> mipmaps) {
             if (MipmapSliderPanel == null || MipmapLevelSlider == null || MipmapInfoTextBlock == null) {
                 return;
             }
 
-            isUpdatingMipLevel = true;
+            texturePreviewService.IsUpdatingMipLevel = true;
 
             try {
                 MipmapSliderPanel.Visibility = Visibility.Visible;
@@ -762,7 +754,7 @@ namespace AssetProcessor {
                     ? $"Мип-уровень 0 из {Math.Max(0, mipmaps.Count - 1)} — {mipmaps[0].Width}×{mipmaps[0].Height}"
                     : "Мип-уровни недоступны";
             } finally {
-                isUpdatingMipLevel = false;
+                texturePreviewService.IsUpdatingMipLevel = false;
             }
         }
 
@@ -778,7 +770,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            isUpdatingMipLevel = true;
+            texturePreviewService.IsUpdatingMipLevel = true;
 
             try {
                 MipmapSliderPanel.Visibility = Visibility.Visible;
@@ -791,7 +783,7 @@ namespace AssetProcessor {
                 int height = D3D11TextureViewer.Renderer.TextureHeight;
                 MipmapInfoTextBlock.Text = $"Мип-уровень 0 из {Math.Max(0, mipCount - 1)} — {width}×{height} (D3D11)";
             } finally {
-                isUpdatingMipLevel = false;
+                texturePreviewService.IsUpdatingMipLevel = false;
             }
         }
 
@@ -803,48 +795,48 @@ namespace AssetProcessor {
         }
 
         private void SetCurrentMipLevel(int level, bool updateSlider = true) {
-            if (currentKtxMipmaps == null || currentKtxMipmaps.Count == 0) {
+            if (texturePreviewService.CurrentKtxMipmaps == null || texturePreviewService.CurrentKtxMipmaps.Count == 0) {
                 return;
             }
 
-            int clampedLevel = Math.Clamp(level, 0, currentKtxMipmaps.Count - 1);
-            currentMipLevel = clampedLevel;
+            int clampedLevel = Math.Clamp(level, 0, texturePreviewService.CurrentKtxMipmaps.Count - 1);
+            texturePreviewService.CurrentMipLevel = clampedLevel;
 
             if (updateSlider && MipmapLevelSlider != null) {
-                isUpdatingMipLevel = true;
+                texturePreviewService.IsUpdatingMipLevel = true;
                 MipmapLevelSlider.Value = clampedLevel;
-                isUpdatingMipLevel = false;
+                texturePreviewService.IsUpdatingMipLevel = false;
             }
 
-            var mip = currentKtxMipmaps[clampedLevel];
-            originalBitmapSource = mip.Bitmap.Clone();
+            var mip = texturePreviewService.CurrentKtxMipmaps[clampedLevel];
+            texturePreviewService.OriginalBitmapSource = mip.Bitmap.Clone();
 
             // Обновляем изображение
             Dispatcher.Invoke(() => {
-                UpdatePreviewImage(originalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
+                UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
 
                 // Update WPF Image if in WPF preview mode
                 if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
-                    WpfTexturePreviewImage.Source = PrepareForWPFDisplay(originalBitmapSource);
+                    WpfTexturePreviewImage.Source = PrepareForWPFDisplay(texturePreviewService.OriginalBitmapSource);
                     logger.Info($"Updated WPF Image in SetCurrentMipLevel: level {clampedLevel}");
                 }
 
-                UpdateHistogram(originalBitmapSource);
+                UpdateHistogram(texturePreviewService.OriginalBitmapSource);
             });
 
             ScheduleFitZoomUpdate(false);
-            UpdateMipmapInfo(mip, currentKtxMipmaps.Count);
+            UpdateMipmapInfo(mip, texturePreviewService.CurrentKtxMipmaps.Count);
         }
 
         private async Task FilterChannelAsync(string channel) {
             // Save current active mask
-            currentActiveChannelMask = channel;
+            texturePreviewService.CurrentActiveChannelMask = channel;
 
             // Sync GUI buttons
             Dispatcher.Invoke(() => UpdateChannelButtonsState());
 
             // Apply channel filter to D3D11 renderer if active
-            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+            if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                 // Convert channel to mask
                 // channelMask: bit 0=R, bit 1=G, bit 2=B, bit 3=A, bit 4=grayscale, bit 5=normal reconstruction
                 uint mask = channel switch {
@@ -863,15 +855,15 @@ namespace AssetProcessor {
                 logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
 
                 // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
-                if (originalBitmapSource != null) {
+                if (texturePreviewService.OriginalBitmapSource != null) {
                     if (channel == "Normal") {
                         // For normal map mode, show RGB histogram (no grayscale)
                         Dispatcher.Invoke(() => {
-                            UpdateHistogram(originalBitmapSource, false);
+                            UpdateHistogram(texturePreviewService.OriginalBitmapSource, false);
                         });
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
-                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(originalBitmapSource, channel);
+                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
                         Dispatcher.Invoke(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
                         });
@@ -882,8 +874,8 @@ namespace AssetProcessor {
             }
 
             // WPF mode: use bitmap filtering
-            if (originalBitmapSource != null) {
-                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(originalBitmapSource, channel);
+            if (texturePreviewService.OriginalBitmapSource != null) {
+                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
 
                 // Обновляем UI в основном потоке
                 Dispatcher.Invoke(() => {
@@ -903,19 +895,19 @@ namespace AssetProcessor {
         }
 
         private void MipmapLevelSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (isUpdatingMipLevel || !isKtxPreviewActive) {
+            if (texturePreviewService.IsUpdatingMipLevel || !texturePreviewService.IsKtxPreviewActive) {
                 return;
             }
 
             int newLevel = (int)Math.Round(e.NewValue);
-            if (newLevel != currentMipLevel) {
+            if (newLevel != texturePreviewService.CurrentMipLevel) {
                 // Check if we're using D3D11 native mipmaps or extracted PNG mipmaps
-                if (currentKtxMipmaps != null && currentKtxMipmaps.Count > 0) {
+                if (texturePreviewService.CurrentKtxMipmaps != null && texturePreviewService.CurrentKtxMipmaps.Count > 0) {
                     // Old method: extracted PNG mipmaps
                     SetCurrentMipLevel(newLevel, updateSlider: false);
                 } else if (D3D11TextureViewer?.Renderer != null) {
                     // New method: D3D11 native mipmaps
-                    currentMipLevel = newLevel;
+                    texturePreviewService.CurrentMipLevel = newLevel;
                     D3D11TextureViewer.Renderer.SetMipLevel(newLevel);
 
                     // Update info text
@@ -934,41 +926,41 @@ namespace AssetProcessor {
         private async void ShowOriginalImage(bool recalculateFitZoom = false, bool preserveMask = false) {
             // Only clear mask if explicitly requested (NOT when switching Source<->KTX)
             if (!preserveMask) {
-                currentActiveChannelMask = null;
+                texturePreviewService.CurrentActiveChannelMask = null;
 
                 // Reset channel filter in D3D11 mode
-                if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                     D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF); // All channels
                     D3D11TextureViewer.Renderer.RestoreOriginalGamma(); // Restore original gamma (if it was overridden for mask)
                     logger.Info($"Reset D3D11 channel mask to all channels and restored original gamma");
                 }
             } else {
                 // Preserve mask - reapply it if active
-                if (currentActiveChannelMask != null && isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                if (texturePreviewService.CurrentActiveChannelMask != null && texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                     // Reapply the current mask to the renderer
-                    _ = FilterChannelAsync(currentActiveChannelMask);
-                    logger.Info($"Preserved and reapplied channel mask '{currentActiveChannelMask}' when switching to Source mode");
+                    _ = FilterChannelAsync(texturePreviewService.CurrentActiveChannelMask);
+                    logger.Info($"Preserved and reapplied channel mask '{texturePreviewService.CurrentActiveChannelMask}' when switching to Source mode");
                 }
             }
 
-            if (originalBitmapSource != null) {
+            if (texturePreviewService.OriginalBitmapSource != null) {
                 await Dispatcher.InvokeAsync(() => {
-                    UpdatePreviewImage(originalBitmapSource, setReference: true, preserveViewport: !recalculateFitZoom);
+                    UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: true, preserveViewport: !recalculateFitZoom);
 
                     // Update WPF Image if in WPF preview mode
                     if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
-                        WpfTexturePreviewImage.Source = PrepareForWPFDisplay(originalBitmapSource);
+                        WpfTexturePreviewImage.Source = PrepareForWPFDisplay(texturePreviewService.OriginalBitmapSource);
                         logger.Info($"Updated WPF Image in ShowOriginalImage");
                     }
 
                     UpdateChannelButtonsState();
-                    UpdateHistogram(originalBitmapSource);
+                    UpdateHistogram(texturePreviewService.OriginalBitmapSource);
                     ScheduleFitZoomUpdate(recalculateFitZoom);
 
                     // AUTO-ENABLE Normal reconstruction for normal map viewModel.Textures (PNG)
                     // Must be AFTER all reset operations to prevent being cleared
-                    if (!preserveMask && currentSelectedTexture?.TextureType?.ToLower() == "normal" && D3D11TextureViewer?.Renderer != null) {
-                        currentActiveChannelMask = "Normal";
+                    if (!preserveMask && texturePreviewService.CurrentSelectedTexture?.TextureType?.ToLower() == "normal" && D3D11TextureViewer?.Renderer != null) {
+                        texturePreviewService.CurrentActiveChannelMask = "Normal";
                         D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
                         D3D11TextureViewer.Renderer.Render();
                         UpdateChannelButtonsState(); // Sync button UI
@@ -981,108 +973,24 @@ namespace AssetProcessor {
         private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false) {
             if (bitmapSource == null) return;
 
-            PlotModel histogramModel = new();
-
-            int[] redHistogram = new int[256];
-            int[] greenHistogram = new int[256];
-            int[] blueHistogram = new int[256];
-
-
-            // Обработка изображения и заполнение гистограммы
-            histogramService.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
-
-            // Calculate combined histogram for statistics (luminance)
-            int[] combinedHistogram = new int[256];
-            for (int i = 0; i < 256; i++) {
-                // Use luminance formula: 0.299*R + 0.587*G + 0.114*B
-                combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
-            }
-
-            // Calculate statistics
-            var stats = histogramService.CalculateStatistics(combinedHistogram);
-
-            if (!isGray) {
-                histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
-                histogramService.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
-                histogramService.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
-            } else {
-                histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
-            }
-
-            histogramModel.Axes.Add(new LinearAxis {
-                Position = AxisPosition.Bottom,
-                IsAxisVisible = false,
-                AxislineThickness = 0.5,
-                MajorGridlineThickness = 0.5,
-                MinorGridlineThickness = 0.5
-            });
-            histogramModel.Axes.Add(new LinearAxis {
-                Position = AxisPosition.Left,
-                IsAxisVisible = false,
-                AxislineThickness = 0.5,
-                MajorGridlineThickness = 0.5,
-                MinorGridlineThickness = 0.5
-            });
+            HistogramComputationResult result = histogramCoordinator.BuildHistogram(bitmapSource, isGray);
 
             Dispatcher.Invoke(() => {
-                HistogramPlotView.Model = histogramModel;
-                UpdateHistogramStatisticsUI(stats);
+                HistogramPlotView.Model = result.Model;
+                UpdateHistogramStatisticsUI(result.Statistics);
             });
         }
-
         private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
             if (bitmapSource == null) return;
 
-            await Task.Run(() => {
-                PlotModel histogramModel = new();
+            HistogramComputationResult result = await histogramCoordinator.BuildHistogramAsync(bitmapSource, isGray);
 
-                int[] redHistogram = new int[256];
-                int[] greenHistogram = new int[256];
-                int[] blueHistogram = new int[256];
-
-                // Обработка изображения и заполнение гистограммы
-                histogramService.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
-
-                // Calculate combined histogram for statistics
-                int[] combinedHistogram = new int[256];
-                for (int i = 0; i < 256; i++) {
-                    combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
-                }
-
-                // Calculate statistics
-                var stats = histogramService.CalculateStatistics(combinedHistogram);
-
-                if (!isGray) {
-                    histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
-                    histogramService.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
-                    histogramService.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
-                } else {
-                    histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
-                }
-
-                histogramModel.Axes.Add(new LinearAxis {
-                    Position = AxisPosition.Bottom,
-                    IsAxisVisible = false,
-                    AxislineThickness = 0.5,
-                    MajorGridlineThickness = 0.5,
-                    MinorGridlineThickness = 0.5
-                });
-                histogramModel.Axes.Add(new LinearAxis {
-                    Position = AxisPosition.Left,
-                    IsAxisVisible = false,
-                    AxislineThickness = 0.5,
-                    MajorGridlineThickness = 0.5,
-                    MinorGridlineThickness = 0.5
-                });
-
-                Dispatcher.Invoke(() => {
-                    HistogramPlotView.Model = histogramModel;
-                    UpdateHistogramStatisticsUI(stats);
-                });
+            Dispatcher.Invoke(() => {
+                HistogramPlotView.Model = result.Model;
+                UpdateHistogramStatisticsUI(result.Statistics);
             });
         }
-
-        private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
+private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
             HistogramMinTextBlock.Text = $"{stats.Min:F0}";
             HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
             HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
@@ -1093,3 +1001,6 @@ namespace AssetProcessor {
 
     }
 }
+
+
+

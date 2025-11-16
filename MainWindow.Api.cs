@@ -1,4 +1,4 @@
-using AssetProcessor.Helpers;
+﻿using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -48,8 +48,9 @@ namespace AssetProcessor {
                 await viewModel.SyncProjectCommand.ExecuteAsync(cancellationToken);
 
                 if (!string.IsNullOrEmpty(viewModel.CurrentProjectName)) {
-                    projectName = viewModel.CurrentProjectName;
-                    projectFolderPath = Path.Combine(AppSettings.Default.ProjectsFolderPath, projectName);
+                    projectSelectionService.UpdateProjectPath(
+                        AppSettings.Default.ProjectsFolderPath,
+                        new KeyValuePair<string, string>(string.Empty, viewModel.CurrentProjectName));
                 }
 
                 if (viewModel.FolderPaths != null) {
@@ -432,11 +433,11 @@ namespace AssetProcessor {
             try {
                 logService.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
 
-                if (String.IsNullOrEmpty(projectFolderPath) || String.IsNullOrEmpty(projectName)) {
+                if (String.IsNullOrEmpty(ProjectFolderPath) || String.IsNullOrEmpty(ProjectName)) {
                     throw new Exception("Project folder path or name is null or empty");
                 }
 
-                string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
+                string jsonFilePath = Path.Combine(ProjectFolderPath!, "assets_list.json");
                 if (File.Exists(jsonFilePath)) {
                     logService.LogInfo($"Loading from JSON file: {jsonFilePath}");
                     string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
@@ -509,7 +510,7 @@ namespace AssetProcessor {
         /// Эти текстуры не являются частью PlayCanvas проекта, но хранятся локально
         /// </summary>
         private async Task DetectAndLoadORMTextures() {
-            if (string.IsNullOrEmpty(projectFolderPath) || !Directory.Exists(projectFolderPath)) {
+            if (string.IsNullOrEmpty(ProjectFolderPath) || !Directory.Exists(ProjectFolderPath)) {
                 return;
             }
 
@@ -517,7 +518,7 @@ namespace AssetProcessor {
 
             try {
                 // Сканируем все .ktx2 файлы рекурсивно
-                var ktx2Files = Directory.GetFiles(projectFolderPath, "*.ktx2", SearchOption.AllDirectories);
+                var ktx2Files = Directory.GetFiles(ProjectFolderPath!, "*.ktx2", SearchOption.AllDirectories);
 
                 int ormCount = 0;
 
@@ -616,3 +617,5 @@ namespace AssetProcessor {
         }
     }
 }
+
+

@@ -58,10 +58,13 @@ namespace AssetProcessor {
             services.AddSingleton<IFileSystem, FileSystem>();
             services.AddSingleton<ILogService, LogService>();
             services.AddSingleton<IHistogramService, HistogramService>();
+            services.AddSingleton<IHistogramCoordinator, HistogramCoordinator>();
             services.AddSingleton<ITextureChannelService, TextureChannelService>();
             services.AddSingleton<IDownloadService, DownloadService>();
             services.AddSingleton<ILocalCacheService, LocalCacheService>();
             services.AddSingleton<ITextureProcessingService, TextureProcessingService>();
+            services.AddSingleton<ITexturePreviewService, TexturePreviewService>();
+            services.AddSingleton<IProjectSelectionService, ProjectSelectionService>();
             services.AddSingleton<IProjectSyncService, ProjectSyncService>();
             services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(
                 sp.GetRequiredService<IProjectSyncService>(),

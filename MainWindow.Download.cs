@@ -1,4 +1,4 @@
-using AssetProcessor.Helpers;
+﻿using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -58,3 +58,5 @@ namespace AssetProcessor {
 
     }
 }
+
+

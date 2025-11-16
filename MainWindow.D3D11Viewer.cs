@@ -1,4 +1,4 @@
-using AssetProcessor.Helpers;
+﻿using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -49,12 +49,12 @@ namespace AssetProcessor {
 
             // Apply UseD3D11Preview setting on startup
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
-            SwitchPreviewRenderer(useD3D11);
+            _ = SwitchPreviewRendererAsync(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
         }
 
         private void OnD3D11Rendering(object? sender, EventArgs e) {
-            if (isD3D11RenderLoopEnabled) {
+            if (texturePreviewService.IsD3D11RenderLoopEnabled) {
                 D3D11TextureViewer?.RenderFrame();
             }
         }
@@ -67,7 +67,7 @@ namespace AssetProcessor {
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
         // CRITICAL: e.GetPosition() is also buggy for HwndHost! Use Mouse.GetPosition()!
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (!isUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
+            if (!texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
                 return; // Let event bubble for scrolling
             }
             D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
@@ -102,7 +102,7 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (!isUsingD3D11Renderer) {
+            if (!texturePreviewService.IsUsingD3D11Renderer) {
                 return;
             }
 
@@ -145,7 +145,7 @@ namespace AssetProcessor {
             }
 
             // Save current selected texture path to check if it's still valid after loading
-            string? texturePathAtStart = currentSelectedTexture?.Path;
+            string? texturePathAtStart = texturePreviewService.CurrentSelectedTexture?.Path;
             bool semaphoreEntered = false;
             bool renderLoopDisabled = false;
 
@@ -160,7 +160,7 @@ namespace AssetProcessor {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Temporarily disable render loop to avoid deadlock
-                isD3D11RenderLoopEnabled = false;
+                texturePreviewService.IsD3D11RenderLoopEnabled = false;
                 renderLoopDisabled = true;
                 logger.Info("Render loop disabled");
 
@@ -230,8 +230,8 @@ namespace AssetProcessor {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     // Check if texture is still valid (user might have switched textures)
-                    if (texturePathAtStart != null && currentSelectedTexture?.Path != texturePathAtStart) {
-                        logger.Info($"Texture was switched during loading (from {texturePathAtStart} to {currentSelectedTexture?.Path}), ignoring result");
+                    if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
+                        logger.Info($"Texture was switched during loading (from {texturePathAtStart} to {texturePreviewService.CurrentSelectedTexture?.Path}), ignoring result");
                         return;
                     }
 
@@ -266,18 +266,18 @@ namespace AssetProcessor {
                 }
 
                 if (renderLoopDisabled) {
-                    isD3D11RenderLoopEnabled = true;
+                    texturePreviewService.IsD3D11RenderLoopEnabled = true;
                     logger.Info("Render loop re-enabled");
                 }
 
                 // Force immediate render to update viewport with current zoom/pan (only if not cancelled and texture is still valid)
                 if (!cancellationToken.IsCancellationRequested &&
-                    (texturePathAtStart == null || currentSelectedTexture?.Path == texturePathAtStart)) {
+                    (texturePathAtStart == null || texturePreviewService.CurrentSelectedTexture?.Path == texturePathAtStart)) {
                     await Dispatcher.InvokeAsync(() => {
                         D3D11TextureViewer?.Renderer?.Render();
                         logger.Info("Forced render to apply current zoom/pan");
                     }, System.Windows.Threading.DispatcherPriority.Normal);
-                } else if (texturePathAtStart != null && currentSelectedTexture?.Path != texturePathAtStart) {
+                } else if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
                     logger.Info("Skipping render - texture was switched during loading");
                 }
 
@@ -412,13 +412,13 @@ namespace AssetProcessor {
                     if (textureData.NormalLayoutMetadata != null) {
                         shouldAutoEnableNormal = true;
                         autoEnableReason = $"KTX2 normal map with metadata (layout: {textureData.NormalLayoutMetadata.Layout})";
-                    } else if (currentSelectedTexture?.TextureType?.ToLower() == "normal") {
+                    } else if (texturePreviewService.CurrentSelectedTexture?.TextureType?.ToLower() == "normal") {
                         shouldAutoEnableNormal = true;
                         autoEnableReason = "KTX2 normal map detected by TextureType (no metadata)";
                     }
 
                     if (shouldAutoEnableNormal && D3D11TextureViewer?.Renderer != null) {
-                        currentActiveChannelMask = "Normal";
+                        texturePreviewService.CurrentActiveChannelMask = "Normal";
                         D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
                         D3D11TextureViewer.Renderer.Render();
                         UpdateChannelButtonsState(); // Sync button UI
@@ -451,7 +451,7 @@ namespace AssetProcessor {
             // Note: NOT resetting zoom/pan to preserve user's viewport between textures
 
             // Reset channel masks when clearing viewer (switching textures)
-            currentActiveChannelMask = null;
+            texturePreviewService.CurrentActiveChannelMask = null;
             if (D3D11TextureViewer?.Renderer != null) {
                 D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
                 D3D11TextureViewer.Renderer.RestoreOriginalGamma();
@@ -488,3 +488,5 @@ namespace AssetProcessor {
         }
     }
 }
+
+

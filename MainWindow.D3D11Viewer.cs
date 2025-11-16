@@ -4,9 +4,6 @@ using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
-using Assimp;
-using HelixToolkit.Wpf;
-using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
@@ -26,7 +23,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs for GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -64,7 +61,7 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer
         // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // CRITICAL: e.GetPosition() ТОЖЕ БАГОВАННЫЙ для HwndHost! Используем Mouse.GetPosition()!
+        // CRITICAL: e.GetPosition() is also buggy for HwndHost! Use Mouse.GetPosition()!
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             if (!isUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
                 return; // Let event bubble for scrolling
@@ -78,7 +75,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            // Устанавливаем фокус на viewport для получения событий клавиатуры
+            // Set focus on viewport to receive keyboard events
             TexturePreviewViewport.Focus();
         }
 
@@ -147,22 +144,22 @@ namespace AssetProcessor {
             logger.Info("Render loop disabled");
 
             try {
-                // Выполняем тяжелые операции (конвертация формата и копирование пикселей) в фоновом потоке
+                // Perform heavy operations (format conversion and pixel copying) in background thread
                 int width = bitmap.PixelWidth;
                 int height = bitmap.PixelHeight;
                 int stride = width * 4; // RGBA8
                 byte[] pixels = new byte[stride * height];
 
-                // Freeze bitmap для безопасного доступа из другого потока
+                // Freeze bitmap for safe access from another thread
                 if (!bitmap.IsFrozen) {
                     bitmap.Freeze();
                 }
 
-                // Конвертация и копирование пикселей в фоновом потоке
+                // Convert and copy pixels in background thread
                 await Task.Run(() => {
                     // Convert to BGRA32 (which is actually RGBA in memory)
                     var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
-                    convertedBitmap.Freeze(); // Freeze для безопасного доступа
+                    convertedBitmap.Freeze(); // Freeze for safe access
                     convertedBitmap.CopyPixels(pixels, stride, 0);
                 });
 
@@ -174,7 +171,7 @@ namespace AssetProcessor {
                     RowPitch = stride
                 };
 
-                // For PNG viewModel.Textures, always load as non-sRGB format (R8G8B8A8_UNorm)
+                // For PNG textures, always load as non-sRGB format (R8G8B8A8_UNorm)
                 // This preserves raw byte values for accurate channel visualization
                 // IsSRGB field indicates whether PNG *contains* sRGB data (not GPU format)
                 var textureData = new TextureData {
@@ -189,11 +186,11 @@ namespace AssetProcessor {
 
                 logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
 
-                // Даем UI потоку возможность обработать другие сообщения перед тяжелой операцией
+                // Allow UI thread to process other messages before heavy operation
                 await Task.Yield();
 
-                // LoadTexture должен быть вызван в UI потоке (требует D3D11 контекст)
-                // Используем Background приоритет, чтобы не блокировать другие UI операции
+                // LoadTexture must be called in UI thread (requires D3D11 context)
+                // Use Background priority to avoid blocking other UI operations
                 await Dispatcher.InvokeAsync(() => {
                     if (D3D11TextureViewer?.Renderer == null) {
                         logger.Error("D3D11TextureViewer.Renderer is null!");
@@ -231,10 +228,10 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Синхронная обертка для обратной совместимости (вызывает асинхронный метод).
+        /// Synchronous wrapper for backward compatibility (calls async method).
         /// </summary>
         private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
-            // Запускаем асинхронную загрузку без ожидания, чтобы не блокировать вызывающий поток
+            // Start async load without waiting to avoid blocking calling thread
             _ = Task.Run(async () => {
                 try {
                     await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB);
@@ -244,11 +241,11 @@ namespace AssetProcessor {
             });
         }
 
-        private int _isLoadingKtx2 = 0; // 0 = false, 1 = true (используем int для Interlocked)
-        private string? _currentLoadingKtx2Path = null; // Путь к загружаемому файлу
+        private int _isLoadingKtx2 = 0; // 0 = false, 1 = true (use int for Interlocked)
+        private string? _currentLoadingKtx2Path = null; // Path to file being loaded
 
         /// <summary>
-        /// Проверяет, загружается ли уже KTX2 файл (любой или конкретный).
+        /// Checks if KTX2 file is already loading (any or specific).
         /// </summary>
         private bool IsKtx2Loading(string? ktxPath = null) {
             int isLoading = Volatile.Read(ref _isLoadingKtx2);
@@ -256,13 +253,13 @@ namespace AssetProcessor {
                 return false;
             }
 
-            // Если указан конкретный путь, проверяем, не тот ли это файл
+            // If specific path is provided, check if it's the same file
             if (ktxPath != null) {
                 string? currentPath = Volatile.Read(ref _currentLoadingKtx2Path);
                 return string.Equals(currentPath, ktxPath, StringComparison.OrdinalIgnoreCase);
             }
 
-            // Если путь не указан, просто проверяем, идет ли загрузка любого файла
+            // If path is not provided, just check if any file is loading
             return true;
         }
 
@@ -275,29 +272,29 @@ namespace AssetProcessor {
                 return false;
             }
 
-            // Атомарная проверка и установка флага для защиты от повторной загрузки
-            // Используем CompareExchange для атомарной проверки и установки, чтобы избежать TOCTOU
-            // Пытаемся установить флаг в 1, если он был 0 (атомарная операция)
+            // Atomic check and set flag to prevent duplicate loading
+            // Use CompareExchange for atomic check and set to avoid TOCTOU
+            // Try to set flag to 1 if it was 0 (atomic operation)
             int wasLoadingBefore = Interlocked.CompareExchange(ref _isLoadingKtx2, 1, 0);
             
-            // Флаг, указывающий, действительно ли мы начали загрузку
-            // Это нужно для правильного сброса флагов в finally блоке
+            // Flag indicating if we actually started loading
+            // This is needed for proper flag reset in finally block
             bool loadStarted = false;
             
             if (wasLoadingBefore != 0) {
-                // Уже идет загрузка - проверяем путь для более информативного сообщения
+                // Already loading - check path for more informative message
                 string? currentPath = Volatile.Read(ref _currentLoadingKtx2Path);
                 if (currentPath != null && string.Equals(currentPath, ktxPath, StringComparison.OrdinalIgnoreCase)) {
                     logger.Warn($"KTX2 file already loading: {ktxPath}, skipping duplicate load");
                 } else {
                     logger.Warn($"Another KTX2 file is loading: {currentPath}, skipping load of: {ktxPath}");
                 }
-                // Важно: не сбрасываем флаг, так как другой поток его установил и должен сбросить
+                // Important: do not reset flag, as another thread set it and should reset it
                 return false;
             }
 
-            // Успешно установили флаг загрузки атомарно - устанавливаем путь и флаг начала загрузки
-            // Установка пути не требует атомарности, так как флаг уже защищает от одновременного доступа
+            // Successfully set loading flag atomically - set path and loading start flag
+            // Path setting doesn't require atomicity, as flag already protects from concurrent access
             Interlocked.Exchange(ref _currentLoadingKtx2Path, ktxPath);
             loadStarted = true;
 
@@ -354,9 +351,9 @@ namespace AssetProcessor {
                 logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");
                 return false;
             } finally {
-                // Атомарно сбрасываем флаг только если мы действительно начали загрузку
-                // Если мы вернулись раньше из-за обнаружения race condition, флаги уже восстановлены
-                // и не должны быть сброшены здесь, иначе это позволит другим потокам обойти защиту
+                // Atomically reset flag only if we actually started loading
+                // If we returned earlier due to race condition detection, flags are already restored
+                // and should not be reset here, otherwise it will allow other threads to bypass protection
                 if (loadStarted) {
                     Interlocked.Exchange(ref _isLoadingKtx2, 0);
                     Interlocked.Exchange(ref _currentLoadingKtx2Path, null);
@@ -371,7 +368,7 @@ namespace AssetProcessor {
             // D3D11TextureRenderer doesn't have a Clear method
             // Note: NOT resetting zoom/pan to preserve user's viewport between textures
 
-            // Reset channel masks when clearing viewer (switching viewModel.Textures)
+            // Reset channel masks when clearing viewer (switching textures)
             currentActiveChannelMask = null;
             if (D3D11TextureViewer?.Renderer != null) {
                 D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);

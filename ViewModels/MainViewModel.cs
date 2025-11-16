@@ -145,8 +145,8 @@ namespace AssetProcessor.ViewModels {
             try {
                 return AppSettings.Default.GetDecryptedPlaycanvasApiKey();
             } catch (CryptographicException ex) {
-                logger.Error(ex, "Не удалось расшифровать Playcanvas API key из настроек.");
-                StatusMessage = "Ошибка безопасности: проверьте мастер-пароль.";
+                logger.Error(ex, "Failed to decrypt Playcanvas API key from settings.");
+                StatusMessage = "Security error: check master password.";
                 return null;
             }
         }
@@ -435,7 +435,7 @@ namespace AssetProcessor.ViewModels {
         }
 
         /// <summary>
-        /// Фильтрует текстуры на основе выбранного материала
+        /// Filters textures based on selected material
         /// </summary>
         private void FilterTexturesForMaterial(MaterialResource? material) {
             if (material == null) {
@@ -445,7 +445,7 @@ namespace AssetProcessor.ViewModels {
 
             var materialTextureIds = new List<int>();
 
-            // Собираем все ID текстур, используемых в материале
+            // Collect all texture IDs used in the material
             if (material.DiffuseMapId.HasValue) materialTextureIds.Add(material.DiffuseMapId.Value);
             if (material.SpecularMapId.HasValue) materialTextureIds.Add(material.SpecularMapId.Value);
             if (material.NormalMapId.HasValue) materialTextureIds.Add(material.NormalMapId.Value);
@@ -455,7 +455,7 @@ namespace AssetProcessor.ViewModels {
             if (material.AOMapId.HasValue) materialTextureIds.Add(material.AOMapId.Value);
             if (material.OpacityMapId.HasValue) materialTextureIds.Add(material.OpacityMapId.Value);
 
-            // Фильтруем текстуры
+            // Filter textures
             var filtered = Textures.Where(t => materialTextureIds.Contains(t.ID)).ToList();
             
             FilteredTextures.Clear();
@@ -467,7 +467,7 @@ namespace AssetProcessor.ViewModels {
         }
 
         /// <summary>
-        /// Обновляет фильтрацию текстур при изменении выбранного материала
+        /// Updates texture filtering when selected material changes
         /// </summary>
         partial void OnSelectedMaterialChanged(MaterialResource? value) {
             FilterTexturesForMaterial(value);
@@ -488,7 +488,7 @@ namespace AssetProcessor.ViewModels {
             }
 
             if (ConversionSettingsProvider == null) {
-                StatusMessage = "Панель настроек конвертации недоступна.";
+                StatusMessage = "Conversion settings panel is not available.";
                 return;
             }
 
@@ -498,13 +498,13 @@ namespace AssetProcessor.ViewModels {
                     ?? new List<TextureResource>();
 
             if (texturesToProcess.Count == 0) {
-                StatusMessage = "Нет текстур для обработки.";
+                StatusMessage = "No textures to process.";
                 return;
             }
 
             try {
                 IsTextureProcessing = true;
-                StatusMessage = $"Конвертация {texturesToProcess.Count} текстур...";
+                StatusMessage = $"Converting {texturesToProcess.Count} textures...";
 
                 var result = await textureProcessingService.ProcessTexturesAsync(new TextureProcessingRequest {
                     Textures = texturesToProcess,
@@ -512,13 +512,13 @@ namespace AssetProcessor.ViewModels {
                     SelectedTexture = SelectedTexture
                 }, CancellationToken.None);
 
-                StatusMessage = $"Конвертация завершена. Успехов: {result.SuccessCount}, ошибок: {result.ErrorCount}.";
+                StatusMessage = $"Conversion completed. Success: {result.SuccessCount}, errors: {result.ErrorCount}.";
                 TextureProcessingCompleted?.Invoke(this, new TextureProcessingCompletedEventArgs(result));
             } catch (OperationCanceledException) {
-                StatusMessage = "Конвертация отменена.";
+                StatusMessage = "Conversion cancelled.";
             } catch (Exception ex) {
-                StatusMessage = $"Ошибка конвертации: {ex.Message}";
-                logger.Error(ex, "Ошибка при обработке текстур");
+                StatusMessage = $"Conversion error: {ex.Message}";
+                logger.Error(ex, "Error processing textures");
             } finally {
                 IsTextureProcessing = false;
             }
@@ -543,7 +543,7 @@ namespace AssetProcessor.ViewModels {
         [RelayCommand]
         private void AutoDetectPresets(IList? selectedItems) {
             if (ConversionSettingsProvider == null) {
-                StatusMessage = "Панель настроек конвертации недоступна.";
+                StatusMessage = "Conversion settings panel is not available.";
                 return;
             }
 
@@ -552,12 +552,12 @@ namespace AssetProcessor.ViewModels {
                 : selectedItems?.OfType<TextureResource>().ToList() ?? new List<TextureResource>();
 
             if (texturesToProcess.Count == 0) {
-                StatusMessage = "Нет текстур для автоопределения.";
+                StatusMessage = "No textures for auto-detection.";
                 return;
             }
 
             var result = textureProcessingService.AutoDetectPresets(texturesToProcess, ConversionSettingsProvider);
-            StatusMessage = $"Auto-detect: найдено {result.MatchedCount}, не найдено {result.NotMatchedCount}.";
+            StatusMessage = $"Auto-detect: found {result.MatchedCount}, not found {result.NotMatchedCount}.";
         }
 
         [RelayCommand]
@@ -572,7 +572,7 @@ namespace AssetProcessor.ViewModels {
                     TexturePreviewLoaded?.Invoke(this, new TexturePreviewLoadedEventArgs(texture, preview));
                 }
             } catch (Exception ex) {
-                logger.Warn(ex, "Не удалось загрузить превью KTX2");
+                logger.Warn(ex, "Failed to load KTX2 preview");
             }
         }
     }

@@ -60,7 +60,7 @@ public class MainViewModelTests {
         Assert.True(service.Called);
         Assert.NotNull(capturedResult);
         Assert.Equal(1, capturedResult!.SuccessCount);
-        Assert.Equal("Конвертация завершена. Успехов: 1, ошибок: 0.", viewModel.StatusMessage);
+        Assert.Equal("Conversion completed. Success: 1, errors: 0.", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class MainViewModelTests {
 
         viewModel.AutoDetectPresetsCommand.Execute(selection);
 
-        Assert.Equal("Auto-detect: найдено 1, не найдено 0.", viewModel.StatusMessage);
+        Assert.Equal("Auto-detect: found 1, not found 0.", viewModel.StatusMessage);
         Assert.Equal(1, service.AutoDetectCallCount);
         Assert.Single(service.LastAutoDetectTextures!);
         Assert.Equal(viewModel.Textures[0], service.LastAutoDetectTextures![0]);

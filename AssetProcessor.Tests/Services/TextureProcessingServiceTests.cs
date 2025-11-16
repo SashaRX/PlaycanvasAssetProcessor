@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using System.IO.Abstractions.TestingHelpers;
 using Xunit;
 
+using ConversionResult = AssetProcessor.TextureConversion.Pipeline.ConversionResult;
+
 namespace AssetProcessor.Tests.Services;
 
 public class TextureProcessingServiceTests {
@@ -28,7 +30,7 @@ public class TextureProcessingServiceTests {
 
             var pipeline = new FakePipeline((input, output) => {
                 File.WriteAllBytes(output, new byte[] { 0x5, 0x6, 0x7, 0x8 });
-                return new TextureConversion.Pipeline.ConversionResult {
+                return new ConversionResult {
                     Success = true,
                     OutputPath = output,
                     MipLevels = 4,
@@ -103,7 +105,7 @@ public class TextureProcessingServiceTests {
             var texture = new TextureResource { Name = "brick_albedo.png", Path = sourcePath };
             var pipeline = new FakePipeline((_, output) => {
                 File.WriteAllBytes(output, new byte[] { 0x4, 0x5, 0x6 });
-                return new TextureConversion.Pipeline.ConversionResult {
+                return new ConversionResult {
                     Success = true,
                     OutputPath = output,
                     MipLevels = 1,
@@ -139,7 +141,7 @@ public class TextureProcessingServiceTests {
                 capturedOutput = output;
                 Directory.CreateDirectory(Path.GetDirectoryName(output)!);
                 File.WriteAllBytes(output, new byte[] { 0x7, 0x8 });
-                return new TextureConversion.Pipeline.ConversionResult {
+                return new ConversionResult {
                     Success = true,
                     OutputPath = output,
                     MipLevels = 2,
@@ -188,21 +190,21 @@ public class TextureProcessingServiceTests {
         public ITextureConversionPipeline Create(string ktxExecutablePath) => pipeline;
     }
 
-    private sealed class FakePipeline : ITextureConversionPipeline {
-        private readonly Func<string, string, TextureConversion.Pipeline.ConversionResult> converter;
+        private sealed class FakePipeline : ITextureConversionPipeline {
+            private readonly Func<string, string, ConversionResult> converter;
 
-        public FakePipeline(Func<string, string, TextureConversion.Pipeline.ConversionResult> converter) {
-            this.converter = converter;
-        }
+            public FakePipeline(Func<string, string, ConversionResult> converter) {
+                this.converter = converter;
+            }
 
-        public Task<TextureConversion.Pipeline.ConversionResult> ConvertTextureAsync(
-            string sourcePath,
-            string outputPath,
-            MipGenerationProfile mipProfile,
-            CompressionSettings compressionSettings,
-            ToksvigSettings toksvigSettings,
-            bool saveSeparateMipmaps,
-            string? mipmapOutputDirectory) =>
+            public Task<ConversionResult> ConvertTextureAsync(
+                string sourcePath,
+                string outputPath,
+                MipGenerationProfile mipProfile,
+                CompressionSettings compressionSettings,
+                ToksvigSettings toksvigSettings,
+                bool saveSeparateMipmaps,
+                string? mipmapOutputDirectory) =>
             Task.FromResult(converter(sourcePath, outputPath));
     }
 

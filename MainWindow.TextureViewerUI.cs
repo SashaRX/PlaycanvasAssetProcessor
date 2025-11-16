@@ -70,7 +70,7 @@ namespace AssetProcessor {
                     }
                 } else {
                     // Сбрасываем фильтр, если кнопка была отжата
-                    ShowOriginalImage();
+                    HandleChannelMaskCleared();
                 }
             }
         }
@@ -89,6 +89,31 @@ namespace AssetProcessor {
             } finally {
                 isUpdatingChannelButtons = false;
             }
+        }
+
+        /// <summary>
+        /// Clears active channel mask without forcing texture reloads in D3D11 mode.
+        /// </summary>
+        private void HandleChannelMaskCleared() {
+            currentActiveChannelMask = null;
+            UpdateChannelButtonsState();
+
+            if (isUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
+                D3D11TextureViewer.Renderer.RestoreOriginalGamma();
+                D3D11TextureViewer.Renderer.Render();
+                logger.Info("Cleared D3D11 channel mask without reloading texture");
+
+                // Refresh histogram using best available bitmap reference
+                BitmapSource? histogramSource = originalBitmapSource ?? originalFileBitmapSource;
+                if (histogramSource != null) {
+                    UpdateHistogram(histogramSource);
+                }
+
+                return;
+            }
+
+            ShowOriginalImage();
         }
 
         private void FitResetButton_Click(object sender, RoutedEventArgs e) {
@@ -170,6 +195,7 @@ namespace AssetProcessor {
         }
 
         private void ResetPreviewState() {
+            CancelPendingD3DPreviewLoad();
             // Zoom/pan state now handled by D3D11TextureViewerControl
             isKtxPreviewActive = false;
             currentMipLevel = 0;

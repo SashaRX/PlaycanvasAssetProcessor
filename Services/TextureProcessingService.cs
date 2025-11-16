@@ -131,8 +131,9 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                 }
 
                 if (string.IsNullOrEmpty(texture.PresetName) || texture.PresetName == "(Auto)") {
+                    var providerPreset = request.SettingsProvider.PresetName;
                     var matchedPreset = CachedPresetManager.FindPresetByFileName(texture.Name ?? string.Empty);
-                    texture.PresetName = matchedPreset?.Name ?? request.SettingsProvider.PresetName ?? "(Custom)";
+                    texture.PresetName = providerPreset ?? matchedPreset?.Name ?? "(Custom)";
                 }
 
                 await Task.Delay(TimeSpan.FromMilliseconds(300), cancellationToken);
@@ -370,10 +371,9 @@ public sealed class TextureProcessingService : ITextureProcessingService {
             return null;
         }
 
-        var configuredDirectory = settings?.DefaultOutputDirectory;
-        if (string.IsNullOrWhiteSpace(configuredDirectory)) {
-            return null;
-        }
+        var configuredDirectory = string.IsNullOrWhiteSpace(settings?.DefaultOutputDirectory)
+            ? TextureConversionSettingsManager.CreateDefaultSettings().DefaultOutputDirectory
+            : settings!.DefaultOutputDirectory;
 
         var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

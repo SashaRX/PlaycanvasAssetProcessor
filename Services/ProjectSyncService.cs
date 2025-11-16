@@ -48,6 +48,7 @@ public sealed class ProjectSyncService : IProjectSyncService {
         IReadOnlyDictionary<int, string> folderPaths = BuildFolderHierarchyFromAssets(assetsJson);
 
         string projectFolderPath = Path.Combine(request.ProjectsRoot, request.ProjectName);
+        projectFolderPath = projectFolderPath.Replace('\\', '/');
         await localCacheService.SaveAssetsListAsync(assetsJson, projectFolderPath, cancellationToken).ConfigureAwait(false);
 
         progress?.Report(new ProjectSyncProgress(ProjectSyncStage.Completed, summaries.Count, summaries.Count));

@@ -221,7 +221,7 @@ public class MainWindowD3D11ViewerTests {
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => {
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => {
             await semaphore.WaitAsync(cts.Token);
         });
 

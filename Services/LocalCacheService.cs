@@ -127,14 +127,16 @@ public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem
                     fileSystem.Directory.CreateDirectory(directoryPath);
                 }
 
-                await using Stream fileStream = await OpenFileStreamWithRetryAsync(resource.Path, cancellationToken).ConfigureAwait(false);
-
-                int bytesRead;
-                while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0) {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
-                    if (totalBytes > 0) {
-                        resource.DownloadProgress = Math.Round((double)fileStream.Position / totalBytes * 100, 2);
+                await using (Stream fileStream = await OpenFileStreamWithRetryAsync(resource.Path, cancellationToken).ConfigureAwait(false)) {
+                    int bytesRead;
+                    while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0) {
+                        await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                        if (totalBytes > 0) {
+                            resource.DownloadProgress = Math.Round((double)fileStream.Position / totalBytes * 100, 2);
+                        }
                     }
+
+                    await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 if (!fileSystem.File.Exists(resource.Path)) {

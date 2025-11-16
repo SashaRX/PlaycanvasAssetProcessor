@@ -124,7 +124,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Loads texture data into the D3D11 viewer.
         /// </summary>
-        private async Task LoadTextureToD3D11ViewerAsync(BitmapSource bitmap, bool isSRGB) {
+        private async Task LoadTextureToD3D11ViewerAsync(BitmapSource bitmap, bool isSRGB, CancellationToken cancellationToken = default) {
             logger.Info($"LoadTextureToD3D11Viewer called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}, isSRGB={isSRGB}");
 
             if (bitmap == null) {
@@ -137,13 +137,48 @@ namespace AssetProcessor {
                 return;
             }
 
-            logger.Info("D3D11TextureViewer and Renderer are not null, proceeding...");
+            // Save current selected texture path to check if it's still valid after loading
+            string? texturePathAtStart = currentSelectedTexture?.Path;
 
-            // Temporarily disable render loop to avoid deadlock
-            isD3D11RenderLoopEnabled = false;
-            logger.Info("Render loop disabled");
+            // Atomic check and set flag to prevent duplicate loading
+            int wasLoadingBefore = Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
+            bool loadStarted = false;
+
+            if (wasLoadingBefore != 0) {
+                logger.Warn("Texture loading already in progress, waiting for previous load to complete (max 500ms)");
+                // Wait for previous load to complete, but with a timeout
+                // If previous load takes too long, we'll proceed anyway (it will be ignored
+                // Use Task.Delay without cancellation token to avoid hanging
+                int waitCount = 0;
+                const int maxWaitCount = 10; // 10 * 50ms = 500ms max wait
+                while (Volatile.Read(ref _isLoadingTexture) == 1 && waitCount < maxWaitCount) {
+                    await Task.Delay(50); // Don't use cancellationToken here to avoid hanging
+                    waitCount++;
+                }
+                
+                if (Volatile.Read(ref _isLoadingTexture) == 1) {
+                    logger.Warn("Previous texture load is taking too long, proceeding with new load anyway (previous result will be ignored)");
+                    // Previous load is stuck - we'll proceed and ignore its result
+                    // Flag is already set to 1, so we can proceed
+                } else {
+                    logger.Info("Previous texture load completed, proceeding with new load");
+                    // Try to set flag again (in case it was reset between check and now)
+                    Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
+                }
+            }
+
+            loadStarted = true;
 
             try {
+                logger.Info("D3D11TextureViewer and Renderer are not null, proceeding...");
+
+                // Check cancellation before starting
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Temporarily disable render loop to avoid deadlock
+                isD3D11RenderLoopEnabled = false;
+                logger.Info("Render loop disabled");
+
                 // Perform heavy operations (format conversion and pixel copying) in background thread
                 int width = bitmap.PixelWidth;
                 int height = bitmap.PixelHeight;
@@ -156,12 +191,20 @@ namespace AssetProcessor {
                 }
 
                 // Convert and copy pixels in background thread
+                logger.Info("Starting pixel conversion in background thread...");
                 await Task.Run(() => {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    logger.Info("Converting bitmap to BGRA32 format...");
                     // Convert to BGRA32 (which is actually RGBA in memory)
                     var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
                     convertedBitmap.Freeze(); // Freeze for safe access
+                    logger.Info("Copying pixels from bitmap...");
                     convertedBitmap.CopyPixels(pixels, stride, 0);
-                });
+                    logger.Info("Pixel conversion completed");
+                }, cancellationToken);
+
+                logger.Info("Pixel conversion task completed, checking cancellation...");
+                cancellationToken.ThrowIfCancellationRequested();
 
                 var mipLevel = new MipLevel {
                     Level = 0,
@@ -187,11 +230,26 @@ namespace AssetProcessor {
                 logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
 
                 // Allow UI thread to process other messages before heavy operation
+                logger.Info("Yielding to UI thread...");
                 await Task.Yield();
 
+                logger.Info("Checking cancellation before Dispatcher.InvokeAsync...");
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // LoadTexture must be called in UI thread (requires D3D11 context)
-                // Use Background priority to avoid blocking other UI operations
+                // Use Normal priority instead of Background to avoid hanging when UI thread is busy
+                // Background priority can be delayed indefinitely if UI thread is processing higher priority messages
+                logger.Info("Invoking LoadTexture on UI thread with Normal priority...");
                 await Dispatcher.InvokeAsync(() => {
+                    logger.Info("Inside Dispatcher.InvokeAsync, checking cancellation...");
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Check if texture is still valid (user might have switched textures)
+                    if (texturePathAtStart != null && currentSelectedTexture?.Path != texturePathAtStart) {
+                        logger.Info($"Texture was switched during loading (from {texturePathAtStart} to {currentSelectedTexture?.Path}), ignoring result");
+                        return;
+                    }
+
                     if (D3D11TextureViewer?.Renderer == null) {
                         logger.Error("D3D11TextureViewer.Renderer is null!");
                         return;
@@ -209,21 +267,33 @@ namespace AssetProcessor {
 
                     // Update histogram correction button state (PNG has no metadata)
                     UpdateHistogramCorrectionButtonState();
-                }, System.Windows.Threading.DispatcherPriority.Background);
+                }, System.Windows.Threading.DispatcherPriority.Normal);
 
                 // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
+            } catch (OperationCanceledException) {
+                logger.Info("Texture loading was cancelled");
+                throw;
             } catch (Exception ex) {
                 logger.Error(ex, "Failed to load texture to D3D11 viewer");
             } finally {
+                if (loadStarted) {
+                    Interlocked.Exchange(ref _isLoadingTexture, 0);
+                }
+
                 // Re-enable render loop
                 isD3D11RenderLoopEnabled = true;
                 logger.Info("Render loop re-enabled");
 
-                // Force immediate render to update viewport with current zoom/pan
-                await Dispatcher.InvokeAsync(() => {
-                    D3D11TextureViewer?.Renderer?.Render();
-                    logger.Info("Forced render to apply current zoom/pan");
-                });
+                // Force immediate render to update viewport with current zoom/pan (only if not cancelled and texture is still valid)
+                if (!cancellationToken.IsCancellationRequested && 
+                    (texturePathAtStart == null || currentSelectedTexture?.Path == texturePathAtStart)) {
+                    await Dispatcher.InvokeAsync(() => {
+                        D3D11TextureViewer?.Renderer?.Render();
+                        logger.Info("Forced render to apply current zoom/pan");
+                    }, System.Windows.Threading.DispatcherPriority.Normal);
+                } else if (texturePathAtStart != null && currentSelectedTexture?.Path != texturePathAtStart) {
+                    logger.Info("Skipping render - texture was switched during loading");
+                }
             }
         }
 
@@ -231,18 +301,29 @@ namespace AssetProcessor {
         /// Synchronous wrapper for backward compatibility (calls async method).
         /// </summary>
         private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
+            // Don't use textureLoadCancellation here because it gets cancelled too early.
+            // Instead, we use CancellationToken.None and rely on the atomic flag _isLoadingTexture
+            // to prevent duplicate loads. Old loads will be ignored when new ones start.
+            CancellationToken cancellationToken = CancellationToken.None;
+
             // Start async load without waiting to avoid blocking calling thread
-            _ = Task.Run(async () => {
+            // Use Dispatcher.InvokeAsync instead of Task.Run to avoid deadlocks when UI thread is busy
+            // This ensures the async operation is scheduled on the UI thread's message queue
+            _ = Dispatcher.InvokeAsync(async () => {
                 try {
-                    await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB);
+                    await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB, cancellationToken);
+                } catch (OperationCanceledException) {
+                    logger.Info("Texture loading was cancelled (expected when switching textures)");
                 } catch (Exception ex) {
                     logger.Error(ex, "Error in async LoadTextureToD3D11Viewer");
                 }
-            });
+            }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private int _isLoadingKtx2 = 0; // 0 = false, 1 = true (use int for Interlocked)
         private string? _currentLoadingKtx2Path = null; // Path to file being loaded
+
+        // Note: _isLoadingTexture is defined in MainWindow.xaml.cs (line 3126)
 
         /// <summary>
         /// Checks if KTX2 file is already loading (any or specific).
@@ -261,6 +342,22 @@ namespace AssetProcessor {
 
             // If path is not provided, just check if any file is loading
             return true;
+        }
+
+        /// <summary>
+        /// Cancels any ongoing texture loading operation.
+        /// </summary>
+        private void CancelTextureLoading() {
+            // Use the existing textureLoadCancellation field from MainWindow.xaml.cs
+            var cts = textureLoadCancellation;
+            if (cts != null) {
+                try {
+                    cts.Cancel();
+                    logger.Info("Cancelled previous texture loading operation");
+                } catch (ObjectDisposedException) {
+                    // Already disposed, ignore
+                }
+            }
         }
 
         /// <summary>
@@ -365,6 +462,9 @@ namespace AssetProcessor {
         /// Clears the D3D11 viewer (equivalent to setting Image.Source = null).
         /// </summary>
         private void ClearD3D11Viewer() {
+            // Note: We don't cancel texture loading here because it happens too early.
+            // Cancellation is handled in LoadTextureToD3D11ViewerAsync when a new load starts.
+
             // D3D11TextureRenderer doesn't have a Clear method
             // Note: NOT resetting zoom/pan to preserve user's viewport between textures
 

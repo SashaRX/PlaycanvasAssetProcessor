@@ -40,6 +40,10 @@ using AssetProcessor.TextureViewer;
 
 namespace AssetProcessor {
     public partial class MainWindow {
+        private readonly SemaphoreSlim d3dTextureLoadSemaphore = new(1, 1);
+        private readonly object d3dPreviewCtsLock = new();
+        private CancellationTokenSource? d3dTexturePreviewCts;
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e) {
             logger.Info("MainWindow loaded - D3D11 viewer ready");
 
@@ -124,53 +128,32 @@ namespace AssetProcessor {
         /// <summary>
         /// Loads texture data into the D3D11 viewer.
         /// </summary>
-        private async Task LoadTextureToD3D11ViewerAsync(BitmapSource bitmap, bool isSRGB, CancellationToken cancellationToken = default) {
+        private async Task LoadTextureToD3D11ViewerAsync(BitmapSource bitmap, bool isSRGB, CancellationTokenSource loadCts) {
+            CancellationToken cancellationToken = loadCts.Token;
             logger.Info($"LoadTextureToD3D11Viewer called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}, isSRGB={isSRGB}");
 
             if (bitmap == null) {
                 logger.Warn("Bitmap is null");
+                CompleteD3DPreviewLoad(loadCts);
                 return;
             }
 
             if (D3D11TextureViewer?.Renderer == null) {
                 logger.Warn("D3D11 viewer or renderer is null");
+                CompleteD3DPreviewLoad(loadCts);
                 return;
             }
 
             // Save current selected texture path to check if it's still valid after loading
             string? texturePathAtStart = currentSelectedTexture?.Path;
-
-            // Atomic check and set flag to prevent duplicate loading
-            int wasLoadingBefore = Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
-            bool loadStarted = false;
-
-            if (wasLoadingBefore != 0) {
-                logger.Warn("Texture loading already in progress, waiting for previous load to complete (max 500ms)");
-                // Wait for previous load to complete, but with a timeout
-                // Use Task.Delay without cancellation token to avoid hanging
-                int waitCount = 0;
-                const int maxWaitCount = 10; // 10 * 50ms = 500ms max wait
-                while (Volatile.Read(ref _isLoadingTexture) == 1 && waitCount < maxWaitCount) {
-                    await Task.Delay(50); // Don't use cancellationToken here to avoid hanging
-                    waitCount++;
-                }
-                
-                // Try to acquire the lock after waiting
-                int acquiredLock = Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
-                if (acquiredLock != 0) {
-                    // Still cannot acquire lock - previous load is stuck or another load started
-                    // Skip this load to avoid race conditions and prevent hanging
-                    logger.Warn("Cannot acquire texture loading lock after waiting (previous load may be stuck), skipping this load to prevent race condition");
-                    return;
-                }
-                
-                logger.Info("Successfully acquired texture loading lock after waiting");
-            }
-
-            // Only set loadStarted to true if we successfully acquired the lock
-            loadStarted = true;
+            bool semaphoreEntered = false;
+            bool renderLoopDisabled = false;
 
             try {
+                logger.Info("Waiting for D3D11 texture preview semaphore...");
+                await d3dTextureLoadSemaphore.WaitAsync(cancellationToken);
+                semaphoreEntered = true;
+
                 logger.Info("D3D11TextureViewer and Renderer are not null, proceeding...");
 
                 // Check cancellation before starting
@@ -178,6 +161,7 @@ namespace AssetProcessor {
 
                 // Temporarily disable render loop to avoid deadlock
                 isD3D11RenderLoopEnabled = false;
+                renderLoopDisabled = true;
                 logger.Info("Render loop disabled");
 
                 // Perform heavy operations (format conversion and pixel copying) in background thread
@@ -277,16 +261,17 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 logger.Error(ex, "Failed to load texture to D3D11 viewer");
             } finally {
-                if (loadStarted) {
-                    Interlocked.Exchange(ref _isLoadingTexture, 0);
+                if (semaphoreEntered) {
+                    d3dTextureLoadSemaphore.Release();
                 }
 
-                // Re-enable render loop
-                isD3D11RenderLoopEnabled = true;
-                logger.Info("Render loop re-enabled");
+                if (renderLoopDisabled) {
+                    isD3D11RenderLoopEnabled = true;
+                    logger.Info("Render loop re-enabled");
+                }
 
                 // Force immediate render to update viewport with current zoom/pan (only if not cancelled and texture is still valid)
-                if (!cancellationToken.IsCancellationRequested && 
+                if (!cancellationToken.IsCancellationRequested &&
                     (texturePathAtStart == null || currentSelectedTexture?.Path == texturePathAtStart)) {
                     await Dispatcher.InvokeAsync(() => {
                         D3D11TextureViewer?.Renderer?.Render();
@@ -295,6 +280,8 @@ namespace AssetProcessor {
                 } else if (texturePathAtStart != null && currentSelectedTexture?.Path != texturePathAtStart) {
                     logger.Info("Skipping render - texture was switched during loading");
                 }
+
+                CompleteD3DPreviewLoad(loadCts);
             }
         }
 
@@ -302,17 +289,14 @@ namespace AssetProcessor {
         /// Synchronous wrapper for backward compatibility (calls async method).
         /// </summary>
         private void LoadTextureToD3D11Viewer(BitmapSource bitmap, bool isSRGB) {
-            // Don't use textureLoadCancellation here because it gets cancelled too early.
-            // Instead, we use CancellationToken.None and rely on the atomic flag _isLoadingTexture
-            // to prevent duplicate loads. Old loads will be ignored when new ones start.
-            CancellationToken cancellationToken = CancellationToken.None;
+            CancellationTokenSource loadCts = CreateD3DPreviewCts();
 
             // Start async load without waiting to avoid blocking calling thread
             // Use Dispatcher.InvokeAsync instead of Task.Run to avoid deadlocks when UI thread is busy
             // This ensures the async operation is scheduled on the UI thread's message queue
             _ = Dispatcher.InvokeAsync(async () => {
                 try {
-                    await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB, cancellationToken);
+                    await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB, loadCts);
                 } catch (OperationCanceledException) {
                     logger.Info("Texture loading was cancelled (expected when switching textures)");
                 } catch (Exception ex) {
@@ -323,8 +307,6 @@ namespace AssetProcessor {
 
         private int _isLoadingKtx2 = 0; // 0 = false, 1 = true (use int for Interlocked)
         private string? _currentLoadingKtx2Path = null; // Path to file being loaded
-
-        // Note: _isLoadingTexture is defined in MainWindow.xaml.cs (line 3126)
 
         /// <summary>
         /// Checks if KTX2 file is already loading (any or specific).
@@ -463,8 +445,7 @@ namespace AssetProcessor {
         /// Clears the D3D11 viewer (equivalent to setting Image.Source = null).
         /// </summary>
         private void ClearD3D11Viewer() {
-            // Note: We don't cancel texture loading here because it happens too early.
-            // Cancellation is handled in LoadTextureToD3D11ViewerAsync when a new load starts.
+            CancelPendingD3DPreviewLoad();
 
             // D3D11TextureRenderer doesn't have a Clear method
             // Note: NOT resetting zoom/pan to preserve user's viewport between textures
@@ -476,6 +457,34 @@ namespace AssetProcessor {
                 D3D11TextureViewer.Renderer.RestoreOriginalGamma();
             }
             UpdateChannelButtonsState();
+        }
+
+        private CancellationTokenSource CreateD3DPreviewCts() {
+            lock (d3dPreviewCtsLock) {
+                d3dTexturePreviewCts?.Cancel();
+                d3dTexturePreviewCts = new CancellationTokenSource();
+                return d3dTexturePreviewCts;
+            }
+        }
+
+        private void CompleteD3DPreviewLoad(CancellationTokenSource loadCts) {
+            if (loadCts == null) {
+                return;
+            }
+
+            lock (d3dPreviewCtsLock) {
+                if (ReferenceEquals(d3dTexturePreviewCts, loadCts)) {
+                    d3dTexturePreviewCts = null;
+                }
+            }
+
+            loadCts.Dispose();
+        }
+
+        private void CancelPendingD3DPreviewLoad() {
+            lock (d3dPreviewCtsLock) {
+                d3dTexturePreviewCts?.Cancel();
+            }
         }
     }
 }

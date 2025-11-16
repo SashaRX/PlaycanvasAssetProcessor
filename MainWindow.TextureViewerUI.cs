@@ -170,6 +170,7 @@ namespace AssetProcessor {
         }
 
         private void ResetPreviewState() {
+            CancelPendingD3DPreviewLoad();
             // Zoom/pan state now handled by D3D11TextureViewerControl
             isKtxPreviewActive = false;
             currentMipLevel = 0;

@@ -9,7 +9,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,7 +20,6 @@ public class TexturePreviewService : ITexturePreviewService {
     private readonly List<KtxMipLevel> currentKtxMipmaps = new();
     private readonly Dictionary<string, BitmapImage> imageCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private readonly ILogService logService;
     private GlobalTextureConversionSettings? globalTextureSettings;
 
@@ -210,38 +208,12 @@ public class TexturePreviewService : ITexturePreviewService {
             return sameDirectoryMatch;
         }
 
-        string? parentDirectory = Directory.GetParent(directory)?.FullName;
-        if (!string.IsNullOrEmpty(parentDirectory)) {
-            string? parentMatch = TryFindKtx2InDirectory(parentDirectory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
-            if (!string.IsNullOrEmpty(parentMatch)) {
-                return parentMatch;
-            }
-        }
-
-        string? projectDirectory = Directory.GetParent(directory)?.Parent?.FullName;
-        if (!string.IsNullOrEmpty(projectDirectory)) {
-            string? projectMatch = TryFindKtx2InDirectory(projectDirectory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
-            if (!string.IsNullOrEmpty(projectMatch)) {
-                return projectMatch;
-            }
-        }
-
         string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory, projectFolderPath);
         if (!string.IsNullOrEmpty(defaultOutputRoot)) {
             string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
             if (!string.IsNullOrEmpty(outputMatch)) {
                 return outputMatch;
             }
-        }
-
-        string? anyMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.AllDirectories);
-        if (!string.IsNullOrEmpty(anyMatch)) {
-            return anyMatch;
-        }
-
-        string? normalizedMatch = TryFindNormalizedKtx(directory, normalizedBaseName);
-        if (!string.IsNullOrEmpty(normalizedMatch)) {
-            return normalizedMatch;
         }
 
         return null;
@@ -265,77 +237,28 @@ public class TexturePreviewService : ITexturePreviewService {
             return null;
         }
 
-        string? bestMatch = null;
-        DateTime bestTime = DateTime.MinValue;
-        int bestScore = -1;
-
         try {
-            foreach (var pattern in new[] { "*.ktx2", "*.ktx" }) {
-                foreach (string file in Directory.EnumerateFiles(directory, pattern, searchOption)) {
-                    DateTime writeTime = File.GetLastWriteTimeUtc(file);
+            foreach (string file in Directory.EnumerateFiles(directory, "*.ktx2", searchOption)) {
+                string name = Path.GetFileNameWithoutExtension(file);
+                if (string.Equals(name, baseName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                    return file;
+                }
+            }
 
-                    int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
-                    if (score < 0) {
-                        continue;
-                    }
-
-                    if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
-                        bestScore = score;
-                        bestTime = writeTime;
-                        bestMatch = file;
-                    }
+            foreach (string file in Directory.EnumerateFiles(directory, "*.ktx", searchOption)) {
+                string name = Path.GetFileNameWithoutExtension(file);
+                if (string.Equals(name, baseName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
+                    return file;
                 }
             }
         } catch (UnauthorizedAccessException ex) {
             logService.LogDebug($"Нет доступа к каталогу {directory} при поиске KTX2: {ex.Message}");
-            return null;
         } catch (DirectoryNotFoundException) {
-            return null;
+            // ignore
         } catch (IOException ex) {
             logService.LogDebug($"Ошибка при перечислении каталога {directory} для поиска KTX2: {ex.Message}");
-            return null;
-        }
-
-        return bestMatch;
-    }
-
-    private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {
-        if (string.IsNullOrWhiteSpace(candidateName)) {
-            return -1;
-        }
-
-        if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-            return 500;
-        }
-
-        if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-            candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-            return 450;
-        }
-
-        return -1;
-    }
-
-    private string? TryFindNormalizedKtx(string directory, string normalizedBaseName) {
-        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(normalizedBaseName)) {
-            return null;
-        }
-
-        try {
-            foreach (string file in Directory.EnumerateFiles(directory)) {
-                string name = Path.GetFileNameWithoutExtension(file);
-
-                Match match = MipLevelRegex.Match(name);
-                if (match.Success) {
-                    name = name[..match.Index];
-                }
-
-                if (name.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-                    return file;
-                }
-            }
-        } catch (IOException ex) {
-            logService.LogDebug($"Ошибка при нормализованном поиске KTX2 в {directory}: {ex.Message}");
         }
 
         return null;

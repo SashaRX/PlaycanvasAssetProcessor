@@ -11,6 +11,11 @@ public sealed class LogService : ILogService {
         this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     }
 
+    public void LogDebug(string message) {
+        ArgumentNullException.ThrowIfNull(message);
+        WriteLog("debug_log.txt", message, writeToDebug: true);
+    }
+
     public void LogInfo(string message) {
         ArgumentNullException.ThrowIfNull(message);
         WriteLog("info_log.txt", message);

@@ -22,7 +22,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -63,7 +62,6 @@ namespace AssetProcessor {
         private readonly ILogService logService;
         private readonly ILocalCacheService localCacheService;
         private Dictionary<int, string> folderPaths = new();
-        private readonly Dictionary<string, BitmapImage> imageCache = new(); // Кеш для загруженных изображений
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
         private ConversionSettingsManager? conversionSettingsManager; // Менеджер параметров конвертации
@@ -78,9 +76,6 @@ namespace AssetProcessor {
         private bool isSorting = false; // Флаг для отслеживания процесса сортировки
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // Отслеживание текстур, для которых уже запущена проверка CompressedSize
-        private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly Regex MipLevelRegex = new(@"(?:_level|_mip|_)(\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
         private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
         private readonly object ignoredAssetTypesLock = new();
@@ -559,8 +554,8 @@ namespace AssetProcessor {
         /// </summary>
         
 
-private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {
-            string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
+        private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {
+            string? ktxPath = texturePreviewService.GetExistingKtx2Path(selectedTexture.Path, ProjectFolderPath);
             if (ktxPath == null) {
                 logger.Info($"KTX2 file not found for: {selectedTexture.Path}");
                 return false;
@@ -618,8 +613,8 @@ private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture
         /// </summary>
         
 
-private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
-            string? ktxPath = GetExistingKtx2Path(selectedTexture.Path);
+        private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken) {
+            string? ktxPath = texturePreviewService.GetExistingKtx2Path(selectedTexture.Path, ProjectFolderPath);
             if (ktxPath == null) {
                 logger.Info($"KTX2 file not found for: {selectedTexture.Path}");
                 return false;
@@ -629,7 +624,7 @@ private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture
 
             try {
                 // OLD METHOD: Extract to PNG files
-                List<KtxMipLevel> mipmaps = await LoadKtx2MipmapsAsync(ktxPath, cancellationToken);
+                List<KtxMipLevel> mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ktxPath, cancellationToken);
                 if (mipmaps.Count == 0 || cancellationToken.IsCancellationRequested) {
                     logger.Warn($"Failed to extract mipmaps from KTX2: {ktxPath}");
                     return false;
@@ -665,293 +660,6 @@ private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture
             }
         }
 
-        private string? GetExistingKtx2Path(string? sourcePath) {
-            if (string.IsNullOrEmpty(sourcePath)) {
-                return null;
-            }
-
-            sourcePath = PathSanitizer.SanitizePath(sourcePath);
-
-            string? directory = Path.GetDirectoryName(sourcePath);
-            if (string.IsNullOrEmpty(directory)) {
-                return null;
-            }
-
-            string baseName = Path.GetFileNameWithoutExtension(sourcePath);
-            string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
-
-            foreach (var extension in new[] { ".ktx2", ".ktx" }) {
-                string directPath = Path.Combine(directory, baseName + extension);
-                if (File.Exists(directPath)) {
-                    return directPath;
-                }
-
-                if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                    !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-                    string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + extension);
-                    if (File.Exists(normalizedDirectPath)) {
-                        return normalizedDirectPath;
-                    }
-                }
-            }
-
-            string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
-            if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
-                return sameDirectoryMatch;
-            }
-
-            string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory);
-            if (!string.IsNullOrEmpty(defaultOutputRoot)) {
-                string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
-                if (!string.IsNullOrEmpty(outputMatch)) {
-                    return outputMatch;
-                }
-            }
-
-            return null;
-        }
-
-        private string? ResolveDefaultKtxSearchRoot(string sourceDirectory) {
-            try {
-                globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
-            } catch (Exception ex) {
-                logger.Debug(ex, "Не удалось загрузить глобальные настройки текстур для вычисления к пути поиска KTX2.");
-                return null;
-            }
-
-            string? configuredDirectory = globalTextureSettings?.DefaultOutputDirectory;
-            if (string.IsNullOrWhiteSpace(configuredDirectory)) {
-                return null;
-            }
-
-            List<string> candidates = new();
-
-            if (Path.IsPathRooted(configuredDirectory)) {
-                candidates.Add(configuredDirectory);
-            } else {
-                candidates.Add(Path.Combine(sourceDirectory, configuredDirectory));
-
-                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
-                    candidates.Add(Path.Combine(ProjectFolderPath!, configuredDirectory));
-                }
-            }
-
-            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase)) {
-                if (Directory.Exists(candidate)) {
-                    return candidate;
-                }
-            }
-
-            return null;
-        }
-
-        private string? TryFindKtx2InDirectory(string directory, string baseName, string normalizedBaseName, SearchOption searchOption) {
-            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
-                return null;
-            }
-
-            string? bestMatch = null;
-            DateTime bestTime = DateTime.MinValue;
-            int bestScore = -1;
-
-            try {
-                foreach (var pattern in new[] { "*.ktx2", "*.ktx" }) {
-                    foreach (string file in Directory.EnumerateFiles(directory, pattern, searchOption)) {
-                        DateTime writeTime = File.GetLastWriteTimeUtc(file);
-
-                        int score = GetKtxMatchScore(Path.GetFileNameWithoutExtension(file), baseName, normalizedBaseName);
-                        if (score < 0) {
-                            continue;
-                        }
-
-                        if (score > bestScore || (score == bestScore && writeTime > bestTime)) {
-                            bestScore = score;
-                            bestTime = writeTime;
-                            bestMatch = file;
-                        }
-                    }
-                }
-            } catch (UnauthorizedAccessException ex) {
-                logger.Debug(ex, $"Нет доступа к каталогу {directory} при поиске KTX2.");
-                return null;
-            } catch (DirectoryNotFoundException) {
-                return null;
-            } catch (IOException ex) {
-                logger.Debug(ex, $"Ошибка при перечислении каталога {directory} для поиска KTX2.");
-                return null;
-            }
-
-            return bestMatch;
-        }
-
-        private static int GetKtxMatchScore(string candidateName, string baseName, string normalizedBaseName) {
-            if (string.IsNullOrWhiteSpace(candidateName)) {
-                return -1;
-            }
-
-            if (candidateName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-                return 500;
-            }
-
-            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                candidateName.Equals(normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-                return 450;
-            }
-
-            return -1;
-        }
-
-        private async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            FileInfo fileInfo = new(ktxPath);
-            DateTime lastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
-
-            if (ktxPreviewCache.TryGetValue(ktxPath, out KtxPreviewCacheEntry? cacheEntry) && cacheEntry.LastWriteTimeUtc == lastWriteTimeUtc) {
-                return cacheEntry.Mipmaps;
-            }
-
-            return await ExtractKtxMipmapsAsync(ktxPath, lastWriteTimeUtc, cancellationToken);
-        }
-
-        private async Task<List<KtxMipLevel>> ExtractKtxMipmapsAsync(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            string ktxToolPath = GetKtxToolExecutablePath();
-            string tempDirectory = Path.Combine(Path.GetTempPath(), "PlaycanvasAssetProcessor", "Preview", Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempDirectory);
-
-            try {
-                if (!string.IsNullOrEmpty(Path.GetDirectoryName(ktxToolPath)) && !File.Exists(ktxToolPath)) {
-                    throw new FileNotFoundException($"Не найден исполняемый файл ktx по пути '{ktxToolPath}'. Установите KTX-Software и настройте PATH.", ktxToolPath);
-                }
-
-                string outputBaseName = Path.Combine(tempDirectory, "mip");
-
-                ProcessStartInfo startInfo = new() {
-                    FileName = ktxToolPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                startInfo.ArgumentList.Add("extract");
-                startInfo.ArgumentList.Add("--level");
-                startInfo.ArgumentList.Add("all");
-                startInfo.ArgumentList.Add("--transcode");
-                startInfo.ArgumentList.Add("rgba8");
-                startInfo.ArgumentList.Add(ktxPath);
-                startInfo.ArgumentList.Add(outputBaseName);
-
-                string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
-                logger.Info($"Executing command: {commandLine}");
-                logger.Info($"Working directory: {tempDirectory}");
-                logger.Info($"Input file exists: {File.Exists(ktxPath)}");
-                logger.Info($"Input file size: {new FileInfo(ktxPath).Length} bytes");
-                logger.Info($"Output base path: {outputBaseName}");
-                logger.Info($"Output directory exists: {Directory.Exists(tempDirectory)}");
-
-                using Process process = new() { StartInfo = startInfo };
-                try {
-                    if (!process.Start()) {
-                        throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2.");
-                    }
-                } catch (Win32Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2. Установите KTX-Software и добавьте в PATH.", ex);
-                } catch (Exception ex) {
-                    throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2.", ex);
-                }
-
-                string stdOutput = await process.StandardOutput.ReadToEndAsync();
-                string stdError = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync(cancellationToken);
-
-                if (process.ExitCode != 0) {
-                    logger.Warn($"ktx exit code: {process.ExitCode}, stderr: {stdError}, stdout: {stdOutput}");
-                    throw new InvalidOperationException($"ktx exited with code {process.ExitCode}. Details logged.");
-                }
-
-                List<KtxMipLevel> mipmaps = new();
-                int level = 0;
-                while (true) {
-                    string pngPath = $"{outputBaseName}_level{level}.png";
-                    if (!File.Exists(pngPath)) {
-                        break;
-                    }
-
-                    mipmaps.Add(CreateMipLevel(pngPath, level));
-                    level++;
-                }
-
-                mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));
-                ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
-                    LastWriteTimeUtc = lastWriteTimeUtc,
-                    Mipmaps = mipmaps
-                };
-
-                return mipmaps;
-            } finally {
-                try {
-                    Directory.Delete(tempDirectory, true);
-                } catch (Exception ex) {
-                    logger.Debug(ex, $"Не удалось удалить временный каталог: {tempDirectory}");
-                }
-            }
-        }
-
-        private KtxMipLevel CreateMipLevel(string filePath, int level) {
-            BitmapImage bitmap = new();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(filePath);
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            return new KtxMipLevel {
-                Level = level,
-                Bitmap = bitmap,
-                Width = bitmap.PixelWidth,
-                Height = bitmap.PixelHeight
-            };
-        }
-
-        private string GetBasisuExecutablePath() {
-            return "basisu";
-        }
-
-        private string GetKtxToolExecutablePath() {
-            var settings = TextureConversionSettingsManager.LoadSettings();
-            return string.IsNullOrWhiteSpace(settings.KtxExecutablePath) ? "ktx" : settings.KtxExecutablePath;
-        }
-
-        private BitmapImage? LoadOptimizedImage(string path, int maxSize) {
-            try {
-                BitmapImage bitmapImage = new();
-                bitmapImage.BeginInit();
-                bitmapImage.UriSource = new Uri(path);
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-
-                using (var imageStream = new FileStream(path, FileMode.Open, FileAccess.Read)) {
-                    var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
-                    int width = decoder.Frames[0].PixelWidth;
-                    int height = decoder.Frames[0].PixelHeight;
-
-                    if (width > maxSize || height > maxSize) {
-                        double scale = Math.Min((double)maxSize / width, (double)maxSize / height);
-                        bitmapImage.DecodePixelWidth = (int)(width * scale);
-                        bitmapImage.DecodePixelHeight = (int)(height * scale);
-                    }
-                }
-
-                bitmapImage.EndInit();
-                bitmapImage.Freeze();
-                return bitmapImage;
-            } catch (Exception ex) {
-                logService.LogError($"Error loading optimized image from {path}: {ex.Message}");
-                return null;
-            }
-        }
 
         private async Task LoadSourcePreviewAsync(TextureResource selectedTexture, CancellationToken cancellationToken, bool loadToViewer = true) {
             // Reset channel masks when loading new texture
@@ -978,7 +686,7 @@ private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture
                 return;
             }
 
-            if (imageCache.TryGetValue(texturePath, out BitmapImage? cachedImage)) {
+            if (texturePreviewService.GetCachedImage(texturePath) is BitmapImage cachedImage) {
                 await Dispatcher.InvokeAsync(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
@@ -1006,7 +714,7 @@ private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture
                 return;
             }
 
-            BitmapImage? thumbnailImage = LoadOptimizedImage(texturePath, ThumbnailSize);
+            BitmapImage? thumbnailImage = texturePreviewService.LoadOptimizedImage(texturePath, ThumbnailSize);
             if (thumbnailImage == null) {
                 logService.LogInfo($"Error loading thumbnail for texture: {selectedTexture.Name}");
                 return;
@@ -1046,7 +754,7 @@ private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture
                         return;
                     }
 
-                    BitmapImage? bitmapImage = LoadOptimizedImage(texturePath, MaxPreviewSize);
+                    BitmapImage? bitmapImage = texturePreviewService.LoadOptimizedImage(texturePath, MaxPreviewSize);
 
                     if (bitmapImage == null || cancellationToken.IsCancellationRequested) {
                         return;
@@ -1057,14 +765,7 @@ private async Task<bool> TryLoadKtx2PreviewAsync(TextureResource selectedTexture
                             return;
                         }
 
-                        if (!imageCache.ContainsKey(texturePath)) {
-                            imageCache[texturePath] = bitmapImage;
-
-                            if (imageCache.Count > 50) {
-                                string firstKey = imageCache.Keys.First();
-                                imageCache.Remove(firstKey);
-                            }
-                        }
+                        texturePreviewService.CacheImage(texturePath, bitmapImage);
 
                         texturePreviewService.OriginalFileBitmapSource = bitmapImage;
                         texturePreviewService.IsSourcePreviewAvailable = true;

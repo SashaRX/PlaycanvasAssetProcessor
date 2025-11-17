@@ -9,6 +9,8 @@ namespace AssetProcessor.Services;
 
 public class HistogramCoordinator : IHistogramCoordinator {
     private readonly IHistogramService histogramService;
+    public HistogramComputationResult? CurrentResult { get; private set; }
+    public HistogramStatistics? CurrentStatistics => CurrentResult?.Statistics;
 
     public HistogramCoordinator(IHistogramService histogramService) {
         this.histogramService = histogramService ?? throw new ArgumentNullException(nameof(histogramService));
@@ -55,7 +57,8 @@ public class HistogramCoordinator : IHistogramCoordinator {
             MinorGridlineThickness = 0.5
         });
 
-        return new HistogramComputationResult(histogramModel, stats);
+        CurrentResult = new HistogramComputationResult(histogramModel, stats);
+        return CurrentResult;
     }
 
     public Task<HistogramComputationResult> BuildHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {

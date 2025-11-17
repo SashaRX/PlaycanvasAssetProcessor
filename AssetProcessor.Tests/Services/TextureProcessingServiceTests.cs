@@ -83,10 +83,12 @@ public class TextureProcessingServiceTests {
             string expectedKtxPath = Path.Combine(outputDirectory, "brick_albedo.ktx2");
             File.WriteAllBytes(expectedKtxPath, new byte[] { 0x2, 0x3 });
 
-            var method = typeof(TextureProcessingService).GetMethod("GetExistingKtx2Path", BindingFlags.NonPublic | BindingFlags.Static);
+            var logService = new LogService(new MockFileSystem());
+            var service = new TextureProcessingService(logService);
+            var method = typeof(TextureProcessingService).GetMethod("GetExistingKtx2Path", BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.NotNull(method);
 
-            string? resolvedPath = (string?)method!.Invoke(null, new object?[] { sourcePath });
+            string? resolvedPath = (string?)method!.Invoke(service, new object?[] { sourcePath });
 
             Assert.Equal(expectedKtxPath, resolvedPath);
         } finally {

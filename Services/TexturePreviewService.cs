@@ -175,49 +175,11 @@ public class TexturePreviewService : ITexturePreviewService {
     }
 
     public string? GetExistingKtx2Path(string? sourcePath, string? projectFolderPath) {
-        if (string.IsNullOrEmpty(sourcePath)) {
-            return null;
-        }
-
-        sourcePath = PathSanitizer.SanitizePath(sourcePath);
-
-        string? directory = Path.GetDirectoryName(sourcePath);
-        if (string.IsNullOrEmpty(directory)) {
-            return null;
-        }
-
-        string baseName = Path.GetFileNameWithoutExtension(sourcePath);
-        string normalizedBaseName = TextureResource.ExtractBaseTextureName(baseName);
-
-        foreach (var extension in new[] { ".ktx2", ".ktx" }) {
-            string directPath = Path.Combine(directory, baseName + extension);
-            if (File.Exists(directPath)) {
-                return directPath;
-            }
-
-            if (!string.IsNullOrWhiteSpace(normalizedBaseName) &&
-                !normalizedBaseName.Equals(baseName, StringComparison.OrdinalIgnoreCase)) {
-                string normalizedDirectPath = Path.Combine(directory, normalizedBaseName + extension);
-                if (File.Exists(normalizedDirectPath)) {
-                    return normalizedDirectPath;
-                }
-            }
-        }
-
-        string? sameDirectoryMatch = TryFindKtx2InDirectory(directory, baseName, normalizedBaseName, SearchOption.TopDirectoryOnly);
-        if (!string.IsNullOrEmpty(sameDirectoryMatch)) {
-            return sameDirectoryMatch;
-        }
-
-        string? defaultOutputRoot = ResolveDefaultKtxSearchRoot(directory, projectFolderPath);
-        if (!string.IsNullOrEmpty(defaultOutputRoot)) {
-            string? outputMatch = TryFindKtx2InDirectory(defaultOutputRoot, baseName, normalizedBaseName, SearchOption.AllDirectories);
-            if (!string.IsNullOrEmpty(outputMatch)) {
-                return outputMatch;
-            }
-        }
-
-        return null;
+        return KtxPathResolver.FindExistingKtxPath(
+            sourcePath,
+            projectFolderPath,
+            () => globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings(),
+            logService);
     }
 
     public async Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken) {
@@ -231,72 +193,6 @@ public class TexturePreviewService : ITexturePreviewService {
         }
 
         return await ExtractKtxMipmapsAsync(ktxPath, lastWriteTimeUtc, cancellationToken);
-    }
-
-    private string? TryFindKtx2InDirectory(string directory, string baseName, string normalizedBaseName, SearchOption searchOption) {
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) {
-            return null;
-        }
-
-        try {
-            foreach (string file in Directory.EnumerateFiles(directory, "*.ktx2", searchOption)) {
-                string name = Path.GetFileNameWithoutExtension(file);
-                if (string.Equals(name, baseName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(name, normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-                    return file;
-                }
-            }
-
-            foreach (string file in Directory.EnumerateFiles(directory, "*.ktx", searchOption)) {
-                string name = Path.GetFileNameWithoutExtension(file);
-                if (string.Equals(name, baseName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(name, normalizedBaseName, StringComparison.OrdinalIgnoreCase)) {
-                    return file;
-                }
-            }
-        } catch (UnauthorizedAccessException ex) {
-            logService.LogDebug($"Нет доступа к каталогу {directory} при поиске KTX2: {ex.Message}");
-        } catch (DirectoryNotFoundException) {
-            // ignore
-        } catch (IOException ex) {
-            logService.LogDebug($"Ошибка при перечислении каталога {directory} для поиска KTX2: {ex.Message}");
-        }
-
-        return null;
-    }
-
-    private string? ResolveDefaultKtxSearchRoot(string sourceDirectory, string? projectFolderPath) {
-        try {
-            globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
-        } catch (Exception ex) {
-            logService.LogDebug($"Не удалось загрузить глобальные настройки текстур для поиска KTX2: {ex.Message}");
-            return null;
-        }
-
-        string? configuredDirectory = globalTextureSettings?.DefaultOutputDirectory;
-        if (string.IsNullOrWhiteSpace(configuredDirectory)) {
-            return null;
-        }
-
-        List<string> candidates = new();
-
-        if (Path.IsPathRooted(configuredDirectory)) {
-            candidates.Add(configuredDirectory);
-        } else {
-            candidates.Add(Path.Combine(sourceDirectory, configuredDirectory));
-
-            if (!string.IsNullOrEmpty(projectFolderPath)) {
-                candidates.Add(Path.Combine(projectFolderPath!, configuredDirectory));
-            }
-        }
-
-        foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase)) {
-            if (Directory.Exists(candidate)) {
-                return candidate;
-            }
-        }
-
-        return null;
     }
 
     private async Task<List<KtxMipLevel>> ExtractKtxMipmapsAsync(string ktxPath, DateTime lastWriteTimeUtc, CancellationToken cancellationToken) {

@@ -17,6 +17,17 @@ public class LogServiceTests {
     }
 
     [Fact]
+    public void LogDebug_WritesMessageToDebugFile() {
+        MockFileSystem fileSystem = new();
+        LogService service = new(fileSystem);
+
+        service.LogDebug("Test debug");
+
+        string content = fileSystem.File.ReadAllText("debug_log.txt");
+        Assert.Contains("Test debug", content);
+    }
+
+    [Fact]
     public void LogWarn_WritesMessageToWarningFile() {
         MockFileSystem fileSystem = new();
         LogService service = new(fileSystem);

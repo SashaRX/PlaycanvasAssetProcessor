@@ -62,8 +62,10 @@ namespace AssetProcessor {
             services.AddSingleton<ITextureChannelService, TextureChannelService>();
             services.AddSingleton<IDownloadService, DownloadService>();
             services.AddSingleton<ILocalCacheService, LocalCacheService>();
+            services.AddSingleton<IProjectAssetService, ProjectAssetService>();
             services.AddSingleton<ITextureProcessingService, TextureProcessingService>();
             services.AddSingleton<ITexturePreviewService, TexturePreviewService>();
+            services.AddSingleton<IPreviewRendererCoordinator, PreviewRendererCoordinator>();
             services.AddSingleton<IProjectSelectionService, ProjectSelectionService>();
             services.AddSingleton<IProjectSyncService, ProjectSyncService>();
             services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(

@@ -49,7 +49,7 @@ namespace AssetProcessor {
 
             // Apply UseD3D11Preview setting on startup
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
-            _ = SwitchPreviewRendererAsync(useD3D11);
+            _ = ApplyRendererPreferenceAsync(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
         }
 

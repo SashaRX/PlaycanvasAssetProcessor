@@ -1,0 +1,2109 @@
+17.11.25 03:06:24: === Initializing on startup ===
+17.11.25 03:06:24: Connecting to PlayCanvas server...
+17.11.25 03:06:25: Skipping ProjectsComboBox_SelectionChanged - initialization in progress
+17.11.25 03:06:25: Updated Project Folder Path: C:\project\playcanvas_projects\North Wind
+17.11.25 03:06:25: === SmartLoadAssets: Checking for updates ===
+17.11.25 03:06:26: Project updates detected: localHash=84707f36 remoteHash=2a91f53f
+17.11.25 03:06:26: Loading local assets from cache...
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing shader, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing shader, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Asset type 'script' is currently ignored (stub handler).
+17.11.25 03:06:26: Processing shader, API path: 
+17.11.25 03:06:26: Processing shader, API path: 
+17.11.25 03:06:26: Processing shader, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\New Material Copy.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalContainer_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_mat.json
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing wasm, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_mat.json
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalContainer_albedo.png
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\New Material.json
+17.11.25 03:06:26: Processing wasm, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing wasm, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing cubemap, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing json, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_mat.json
+17.11.25 03:06:26: Processing render, API path: 
+17.11.25 03:06:26: Processing render, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalContainer_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\New Material Copy.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_albedo.png
+17.11.25 03:06:26: Asset type 'wasm' is currently ignored (stub handler).
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_mat.json
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalContainer_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\New Material.json
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negz.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negy.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posz.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Asset type 'cubemap' is currently ignored (stub handler).
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: dirtyLada_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negz.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negy.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posz.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: metalContainer_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalContainer_mat.json
+17.11.25 03:06:26: woodenFence_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_mat.json
+17.11.25 03:06:26: New Material Copy not found on disk: C:\project\playcanvas_projects\North Wind\assets\New Material Copy.json
+17.11.25 03:06:26: woodenFence_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\New Material.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_alpha_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldSofa_mat.json
+17.11.25 03:06:26: build_01_Brick_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_mat.json
+17.11.25 03:06:26: metalContainer_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalContainer_albedo.png
+17.11.25 03:06:26: New Material not found on disk: C:\project\playcanvas_projects\North Wind\assets\New Material.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material: dirtyLada_mat, Status: On Server
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\roofSide_normal.png
+17.11.25 03:06:26: concreteStairs_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\roofSide_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\roofSide_gloss.png
+17.11.25 03:06:26: Processing material: metalContainer_mat, Status: On Server
+17.11.25 03:06:26: Material 'metalContainer_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing material: New Material Copy, Status: On Server
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\New Material.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_gloss.png
+17.11.25 03:06:26: Adding texture to list: woodenFence_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\roofSide_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_metalness.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_alpha_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldSofa_mat.json
+17.11.25 03:06:26: Processing material: build_01_Brick_mat, Status: On Server
+17.11.25 03:06:26: Adding texture to list: metalContainer_albedo
+17.11.25 03:06:26: Processing material: New Material, Status: On Server
+17.11.25 03:06:26: Material 'New Material' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: New Material
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: belfast_sunset_puresky_2k-cube_negz not found on disk: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negz.png
+17.11.25 03:06:26: belfast_sunset_puresky_2k-cube_negy not found on disk: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negy.png
+17.11.25 03:06:26: Adding texture to list: belfast_sunset_puresky_2k-cube_negy
+17.11.25 03:06:26: belfast_sunset_puresky_2k-cube_posy not found on disk: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:06:26: belfast_sunset_puresky_2k-cube_posz not found on disk: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posz.png
+17.11.25 03:06:26: Adding texture to list: belfast_sunset_puresky_2k-cube_posz
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\roofSide_normal.png
+17.11.25 03:06:26: Processing material: concreteStairs_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\roofSide_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\roofSide_gloss.png
+17.11.25 03:06:26: Processing material: woodenFence_mat, Status: On Server
+17.11.25 03:06:26: Adding material to list: metalContainer_mat
+17.11.25 03:06:26: Material 'New Material Copy' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: well_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\well_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_metalness.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Material 'build_01_Brick_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_mat.json
+17.11.25 03:06:26: belfast_sunset_puresky_2k-cube_negx not found on disk: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:06:26: Adding texture to list: belfast_sunset_puresky_2k-cube_negz
+17.11.25 03:06:26: belfast_sunset_puresky_2k-cube_posx not found on disk: C:\project\playcanvas_projects\North Wind\assets\belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:06:26: Adding texture to list: belfast_sunset_puresky_2k-cube_posx
+17.11.25 03:06:26: Material 'dirtyLada_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: dirtyLada_mat
+17.11.25 03:06:26: Material 'concreteStairs_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Material 'woodenFence_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_ao.png
+17.11.25 03:06:26: Adding material to list: New Material Copy
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_gloss.png
+17.11.25 03:06:26: New Material not found on disk: C:\project\playcanvas_projects\North Wind\assets\New Material.json
+17.11.25 03:06:26: build_01_Doors_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_mat.json
+17.11.25 03:06:26: oldMailBox_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\roofSide_ao.png
+17.11.25 03:06:26: Processing material: well_mat, Status: On Server
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenFence_Old_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_mat.json
+17.11.25 03:06:26: build_01_topBrick_alpha_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_alpha_mat.json
+17.11.25 03:06:26: oldSofa_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldSofa_mat.json
+17.11.25 03:06:26: Adding material to list: build_01_Brick_mat
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: belfast_sunset_puresky_2k-cube_negx
+17.11.25 03:06:26: Adding texture to list: belfast_sunset_puresky_2k-cube_posy
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Adding material to list: concreteStairs_mat
+17.11.25 03:06:26: roofSide_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\roofSide_albedo.png
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_normal.png
+17.11.25 03:06:26: roofSide_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\roofSide_gloss.png
+17.11.25 03:06:26: Adding material to list: woodenFence_mat
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_ao.png
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_gloss.png
+17.11.25 03:06:26: Processing material: New Material, Status: On Server
+17.11.25 03:06:26: Processing material: build_01_Doors_01_mat, Status: On Server
+17.11.25 03:06:26: Adding texture to list: oldMailBox_gloss
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: roofSide_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\roofSide_ao.png
+17.11.25 03:06:26: stovePipe_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_mat.json
+17.11.25 03:06:26: bunkerDoor_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_normal.png
+17.11.25 03:06:26: bunkerDoor_metalness not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_metalness.png
+17.11.25 03:06:26: bunkerDoor_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_albedo.png
+17.11.25 03:06:26: Processing material: woodenFence_Old_mat, Status: On Server
+17.11.25 03:06:26: Processing material: build_01_topBrick_alpha_mat, Status: On Server
+17.11.25 03:06:26: Processing material: oldSofa_mat, Status: On Server
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: build_01_topBrick_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_mat.json
+17.11.25 03:06:26: woodenBench_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_ao.png
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_normal.png
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_albedo.png
+17.11.25 03:06:26: roofSide_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\roofSide_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\roofSide_mat.json
+17.11.25 03:06:26: Adding texture to list: roofSide_albedo
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_normal.png
+17.11.25 03:06:26: Adding texture to list: roofSide_gloss
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: bunkerDoor_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Material 'New Material' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Material 'build_01_Doors_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: build_01_Doors_01_mat
+17.11.25 03:06:26: Adding texture to list: roofSide_ao
+17.11.25 03:06:26: Processing material: stovePipe_01_mat, Status: On Server
+17.11.25 03:06:26: Adding texture to list: bunkerDoor_normal
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: bunkerDoor_metalness
+17.11.25 03:06:26: Adding texture to list: bunkerDoor_albedo
+17.11.25 03:06:26: Material 'woodenFence_Old_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Material 'build_01_topBrick_alpha_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Material 'oldSofa_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_01_mat.json
+17.11.25 03:06:26: Processing material: woodenBench_01_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_02_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_albedo.png
+17.11.25 03:06:26: Adding texture to list: roofSide_normal
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\roofSide_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: bunkerDoor_ao
+17.11.25 03:06:26: woodenTableWhite_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_gloss.png
+17.11.25 03:06:26: Adding material to list: New Material
+17.11.25 03:06:26: Material 'well_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Material 'stovePipe_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Adding material to list: woodenFence_Old_mat
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding material to list: build_01_topBrick_alpha_mat
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Adding material to list: oldSofa_mat
+17.11.25 03:06:26: Processing material: build_01_topBrick_mat, Status: On Server
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Material 'woodenBench_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: dirtyLada_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_normal.png
+17.11.25 03:06:26: Adding texture to list: dirtyLada_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenTableWhite_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_ao.png
+17.11.25 03:06:26: Adding texture to list: woodenTableWhite_gloss
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding material to list: well_mat
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Metalness.png
+17.11.25 03:06:26: Adding material to list: stovePipe_01_mat
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_mat.json
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Material 'build_01_topBrick_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: foundation_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_01_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox.FBX
+17.11.25 03:06:26: Adding material to list: woodenBench_01_mat
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox.FBX
+17.11.25 03:06:26: woodenTableWhite_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_Win_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_mat.json
+17.11.25 03:06:26: Processing material: build_01_Win_01_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_02_mat.json
+17.11.25 03:06:26: dirtyLada_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_albedo.png
+17.11.25 03:06:26: dirtyLada_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: dirtyLada_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
+17.11.25 03:06:26: roofSide_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\roofSide_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_albedo.png
+17.11.25 03:06:26: oldMailBox_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_mat.json
+17.11.25 03:06:26: Adding texture to list: woodenTableWhite_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_metalness.png
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Metalness.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_mat.json
+17.11.25 03:06:26: Processing material: foundation_01_mat, Status: On Server
+17.11.25 03:06:26: Material 'foundation_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: foundation_01_mat
+17.11.25 03:06:26: Adding texture to list: woodenTableWhite_ao
+17.11.25 03:06:26: woodenTableWhite_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
+17.11.25 03:06:26: Material 'build_01_Win_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: foundation_02_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_02_mat.json
+17.11.25 03:06:26: Adding texture to list: dirtyLada_ao
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_normal.png
+17.11.25 03:06:26: Adding texture to list: dirtyLada_gloss
+17.11.25 03:06:26: Processing material: roofSide_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_albedo.png
+17.11.25 03:06:26: Processing material: oldMailBox_mat, Status: On Server
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: electricShield_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_mat.json
+17.11.25 03:06:26: build_03_Found_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_metalness.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_gloss.png
+17.11.25 03:06:26: oldMailBox_Albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding material to list: build_01_topBrick_mat
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding texture to list: woodenTableWhite_albedo
+17.11.25 03:06:26: Adding material to list: build_01_Win_01_mat
+17.11.25 03:06:26: Adding texture to list: dirtyLada_albedo
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material: foundation_02_mat, Status: On Server
+17.11.25 03:06:26: Material 'foundation_02_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: foundation_02_mat
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldMailBox_Normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Normal.png
+17.11.25 03:06:26: Adding texture to list: oldMailBox_Normal
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_mat.json
+17.11.25 03:06:26: Processing material: electricShield_01_mat, Status: On Server
+17.11.25 03:06:26: Processing material: build_03_Found_mat, Status: On Server
+17.11.25 03:06:26: oldMailBox_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldTrailer_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_gloss.png
+17.11.25 03:06:26: Adding texture to list: oldMailBox_Albedo
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: concreteBase_02_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_mat.json
+17.11.25 03:06:26: build_03_Wall_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_mat.json
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: oldMailBox not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox.FBX
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_normal.png
+17.11.25 03:06:26: Material 'roofSide_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_albedo.png
+17.11.25 03:06:26: oldTrailer_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_albedo.png
+17.11.25 03:06:26: Material 'oldMailBox_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: oldMailBox_mat
+17.11.25 03:06:26: Material 'electricShield_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: electricShield_01_mat
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding texture to list: oldMailBox_ao
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: oldTrailer_gloss
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: oldMailBox_Metalness not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Metalness.png
+17.11.25 03:06:26: Adding texture to list: oldMailBox_Metalness
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldTrailer_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: oldTrailer_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_mat.json
+17.11.25 03:06:26: Processing material: concreteBase_02_mat, Status: On Server
+17.11.25 03:06:26: Processing material: build_03_Wall_01_mat, Status: On Server
+17.11.25 03:06:26: Material 'build_03_Wall_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_normal.png
+17.11.25 03:06:26: Adding model to list: oldMailBox
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding material to list: roofSide_mat
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\man_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_albedo.png
+17.11.25 03:06:26: Adding texture to list: oldTrailer_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_mat.json
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Material 'build_03_Found_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldTrailer_metalness not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_metalness.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\milkCanister_albedo.png
+17.11.25 03:06:26: groundPineNeedles2_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_albedo.png
+17.11.25 03:06:26: groundPineNeedles2_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\milkCanister_agm.png
+17.11.25 03:06:26: groundPineNeedles2_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_gloss.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding texture to list: oldTrailer_ao
+17.11.25 03:06:26: groundPineNeedles2_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_ao.png
+17.11.25 03:06:26: Adding texture to list: groundPineNeedles2_ao
+17.11.25 03:06:26: Processing material: oldTrailer_mat, Status: On Server
+17.11.25 03:06:26: Material 'concreteBase_02_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: concreteBase_02_mat
+17.11.25 03:06:26: Adding material to list: build_03_Wall_01_mat
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_winEdge_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\milkCanister.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\man_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding material to list: build_03_Found_mat
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\milkCanister_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\milkCanister_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_winEdge_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_gloss.png
+17.11.25 03:06:26: Adding texture to list: oldTrailer_metalness
+17.11.25 03:06:26: groundPineNeedles2_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\groundPineNeedles2_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\milkCanister_albedo.png
+17.11.25 03:06:26: Adding texture to list: groundPineNeedles2_albedo
+17.11.25 03:06:26: Adding texture to list: groundPineNeedles2_normal
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\milkCanister_agm.png
+17.11.25 03:06:26: Adding texture to list: groundPineNeedles2_gloss
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\man.fbx
+17.11.25 03:06:26: Material 'oldTrailer_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dirtyLada.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldTrailer_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer_normal.png
+17.11.25 03:06:26: Adding texture to list: build_01_winEdge_normal
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\milkCanister_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\milkCanister.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_winEdge_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_albedo.png
+17.11.25 03:06:26: Adding texture to list: build_01_winEdge_albedo
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_normal.png
+17.11.25 03:06:26: Adding texture to list: build_01_winEdge_gloss
+17.11.25 03:06:26: Processing material: groundPineNeedles2_mat, Status: On Server
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\man.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding material to list: oldTrailer_mat
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_opacity.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_winEdge_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_ao.png
+17.11.25 03:06:26: build_01_winEdge not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge.fbx
+17.11.25 03:06:26: Adding texture to list: oldTrailer_normal
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\milkCanister_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: man_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\man_mat.json
+17.11.25 03:06:26: build_01_winEdge_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_winEdge_mat.json
+17.11.25 03:06:26: Processing material: build_01_winEdge_mat, Status: On Server
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_mat.json
+17.11.25 03:06:26: milkCanister_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\milkCanister_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_normal.png
+17.11.25 03:06:26: Material 'groundPineNeedles2_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: milkCanister_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\milkCanister_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenWall_mat.json
+17.11.25 03:06:26: milkCanister_agm not found on disk: C:\project\playcanvas_projects\North Wind\assets\milkCanister_agm.png
+17.11.25 03:06:26: Adding texture to list: milkCanister_agm
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldSofa_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldSofa_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldSofa_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_opacity.png
+17.11.25 03:06:26: dirtyLada not found on disk: C:\project\playcanvas_projects\North Wind\assets\dirtyLada.fbx
+17.11.25 03:06:26: Adding texture to list: build_01_winEdge_ao
+17.11.25 03:06:26: Adding model to list: build_01_winEdge
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: milkCanister_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\milkCanister_normal.png
+17.11.25 03:06:26: Adding texture to list: milkCanister_normal
+17.11.25 03:06:26: Processing material: man_mat, Status: On Server
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_ao.png
+17.11.25 03:06:26: Material 'build_01_winEdge_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\chimney_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well_albedo.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_mat.json
+17.11.25 03:06:26: Processing material: milkCanister_mat, Status: On Server
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding material to list: groundPineNeedles2_mat
+17.11.25 03:06:26: Adding texture to list: milkCanister_albedo
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenWall_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldSofa_albedo.png
+17.11.25 03:06:26: man not found on disk: C:\project\playcanvas_projects\North Wind\assets\man.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldSofa_normal.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldSofa_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: stoveBarrel_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: stoveBarrel not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel.fbx
+17.11.25 03:06:26: Adding model to list: dirtyLada
+17.11.25 03:06:26: milkCanister not found on disk: C:\project\playcanvas_projects\North Wind\assets\milkCanister.fbx
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldSofa_gloss.png
+17.11.25 03:06:26: Material 'man_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: man_mat
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_ao.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding material to list: build_01_winEdge_mat
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\chimney_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Material 'milkCanister_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: milkCanister_mat
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding model to list: man
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: stoveBarrel_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_gloss.png
+17.11.25 03:06:26: Adding texture to list: stoveBarrel_gloss
+17.11.25 03:06:26: Adding model to list: stoveBarrel
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding model to list: milkCanister
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\chimney_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldSofa_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\well_metalic.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: stoveBarrel_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_ao.png
+17.11.25 03:06:26: Adding texture to list: stoveBarrel_ao
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: chimney_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\chimney_mat.json
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: stoveBarrel_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_mat.json
+17.11.25 03:06:26: Processing material: stoveBarrel_mat, Status: On Server
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\chimney.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenWall_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenWall_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\chimney_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_brickCorn_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_mat.json
+17.11.25 03:06:26: oldSofa_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldSofa_albedo.png
+17.11.25 03:06:26: Adding texture to list: oldSofa_albedo
+17.11.25 03:06:26: oldSofa_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldSofa_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: stoveBarrel_albedo
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\chimney_gloss.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\chimney_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\well_metalic.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\chimney_normal.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material: chimney_mat, Status: On Server
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_mat.json
+17.11.25 03:06:26: stoveBarrel_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_normal.png
+17.11.25 03:06:26: Material 'stoveBarrel_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\chimney.fbx
+17.11.25 03:06:26: well_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\well_normal.png
+17.11.25 03:06:26: Processing material: woodenWall_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\chimney_ao.png
+17.11.25 03:06:26: metalCan_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_mat.json
+17.11.25 03:06:26: Processing material: build_01_brickCorn_mat, Status: On Server
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Adding texture to list: oldSofa_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldSofa_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldSofa_ao.png
+17.11.25 03:06:26: well_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\well_gloss.png
+17.11.25 03:06:26: well_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\well_ao.png
+17.11.25 03:06:26: stoveBarrel_opacity not found on disk: C:\project\playcanvas_projects\North Wind\assets\stoveBarrel_opacity.png
+17.11.25 03:06:26: Adding texture to list: stoveBarrel_opacity
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\chimney_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldTrailer.FBX
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: chimney_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\chimney_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\chimney_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: well_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\well_albedo.png
+17.11.25 03:06:26: Adding texture to list: well_albedo
+17.11.25 03:06:26: Material 'chimney_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_mat.json
+17.11.25 03:06:26: Adding texture to list: stoveBarrel_normal
+17.11.25 03:06:26: Adding material to list: stoveBarrel_mat
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing container, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: chimney not found on disk: C:\project\playcanvas_projects\North Wind\assets\chimney.fbx
+17.11.25 03:06:26: Material 'woodenWall_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material: metalCan_01_mat, Status: On Server
+17.11.25 03:06:26: Material 'build_01_brickCorn_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldSofa.FBX
+17.11.25 03:06:26: well not found on disk: C:\project\playcanvas_projects\North Wind\assets\well.fbx
+17.11.25 03:06:26: Adding texture to list: oldSofa_ao
+17.11.25 03:06:26: Adding texture to list: well_gloss
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: well_ao
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01.fbx
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldTrailer.FBX
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding texture to list: chimney_albedo
+17.11.25 03:06:26: well_metalic not found on disk: C:\project\playcanvas_projects\North Wind\assets\well_metalic.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_normal.png
+17.11.25 03:06:26: Processing template, API path: 
+17.11.25 03:06:26: Adding material to list: chimney_mat
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_gloss.png
+17.11.25 03:06:26: Adding texture to list: well_normal
+17.11.25 03:06:26: Adding model to list: chimney
+17.11.25 03:06:26: Adding material to list: woodenWall_mat
+17.11.25 03:06:26: chimney_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\chimney_ao.png
+17.11.25 03:06:26: Material 'metalCan_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: build_01_brickCorn_mat
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldSofa.FBX
+17.11.25 03:06:26: Adding model to list: well
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_ao.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01.fbx
+17.11.25 03:06:26: chimney_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\chimney_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\roofSide.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldSofa_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldSofa_gloss.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding texture to list: well_metalic
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: chimney_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\chimney_normal.png
+17.11.25 03:06:26: Adding texture to list: chimney_normal
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: bunkerDoor_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_gloss.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding texture to list: chimney_ao
+17.11.25 03:06:26: Adding material to list: metalCan_01_mat
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_ao.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Adding texture to list: chimney_gloss
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\roofSide.fbx
+17.11.25 03:06:26: oldTrailer not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldTrailer.FBX
+17.11.25 03:06:26: Adding texture to list: oldSofa_gloss
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_oldDoors.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor.fbx
+17.11.25 03:06:26: build_03_Wall_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_albedo.png
+17.11.25 03:06:26: Processing material: bunkerDoor_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: oldSofa not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldSofa.FBX
+17.11.25 03:06:26: Adding model to list: oldSofa
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_albedo.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_03_Wall_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_mat.json
+17.11.25 03:06:26: build_03_Wall_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01.fbx
+17.11.25 03:06:26: Adding model to list: build_03_Wall_01
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding model to list: oldTrailer
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_oldDoors.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_03_Wall_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_normal.png
+17.11.25 03:06:26: Adding texture to list: build_03_Wall_01_normal
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: bunkerDoor not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor.fbx
+17.11.25 03:06:26: Material 'bunkerDoor_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: bunkerDoor_mat
+17.11.25 03:06:26: build_03_Wall_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Wall_01_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_albedo.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_doorsFrame.fbx
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding texture to list: build_03_Wall_01_ao
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick.fbx
+17.11.25 03:06:26: roofSide not found on disk: C:\project\playcanvas_projects\North Wind\assets\roofSide.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_oldDoors not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_oldDoors.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_gloss.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: build_03_Wall_01_albedo
+17.11.25 03:06:26: Adding model to list: bunkerDoor
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: build_03_Wall_01_gloss
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: barrelBlue_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_mat.json
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_doorsFrame.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_gloss.png
+17.11.25 03:06:26: abandonedIronBox_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_albedo.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: abandonedIronBox_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick.fbx
+17.11.25 03:06:26: Adding model to list: roofSide
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_normal.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding model to list: build_01_oldDoors
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_ao.png
+17.11.25 03:06:26: build_01_Doors_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: bunkerDoor_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\bunkerDoor_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_gloss.png
+17.11.25 03:06:26: build_01_Doors_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_gloss.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: build_01_Doors_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_ao.png
+17.11.25 03:06:26: build_01_Doors_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Doors_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_normal.png
+17.11.25 03:06:26: Processing material: barrelBlue_mat, Status: On Server
+17.11.25 03:06:26: woodenBench_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_gloss.png
+17.11.25 03:06:26: Adding texture to list: abandonedIronBox_albedo
+17.11.25 03:06:26: Processing material: abandonedIronBox_mat, Status: On Server
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_Brick_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_normal.png
+17.11.25 03:06:26: build_01_Brick_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_ao.png
+17.11.25 03:06:26: Adding texture to list: build_01_Doors_01_normal
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_albedo.png
+17.11.25 03:06:26: Adding texture to list: bunkerDoor_gloss
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_gloss.png
+17.11.25 03:06:26: Adding texture to list: build_01_Doors_01_gloss
+17.11.25 03:06:26: Adding texture to list: build_01_Doors_01_ao
+17.11.25 03:06:26: Adding texture to list: build_01_Doors_01_albedo
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_Brick_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_ao.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Material 'barrelBlue_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: barrelBlue_mat
+17.11.25 03:06:26: build_01_doorsFrame not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_doorsFrame.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_Win_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_gloss.png
+17.11.25 03:06:26: Material 'abandonedIronBox_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_topBrick not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_02.fbx
+17.11.25 03:06:26: build_01_Win_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_brickCorn_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_normal.png
+17.11.25 03:06:26: Adding texture to list: build_01_brickCorn_normal
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_ao.png
+17.11.25 03:06:26: Adding texture to list: build_01_Brick_normal
+17.11.25 03:06:26: Adding texture to list: build_01_Brick_gloss
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_brickCorn_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_ao.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_Win_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01.fbx
+17.11.25 03:06:26: Adding texture to list: build_01_Brick_ao
+17.11.25 03:06:26: build_01_Brick_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Brick_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: woodenBench_01_albedo
+17.11.25 03:06:26: Processing cubemap, API path: 
+17.11.25 03:06:26: Adding model to list: build_01_doorsFrame
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: build_01_Win_01_gloss
+17.11.25 03:06:26: Adding material to list: abandonedIronBox_mat
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_normal.png
+17.11.25 03:06:26: Adding model to list: build_01_topBrick
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_02.fbx
+17.11.25 03:06:26: Adding texture to list: build_01_Win_01_albedo
+17.11.25 03:06:26: build_01_Win_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_ao.png
+17.11.25 03:06:26: Adding texture to list: build_01_Win_01_ao
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn.fbx
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negx.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_albedo.png
+17.11.25 03:06:26: Adding texture to list: build_01_brickCorn_ao
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_albedo.png
+17.11.25 03:06:26: build_01_brickCorn_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\Foundation_02_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_02_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_02_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_02_ao.png
+17.11.25 03:06:26: Adding model to list: build_01_Win_01
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_Win_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_Win_01_normal.png
+17.11.25 03:06:26: Adding texture to list: build_01_Brick_albedo
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posx.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negz.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: foundation_02 not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_02.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posy.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negx.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negy.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_albedo.png
+17.11.25 03:06:26: Adding texture to list: build_01_brickCorn_gloss
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\Foundation_02_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_02_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_02_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_02_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posz.png
+17.11.25 03:06:26: Adding texture to list: build_01_Win_01_normal
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posx.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negz.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_gloss.png
+17.11.25 03:06:26: Adding model to list: foundation_02
+17.11.25 03:06:26: build_01_brickCorn not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_topBrick_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posy.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_01_brickCorn_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_brickCorn_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negy.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: foundation_02_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_02_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posz.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: build_01_topBrick_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_normal.png
+17.11.25 03:06:26: Adding texture to list: build_01_topBrick_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding model to list: build_01_brickCorn
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_normal.png
+17.11.25 03:06:26: Adding texture to list: build_01_topBrick_ao
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: overcast_soil_puresky_4k-cube_posy not found on disk: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posy.png
+17.11.25 03:06:26: Adding texture to list: build_01_brickCorn_albedo
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_ao.png
+17.11.25 03:06:26: concreteBase_02_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_albedo.png
+17.11.25 03:06:26: Foundation_02_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\Foundation_02_normal.png
+17.11.25 03:06:26: foundation_02_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_02_gloss.png
+17.11.25 03:06:26: Adding texture to list: foundation_02_gloss
+17.11.25 03:06:26: Adding texture to list: foundation_02_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: overcast_soil_puresky_4k-cube_posz not found on disk: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posz.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteStairs.fbx
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_topBrick_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_fwrd.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_edge.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_01_topBrick_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_01_topBrick_gloss.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_normal.png
+17.11.25 03:06:26: overcast_soil_puresky_4k-cube_negx not found on disk: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negx.png
+17.11.25 03:06:26: Adding texture to list: overcast_soil_puresky_4k-cube_posy
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: overcast_soil_puresky_4k-cube_negy not found on disk: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negy.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: concreteBase_02_albedo
+17.11.25 03:06:26: Adding texture to list: Foundation_02_normal
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: concreteStairs_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_albedo.png
+17.11.25 03:06:26: overcast_soil_puresky_4k-cube_posx not found on disk: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_posx.png
+17.11.25 03:06:26: Adding texture to list: overcast_soil_puresky_4k-cube_posz
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteStairs.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: overcast_soil_puresky_4k-cube_negz not found on disk: C:\project\playcanvas_projects\North Wind\assets\overcast_soil_puresky_4k-cube_negz.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_gloss.png
+17.11.25 03:06:26: Adding texture to list: build_01_topBrick_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_fwrd.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_edge.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_gloss.png
+17.11.25 03:06:26: Adding texture to list: build_01_topBrick_gloss
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: concreteStairs_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_normal.png
+17.11.25 03:06:26: Adding texture to list: concreteStairs_normal
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Adding texture to list: overcast_soil_puresky_4k-cube_negy
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\foundation_01.fbx
+17.11.25 03:06:26: concreteStairs_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_gloss.png
+17.11.25 03:06:26: concreteStairs_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteStairs_ao.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenWall_albedo.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: foundation_02_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_02_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenWall_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: concreteStairs_albedo
+17.11.25 03:06:26: Adding texture to list: overcast_soil_puresky_4k-cube_posx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenWall_ao.png
+17.11.25 03:06:26: Adding texture to list: overcast_soil_puresky_4k-cube_negz
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_ao.png
+17.11.25 03:06:26: Adding texture to list: overcast_soil_puresky_4k-cube_negx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenWall.fbx
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\foundation_01.fbx
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding texture to list: concreteStairs_gloss
+17.11.25 03:06:26: Adding texture to list: concreteStairs_ao
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenWall_albedo.png
+17.11.25 03:06:26: Adding texture to list: foundation_02_ao
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenWall_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenWall_gloss.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: concreteStairs not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteStairs.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalContainer_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenWall_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: build_03_Found_fwrd not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_fwrd.fbx
+17.11.25 03:06:26: build_03_Found_edge not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_edge.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Foundation_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01_ao.png
+17.11.25 03:06:26: build_03_Found_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_ao.png
+17.11.25 03:06:26: Adding texture to list: build_03_Found_ao
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenWall.fbx
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenWall_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_normal.png
+17.11.25 03:06:26: Adding model to list: concreteStairs
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalContainer_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_ao.png
+17.11.25 03:06:26: Foundation_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_gloss.png
+17.11.25 03:06:26: Adding model to list: build_03_Found_fwrd
+17.11.25 03:06:26: Adding model to list: build_03_Found_edge
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: metalContainer_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01_gloss.png
+17.11.25 03:06:26: build_03_Found_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_albedo.png
+17.11.25 03:06:26: Adding texture to list: Foundation_01_albedo
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: build_03_Found_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_normal.png
+17.11.25 03:06:26: Foundation_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_01.fbx
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: foundation_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\foundation_01.fbx
+17.11.25 03:06:26: Adding model to list: foundation_01
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_02.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_normal.png
+17.11.25 03:06:26: woodenWall_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenWall_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_ao.png
+17.11.25 03:06:26: woodenWall_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenWall_normal.png
+17.11.25 03:06:26: Adding texture to list: woodenWall_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_normal.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenWall_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenWall_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_ao.png
+17.11.25 03:06:26: Adding texture to list: Foundation_01_gloss
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: build_03_Found_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\build_03_Found_gloss.png
+17.11.25 03:06:26: Adding texture to list: metalContainer_01_gloss
+17.11.25 03:06:26: Adding texture to list: build_03_Found_albedo
+17.11.25 03:06:26: metalContainer_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01_ao.png
+17.11.25 03:06:26: Adding texture to list: metalContainer_01_ao
+17.11.25 03:06:26: Adding texture to list: build_03_Found_normal
+17.11.25 03:06:26: Adding texture to list: Foundation_01_ao
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_albedo.png
+17.11.25 03:06:26: Foundation_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\Foundation_01_normal.png
+17.11.25 03:06:26: woodenWall not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenWall.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_01.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_02.fbx
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_normal.png
+17.11.25 03:06:26: Adding texture to list: woodenWall_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_gloss.png
+17.11.25 03:06:26: woodenWall_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenWall_gloss.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\electricShield_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: metalContainer_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalContainer_01.fbx
+17.11.25 03:06:26: metalContainer_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalContainer_normal.png
+17.11.25 03:06:26: Adding texture to list: woodenWall_ao
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\dev_gray_mat.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_gloss.png
+17.11.25 03:06:26: Adding texture to list: build_03_Found_gloss
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_gloss.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_albedo.png
+17.11.25 03:06:26: Adding texture to list: Foundation_01_normal
+17.11.25 03:06:26: Adding model to list: woodenWall
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_gloss.png
+17.11.25 03:06:26: Adding texture to list: woodenWall_gloss
+17.11.25 03:06:26: woodenFence_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\electricShield_01.fbx
+17.11.25 03:06:26: woodenFence_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_gloss.png
+17.11.25 03:06:26: Adding texture to list: woodenFence_gloss
+17.11.25 03:06:26: Adding model to list: metalContainer_01
+17.11.25 03:06:26: Adding texture to list: metalContainer_normal
+17.11.25 03:06:26: woodenFence_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_ao.png
+17.11.25 03:06:26: Adding texture to list: woodenFence_ao
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\dev_gray_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: woodenFence_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_01.fbx
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: oldWheel_01_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_normal.png
+17.11.25 03:06:26: woodenFence_02 not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_02.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02.fbx
+17.11.25 03:06:26: electricShield_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_normal.png
+17.11.25 03:06:26: electricShield_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: electricShield_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_gloss.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: woodenFence_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01.fbx
+17.11.25 03:06:26: electricShield_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\electricShield_01_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_albedo.png
+17.11.25 03:06:26: Adding model to list: woodenFence_01
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material: oldWheel_01_mat, Status: On Server
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding model to list: woodenFence_02
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: electricShield_01_normal
+17.11.25 03:06:26: Adding texture to list: electricShield_01_ao
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: electricShield_01_gloss
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_gloss.png
+17.11.25 03:06:26: electricShield_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\electricShield_01.fbx
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_02.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: redChairs_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: concreteBase_02_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_gloss.png
+17.11.25 03:06:26: Adding texture to list: concreteBase_02_gloss
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: stovePipe_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_normal.png
+17.11.25 03:06:26: stovePipe_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: electricShield_01_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_ao.png
+17.11.25 03:06:26: Material 'oldWheel_01_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: oldWheel_01_mat
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: concreteBase_02 not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02.fbx
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_gloss.png
+17.11.25 03:06:26: Adding model to list: electricShield_01
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_02.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_gloss.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_01.fbx
+17.11.25 03:06:26: dev_gray_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\dev_gray_mat.json
+17.11.25 03:06:26: Processing material: dev_gray_mat, Status: On Server
+17.11.25 03:06:26: stovePipe_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_albedo.png
+17.11.25 03:06:26: stovePipe_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: concreteBase_02_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_normal.png
+17.11.25 03:06:26: Adding texture to list: stovePipe_01_normal
+17.11.25 03:06:26: Adding texture to list: stovePipe_01_gloss
+17.11.25 03:06:26: stovePipe_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\stovePipe_01.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_ao.png
+17.11.25 03:06:26: concreteBase_02_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\concreteBase_02_normal.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Adding model to list: concreteBase_02
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs_mat.json
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: redChairs_ao
+17.11.25 03:06:26: Material 'dev_gray_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding texture to list: stovePipe_01_albedo
+17.11.25 03:06:26: Adding texture to list: stovePipe_01_ao
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs_albedo.png
+17.11.25 03:06:26: oldWheel_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_albedo.png
+17.11.25 03:06:26: Adding texture to list: concreteBase_02_ao
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_normal.png
+17.11.25 03:06:26: Adding model to list: stovePipe_01
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_normal.png
+17.11.25 03:06:26: woodenFence_Old_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_albedo.png
+17.11.25 03:06:26: Adding texture to list: woodenFence_Old_albedo
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs_gloss.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: concreteBase_02_normal
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs_mat.json
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenFence_Old_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\Metal_Can_01.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenFence_Old_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_ao.png
+17.11.25 03:06:26: woodenFence_Old_02 not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_02.fbx
+17.11.25 03:06:26: oldWheel_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs.fbx
+17.11.25 03:06:26: woodenFence_Old_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_01.fbx
+17.11.25 03:06:26: Adding material to list: dev_gray_mat
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs_albedo.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Adding texture to list: oldWheel_01_albedo
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\redChairs_metallic.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: oldWheel_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: woodenFence_Old_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenFence_Old_normal.png
+17.11.25 03:06:26: Adding texture to list: woodenFence_Old_gloss
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\Metal_Can_01.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_normal.png
+17.11.25 03:06:26: oldWheel_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01.fbx
+17.11.25 03:06:26: Adding texture to list: woodenFence_Old_ao
+17.11.25 03:06:26: Adding model to list: woodenFence_Old_02
+17.11.25 03:06:26: Adding texture to list: oldWheel_01_gloss
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding model to list: woodenFence_Old_01
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_albedo.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\barrelBlue.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\redChairs_metallic.png
+17.11.25 03:06:26: redChairs_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs_normal.png
+17.11.25 03:06:26: redChairs_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs_gloss.png
+17.11.25 03:06:26: Adding texture to list: redChairs_gloss
+17.11.25 03:06:26: Adding texture to list: oldWheel_01_ao
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_ao.png
+17.11.25 03:06:26: redChairs_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_gloss.png
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Adding texture to list: woodenFence_Old_normal
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_normal.png
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Adding model to list: oldWheel_01
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: redChairs not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs.fbx
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Processing model, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_ao.png
+17.11.25 03:06:26: redChairs_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs_albedo.png
+17.11.25 03:06:26: oldWheel_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\oldWheel_01_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\barrelBlue.fbx
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: metalCan_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: redChairs_metallic not found on disk: C:\project\playcanvas_projects\North Wind\assets\redChairs_metallic.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_ao.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_normal.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing material: redChairs_mat, Status: On Server
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_mat.json
+17.11.25 03:06:26: Metal_Can_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\Metal_Can_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite.fbx
+17.11.25 03:06:26: Adding model to list: redChairs
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: redChairs_albedo
+17.11.25 03:06:26: Adding texture to list: oldWheel_01_normal
+17.11.25 03:06:26: barrelBlue_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_albedo.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: barrelBlue not found on disk: C:\project\playcanvas_projects\North Wind\assets\barrelBlue.fbx
+17.11.25 03:06:26: metalCan_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_gloss.png
+17.11.25 03:06:26: Adding texture to list: metalCan_01_normal
+17.11.25 03:06:26: Adding texture to list: redChairs_normal
+17.11.25 03:06:26: Adding texture to list: redChairs_metallic
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenBench_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_ao.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: metalCan_01_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_albedo.png
+17.11.25 03:06:26: Adding texture to list: metalCan_01_albedo
+17.11.25 03:06:26: Material 'redChairs_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_mat.json
+17.11.25 03:06:26: Adding model to list: Metal_Can_01
+17.11.25 03:06:26: barrelBlue_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_normal.png
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_normal.png
+17.11.25 03:06:26: Processing scene, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite.fbx
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: barrelBlue_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_gloss.png
+17.11.25 03:06:26: barrelBlue_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\barrelBlue_ao.png
+17.11.25 03:06:26: Adding texture to list: barrelBlue_albedo
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox.fbx
+17.11.25 03:06:26: Adding model to list: barrelBlue
+17.11.25 03:06:26: Adding texture to list: metalCan_01_gloss
+17.11.25 03:06:26: Processing material, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_ao.png
+17.11.25 03:06:26: Adding texture to list: woodenBench_01_ao
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_gloss.png
+17.11.25 03:06:26: woodenBench_01_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_normal.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: metalCan_01_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\metalCan_01_ao.png
+17.11.25 03:06:26: Adding material to list: redChairs_mat
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: woodenBench_01_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01_gloss.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenTableWhite_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_mat.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\lightGray.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_normal.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: woodenTableWhite not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite.fbx
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_albedo.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_gloss.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_normal.png
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_mat.json
+17.11.25 03:06:26: Adding texture to list: barrelBlue_gloss
+17.11.25 03:06:26: Adding texture to list: barrelBlue_ao
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_ao.png
+17.11.25 03:06:26: woodenBench_01 not found on disk: C:\project\playcanvas_projects\North Wind\assets\woodenBench_01.fbx
+17.11.25 03:06:26: Adding model to list: woodenBench_01
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\surface_.json
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_ao.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: woodenBench_01_normal
+17.11.25 03:06:26: Adding texture to list: metalCan_01_ao
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\gray.png
+17.11.25 03:06:26: Adding texture to list: woodenBench_01_gloss
+17.11.25 03:06:26: Adding texture to list: barrelBlue_normal
+17.11.25 03:06:26: Processing material: woodenTableWhite_mat, Status: On Server
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\lightGray.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked.fbx
+17.11.25 03:06:26: Adding model to list: woodenTableWhite
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_gloss.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_normal.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_mat.json
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_ao.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox.fbx
+17.11.25 03:06:26: Processing texture, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\white.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\surface_.json
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\black.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: abandonedIronBox_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_gloss.png
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\gray.png
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Material 'woodenTableWhite_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: abandonedIronBox_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_normal.png
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing wasm, API path: 
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_albedo.png
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: airplaneWrecked_gloss not found on disk: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_gloss.png
+17.11.25 03:06:26: Adding texture to list: airplaneWrecked_gloss
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\joystick.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing folder, API path: 
+17.11.25 03:06:26: Generated resource path: C:\project\playcanvas_projects\North Wind\assets\crosshair.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\white.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: surface_ not found on disk: C:\project\playcanvas_projects\North Wind\assets\surface_.json
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: abandonedIronBox_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox_ao.png
+17.11.25 03:06:26: Adding texture to list: abandonedIronBox_gloss
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: Adding material to list: woodenTableWhite_mat
+17.11.25 03:06:26: Processing script, API path: 
+17.11.25 03:06:26: lightGray not found on disk: C:\project\playcanvas_projects\North Wind\assets\lightGray.png
+17.11.25 03:06:26: Adding texture to list: abandonedIronBox_normal
+17.11.25 03:06:26: airplaneWrecked not found on disk: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked.fbx
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: airplaneWrecked_albedo not found on disk: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_albedo.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: airplaneWrecked_ao not found on disk: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_ao.png
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\joystick.png
+17.11.25 03:06:26: abandonedIronBox not found on disk: C:\project\playcanvas_projects\North Wind\assets\abandonedIronBox.fbx
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\crosshair.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: white not found on disk: C:\project\playcanvas_projects\North Wind\assets\white.png
+17.11.25 03:06:26: Processing material: surface_, Status: On Server
+17.11.25 03:06:26: Adding texture to list: abandonedIronBox_ao
+17.11.25 03:06:26: gray not found on disk: C:\project\playcanvas_projects\North Wind\assets\gray.png
+17.11.25 03:06:26: Adding texture to list: lightGray
+17.11.25 03:06:26: Adding model to list: airplaneWrecked
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: airplaneWrecked_albedo
+17.11.25 03:06:26: airplaneWrecked_mat not found on disk: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_mat.json
+17.11.25 03:06:26: Adding texture to list: airplaneWrecked_ao
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: joystick not found on disk: C:\project\playcanvas_projects\North Wind\assets\joystick.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Checking if file exists: C:\project\playcanvas_projects\North Wind\assets\black.png
+17.11.25 03:06:26: Adding texture to list: white
+17.11.25 03:06:26: Material 'surface_' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: surface_
+17.11.25 03:06:26: airplaneWrecked_normal not found on disk: C:\project\playcanvas_projects\North Wind\assets\airplaneWrecked_normal.png
+17.11.25 03:06:26: Processing material: airplaneWrecked_mat, Status: On Server
+17.11.25 03:06:26: Adding model to list: abandonedIronBox
+17.11.25 03:06:26: Adding texture to list: joystick
+17.11.25 03:06:26: crosshair not found on disk: C:\project\playcanvas_projects\North Wind\assets\crosshair.png
+17.11.25 03:06:26: File exists: False
+17.11.25 03:06:26: Adding texture to list: gray
+17.11.25 03:06:26: Adding texture to list: airplaneWrecked_normal
+17.11.25 03:06:26: Material 'airplaneWrecked_mat' not downloaded, MapIds unavailable (Status: On Server)
+17.11.25 03:06:26: Adding material to list: airplaneWrecked_mat
+17.11.25 03:06:26: black not found on disk: C:\project\playcanvas_projects\North Wind\assets\black.png
+17.11.25 03:06:26: Adding texture to list: crosshair
+17.11.25 03:06:26: Adding texture to list: black
+17.11.25 03:06:26: Successfully retrieved resolution for https://playcanvas.com/api/assets/251055552/file/metalContainer_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252507791/file/oldMailBox_Albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031528/file/milkCanister_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251659940/file/oldTrailer_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250420916/file/woodenTableWhite_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031433/file/stoveBarrel_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251214226/file/build_01_winEdge_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652983/file/roofSide_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031666/file/dirtyLada_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031663/file/dirtyLada_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251214223/file/build_01_winEdge_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/234288312/file/belfast_sunset_puresky_2k-cube_negy.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031430/file/stoveBarrel_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250420911/file/woodenTableWhite_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652979/file/roofSide_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/234288311/file/belfast_sunset_puresky_2k-cube_negx.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652475/file/bunkerDoor_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251659939/file/oldTrailer_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250682415/file/woodenFence_albedo.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250420912/file/woodenTableWhite_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251659937/file/oldTrailer_metalness.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252032098/file/groundPineNeedles2_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031529/file/milkCanister_agm.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/234288310/file/belfast_sunset_puresky_2k-cube_negz.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031662/file/dirtyLada_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252507789/file/oldMailBox_AO.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252507784/file/oldMailBox_Metalness.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251660669/file/oldSofa_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252032095/file/groundPineNeedles2_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652980/file/roofSide_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251660670/file/oldSofa_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252507788/file/OldMailBox_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031434/file/stoveBarrel_opacity.png: 512x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/234288309/file/belfast_sunset_puresky_2k-cube_posx.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252032096/file/groundPineNeedles2_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252507790/file/oldMailBox_Normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251659938/file/oldTrailer_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652479/file/bunkerDoor_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652476/file/bunkerDoor_metalness.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251214225/file/build_01_winEdge_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252032097/file/groundPineNeedles2_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652982/file/roofSide_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031428/file/stoveBarrel_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652478/file/bunkerDoor_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251664220/file/well_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251659936/file/oldTrailer_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250420915/file/woodenTableWhite_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251664219/file/well_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/234288307/file/belfast_sunset_puresky_2k-cube_posy.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251664214/file/well_metalic.png: 512x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251662421/file/chimney_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251662419/file/chimney_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251662420/file/chimney_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251662418/file/chimney_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251664221/file/well_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252030375/file/oldSofa_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251654042/file/build_03_Wall_01_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251664218/file/well_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031431/file/stoveBarrel_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031664/file/dirtyLada_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251282697/file/build_01_Brick_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251234306/file/build_01_topBrick_ao.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251278242/file/build_01_Win_01_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251217568/file/foundation_02_albedo.png: 2048x256
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251654044/file/build_03_Wall_01_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251275876/file/build_01_brickCorn_gloss.png: 1024x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251654040/file/build_03_Wall_01_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/240562916/file/abandonedIronBox_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250469151/file/woodenBench_01_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251217566/file/foundation_02_gloss.png: 2048x256
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251284119/file/build_01_Doors_01_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251278245/file/build_01_Win_01_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251660666/file/oldSofa_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251214224/file/build_01_winEdge_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251197262/file/overcast_soil_puresky_4k-cube_posy.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251275877/file/build_01_brickCorn_normal.png: 1024x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/234288308/file/belfast_sunset_puresky_2k-cube_posz.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251654043/file/build_03_Wall_01_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251282707/file/build_01_Brick_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/252031530/file/milkCanister_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251278246/file/build_01_Win_01_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251284122/file/build_01_Doors_01_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251217567/file/Foundation_02_normal.png: 2048x256
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251652477/file/bunkerDoor_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251282698/file/build_01_Brick_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251284121/file/build_01_Doors_01_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251284120/file/build_01_Doors_01_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251282708/file/build_01_Brick_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251278243/file/build_01_Win_01_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251275878/file/build_01_brickCorn_albedo.png: 1024x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251234309/file/build_01_topBrick_gloss.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251275875/file/build_01_brickCorn_ao.png: 1024x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251234310/file/build_01_topBrick_albedo.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251217565/file/foundation_02_ao.png: 2048x256
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251185649/file/concreteStairs_gloss.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250679485/file/concreteBase_02_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251197264/file/overcast_soil_puresky_4k-cube_negz.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251197260/file/overcast_soil_puresky_4k-cube_posx.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251185648/file/concreteStairs_ao.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251234311/file/build_01_topBrick_normal.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251185652/file/concreteStairs_albedo.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251197261/file/overcast_soil_puresky_4k-cube_negy.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085887/file/Foundation_01_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251197265/file/overcast_soil_puresky_4k-cube_negx.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250682414/file/woodenFence_normal.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085886/file/Foundation_01_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251178674/file/build_03_Found_albedo.png: 2048x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085889/file/Foundation_01_albedo.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251178671/file/build_03_Found_ao.png: 2048x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085576/file/woodenWall_ao.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085578/file/woodenWall_normal.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251197263/file/overcast_soil_puresky_4k-cube_posz.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250669865/file/woodenFence_Old_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251185651/file/concreteStairs_normal.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251178672/file/build_03_Found_gloss.png: 2048x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250668677/file/oldWheel_01_gloss.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251178673/file/build_03_Found_normal.png: 2048x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250682412/file/woodenFence_ao.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472218/file/redChairs_metallic.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472217/file/redChairs_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085888/file/Foundation_01_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250668676/file/oldWheel_01_normal.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251055549/file/metalContainer_01_ao.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250679484/file/concreteBase_02_normal.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250679482/file/concreteBase_02_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250677511/file/stovePipe_01_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085577/file/woodenWall_gloss.png: 2048x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251055551/file/metalContainer_normal.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250677509/file/stovePipe_01_ao.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/251055550/file/metalContainer_01_gloss.png: 2048x2048
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250682413/file/woodenFence_gloss.png: 1024x512
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383039/file/lightGray.png: 8x8
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250677512/file/stovePipe_01_albedo.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250679483/file/concreteBase_02_gloss.png: 1024x1024
+17.11.25 03:06:27: Successfully retrieved resolution for https://playcanvas.com/api/assets/250680219/file/electricShield_01_albedo.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250471314/file/barrelBlue_albedo.png: 2048x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472117/file/metalCan_01_gloss.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250680218/file/electricShield_01_normal.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250469150/file/woodenBench_01_normal.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472116/file/metalCan_01_normal.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250680217/file/electricShield_01_gloss.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250469149/file/woodenBench_01_gloss.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250668678/file/oldWheel_01_albedo.png: 1024x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240562914/file/abandonedIronBox_ao.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472368/file/redChairs_ao.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383040/file/white.png: 8x8
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250680216/file/electricShield_01_ao.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250668673/file/oldWheel_01_ao.png: 1024x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250677513/file/stovePipe_01_normal.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250471312/file/barrelBlue_normal.png: 2048x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383580/file/airplaneWrecked_gloss.png: 2048x2048
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250471310/file/barrelBlue_ao.png: 2048x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250669867/file/woodenFence_Old_normal.png: 2048x2048
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472118/file/metalCan_01_albedo.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240562919/file/abandonedIronBox_gloss.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472112/file/metalCan_01_ao.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472222/file/redChairs_normal.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240562912/file/abandonedIronBox_normal.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250669871/file/woodenFence_Old_albedo.png: 2048x2048
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383577/file/airplaneWrecked_ao.png: 2048x2048
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250471311/file/barrelBlue_gloss.png: 2048x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250669863/file/woodenFence_Old_ao.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/251085579/file/woodenWall_albedo.png: 2048x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/234287736/file/joystick.png: 512x512
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250469148/file/woodenBench_01_ao.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383579/file/airplaneWrecked_albedo.png: 2048x2048
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383042/file/gray.png: 8x8
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383041/file/black.png: 8x8
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/234287738/file/crosshair.png: 176x176
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/250472221/file/redChairs_gloss.png: 1024x1024
+17.11.25 03:06:28: Successfully retrieved resolution for https://playcanvas.com/api/assets/240383578/file/airplaneWrecked_normal.png: 2048x2048
+17.11.25 03:06:28: === Detecting local ORM textures ===
+17.11.25 03:06:28:     Extracted metadata: 2048x1024, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: concreteStairs_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x2048, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: dirtyLada_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x2048, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: oldSofa_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 1024x1024, 11 mips
+17.11.25 03:06:28:   Loaded ORM texture: well_ogm (OGM)
+17.11.25 03:06:28:     Extracted metadata: 1024x1024, 11 mips
+17.11.25 03:06:28:   Loaded ORM texture: woodenFence_Old_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x2048, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: build_01_Brick_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x1024, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: concreteStairs_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x2048, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: dirtyLada_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x2048, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: oldSofa_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 1024x1024, 11 mips
+17.11.25 03:06:28:   Loaded ORM texture: well_ogm (OGM)
+17.11.25 03:06:28:     Extracted metadata: 1024x1024, 11 mips
+17.11.25 03:06:28:   Loaded ORM texture: woodenFence_Old_og (OG)
+17.11.25 03:06:28:     Extracted metadata: 2048x2048, 12 mips
+17.11.25 03:06:28:   Loaded ORM texture: build_01_Brick_og (OG)
+17.11.25 03:06:28: === Detected 12 ORM textures ===
+17.11.25 03:06:28: Hashes differ! Updates available on server (cached assets loaded).
+17.11.25 03:06:28: UpdateConnectionButton: Changing state to UpToDate
+17.11.25 03:06:28: UpdateConnectionButton: Button set to Refresh, enabled=True
+17.11.25 03:06:31: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:06:31: [TexturesDataGrid_SelectionChanged] Selected texture: woodenTableWhite_albedo, Path: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
+17.11.25 03:06:31: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:06:31: [TextureSelection] Debounce completed for: woodenTableWhite_albedo
+17.11.25 03:06:31: [TextureSelection] Loading conversion settings for: woodenTableWhite_albedo
+17.11.25 03:06:31: [LoadTextureConversionSettings] START for: woodenTableWhite_albedo
+17.11.25 03:06:31: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: Albedo/Color (sRGB)
+17.11.25 03:06:31: Auto-detected preset 'Albedo/Color (sRGB)' for texture woodenTableWhite_albedo
+17.11.25 03:06:31: [LoadTextureConversionSettings] Dropdown contains 5 items: Custom, Albedo/Color (sRGB), Normal (Linear), Gloss (Linear + Toksvig), Height (Linear with Clamp)
+17.11.25 03:06:31: [LoadTextureConversionSettings] Preset 'Albedo/Color (sRGB)' exists in dropdown: True
+17.11.25 03:06:31: [LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: Albedo/Color (sRGB)
+17.11.25 03:06:31: [LoadTextureConversionSettings] END for: woodenTableWhite_albedo
+17.11.25 03:06:31: [TextureSelection] Conversion settings loaded for: woodenTableWhite_albedo
+17.11.25 03:06:31: [TextureSelection] Starting texture load for: woodenTableWhite_albedo
+17.11.25 03:06:31: [TextureSelection] Attempting KTX2 load for: woodenTableWhite_albedo
+17.11.25 03:06:31: [TextureSelection] KTX2 load result for woodenTableWhite_albedo: False
+17.11.25 03:06:31: [TextureSelection] No KTX2, loading source preview for: woodenTableWhite_albedo
+17.11.25 03:06:31: Error loading thumbnail for texture: woodenTableWhite_albedo
+17.11.25 03:06:31: [TextureSelection] Source preview loaded for: woodenTableWhite_albedo
+17.11.25 03:06:32: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:06:32: [TexturesDataGrid_SelectionChanged] Selected texture: oldMailBox_Albedo, Path: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
+17.11.25 03:06:32: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:06:32: [TextureSelection] Debounce completed for: oldMailBox_Albedo
+17.11.25 03:06:32: [TextureSelection] Loading conversion settings for: oldMailBox_Albedo
+17.11.25 03:06:32: [LoadTextureConversionSettings] START for: oldMailBox_Albedo
+17.11.25 03:06:32: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: Albedo/Color (sRGB)
+17.11.25 03:06:32: Auto-detected preset 'Albedo/Color (sRGB)' for texture oldMailBox_Albedo
+17.11.25 03:06:32: [LoadTextureConversionSettings] Dropdown contains 5 items: Custom, Albedo/Color (sRGB), Normal (Linear), Gloss (Linear + Toksvig), Height (Linear with Clamp)
+17.11.25 03:06:32: [LoadTextureConversionSettings] Preset 'Albedo/Color (sRGB)' exists in dropdown: True
+17.11.25 03:06:32: [LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: Albedo/Color (sRGB)
+17.11.25 03:06:32: [LoadTextureConversionSettings] END for: oldMailBox_Albedo
+17.11.25 03:06:32: [TextureSelection] Conversion settings loaded for: oldMailBox_Albedo
+17.11.25 03:06:32: [TextureSelection] Starting texture load for: oldMailBox_Albedo
+17.11.25 03:06:32: Error loading thumbnail for texture: oldMailBox_Albedo
+17.11.25 03:06:33: DynamicConnectionButton_Click: Button clicked, current state: UpToDate
+17.11.25 03:06:33: DynamicConnectionButton_Click: Calling RefreshFromServer
+17.11.25 03:06:34: Project updates detected: localHash=84707f36 remoteHash=2a91f53f
+17.11.25 03:06:34: UpdateConnectionButton: Changing state to NeedsDownload
+17.11.25 03:06:34: UpdateConnectionButton: Button set to Download, enabled=True
+17.11.25 03:06:40: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:06:40: [TexturesDataGrid_SelectionChanged] Selected texture: dirtyLada_gloss, Path: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
+17.11.25 03:06:40: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:06:40: [TextureSelection] Debounce completed for: dirtyLada_gloss
+17.11.25 03:06:40: [TextureSelection] Loading conversion settings for: dirtyLada_gloss
+17.11.25 03:06:40: [LoadTextureConversionSettings] START for: dirtyLada_gloss
+17.11.25 03:06:40: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: Gloss (Linear + Toksvig)
+17.11.25 03:06:40: Auto-detected preset 'Gloss (Linear + Toksvig)' for texture dirtyLada_gloss
+17.11.25 03:06:40: [LoadTextureConversionSettings] Dropdown contains 5 items: Custom, Albedo/Color (sRGB), Normal (Linear), Gloss (Linear + Toksvig), Height (Linear with Clamp)
+17.11.25 03:06:40: [LoadTextureConversionSettings] Preset 'Gloss (Linear + Toksvig)' exists in dropdown: True
+17.11.25 03:06:40: [LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: Gloss (Linear + Toksvig)
+17.11.25 03:06:40: [LoadTextureConversionSettings] END for: dirtyLada_gloss
+17.11.25 03:06:40: [TextureSelection] Conversion settings loaded for: dirtyLada_gloss
+17.11.25 03:06:40: [TextureSelection] Starting texture load for: dirtyLada_gloss
+17.11.25 03:06:40: Error loading thumbnail for texture: dirtyLada_gloss
+17.11.25 03:06:42: DynamicConnectionButton_Click: Button clicked, current state: NeedsDownload
+17.11.25 03:06:42: DynamicConnectionButton_Click: Calling DownloadFromServer
+17.11.25 03:06:42: DownloadFromServer: Starting download from server
+17.11.25 03:06:42: DownloadFromServer: Loading assets list from server
+17.11.25 03:06:42: SyncProjectAsync: Fetching assets for project 1354757 / branch df264c8f-3c95-4882-9ebf-6e9474a31273
+17.11.25 03:06:43: BuildFolderHierarchyFromAssets: Created 63 folder paths
+17.11.25 03:06:43: Assets list saved to C:/project/playcanvas_projects/North Wind\assets_list.json
+17.11.25 03:06:43: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:06:43: Updated Project Folder Path: C:\project\playcanvas_projects\North Wind
+17.11.25 03:06:43: DownloadFromServer: Starting file downloads
+17.11.25 03:07:05: DownloadFromServer: File downloads completed
+17.11.25 03:07:05: DownloadFromServer: Checking for updates on server after download
+17.11.25 03:07:06: Project is up to date based on hash comparison.
+17.11.25 03:07:06: DownloadFromServer: Project is up to date - setting button to Refresh
+17.11.25 03:07:06: UpdateConnectionButton: Changing state to UpToDate
+17.11.25 03:07:06: UpdateConnectionButton: Button set to Refresh, enabled=True
+17.11.25 03:07:06: DownloadFromServer: Button state updated
+17.11.25 03:07:20: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:07:20: [TexturesDataGrid_SelectionChanged] Selected texture: belfast_sunset_puresky_2k-cube_posy.png, Path: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:20: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:07:20: [TextureSelection] Debounce completed for: belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:20: [TextureSelection] Loading conversion settings for: belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:20: [LoadTextureConversionSettings] START for: belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:20: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: null
+17.11.25 03:07:20: No preset matched for 'belfast_sunset_puresky_2k-cube_posy.png', using Custom SILENTLY
+17.11.25 03:07:20: [LoadTextureConversionSettings] END for: belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:20: [TextureSelection] Conversion settings loaded for: belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:20: [TextureSelection] Starting texture load for: belfast_sunset_puresky_2k-cube_posy.png
+17.11.25 03:07:21: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:07:21: [TexturesDataGrid_SelectionChanged] Selected texture: oldMailBox_gloss.png, Path: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
+17.11.25 03:07:21: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:07:21: [TextureSelection] Debounce completed for: oldMailBox_gloss.png
+17.11.25 03:07:21: [TextureSelection] Loading conversion settings for: oldMailBox_gloss.png
+17.11.25 03:07:21: [LoadTextureConversionSettings] START for: oldMailBox_gloss.png
+17.11.25 03:07:21: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: Gloss (Linear + Toksvig)
+17.11.25 03:07:21: Auto-detected preset 'Gloss (Linear + Toksvig)' for texture oldMailBox_gloss.png
+17.11.25 03:07:21: [LoadTextureConversionSettings] Dropdown contains 5 items: Custom, Albedo/Color (sRGB), Normal (Linear), Gloss (Linear + Toksvig), Height (Linear with Clamp)
+17.11.25 03:07:21: [LoadTextureConversionSettings] Preset 'Gloss (Linear + Toksvig)' exists in dropdown: True
+17.11.25 03:07:21: [LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: Gloss (Linear + Toksvig)
+17.11.25 03:07:21: [LoadTextureConversionSettings] END for: oldMailBox_gloss.png
+17.11.25 03:07:21: [TextureSelection] Conversion settings loaded for: oldMailBox_gloss.png
+17.11.25 03:07:21: [TextureSelection] Starting texture load for: oldMailBox_gloss.png
+17.11.25 03:07:22: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:07:22: [TexturesDataGrid_SelectionChanged] Selected texture: roofSide_ao.png, Path: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
+17.11.25 03:07:22: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:07:22: [TextureSelection] Debounce completed for: roofSide_ao.png
+17.11.25 03:07:22: [TextureSelection] Loading conversion settings for: roofSide_ao.png
+17.11.25 03:07:22: [LoadTextureConversionSettings] START for: roofSide_ao.png
+17.11.25 03:07:22: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: null
+17.11.25 03:07:22: No preset matched for 'roofSide_ao.png', using Custom SILENTLY
+17.11.25 03:07:22: [LoadTextureConversionSettings] END for: roofSide_ao.png
+17.11.25 03:07:22: [TextureSelection] Conversion settings loaded for: roofSide_ao.png
+17.11.25 03:07:22: [TextureSelection] Starting texture load for: roofSide_ao.png
+17.11.25 03:07:22: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:07:22: [TexturesDataGrid_SelectionChanged] Selected texture: belfast_sunset_puresky_2k-cube_posx.png, Path: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:22: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:07:22: [TextureSelection] Debounce completed for: belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:22: [TextureSelection] Loading conversion settings for: belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:22: [LoadTextureConversionSettings] START for: belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:22: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: null
+17.11.25 03:07:22: No preset matched for 'belfast_sunset_puresky_2k-cube_posx.png', using Custom SILENTLY
+17.11.25 03:07:22: [LoadTextureConversionSettings] END for: belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:22: [TextureSelection] Conversion settings loaded for: belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:22: [TextureSelection] Starting texture load for: belfast_sunset_puresky_2k-cube_posx.png
+17.11.25 03:07:23: [TexturesDataGrid_SelectionChanged] EVENT FIRED
+17.11.25 03:07:23: [TexturesDataGrid_SelectionChanged] Selected texture: belfast_sunset_puresky_2k-cube_negx.png, Path: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:07:23: [TexturesDataGrid_SelectionChanged] Path is valid, entering main load block
+17.11.25 03:07:23: [TextureSelection] Debounce completed for: belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:07:23: [TextureSelection] Loading conversion settings for: belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:07:23: [LoadTextureConversionSettings] START for: belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:07:23: [LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: null
+17.11.25 03:07:23: No preset matched for 'belfast_sunset_puresky_2k-cube_negx.png', using Custom SILENTLY
+17.11.25 03:07:23: [LoadTextureConversionSettings] END for: belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:07:23: [TextureSelection] Conversion settings loaded for: belfast_sunset_puresky_2k-cube_negx.png
+17.11.25 03:07:23: [TextureSelection] Starting texture load for: belfast_sunset_puresky_2k-cube_negx.png

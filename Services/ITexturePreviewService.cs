@@ -2,6 +2,7 @@ using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using AssetProcessor.TextureViewer;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
@@ -30,4 +31,10 @@ public interface ITexturePreviewService {
 
     void ResetPreviewState();
     Task SwitchRendererAsync(TexturePreviewContext context, bool useD3D11);
+
+    BitmapImage? GetCachedImage(string texturePath);
+    void CacheImage(string texturePath, BitmapImage bitmapImage);
+    BitmapImage? LoadOptimizedImage(string path, int maxSize);
+    string? GetExistingKtx2Path(string? sourcePath, string? projectFolderPath);
+    Task<List<KtxMipLevel>> LoadKtx2MipmapsAsync(string ktxPath, CancellationToken cancellationToken);
 }

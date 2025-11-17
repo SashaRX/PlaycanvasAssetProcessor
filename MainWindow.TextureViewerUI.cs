@@ -975,22 +975,23 @@ namespace AssetProcessor {
 
             HistogramComputationResult result = histogramCoordinator.BuildHistogram(bitmapSource, isGray);
 
-            Dispatcher.Invoke(() => {
-                HistogramPlotView.Model = result.Model;
-                UpdateHistogramStatisticsUI(result.Statistics);
-            });
+            Dispatcher.Invoke(() => ApplyHistogramResult(result));
         }
+
         private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
             if (bitmapSource == null) return;
 
             HistogramComputationResult result = await histogramCoordinator.BuildHistogramAsync(bitmapSource, isGray);
 
-            Dispatcher.Invoke(() => {
-                HistogramPlotView.Model = result.Model;
-                UpdateHistogramStatisticsUI(result.Statistics);
-            });
+            Dispatcher.Invoke(() => ApplyHistogramResult(result));
         }
-private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
+
+        private void ApplyHistogramResult(HistogramComputationResult result) {
+            HistogramPlotView.Model = result.Model;
+            UpdateHistogramStatisticsUI(result.Statistics);
+        }
+
+        private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
             HistogramMinTextBlock.Text = $"{stats.Min:F0}";
             HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
             HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";

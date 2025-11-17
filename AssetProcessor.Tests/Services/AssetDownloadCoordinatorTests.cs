@@ -133,7 +133,7 @@ public class AssetDownloadCoordinatorTests {
         public Task<Newtonsoft.Json.Linq.JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) => throw new NotImplementedException();
 
         public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) =>
-            System.IO.Path.Combine(projectsRoot, projectName, fileName ?? string.Empty);
+            System.IO.Path.Combine(projectsRoot, projectName, LocalCacheService.AssetsDirectoryName, fileName ?? string.Empty);
 
         public Task SaveAssetsListAsync(Newtonsoft.Json.Linq.JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) => throw new NotImplementedException();
 

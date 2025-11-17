@@ -1,123 +1,240 @@
-17.11.25 03:06:26: Unsupported asset type or format: shader - .glsl
-17.11.25 03:06:26: Unsupported asset type or format: shader - .glsl
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: shader - .glsl
-17.11.25 03:06:26: Unsupported asset type or format: shader - .glsl
-17.11.25 03:06:26: Unsupported asset type or format: shader - .glsl
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: json - .json
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: container - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Unsupported asset type or format: texture - .hdr
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Unsupported asset type or format: model - .glb
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:26: Invalid asset file format
-17.11.25 03:06:31: Error loading optimized image from C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png: Could not find file 'C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png'.
-17.11.25 03:06:32: Error loading optimized image from C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png: Could not find file 'C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png'.
-17.11.25 03:06:40: Error loading optimized image from C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png: Could not find file 'C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png'.
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: shader - .glsl
+17.11.25 13:54:29: Unsupported asset type or format: shader - .glsl
+17.11.25 13:54:29: Unsupported asset type or format: shader - .glsl
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: shader - .glsl
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: shader - .glsl
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: json - .json
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: container - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: texture - .hdr
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Unsupported asset type or format: model - .glb
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:54:29: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: shader - .glsl
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: shader - .glsl
+17.11.25 13:55:39: Unsupported asset type or format: shader - .glsl
+17.11.25 13:55:39: Unsupported asset type or format: shader - .glsl
+17.11.25 13:55:39: Unsupported asset type or format: shader - .glsl
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: json - .json
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: container - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: texture - .hdr
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Unsupported asset type or format: model - .glb
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format
+17.11.25 13:55:39: Invalid asset file format

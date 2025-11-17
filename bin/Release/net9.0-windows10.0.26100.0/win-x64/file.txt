@@ -1,306 +1,212 @@
-2025-11-17 03:06:24.4626|INFO|AssetProcessor.ViewModels.MainViewModel|MainViewModel initialized
-2025-11-17 03:06:24.7820|INFO|AssetProcessor.MainWindow|=== InitializeOnStartup: Starting ===
-2025-11-17 03:06:24.7820|INFO|AssetProcessor.MainWindow|InitializeOnStartup: Connecting to PlayCanvas server...
-2025-11-17 03:06:24.7820|INFO|AssetProcessor.MainWindow|LoadLastSettings: Starting
-2025-11-17 03:06:24.8480|INFO|AssetProcessor.TextureConversion.Settings.TextureConversionSettingsManager|Texture conversion settings loaded from C:\Users\Sasha\AppData\Roaming\PlayCanvasAssetProcessor\TextureConversionSettings.json
-2025-11-17 03:06:24.8480|INFO|AssetProcessor.MainWindow|ConversionSettingsManager passed to panel. PresetComboBox items count: 5
-2025-11-17 03:06:24.8480|INFO|AssetProcessor.MainWindow|ConversionSettings initialized successfully
-2025-11-17 03:06:24.9884|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|Created D3D11 host window with native mouse handling: hwnd=2F0AD0
-2025-11-17 03:06:25.0743|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|D3D11 texture viewer control initialized: 800x600
-2025-11-17 03:06:25.1905|INFO|AssetProcessor.MainWindow|MainWindow loaded - D3D11 viewer ready
-2025-11-17 03:06:25.1905|INFO|AssetProcessor.MainWindow|Switched to D3D11 preview renderer
-2025-11-17 03:06:25.1905|INFO|AssetProcessor.MainWindow|Applied UseD3D11Preview setting on startup: True
-2025-11-17 03:06:25.1967|INFO|AssetProcessor.Controls.LogViewerControl|Log Viewer initialized
-2025-11-17 03:06:25.4533|INFO|AssetProcessor.MainWindow|LoadLastSettings: Selected project: 1354757
-2025-11-17 03:06:25.6000|INFO|AssetProcessor.MainWindow|LoadLastSettings: Selected branch: df264c8f-3c95-4882-9ebf-6e9474a31273
-2025-11-17 03:06:25.6000|INFO|AssetProcessor.MainWindow|LoadLastSettings: Project folder path set to: C:\project\playcanvas_projects\North Wind
-2025-11-17 03:06:25.6000|INFO|AssetProcessor.MainWindow|=== SmartLoadAssets: Starting ===
-2025-11-17 03:06:26.2654|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Loading local assets from cache...
-2025-11-17 03:06:28.3446|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Hashes differ! Updates available on server (cached assets still loaded).
-2025-11-17 03:06:28.3446|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Changing state from Disconnected to UpToDate
-2025-11-17 03:06:28.3446|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: hasSelection=True, DynamicConnectionButton is null: False
-2025-11-17 03:06:28.3446|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Set to Refresh (enabled=True)
-2025-11-17 03:06:28.3446|INFO|AssetProcessor.MainWindow|InitializeOnStartup: LoadLastSettings completed
-2025-11-17 03:06:31.0555|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:06:31.0555|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\woodenTableWhite_albedo.png
-2025-11-17 03:06:31.0559|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:06:31.0559|WARN|AssetProcessor.MainWindow|No source texture path available for WPF preview
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:06:32.2477|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\oldMailBox_Albedo.png
-2025-11-17 03:06:33.9828|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Button clicked, current state: UpToDate
-2025-11-17 03:06:33.9828|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Calling RefreshFromServer
-2025-11-17 03:06:34.5602|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Changing state from UpToDate to NeedsDownload
-2025-11-17 03:06:34.5602|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: hasSelection=True, DynamicConnectionButton is null: False
-2025-11-17 03:06:34.5602|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Set to Download (enabled=True)
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:06:40.9896|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\dirtyLada_gloss.png
-2025-11-17 03:06:42.5564|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Button clicked, current state: NeedsDownload
-2025-11-17 03:06:42.5564|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Calling DownloadFromServer
-2025-11-17 03:06:42.5564|INFO|AssetProcessor.MainWindow|DownloadFromServer: Starting download
-2025-11-17 03:06:42.5564|INFO|AssetProcessor.MainWindow|DownloadFromServer: Loading assets list from server
-2025-11-17 03:06:43.3665|INFO|AssetProcessor.ViewModels.MainViewModel|Project synchronized: 262 assets loaded
-2025-11-17 03:06:43.3665|INFO|AssetProcessor.MainWindow|DownloadFromServer: Starting file downloads
-2025-11-17 03:06:43.3704|INFO|AssetDownloadCoordinator|AssetDownloadCoordinator: starting attempt 1 for 262 assets
-2025-11-17 03:07:05.5391|INFO|AssetProcessor.ViewModels.MainViewModel|Downloaded 262 assets
-2025-11-17 03:07:05.5391|INFO|AssetProcessor.MainWindow|DownloadFromServer: File downloads completed
-2025-11-17 03:07:05.5391|INFO|AssetProcessor.MainWindow|DownloadFromServer: Checking for updates on server after download
-2025-11-17 03:07:06.1752|INFO|AssetProcessor.MainWindow|DownloadFromServer: Project is up to date - setting button to Refresh
-2025-11-17 03:07:06.1752|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Changing state from NeedsDownload to UpToDate
-2025-11-17 03:07:06.1752|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: hasSelection=True, DynamicConnectionButton is null: False
-2025-11-17 03:07:06.1752|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Set to Refresh (enabled=True)
-2025-11-17 03:07:06.1752|INFO|AssetProcessor.MainWindow|DownloadFromServer: Button state updated
-2025-11-17 03:07:06.1752|INFO|AssetProcessor.MainWindow|DownloadFromServer: Completed
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:20.8078|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:20.8545|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=512x512
-2025-11-17 03:07:20.8545|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:20.8545|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:20.8545|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:20.8545|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:20.8829|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:20.8829|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:20.9413|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:20.9413|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:20.9413|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:20.9413|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:20.9413|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:20.9686|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:20.9686|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:21.4327|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:21.4327|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:21.4327|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:21.4327|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:21.4327|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:21.4601|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:21.4601|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:21.6355|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:21.6355|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:21.6355|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:21.6355|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:21.6355|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:21.6628|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posy.png
-2025-11-17 03:07:21.6628|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:21.8954|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:21.9033|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=512x512
-2025-11-17 03:07:21.9033|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:21.9033|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:21.9033|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:21.9033|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:21.9033|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:21.9033|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:21.9242|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=1024x1024
-2025-11-17 03:07:21.9242|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:21.9242|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:21.9242|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:21.9242|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:21.9242|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:21.9242|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.0023|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=1024x1024
-2025-11-17 03:07:22.0023|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.0023|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.0023|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.0023|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.0023|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:22.0023|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.0417|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=1024x1024
-2025-11-17 03:07:22.0417|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.0417|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.0417|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.0417|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.0417|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\OldMailBox_gloss.png
-2025-11-17 03:07:22.0417|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:22.1359|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.1651|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=512x512
-2025-11-17 03:07:22.1651|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.1651|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.1651|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.1651|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.1895|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.1895|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.2008|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:22.2008|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.2008|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.2008|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.2008|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.2250|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.2250|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.5083|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:22.5083|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.5083|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.5083|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.5083|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.5325|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.5325|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.6502|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:22.6503|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.6503|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.6503|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.6503|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.6744|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\models\props\roofSide\roofSide_ao.png
-2025-11-17 03:07:22.6744|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:22.8473|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:22.8774|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=512x512
-2025-11-17 03:07:22.8774|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.8774|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.8774|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.8774|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.9002|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:22.9002|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:22.9002|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:22.9002|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:22.9002|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:22.9002|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:22.9002|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:22.9336|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:22.9336|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:23.2780|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:23.2780|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:23.2780|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:23.2780|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:23.2780|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:23.3006|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:23.3006|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:23.4353|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:23.4353|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:23.4353|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:23.4353|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:23.4353|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:23.4580|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_posx.png
-2025-11-17 03:07:23.4580|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
-2025-11-17 03:07:23.7892|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:23.8175|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=512x512
-2025-11-17 03:07:23.8175|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:23.8175|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:23.8175|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:23.8175|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:23.8391|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:23.8391|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:23.8391|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:23.8391|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:23.8391|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:23.8391|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:23.8391|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:23.8671|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:23.8671|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:24.1903|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:24.1903|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:24.1903|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:24.1903|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:24.1903|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:24.2111|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:24.2111|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
-2025-11-17 03:07:24.3340|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
-2025-11-17 03:07:24.3340|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
-2025-11-17 03:07:24.3340|INFO|AssetProcessor.MainWindow|WPF preview image prepared in UpdatePreviewImage
-2025-11-17 03:07:24.3340|WARN|AssetProcessor.MainWindow|D3D11TextureViewer or renderer is not available; switching to WPF preview
-2025-11-17 03:07:24.3340|INFO|AssetProcessor.MainWindow|Switched to WPF preview renderer
-2025-11-17 03:07:24.3548|INFO|AssetProcessor.MainWindow|Loaded source texture to WPF Image: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negx.png
-2025-11-17 03:07:24.3548|INFO|AssetProcessor.MainWindow|Updated WPF Image in ShowOriginalImage
+2025-11-17 13:54:27.3995|INFO|AssetProcessor.ViewModels.MainViewModel|MainViewModel initialized
+2025-11-17 13:54:27.7096|INFO|AssetProcessor.MainWindow|=== InitializeOnStartup: Starting ===
+2025-11-17 13:54:27.7096|INFO|AssetProcessor.MainWindow|InitializeOnStartup: Connecting to PlayCanvas server...
+2025-11-17 13:54:27.7096|INFO|AssetProcessor.MainWindow|LoadLastSettings: Starting
+2025-11-17 13:54:27.7719|INFO|AssetProcessor.TextureConversion.Settings.TextureConversionSettingsManager|Texture conversion settings loaded from C:\Users\Sasha\AppData\Roaming\PlayCanvasAssetProcessor\TextureConversionSettings.json
+2025-11-17 13:54:27.7719|INFO|AssetProcessor.MainWindow|ConversionSettingsManager passed to panel. PresetComboBox items count: 5
+2025-11-17 13:54:27.7719|INFO|AssetProcessor.MainWindow|ConversionSettings initialized successfully
+2025-11-17 13:54:27.9036|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|Created D3D11 host window with native mouse handling: hwnd=F207CE
+2025-11-17 13:54:27.9833|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|D3D11 texture viewer control initialized: 800x600
+2025-11-17 13:54:28.0954|INFO|AssetProcessor.MainWindow|MainWindow loaded - D3D11 viewer ready
+2025-11-17 13:54:28.0954|INFO|AssetProcessor.MainWindow|Switched to D3D11 preview renderer
+2025-11-17 13:54:28.0954|INFO|AssetProcessor.MainWindow|Applied UseD3D11Preview setting on startup: True
+2025-11-17 13:54:28.1021|INFO|AssetProcessor.Controls.LogViewerControl|Log Viewer initialized
+2025-11-17 13:54:28.3146|INFO|AssetProcessor.MainWindow|LoadLastSettings: Selected project: 1354757
+2025-11-17 13:54:28.4583|INFO|AssetProcessor.MainWindow|LoadLastSettings: Selected branch: df264c8f-3c95-4882-9ebf-6e9474a31273
+2025-11-17 13:54:28.4583|INFO|AssetProcessor.MainWindow|LoadLastSettings: Project folder path set to: C:\project\playcanvas_projects\North Wind
+2025-11-17 13:54:28.4598|INFO|AssetProcessor.MainWindow|=== SmartLoadAssets: Starting ===
+2025-11-17 13:54:29.0889|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Loading local assets...
+2025-11-17 13:54:29.9627|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Hashes differ! Updates available on server.
+2025-11-17 13:54:29.9627|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Changing state from Disconnected to NeedsDownload
+2025-11-17 13:54:29.9627|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: hasSelection=True, DynamicConnectionButton is null: False
+2025-11-17 13:54:29.9627|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Set to Download (enabled=True)
+2025-11-17 13:54:29.9627|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Assets loaded successfully
+2025-11-17 13:54:29.9627|INFO|AssetProcessor.MainWindow|InitializeOnStartup: LoadLastSettings completed
+2025-11-17 13:54:35.1966|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Button clicked, current state: NeedsDownload
+2025-11-17 13:54:35.1966|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Calling DownloadFromServer
+2025-11-17 13:54:35.1966|INFO|AssetProcessor.MainWindow|DownloadFromServer: Starting download
+2025-11-17 13:54:35.1966|INFO|AssetProcessor.MainWindow|DownloadFromServer: Loading assets list from server
+2025-11-17 13:54:35.9852|INFO|AssetProcessor.ViewModels.MainViewModel|Project synchronized: 262 assets loaded
+2025-11-17 13:54:35.9852|INFO|AssetProcessor.MainWindow|DownloadFromServer: Starting file downloads
+2025-11-17 13:54:35.9852|INFO|AssetDownloadCoordinator|AssetDownloadCoordinator: starting attempt 1 for 262 assets
+2025-11-17 13:54:45.1146|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|D3D11 texture viewer control destroyed
+2025-11-17 13:55:37.7569|INFO|AssetProcessor.ViewModels.MainViewModel|MainViewModel initialized
+2025-11-17 13:55:38.0632|INFO|AssetProcessor.MainWindow|=== InitializeOnStartup: Starting ===
+2025-11-17 13:55:38.0632|INFO|AssetProcessor.MainWindow|InitializeOnStartup: Connecting to PlayCanvas server...
+2025-11-17 13:55:38.0632|INFO|AssetProcessor.MainWindow|LoadLastSettings: Starting
+2025-11-17 13:55:38.1255|INFO|AssetProcessor.TextureConversion.Settings.TextureConversionSettingsManager|Texture conversion settings loaded from C:\Users\Sasha\AppData\Roaming\PlayCanvasAssetProcessor\TextureConversionSettings.json
+2025-11-17 13:55:38.1255|INFO|AssetProcessor.MainWindow|ConversionSettingsManager passed to panel. PresetComboBox items count: 5
+2025-11-17 13:55:38.1255|INFO|AssetProcessor.MainWindow|ConversionSettings initialized successfully
+2025-11-17 13:55:38.2561|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|Created D3D11 host window with native mouse handling: hwnd=15066A
+2025-11-17 13:55:38.3342|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|D3D11 texture viewer control initialized: 800x600
+2025-11-17 13:55:38.4352|INFO|AssetProcessor.MainWindow|MainWindow loaded - D3D11 viewer ready
+2025-11-17 13:55:38.4352|INFO|AssetProcessor.MainWindow|Switched to D3D11 preview renderer
+2025-11-17 13:55:38.4352|INFO|AssetProcessor.MainWindow|Applied UseD3D11Preview setting on startup: True
+2025-11-17 13:55:38.4352|INFO|AssetProcessor.Controls.LogViewerControl|Log Viewer initialized
+2025-11-17 13:55:38.6727|INFO|AssetProcessor.MainWindow|LoadLastSettings: Selected project: 1354757
+2025-11-17 13:55:38.8167|INFO|AssetProcessor.MainWindow|LoadLastSettings: Selected branch: df264c8f-3c95-4882-9ebf-6e9474a31273
+2025-11-17 13:55:38.8167|INFO|AssetProcessor.MainWindow|LoadLastSettings: Project folder path set to: C:\project\playcanvas_projects\North Wind
+2025-11-17 13:55:38.8167|INFO|AssetProcessor.MainWindow|=== SmartLoadAssets: Starting ===
+2025-11-17 13:55:39.4631|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Loading local assets...
+2025-11-17 13:55:41.9152|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Hashes match! Project is up to date.
+2025-11-17 13:55:41.9152|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Changing state from Disconnected to UpToDate
+2025-11-17 13:55:41.9152|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: hasSelection=True, DynamicConnectionButton is null: False
+2025-11-17 13:55:41.9152|INFO|AssetProcessor.MainWindow|UpdateConnectionButton: Set to Refresh (enabled=True)
+2025-11-17 13:55:41.9152|INFO|AssetProcessor.MainWindow|SmartLoadAssets: Assets loaded successfully
+2025-11-17 13:55:41.9152|INFO|AssetProcessor.MainWindow|InitializeOnStartup: LoadLastSettings completed
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.png
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.png
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.png
+2025-11-17 13:55:43.2064|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.MainWindow|Found KTX2 file: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.ktx2
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.MainWindow|Loading KTX2 file to D3D11 viewer: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.ktx2
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2TextureLoader|Loading KTX2 texture from: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.ktx2
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.LibKtxNative|[LibKtxNative]   ✓ Loaded successfully from: D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\ktx.dll (handle: 0x7FFB99B50000)
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] Reading metadata from file: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.ktx2
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KTX2 identifier verified
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD: offset=148, length=36
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] Read 36 bytes of KVD data
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD entry: key="KTXwriter", valueLength=21
+2025-11-17 13:55:43.2118|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data
+2025-11-17 13:55:43.2356|INFO|AssetProcessor.TextureViewer.Ktx2TextureLoader|KTX2 loaded: 1024x1024, 1 mips, BC3_SRGB_BLOCK
+2025-11-17 13:55:43.2356|INFO|AssetProcessor.TextureViewer.D3D11TextureRenderer|[D3D11TextureRenderer] No histogram metadata in texture
+2025-11-17 13:55:43.2356|INFO|AssetProcessor.MainWindow|Loaded KTX2 to D3D11 viewer: 1024x1024, 1 mips
+2025-11-17 13:55:43.2356|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:43.2413|INFO|AssetProcessor.MainWindow|Forced render to apply current zoom/pan after KTX2 load
+2025-11-17 13:55:43.2413|INFO|AssetProcessor.MainWindow|Loaded KTX2 directly to D3D11 viewer: C:\project\playcanvas_projects\North Wind\assets\content\models\props\bunkerDoor\bunkerDoor_ao.ktx2
+2025-11-17 13:55:43.2413|INFO|AssetProcessor.MainWindow|KTX2 already loaded in D3D11 - 1 mip levels available
+2025-11-17 13:55:43.2413|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negz.png
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negz.png
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negz.png
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:43.7878|INFO|AssetProcessor.MainWindow|KTX2 file not found for: C:\project\playcanvas_projects\North Wind\assets\content\textures\skys\Belfast Sunset HDR Cubemap\belfast_sunset_puresky_2k-cube_negz.png
+2025-11-17 13:55:43.8178|INFO|AssetProcessor.MainWindow|Reset D3D11 channel mask to all channels and restored original gamma
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=512x512
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|D3D11TextureViewer is not null
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|About to call LoadTextureToD3D11Viewer from UpdatePreviewImage
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|Getting bitmap dimensions...
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|Bitmap dimensions: 512x512
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|Calling LoadTextureToD3D11Viewer with bitmap 512x512, isSRGB=True (type=Other)
+2025-11-17 13:55:43.8191|INFO|AssetProcessor.MainWindow|LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|Reset D3D11 channel mask to all channels and restored original gamma
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|UpdatePreviewImage called: bitmap=2048x2048
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|About to check D3D11TextureViewer
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|D3D11TextureViewer is not null
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|About to call LoadTextureToD3D11Viewer from UpdatePreviewImage
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|Getting bitmap dimensions...
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|Bitmap dimensions: 2048x2048
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|Calling LoadTextureToD3D11Viewer with bitmap 2048x2048, isSRGB=True (type=Other)
+2025-11-17 13:55:43.8396|INFO|AssetProcessor.MainWindow|LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|LoadTextureToD3D11Viewer called: bitmap=512x512, isSRGB=True
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Waiting for D3D11 texture preview semaphore...
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Texture loading was cancelled
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Texture loading was cancelled (expected when switching textures)
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|LoadTextureToD3D11Viewer called: bitmap=2048x2048, isSRGB=True
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Waiting for D3D11 texture preview semaphore...
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|D3D11TextureViewer and Renderer are not null, proceeding...
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Render loop disabled
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Starting pixel conversion in background thread...
+2025-11-17 13:55:43.9541|INFO|AssetProcessor.MainWindow|Converting bitmap to BGRA32 format...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Copying pixels from bitmap...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Pixel conversion completed
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Pixel conversion task completed, checking cancellation...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|About to call D3D11TextureRenderer.LoadTexture: 2048x2048, sRGB=True
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Yielding to UI thread...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Checking cancellation before Dispatcher.InvokeAsync...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Invoking LoadTexture on UI thread with Normal priority...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Inside Dispatcher.InvokeAsync, checking cancellation...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.MainWindow|Calling LoadTexture on renderer...
+2025-11-17 13:55:44.0144|INFO|AssetProcessor.TextureViewer.D3D11TextureRenderer|[D3D11TextureRenderer] No histogram metadata in texture
+2025-11-17 13:55:44.0237|INFO|AssetProcessor.MainWindow|D3D11TextureRenderer.LoadTexture completed successfully
+2025-11-17 13:55:44.0237|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:44.0480|INFO|AssetProcessor.MainWindow|Render loop re-enabled
+2025-11-17 13:55:44.0480|INFO|AssetProcessor.MainWindow|Forced render to apply current zoom/pan
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.png
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.png
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.png
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.MainWindow|Found KTX2 file: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.ktx2
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.MainWindow|Loading KTX2 file to D3D11 viewer: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.ktx2
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2TextureLoader|Loading KTX2 texture from: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.ktx2
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] Reading metadata from file: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.ktx2
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KTX2 identifier verified
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD: offset=412, length=120
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] Read 120 bytes of KVD data
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD entry: key="KTXwriter", valueLength=56
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD entry: key="KTXwriterScParams", valueLength=24
+2025-11-17 13:55:44.3383|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data
+2025-11-17 13:55:44.3647|INFO|AssetProcessor.TextureViewer.Ktx2TextureLoader|KTX2 loaded: 2048x2048, 12 mips, BC3_UNORM_BLOCK
+2025-11-17 13:55:44.3647|INFO|AssetProcessor.TextureViewer.D3D11TextureRenderer|[D3D11TextureRenderer] No histogram metadata in texture
+2025-11-17 13:55:44.3663|INFO|AssetProcessor.MainWindow|Loaded KTX2 to D3D11 viewer: 2048x2048, 12 mips
+2025-11-17 13:55:44.3663|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:44.3663|INFO|AssetProcessor.MainWindow|Forced render to apply current zoom/pan after KTX2 load
+2025-11-17 13:55:44.3663|INFO|AssetProcessor.MainWindow|Loaded KTX2 directly to D3D11 viewer: C:\project\playcanvas_projects\North Wind\assets\content\models\props\dirtyLada\dirtyLada_gloss.ktx2
+2025-11-17 13:55:44.3663|INFO|AssetProcessor.MainWindow|KTX2 already loaded in D3D11 - 12 mip levels available
+2025-11-17 13:55:44.3663|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:45.3188|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Button clicked, current state: UpToDate
+2025-11-17 13:55:45.3188|INFO|AssetProcessor.MainWindow|DynamicConnectionButton_Click: Calling RefreshFromServer
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== SetCurrentTexturePath called ===
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  texturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.png
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Toksvig enabled: False
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  NormalMapPath empty: True
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.png
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|=== UpdateNormalMapAutoDetect called ===
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  toksvigEnabled: False
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  pathEmpty: True
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  _currentTexturePath: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.png
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.Controls.TextureConversionSettingsPanel|  Conditions NOT met, skipping auto-detect
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.MainWindow|Found KTX2 file: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.ktx2
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.MainWindow|Loading KTX2 file to D3D11 viewer: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.ktx2
+2025-11-17 13:55:48.2074|INFO|AssetProcessor.TextureViewer.Ktx2TextureLoader|Loading KTX2 texture from: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.ktx2
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] Reading metadata from file: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.ktx2
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KTX2 identifier verified
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD: offset=388, length=120
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] Read 120 bytes of KVD data
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD entry: key="KTXwriter", valueLength=56
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] KVD entry: key="KTXwriterScParams", valueLength=24
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2MetadataReader|[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.Ktx2TextureLoader|KTX2 loaded: 1024x1024, 11 mips, BC3_UNORM_BLOCK
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.TextureViewer.D3D11TextureRenderer|[D3D11TextureRenderer] No histogram metadata in texture
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.MainWindow|Loaded KTX2 to D3D11 viewer: 1024x1024, 11 mips
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.MainWindow|Forced render to apply current zoom/pan after KTX2 load
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.MainWindow|Loaded KTX2 directly to D3D11 viewer: C:\project\playcanvas_projects\North Wind\assets\content\models\props\oldMailBox\oldMailBox_gloss.ktx2
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.MainWindow|KTX2 already loaded in D3D11 - 11 mip levels available
+2025-11-17 13:55:48.2140|INFO|AssetProcessor.MainWindow|No histogram metadata in current texture
+2025-11-17 13:55:49.7231|INFO|AssetProcessor.TextureViewer.D3D11TextureViewerControl|D3D11 texture viewer control destroyed

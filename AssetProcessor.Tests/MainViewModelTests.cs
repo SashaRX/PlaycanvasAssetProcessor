@@ -235,7 +235,7 @@ public class MainViewModelTests {
             Task.CompletedTask;
 
         public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) =>
-            Path.Combine(projectsRoot, projectName, fileName ?? string.Empty);
+            Path.Combine(projectsRoot, projectName, LocalCacheService.AssetsDirectoryName, fileName ?? string.Empty);
 
         public Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) =>
             Task.FromResult<JArray?>(null);
@@ -286,7 +286,7 @@ public class MainViewModelTests {
             Task.CompletedTask;
 
         public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) =>
-            Path.Combine(projectsRoot, projectName, fileName ?? string.Empty);
+            Path.Combine(projectsRoot, projectName, LocalCacheService.AssetsDirectoryName, fileName ?? string.Empty);
 
         public Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) =>
             Task.FromResult<JArray?>(null);

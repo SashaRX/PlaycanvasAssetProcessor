@@ -2250,13 +2250,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
                     logger.Warn("CheckProjectState: projectFolderPath or projectName is empty");
-                    logService.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
-                }
+            logService.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
+            UpdateConnectionButton(ConnectionState.NeedsDownload);
+            return;
+        }
 
-                string assetsListPath = Path.Combine(ProjectFolderPath!, "assets_list.json");
-                logger.Info($"CheckProjectState: Checking for assets_list.json at {assetsListPath}");
+        string assetsListPath = Path.Combine(ProjectFolderPath!, "assets_list.json");
+        logger.Info($"CheckProjectState: Checking for assets_list.json at {assetsListPath}");
 
                 if (!File.Exists(assetsListPath)) {
                     logger.Info("CheckProjectState: Project not downloaded yet - assets_list.json not found");
@@ -2293,11 +2293,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
                     return false;
-                }
+            }
 
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-                string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
+            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+            string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
 
                 if (!File.Exists(assetsListPath)) {
                     return true;
@@ -2506,9 +2506,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-                string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
+            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+            string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
 
                 // Проверяем наличие локального JSON
                 bool localFileExists = File.Exists(assetsListPath);

@@ -132,7 +132,7 @@ public class ProjectSyncServiceTests {
         }
 
         public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) {
-            return Path.Combine(projectsRoot, projectName, folderPaths.TryGetValue(parentId ?? 0, out string? folder) ? folder : string.Empty, fileName ?? string.Empty);
+            return Path.Combine(projectsRoot, projectName, LocalCacheService.AssetsDirectoryName, folderPaths.TryGetValue(parentId ?? 0, out string? folder) ? folder : string.Empty, fileName ?? string.Empty);
         }
 
         public Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) => Task.FromResult<JArray?>(null);

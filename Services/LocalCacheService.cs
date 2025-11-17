@@ -15,9 +15,13 @@ using System.Security.Cryptography;
 namespace AssetProcessor.Services;
 
 public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem fileSystem, ILogService logService) : ILocalCacheService {
+    public const string AssetsDirectoryName = "assets";
+
     private readonly IHttpClientFactory httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly IFileSystem fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
     private readonly ILogService logService = logService ?? throw new ArgumentNullException(nameof(logService));
+
+    private static string GetAssetsListPath(string projectFolderPath) => Path.Combine(projectFolderPath, "assets_list.json");
 
     public string SanitizePath(string? path) {
         if (string.IsNullOrWhiteSpace(path)) {
@@ -34,8 +38,8 @@ public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem
         ArgumentException.ThrowIfNullOrEmpty(projectsRoot);
         ArgumentException.ThrowIfNullOrEmpty(projectName);
 
-        string projectFolder = Path.Combine(projectsRoot, projectName);
-        string targetFolder = projectFolder;
+        string assetsFolder = Path.Combine(projectsRoot, projectName, AssetsDirectoryName);
+        string targetFolder = assetsFolder;
 
         if (parentId.HasValue && folderPaths.TryGetValue(parentId.Value, out string? folderPath) && !string.IsNullOrEmpty(folderPath)) {
             targetFolder = Path.Combine(targetFolder, folderPath);
@@ -52,7 +56,7 @@ public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem
         ArgumentNullException.ThrowIfNull(jsonResponse);
         ArgumentException.ThrowIfNullOrEmpty(projectFolderPath);
 
-        string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
+        string jsonFilePath = GetAssetsListPath(projectFolderPath);
 
         if (!fileSystem.Directory.Exists(projectFolderPath)) {
             fileSystem.Directory.CreateDirectory(projectFolderPath);
@@ -66,7 +70,7 @@ public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem
     public async Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) {
         ArgumentException.ThrowIfNullOrEmpty(projectFolderPath);
 
-        string jsonFilePath = Path.Combine(projectFolderPath, "assets_list.json");
+        string jsonFilePath = GetAssetsListPath(projectFolderPath);
         if (!fileSystem.File.Exists(jsonFilePath)) {
             return null;
         }

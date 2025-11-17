@@ -30,8 +30,10 @@ public class LocalCacheServiceTests {
 
         string result = service.GetResourcePath(root, projectName, folders, "file.png", 1);
 
-        Assert.Equal("c:/projects/TestProject/Textures/file.png".Replace('/', fileSystem.Path.DirectorySeparatorChar), result.Replace('/', fileSystem.Path.DirectorySeparatorChar));
-        Assert.True(fileSystem.Directory.Exists("c:/projects/TestProject/Textures".Replace('/', fileSystem.Path.DirectorySeparatorChar)));
+        string expectedPath = $"c:/projects/TestProject/{LocalCacheService.AssetsDirectoryName}/Textures/file.png";
+        Assert.Equal(expectedPath.Replace('/', fileSystem.Path.DirectorySeparatorChar), result.Replace('/', fileSystem.Path.DirectorySeparatorChar));
+        string expectedFolder = $"c:/projects/TestProject/{LocalCacheService.AssetsDirectoryName}/Textures";
+        Assert.True(fileSystem.Directory.Exists(expectedFolder.Replace('/', fileSystem.Path.DirectorySeparatorChar)));
     }
 
     [Fact]
@@ -46,7 +48,8 @@ public class LocalCacheServiceTests {
 
         Assert.NotNull(loaded);
         Assert.Single(loaded);
-        Assert.True(fileSystem.File.Exists("c:/projects/TestProject/assets_list.json".Replace('/', fileSystem.Path.DirectorySeparatorChar)));
+        string assetsListPath = "c:/projects/TestProject/assets_list.json";
+        Assert.True(fileSystem.File.Exists(assetsListPath.Replace('/', fileSystem.Path.DirectorySeparatorChar)));
     }
 
     [Fact]

@@ -437,11 +437,9 @@ namespace AssetProcessor {
                     throw new Exception("Project folder path or name is null or empty");
                 }
 
-                string jsonFilePath = Path.Combine(ProjectFolderPath!, "assets_list.json");
-                if (File.Exists(jsonFilePath)) {
-                    logService.LogInfo($"Loading from JSON file: {jsonFilePath}");
-                    string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
-                    JArray assetsResponse = JArray.Parse(jsonContent);
+                JArray? assetsResponse = await projectAssetService.LoadAssetsFromJsonAsync(ProjectFolderPath!, CancellationToken.None);
+                if (assetsResponse != null) {
+                    logService.LogInfo($"Loaded {assetsResponse.Count} assets from local JSON cache");
 
                     // Строим иерархию папок из списка ассетов
                     BuildFolderHierarchyFromAssets(assetsResponse);

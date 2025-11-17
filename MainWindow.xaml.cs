@@ -61,6 +61,8 @@ namespace AssetProcessor {
         private readonly IProjectSelectionService projectSelectionService;
         private readonly ILogService logService;
         private readonly ILocalCacheService localCacheService;
+        private readonly IProjectAssetService projectAssetService;
+        private readonly IPreviewRendererCoordinator previewRendererCoordinator;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
@@ -110,6 +112,8 @@ namespace AssetProcessor {
             IProjectSelectionService projectSelectionService,
             ILogService logService,
             ILocalCacheService localCacheService,
+            IProjectAssetService projectAssetService,
+            IPreviewRendererCoordinator previewRendererCoordinator,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -118,6 +122,8 @@ namespace AssetProcessor {
             this.projectSelectionService = projectSelectionService ?? throw new ArgumentNullException(nameof(projectSelectionService));
             this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
             this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
+            this.projectAssetService = projectAssetService ?? throw new ArgumentNullException(nameof(projectAssetService));
+            this.previewRendererCoordinator = previewRendererCoordinator ?? throw new ArgumentNullException(nameof(previewRendererCoordinator));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
 
             InitializeComponent();
@@ -201,11 +207,16 @@ namespace AssetProcessor {
         }
 
         private void HandlePreviewRendererChanged(bool useD3D11) {
-            _ = SwitchPreviewRendererAsync(useD3D11);
+            _ = ApplyRendererPreferenceAsync(useD3D11);
         }
 
-        private Task SwitchPreviewRendererAsync(bool useD3D11) {
-            TexturePreviewContext context = new() {
+        private Task ApplyRendererPreferenceAsync(bool useD3D11) {
+            TexturePreviewContext context = CreateTexturePreviewContext();
+            return previewRendererCoordinator.SwitchRendererAsync(context, useD3D11);
+        }
+
+        private TexturePreviewContext CreateTexturePreviewContext() {
+            return new TexturePreviewContext {
                 D3D11TextureViewer = D3D11TextureViewer,
                 WpfTexturePreviewImage = WpfTexturePreviewImage,
                 IsKtx2Loading = IsKtx2Loading,
@@ -218,8 +229,6 @@ namespace AssetProcessor {
                 LogError = (exception, message) => logger.Error(exception, message),
                 LogWarn = message => logger.Warn(message)
             };
-
-            return texturePreviewService.SwitchRendererAsync(context, useD3D11);
         }
 
 
@@ -1642,10 +1651,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 throw new Exception("Project name is null or empty");
             }
 
-            string sanitizedFileName = localCacheService.SanitizePath(fileName);
-            string fullPath = localCacheService.GetResourcePath(AppSettings.Default.ProjectsFolderPath, ProjectName, folderPaths, sanitizedFileName, parentId);
-            logService.LogInfo($"Generated resource path: {fullPath}");
-            return fullPath;
+            return projectAssetService.GetResourcePath(AppSettings.Default.ProjectsFolderPath, ProjectName, folderPaths, fileName, parentId);
         }
 
         private void RecalculateIndices() {
@@ -1992,54 +1998,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private async Task<bool> CheckForUpdates() {
             try {
-                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null || string.IsNullOrEmpty(ProjectFolderPath)) {
                     return false;
-            }
-
-            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-            string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
-
-                if (!File.Exists(assetsListPath)) {
-                    return true;
                 }
 
-                string localJson = await File.ReadAllTextAsync(assetsListPath);
-                JToken? localData = JsonConvert.DeserializeObject<JToken>(localJson);
-
-                List<PlayCanvasAssetSummary> serverSummaries = [];
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
                 string? apiKey = GetDecryptedApiKey();
-                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? string.Empty, CancellationToken.None)) {
-                    serverSummaries.Add(asset);
-                }
-                JArray serverData = new();
-                foreach (PlayCanvasAssetSummary asset in serverSummaries) {
-                    serverData.Add(JToken.Parse(asset.ToJsonString()));
+                if (string.IsNullOrEmpty(apiKey)) {
+                    logService.LogError("API key is missing while checking for updates");
+                    return false;
                 }
 
-                string localHash = ComputeHash(localJson);
-                string serverHash = ComputeHash(serverData.ToString());
-
-                bool hasChanges = localHash != serverHash;
-
-                if (hasChanges) {
-                    logService.LogInfo($"Project has updates: local hash {localHash.Substring(0, 8)}... != server hash {serverHash.Substring(0, 8)}...");
-                } else {
-                    logService.LogInfo("Project is up to date");
-                }
-
-                return hasChanges;
+                ProjectUpdateContext context = new(ProjectFolderPath!, selectedProjectId, selectedBranchId, apiKey);
+                return await projectAssetService.HasUpdatesAsync(context, CancellationToken.None);
             } catch (Exception ex) {
                 logService.LogError($"Error checking for updates: {ex.Message}");
                 return false;
             }
-        }
-
-        private string ComputeHash(string input) {
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
-            byte[] hashBytes = md5.ComputeHash(inputBytes);
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
         }
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
@@ -2207,50 +2183,42 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-            string assetsListPath = Path.Combine(ProjectFolderPath ?? string.Empty, "assets_list.json");
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
-                // Проверяем наличие локального JSON
-                bool localFileExists = File.Exists(assetsListPath);
+                if (string.IsNullOrEmpty(ProjectFolderPath)) {
+                    logService.LogInfo("Project folder path is empty during SmartLoadAssets");
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    return;
+                }
 
-                if (localFileExists) {
-                    logService.LogInfo($"Local assets_list.json found: {assetsListPath}");
+                JArray? localAssets = await projectAssetService.LoadAssetsFromJsonAsync(ProjectFolderPath, CancellationToken.None);
 
-                    // Получаем hash локального JSON
-                    string localJson = await File.ReadAllTextAsync(assetsListPath);
-                    string localHash = ComputeHash(localJson);
-                    logService.LogInfo($"Local hash: {localHash.Substring(0, 16)}...");
+                if (localAssets != null) {
+                    logService.LogInfo($"Local assets_list.json found for project {ProjectName}");
 
-                    // Получаем данные с сервера для сравнения hash
-                    logService.LogInfo("Fetching assets from server to check hash...");
-                    List<PlayCanvasAssetSummary> serverSummaries = [];
-                    string? apiKey = GetDecryptedApiKey();
-                await foreach (PlayCanvasAssetSummary asset in playCanvasService.GetAssetsAsync(selectedProjectId, selectedBranchId, apiKey ?? "", CancellationToken.None)) {
-                        serverSummaries.Add(asset);
-                    }
-                    JArray serverData = new();
-                    foreach (PlayCanvasAssetSummary asset in serverSummaries) {
-                        serverData.Add(JToken.Parse(asset.ToJsonString()));
-                    }
-                    string serverHash = ComputeHash(serverData.ToString());
-                    logService.LogInfo($"Server hash: {serverHash.Substring(0, 16)}...");
-
-                    // Загружаем локальные данные в любом случае
                     logger.Info("SmartLoadAssets: Loading local assets...");
                     logService.LogInfo("Loading local assets...");
                     await LoadAssetsFromJsonFileAsync();
 
-                    if (localHash == serverHash) {
-                        // Hash совпадают - проект актуален
-                        logger.Info("SmartLoadAssets: Hashes match! Project is up to date.");
-                        logService.LogInfo("Hashes match! Project is up to date.");
-                        UpdateConnectionButton(ConnectionState.UpToDate);
-                    } else {
-                        // Hash отличаются - есть обновления на сервере
-                        logger.Info("SmartLoadAssets: Hashes differ! Updates available on server.");
+                    string? apiKey = GetDecryptedApiKey();
+                    if (string.IsNullOrEmpty(apiKey)) {
+                        logService.LogError("API key missing during SmartLoadAssets");
+                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                        return;
+                    }
+
+                    ProjectUpdateContext context = new(ProjectFolderPath, selectedProjectId, selectedBranchId, apiKey);
+                    bool hasUpdates = await projectAssetService.HasUpdatesAsync(context, CancellationToken.None);
+
+                    if (hasUpdates) {
+                        logger.Info("SmartLoadAssets: Updates available on server.");
                         logService.LogInfo("Hashes differ! Updates available on server.");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    } else {
+                        logger.Info("SmartLoadAssets: Project is up to date.");
+                        logService.LogInfo("Hashes match! Project is up to date.");
+                        UpdateConnectionButton(ConnectionState.UpToDate);
                     }
                     logger.Info("SmartLoadAssets: Assets loaded successfully");
                 } else {
@@ -2266,10 +2234,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
         }
-
-        /// <summary>
-        /// Загружает последние настройки и подключается к серверу (старый метод)
-        /// </summary>
                 private async Task LoadLastSettings() {
             try {
                 logger.Info("LoadLastSettings: Starting");

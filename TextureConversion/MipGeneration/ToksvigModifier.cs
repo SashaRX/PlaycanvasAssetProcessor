@@ -1,3 +1,4 @@
+using System.Numerics;
 using AssetProcessor.TextureConversion.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -10,8 +11,10 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
     /// дисперсию нормалей в пикселе. Это предотвращает чрезмерно яркие
     /// блики на мипмапах с усредненными нормалями.
     ///
-    /// Формула: roughness' = sqrt(roughness^2 + (1/k - 1))
-    /// где k = 1 / (1 - avg_normal_length^2)
+    /// Дисперсия оценивается как variance = (1 - |N̄|) / |N̄|, где |N̄|
+    /// — длина усреднённой нормали в окрестности пикселя. Далее применяется
+    /// Toksvig-формула из Unreal Engine для пересчёта roughness (коррекция
+    /// параметра alpha в GGX BRDF).
     ///
     /// Ссылки:
     /// - Toksvig, M. (2005). "Mipmapping Normal Maps"
@@ -39,18 +42,27 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
                 return mipImage.Clone();
             }
 
-            // TODO: Реализовать алгоритм Toksvig
-            //
-            // Шаги реализации:
-            // 1. Для каждого пикселя в мипе:
-            //    - Найти соответствующую область в оригинальной карте нормалей
-            //    - Вычислить средний вектор нормали в этой области
-            //    - Вычислить длину среднего вектора (показатель дисперсии)
-            //    - Применить формулу Toksvig для коррекции roughness/gloss
-            // 2. Обновить значения пикселей
+            float scaleX = (float)_normalMap.Width / mipImage.Width;
+            float scaleY = (float)_normalMap.Height / mipImage.Height;
 
-            // Пока возвращаем клон без изменений
-            return mipImage.Clone();
+            var corrected = new Image<Rgba32>(mipImage.Width, mipImage.Height);
+
+            for (int y = 0; y < mipImage.Height; y++) {
+                for (int x = 0; x < mipImage.Width; x++) {
+                    var pixel = mipImage[x, y];
+                    float inputValue = pixel.R / 255.0f;
+
+                    float averageNormalLength = CalculateAverageNormalLength(x, y, scaleX, scaleY);
+                    float roughness = _isGloss ? GlossToRoughness(inputValue) : inputValue;
+                    float correctedRoughness = CalculateToksvigRoughness(roughness, averageNormalLength);
+                    float outputValue = _isGloss ? RoughnessToGloss(correctedRoughness) : correctedRoughness;
+
+                    byte outputByte = (byte)Math.Clamp(outputValue * 255.0f, 0, 255);
+                    corrected[x, y] = new Rgba32(outputByte, outputByte, outputByte, pixel.A);
+                }
+            }
+
+            return corrected;
         }
 
         public bool IsApplicable(TextureType textureType) {
@@ -63,19 +75,29 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// Вычисляет модифицированный roughness по формуле Toksvig
         /// </summary>
         private float CalculateToksvigRoughness(float originalRoughness, float normalLengthAverage) {
-            if (normalLengthAverage >= 0.9999f) {
+            const float epsilon = 1e-5f;
+
+            // Чем короче средняя нормаль, тем больше дисперсия
+            float safeLength = Math.Clamp(normalLengthAverage, epsilon, 0.9999f);
+            float variance = (1.0f - safeLength) / safeLength;
+
+            if (variance <= epsilon) {
                 return originalRoughness;
             }
 
-            // k = 1 / (1 - |avgNormal|^2)
-            float k = 1.0f / (1.0f - normalLengthAverage * normalLengthAverage);
+            float a = originalRoughness * originalRoughness;
+            float a2 = a * a;
 
-            // roughness' = sqrt(roughness^2 + (1/k - 1))
-            float modifiedRoughness = MathF.Sqrt(
-                originalRoughness * originalRoughness + (1.0f / k - 1.0f)
-            );
+            float B = 2.0f * variance * (a2 - 1.0f);
+            if (Math.Abs(B - 1.0f) < epsilon) {
+                return originalRoughness;
+            }
 
-            return Math.Clamp(modifiedRoughness, 0.0f, 1.0f);
+            float a2Corrected = (B - a2) / (B - 1.0f);
+            a2Corrected = Math.Clamp(a2Corrected, epsilon * epsilon, 1.0f);
+
+            float correctedRoughness = MathF.Pow(a2Corrected, 0.25f);
+            return Math.Clamp(correctedRoughness, 0.0f, 1.0f);
         }
 
         /// <summary>
@@ -90,6 +112,48 @@ namespace AssetProcessor.TextureConversion.MipGeneration {
         /// </summary>
         private float RoughnessToGloss(float roughness) {
             return 1.0f - roughness;
+        }
+
+        private float CalculateAverageNormalLength(int mipX, int mipY, float scaleX, float scaleY) {
+            if (_normalMap == null) {
+                return 1.0f;
+            }
+
+            int startX = Math.Clamp((int)MathF.Floor(mipX * scaleX), 0, _normalMap.Width - 1);
+            int endX = Math.Clamp((int)MathF.Ceiling((mipX + 1) * scaleX), startX + 1, _normalMap.Width);
+
+            int startY = Math.Clamp((int)MathF.Floor(mipY * scaleY), 0, _normalMap.Height - 1);
+            int endY = Math.Clamp((int)MathF.Ceiling((mipY + 1) * scaleY), startY + 1, _normalMap.Height);
+
+            Vector3 accumulated = Vector3.Zero;
+            int sampleCount = 0;
+
+            for (int y = startY; y < endY; y++) {
+                for (int x = startX; x < endX; x++) {
+                    var normalPixel = _normalMap[x, y];
+                    var normal = DecodeNormal(normalPixel);
+
+                    if (normal.LengthSquared() > 1e-6f) {
+                        normal = Vector3.Normalize(normal);
+                        accumulated += normal;
+                        sampleCount++;
+                    }
+                }
+            }
+
+            if (sampleCount == 0) {
+                return 1.0f;
+            }
+
+            var average = accumulated / sampleCount;
+            return Math.Clamp(average.Length(), 0.0f, 1.0f);
+        }
+
+        private static Vector3 DecodeNormal(Rgba32 pixel) {
+            float nx = pixel.R / 255.0f * 2.0f - 1.0f;
+            float ny = pixel.G / 255.0f * 2.0f - 1.0f;
+            float nz = pixel.B / 255.0f * 2.0f - 1.0f;
+            return new Vector3(nx, ny, nz);
         }
     }
 }

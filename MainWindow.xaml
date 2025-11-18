@@ -16,6 +16,7 @@
     xmlns:viewModels="clr-namespace:AssetProcessor.ViewModels"
     xmlns:infra="clr-namespace:AssetProcessor.Infrastructure"
     av:DataContext="{av:DesignInstance Type=viewModels:MainViewModel}"
+    DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
     Title="MainWindow" Height="684" Width="942">
@@ -303,6 +304,7 @@
                         </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
                                 AutoGenerateColumns="False"
+                                ItemsSource="{Binding Textures}"
                                 SelectedItem="{Binding SelectedTexture, Mode=TwoWay}"
                                 SelectionChanged="TexturesDataGrid_SelectionChanged"
                                 LoadingRow="TexturesDataGrid_LoadingRow"
@@ -458,6 +460,7 @@
                         </StackPanel>
                         <DataGrid x:Name="ModelsDataGrid" Grid.Row="1"
                               AutoGenerateColumns="False"
+                              ItemsSource="{Binding Models}"
                               SelectionChanged="ModelsDataGrid_SelectionChanged"
                               Sorting="ModelsDataGrid_Sorting"
                               IsReadOnly="True"

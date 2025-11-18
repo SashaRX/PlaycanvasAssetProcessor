@@ -8,8 +8,6 @@ using AssetProcessor.ViewModels;
 using Assimp;
 using HelixToolkit.Wpf;
 using CommunityToolkit.Mvvm.Input;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
@@ -50,9 +48,6 @@ namespace AssetProcessor {
         private readonly SemaphoreSlim downloadSemaphore;
         private bool? isViewerVisible = true;
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
-        private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
-        private readonly List<string> excludedFormats = [".hdr", ".avif"];
-        private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
         private readonly IHistogramCoordinator histogramCoordinator;
@@ -63,6 +58,7 @@ namespace AssetProcessor {
         private readonly ILocalCacheService localCacheService;
         private readonly IProjectAssetService projectAssetService;
         private readonly IPreviewRendererCoordinator previewRendererCoordinator;
+        private readonly IAssetResourceService assetResourceService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
         private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
@@ -78,9 +74,6 @@ namespace AssetProcessor {
         private bool isSorting = false; // Флаг для отслеживания процесса сортировки
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // Отслеживание текстур, для которых уже запущена проверка CompressedSize
-        private readonly HashSet<string> ignoredAssetTypes = new(StringComparer.OrdinalIgnoreCase) { "script", "wasm", "cubemap" };
-        private readonly HashSet<string> reportedIgnoredAssetTypes = new(StringComparer.OrdinalIgnoreCase);
-        private readonly object ignoredAssetTypesLock = new();
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -116,6 +109,7 @@ namespace AssetProcessor {
             ILocalCacheService localCacheService,
             IProjectAssetService projectAssetService,
             IPreviewRendererCoordinator previewRendererCoordinator,
+            IAssetResourceService assetResourceService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -126,6 +120,7 @@ namespace AssetProcessor {
             this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
             this.projectAssetService = projectAssetService ?? throw new ArgumentNullException(nameof(projectAssetService));
             this.previewRendererCoordinator = previewRendererCoordinator ?? throw new ArgumentNullException(nameof(previewRendererCoordinator));
+            this.assetResourceService = assetResourceService ?? throw new ArgumentNullException(nameof(assetResourceService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 
@@ -1116,135 +1111,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         #region Materials
 
-        private static async Task<MaterialResource> ParseMaterialJsonAsync(string filePath) {
-            try {
-                string jsonContent = await File.ReadAllTextAsync(filePath);
-                JObject json = JObject.Parse(jsonContent);
-
-                JToken? data = json["data"];
-                if (data != null) {
-
-                    // Debug: Log texture map tokens from JSON
-                    var materialName = json["name"]?.ToString() ?? "Unknown";
-                    logger.Debug($"Parsing material '{materialName}' from JSON:");
-                    logger.Debug($"  aoMap token: {data["aoMap"]?.ToString() ?? "null"}");
-                    logger.Debug($"  glossMap token: {data["glossMap"]?.ToString() ?? "null"}");
-                    logger.Debug($"  metalnessMap token: {data["metalnessMap"]?.ToString() ?? "null"}");
-                    logger.Debug($"  specularMap token: {data["specularMap"]?.ToString() ?? "null"}");
-                    logger.Debug($"  useMetalness: {data["useMetalness"]?.ToString() ?? "null"}");
-
-                    var materialResource = new MaterialResource {
-                        ID = json["id"]?.ToObject<int>() ?? 0,
-                        Name = json["name"]?.ToString() ?? string.Empty,
-                        CreatedAt = json["createdAt"]?.ToString() ?? string.Empty,
-                        Shader = data["shader"]?.ToString() ?? string.Empty,
-                        BlendType = data["blendType"]?.ToString() ?? string.Empty,
-                        Cull = data["cull"]?.ToString() ?? string.Empty,
-                        UseLighting = data["useLighting"]?.ToObject<bool>() ?? false,
-                        TwoSidedLighting = data["twoSidedLighting"]?.ToObject<bool>() ?? false,
-
-                        DiffuseTint = data["diffuseTint"]?.ToObject<bool>() ?? false,
-                        Diffuse = data["diffuse"]?.Select(d => d.ToObject<float>()).ToList(),
-
-                        SpecularTint = data["specularTint"]?.ToObject<bool>() ?? false,
-                        Specular = data["specular"]?.Select(d => d.ToObject<float>()).ToList(),
-
-                        AOTint = data["aoTint"]?.ToObject<bool>() ?? false,
-                        AOColor = data["ao"]?.Select(d => d.ToObject<float>()).ToList(),
-
-                        UseMetalness = data["useMetalness"]?.ToObject<bool>() ?? false,
-                        MetalnessMapId = ParseTextureAssetId(data["metalnessMap"], "metalnessMap"),
-                        Metalness = data["metalness"]?.ToObject<float?>(),
-
-                        GlossMapId = ParseTextureAssetId(data["glossMap"], "glossMap"),
-                        Shininess = data["shininess"]?.ToObject<float?>(),
-
-                        Opacity = data["opacity"]?.ToObject<float?>(),
-                        AlphaTest = data["alphaTest"]?.ToObject<float?>(),
-                        OpacityMapId = ParseTextureAssetId(data["opacityMap"], "opacityMap"),
-
-
-                        NormalMapId = ParseTextureAssetId(data["normalMap"], "normalMap"),
-                        BumpMapFactor = data["bumpMapFactor"]?.ToObject<float?>(),
-
-                        Reflectivity = data["reflectivity"]?.ToObject<float?>(),
-                        RefractionIndex = data["refractionIndex"]?.ToObject<float?>(),
-
-
-                        DiffuseMapId = ParseTextureAssetId(data["diffuseMap"], "diffuseMap"),
-
-                        SpecularMapId = ParseTextureAssetId(data["specularMap"], "specularMap"),
-                        SpecularityFactor = data["specularityFactor"]?.ToObject<float?>(),
-
-                        Emissive = data["emissive"]?.Select(d => d.ToObject<float>()).ToList(),
-                        EmissiveIntensity = data["emissiveIntensity"]?.ToObject<float?>(),
-                        EmissiveMapId = ParseTextureAssetId(data["emissiveMap"], "emissiveMap"),
-
-                        AOMapId = ParseTextureAssetId(data["aoMap"], "aoMap"),
-
-                        DiffuseColorChannel = ParseColorChannel(data["diffuseMapChannel"]?.ToString() ?? string.Empty),
-                        SpecularColorChannel = ParseColorChannel(data["specularMapChannel"]?.ToString() ?? string.Empty),
-                        MetalnessColorChannel = ParseColorChannel(data["metalnessMapChannel"]?.ToString() ?? string.Empty),
-                        GlossinessColorChannel = ParseColorChannel(data["glossMapChannel"]?.ToString() ?? string.Empty),
-                        AOChannel = ParseColorChannel(data["aoMapChannel"]?.ToString() ?? string.Empty)
-                    };
-
-                    // Debug: Log parsed MapIds
-                    logger.Debug($"  Parsed MapIds for '{materialName}':");
-                    logger.Debug($"    AOMapId: {materialResource.AOMapId?.ToString() ?? "null"}");
-                    logger.Debug($"    GlossMapId: {materialResource.GlossMapId?.ToString() ?? "null"}");
-                    logger.Debug($"    MetalnessMapId: {materialResource.MetalnessMapId?.ToString() ?? "null"}");
-                    logger.Debug($"    SpecularMapId: {materialResource.SpecularMapId?.ToString() ?? "null"}");
-
-                    return materialResource;
-                }
-            } catch (Exception ex) {
-                System.Diagnostics.Debug.WriteLine($"Error parsing material JSON: {ex.Message}");
-            }
-            return null;
-        }
-
-        private static ColorChannel ParseColorChannel(string channel) {
-            return channel switch {
-                "r" => ColorChannel.R,
-                "g" => ColorChannel.G,
-                "b" => ColorChannel.B,
-                "a" => ColorChannel.A,
-                "rgb" => ColorChannel.RGB,
-                _ => ColorChannel.R // или выберите другой дефолтный канал
-            };
-        }
-
-        private static int? ParseTextureAssetId(JToken? token, string propertyName) {
-            if (token == null || token.Type == JTokenType.Null) {
-                logger.Debug("Свойство {PropertyName} отсутствует или имеет значение null при чтении материала.", propertyName);
-                return null;
-            }
-
-            static int? ExtractAssetId(JToken? candidate) {
-                if (candidate == null || candidate.Type == JTokenType.Null) {
-                    return null;
-                }
-
-                return candidate.Type switch {
-                    JTokenType.Integer => candidate.ToObject<int?>(),
-                    JTokenType.Float => candidate.ToObject<double?>() is double value ? (int?)Convert.ToInt32(Math.Round(value, MidpointRounding.AwayFromZero)) : null,
-                    JTokenType.String => int.TryParse(candidate.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : null,
-                    JTokenType.Object => ExtractAssetId(candidate["asset"] ?? candidate["id"] ?? candidate["value"] ?? candidate["data"] ?? candidate["guid"] ?? candidate.FirstOrDefault()),
-                    _ => null,
-                };
-            }
-
-            int? parsedId = ExtractAssetId(token);
-            if (parsedId.HasValue) {
-                logger.Debug("Из свойства {PropertyName} получен ID текстуры {TextureId}.", propertyName, parsedId.Value);
-                return parsedId;
-            }
-
-            logger.Warn("Не удалось извлечь ID текстуры из свойства {PropertyName}. Тип токена: {TokenType}. Значение: {TokenValue}", propertyName, token.Type, token.Type == JTokenType.Object ? token.ToString(Formatting.None) : token.ToString());
-            return null;
-        }
-
         private void DisplayMaterialParameters(MaterialResource parameters) {
             Dispatcher.Invoke(() => {
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
@@ -1516,7 +1382,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
-                    MaterialResource materialParameters = await ParseMaterialJsonAsync(selectedMaterial.Path);
+                    MaterialResource? materialParameters = await assetResourceService.LoadMaterialFromFileAsync(
+                        selectedMaterial.Path,
+                        CancellationToken.None);
                     if (materialParameters != null) {
                         selectedMaterial = materialParameters;
                         DisplayMaterialParameters(selectedMaterial); // Передаем весь объект MaterialResource

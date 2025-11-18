@@ -63,6 +63,7 @@ namespace AssetProcessor {
             services.AddSingleton<IDownloadService, DownloadService>();
             services.AddSingleton<ILocalCacheService, LocalCacheService>();
             services.AddSingleton<IProjectAssetService, ProjectAssetService>();
+            services.AddSingleton<IAssetResourceService, AssetResourceService>();
             services.AddSingleton<ITextureConversionPipelineFactory, TextureConversionPipelineFactory>();
             services.AddSingleton<ITextureProcessingService>(sp => new TextureProcessingService(
                 sp.GetRequiredService<ITextureConversionPipelineFactory>(),

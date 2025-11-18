@@ -23,9 +23,9 @@ public class HistogramCoordinatorTests {
         Assert.Equal(histogramService.Statistics, result.Statistics);
         Assert.Same(bitmap, histogramService.LastProcessedBitmap);
         Assert.Equal(3, histogramService.AddedSeries.Count);
-        Assert.True(histogramService.AddedSeries.Any(entry => entry.Color == OxyColors.Red));
-        Assert.True(histogramService.AddedSeries.Any(entry => entry.Color == OxyColors.Green));
-        Assert.True(histogramService.AddedSeries.Any(entry => entry.Color == OxyColors.Blue));
+        Assert.Contains(histogramService.AddedSeries, entry => entry.Color == OxyColors.Red);
+        Assert.Contains(histogramService.AddedSeries, entry => entry.Color == OxyColors.Green);
+        Assert.Contains(histogramService.AddedSeries, entry => entry.Color == OxyColors.Blue);
         Assert.Equal(6, histogramService.LastCombinedHistogram![1]);
     }
 
@@ -37,7 +37,7 @@ public class HistogramCoordinatorTests {
 
         HistogramComputationResult result = coordinator.BuildHistogram(bitmap, isGray: true);
 
-        Assert.Equal(1, histogramService.AddedSeries.Count);
+        Assert.Single(histogramService.AddedSeries);
         Assert.Equal(OxyColors.Black, histogramService.AddedSeries[0].Color);
         Assert.Same(result, coordinator.CurrentResult);
         Assert.Equal(histogramService.Statistics, coordinator.CurrentStatistics);

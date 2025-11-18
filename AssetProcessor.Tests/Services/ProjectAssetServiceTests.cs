@@ -142,7 +142,7 @@ public class ProjectAssetServiceTests {
             CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<ResourceDownloadResult> DownloadFileAsync(BaseResource resource, string apiKey, CancellationToken cancellationToken) =>
-            Task.FromResult(new ResourceDownloadResult(true, resource.Path));
+            Task.FromResult(new ResourceDownloadResult(true, resource.Status ?? "Downloaded", 1));
     }
 
     private sealed class FakePlayCanvasService : IPlayCanvasService {

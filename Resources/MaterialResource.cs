@@ -15,6 +15,13 @@ namespace AssetProcessor.Resources {
 
         public float? Reflectivity { get; set; }
         public float? RefractionIndex { get; set; }
+        public string? FresnelModel { get; set; }
+        public float? Glossiness { get; set; }
+        public bool? OpacityFresnel { get; set; }
+        public float? CavityMapIntensity { get; set; }
+        public bool? UseSkybox { get; set; }
+        public bool? UseFog { get; set; }
+        public bool? UseGammaTonemap { get; set; }
 
         public float? AlphaTest { get; set; }
         public int? OpacityMapId { get; set; }

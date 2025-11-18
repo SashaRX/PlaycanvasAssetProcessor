@@ -38,11 +38,16 @@ using System.Linq;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using Newtonsoft.Json.Linq;
 
 namespace AssetProcessor {
     public partial class MainWindow : Window, INotifyPropertyChanged {
         // Коллекции теперь в MainViewModel - удалены дублирующиеся объявления
         // viewModel.Textures, viewModel.Models, viewModel.Materials, Assets теперь доступны через viewModel
+
+        private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
+        private readonly List<string> excludedFormats = [".hdr", ".avif"];
+        private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
 
         private readonly SemaphoreSlim getAssetsSemaphore;
         private readonly SemaphoreSlim downloadSemaphore;

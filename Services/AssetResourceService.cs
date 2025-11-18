@@ -405,7 +405,6 @@ public sealed class AssetResourceService : IAssetResourceService {
                 Reflectivity = data["reflectivity"]?.ToObject<float?>(),
                 RefractionIndex = data["refraction"]?.ToObject<float?>(),
                 OpacityFresnel = data["opacityFresnel"]?.ToObject<bool?>(),
-                AlphaTest = data["alphaTest"]?.ToObject<float?>(),
                 CavityMapIntensity = data["cavityMapIntensity"]?.ToObject<float?>(),
                 UseSkybox = data["useSkybox"]?.ToObject<bool?>(),
                 UseFog = data["useFog"]?.ToObject<bool?>(),

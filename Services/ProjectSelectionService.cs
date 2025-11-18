@@ -22,6 +22,8 @@ public class ProjectSelectionService : IProjectSelectionService {
     public string? ProjectName { get; private set; }
     public string? UserName { get; private set; }
     public string? UserId { get; private set; }
+    public string? SelectedBranchId { get; private set; }
+    public string? SelectedBranchName { get; private set; }
     public bool IsBranchInitializationInProgress { get; private set; }
     public bool IsProjectInitializationInProgress { get; private set; }
 
@@ -78,5 +80,12 @@ public class ProjectSelectionService : IProjectSelectionService {
 
     public void SetProjectInitializationInProgress(bool value) {
         IsProjectInitializationInProgress = value;
+    }
+
+    public void UpdateSelectedBranch(Branch branch) {
+        ArgumentNullException.ThrowIfNull(branch);
+
+        SelectedBranchId = branch.Id;
+        SelectedBranchName = branch.Name;
     }
 }

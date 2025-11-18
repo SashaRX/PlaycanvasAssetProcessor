@@ -30,10 +30,15 @@ namespace AssetProcessor.ViewModels {
         private readonly IProjectSyncService projectSyncService;
         private readonly IAssetDownloadCoordinator assetDownloadCoordinator;
         private readonly SynchronizationContext? synchronizationContext;
+        private readonly IProjectSelectionService projectSelectionService;
 
         public event EventHandler<TextureProcessingCompletedEventArgs>? TextureProcessingCompleted;
 
         public event EventHandler<TexturePreviewLoadedEventArgs>? TexturePreviewLoaded;
+
+        public event EventHandler<ProjectSelectionChangedEventArgs>? ProjectSelectionChanged;
+
+        public event EventHandler<BranchSelectionChangedEventArgs>? BranchSelectionChanged;
 
         public ITextureConversionSettingsProvider? ConversionSettingsProvider { get; set; }
 
@@ -111,12 +116,14 @@ namespace AssetProcessor.ViewModels {
             ITextureProcessingService textureProcessingService,
             ILocalCacheService localCacheService,
             IProjectSyncService projectSyncService,
-            IAssetDownloadCoordinator assetDownloadCoordinator) {
+            IAssetDownloadCoordinator assetDownloadCoordinator,
+            IProjectSelectionService projectSelectionService) {
             this.playCanvasService = playCanvasService;
             this.textureProcessingService = textureProcessingService;
             this.localCacheService = localCacheService;
             this.projectSyncService = projectSyncService;
             this.assetDownloadCoordinator = assetDownloadCoordinator;
+            this.projectSelectionService = projectSelectionService;
             synchronizationContext = SynchronizationContext.Current;
 
             logger.Info("MainViewModel initialized");
@@ -220,8 +227,20 @@ namespace AssetProcessor.ViewModels {
                 StatusMessage = "Loading branches...";
                 logger.Info($"Loading branches for project: {SelectedProjectId}");
 
-                var branchesList = await playCanvasService.GetBranchesAsync(SelectedProjectId, resolvedApiKey, new List<Branch>(), cancellationToken);
-                Branches = new ObservableCollection<Branch>(branchesList);
+                BranchSelectionResult result = await projectSelectionService.LoadBranchesAsync(
+                    SelectedProjectId,
+                    resolvedApiKey,
+                    AppSettings.Default.LastSelectedBranchName,
+                    cancellationToken);
+
+                Branches = new ObservableCollection<Branch>(result.Branches);
+
+                if (Branches.Count > 0) {
+                    SelectedBranchId = result.SelectedBranchId ?? Branches[0].Id;
+                } else {
+                    SelectedBranchId = null;
+                }
+
                 logger.Info($"Retrieved {Branches.Count} branches");
 
                 StatusMessage = $"Loaded {Branches.Count} branches.";
@@ -232,6 +251,46 @@ namespace AssetProcessor.ViewModels {
                 StatusMessage = $"Network error: {ex.Message}";
                 logger.Error(ex, "Network error loading branches");
             }
+        }
+
+        [RelayCommand]
+        private async Task ProjectSelectionChangedAsync(KeyValuePair<string, string>? selectedProject) {
+            if (projectSelectionService.IsProjectInitializationInProgress) {
+                logger.Info("Project selection ignored - initialization in progress");
+                return;
+            }
+
+            if (selectedProject is null) {
+                return;
+            }
+
+            SelectedProjectId = selectedProject.Value.Key;
+            projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject.Value);
+
+            try {
+                await LoadBranchesAsync(CancellationToken.None);
+            } catch (Exception ex) {
+                logger.Error(ex, "Failed to load branches after project selection");
+            }
+
+            ProjectSelectionChanged?.Invoke(this, new ProjectSelectionChangedEventArgs(selectedProject.Value));
+        }
+
+        [RelayCommand]
+        private Task BranchSelectionChangedAsync(Branch? branch) {
+            if (branch == null) {
+                return Task.CompletedTask;
+            }
+
+            if (projectSelectionService.IsBranchInitializationInProgress) {
+                return Task.CompletedTask;
+            }
+
+            SelectedBranchId = branch.Id;
+            projectSelectionService.UpdateSelectedBranch(branch);
+
+            BranchSelectionChanged?.Invoke(this, new BranchSelectionChangedEventArgs(branch));
+            return Task.CompletedTask;
         }
 
         [RelayCommand]
@@ -622,5 +681,21 @@ namespace AssetProcessor.ViewModels {
         public TextureResource Texture { get; }
 
         public TexturePreviewResult Preview { get; }
+    }
+
+    public sealed class ProjectSelectionChangedEventArgs : EventArgs {
+        public ProjectSelectionChangedEventArgs(KeyValuePair<string, string> project) {
+            SelectedProject = project;
+        }
+
+        public KeyValuePair<string, string> SelectedProject { get; }
+    }
+
+    public sealed class BranchSelectionChangedEventArgs : EventArgs {
+        public BranchSelectionChangedEventArgs(Branch branch) {
+            SelectedBranch = branch;
+        }
+
+        public Branch SelectedBranch { get; }
     }
 }

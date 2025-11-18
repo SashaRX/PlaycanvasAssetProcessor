@@ -102,7 +102,12 @@ public class ProjectAssetServiceTests {
         ILogService log) => new(cache, playCanvas, log);
 
     private static PlayCanvasAssetSummary CreateAssetSummary(int id) {
-        using JsonDocument document = JsonDocument.Parse($$"""{"id":{{id}},"type":"texture","name":"Asset{{id}}"}""");
+        using JsonDocument document = JsonDocument.Parse(
+            JsonSerializer.Serialize(new {
+                id,
+                type = "texture",
+                name = $"Asset{id}"
+            }));
         return new PlayCanvasAssetSummary(
             id,
             "texture",

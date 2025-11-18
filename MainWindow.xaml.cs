@@ -104,6 +104,8 @@ namespace AssetProcessor {
 
         private readonly MainViewModel viewModel;
 
+        public MainViewModel ViewModel { get; }
+
         public MainWindow(
             IPlayCanvasService playCanvasService,
             IHistogramCoordinator histogramCoordinator,
@@ -125,6 +127,7 @@ namespace AssetProcessor {
             this.projectAssetService = projectAssetService ?? throw new ArgumentNullException(nameof(projectAssetService));
             this.previewRendererCoordinator = previewRendererCoordinator ?? throw new ArgumentNullException(nameof(previewRendererCoordinator));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            ViewModel = this.viewModel;
 
             InitializeComponent();
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
@@ -166,14 +169,9 @@ namespace AssetProcessor {
             projectSelectionService.InitializeProjectsFolder(AppSettings.Default.ProjectsFolderPath);
             UpdateConnectionStatus(false);
 
-            TexturesDataGrid.ItemsSource = viewModel.Textures;
-            ModelsDataGrid.ItemsSource = viewModel.Models;
-            MaterialsDataGrid.ItemsSource = viewModel.Materials;
-
             TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
             TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
 
-            DataContext = viewModel;
             viewModel.ProjectSelectionChanged += ViewModel_ProjectSelectionChanged;
             viewModel.BranchSelectionChanged += ViewModel_BranchSelectionChanged;
 

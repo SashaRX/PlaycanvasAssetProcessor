@@ -42,7 +42,7 @@ public class MainViewModelTests {
     [Fact]
     public async Task ProcessTexturesCommand_RaisesCompletionEvent() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "Texture1", Path = "file.png" }
             }
@@ -76,7 +76,7 @@ public class MainViewModelTests {
                 ResultToReturn = new AssetDownloadResult(true, "Downloaded 1 assets. Failed: 0", new ResourceDownloadBatchResult(1, 0, 1))
             };
 
-            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator) {
+            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator, new DummyProjectSelectionService()) {
                 ApiKey = "token",
                 SelectedProjectId = "proj1",
                 SelectedBranchId = "branch1",
@@ -103,7 +103,7 @@ public class MainViewModelTests {
     [Fact]
     public void AutoDetectPresetsCommand_UpdatesStatusMessage() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService()) {
             ConversionSettingsProvider = new StubSettingsProvider(),
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "rock_albedo.png", Path = "c:/tex/rock_albedo.png" }
@@ -134,7 +134,7 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -295,6 +295,47 @@ public class MainViewModelTests {
 
         public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) =>
             Task.CompletedTask;
+    }
+
+    private sealed class DummyProjectSelectionService : IProjectSelectionService {
+        public string? ProjectFolderPath { get; private set; }
+        public string? ProjectName { get; private set; }
+        public string? UserName { get; private set; }
+        public string? UserId { get; private set; }
+        public string? SelectedBranchId { get; private set; }
+        public string? SelectedBranchName { get; private set; }
+        public bool IsBranchInitializationInProgress { get; private set; }
+        public bool IsProjectInitializationInProgress { get; private set; }
+
+        public void InitializeProjectsFolder(string? projectsFolderPath) {
+            ProjectFolderPath = projectsFolderPath;
+        }
+
+        public Task<ProjectSelectionResult> LoadProjectsAsync(string userName, string apiKey, string lastSelectedProjectId, CancellationToken cancellationToken) {
+            UserName = userName;
+            UserId = "user";
+            return Task.FromResult(new ProjectSelectionResult(new Dictionary<string, string>(), lastSelectedProjectId, UserId!, userName));
+        }
+
+        public Task<BranchSelectionResult> LoadBranchesAsync(string projectId, string apiKey, string? lastSelectedBranchName, CancellationToken cancellationToken) {
+            SelectedBranchName = lastSelectedBranchName;
+            return Task.FromResult(new BranchSelectionResult(new List<Branch>(), SelectedBranchId));
+        }
+
+        public void UpdateProjectPath(string projectsRoot, KeyValuePair<string, string> selectedProject) {
+            ProjectName = selectedProject.Value;
+            ProjectFolderPath = Path.Combine(projectsRoot, selectedProject.Value);
+        }
+
+        public void SetProjectInitializationInProgress(bool value) {
+            IsProjectInitializationInProgress = value;
+        }
+
+        public void UpdateSelectedBranch(Branch branch) {
+            SelectedBranchId = branch.Id;
+            SelectedBranchName = branch.Name;
+            IsBranchInitializationInProgress = false;
+        }
     }
 
     private sealed class TestProjectSyncService : IProjectSyncService {

@@ -10,6 +10,8 @@ public interface IProjectSelectionService {
     string? ProjectName { get; }
     string? UserName { get; }
     string? UserId { get; }
+    string? SelectedBranchId { get; }
+    string? SelectedBranchName { get; }
     bool IsBranchInitializationInProgress { get; }
     bool IsProjectInitializationInProgress { get; }
 
@@ -18,4 +20,5 @@ public interface IProjectSelectionService {
     Task<BranchSelectionResult> LoadBranchesAsync(string projectId, string apiKey, string? lastSelectedBranchName, CancellationToken cancellationToken);
     void UpdateProjectPath(string projectsRoot, KeyValuePair<string, string> selectedProject);
     void SetProjectInitializationInProgress(bool value);
+    void UpdateSelectedBranch(Branch branch);
 }

@@ -79,7 +79,14 @@ namespace AssetProcessor {
                 var localCacheService = sp.GetRequiredService<ILocalCacheService>();
                 var projectSyncService = sp.GetRequiredService<IProjectSyncService>();
                 var assetDownloadCoordinator = sp.GetRequiredService<IAssetDownloadCoordinator>();
-                return new MainViewModel(playCanvasService, textureProcessingService, localCacheService, projectSyncService, assetDownloadCoordinator);
+                var projectSelectionService = sp.GetRequiredService<IProjectSelectionService>();
+                return new MainViewModel(
+                    playCanvasService,
+                    textureProcessingService,
+                    localCacheService,
+                    projectSyncService,
+                    assetDownloadCoordinator,
+                    projectSelectionService);
             });
             services.AddTransient<MainWindow>();
         }

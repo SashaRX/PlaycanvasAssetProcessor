@@ -7,6 +7,7 @@
     xmlns:controls="clr-namespace:AssetProcessor.Controls"
     xmlns:help ="clr-namespace:AssetProcessor.Helpers"
     xmlns:viewer="clr-namespace:AssetProcessor.TextureViewer"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helix="http://helix-toolkit.org/wpf"
@@ -172,7 +173,6 @@
                                   DisplayMemberPath="Value"
                                   SelectedValuePath="Key"
                                   SelectedValue="{Binding SelectedProjectId, Mode=TwoWay}"
-                                  SelectionChanged="ProjectsComboBox_SelectionChanged"
                                   Margin="0,0,4,0"
                                   Width="160"
                                   Height="20"
@@ -185,6 +185,12 @@
                                     <Setter Property="VerticalContentAlignment" Value="Center"/>
                                 </Style>
                             </ComboBox.ItemContainerStyle>
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="SelectionChanged">
+                                    <i:InvokeCommandAction Command="{Binding ProjectSelectionChangedCommand}"
+                                                           CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
                         </ComboBox>
 
                         <ComboBox x:Name="BranchesComboBox"
@@ -192,7 +198,6 @@
                                   DisplayMemberPath="Name"
                                   SelectedValuePath="Id"
                                   SelectedValue="{Binding SelectedBranchId, Mode=TwoWay}"
-                                  SelectionChanged="BranchesComboBox_SelectionChanged"
                                   Width="160"
                                   Height="20"
                                   VerticalContentAlignment="Center"
@@ -204,6 +209,12 @@
                                     <Setter Property="VerticalContentAlignment" Value="Center"/>
                                 </Style>
                             </ComboBox.ItemContainerStyle>
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="SelectionChanged">
+                                    <i:InvokeCommandAction Command="{Binding BranchSelectionChangedCommand}"
+                                                           CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
                         </ComboBox>
                     </StackPanel>
                 </StackPanel>

@@ -174,6 +174,8 @@ namespace AssetProcessor {
             TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
 
             DataContext = viewModel;
+            viewModel.ProjectSelectionChanged += ViewModel_ProjectSelectionChanged;
+            viewModel.BranchSelectionChanged += ViewModel_BranchSelectionChanged;
 
             this.Closing += MainWindow_Closing;
             //LoadLastSettings();
@@ -208,6 +210,14 @@ namespace AssetProcessor {
 
         private void HandlePreviewRendererChanged(bool useD3D11) {
             _ = ApplyRendererPreferenceAsync(useD3D11);
+        }
+
+        private async void ViewModel_ProjectSelectionChanged(object? sender, ProjectSelectionChangedEventArgs e) {
+            await HandleProjectSelectionChangedAsync();
+        }
+
+        private async void ViewModel_BranchSelectionChanged(object? sender, BranchSelectionChangedEventArgs e) {
+            await HandleBranchSelectionChangedAsync();
         }
 
         private Task ApplyRendererPreferenceAsync(bool useD3D11) {
@@ -277,9 +287,9 @@ namespace AssetProcessor {
             }
         }
 
-        private async void ProjectsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+        private async Task HandleProjectSelectionChangedAsync() {
             if (projectSelectionService.IsProjectInitializationInProgress) {
-                logService.LogInfo("Skipping ProjectsComboBox_SelectionChanged - initialization in progress");
+                logService.LogInfo("Skipping project selection - initialization in progress");
                 return;
             }
 
@@ -287,15 +297,12 @@ namespace AssetProcessor {
                 return;
             }
 
-            projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
-
-            logService.LogInfo("Calling LoadAssetsFromJsonFileAsync from ProjectsComboBox_SelectionChanged");
+            logService.LogInfo("Calling LoadAssetsFromJsonFileAsync after project selection");
             bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
             if (!jsonLoaded) {
                 logService.LogInfo($"No local data found for project '{ProjectName}'. User can connect to server to download.");
             }
 
-            await LoadBranchesAsync(selectedProject.Key, CancellationToken.None);
             SaveCurrentSettings();
 
             if (currentConnectionState != ConnectionState.Disconnected) {
@@ -303,7 +310,7 @@ namespace AssetProcessor {
             }
         }
 
-        private async void BranchesComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
+        private async Task HandleBranchSelectionChangedAsync() {
             SaveCurrentSettings();
 
             if (projectSelectionService.IsBranchInitializationInProgress) {
@@ -2049,12 +2056,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void SaveCurrentSettings() {
-            if (ProjectsComboBox.SelectedItem != null) {
-                AppSettings.Default.LastSelectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+            if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                AppSettings.Default.LastSelectedProjectId = viewModel.SelectedProjectId;
             }
-            if (BranchesComboBox.SelectedItem != null) {
-                AppSettings.Default.LastSelectedBranchName = ((Branch)BranchesComboBox.SelectedItem).Name;
+
+            if (!string.IsNullOrEmpty(viewModel.SelectedBranchId)) {
+                Branch? selectedBranch = viewModel.Branches.FirstOrDefault(b => b.Id == viewModel.SelectedBranchId);
+                if (selectedBranch != null) {
+                    AppSettings.Default.LastSelectedBranchName = selectedBranch.Name;
+                }
             }
+
             AppSettings.Default.Save();
         }
 
@@ -2073,6 +2085,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Error(ex, "Error canceling operations during window closing");
             }
 
+            viewModel.ProjectSelectionChanged -= ViewModel_ProjectSelectionChanged;
+            viewModel.BranchSelectionChanged -= ViewModel_BranchSelectionChanged;
             SaveCurrentSettings();
         }
 

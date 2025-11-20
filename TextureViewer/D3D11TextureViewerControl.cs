@@ -298,24 +298,22 @@ public class D3D11TextureViewerControl : HwndHost {
         float mouseNDCX = (mouseInViewportX / viewportWidth) * 2.0f - 1.0f;
         float mouseNDCY = -((mouseInViewportY / viewportHeight) * 2.0f - 1.0f); // Flip Y axis
 
-        // The quad vertices are scaled by posScale in the vertex shader
-        // This scales the NDC coordinates, so we need to invert that scaling
-        // to find which point on the original quad (before scaling) the mouse is over
-        float quadNDCX = mouseNDCX / posScaleX;
-        float quadNDCY = mouseNDCY / posScaleY;
-
         // Convert from NDC space to UV space [0, 1]
         // NDC (-1,-1) maps to UV (0,1) and NDC (1,1) maps to UV (1,0)
         // Note: UV Y is flipped relative to NDC Y
-        float quadLocalX = (quadNDCX + 1.0f) * 0.5f;
-        float quadLocalY = (1.0f - (quadNDCY + 1.0f) * 0.5f);
+        float quadLocalX = (mouseNDCX + 1.0f) * 0.5f;
+        float quadLocalY = (1.0f - (mouseNDCY + 1.0f) * 0.5f);
+
+        // Aspect-коррекция теперь применяется к UV: центрируем, делим на posScale и возвращаем.
+        float aspectUvX = (quadLocalX - 0.5f) / posScaleX + 0.5f;
+        float aspectUvY = (quadLocalY - 0.5f) / posScaleY + 0.5f;
 
         // Now we need to find what UV coordinate the mouse is pointing to
-        // The shader transforms: output.texcoord = input.texcoord * (1/zoom) + pan
+        // The shader transforms: output.texcoord = aspectUv * (1/zoom) + pan
         // Where input.texcoord comes from the quad vertices which are [0,1]
         // So the actual UV under the mouse is:
-        float uvUnderMouseX = quadLocalX * (1.0f / zoom) + panX;
-        float uvUnderMouseY = quadLocalY * (1.0f / zoom) + panY;
+        float uvUnderMouseX = aspectUvX * (1.0f / zoom) + panX;
+        float uvUnderMouseY = aspectUvY * (1.0f / zoom) + panY;
 
         // Apply zoom change
         float oldZoom = zoom;

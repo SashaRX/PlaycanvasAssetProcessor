@@ -43,15 +43,17 @@ PSInput VSMain(VSInput input)
 {
     PSInput output;
 
-    // Apply aspect ratio correction to position
-    float2 pos = input.position * posScale;
-    output.position = float4(pos, 0.0, 1.0);
+    // Рамку тянем на весь вьюпорт, аспект-коррекцию переносим в UV — так не режется геометрия, но текстура сохраняет пропорции.
+    output.position = float4(input.position, 0.0, 1.0);
+
+    // Сначала нормализуем UV в центр, затем делим на posScale (расширяем диапазон по «короткой» стороне) и смещаем обратно.
+    float2 aspectUv = (input.texcoord - 0.5) / posScale + 0.5;
 
     // Store original UV before transformation (for debug visualization)
-    output.originalUV = input.texcoord;
+    output.originalUV = aspectUv;
 
     // Apply zoom/pan to UV
-    output.texcoord = input.texcoord * uvScale + uvOffset;
+    output.texcoord = aspectUv * uvScale + uvOffset;
 
     return output;
 }

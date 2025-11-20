@@ -143,6 +143,15 @@ namespace AssetProcessor {
             }
         }
 
+        private void TileToggleButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is ToggleButton button && D3D11TextureViewer?.Renderer != null) {
+                bool enableTiling = button.IsChecked ?? false;
+                D3D11TextureViewer.Renderer.SetTiling(enableTiling);
+                D3D11TextureViewer.Renderer.Render();
+                logger.Info($"Tile toggle: {(enableTiling ? "Enabled" : "Disabled")}");
+            }
+        }
+
         private void HistogramCorrectionButton_Click(object sender, RoutedEventArgs e) {
             if (sender is ToggleButton button && D3D11TextureViewer?.Renderer != null) {
                 bool enabled = button.IsChecked ?? true;

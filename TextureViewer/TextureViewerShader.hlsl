@@ -17,7 +17,9 @@ cbuffer ShaderConstants : register(b0)
     uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
     uint histogramIsPerChannel;         // 0 = scalar, 1 = per-channel
     uint normalLayout;                  // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
+    uint tilingEnabled;                 // 0 = clamp to texture, 1 = tile/wrap
     uint padding3;                      // Padding to align to 16-byte boundary
+    uint padding4;
 };
 
 Texture2D<float4> sourceTexture : register(t0);
@@ -41,15 +43,17 @@ PSInput VSMain(VSInput input)
 {
     PSInput output;
 
-    // Apply aspect ratio correction to position
-    float2 pos = input.position * posScale;
-    output.position = float4(pos, 0.0, 1.0);
+    // Рамку тянем на весь вьюпорт, аспект-коррекцию переносим в UV — так не режется геометрия, но текстура сохраняет пропорции.
+    output.position = float4(input.position, 0.0, 1.0);
+
+    // Сначала нормализуем UV в центр, затем делим на posScale (расширяем диапазон по «короткой» стороне) и смещаем обратно.
+    float2 aspectUv = (input.texcoord - 0.5) / posScale + 0.5;
 
     // Store original UV before transformation (for debug visualization)
-    output.originalUV = input.texcoord;
+    output.originalUV = aspectUv;
 
     // Apply zoom/pan to UV
-    output.texcoord = input.texcoord * uvScale + uvOffset;
+    output.texcoord = aspectUv * uvScale + uvOffset;
 
     return output;
 }
@@ -69,9 +73,12 @@ float3 LinearToSRGB(float3 linearColor)
 // Pixel Shader
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    // Clip pixels outside UV [0, 1] range (texture bounds)
-    if (input.texcoord.x < 0.0 || input.texcoord.x > 1.0 ||
-        input.texcoord.y < 0.0 || input.texcoord.y > 1.0)
+    // При тайлинге используем семплер с обёрткой и исходные UV без модификации, чтобы не рвать производные и избежать полос.
+    float2 sampleUV = input.texcoord;
+
+    // Обрезаем только в режиме без тайлинга — wrap-сэмплер сам обрабатывает выход за границы.
+    if (tilingEnabled == 0 && (sampleUV.x < 0.0 || sampleUV.x > 1.0 ||
+        sampleUV.y < 0.0 || sampleUV.y > 1.0))
     {
         discard;
     }
@@ -81,11 +88,11 @@ float4 PSMain(PSInput input) : SV_TARGET
     // Sample texture with manual mip level or auto mip
     if (mipLevel >= 0.0)
     {
-        color = sourceTexture.SampleLevel(texSampler, input.texcoord, mipLevel);
+        color = sourceTexture.SampleLevel(texSampler, sampleUV, mipLevel);
     }
     else
     {
-        color = sourceTexture.Sample(texSampler, input.texcoord);
+        color = sourceTexture.Sample(texSampler, sampleUV);
     }
 
     // STEP 0: Apply histogram denormalization if enabled

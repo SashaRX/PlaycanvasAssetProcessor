@@ -685,7 +685,7 @@
                                 </Border>
 
                                 <!-- Texture Viewport -->
-                                <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" MaxHeight="512">
+                                <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
                                     <Grid x:Name="TexturePreviewViewport"
                                           Background="#FF333333"
                                           ClipToBounds="True"
@@ -753,6 +753,9 @@
 
                                         <!-- Filter toggle button (Point/Trilinear) -->
                                         <ToggleButton x:Name="FilterToggleButton" Content="Filter" Width="45" Height="20" Margin="4,0,0,0" Background="#FFE0E0E0" IsChecked="True" Click="FilterToggleButton_Click" BorderBrush="Black" FontSize="9" Padding="2"/>
+
+                                        <!-- Tile toggle button -->
+                                        <ToggleButton x:Name="TileToggleButton" Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="#FFE0E0E0" IsChecked="False" Click="TileToggleButton_Click" BorderBrush="Black" FontSize="9" Padding="2"/>
 
                                         <!-- Histogram correction toggle button -->
                                         <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="Black" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>

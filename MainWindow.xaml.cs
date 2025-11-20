@@ -238,7 +238,7 @@ namespace AssetProcessor {
                 LogInfo = message => logger.Info(message),
                 LogError = (exception, message) => logger.Error(exception, message),
                 LogWarn = message => logger.Warn(message),
-                ApplyWpfTiling = ApplyWpfTilingMode
+                ApplyWpfTiling = enabled => ApplyWpfTilingMode(enabled)
             };
         }
 

@@ -636,7 +636,7 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition x:Name="PreviewContentRow" Height="300" />
+                                    <RowDefinition x:Name="PreviewContentRow" Height="*" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>

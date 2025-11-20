@@ -681,8 +681,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            double clampedHeight = Math.Clamp(desiredHeight, MinPreviewContentHeight, MaxPreviewContentHeight);
-            PreviewContentRow.Height = new GridLength(clampedHeight);
+            PreviewContentRow.Height = new GridLength(1, GridUnitType.Star);
         }
 
         // Removed: UpdatePreviewWidthText (PreviewWidthSlider was removed)

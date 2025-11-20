@@ -73,8 +73,6 @@ namespace AssetProcessor {
         private const int ThumbnailSize = 512; // Размер для быстрого превью (увеличено для лучшей читаемости)
         private const double MinPreviewColumnWidth = 256.0;
         private const double MaxPreviewColumnWidth = 512.0;
-        private const double MinPreviewContentHeight = 128.0;
-        private const double MaxPreviewContentHeight = 1024.0;
         private const double DefaultPreviewContentHeight = 300.0;
         private int lastPreviewTextureWidth;
         private int lastPreviewTextureHeight;

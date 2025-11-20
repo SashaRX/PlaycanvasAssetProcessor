@@ -222,6 +222,9 @@ namespace AssetProcessor {
             ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
+            lastPreviewTextureWidth = 0;
+            lastPreviewTextureHeight = 0;
+            UpdatePreviewContentHeight(DefaultPreviewContentHeight);
 
             if (TileToggleButton != null) {
                 TileToggleButton.IsChecked = false;
@@ -305,12 +308,21 @@ namespace AssetProcessor {
                 logger.Info("Getting bitmap dimensions...");
                 int w = bitmap.PixelWidth;
                 int h = bitmap.PixelHeight;
+                RememberPreviewTextureSize(w, h);
                 logger.Info($"Bitmap dimensions: {w}x{h}");
                 logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={texturePreviewService.CurrentSelectedTexture?.TextureType})");
                 LoadTextureToD3D11Viewer(bitmap, isSRGB);
+                AdjustPreviewHeightToTextureAspect(w, h);
                 logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
             } catch (Exception ex) {
                 logger.Error(ex, "Exception in UpdatePreviewImage when calling LoadTextureToD3D11Viewer");
+            }
+        }
+
+        private void RememberPreviewTextureSize(int width, int height) {
+            if (width > 0 && height > 0) {
+                lastPreviewTextureWidth = width;
+                lastPreviewTextureHeight = height;
             }
         }
 
@@ -634,6 +646,34 @@ namespace AssetProcessor {
             }
 
             UpdatePreviewContentHeight(currentHeight);
+        }
+
+        private void AdjustPreviewHeightToTextureAspect(int textureWidth, int textureHeight) {
+            if (PreviewContentRow == null || TexturePreviewViewport == null) {
+                return;
+            }
+
+            if (textureWidth <= 0 || textureHeight <= 0) {
+                return;
+            }
+
+            double availableWidth = TexturePreviewViewport.ActualWidth;
+
+            if (availableWidth <= 0 && TextureViewer != null) {
+                availableWidth = TextureViewer.ActualWidth - TextureViewer.BorderThickness.Left - TextureViewer.BorderThickness.Right;
+            }
+
+            if (availableWidth <= 0 && TextureViewerScroll != null) {
+                availableWidth = TextureViewerScroll.ViewportWidth > 0 ? TextureViewerScroll.ViewportWidth : TextureViewerScroll.ActualWidth;
+            }
+
+            if (availableWidth <= 0) {
+                return;
+            }
+
+            double aspect = (double)textureHeight / textureWidth;
+            double desiredHeight = availableWidth * aspect;
+            UpdatePreviewContentHeight(desiredHeight);
         }
 
         private void UpdatePreviewContentHeight(double desiredHeight) {

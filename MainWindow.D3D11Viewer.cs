@@ -61,6 +61,10 @@ namespace AssetProcessor {
 
         private void TexturePreviewViewport_SizeChanged(object sender, SizeChangedEventArgs e) {
             // D3D11TextureViewerControl will handle resize automatically via OnRenderSizeChanged
+
+            if (lastPreviewTextureWidth > 0 && lastPreviewTextureHeight > 0) {
+                AdjustPreviewHeightToTextureAspect(lastPreviewTextureWidth, lastPreviewTextureHeight);
+            }
         }
 
         // Mouse wheel zoom handler for D3D11 viewer

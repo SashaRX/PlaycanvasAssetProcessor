@@ -323,11 +323,11 @@ public class D3D11TextureViewerControl : HwndHost {
 
         // Calculate new pan to keep the UV point under the mouse stationary
         // After zoom, the UV under mouse should remain the same:
-        // uvUnderMouseX = quadLocalX * (1/newZoom) + newPanX
+        // uvUnderMouseX = aspectUvX * (1/newZoom) + newPanX
         // Solving for newPanX:
-        // newPanX = uvUnderMouseX - quadLocalX * (1/newZoom)
-        panX = uvUnderMouseX - quadLocalX * (1.0f / zoom);
-        panY = uvUnderMouseY - quadLocalY * (1.0f / zoom);
+        // newPanX = uvUnderMouseX - aspectUvX * (1/newZoom)
+        panX = uvUnderMouseX - aspectUvX * (1.0f / zoom);
+        panY = uvUnderMouseY - aspectUvY * (1.0f / zoom);
 
         renderer.SetZoom(zoom);
         renderer.SetPan(panX, panY);

@@ -74,7 +74,7 @@ namespace AssetProcessor {
         private const double MinPreviewColumnWidth = 256.0;
         private const double MaxPreviewColumnWidth = 512.0;
         private const double MinPreviewContentHeight = 128.0;
-        private const double MaxPreviewContentHeight = 512.0;
+        private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
         private bool isSorting = false; // Флаг для отслеживания процесса сортировки
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации

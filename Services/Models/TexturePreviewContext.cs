@@ -19,4 +19,5 @@ public sealed class TexturePreviewContext {
     public required Action<string> LogInfo { get; init; }
     public required Action<Exception, string> LogError { get; init; }
     public required Action<string> LogWarn { get; init; }
+    public required Action<bool> ApplyWpfTiling { get; init; }
 }

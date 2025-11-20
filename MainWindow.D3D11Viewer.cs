@@ -242,6 +242,7 @@ namespace AssetProcessor {
 
                     logger.Info("Calling LoadTexture on renderer...");
                     D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                    D3D11TextureViewer.Renderer.SetTiling(texturePreviewService.IsTilingEnabled);
                     logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
 
                     // Update format info in UI
@@ -385,6 +386,7 @@ namespace AssetProcessor {
 
                 await Dispatcher.InvokeAsync(() => {
                     D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                    D3D11TextureViewer.Renderer.SetTiling(texturePreviewService.IsTilingEnabled);
                     logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
                     // Update histogram correction button state

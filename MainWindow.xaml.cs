@@ -79,6 +79,7 @@ namespace AssetProcessor {
         private bool isSorting = false; // Флаг для отслеживания процесса сортировки
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // Отслеживание текстур, для которых уже запущена проверка CompressedSize
+        private Brush? defaultPreviewBackground;
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -130,6 +131,7 @@ namespace AssetProcessor {
             ViewModel = this.viewModel;
 
             InitializeComponent();
+            defaultPreviewBackground = TexturePreviewViewport?.Background;
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -235,7 +237,8 @@ namespace AssetProcessor {
                 ShowMipmapControls = ShowMipmapControls,
                 LogInfo = message => logger.Info(message),
                 LogError = (exception, message) => logger.Error(exception, message),
-                LogWarn = message => logger.Warn(message)
+                LogWarn = message => logger.Warn(message),
+                ApplyWpfTiling = ApplyWpfTilingMode
             };
         }
 

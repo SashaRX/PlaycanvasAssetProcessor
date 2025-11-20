@@ -26,6 +26,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private ID3D11ShaderResourceView? textureSRV;
     private ID3D11SamplerState? samplerPoint;
     private ID3D11SamplerState? samplerLinear;
+    private ID3D11SamplerState? samplerPointWrap;
+    private ID3D11SamplerState? samplerLinearWrap;
 
     private ID3D11VertexShader? vertexShader;
     private ID3D11PixelShader? pixelShader;
@@ -46,6 +48,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private uint channelMask = 0xFFFFFFFF; // All channels enabled by default
     private float currentGamma = 2.2f; // Default: sRGB gamma
     private float originalGamma = 2.2f; // Original gamma set during LoadTexture (for restoring after mask)
+    private bool isTilingEnabled = false;
 
     // Histogram preprocessing compensation
     private HistogramMetadata? histogramMetadata = null;
@@ -72,7 +75,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
         public uint EnableHistogramCorrection; // 0 = disabled, 1 = enabled
         public uint HistogramIsPerChannel; // 0 = scalar, 1 = per-channel
         public uint NormalLayout; // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
-        public uint Padding3; // Padding to maintain 16-byte alignment
+        public uint EnableTiling; // 0 = clamp, 1 = tile
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -155,6 +158,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
         };
         samplerPoint = device!.CreateSamplerState(pointDesc);
 
+        var pointWrapDesc = pointDesc;
+        pointWrapDesc.AddressU = TextureAddressMode.Wrap;
+        pointWrapDesc.AddressV = TextureAddressMode.Wrap;
+        pointWrapDesc.AddressW = TextureAddressMode.Wrap;
+        samplerPointWrap = device!.CreateSamplerState(pointWrapDesc);
+
         // Linear sampling
         var linearDesc = new SamplerDescription {
             Filter = Filter.MinMagMipLinear,
@@ -165,6 +174,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
             MaxLOD = float.MaxValue
         };
         samplerLinear = device!.CreateSamplerState(linearDesc);
+
+        var linearWrapDesc = linearDesc;
+        linearWrapDesc.AddressU = TextureAddressMode.Wrap;
+        linearWrapDesc.AddressV = TextureAddressMode.Wrap;
+        linearWrapDesc.AddressW = TextureAddressMode.Wrap;
+        samplerLinearWrap = device!.CreateSamplerState(linearWrapDesc);
     }
 
     private void CreateShaders() {
@@ -467,7 +482,10 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 context.VSSetShader(vertexShader);
                 context.PSSetShader(pixelShader);
                 context.PSSetShaderResource(0, textureSRV);
-                context.PSSetSampler(0, useLinearFilter ? samplerLinear : samplerPoint);
+                ID3D11SamplerState? sampler = useLinearFilter
+                    ? (isTilingEnabled ? samplerLinearWrap : samplerLinear)
+                    : (isTilingEnabled ? samplerPointWrap : samplerPoint);
+                context.PSSetSampler(0, sampler);
                 context.VSSetConstantBuffer(0, constantBuffer);
                 context.PSSetConstantBuffer(0, constantBuffer);
 
@@ -551,7 +569,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
             EnableHistogramCorrection = enableHist,
             HistogramIsPerChannel = isPerChannel,
             NormalLayout = normalLayout,
-            Padding3 = 0u
+            EnableTiling = isTilingEnabled ? 1u : 0u
         };
 
         var mapped = context!.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
@@ -611,6 +629,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
     public void SetFilter(bool linear) {
         lock (renderLock) {
             useLinearFilter = linear;
+        }
+    }
+
+    public void SetTiling(bool enabled) {
+        lock (renderLock) {
+            isTilingEnabled = enabled;
         }
     }
 
@@ -676,6 +700,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
         texture?.Dispose();
         samplerPoint?.Dispose();
         samplerLinear?.Dispose();
+        samplerPointWrap?.Dispose();
+        samplerLinearWrap?.Dispose();
         vertexShader?.Dispose();
         pixelShader?.Dispose();
         constantBuffer?.Dispose();

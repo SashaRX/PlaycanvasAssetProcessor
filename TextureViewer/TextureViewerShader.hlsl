@@ -17,7 +17,7 @@ cbuffer ShaderConstants : register(b0)
     uint enableHistogramCorrection;     // 0 = disabled, 1 = enabled
     uint histogramIsPerChannel;         // 0 = scalar, 1 = per-channel
     uint normalLayout;                  // Normal map layout: 0=NONE, 1=RG, 2=GA, 3=RGB, 4=AG, 5=RGBxAy
-    uint padding3;                      // Padding to align to 16-byte boundary
+    uint enableTiling;                  // 0 = clamp to [0,1], 1 = tile UVs
 };
 
 Texture2D<float4> sourceTexture : register(t0);
@@ -70,10 +70,18 @@ float3 LinearToSRGB(float3 linearColor)
 float4 PSMain(PSInput input) : SV_TARGET
 {
     // Clip pixels outside UV [0, 1] range (texture bounds)
-    if (input.texcoord.x < 0.0 || input.texcoord.x > 1.0 ||
-        input.texcoord.y < 0.0 || input.texcoord.y > 1.0)
+    float2 sampledUv = input.texcoord;
+    if (enableTiling == 0)
     {
-        discard;
+        if (sampledUv.x < 0.0 || sampledUv.x > 1.0 ||
+            sampledUv.y < 0.0 || sampledUv.y > 1.0)
+        {
+            discard;
+        }
+    }
+    else
+    {
+        sampledUv = frac(sampledUv);
     }
 
     float4 color;
@@ -81,11 +89,11 @@ float4 PSMain(PSInput input) : SV_TARGET
     // Sample texture with manual mip level or auto mip
     if (mipLevel >= 0.0)
     {
-        color = sourceTexture.SampleLevel(texSampler, input.texcoord, mipLevel);
+        color = sourceTexture.SampleLevel(texSampler, sampledUv, mipLevel);
     }
     else
     {
-        color = sourceTexture.Sample(texSampler, input.texcoord);
+        color = sourceTexture.Sample(texSampler, sampledUv);
     }
 
     // STEP 0: Apply histogram denormalization if enabled

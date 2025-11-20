@@ -27,6 +27,7 @@ public interface ITexturePreviewService {
     double PreviewReferenceHeight { get; set; }
     bool IsD3D11RenderLoopEnabled { get; set; }
     bool IsUsingD3D11Renderer { get; set; }
+    bool IsTilingEnabled { get; set; }
     IList<KtxMipLevel> CurrentKtxMipmaps { get; }
 
     void ResetPreviewState();

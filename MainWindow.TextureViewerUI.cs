@@ -135,12 +135,33 @@ namespace AssetProcessor {
             logger.Info("Fit/Reset: Reset channel masks (without changing Source/KTX mode)");
         }
 
+        private void ApplyTilingToCurrentRenderer(bool enabled) {
+            texturePreviewService.IsTilingEnabled = enabled;
+
+            if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
+                D3D11TextureViewer.Renderer.SetTiling(enabled);
+                D3D11TextureViewer.Renderer.Render();
+
+                if (defaultPreviewBackground != null && TexturePreviewViewport != null) {
+                    TexturePreviewViewport.Background = defaultPreviewBackground;
+                }
+            } else {
+                ApplyWpfTilingMode(enabled);
+            }
+        }
+
         private void FilterToggleButton_Click(object sender, RoutedEventArgs e) {
             if (sender is ToggleButton button) {
                 bool useLinearFilter = button.IsChecked ?? true;
                 D3D11TextureViewer?.Renderer?.SetFilter(useLinearFilter);
                 logger.Info($"Filter toggle: {(useLinearFilter ? "Trilinear" : "Point")}");
             }
+        }
+
+        private void TileToggleButton_Click(object sender, RoutedEventArgs e) {
+            bool enabled = TileToggleButton?.IsChecked ?? false;
+            ApplyTilingToCurrentRenderer(enabled);
+            logger.Info($"Tile preview mode {(enabled ? "enabled" : "disabled")}");
         }
 
         private void HistogramCorrectionButton_Click(object sender, RoutedEventArgs e) {
@@ -201,6 +222,10 @@ namespace AssetProcessor {
             ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
+
+            if (TileToggleButton != null) {
+                TileToggleButton.IsChecked = false;
+            }
         }
 
         private void ClearPreviewReferenceSize() {
@@ -286,6 +311,54 @@ namespace AssetProcessor {
                 logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
             } catch (Exception ex) {
                 logger.Error(ex, "Exception in UpdatePreviewImage when calling LoadTextureToD3D11Viewer");
+            }
+        }
+
+        private void ApplyWpfTilingMode(bool enabled, BitmapSource? sourceOverride = null) {
+            if (TexturePreviewViewport == null) {
+                return;
+            }
+
+            if (!enabled) {
+                if (defaultPreviewBackground != null) {
+                    TexturePreviewViewport.Background = defaultPreviewBackground;
+                }
+
+                if (!texturePreviewService.IsUsingD3D11Renderer && WpfTexturePreviewImage != null) {
+                    WpfTexturePreviewImage.Visibility = Visibility.Visible;
+                }
+
+                return;
+            }
+
+            BitmapSource? source = sourceOverride ?? WpfTexturePreviewImage?.Source as BitmapSource ?? texturePreviewService.OriginalBitmapSource;
+            if (source == null) {
+                if (defaultPreviewBackground != null) {
+                    TexturePreviewViewport.Background = defaultPreviewBackground;
+                }
+                return;
+            }
+
+            (double tileWidth, double tileHeight) = GetImageSizeInDips(source);
+            if (tileWidth <= 0 || tileHeight <= 0) {
+                if (defaultPreviewBackground != null) {
+                    TexturePreviewViewport.Background = defaultPreviewBackground;
+                }
+                return;
+            }
+
+            ImageBrush brush = new(source) {
+                TileMode = TileMode.Tile,
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewport = new Rect(0, 0, tileWidth, tileHeight),
+                Stretch = Stretch.None
+            };
+
+            brush.Freeze();
+            TexturePreviewViewport.Background = brush;
+
+            if (WpfTexturePreviewImage != null) {
+                WpfTexturePreviewImage.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -818,6 +891,7 @@ namespace AssetProcessor {
                 // Update WPF Image if in WPF preview mode
                 if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
                     WpfTexturePreviewImage.Source = PrepareForWPFDisplay(texturePreviewService.OriginalBitmapSource);
+                    ApplyWpfTilingMode(texturePreviewService.IsTilingEnabled, texturePreviewService.OriginalBitmapSource);
                     logger.Info($"Updated WPF Image in SetCurrentMipLevel: level {clampedLevel}");
                 }
 
@@ -886,6 +960,7 @@ namespace AssetProcessor {
                         // Note: filtered bitmaps are already processed, may not need gamma correction
                         // But apply it anyway for consistency if texture is linear
                         WpfTexturePreviewImage.Source = PrepareForWPFDisplay(filteredBitmap);
+                        ApplyWpfTilingMode(texturePreviewService.IsTilingEnabled, filteredBitmap);
                         logger.Info($"Updated WPF Image in FilterChannelAsync: {channel}");
                     }
 
@@ -950,6 +1025,7 @@ namespace AssetProcessor {
                     // Update WPF Image if in WPF preview mode
                     if (WpfTexturePreviewImage.Visibility == Visibility.Visible) {
                         WpfTexturePreviewImage.Source = PrepareForWPFDisplay(texturePreviewService.OriginalBitmapSource);
+                        ApplyWpfTilingMode(texturePreviewService.IsTilingEnabled, texturePreviewService.OriginalBitmapSource);
                         logger.Info($"Updated WPF Image in ShowOriginalImage");
                     }
 

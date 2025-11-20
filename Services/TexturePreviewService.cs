@@ -46,6 +46,7 @@ public class TexturePreviewService : ITexturePreviewService {
     public double PreviewReferenceHeight { get; set; }
     public bool IsD3D11RenderLoopEnabled { get; set; } = true;
     public bool IsUsingD3D11Renderer { get; set; } = true;
+    public bool IsTilingEnabled { get; set; }
     public IList<KtxMipLevel> CurrentKtxMipmaps => currentKtxMipmaps;
 
     public void ResetPreviewState() {
@@ -60,6 +61,7 @@ public class TexturePreviewService : ITexturePreviewService {
         IsUserPreviewSelection = false;
         PreviewReferenceWidth = 0;
         PreviewReferenceHeight = 0;
+        IsTilingEnabled = false;
     }
 
     public async Task SwitchRendererAsync(TexturePreviewContext context, bool useD3D11) {
@@ -69,6 +71,7 @@ public class TexturePreviewService : ITexturePreviewService {
             IsUsingD3D11Renderer = true;
             context.D3D11TextureViewer.Visibility = Visibility.Visible;
             context.WpfTexturePreviewImage.Visibility = Visibility.Collapsed;
+            context.ApplyWpfTiling(false);
             context.LogInfo("Switched to D3D11 preview renderer");
 
             if (IsKtxPreviewAvailable && CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
@@ -94,6 +97,11 @@ public class TexturePreviewService : ITexturePreviewService {
                 } catch (Exception ex) {
                     context.LogError(ex, "Failed to reload Source PNG to D3D11 viewer");
                 }
+            }
+
+            if (context.D3D11TextureViewer.Renderer != null) {
+                context.D3D11TextureViewer.Renderer.SetTiling(IsTilingEnabled);
+                context.D3D11TextureViewer.Renderer.Render();
             }
         } else {
             IsUsingD3D11Renderer = false;
@@ -124,6 +132,8 @@ public class TexturePreviewService : ITexturePreviewService {
                 context.LogWarn("No source texture path available for WPF preview");
                 context.WpfTexturePreviewImage.Source = null;
             }
+
+            context.ApplyWpfTiling(IsTilingEnabled);
         }
     }
 

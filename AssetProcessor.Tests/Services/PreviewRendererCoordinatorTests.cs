@@ -42,7 +42,8 @@ public class PreviewRendererCoordinatorTests {
             ShowMipmapControls = () => { },
             LogInfo = _ => { },
             LogError = (_, _) => { },
-            LogWarn = _ => { }
+            LogWarn = _ => { },
+            ApplyWpfTiling = _ => { }
         };
     }
 
@@ -67,6 +68,7 @@ public class PreviewRendererCoordinatorTests {
         public double PreviewReferenceHeight { get; set; }
         public bool IsD3D11RenderLoopEnabled { get; set; }
         public bool IsUsingD3D11Renderer { get; set; }
+        public bool IsTilingEnabled { get; set; }
         public IList<KtxMipLevel> CurrentKtxMipmaps { get; } = new List<KtxMipLevel>();
 
         public void ResetPreviewState() {

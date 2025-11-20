@@ -504,18 +504,8 @@ public sealed class D3D11TextureRenderer : IDisposable {
     }
 
     private void UpdateConstantBuffer() {
-        // Calculate aspect ratio correction
-        float viewportAspect = (float)viewportWidth / viewportHeight;
-        float textureAspect = currentTexture != null ? (float)currentTexture.Width / currentTexture.Height : 1.0f;
-
-        Vector2 posScale;
-        if (viewportAspect > textureAspect) {
-            // Viewport is wider than texture - fit by height (pillarbox)
-            posScale = new Vector2(textureAspect / viewportAspect, 1.0f);
-        } else {
-            // Viewport is taller than texture - fit by width (letterbox)
-            posScale = new Vector2(1.0f, viewportAspect / textureAspect);
-        }
+        // Disable aspect ratio correction: render quad across the full viewport
+        Vector2 posScale = Vector2.One;
 
         // Prepare histogram metadata for shader (using Vector4 for proper HLSL alignment)
         Vector4 histScale = new Vector4(1.0f, 1.0f, 1.0f, 0.0f);

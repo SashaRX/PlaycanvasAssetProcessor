@@ -5,7 +5,7 @@ cbuffer ShaderConstants : register(b0)
 {
     float2 uvScale;                     // UV scaling for zoom
     float2 uvOffset;                    // UV offset for pan
-    float2 posScale;                    // Position scaling for aspect ratio correction
+    float2 posScale;                    // Position scaling (kept for compatibility, now set to 1)
     float mipLevel;                     // Manual mip level (-1 for auto)
     float exposure;                     // HDR exposure (EV)
     float gamma;                        // Gamma correction (2.2 for sRGB, 1.0 for linear)
@@ -41,7 +41,7 @@ PSInput VSMain(VSInput input)
 {
     PSInput output;
 
-    // Apply aspect ratio correction to position
+    // Pass through quad vertices (posScale stays at 1 to cover the full viewport)
     float2 pos = input.position * posScale;
     output.position = float4(pos, 0.0, 1.0);
 

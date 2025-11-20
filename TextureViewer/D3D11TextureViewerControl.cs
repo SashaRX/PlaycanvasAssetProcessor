@@ -247,7 +247,7 @@ public class D3D11TextureViewerControl : HwndHost {
             return false;
         }
 
-        // Get D3D11 viewport size (this is what the renderer uses for aspect ratio!)
+        // Get D3D11 viewport size (renderer works directly in viewport coordinates)
         int viewportWidth = renderer.ViewportWidth;
         int viewportHeight = renderer.ViewportHeight;
 
@@ -259,9 +259,7 @@ public class D3D11TextureViewerControl : HwndHost {
             return true;
         }
 
-        // CRITICAL: Scale mouse coordinates from client rect space to viewport space
-        // Mouse coordinates from ScreenToClient are relative to client rect
-        // But aspect ratio is calculated using viewport dimensions
+        // Scale mouse coordinates from client rect space to viewport space
         float mouseInViewportX = pt.x * (float)viewportWidth / clientWidth;
         float mouseInViewportY = pt.y * (float)viewportHeight / clientHeight;
 
@@ -276,39 +274,17 @@ public class D3D11TextureViewerControl : HwndHost {
             return true;
         }
 
-        // Calculate aspect ratios (MUST match D3D11TextureRenderer.UpdateConstantBuffer!)
-        float viewportAspect = (float)viewportWidth / viewportHeight;
-        float textureAspect = (float)texWidth / texHeight;
-
-        // Calculate posScale (aspect ratio correction)
-        float posScaleX, posScaleY;
-        if (viewportAspect > textureAspect) {
-            // Viewport is wider than texture - fit by height (pillarbox)
-            posScaleX = textureAspect / viewportAspect;
-            posScaleY = 1.0f;
-        } else {
-            // Viewport is taller than texture - fit by width (letterbox)
-            posScaleX = 1.0f;
-            posScaleY = viewportAspect / textureAspect;
-        }
-
         // Convert mouse position to NDC space [-1, 1]
         // Viewport coordinates: (0,0) at top-left, (width,height) at bottom-right
         // NDC coordinates: (-1,-1) at bottom-left, (1,1) at top-right
         float mouseNDCX = (mouseInViewportX / viewportWidth) * 2.0f - 1.0f;
         float mouseNDCY = -((mouseInViewportY / viewportHeight) * 2.0f - 1.0f); // Flip Y axis
 
-        // The quad vertices are scaled by posScale in the vertex shader
-        // This scales the NDC coordinates, so we need to invert that scaling
-        // to find which point on the original quad (before scaling) the mouse is over
-        float quadNDCX = mouseNDCX / posScaleX;
-        float quadNDCY = mouseNDCY / posScaleY;
-
         // Convert from NDC space to UV space [0, 1]
         // NDC (-1,-1) maps to UV (0,1) and NDC (1,1) maps to UV (1,0)
         // Note: UV Y is flipped relative to NDC Y
-        float quadLocalX = (quadNDCX + 1.0f) * 0.5f;
-        float quadLocalY = (1.0f - (quadNDCY + 1.0f) * 0.5f);
+        float quadLocalX = (mouseNDCX + 1.0f) * 0.5f;
+        float quadLocalY = (1.0f - (mouseNDCY + 1.0f) * 0.5f);
 
         // Now we need to find what UV coordinate the mouse is pointing to
         // The shader transforms: output.texcoord = input.texcoord * (1/zoom) + pan
@@ -384,7 +360,7 @@ public class D3D11TextureViewerControl : HwndHost {
         int height = renderer.ViewportHeight;
         if (width <= 0 || height <= 0) return;
 
-        // Get texture dimensions for aspect ratio calculation
+        // Get texture dimensions
         int texWidth = renderer.TextureWidth;
         int texHeight = renderer.TextureHeight;
         if (texWidth <= 0 || texHeight <= 0) {
@@ -399,26 +375,10 @@ public class D3D11TextureViewerControl : HwndHost {
             return;
         }
 
-        // Calculate aspect ratios (must match HandleMouseWheel logic exactly!)
-        float viewportAspect = (float)width / height;
-        float textureAspect = (float)texWidth / texHeight;
-
-        // Calculate posScale (aspect ratio correction)
-        float posScaleX, posScaleY;
-        if (viewportAspect > textureAspect) {
-            // Viewport is wider than texture - fit by height (pillarbox)
-            posScaleX = textureAspect / viewportAspect;
-            posScaleY = 1.0f;
-        } else {
-            // Viewport is taller than texture - fit by width (letterbox)
-            posScaleX = 1.0f;
-            posScaleY = viewportAspect / textureAspect;
-        }
-
         // Convert screen delta to texture UV space
-        // Account for aspect ratio correction and zoom level
-        float panSpeedX = 1.0f / (width * posScaleX * zoom);
-        float panSpeedY = 1.0f / (height * posScaleY * zoom);
+        // Account only for zoom level (quad covers the full viewport)
+        float panSpeedX = 1.0f / (width * zoom);
+        float panSpeedY = 1.0f / (height * zoom);
         panX -= deltaX * panSpeedX;  // X: left/right
         panY -= deltaY * panSpeedY;  // Y: up/down (inverted for correct direction)
 

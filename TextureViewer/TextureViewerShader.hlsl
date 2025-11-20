@@ -71,9 +71,10 @@ float3 LinearToSRGB(float3 linearColor)
 // Pixel Shader
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    float2 sampleUV = (tilingEnabled != 0) ? frac(input.texcoord) : input.texcoord;
+    // При тайлинге используем семплер с обёрткой и исходные UV без модификации, чтобы не рвать производные и избежать полос.
+    float2 sampleUV = input.texcoord;
 
-    // Clip pixels outside UV [0, 1] range (texture bounds) when tiling disabled
+    // Обрезаем только в режиме без тайлинга — wrap-сэмплер сам обрабатывает выход за границы.
     if (tilingEnabled == 0 && (sampleUV.x < 0.0 || sampleUV.x > 1.0 ||
         sampleUV.y < 0.0 || sampleUV.y > 1.0))
     {

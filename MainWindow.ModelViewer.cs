@@ -116,8 +116,8 @@ namespace AssetProcessor {
             );
             mesh.AddCylinder(start, shaftEnd, shaftRadius, 8);
 
-            // Конус стрелки
-            mesh.AddCone(shaftEnd, direction, coneRadius, coneHeight, false, false, 12);
+            // Конус стрелки (baseRadius, topRadius=0 для острого конуса, height, caps, thetaDiv)
+            mesh.AddCone(shaftEnd, direction, coneRadius, 0, coneHeight, false, false, 12);
 
             var geometry = mesh.ToMesh();
 

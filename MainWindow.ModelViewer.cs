@@ -458,17 +458,23 @@ namespace AssetProcessor {
             Material material;
             try {
                 var uri = new Uri("pack://application:,,,/refman.png");
-                var bitmap = new BitmapImage(uri);
-                var brush = new ImageBrush(bitmap);
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = uri;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = BitmapCreateOptions.PreservePixelFormat; // Сохраняем альфа-канал
+                bitmap.EndInit();
+                bitmap.Freeze();
 
-                // DiffuseMaterial + EmissiveMaterial для unlit отображения с альфа-каналом
-                // DiffuseMaterial нужен для правильной обработки альфа-канала
-                var materialGroup = new MaterialGroup();
-                materialGroup.Children.Add(new DiffuseMaterial(brush) {
-                    AmbientColor = Colors.White // Полная яркость
-                });
-                materialGroup.Children.Add(new EmissiveMaterial(brush)); // Unlit свечение
-                material = materialGroup;
+                var brush = new ImageBrush(bitmap);
+                brush.Opacity = 1.0; // Полная непрозрачность для brush, альфа берется из PNG
+
+                // Только DiffuseMaterial для правильной обработки альфа-канала
+                // EmissiveMaterial игнорирует альфа-канал!
+                material = new DiffuseMaterial(brush) {
+                    AmbientColor = Colors.White, // Полная яркость (unlit эффект)
+                    Color = Colors.White
+                };
             } catch (Exception ex) {
                 // Fallback: если текстура не загрузилась, используем зелёный цвет
                 LodLogger.Warn($"Failed to load refman.png: {ex.Message}");
@@ -486,8 +492,12 @@ namespace AssetProcessor {
             _humanSilhouette = new ModelVisual3D { Content = silhouette };
 
             // Billboard rotation (только Y-axis, в мировом пространстве, БЕЗ up vector transform)
+            // Перемещаем в сторону на 2 метра по X для видимости
+            var transformGroup = new Transform3DGroup();
             _humanBillboardRotation = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0));
-            _humanSilhouette.Transform = _humanBillboardRotation;
+            transformGroup.Children.Add(_humanBillboardRotation);
+            transformGroup.Children.Add(new TranslateTransform3D(2, 0, 0)); // Смещение на 2м вправо
+            _humanSilhouette.Transform = transformGroup;
 
             viewPort3d.Children.Add(_humanSilhouette);
 
@@ -550,7 +560,7 @@ namespace AssetProcessor {
             if (camera == null) return;
 
             var cameraPos = camera.Position;
-            var billboardPos = new Point3D(0, 0, 0); // Плоскость стоит в origin
+            var billboardPos = new Point3D(2, 0, 0); // Плоскость смещена на 2м по X
 
             // Вычисляем направление от billboard к камере
             var direction = cameraPos - billboardPos;

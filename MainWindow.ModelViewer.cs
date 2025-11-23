@@ -28,6 +28,9 @@ namespace AssetProcessor {
         /// Обновляет видимость и размер pivot visualization
         /// </summary>
         private void UpdatePivotVisibility() {
+            // Проверка что viewport инициализирован
+            if (viewPort3d == null) return;
+
             bool showPivot = ShowPivotCheckBox.IsChecked == true;
 
             // Убираем старый pivot
@@ -66,6 +69,9 @@ namespace AssetProcessor {
         /// Обработчик изменения чекбокса "Show Human Silhouette"
         /// </summary>
         private void ShowHumanCheckBox_Changed(object sender, RoutedEventArgs e) {
+            // Проверка что viewport инициализирован
+            if (viewPort3d == null) return;
+
             bool showHuman = ShowHumanCheckBox.IsChecked == true;
 
             if (showHuman) {
@@ -315,6 +321,9 @@ namespace AssetProcessor {
         /// Создаёт или обновляет силуэт человека (1.8м) для понимания масштаба
         /// </summary>
         private void UpdateHumanSilhouette() {
+            // Проверка что viewport инициализирован
+            if (viewPort3d == null) return;
+
             // Убираем старый силуэт
             if (_humanSilhouette != null && viewPort3d.Children.Contains(_humanSilhouette)) {
                 viewPort3d.Children.Remove(_humanSilhouette);

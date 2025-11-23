@@ -415,12 +415,13 @@ namespace AssetProcessor {
             var silhouette = new Model3DGroup();
             var planeMesh = new MeshBuilder();
 
-            // Вертикальная плоскость в плоскости YZ (X=0, нормаль смотрит на +X)
-            // Нижний край на Y=0, верхний на Y=1.8
-            var p0 = new Point3D(0, 0, -0.45);   // нижний левый
-            var p1 = new Point3D(0, 0, 0.45);    // нижний правый
-            var p2 = new Point3D(0, 1.8, 0.45);  // верхний правый
-            var p3 = new Point3D(0, 1.8, -0.45); // верхний левый
+            // Вертикальная плоскость в плоскости XY (Z=0, нормаль смотрит на +Z)
+            // Это правильная ориентация для cylindrical billboard rotation вокруг Y оси
+            // Нижний край на Y=0, верхний на Y=1.8, ширина по X
+            var p0 = new Point3D(-0.45, 0, 0);   // нижний левый
+            var p1 = new Point3D(0.45, 0, 0);    // нижний правый
+            var p2 = new Point3D(0.45, 1.8, 0);  // верхний правый
+            var p3 = new Point3D(-0.45, 1.8, 0); // верхний левый
 
             // Добавляем два треугольника вручную для вертикальной плоскости
             int baseIndex = planeMesh.Positions.Count;
@@ -430,8 +431,8 @@ namespace AssetProcessor {
             planeMesh.Positions.Add(p2);
             planeMesh.Positions.Add(p3);
 
-            // Нормали (вправо, в направлении +X)
-            var normal = new Vector3D(1, 0, 0);
+            // Нормали (вперед, в направлении +Z, к камере по умолчанию)
+            var normal = new Vector3D(0, 0, 1);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
@@ -491,11 +492,11 @@ namespace AssetProcessor {
             _humanSilhouetteOffsetX = CalculateHumanSilhouetteOffset();
 
             // Billboard rotation (только Y-axis, в мировом пространстве, БЕЗ up vector transform)
-            // Перемещаем в сторону адаптивно на основе размеров модели
+            // Плоскость в XY plane (Z=0), смещаем по Z, поворачиваем вокруг Y чтобы смотрел на камеру
             var transformGroup = new Transform3DGroup();
             _humanBillboardRotation = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0));
             transformGroup.Children.Add(_humanBillboardRotation);
-            transformGroup.Children.Add(new TranslateTransform3D(_humanSilhouetteOffsetX, 0, 0)); // Адаптивное смещение
+            transformGroup.Children.Add(new TranslateTransform3D(0, 0, _humanSilhouetteOffsetX)); // Смещение по Z (вперед от центра)
             _humanSilhouette.Transform = transformGroup;
 
             viewPort3d.Children.Add(_humanSilhouette);
@@ -583,7 +584,7 @@ namespace AssetProcessor {
             if (camera == null) return;
 
             var cameraPos = camera.Position;
-            var billboardPos = new Point3D(_humanSilhouetteOffsetX, 0, 0); // Адаптивное смещение по X
+            var billboardPos = new Point3D(0, 0, _humanSilhouetteOffsetX); // Адаптивное смещение по Z
 
             // Вычисляем направление от billboard к камере
             var direction = cameraPos - billboardPos;

@@ -200,6 +200,11 @@ namespace AssetProcessor {
             foreach (var mesh in scene.Meshes) {
                 var builder = new MeshBuilder();
 
+                // Проверяем наличие UV координат для всех вершин
+                bool hasTextureCoords = mesh.HasTextureCoords(0) &&
+                                       mesh.TextureCoordinateChannels[0] != null &&
+                                       mesh.TextureCoordinateChannels[0].Count == mesh.VertexCount;
+
                 // Вершины и нормали
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
@@ -207,10 +212,8 @@ namespace AssetProcessor {
                     builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                     builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 
-                    // Текстурные координаты
-                    if (mesh.TextureCoordinateChannels.Length > 0 &&
-                        mesh.TextureCoordinateChannels[0] != null &&
-                        i < mesh.TextureCoordinateChannels[0].Count) {
+                    // Добавляем текстурные координаты только если они есть для ВСЕХ вершин
+                    if (hasTextureCoords) {
                         builder.TextureCoordinates.Add(new System.Windows.Point(
                             mesh.TextureCoordinateChannels[0][i].X,
                             mesh.TextureCoordinateChannels[0][i].Y));
@@ -253,8 +256,7 @@ namespace AssetProcessor {
         /// </summary>
         private void ShowGlbLodUI() {
             Dispatcher.Invoke(() => {
-                LodQuickSwitchPanel.Visibility = Visibility.Visible;
-                LodInformationPanel.Visibility = Visibility.Visible;
+                LodControlsPanel.Visibility = Visibility.Visible;
                 ModelCurrentLodTextBlock.Visibility = Visibility.Visible;
             });
         }
@@ -264,8 +266,7 @@ namespace AssetProcessor {
         /// </summary>
         private void HideGlbLodUI() {
             Dispatcher.Invoke(() => {
-                LodQuickSwitchPanel.Visibility = Visibility.Collapsed;
-                LodInformationPanel.Visibility = Visibility.Collapsed;
+                LodControlsPanel.Visibility = Visibility.Collapsed;
                 ModelCurrentLodTextBlock.Visibility = Visibility.Collapsed;
 
                 // Очищаем данные
@@ -372,6 +373,26 @@ namespace AssetProcessor {
             if (LodInformationGrid.SelectedItem is LodDisplayInfo selectedLod) {
                 SelectLod(selectedLod.Level);
             }
+        }
+
+        /// <summary>
+        /// Обработчик изменения размера вьюпорта модели через GridSplitter
+        /// </summary>
+        private void ModelViewportGridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
+            if (ModelViewportRow == null) {
+                return;
+            }
+
+            double desiredHeight = ModelViewportRow.ActualHeight + e.VerticalChange;
+
+            // Ограничиваем высоту вьюпорта
+            const double minHeight = 150;
+            const double maxHeight = 800;
+
+            desiredHeight = Math.Max(minHeight, Math.Min(maxHeight, desiredHeight));
+            ModelViewportRow.Height = new GridLength(desiredHeight);
+
+            e.Handled = true;
         }
     }
 }

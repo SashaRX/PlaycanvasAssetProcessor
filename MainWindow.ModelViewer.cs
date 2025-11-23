@@ -13,6 +13,8 @@ namespace AssetProcessor {
         private CoordinateSystemVisual3D? _pivotVisual;
         private bool _isWireframeMode = false;
         private bool _isZUp = false; // Y-up по умолчанию
+        private readonly List<LinesVisual3D> _wireframeLines = new(); // Линии для wireframe
+        private readonly Dictionary<GeometryModel3D, Material> _originalMaterials = new(); // Оригинальные материалы
 
         /// <summary>
         /// Обработчик изменения чекбокса "Show Pivot"
@@ -31,7 +33,7 @@ namespace AssetProcessor {
                 // Создаём pivot если ещё не создан
                 if (_pivotVisual == null) {
                     _pivotVisual = new CoordinateSystemVisual3D {
-                        ArrowLengths = 20 // Длина осей
+                        ArrowLengths = 2 // Длина осей (уменьшено с 20 до 2)
                     };
                 }
 
@@ -59,54 +61,88 @@ namespace AssetProcessor {
         /// Обновляет wireframe режим для всех моделей в viewport
         /// </summary>
         private void UpdateModelWireframe() {
-            foreach (var visual in viewPort3d.Children) {
-                if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
-                    ApplyWireframeToModelGroup(modelGroup, _isWireframeMode);
-                }
+            // Удаляем все старые wireframe линии
+            foreach (var wireframe in _wireframeLines) {
+                viewPort3d.Children.Remove(wireframe);
             }
-        }
+            _wireframeLines.Clear();
 
-        /// <summary>
-        /// Применяет wireframe режим к Model3DGroup рекурсивно
-        /// </summary>
-        private void ApplyWireframeToModelGroup(Model3DGroup modelGroup, bool wireframe) {
-            foreach (var child in modelGroup.Children) {
-                if (child is GeometryModel3D geoModel) {
-                    if (wireframe) {
-                        // Wireframe: тёмный материал + белые рёбра
-                        var wireframeMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(30, 30, 30)));
-                        var edgeMaterial = new EmissiveMaterial(new SolidColorBrush(Colors.White));
-
-                        var materialGroup = new MaterialGroup();
-                        materialGroup.Children.Add(wireframeMaterial);
-                        materialGroup.Children.Add(edgeMaterial);
-
-                        geoModel.Material = materialGroup;
-                        geoModel.BackMaterial = null; // Отключаем backface culling для wireframe
-                    } else {
-                        // Solid mode: восстанавливаем нормальные материалы
-                        RestoreNormalMaterial(geoModel);
+            if (_isWireframeMode) {
+                // Создаём wireframe для всех моделей
+                foreach (var visual in viewPort3d.Children) {
+                    if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
+                        CreateWireframeForModelGroup(modelGroup);
                     }
-                } else if (child is Model3DGroup childGroup) {
-                    ApplyWireframeToModelGroup(childGroup, wireframe);
                 }
+            } else {
+                // Восстанавливаем оригинальные материалы
+                foreach (var kvp in _originalMaterials) {
+                    kvp.Key.Material = kvp.Value;
+                    // Восстанавливаем стандартный backMaterial
+                    kvp.Key.BackMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.Red));
+                }
+                _originalMaterials.Clear();
             }
         }
 
         /// <summary>
-        /// Восстанавливает нормальный материал для модели
+        /// Создаёт wireframe линии для Model3DGroup рекурсивно
         /// </summary>
-        private void RestoreNormalMaterial(GeometryModel3D geoModel) {
-            var frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
-            var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.Red));
-            var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(40, 40, 40)));
+        private void CreateWireframeForModelGroup(Model3DGroup modelGroup) {
+            foreach (var child in modelGroup.Children) {
+                if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
+                    // Сохраняем оригинальный материал
+                    if (!_originalMaterials.ContainsKey(geoModel)) {
+                        _originalMaterials[geoModel] = geoModel.Material;
+                    }
 
-            var materialGroup = new MaterialGroup();
-            materialGroup.Children.Add(frontMaterial);
-            materialGroup.Children.Add(emissiveMaterial);
+                    // Делаем модель полупрозрачной/тёмной
+                    var darkMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(50, 20, 20, 20)));
+                    geoModel.Material = darkMaterial;
+                    geoModel.BackMaterial = darkMaterial;
 
-            geoModel.Material = materialGroup;
-            geoModel.BackMaterial = backMaterial;
+                    // Создаём линии для всех рёбер треугольников
+                    var wireframe = new LinesVisual3D {
+                        Color = Colors.White,
+                        Thickness = 1
+                    };
+
+                    // Применяем ту же трансформацию что и у модели
+                    wireframe.Transform = modelGroup.Transform;
+
+                    // Добавляем рёбра для каждого треугольника
+                    for (int i = 0; i < mesh.TriangleIndices.Count; i += 3) {
+                        if (i + 2 >= mesh.TriangleIndices.Count) break;
+
+                        var i0 = mesh.TriangleIndices[i];
+                        var i1 = mesh.TriangleIndices[i + 1];
+                        var i2 = mesh.TriangleIndices[i + 2];
+
+                        if (i0 >= mesh.Positions.Count || i1 >= mesh.Positions.Count || i2 >= mesh.Positions.Count)
+                            continue;
+
+                        var p0 = mesh.Positions[i0];
+                        var p1 = mesh.Positions[i1];
+                        var p2 = mesh.Positions[i2];
+
+                        // Три ребра треугольника
+                        wireframe.Points.Add(p0);
+                        wireframe.Points.Add(p1);
+
+                        wireframe.Points.Add(p1);
+                        wireframe.Points.Add(p2);
+
+                        wireframe.Points.Add(p2);
+                        wireframe.Points.Add(p0);
+                    }
+
+                    _wireframeLines.Add(wireframe);
+                    viewPort3d.Children.Add(wireframe);
+
+                } else if (child is Model3DGroup childGroup) {
+                    CreateWireframeForModelGroup(childGroup);
+                }
+            }
         }
 
         /// <summary>

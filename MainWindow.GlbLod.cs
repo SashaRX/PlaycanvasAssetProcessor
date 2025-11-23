@@ -206,42 +206,36 @@ namespace AssetProcessor {
             var modelGroup = new Model3DGroup();
 
             foreach (var mesh in scene.Meshes) {
-                var builder = new MeshBuilder();
-
                 LodLogger.Info($"Processing mesh: {mesh.VertexCount} vertices, {mesh.FaceCount} faces, HasUVs={mesh.HasTextureCoords(0)}");
+
+                // Создаём геометрию напрямую, без MeshBuilder (он багованный)
+                var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
-                    builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
-                    builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
-
-                    // НИКОГДА не добавляем UV координаты
+                    geometry.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
+                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
                 }
 
                 // Индексы
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
-                        builder.TriangleIndices.Add(face.Indices[0]);
-                        builder.TriangleIndices.Add(face.Indices[1]);
-                        builder.TriangleIndices.Add(face.Indices[2]);
+                        geometry.TriangleIndices.Add(face.Indices[0]);
+                        geometry.TriangleIndices.Add(face.Indices[1]);
+                        geometry.TriangleIndices.Add(face.Indices[2]);
                     }
                 }
 
-                LodLogger.Info($"MeshBuilder: Positions={builder.Positions.Count}, Normals={builder.Normals.Count}, TexCoords={builder.TextureCoordinates.Count}, Indices={builder.TriangleIndices.Count}");
+                LodLogger.Info($"Geometry created: Positions={geometry.Positions.Count}, Normals={geometry.Normals.Count}, TexCoords={geometry.TextureCoordinates.Count}, Indices={geometry.TriangleIndices.Count}");
 
-                try {
-                    var geometry = builder.ToMesh(true);
-                    var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
-                    var model = new GeometryModel3D(geometry, material);
-                    modelGroup.Children.Add(model);
-                    LodLogger.Info($"Mesh created successfully");
-                } catch (Exception ex) {
-                    LodLogger.Error(ex, $"Failed to create mesh: {ex.Message}");
-                    throw;
-                }
+                var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
+                var model = new GeometryModel3D(geometry, material);
+                modelGroup.Children.Add(model);
+
+                LodLogger.Info($"Mesh created successfully");
             }
 
             // Центрирование модели (аналогично LoadModel)

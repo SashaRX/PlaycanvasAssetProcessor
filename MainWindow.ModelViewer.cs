@@ -31,8 +31,7 @@ namespace AssetProcessor {
                 // Создаём pivot если ещё не создан
                 if (_pivotVisual == null) {
                     _pivotVisual = new CoordinateSystemVisual3D {
-                        ArrowLengths = 20, // Длина осей
-                        Diameter = 0.5,    // Толщина осей
+                        ArrowLengths = 20 // Длина осей
                     };
                 }
 

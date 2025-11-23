@@ -200,12 +200,16 @@ namespace AssetProcessor {
             foreach (var mesh in scene.Meshes) {
                 var builder = new MeshBuilder();
 
+                LodLogger.Info($"Processing mesh: {mesh.VertexCount} vertices, {mesh.FaceCount} faces, HasUVs={mesh.HasTextureCoords(0)}");
+
                 // Вершины и нормали
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
                     builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                     builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+
+                    // НИКОГДА не добавляем UV координаты
                 }
 
                 // Индексы
@@ -218,14 +222,18 @@ namespace AssetProcessor {
                     }
                 }
 
-                // НЕ добавляем текстурные координаты - они вызывают проблемы
-                // MeshBuilder требует либо УВ для ВСЕХ вершин, либо вообще никаких
-                // Пока используем только геометрию без текстур
+                LodLogger.Info($"MeshBuilder: Positions={builder.Positions.Count}, Normals={builder.Normals.Count}, TexCoords={builder.TextureCoordinates.Count}, Indices={builder.TriangleIndices.Count}");
 
-                var geometry = builder.ToMesh(true);
-                var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
-                var model = new GeometryModel3D(geometry, material);
-                modelGroup.Children.Add(model);
+                try {
+                    var geometry = builder.ToMesh(true);
+                    var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
+                    var model = new GeometryModel3D(geometry, material);
+                    modelGroup.Children.Add(model);
+                    LodLogger.Info($"Mesh created successfully");
+                } catch (Exception ex) {
+                    LodLogger.Error(ex, $"Failed to create mesh: {ex.Message}");
+                    throw;
+                }
             }
 
             // Центрирование модели (аналогично LoadModel)

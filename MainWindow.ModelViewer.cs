@@ -61,6 +61,8 @@ namespace AssetProcessor {
         /// Обновляет wireframe режим для всех моделей в viewport
         /// </summary>
         private void UpdateModelWireframe() {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
             // Удаляем все старые wireframe линии
             foreach (var wireframe in _wireframeLines) {
                 viewPort3d.Children.Remove(wireframe);
@@ -68,14 +70,18 @@ namespace AssetProcessor {
             _wireframeLines.Clear();
 
             if (_isWireframeMode) {
+                int totalEdges = 0;
                 // Создаём wireframe для всех моделей
                 // ВАЖНО: ToList() создаёт копию коллекции, чтобы избежать InvalidOperationException
                 // при добавлении wireframe линий в viewPort3d.Children во время итерации
                 foreach (var visual in viewPort3d.Children.ToList()) {
                     if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
-                        CreateWireframeForModelGroup(modelGroup);
+                        int edges = CreateWireframeForModelGroup(modelGroup);
+                        totalEdges += edges;
                     }
                 }
+                sw.Stop();
+                Logger.Info($"Wireframe created: {totalEdges} edges in {sw.ElapsedMilliseconds}ms");
             } else {
                 // Восстанавливаем оригинальные материалы
                 foreach (var kvp in _originalMaterials) {
@@ -90,7 +96,8 @@ namespace AssetProcessor {
         /// <summary>
         /// Создаёт wireframe линии для Model3DGroup рекурсивно
         /// </summary>
-        private void CreateWireframeForModelGroup(Model3DGroup modelGroup) {
+        /// <returns>Количество созданных рёбер</returns>
+        private int CreateWireframeForModelGroup(Model3DGroup modelGroup) {
             // Создаём один LinesVisual3D для всей модели (оптимизация)
             var wireframe = new LinesVisual3D {
                 Color = Colors.White,
@@ -103,7 +110,9 @@ namespace AssetProcessor {
             if (wireframe.Points.Count > 0) {
                 _wireframeLines.Add(wireframe);
                 viewPort3d.Children.Add(wireframe);
+                return wireframe.Points.Count / 2; // Каждое ребро = 2 точки
             }
+            return 0;
         }
 
         /// <summary>

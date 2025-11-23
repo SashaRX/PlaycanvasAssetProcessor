@@ -184,6 +184,12 @@ namespace AssetProcessor {
                 // Конвертируем Assimp Scene в WPF модель
                 var modelGroup = ConvertAssimpSceneToWpfModel(scene);
 
+                // ИСПРАВЛЕНИЕ: GLB модели инвертированы по вертикали
+                // Применяем Scale(-1) по Y оси для корректной ориентации
+                var transformGroup = new Transform3DGroup();
+                transformGroup.Children.Add(new ScaleTransform3D(1, -1, 1));
+                modelGroup.Transform = transformGroup;
+
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);

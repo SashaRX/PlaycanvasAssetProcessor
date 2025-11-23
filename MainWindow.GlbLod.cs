@@ -6,6 +6,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
+using Assimp;
+using HelixToolkit.Wpf;
 using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Viewer;
 using AssetProcessor.Resources;
@@ -17,11 +21,12 @@ namespace AssetProcessor {
     /// </summary>
     public partial class MainWindow {
         private static readonly Logger LodLogger = LogManager.GetCurrentClassLogger();
-        private GlbViewerControl? _glbViewer;
+        private GlbLoader? _glbLoader;
+        private Dictionary<LodLevel, Scene> _lodScenes = new();
         private Dictionary<LodLevel, GlbLodHelper.LodInfo> _currentLodInfos = new();
         private ObservableCollection<LodDisplayInfo> _lodDisplayItems = new();
         private bool _isGlbViewerActive = false;
-        private Border? _viewportBorderContainer;
+        private LodLevel _currentLod = LodLevel.LOD0;
 
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
@@ -36,10 +41,12 @@ namespace AssetProcessor {
         /// </summary>
         private void CleanupGlbViewer() {
             try {
-                _glbViewer?.Clear();
+                _lodScenes.Clear();
                 _currentLodInfos.Clear();
                 _lodDisplayItems.Clear();
                 _isGlbViewerActive = false;
+                _glbLoader?.ClearCache();
+                _glbLoader?.Dispose();
                 LodLogger.Info("GLB viewer cleaned up");
             } catch (Exception ex) {
                 LodLogger.Error(ex, "Failed to cleanup GLB viewer");
@@ -99,18 +106,38 @@ namespace AssetProcessor {
                 // Заполняем DataGrid
                 PopulateLodDataGrid();
 
-                // Создаём GlbViewerControl если его еще нет
-                if (_glbViewer == null) {
-                    LodLogger.Info("Creating GlbViewerControl");
-                    _glbViewer = new GlbViewerControl();
+                // Создаём GlbLoader если его еще нет
+                if (_glbLoader == null) {
+                    LodLogger.Info("Creating GlbLoader");
+                    _glbLoader = new GlbLoader();
                 }
 
-                // Загружаем LOD цепочку
+                // Загружаем все LOD сцены
+                _lodScenes.Clear();
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
-                await _glbViewer.LoadLodChainAsync(lodFilePaths);
 
-                // Переключаемся на GLB viewer
-                SwitchToGlbViewer();
+                foreach (var kvp in lodFilePaths) {
+                    var lodLevel = kvp.Key;
+                    var glbPath = kvp.Value;
+
+                    LodLogger.Info($"  Loading {lodLevel}: {glbPath}");
+                    var scene = await _glbLoader.LoadGlbAsync(glbPath);
+                    if (scene != null) {
+                        _lodScenes[lodLevel] = scene;
+                    }
+                }
+
+                LodLogger.Info($"Loaded {_lodScenes.Count} LOD scenes");
+
+                // Отображаем LOD0 в существующем viewport
+                if (_lodScenes.ContainsKey(LodLevel.LOD0)) {
+                    LoadGlbModelToViewport(LodLevel.LOD0);
+                } else if (_lodScenes.Count > 0) {
+                    var firstLod = _lodScenes.Keys.First();
+                    LoadGlbModelToViewport(firstLod);
+                }
+
+                _isGlbViewerActive = true;
 
                 // Выбираем LOD0 по умолчанию
                 SelectLod(LodLevel.LOD0);
@@ -121,6 +148,104 @@ namespace AssetProcessor {
                 LodLogger.Error(ex, "Failed to load GLB LOD files");
                 HideGlbLodUI();
             }
+        }
+
+        /// <summary>
+        /// Загружает GLB модель в существующий viewPort3d
+        /// </summary>
+        private void LoadGlbModelToViewport(LodLevel lodLevel) {
+            try {
+                if (!_lodScenes.TryGetValue(lodLevel, out var scene)) {
+                    LodLogger.Warn($"LOD {lodLevel} scene not found");
+                    return;
+                }
+
+                LodLogger.Info($"Loading GLB LOD{(int)lodLevel} to viewport: {scene.MeshCount} meshes");
+
+                // Очищаем только модели, оставляя освещение (аналогично LoadModel)
+                var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
+                foreach (var model in modelsToRemove) {
+                    viewPort3d.Children.Remove(model);
+                }
+
+                // Убеждаемся что есть освещение
+                if (!viewPort3d.Children.OfType<DefaultLights>().Any()) {
+                    viewPort3d.Children.Add(new DefaultLights());
+                }
+
+                // Конвертируем Assimp Scene в WPF модель
+                var modelGroup = ConvertAssimpSceneToWpfModel(scene);
+
+                // Добавляем в viewport
+                var visual3d = new ModelVisual3D { Content = modelGroup };
+                viewPort3d.Children.Add(visual3d);
+
+                // Центрируем камеру
+                viewPort3d.ZoomExtents();
+
+                _currentLod = lodLevel;
+                LodLogger.Info($"Loaded GLB LOD{(int)lodLevel} successfully");
+
+            } catch (Exception ex) {
+                LodLogger.Error(ex, $"Failed to load GLB LOD {lodLevel} to viewport");
+            }
+        }
+
+        /// <summary>
+        /// Конвертирует Assimp Scene в WPF Model3DGroup (аналогично LoadModel)
+        /// </summary>
+        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
+            var modelGroup = new Model3DGroup();
+
+            foreach (var mesh in scene.Meshes) {
+                var builder = new MeshBuilder();
+
+                // Вершины и нормали
+                for (int i = 0; i < mesh.VertexCount; i++) {
+                    var vertex = mesh.Vertices[i];
+                    var normal = mesh.Normals[i];
+                    builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
+                    builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+
+                    // Текстурные координаты
+                    if (mesh.TextureCoordinateChannels.Length > 0 &&
+                        mesh.TextureCoordinateChannels[0] != null &&
+                        i < mesh.TextureCoordinateChannels[0].Count) {
+                        builder.TextureCoordinates.Add(new System.Windows.Point(
+                            mesh.TextureCoordinateChannels[0][i].X,
+                            mesh.TextureCoordinateChannels[0][i].Y));
+                    }
+                }
+
+                // Индексы
+                for (int i = 0; i < mesh.FaceCount; i++) {
+                    var face = mesh.Faces[i];
+                    if (face.IndexCount == 3) {
+                        builder.TriangleIndices.Add(face.Indices[0]);
+                        builder.TriangleIndices.Add(face.Indices[1]);
+                        builder.TriangleIndices.Add(face.Indices[2]);
+                    }
+                }
+
+                var geometry = builder.ToMesh(true);
+                var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
+                var model = new GeometryModel3D(geometry, material);
+                modelGroup.Children.Add(model);
+            }
+
+            // Центрирование модели (аналогично LoadModel)
+            var bounds = modelGroup.Bounds;
+            var centerOffset = new System.Windows.Media.Media3D.Vector3D(
+                -bounds.X - bounds.SizeX / 2,
+                -bounds.Y - bounds.SizeY / 2,
+                -bounds.Z - bounds.SizeZ / 2
+            );
+
+            var transformGroup = new Transform3DGroup();
+            transformGroup.Children.Add(new TranslateTransform3D(centerOffset));
+            modelGroup.Transform = transformGroup;
+
+            return modelGroup;
         }
 
         /// <summary>
@@ -146,11 +271,8 @@ namespace AssetProcessor {
                 // Очищаем данные
                 _currentLodInfos.Clear();
                 _lodDisplayItems.Clear();
-
-                // Переключаемся обратно на FBX viewer если был активен GLB
-                if (_isGlbViewerActive) {
-                    SwitchToFbxViewer();
-                }
+                _lodScenes.Clear();
+                _isGlbViewerActive = false;
             });
         }
 
@@ -175,74 +297,16 @@ namespace AssetProcessor {
             });
         }
 
-        /// <summary>
-        /// Переключается на GLB viewer
-        /// </summary>
-        private void SwitchToGlbViewer() {
-            if (_glbViewer == null) return;
-
-            Dispatcher.Invoke(() => {
-                try {
-                    // Сохраняем ссылку на Border контейнер при первом переключении
-                    if (_viewportBorderContainer == null) {
-                        _viewportBorderContainer = viewPort3d.Parent as Border;
-                    }
-
-                    if (_viewportBorderContainer != null) {
-                        // Удаляем FBX viewer из контейнера
-                        _viewportBorderContainer.Child = null;
-
-                        // Добавляем GLB viewer
-                        _viewportBorderContainer.Child = _glbViewer;
-                    }
-
-                    _isGlbViewerActive = true;
-                    LodLogger.Info("Switched to GLB viewer");
-                } catch (Exception ex) {
-                    LodLogger.Error(ex, "Failed to switch to GLB viewer");
-                }
-            });
-        }
-
-        /// <summary>
-        /// Переключается обратно на FBX viewer
-        /// </summary>
-        private void SwitchToFbxViewer() {
-            Dispatcher.Invoke(() => {
-                try {
-                    if (_viewportBorderContainer != null) {
-                        // Удаляем GLB viewer из контейнера
-                        _viewportBorderContainer.Child = null;
-
-                        // Очищаем GLB viewer перед переключением
-                        _glbViewer?.Clear();
-
-                        // Возвращаем FBX viewer
-                        _viewportBorderContainer.Child = viewPort3d;
-
-                        // Сбрасываем viewport (очищаем старые модели)
-                        ResetViewport();
-                    }
-
-                    _isGlbViewerActive = false;
-                    LodLogger.Info("Switched to FBX viewer");
-                } catch (Exception ex) {
-                    LodLogger.Error(ex, "Failed to switch to FBX viewer");
-                }
-            });
-        }
 
         /// <summary>
         /// Выбирает конкретный LOD уровень для просмотра
         /// </summary>
         private void SelectLod(LodLevel lodLevel) {
-            if (_glbViewer == null) return;
-
             try {
                 LodLogger.Info($"Selecting LOD: {lodLevel}");
 
-                // Переключаем LOD в viewer
-                _glbViewer.SwitchLod(lodLevel);
+                // Загружаем модель LOD в viewport
+                LoadGlbModelToViewport(lodLevel);
 
                 // Обновляем UI
                 Dispatcher.Invoke(() => {

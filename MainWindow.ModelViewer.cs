@@ -468,27 +468,16 @@ namespace AssetProcessor {
 
                 var brush = new ImageBrush(bitmap);
                 brush.Opacity = 1.0; // Полная непрозрачность для brush, альфа берется из PNG
+                brush.Stretch = Stretch.Fill;
+                brush.ViewportUnits = BrushMappingMode.Absolute;
 
-                // MaterialGroup: DiffuseMaterial для альфа + EmissiveMaterial для unlit яркости
-                var materialGroup = new MaterialGroup();
-
-                // DiffuseMaterial обрабатывает альфа-канал
-                materialGroup.Children.Add(new DiffuseMaterial(brush) {
-                    AmbientColor = Colors.White,
-                    Color = Colors.White
-                });
-
-                // EmissiveMaterial добавляет unlit свечение (но не влияет на альфа)
-                materialGroup.Children.Add(new EmissiveMaterial(brush));
-
-                material = materialGroup;
+                // Используем только EmissiveMaterial для unlit отображения с альфа-каналом
+                // EmissiveMaterial в WPF 3D лучше работает с прозрачностью для billboard
+                material = new EmissiveMaterial(brush);
             } catch (Exception ex) {
-                // Fallback: если текстура не загрузилась, используем зелёный цвет
+                // Fallback: если текстура не загрузилась, используем ярко-зелёный цвет (полная непрозрачность)
                 LodLogger.Warn($"Failed to load refman.png: {ex.Message}");
-                var fallbackMaterial = new MaterialGroup();
-                fallbackMaterial.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(100, 50, 255, 50))));
-                fallbackMaterial.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(150, 50, 200, 50))));
-                material = fallbackMaterial;
+                material = new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(255, 0, 255, 0)));
             }
 
             var model = new GeometryModel3D(geometry, material);

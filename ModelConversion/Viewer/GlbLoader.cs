@@ -43,13 +43,15 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     }
 
                     // Загружаем декомпрессированный файл
-                    var scene = _assimpContext.ImportFile(decompressedPath);
+                    var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
+                    var scene = _assimpContext.ImportFile(decompressedPath, postProcess);
                     Logger.Info($"Loaded decompressed GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
                     return scene;
                 } else {
                     // Прямая загрузка (Quantization only)
                     Logger.Info("Loading GLB directly (no meshopt compression)");
-                    var scene = _assimpContext.ImportFile(glbPath);
+                    var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
+                    var scene = _assimpContext.ImportFile(glbPath, postProcess);
                     Logger.Info($"Loaded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
                     return scene;
                 }

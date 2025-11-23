@@ -208,6 +208,13 @@ namespace AssetProcessor {
             foreach (var mesh in scene.Meshes) {
                 LodLogger.Info($"Processing mesh: {mesh.VertexCount} vertices, {mesh.FaceCount} faces, HasUVs={mesh.HasTextureCoords(0)}");
 
+                // Логируем первые 5 вершин из Assimp для диагностики
+                LodLogger.Info($"First 5 vertices from Assimp:");
+                for (int i = 0; i < Math.Min(5, mesh.VertexCount); i++) {
+                    var v = mesh.Vertices[i];
+                    LodLogger.Info($"  Vertex {i}: ({v.X:F4}, {v.Y:F4}, {v.Z:F4})");
+                }
+
                 // Создаём геометрию напрямую, без MeshBuilder (он багованный)
                 var geometry = new MeshGeometry3D();
 
@@ -230,6 +237,13 @@ namespace AssetProcessor {
                 }
 
                 LodLogger.Info($"Geometry created: Positions={geometry.Positions.Count}, Normals={geometry.Normals.Count}, TexCoords={geometry.TextureCoordinates.Count}, Indices={geometry.TriangleIndices.Count}");
+
+                // Логируем первые 5 вершин из geometry.Positions для проверки
+                LodLogger.Info($"First 5 vertices in geometry.Positions:");
+                for (int i = 0; i < Math.Min(5, geometry.Positions.Count); i++) {
+                    var p = geometry.Positions[i];
+                    LodLogger.Info($"  Position {i}: ({p.X:F4}, {p.Y:F4}, {p.Z:F4})");
+                }
 
                 // Create two-sided material with emissive properties for visibility
                 var frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));

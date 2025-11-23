@@ -104,17 +104,21 @@ namespace AssetProcessor {
             AddWireframeForGroup(modelGroup, allPoints);
 
             if (allPoints.Count > 0) {
-                // Создаём LinesVisual3D только после того как собрали все точки
+                // КРИТИЧЕСКАЯ ОПТИМИЗАЦИЯ: Создаём Point3DCollection отдельно и замораживаем
+                // Freeze() делает коллекцию read-only но ЗНАЧИТЕЛЬНО ускоряет рендеринг
+                var points = new Point3DCollection(allPoints.Count);
+                foreach (var pt in allPoints) {
+                    points.Add(pt);
+                }
+                points.Freeze(); // Замораживаем для максимальной производительности
+
+                // Создаём LinesVisual3D и назначаем замороженную коллекцию
                 var wireframe = new LinesVisual3D {
                     Color = Colors.White,
-                    Thickness = 1
+                    Thickness = 1,
+                    Points = points // Назначаем готовую замороженную коллекцию
                 };
                 wireframe.Transform = modelGroup.Transform;
-
-                // Batch add: добавляем все точки
-                foreach (var pt in allPoints) {
-                    wireframe.Points.Add(pt);
-                }
 
                 _wireframeLines.Add(wireframe);
                 viewPort3d.Children.Add(wireframe);

@@ -858,6 +858,8 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
@@ -875,6 +877,13 @@
                                                   Foreground="#FFCCCCCC"
                                                   FontSize="9"
                                                   Margin="0,0,0,1" />
+                                        <TextBlock x:Name="ModelCurrentLodTextBlock"
+                                                  x:FieldModifier="private"
+                                                  Text="Current LOD: FBX"
+                                                  Foreground="#FFCCCCCC"
+                                                  FontSize="9"
+                                                  Margin="0,0,0,1"
+                                                  Visibility="Collapsed" />
                                         <TextBlock x:Name="ModelVerticesTextBlock"
                                                   Text="Vertices:"
                                                   Foreground="#FFCCCCCC"
@@ -887,8 +896,111 @@
                                     </StackPanel>
                                 </Border>
 
+                                <!-- LOD Quick Switch Buttons -->
+                                <Border x:Name="LodQuickSwitchPanel"
+                                        Grid.Row="1"
+                                        Background="#EE000000"
+                                        BorderThickness="0,0,0,1"
+                                        BorderBrush="#FF555555"
+                                        Padding="6,4"
+                                        Visibility="Collapsed">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="LOD:"
+                                                  Foreground="#FFAAAAAA"
+                                                  FontSize="9"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,6,0" />
+                                        <Button x:Name="LodButton0"
+                                               Content="LOD0"
+                                               Click="LodButton_Click"
+                                               Tag="0"
+                                               Width="45"
+                                               Height="20"
+                                               Margin="2,0"
+                                               FontSize="9"
+                                               Padding="2" />
+                                        <Button x:Name="LodButton1"
+                                               Content="LOD1"
+                                               Click="LodButton_Click"
+                                               Tag="1"
+                                               Width="45"
+                                               Height="20"
+                                               Margin="2,0"
+                                               FontSize="9"
+                                               Padding="2" />
+                                        <Button x:Name="LodButton2"
+                                               Content="LOD2"
+                                               Click="LodButton_Click"
+                                               Tag="2"
+                                               Width="45"
+                                               Height="20"
+                                               Margin="2,0"
+                                               FontSize="9"
+                                               Padding="2" />
+                                        <Button x:Name="LodButton3"
+                                               Content="LOD3"
+                                               Click="LodButton_Click"
+                                               Tag="3"
+                                               Width="45"
+                                               Height="20"
+                                               Margin="2,0"
+                                               FontSize="9"
+                                               Padding="2" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- LOD Information DataGrid -->
+                                <Border x:Name="LodInformationPanel"
+                                        Grid.Row="2"
+                                        Background="#DD000000"
+                                        BorderThickness="0,0,0,1"
+                                        BorderBrush="#FF555555"
+                                        Padding="6,4"
+                                        MaxHeight="120"
+                                        Visibility="Collapsed">
+                                    <DataGrid x:Name="LodInformationGrid"
+                                             AutoGenerateColumns="False"
+                                             HeadersVisibility="Column"
+                                             CanUserAddRows="False"
+                                             CanUserDeleteRows="False"
+                                             CanUserReorderColumns="False"
+                                             CanUserResizeRows="False"
+                                             IsReadOnly="True"
+                                             SelectionMode="Single"
+                                             GridLinesVisibility="Horizontal"
+                                             Background="Transparent"
+                                             RowBackground="#22FFFFFF"
+                                             AlternatingRowBackground="#11FFFFFF"
+                                             FontSize="9"
+                                             RowHeight="18"
+                                             SelectionChanged="LodInformationGrid_SelectionChanged">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="LOD" Binding="{Binding LodName}" Width="45" />
+                                            <DataGridTextColumn Header="Triangles" Binding="{Binding TriangleCount, StringFormat=N0}" Width="70" />
+                                            <DataGridTextColumn Header="Vertices" Binding="{Binding VertexCount, StringFormat=N0}" Width="70" />
+                                            <DataGridTextColumn Header="Size" Binding="{Binding FileSizeFormatted}" Width="60" />
+                                        </DataGrid.Columns>
+                                        <DataGrid.Resources>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="Background" Value="#FF333333" />
+                                                <Setter Property="Foreground" Value="#FFAAAAAA" />
+                                                <Setter Property="FontSize" Value="9" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="Padding" Value="4,2" />
+                                                <Setter Property="BorderBrush" Value="#FF555555" />
+                                                <Setter Property="BorderThickness" Value="0,0,1,1" />
+                                            </Style>
+                                            <Style TargetType="DataGridCell">
+                                                <Setter Property="Foreground" Value="#FFCCCCCC" />
+                                                <Setter Property="BorderThickness" Value="0" />
+                                                <Setter Property="Padding" Value="4,2" />
+                                            </Style>
+                                        </DataGrid.Resources>
+                                    </DataGrid>
+                                </Border>
+
                                 <!-- 3D Viewport -->
-                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
+                                <Border Grid.Row="3" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
                                     <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true">
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>

@@ -43,12 +43,19 @@ using AssetProcessor.TextureViewer;
 
 namespace AssetProcessor {
     public partial class MainWindow {
-        private void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+        private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
                     if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
-                                                                // Загружаем модель во вьюпорт (3D просмотрщик)
-                        LoadModel(selectedModel.Path);
+                        // Сначала пытаемся загрузить GLB LOD файлы
+                        await TryLoadGlbLodAsync(selectedModel.Path);
+
+                        // Если GLB LOD не найдены, загружаем FBX модель в обычный вьюпорт
+                        if (!_isGlbViewerActive) {
+                            // Загружаем модель во вьюпорт (3D просмотрщик)
+                            LoadModel(selectedModel.Path);
+                        }
+
                         // Обновляем информацию о модели
                         AssimpContext context = new();
                         Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);

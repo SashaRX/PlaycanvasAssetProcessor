@@ -168,7 +168,7 @@ namespace AssetProcessor.ModelConversion.Viewer {
         public List<LodLevel> AvailableLods => _lodScenes.Keys.OrderBy(l => l).ToList();
 
         /// <summary>
-        /// Конвертирует Assimp Scene в WPF Model3DGroup
+        /// Конвертирует Assimp Scene в WPF Model3DGroup с центрированием и масштабированием
         /// </summary>
         private Model3DGroup ConvertAssimpSceneToWpf(Scene scene) {
             var modelGroup = new Model3DGroup();
@@ -216,6 +216,19 @@ namespace AssetProcessor.ModelConversion.Viewer {
 
                 modelGroup.Children.Add(geometryModel);
             }
+
+            // Центрируем модель (аналогично FBX viewer в MainWindow.Models.cs)
+            var bounds = modelGroup.Bounds;
+            var centerOffset = new Media3D.Vector3D(
+                -bounds.X - bounds.SizeX / 2,
+                -bounds.Y - bounds.SizeY / 2,
+                -bounds.Z - bounds.SizeZ / 2
+            );
+
+            var transformGroup = new Transform3DGroup();
+            transformGroup.Children.Add(new TranslateTransform3D(centerOffset));
+
+            modelGroup.Transform = transformGroup;
 
             return modelGroup;
         }

@@ -910,7 +910,7 @@
                                 <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
                                     <helix:HelixViewport3D x:Name="viewPort3d"
                                                           ZoomExtentsWhenLoaded="true"
-                                                          ShowCoordinateSystem="true"
+                                                          ShowCoordinateSystem="false"
                                                           ShowViewCube="true">
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>

@@ -79,6 +79,7 @@
 
   <ItemGroup>
     <None Remove="colorPicker.png" />
+    <None Remove="refman.png" />
     <!-- Exclude test files from main project compilation -->
     <Compile Remove="AssetProcessor.Tests\**\*.cs" />
     <None Include="AssetProcessor.Tests\**\*.cs" />
@@ -114,6 +115,7 @@
 
   <ItemGroup>
     <Resource Include="colorPicker.png" />
+    <Resource Include="refman.png" />
   </ItemGroup>
 
   <ItemGroup>

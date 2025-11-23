@@ -24,39 +24,95 @@ namespace AssetProcessor.ModelConversion.Viewer {
 
         /// <summary>
         /// Загружает GLB файл
-        /// Автоматически декомпрессирует EXT_meshopt_compression если нужно
+        /// Автоматически декодирует quantization и декомпрессирует EXT_meshopt_compression
         /// </summary>
         public async Task<Scene?> LoadGlbAsync(string glbPath) {
             try {
                 Logger.Info($"Loading GLB: {glbPath}");
 
-                // Проверяем наличие EXT_meshopt_compression
-                if (await HasMeshOptCompressionAsync(glbPath)) {
-                    Logger.Info("GLB contains EXT_meshopt_compression, decompressing...");
+                // CRITICAL FIX: Assimp не поддерживает KHR_mesh_quantization!
+                // Всегда декодируем через gltfpack, который правильно декодирует quantization
+                Logger.Info("Decoding GLB through gltfpack (removes quantization + meshopt compression)");
 
-                    // Декомпрессируем через gltfpack
-                    var decompressedPath = await DecompressMeshOptAsync(glbPath);
+                var decodedPath = await DecodeGlbAsync(glbPath);
 
-                    if (decompressedPath == null) {
-                        Logger.Error("Failed to decompress meshopt GLB");
-                        return null;
-                    }
-
-                    // Загружаем декомпрессированный файл
-                    var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
-                    var scene = _assimpContext.ImportFile(decompressedPath, postProcess);
-                    Logger.Info($"Loaded decompressed GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
-                    return scene;
-                } else {
-                    // Прямая загрузка (Quantization only)
-                    Logger.Info("Loading GLB directly (no meshopt compression)");
-                    var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
-                    var scene = _assimpContext.ImportFile(glbPath, postProcess);
-                    Logger.Info($"Loaded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
-                    return scene;
+                if (decodedPath == null) {
+                    Logger.Error("Failed to decode GLB");
+                    return null;
                 }
+
+                // Загружаем декодированный файл
+                var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
+                var scene = _assimpContext.ImportFile(decodedPath, postProcess);
+                Logger.Info($"Loaded decoded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
+                return scene;
             } catch (Exception ex) {
                 Logger.Error(ex, $"Failed to load GLB: {glbPath}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Декодирует GLB файл через gltfpack (убирает quantization и meshopt compression)
+        /// </summary>
+        private async Task<string?> DecodeGlbAsync(string inputPath) {
+            try {
+                // Проверяем кэш
+                if (_decompressCache.TryGetValue(inputPath, out var cachedPath)) {
+                    if (File.Exists(cachedPath)) {
+                        Logger.Info($"Using cached decoded file: {cachedPath}");
+                        return cachedPath;
+                    } else {
+                        _decompressCache.Remove(inputPath);
+                    }
+                }
+
+                if (_gltfPackWrapper == null) {
+                    Logger.Error("gltfpack not available for decoding");
+                    return null;
+                }
+
+                // Создаём временный файл
+                var tempDir = Path.Combine(Path.GetTempPath(), "TexTool_GlbDecode");
+                Directory.CreateDirectory(tempDir);
+
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
+                var outputPath = Path.Combine(tempDir, $"{fileName}_decoded.glb");
+
+                Logger.Info($"Decoding GLB: {inputPath} -> {outputPath}");
+
+                // gltfpack с флагом -noq (no quantization) для декодирования
+                var startInfo = new System.Diagnostics.ProcessStartInfo {
+                    FileName = _gltfPackWrapper.GltfPackPath,
+                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(startInfo);
+                if (process == null) {
+                    Logger.Error("Failed to start gltfpack process");
+                    return null;
+                }
+
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode == 0 && File.Exists(outputPath)) {
+                    Logger.Info($"Successfully decoded GLB: {outputPath}");
+
+                    // Кэшируем результат
+                    _decompressCache[inputPath] = outputPath;
+
+                    return outputPath;
+                } else {
+                    var stderr = await process.StandardError.ReadToEndAsync();
+                    Logger.Error($"gltfpack decode failed with exit code {process.ExitCode}: {stderr}");
+                    return null;
+                }
+            } catch (Exception ex) {
+                Logger.Error(ex, "Failed to decode GLB");
                 return null;
             }
         }

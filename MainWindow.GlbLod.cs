@@ -231,8 +231,17 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"Geometry created: Positions={geometry.Positions.Count}, Normals={geometry.Normals.Count}, TexCoords={geometry.TextureCoordinates.Count}, Indices={geometry.TriangleIndices.Count}");
 
-                var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
-                var model = new GeometryModel3D(geometry, material);
+                // Create two-sided material with emissive properties for visibility
+                var frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
+                var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.Red)); // Red for debugging backfaces
+                var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(40, 40, 40)));
+
+                var materialGroup = new MaterialGroup();
+                materialGroup.Children.Add(frontMaterial);
+                materialGroup.Children.Add(emissiveMaterial);
+
+                var model = new GeometryModel3D(geometry, materialGroup);
+                model.BackMaterial = backMaterial; // Ensure backfaces are visible
                 modelGroup.Children.Add(model);
 
                 LodLogger.Info($"Mesh created successfully");
@@ -245,6 +254,10 @@ namespace AssetProcessor {
                 -bounds.Y - bounds.SizeY / 2,
                 -bounds.Z - bounds.SizeZ / 2
             );
+
+            LodLogger.Info($"Model bounds: X={bounds.X:F2}, Y={bounds.Y:F2}, Z={bounds.Z:F2}");
+            LodLogger.Info($"Model size: {bounds.SizeX:F2} x {bounds.SizeY:F2} x {bounds.SizeZ:F2}");
+            LodLogger.Info($"Center offset: X={centerOffset.X:F2}, Y={centerOffset.Y:F2}, Z={centerOffset.Z:F2}");
 
             var transformGroup = new Transform3DGroup();
             transformGroup.Children.Add(new TranslateTransform3D(centerOffset));

@@ -123,8 +123,10 @@ namespace AssetProcessor {
                     // BackMaterial = null для правильного culling (задние грани не рендерятся)
                     geoModel.BackMaterial = null;
 
-                    // Используем HashSet для уникальных рёбер (избегаем дублирования)
-                    var edges = new HashSet<(int, int)>();
+                    // Оптимизация: используем Dictionary вместо HashSet для лучшей производительности
+                    // Capacity = примерно triangles * 1.5 (каждое ребро разделяется двумя треугольниками)
+                    var triangleCount = mesh.TriangleIndices.Count / 3;
+                    var edges = new Dictionary<long, (int, int)>(capacity: triangleCount * 3 / 2);
 
                     // Собираем уникальные рёбра
                     for (int i = 0; i < mesh.TriangleIndices.Count; i += 3) {
@@ -137,16 +139,17 @@ namespace AssetProcessor {
                         if (i0 >= mesh.Positions.Count || i1 >= mesh.Positions.Count || i2 >= mesh.Positions.Count)
                             continue;
 
-                        // Добавляем три ребра треугольника (упорядоченные пары)
-                        AddEdge(edges, i0, i1);
-                        AddEdge(edges, i1, i2);
-                        AddEdge(edges, i2, i0);
+                        // Добавляем три ребра треугольника
+                        TryAddEdge(edges, i0, i1);
+                        TryAddEdge(edges, i1, i2);
+                        TryAddEdge(edges, i2, i0);
                     }
 
-                    // Добавляем уникальные рёбра в wireframe
-                    foreach (var (idx0, idx1) in edges) {
-                        wireframePoints.Add(mesh.Positions[idx0]);
-                        wireframePoints.Add(mesh.Positions[idx1]);
+                    // Добавляем уникальные рёбра в wireframe (пре-аллоцируем память)
+                    wireframePoints.EnsureCapacity(wireframePoints.Count + edges.Count * 2);
+                    foreach (var edge in edges.Values) {
+                        wireframePoints.Add(mesh.Positions[edge.Item1]);
+                        wireframePoints.Add(mesh.Positions[edge.Item2]);
                     }
 
                 } else if (child is Model3DGroup childGroup) {
@@ -156,14 +159,17 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Добавляет ребро в HashSet (упорядоченная пара для избежания дублирования)
+        /// Добавляет ребро в Dictionary (упорядоченная пара для избежания дублирования)
+        /// Использует long key для быстрого поиска вместо tuple
         /// </summary>
-        private void AddEdge(HashSet<(int, int)> edges, int i0, int i1) {
-            // Упорядочиваем индексы, чтобы (i0, i1) и (i1, i0) считались одним ребром
+        private void TryAddEdge(Dictionary<long, (int, int)> edges, int i0, int i1) {
+            // Упорядочиваем индексы
             if (i0 > i1) {
                 (i0, i1) = (i1, i0);
             }
-            edges.Add((i0, i1));
+            // Упаковываем два int в один long для быстрого ключа
+            long key = ((long)i0 << 32) | (uint)i1;
+            edges.TryAdd(key, (i0, i1));
         }
 
         /// <summary>

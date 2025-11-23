@@ -42,7 +42,11 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 }
 
                 // Загружаем декодированный файл
-                var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
+                // ВАЖНО: GLB использует right-handed координаты, WPF - left-handed
+                var postProcess = PostProcessSteps.Triangulate |
+                                  PostProcessSteps.GenerateSmoothNormals |
+                                  PostProcessSteps.MakeLeftHanded |
+                                  PostProcessSteps.FlipWindingOrder;
                 var scene = _assimpContext.ImportFile(decodedPath, postProcess);
                 Logger.Info($"Loaded decoded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
                 return scene;

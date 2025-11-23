@@ -903,6 +903,14 @@
                                                          Margin="0,0,8,0"
                                                          Checked="ShowWireframeCheckBox_Changed"
                                                          Unchecked="ShowWireframeCheckBox_Changed" />
+                                                <CheckBox x:Name="ShowHumanCheckBox"
+                                                         Content="1.8m"
+                                                         Foreground="White"
+                                                         FontSize="9"
+                                                         Margin="0,0,8,0"
+                                                         Checked="ShowHumanCheckBox_Changed"
+                                                         Unchecked="ShowHumanCheckBox_Changed"
+                                                         IsChecked="True" />
                                                 <TextBlock Text="Up:"
                                                           Foreground="White"
                                                           FontSize="9"

@@ -199,6 +199,12 @@ namespace AssetProcessor {
                 // Применяем настройки viewer (wireframe, up vector)
                 ApplyViewerSettingsToModel();
 
+                // Обновляем UV preview (берём первую mesh с UV координатами)
+                var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
+                if (meshWithUV != null) {
+                    UpdateUVImage(meshWithUV);
+                }
+
                 // Центрируем камеру только при первой загрузке модели
                 if (zoomToFit) {
                     viewPort3d.ZoomExtents();

@@ -7,10 +7,11 @@ using HelixToolkit.Wpf;
 
 namespace AssetProcessor {
     /// <summary>
-    /// Логика для управления 3D viewer (pivot, wireframe, up vector)
+    /// Логика для управления 3D viewer (pivot, wireframe, up vector, human silhouette)
     /// </summary>
     public partial class MainWindow {
         private CoordinateSystemVisual3D? _pivotVisual;
+        private ModelVisual3D? _humanSilhouette; // Силуэт человека для масштаба
         private bool _isWireframeMode = false;
         private bool _isZUp = false; // Y-up по умолчанию
         private readonly List<LinesVisual3D> _wireframeLines = new(); // Линии для wireframe
@@ -24,28 +25,32 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Обновляет видимость pivot visualization
+        /// Обновляет видимость и размер pivot visualization
         /// </summary>
         private void UpdatePivotVisibility() {
             bool showPivot = ShowPivotCheckBox.IsChecked == true;
 
+            // Убираем старый pivot
+            if (_pivotVisual != null && viewPort3d.Children.Contains(_pivotVisual)) {
+                viewPort3d.Children.Remove(_pivotVisual);
+            }
+
             if (showPivot) {
-                // Создаём pivot если ещё не создан
-                if (_pivotVisual == null) {
-                    _pivotVisual = new CoordinateSystemVisual3D {
-                        ArrowLengths = 2 // Длина осей (уменьшено с 20 до 2)
-                    };
+                // Вычисляем адаптивный размер на основе модели
+                double pivotSize = CalculateOptimalPivotSize();
+
+                // Создаём новый pivot с правильным размером
+                _pivotVisual = new CoordinateSystemVisual3D {
+                    ArrowLengths = pivotSize
+                };
+
+                // Применяем трансформацию up vector если нужно
+                if (_isZUp) {
+                    var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
+                    _pivotVisual.Transform = new RotateTransform3D(rotation);
                 }
 
-                // Добавляем в viewport если ещё не добавлен
-                if (!viewPort3d.Children.Contains(_pivotVisual)) {
-                    viewPort3d.Children.Add(_pivotVisual);
-                }
-            } else {
-                // Удаляем pivot из viewport
-                if (_pivotVisual != null && viewPort3d.Children.Contains(_pivotVisual)) {
-                    viewPort3d.Children.Remove(_pivotVisual);
-                }
+                viewPort3d.Children.Add(_pivotVisual);
             }
         }
 
@@ -55,6 +60,22 @@ namespace AssetProcessor {
         private void ShowWireframeCheckBox_Changed(object sender, RoutedEventArgs e) {
             _isWireframeMode = ShowWireframeCheckBox.IsChecked == true;
             UpdateModelWireframe();
+        }
+
+        /// <summary>
+        /// Обработчик изменения чекбокса "Show Human Silhouette"
+        /// </summary>
+        private void ShowHumanCheckBox_Changed(object sender, RoutedEventArgs e) {
+            bool showHuman = ShowHumanCheckBox.IsChecked == true;
+
+            if (showHuman) {
+                UpdateHumanSilhouette();
+            } else {
+                // Убираем силуэт
+                if (_humanSilhouette != null && viewPort3d.Children.Contains(_humanSilhouette)) {
+                    viewPort3d.Children.Remove(_humanSilhouette);
+                }
+            }
         }
 
         /// <summary>
@@ -283,6 +304,76 @@ namespace AssetProcessor {
 
             // Применяем pivot если нужно
             UpdatePivotVisibility();
+
+            // Применяем силуэт человека если включён
+            if (ShowHumanCheckBox?.IsChecked == true) {
+                UpdateHumanSilhouette();
+            }
+        }
+
+        /// <summary>
+        /// Создаёт или обновляет силуэт человека (1.8м) для понимания масштаба
+        /// </summary>
+        private void UpdateHumanSilhouette() {
+            // Убираем старый силуэт
+            if (_humanSilhouette != null && viewPort3d.Children.Contains(_humanSilhouette)) {
+                viewPort3d.Children.Remove(_humanSilhouette);
+            }
+
+            // Создаём новый силуэт (простая капсула: цилиндр + сфера для головы)
+            var silhouette = new Model3DGroup();
+
+            // Тело (цилиндр 0.4м диаметр, 1.5м высота от 0 до 1.5)
+            var bodyMesh = new MeshBuilder();
+            bodyMesh.AddCylinder(new Point3D(0, 0.75, 0), new Point3D(0, 0, 0), 0.2, 16);
+
+            // Голова (сфера 0.2м радиус на высоте 1.7м)
+            bodyMesh.AddSphere(new Point3D(0, 1.7, 0), 0.2, 12, 12);
+
+            var geometry = bodyMesh.ToMesh();
+
+            // Используем EmissiveMaterial для unlit отображения (полупрозрачный зелёный)
+            var material = new MaterialGroup();
+            material.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(100, 50, 255, 50))));
+            material.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(150, 50, 200, 50))));
+
+            var model = new GeometryModel3D(geometry, material);
+            model.BackMaterial = material;
+            silhouette.Children.Add(model);
+
+            _humanSilhouette = new ModelVisual3D { Content = silhouette };
+
+            // Применяем трансформацию up vector если нужно
+            if (_isZUp) {
+                var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
+                _humanSilhouette.Transform = new RotateTransform3D(rotation);
+            }
+
+            viewPort3d.Children.Add(_humanSilhouette);
+        }
+
+        /// <summary>
+        /// Вычисляет оптимальный размер pivot на основе размеров модели
+        /// </summary>
+        private double CalculateOptimalPivotSize() {
+            double maxDimension = 0;
+
+            // Находим максимальный размер модели
+            foreach (var visual in viewPort3d.Children) {
+                if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
+                    var bounds = modelGroup.Bounds;
+                    if (bounds != Rect3D.Empty) {
+                        double sizeX = bounds.SizeX;
+                        double sizeY = bounds.SizeY;
+                        double sizeZ = bounds.SizeZ;
+                        maxDimension = Math.Max(maxDimension, Math.Max(sizeX, Math.Max(sizeY, sizeZ)));
+                    }
+                }
+            }
+
+            // Pivot = 20% от максимального размера модели (но не меньше 0.5 и не больше 5)
+            double pivotSize = Math.Max(0.5, Math.Min(5.0, maxDimension * 0.2));
+            return pivotSize;
         }
     }
 }

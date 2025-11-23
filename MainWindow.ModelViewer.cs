@@ -438,11 +438,11 @@ namespace AssetProcessor {
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
 
-            // UV координаты (flipped вертикально)
-            planeMesh.TextureCoordinates.Add(new Point(0, 1)); // нижний левый
-            planeMesh.TextureCoordinates.Add(new Point(1, 1)); // нижний правый
-            planeMesh.TextureCoordinates.Add(new Point(1, 0)); // верхний правый
-            planeMesh.TextureCoordinates.Add(new Point(0, 0)); // верхний левый
+            // UV координаты (повернуты на 90° по часовой стрелке, чтобы человек стоял вертикально)
+            planeMesh.TextureCoordinates.Add(new Point(1, 1)); // нижний левый -> UV правый нижний
+            planeMesh.TextureCoordinates.Add(new Point(1, 0)); // нижний правый -> UV правый верхний
+            planeMesh.TextureCoordinates.Add(new Point(0, 0)); // верхний правый -> UV левый верхний
+            planeMesh.TextureCoordinates.Add(new Point(0, 1)); // верхний левый -> UV левый нижний
 
             // Два треугольника (против часовой стрелки для front face)
             planeMesh.TriangleIndices.Add(baseIndex + 0);

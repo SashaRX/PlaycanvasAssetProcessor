@@ -414,13 +414,12 @@ namespace AssetProcessor {
             var silhouette = new Model3DGroup();
             var planeMesh = new MeshBuilder();
 
-            // Вертикальная плоскость в плоскости XY (нормаль смотрит на +Z)
+            // Вертикальная плоскость в плоскости YZ (X=0, нормаль смотрит на +X)
             // Нижний край на Y=0, верхний на Y=1.8
-            // UV координаты flipped по вертикали
-            var p0 = new Point3D(-0.45, 0, 0);    // нижний левый
-            var p1 = new Point3D(0.45, 0, 0);     // нижний правый
-            var p2 = new Point3D(0.45, 1.8, 0);   // верхний правый
-            var p3 = new Point3D(-0.45, 1.8, 0);  // верхний левый
+            var p0 = new Point3D(0, 0, -0.45);   // нижний левый
+            var p1 = new Point3D(0, 0, 0.45);    // нижний правый
+            var p2 = new Point3D(0, 1.8, 0.45);  // верхний правый
+            var p3 = new Point3D(0, 1.8, -0.45); // верхний левый
 
             // Добавляем два треугольника вручную для вертикальной плоскости
             int baseIndex = planeMesh.Positions.Count;
@@ -430,8 +429,8 @@ namespace AssetProcessor {
             planeMesh.Positions.Add(p2);
             planeMesh.Positions.Add(p3);
 
-            // Нормали (вперёд, в направлении +Z)
-            var normal = new Vector3D(0, 0, 1);
+            // Нормали (вправо, в направлении +X)
+            var normal = new Vector3D(1, 0, 0);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
@@ -469,12 +468,19 @@ namespace AssetProcessor {
                 var brush = new ImageBrush(bitmap);
                 brush.Opacity = 1.0; // Полная непрозрачность для brush, альфа берется из PNG
 
-                // Только DiffuseMaterial для правильной обработки альфа-канала
-                // EmissiveMaterial игнорирует альфа-канал!
-                material = new DiffuseMaterial(brush) {
-                    AmbientColor = Colors.White, // Полная яркость (unlit эффект)
+                // MaterialGroup: DiffuseMaterial для альфа + EmissiveMaterial для unlit яркости
+                var materialGroup = new MaterialGroup();
+
+                // DiffuseMaterial обрабатывает альфа-канал
+                materialGroup.Children.Add(new DiffuseMaterial(brush) {
+                    AmbientColor = Colors.White,
                     Color = Colors.White
-                };
+                });
+
+                // EmissiveMaterial добавляет unlit свечение (но не влияет на альфа)
+                materialGroup.Children.Add(new EmissiveMaterial(brush));
+
+                material = materialGroup;
             } catch (Exception ex) {
                 // Fallback: если текстура не загрузилась, используем зелёный цвет
                 LodLogger.Warn($"Failed to load refman.png: {ex.Message}");

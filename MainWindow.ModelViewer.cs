@@ -145,8 +145,7 @@ namespace AssetProcessor {
                         TryAddEdge(edges, i2, i0);
                     }
 
-                    // Добавляем уникальные рёбра в wireframe (пре-аллоцируем память)
-                    wireframePoints.EnsureCapacity(wireframePoints.Count + edges.Count * 2);
+                    // Добавляем уникальные рёбра в wireframe
                     foreach (var edge in edges.Values) {
                         wireframePoints.Add(mesh.Positions[edge.Item1]);
                         wireframePoints.Add(mesh.Positions[edge.Item2]);

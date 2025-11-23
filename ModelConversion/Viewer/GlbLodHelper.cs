@@ -54,36 +54,66 @@ namespace AssetProcessor.ModelConversion.Viewer {
 
                 Logger.Info($"Searching for GLB LOD files for: {modelName}");
 
-                // Сначала проверяем наличие манифеста
-                var manifestPath = Path.Combine(directory, $"{modelName}_manifest.json");
-                if (File.Exists(manifestPath)) {
-                    Logger.Info($"Found manifest: {manifestPath}");
-                    var manifestResult = LoadFromManifest(manifestPath, directory);
-                    if (manifestResult.Count > 0) {
-                        return manifestResult;
+                // Список директорий для поиска:
+                // 1. Поддиректория glb/ (основной путь для конвертированных моделей)
+                // 2. Та же директория, что и FBX
+                var searchDirectories = new List<string> {
+                    Path.Combine(directory, "glb"),
+                    directory
+                };
+
+                string? searchDir = null;
+
+                // Сначала проверяем наличие манифеста в каждой из директорий
+                foreach (var dir in searchDirectories) {
+                    var manifestPath = Path.Combine(dir, $"{modelName}_manifest.json");
+                    if (File.Exists(manifestPath)) {
+                        Logger.Info($"Found manifest: {manifestPath}");
+                        var manifestResult = LoadFromManifest(manifestPath, dir);
+                        if (manifestResult.Count > 0) {
+                            return manifestResult;
+                        }
                     }
                 }
 
                 // Если манифеста нет, ищем файлы по паттерну
-                foreach (var lodLevel in Enum.GetValues<LodLevel>()) {
-                    var lodFileName = $"{modelName}_lod{(int)lodLevel}.glb";
-                    var lodFilePath = Path.Combine(directory, lodFileName);
+                foreach (var dir in searchDirectories) {
+                    if (!Directory.Exists(dir)) {
+                        continue;
+                    }
 
-                    if (File.Exists(lodFilePath)) {
-                        Logger.Info($"Found LOD{(int)lodLevel}: {lodFilePath}");
+                    bool foundInThisDir = false;
 
-                        var lodInfo = new LodInfo {
-                            Level = lodLevel,
-                            FilePath = lodFilePath,
-                            FileSize = new FileInfo(lodFilePath).Length
-                        };
+                    foreach (var lodLevel in Enum.GetValues<LodLevel>()) {
+                        var lodFileName = $"{modelName}_lod{(int)lodLevel}.glb";
+                        var lodFilePath = Path.Combine(dir, lodFileName);
 
-                        // Извлекаем информацию о геометрии
-                        var metrics = ExtractMeshMetrics(lodFilePath);
-                        lodInfo.TriangleCount = metrics.TriangleCount;
-                        lodInfo.VertexCount = metrics.VertexCount;
+                        if (File.Exists(lodFilePath)) {
+                            if (!foundInThisDir) {
+                                Logger.Info($"Searching in directory: {dir}");
+                                foundInThisDir = true;
+                            }
 
-                        result[lodLevel] = lodInfo;
+                            Logger.Info($"  Found LOD{(int)lodLevel}: {lodFileName}");
+
+                            var lodInfo = new LodInfo {
+                                Level = lodLevel,
+                                FilePath = lodFilePath,
+                                FileSize = new FileInfo(lodFilePath).Length
+                            };
+
+                            // Извлекаем информацию о геометрии
+                            var metrics = ExtractMeshMetrics(lodFilePath);
+                            lodInfo.TriangleCount = metrics.TriangleCount;
+                            lodInfo.VertexCount = metrics.VertexCount;
+
+                            result[lodLevel] = lodInfo;
+                        }
+                    }
+
+                    // Если нашли файлы в этой директории, прекращаем поиск
+                    if (result.Count > 0) {
+                        break;
                     }
                 }
 

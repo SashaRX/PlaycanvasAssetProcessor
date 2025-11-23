@@ -11,7 +11,7 @@ namespace AssetProcessor {
     /// Логика для управления 3D viewer (pivot, wireframe, up vector, human silhouette)
     /// </summary>
     public partial class MainWindow {
-        private CoordinateSystemVisual3D? _pivotVisual;
+        private ModelVisual3D? _pivotVisual; // Изменено с CoordinateSystemVisual3D на ModelVisual3D для emissive pivot
         private ModelVisual3D? _humanSilhouette; // Силуэт человека для масштаба (billboard плоскость)
         private RotateTransform3D? _humanBillboardRotation; // Rotation для billboard эффекта
         private bool _isWireframeMode = false;
@@ -44,10 +44,8 @@ namespace AssetProcessor {
                 // Вычисляем адаптивный размер на основе модели
                 double pivotSize = CalculateOptimalPivotSize();
 
-                // Создаём новый pivot с правильным размером
-                _pivotVisual = new CoordinateSystemVisual3D {
-                    ArrowLengths = pivotSize
-                };
+                // Создаём новый emissive pivot с правильным размером
+                _pivotVisual = CreateEmissivePivot(pivotSize);
 
                 // Применяем трансформацию up vector если нужно
                 if (_isZUp) {
@@ -57,6 +55,76 @@ namespace AssetProcessor {
 
                 viewPort3d.Children.Add(_pivotVisual);
             }
+        }
+
+        /// <summary>
+        /// Создаёт unshaded (emissive) pivot с 3 стрелками X, Y, Z
+        /// </summary>
+        private ModelVisual3D CreateEmissivePivot(double size) {
+            var pivot = new Model3DGroup();
+            double arrowRadius = size * 0.02; // Толщина стрелок
+            double coneHeight = size * 0.15; // Высота конуса
+            double coneRadius = size * 0.05; // Радиус конуса
+
+            // X axis (Red)
+            pivot.Children.Add(CreateArrow(
+                new Point3D(0, 0, 0),
+                new Point3D(size, 0, 0),
+                arrowRadius,
+                coneHeight,
+                coneRadius,
+                Colors.Red
+            ));
+
+            // Y axis (Green)
+            pivot.Children.Add(CreateArrow(
+                new Point3D(0, 0, 0),
+                new Point3D(0, size, 0),
+                arrowRadius,
+                coneHeight,
+                coneRadius,
+                Colors.Lime
+            ));
+
+            // Z axis (Blue)
+            pivot.Children.Add(CreateArrow(
+                new Point3D(0, 0, 0),
+                new Point3D(0, 0, size),
+                arrowRadius,
+                coneHeight,
+                coneRadius,
+                Colors.Blue
+            ));
+
+            return new ModelVisual3D { Content = pivot };
+        }
+
+        /// <summary>
+        /// Создаёт одну стрелку с emissive материалом
+        /// </summary>
+        private GeometryModel3D CreateArrow(Point3D start, Point3D end, double shaftRadius, double coneHeight, double coneRadius, Color color) {
+            var mesh = new MeshBuilder();
+            var direction = new Vector3D(end.X - start.X, end.Y - start.Y, end.Z - start.Z);
+            var length = direction.Length;
+            direction.Normalize();
+
+            // Стержень стрелки
+            var shaftEnd = new Point3D(
+                start.X + direction.X * (length - coneHeight),
+                start.Y + direction.Y * (length - coneHeight),
+                start.Z + direction.Z * (length - coneHeight)
+            );
+            mesh.AddCylinder(start, shaftEnd, shaftRadius, 8);
+
+            // Конус стрелки
+            mesh.AddCone(shaftEnd, direction, coneRadius, coneHeight, false, false, 12);
+
+            var geometry = mesh.ToMesh();
+
+            // Emissive материал для unlit отображения
+            var material = new EmissiveMaterial(new SolidColorBrush(color));
+
+            return new GeometryModel3D(geometry, material);
         }
 
         /// <summary>
@@ -246,6 +314,11 @@ namespace AssetProcessor {
         private void ApplyUpVectorTransform() {
             // ToList() для безопасности (хотя мы не добавляем/удаляем элементы)
             foreach (var visual in viewPort3d.Children.ToList()) {
+                // ВАЖНО: Пропускаем billboard человека - он всегда в мировом Y-up пространстве!
+                if (visual == _humanSilhouette) {
+                    continue;
+                }
+
                 if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
                     Transform3DGroup currentTransform;
 
@@ -363,10 +436,17 @@ namespace AssetProcessor {
                 var bitmap = new BitmapImage(uri);
                 var brush = new ImageBrush(bitmap);
 
-                // EmissiveMaterial для unlit отображения с текстурой (альфа-канал используется автоматически)
-                material = new EmissiveMaterial(brush);
-            } catch {
+                // DiffuseMaterial + EmissiveMaterial для unlit отображения с альфа-каналом
+                // DiffuseMaterial нужен для правильной обработки альфа-канала
+                var materialGroup = new MaterialGroup();
+                materialGroup.Children.Add(new DiffuseMaterial(brush) {
+                    AmbientColor = Colors.White // Полная яркость
+                });
+                materialGroup.Children.Add(new EmissiveMaterial(brush)); // Unlit свечение
+                material = materialGroup;
+            } catch (Exception ex) {
                 // Fallback: если текстура не загрузилась, используем зелёный цвет
+                LodLogger.Warn($"Failed to load refman.png: {ex.Message}");
                 var fallbackMaterial = new MaterialGroup();
                 fallbackMaterial.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(100, 50, 255, 50))));
                 fallbackMaterial.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(150, 50, 200, 50))));

@@ -98,19 +98,27 @@ namespace AssetProcessor {
         /// </summary>
         /// <returns>Количество созданных рёбер</returns>
         private int CreateWireframeForModelGroup(Model3DGroup modelGroup) {
-            // Создаём один LinesVisual3D для всей модели (оптимизация)
-            var wireframe = new LinesVisual3D {
-                Color = Colors.White,
-                Thickness = 1
-            };
-            wireframe.Transform = modelGroup.Transform;
+            // ОПТИМИЗАЦИЯ: Сначала собираем все точки в List, потом создаём LinesVisual3D
+            // Это быстрее чем добавлять в wireframe.Points напрямую
+            var allPoints = new List<Point3D>();
+            AddWireframeForGroup(modelGroup, allPoints);
 
-            AddWireframeForGroup(modelGroup, wireframe.Points);
+            if (allPoints.Count > 0) {
+                // Создаём LinesVisual3D только после того как собрали все точки
+                var wireframe = new LinesVisual3D {
+                    Color = Colors.White,
+                    Thickness = 1
+                };
+                wireframe.Transform = modelGroup.Transform;
 
-            if (wireframe.Points.Count > 0) {
+                // Batch add: добавляем все точки
+                foreach (var pt in allPoints) {
+                    wireframe.Points.Add(pt);
+                }
+
                 _wireframeLines.Add(wireframe);
                 viewPort3d.Children.Add(wireframe);
-                return wireframe.Points.Count / 2; // Каждое ребро = 2 точки
+                return allPoints.Count / 2; // Каждое ребро = 2 точки
             }
             return 0;
         }
@@ -118,7 +126,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Рекурсивно добавляет wireframe линии для Model3DGroup
         /// </summary>
-        private void AddWireframeForGroup(Model3DGroup modelGroup, Point3DCollection wireframePoints) {
+        private void AddWireframeForGroup(Model3DGroup modelGroup, List<Point3D> wireframePoints) {
             foreach (var child in modelGroup.Children) {
                 if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
                     // Сохраняем оригинальный материал
@@ -154,7 +162,7 @@ namespace AssetProcessor {
                         TryAddEdge(edges, i2, i0);
                     }
 
-                    // Добавляем уникальные рёбра в wireframe
+                    // Добавляем уникальные рёбра в wireframePoints (List - это быстро)
                     foreach (var edge in edges.Values) {
                         wireframePoints.Add(mesh.Positions[edge.Item1]);
                         wireframePoints.Add(mesh.Positions[edge.Item2]);
@@ -201,19 +209,32 @@ namespace AssetProcessor {
             // ToList() для безопасности (хотя мы не добавляем/удаляем элементы)
             foreach (var visual in viewPort3d.Children.ToList()) {
                 if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
-                    var currentTransform = modelGroup.Transform as Transform3DGroup;
+                    Transform3DGroup currentTransform;
 
-                    if (currentTransform == null) {
+                    // ИСПРАВЛЕНИЕ: НЕ перезаписываем существующий Transform (содержит Y-flip для GLB)!
+                    if (modelGroup.Transform is Transform3DGroup existingGroup) {
+                        currentTransform = existingGroup;
+                    } else if (modelGroup.Transform != null && modelGroup.Transform != Transform3D.Identity) {
+                        // Есть другой transform (например ScaleTransform для Y-flip)
+                        // Оборачиваем его в Transform3DGroup
+                        currentTransform = new Transform3DGroup();
+                        currentTransform.Children.Add(modelGroup.Transform);
+                        modelGroup.Transform = currentTransform;
+                    } else {
+                        // Нет transform
                         currentTransform = new Transform3DGroup();
                         modelGroup.Transform = currentTransform;
                     }
 
-                    // Удаляем старую up vector трансформацию если есть
+                    // Удаляем старую up vector трансформацию (RotateTransform) если есть
                     Transform3D? upTransform = null;
-                    foreach (var t in currentTransform.Children) {
-                        if (t is RotateTransform3D rotTransform && rotTransform.Rotation is AxisAngleRotation3D) {
-                            upTransform = t;
-                            break;
+                    foreach (var t in currentTransform.Children.ToList()) {
+                        if (t is RotateTransform3D rotTransform && rotTransform.Rotation is AxisAngleRotation3D axisRot) {
+                            // Проверяем что это rotation вокруг X (up vector transform)
+                            if (Math.Abs(axisRot.Axis.X - 1.0) < 0.01 && Math.Abs(axisRot.Axis.Y) < 0.01) {
+                                upTransform = t;
+                                break;
+                            }
                         }
                     }
                     if (upTransform != null) {
@@ -225,7 +246,8 @@ namespace AssetProcessor {
                         // Поворот на -90° вокруг X для преобразования Y-up в Z-up
                         var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
                         var rotateTransform = new RotateTransform3D(rotation);
-                        currentTransform.Children.Insert(0, rotateTransform); // В начало
+                        // Добавляем ПОСЛЕ ScaleTransform (если он есть)
+                        currentTransform.Children.Add(rotateTransform);
                     }
                 }
             }

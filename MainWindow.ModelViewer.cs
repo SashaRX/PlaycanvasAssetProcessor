@@ -14,6 +14,7 @@ namespace AssetProcessor {
         private ModelVisual3D? _pivotVisual; // Изменено с CoordinateSystemVisual3D на ModelVisual3D для emissive pivot
         private ModelVisual3D? _humanSilhouette; // Силуэт человека для масштаба (billboard плоскость)
         private RotateTransform3D? _humanBillboardRotation; // Rotation для billboard эффекта
+        private double _humanSilhouetteOffsetX = 2.0; // Адаптивное смещение billboard по X
         private bool _isWireframeMode = false;
         private bool _isZUp = false; // Y-up по умолчанию
         private readonly List<LinesVisual3D> _wireframeLines = new(); // Линии для wireframe
@@ -498,14 +499,14 @@ namespace AssetProcessor {
             _humanSilhouette = new ModelVisual3D { Content = silhouette };
 
             // Вычисляем адаптивное смещение на основе размеров модели
-            double offsetX = CalculateHumanSilhouetteOffset();
+            _humanSilhouetteOffsetX = CalculateHumanSilhouetteOffset();
 
             // Billboard rotation (только Y-axis, в мировом пространстве, БЕЗ up vector transform)
             // Перемещаем в сторону адаптивно на основе размеров модели
             var transformGroup = new Transform3DGroup();
             _humanBillboardRotation = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0));
             transformGroup.Children.Add(_humanBillboardRotation);
-            transformGroup.Children.Add(new TranslateTransform3D(offsetX, 0, 0)); // Адаптивное смещение
+            transformGroup.Children.Add(new TranslateTransform3D(_humanSilhouetteOffsetX, 0, 0)); // Адаптивное смещение
             _humanSilhouette.Transform = transformGroup;
 
             viewPort3d.Children.Add(_humanSilhouette);
@@ -593,7 +594,7 @@ namespace AssetProcessor {
             if (camera == null) return;
 
             var cameraPos = camera.Position;
-            var billboardPos = new Point3D(2, 0, 0); // Плоскость смещена на 2м по X
+            var billboardPos = new Point3D(_humanSilhouetteOffsetX, 0, 0); // Адаптивное смещение по X
 
             // Вычисляем направление от billboard к камере
             var direction = cameraPos - billboardPos;

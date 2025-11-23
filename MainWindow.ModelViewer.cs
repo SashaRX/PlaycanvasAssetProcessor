@@ -497,18 +497,45 @@ namespace AssetProcessor {
 
             _humanSilhouette = new ModelVisual3D { Content = silhouette };
 
+            // Вычисляем адаптивное смещение на основе размеров модели
+            double offsetX = CalculateHumanSilhouetteOffset();
+
             // Billboard rotation (только Y-axis, в мировом пространстве, БЕЗ up vector transform)
-            // Перемещаем в сторону на 2 метра по X для видимости
+            // Перемещаем в сторону адаптивно на основе размеров модели
             var transformGroup = new Transform3DGroup();
             _humanBillboardRotation = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0));
             transformGroup.Children.Add(_humanBillboardRotation);
-            transformGroup.Children.Add(new TranslateTransform3D(2, 0, 0)); // Смещение на 2м вправо
+            transformGroup.Children.Add(new TranslateTransform3D(offsetX, 0, 0)); // Адаптивное смещение
             _humanSilhouette.Transform = transformGroup;
 
             viewPort3d.Children.Add(_humanSilhouette);
 
             // Запускаем billboard обновление если ещё не запущено
             StartBillboardUpdate();
+        }
+
+        /// <summary>
+        /// Вычисляет адаптивное смещение для силуэта человека на основе размеров модели
+        /// </summary>
+        private double CalculateHumanSilhouetteOffset() {
+            double maxDimension = 1.0; // Значение по умолчанию
+
+            // Находим максимальный размер модели
+            foreach (var visual in viewPort3d.Children) {
+                if (visual == _humanSilhouette) continue; // Пропускаем сам силуэт
+
+                if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
+                    var bounds = modelGroup.Bounds;
+                    if (bounds != Rect3D.Empty) {
+                        double sizeX = bounds.SizeX;
+                        double sizeZ = bounds.SizeZ;
+                        maxDimension = Math.Max(maxDimension, Math.Max(sizeX, sizeZ));
+                    }
+                }
+            }
+
+            // Смещаем на 150% от максимального размера модели (чтобы силуэт был сбоку, но видно)
+            return maxDimension * 1.5;
         }
 
         /// <summary>

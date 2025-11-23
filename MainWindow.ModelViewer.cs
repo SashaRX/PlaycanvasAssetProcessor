@@ -69,7 +69,9 @@ namespace AssetProcessor {
 
             if (_isWireframeMode) {
                 // Создаём wireframe для всех моделей
-                foreach (var visual in viewPort3d.Children) {
+                // ВАЖНО: ToList() создаёт копию коллекции, чтобы избежать InvalidOperationException
+                // при добавлении wireframe линий в viewPort3d.Children во время итерации
+                foreach (var visual in viewPort3d.Children.ToList()) {
                     if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
                         CreateWireframeForModelGroup(modelGroup);
                     }
@@ -163,7 +165,8 @@ namespace AssetProcessor {
         /// Применяет трансформацию для изменения up vector
         /// </summary>
         private void ApplyUpVectorTransform() {
-            foreach (var visual in viewPort3d.Children) {
+            // ToList() для безопасности (хотя мы не добавляем/удаляем элементы)
+            foreach (var visual in viewPort3d.Children.ToList()) {
                 if (visual is ModelVisual3D modelVisual && modelVisual.Content is Model3DGroup modelGroup) {
                     var currentTransform = modelGroup.Transform as Transform3DGroup;
 

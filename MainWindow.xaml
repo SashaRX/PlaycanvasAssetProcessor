@@ -19,7 +19,8 @@
     DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
-    Title="MainWindow" Height="684" Width="942">
+    Title="MainWindow" Height="684" Width="942"
+    KeyDown="Window_KeyDown">
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />

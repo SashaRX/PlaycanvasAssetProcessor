@@ -138,11 +138,12 @@ namespace AssetProcessor {
                 LodLogger.Info($"Loaded {_lodScenes.Count} LOD scenes");
 
                 // Отображаем LOD0 в существующем viewport
+                // zoomToFit=true только при первой загрузке модели
                 if (_lodScenes.ContainsKey(LodLevel.LOD0)) {
-                    LoadGlbModelToViewport(LodLevel.LOD0);
+                    LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
                 } else if (_lodScenes.Count > 0) {
                     var firstLod = _lodScenes.Keys.First();
-                    LoadGlbModelToViewport(firstLod);
+                    LoadGlbModelToViewport(firstLod, zoomToFit: true);
                 }
 
                 _isGlbViewerActive = true;
@@ -161,7 +162,8 @@ namespace AssetProcessor {
         /// <summary>
         /// Загружает GLB модель в существующий viewPort3d
         /// </summary>
-        private void LoadGlbModelToViewport(LodLevel lodLevel) {
+        /// <param name="zoomToFit">Выполнить ZoomExtents после загрузки (только при первой загрузке модели)</param>
+        private void LoadGlbModelToViewport(LodLevel lodLevel, bool zoomToFit = false) {
             try {
                 if (!_lodScenes.TryGetValue(lodLevel, out var scene)) {
                     LodLogger.Warn($"LOD {lodLevel} scene not found");
@@ -197,8 +199,10 @@ namespace AssetProcessor {
                 // Применяем настройки viewer (wireframe, up vector)
                 ApplyViewerSettingsToModel();
 
-                // Центрируем камеру
-                viewPort3d.ZoomExtents();
+                // Центрируем камеру только при первой загрузке модели
+                if (zoomToFit) {
+                    viewPort3d.ZoomExtents();
+                }
 
                 _currentLod = lodLevel;
                 LodLogger.Info($"Loaded GLB LOD{(int)lodLevel} successfully");

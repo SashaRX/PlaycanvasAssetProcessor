@@ -3088,6 +3088,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
+        /// <summary>
+        /// Обработчик нажатия клавиш для всего окна
+        /// </summary>
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) {
+            // F - Fit model to viewport (ZoomExtents)
+            if (e.Key == System.Windows.Input.Key.F) {
+                viewPort3d?.ZoomExtents();
+                e.Handled = true;
+            }
+        }
+
         #endregion
     }
 }

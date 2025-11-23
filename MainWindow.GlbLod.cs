@@ -188,6 +188,9 @@ namespace AssetProcessor {
                 var visual3d = new ModelVisual3D { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
+                // Применяем настройки viewer (wireframe, up vector)
+                ApplyViewerSettingsToModel();
+
                 // Центрируем камеру
                 viewPort3d.ZoomExtents();
 

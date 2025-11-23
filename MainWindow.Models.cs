@@ -251,8 +251,8 @@ namespace AssetProcessor {
                 ModelVisual3D visual3d = new() { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
-                ModelVisual3D pivotGizmo = MainWindowHelpers.CreatePivotGizmo(transformGroup);
-                viewPort3d.Children.Add(pivotGizmo);
+                // Применяем настройки viewer (wireframe, pivot, up vector)
+                ApplyViewerSettingsToModel();
 
                 viewPort3d.ZoomExtents();
 

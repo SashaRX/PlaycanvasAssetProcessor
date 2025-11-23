@@ -885,7 +885,38 @@
                                                       Margin="0,0,0,1" />
                                         </StackPanel>
 
+                                        <!-- Viewer Controls (Right Column) -->
                                         <StackPanel Grid.Column="1" Orientation="Vertical">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <CheckBox x:Name="ShowPivotCheckBox"
+                                                         Content="Pivot"
+                                                         Foreground="White"
+                                                         FontSize="9"
+                                                         Margin="0,0,8,0"
+                                                         Checked="ShowPivotCheckBox_Changed"
+                                                         Unchecked="ShowPivotCheckBox_Changed" />
+                                                <CheckBox x:Name="ShowWireframeCheckBox"
+                                                         Content="Wireframe"
+                                                         Foreground="White"
+                                                         FontSize="9"
+                                                         Margin="0,0,8,0"
+                                                         Checked="ShowWireframeCheckBox_Changed"
+                                                         Unchecked="ShowWireframeCheckBox_Changed" />
+                                                <TextBlock Text="Up:"
+                                                          Foreground="White"
+                                                          FontSize="9"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,4,0" />
+                                                <ComboBox x:Name="UpVectorComboBox"
+                                                         FontSize="9"
+                                                         Width="40"
+                                                         Height="18"
+                                                         Padding="4,0"
+                                                         SelectionChanged="UpVectorComboBox_SelectionChanged">
+                                                    <ComboBoxItem Content="Y" IsSelected="True" />
+                                                    <ComboBoxItem Content="Z" />
+                                                </ComboBox>
+                                            </StackPanel>
                                             <TextBlock x:Name="ModelCurrentLodTextBlock"
                                                       x:FieldModifier="private"
                                                       Text="Current LOD: FBX"

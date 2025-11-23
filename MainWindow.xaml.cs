@@ -3013,6 +3013,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     logService.LogInfo($"✓ Model processed successfully");
                     logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
                     logService.LogInfo($"  Manifest: {result.ManifestPath}");
+
+                    // Автоматически обновляем viewport с новыми GLB LOD файлами
+                    logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
+                    await TryLoadGlbLodAsync(selectedModel.Path);
+
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {

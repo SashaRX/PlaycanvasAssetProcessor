@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using HelixToolkit.Wpf;
 
@@ -341,23 +342,36 @@ namespace AssetProcessor {
 
             // Плоскость в плоскости XY (перпендикулярна оси Z), центр на высоте Y=0.9м
             // Размеры: ширина 0.9м, высота 1.8м
+            // UV координаты flipped по вертикали (V: 0↔1)
             planeMesh.AddQuad(
                 new Point3D(-0.45, 0, 0),    // нижний левый
                 new Point3D(0.45, 0, 0),     // нижний правый
                 new Point3D(0.45, 1.8, 0),   // верхний правый
                 new Point3D(-0.45, 1.8, 0),  // верхний левый
-                new Point(0, 1),             // UV нижний левый
-                new Point(1, 1),             // UV нижний правый
-                new Point(1, 0),             // UV верхний правый
-                new Point(0, 0)              // UV верхний левый
+                new Point(0, 0),             // UV нижний левый (flipped V: 0 вместо 1)
+                new Point(1, 0),             // UV нижний правый (flipped V: 0 вместо 1)
+                new Point(1, 1),             // UV верхний правый (flipped V: 1 вместо 0)
+                new Point(0, 1)              // UV верхний левый (flipped V: 1 вместо 0)
             );
 
             var geometry = planeMesh.ToMesh();
 
-            // EmissiveMaterial для unlit отображения (полупрозрачный зелёный)
-            var material = new MaterialGroup();
-            material.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(100, 50, 255, 50))));
-            material.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(150, 50, 200, 50))));
+            // Загружаем текстуру refman.png
+            Material material;
+            try {
+                var uri = new Uri("pack://application:,,,/refman.png");
+                var bitmap = new BitmapImage(uri);
+                var brush = new ImageBrush(bitmap);
+
+                // EmissiveMaterial для unlit отображения с текстурой (альфа-канал используется автоматически)
+                material = new EmissiveMaterial(brush);
+            } catch {
+                // Fallback: если текстура не загрузилась, используем зелёный цвет
+                var fallbackMaterial = new MaterialGroup();
+                fallbackMaterial.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(100, 50, 255, 50))));
+                fallbackMaterial.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(150, 50, 200, 50))));
+                material = fallbackMaterial;
+            }
 
             var model = new GeometryModel3D(geometry, material);
             model.BackMaterial = material; // Двусторонний рендеринг
@@ -366,20 +380,9 @@ namespace AssetProcessor {
 
             _humanSilhouette = new ModelVisual3D { Content = silhouette };
 
-            // Создаём Transform3DGroup для комбинации billboard rotation + up vector
-            var transformGroup = new Transform3DGroup();
-
-            // Billboard rotation (будет обновляться каждый кадр)
+            // Billboard rotation (только Y-axis, в мировом пространстве, БЕЗ up vector transform)
             _humanBillboardRotation = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0));
-            transformGroup.Children.Add(_humanBillboardRotation);
-
-            // Применяем трансформацию up vector если нужно (Z-up поворот на -90° вокруг X)
-            if (_isZUp) {
-                var upRotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
-                transformGroup.Children.Add(new RotateTransform3D(upRotation));
-            }
-
-            _humanSilhouette.Transform = transformGroup;
+            _humanSilhouette.Transform = _humanBillboardRotation;
 
             viewPort3d.Children.Add(_humanSilhouette);
 
@@ -429,7 +432,7 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Обновляет billboard rotation каждый кадр (cylindrical billboard - только Y-axis rotation)
+        /// Обновляет billboard rotation каждый кадр (cylindrical billboard - только Y-axis rotation в мировом пространстве)
         /// </summary>
         private void UpdateBillboard(object? sender, EventArgs e) {
             // Проверяем что всё инициализировано
@@ -447,31 +450,18 @@ namespace AssetProcessor {
             // Вычисляем направление от billboard к камере
             var direction = cameraPos - billboardPos;
 
-            // Для cylindrical billboard: проецируем на горизонтальную плоскость
-            // (убираем вертикальную компоненту в зависимости от Up Vector)
-            double angle;
-            if (_isZUp) {
-                // Z-up: проецируем на XY плоскость (убираем Z компоненту)
-                direction.Z = 0;
-                // Вычисляем угол вокруг Z оси
-                angle = Math.Atan2(direction.Y, direction.X) * (180.0 / Math.PI);
-                // Поворачиваем вокруг Z (up vector в Z-up режиме)
-                var rotation = _humanBillboardRotation.Rotation as AxisAngleRotation3D;
-                if (rotation != null) {
-                    rotation.Axis = new Vector3D(0, 0, 1);
-                    rotation.Angle = angle - 90; // -90 чтобы плоскость смотрела на камеру
-                }
-            } else {
-                // Y-up: проецируем на XZ плоскость (убираем Y компоненту)
-                direction.Y = 0;
-                // Вычисляем угол вокруг Y оси
-                angle = Math.Atan2(direction.X, direction.Z) * (180.0 / Math.PI);
-                // Поворачиваем вокруг Y (up vector в Y-up режиме)
-                var rotation = _humanBillboardRotation.Rotation as AxisAngleRotation3D;
-                if (rotation != null) {
-                    rotation.Axis = new Vector3D(0, 1, 0);
-                    rotation.Angle = angle;
-                }
+            // Cylindrical billboard: всегда в мировом Y-up пространстве
+            // Проецируем на XZ плоскость (убираем Y компоненту)
+            direction.Y = 0;
+
+            // Вычисляем угол вокруг Y оси
+            double angle = Math.Atan2(direction.X, direction.Z) * (180.0 / Math.PI);
+
+            // Поворачиваем вокруг Y (мировая вертикальная ось)
+            var rotation = _humanBillboardRotation.Rotation as AxisAngleRotation3D;
+            if (rotation != null) {
+                rotation.Axis = new Vector3D(0, 1, 0);
+                rotation.Angle = angle;
             }
         }
     }

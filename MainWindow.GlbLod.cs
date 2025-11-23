@@ -247,16 +247,38 @@ namespace AssetProcessor {
                 LodLogger.Info($"Mesh created successfully");
             }
 
-            // Центрирование модели (аналогично LoadModel)
-            var bounds = modelGroup.Bounds;
+            // Вычисление bounds вручную из всех вершин (modelGroup.Bounds не работает до добавления в viewport)
+            var minX = double.MaxValue;
+            var minY = double.MaxValue;
+            var minZ = double.MaxValue;
+            var maxX = double.MinValue;
+            var maxY = double.MinValue;
+            var maxZ = double.MinValue;
+
+            foreach (var child in modelGroup.Children) {
+                if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
+                    foreach (var pos in mesh.Positions) {
+                        minX = Math.Min(minX, pos.X);
+                        minY = Math.Min(minY, pos.Y);
+                        minZ = Math.Min(minZ, pos.Z);
+                        maxX = Math.Max(maxX, pos.X);
+                        maxY = Math.Max(maxY, pos.Y);
+                        maxZ = Math.Max(maxZ, pos.Z);
+                    }
+                }
+            }
+
+            var sizeX = maxX - minX;
+            var sizeY = maxY - minY;
+            var sizeZ = maxZ - minZ;
             var centerOffset = new System.Windows.Media.Media3D.Vector3D(
-                -bounds.X - bounds.SizeX / 2,
-                -bounds.Y - bounds.SizeY / 2,
-                -bounds.Z - bounds.SizeZ / 2
+                -(minX + sizeX / 2),
+                -(minY + sizeY / 2),
+                -(minZ + sizeZ / 2)
             );
 
-            LodLogger.Info($"Model bounds: X={bounds.X:F2}, Y={bounds.Y:F2}, Z={bounds.Z:F2}");
-            LodLogger.Info($"Model size: {bounds.SizeX:F2} x {bounds.SizeY:F2} x {bounds.SizeZ:F2}");
+            LodLogger.Info($"Model bounds: min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
+            LodLogger.Info($"Model size: {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
             LodLogger.Info($"Center offset: X={centerOffset.X:F2}, Y={centerOffset.Y:F2}, Z={centerOffset.Z:F2}");
 
             var transformGroup = new Transform3DGroup();

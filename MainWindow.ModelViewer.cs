@@ -346,7 +346,10 @@ namespace AssetProcessor {
                 new Point3D(0.45, 0, 0),     // нижний правый
                 new Point3D(0.45, 1.8, 0),   // верхний правый
                 new Point3D(-0.45, 1.8, 0),  // верхний левый
-                new Vector3D(0, 0, 1)        // нормаль вперёд (для front face)
+                new Point(0, 1),             // UV нижний левый
+                new Point(1, 1),             // UV нижний правый
+                new Point(1, 0),             // UV верхний правый
+                new Point(0, 0)              // UV верхний левый
             );
 
             var geometry = planeMesh.ToMesh();

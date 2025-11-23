@@ -409,23 +409,48 @@ namespace AssetProcessor {
                 viewPort3d.Children.Remove(_humanSilhouette);
             }
 
-            // Создаём плоскость 1:2 (0.9м x 1.8м) с центром на высоте 0.9м
+            // Создаём ВЕРТИКАЛЬНУЮ плоскость 1:2 (0.9м x 1.8м)
+            // Плоскость стоит вертикально в мировом Y-up пространстве
             var silhouette = new Model3DGroup();
             var planeMesh = new MeshBuilder();
 
-            // Плоскость в плоскости XY (перпендикулярна оси Z), центр на высоте Y=0.9м
-            // Размеры: ширина 0.9м, высота 1.8м
-            // UV координаты flipped по вертикали (V: 0↔1)
-            planeMesh.AddQuad(
-                new Point3D(-0.45, 0, 0),    // нижний левый
-                new Point3D(0.45, 0, 0),     // нижний правый
-                new Point3D(0.45, 1.8, 0),   // верхний правый
-                new Point3D(-0.45, 1.8, 0),  // верхний левый
-                new Point(0, 0),             // UV нижний левый (flipped V: 0 вместо 1)
-                new Point(1, 0),             // UV нижний правый (flipped V: 0 вместо 1)
-                new Point(1, 1),             // UV верхний правый (flipped V: 1 вместо 0)
-                new Point(0, 1)              // UV верхний левый (flipped V: 1 вместо 0)
-            );
+            // Вертикальная плоскость в плоскости XY (нормаль смотрит на +Z)
+            // Нижний край на Y=0, верхний на Y=1.8
+            // UV координаты flipped по вертикали
+            var p0 = new Point3D(-0.45, 0, 0);    // нижний левый
+            var p1 = new Point3D(0.45, 0, 0);     // нижний правый
+            var p2 = new Point3D(0.45, 1.8, 0);   // верхний правый
+            var p3 = new Point3D(-0.45, 1.8, 0);  // верхний левый
+
+            // Добавляем два треугольника вручную для вертикальной плоскости
+            int baseIndex = planeMesh.Positions.Count;
+
+            planeMesh.Positions.Add(p0);
+            planeMesh.Positions.Add(p1);
+            planeMesh.Positions.Add(p2);
+            planeMesh.Positions.Add(p3);
+
+            // Нормали (вперёд, в направлении +Z)
+            var normal = new Vector3D(0, 0, 1);
+            planeMesh.Normals.Add(normal);
+            planeMesh.Normals.Add(normal);
+            planeMesh.Normals.Add(normal);
+            planeMesh.Normals.Add(normal);
+
+            // UV координаты (flipped вертикально)
+            planeMesh.TextureCoordinates.Add(new Point(0, 1)); // нижний левый
+            planeMesh.TextureCoordinates.Add(new Point(1, 1)); // нижний правый
+            planeMesh.TextureCoordinates.Add(new Point(1, 0)); // верхний правый
+            planeMesh.TextureCoordinates.Add(new Point(0, 0)); // верхний левый
+
+            // Два треугольника (против часовой стрелки для front face)
+            planeMesh.TriangleIndices.Add(baseIndex + 0);
+            planeMesh.TriangleIndices.Add(baseIndex + 1);
+            planeMesh.TriangleIndices.Add(baseIndex + 2);
+
+            planeMesh.TriangleIndices.Add(baseIndex + 0);
+            planeMesh.TriangleIndices.Add(baseIndex + 2);
+            planeMesh.TriangleIndices.Add(baseIndex + 3);
 
             var geometry = planeMesh.ToMesh();
 

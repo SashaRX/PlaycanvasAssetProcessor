@@ -81,7 +81,7 @@ namespace AssetProcessor {
                     }
                 }
                 sw.Stop();
-                Logger.Info($"Wireframe created: {totalEdges} edges in {sw.ElapsedMilliseconds}ms");
+                LodLogger.Info($"Wireframe created: {totalEdges} edges in {sw.ElapsedMilliseconds}ms");
             } else {
                 // Восстанавливаем оригинальные материалы
                 foreach (var kvp in _originalMaterials) {

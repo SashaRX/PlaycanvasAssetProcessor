@@ -91,6 +91,25 @@ namespace AssetProcessor {
         /// Создаёт wireframe линии для Model3DGroup рекурсивно
         /// </summary>
         private void CreateWireframeForModelGroup(Model3DGroup modelGroup) {
+            // Создаём один LinesVisual3D для всей модели (оптимизация)
+            var wireframe = new LinesVisual3D {
+                Color = Colors.White,
+                Thickness = 1
+            };
+            wireframe.Transform = modelGroup.Transform;
+
+            AddWireframeForGroup(modelGroup, wireframe.Points);
+
+            if (wireframe.Points.Count > 0) {
+                _wireframeLines.Add(wireframe);
+                viewPort3d.Children.Add(wireframe);
+            }
+        }
+
+        /// <summary>
+        /// Рекурсивно добавляет wireframe линии для Model3DGroup
+        /// </summary>
+        private void AddWireframeForGroup(Model3DGroup modelGroup, Point3DCollection wireframePoints) {
             foreach (var child in modelGroup.Children) {
                 if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
                     // Сохраняем оригинальный материал
@@ -101,18 +120,13 @@ namespace AssetProcessor {
                     // Делаем модель полупрозрачной/тёмной
                     var darkMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(50, 20, 20, 20)));
                     geoModel.Material = darkMaterial;
-                    geoModel.BackMaterial = darkMaterial;
+                    // BackMaterial = null для правильного culling (задние грани не рендерятся)
+                    geoModel.BackMaterial = null;
 
-                    // Создаём линии для всех рёбер треугольников
-                    var wireframe = new LinesVisual3D {
-                        Color = Colors.White,
-                        Thickness = 1
-                    };
+                    // Используем HashSet для уникальных рёбер (избегаем дублирования)
+                    var edges = new HashSet<(int, int)>();
 
-                    // Применяем ту же трансформацию что и у модели
-                    wireframe.Transform = modelGroup.Transform;
-
-                    // Добавляем рёбра для каждого треугольника
+                    // Собираем уникальные рёбра
                     for (int i = 0; i < mesh.TriangleIndices.Count; i += 3) {
                         if (i + 2 >= mesh.TriangleIndices.Count) break;
 
@@ -123,28 +137,33 @@ namespace AssetProcessor {
                         if (i0 >= mesh.Positions.Count || i1 >= mesh.Positions.Count || i2 >= mesh.Positions.Count)
                             continue;
 
-                        var p0 = mesh.Positions[i0];
-                        var p1 = mesh.Positions[i1];
-                        var p2 = mesh.Positions[i2];
-
-                        // Три ребра треугольника
-                        wireframe.Points.Add(p0);
-                        wireframe.Points.Add(p1);
-
-                        wireframe.Points.Add(p1);
-                        wireframe.Points.Add(p2);
-
-                        wireframe.Points.Add(p2);
-                        wireframe.Points.Add(p0);
+                        // Добавляем три ребра треугольника (упорядоченные пары)
+                        AddEdge(edges, i0, i1);
+                        AddEdge(edges, i1, i2);
+                        AddEdge(edges, i2, i0);
                     }
 
-                    _wireframeLines.Add(wireframe);
-                    viewPort3d.Children.Add(wireframe);
+                    // Добавляем уникальные рёбра в wireframe
+                    foreach (var (idx0, idx1) in edges) {
+                        wireframePoints.Add(mesh.Positions[idx0]);
+                        wireframePoints.Add(mesh.Positions[idx1]);
+                    }
 
                 } else if (child is Model3DGroup childGroup) {
-                    CreateWireframeForModelGroup(childGroup);
+                    AddWireframeForGroup(childGroup, wireframePoints);
                 }
             }
+        }
+
+        /// <summary>
+        /// Добавляет ребро в HashSet (упорядоченная пара для избежания дублирования)
+        /// </summary>
+        private void AddEdge(HashSet<(int, int)> edges, int i0, int i1) {
+            // Упорядочиваем индексы, чтобы (i0, i1) и (i1, i0) считались одним ребром
+            if (i0 > i1) {
+                (i0, i1) = (i1, i0);
+            }
+            edges.Add((i0, i1));
         }
 
         /// <summary>

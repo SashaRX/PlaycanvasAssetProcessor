@@ -14,6 +14,11 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly string _executablePath;
 
+        /// <summary>
+        /// Путь к исполняемому файлу gltfpack
+        /// </summary>
+        public string ExecutablePath => _executablePath;
+
         public GltfPackWrapper(string? executablePath = null) {
             _executablePath = executablePath ?? "gltfpack.exe";
         }

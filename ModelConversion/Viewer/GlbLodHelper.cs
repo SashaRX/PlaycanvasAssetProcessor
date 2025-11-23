@@ -62,8 +62,6 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     directory
                 };
 
-                string? searchDir = null;
-
                 // Сначала проверяем наличие манифеста в каждой из директорий
                 foreach (var dir in searchDirectories) {
                     var manifestPath = Path.Combine(dir, $"{modelName}_manifest.json");

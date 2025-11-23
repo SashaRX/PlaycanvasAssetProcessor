@@ -83,7 +83,7 @@ namespace AssetProcessor.ModelConversion.Viewer {
 
                 // gltfpack с флагом -noq (no quantization) для декодирования
                 var startInfo = new System.Diagnostics.ProcessStartInfo {
-                    FileName = _gltfPackWrapper.GltfPackPath,
+                    FileName = _gltfPackWrapper.ExecutablePath,
                     Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

@@ -54,25 +54,26 @@ namespace AssetProcessor {
                         if (!_isGlbViewerActive) {
                             // Загружаем модель во вьюпорт (3D просмотрщик)
                             LoadModel(selectedModel.Path);
-                        }
 
-                        // Обновляем информацию о модели
-                        AssimpContext context = new();
-                        Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                        Mesh? mesh = scene.Meshes.FirstOrDefault();
+                            // Обновляем информацию о модели из FBX
+                            AssimpContext context = new();
+                            Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                            Mesh? mesh = scene.Meshes.FirstOrDefault();
 
-                        if (mesh != null) {
-                            string? modelName = selectedModel.Name;
-                            int triangles = mesh.FaceCount;
-                            int vertices = mesh.VertexCount;
-                            int uvChannels = mesh.TextureCoordinateChannelCount;
+                            if (mesh != null) {
+                                string? modelName = selectedModel.Name;
+                                int triangles = mesh.FaceCount;
+                                int vertices = mesh.VertexCount;
+                                int uvChannels = mesh.TextureCoordinateChannelCount;
 
-                            if (!String.IsNullOrEmpty(modelName)) {
-                                UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                                if (!String.IsNullOrEmpty(modelName)) {
+                                    UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                                }
+
+                                UpdateUVImage(mesh);
                             }
-
-                            UpdateUVImage(mesh);
                         }
+                        // Если GLB viewer активен, информация уже обновлена в TryLoadGlbLodAsync
                     }
                 }
             }

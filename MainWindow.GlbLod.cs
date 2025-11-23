@@ -21,6 +21,7 @@ namespace AssetProcessor {
         private Dictionary<LodLevel, GlbLodHelper.LodInfo> _currentLodInfos = new();
         private ObservableCollection<LodDisplayInfo> _lodDisplayItems = new();
         private bool _isGlbViewerActive = false;
+        private Border? _viewportBorderContainer;
 
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
@@ -142,6 +143,10 @@ namespace AssetProcessor {
                 LodInformationPanel.Visibility = Visibility.Collapsed;
                 ModelCurrentLodTextBlock.Visibility = Visibility.Collapsed;
 
+                // Очищаем данные
+                _currentLodInfos.Clear();
+                _lodDisplayItems.Clear();
+
                 // Переключаемся обратно на FBX viewer если был активен GLB
                 if (_isGlbViewerActive) {
                     SwitchToFbxViewer();
@@ -177,15 +182,25 @@ namespace AssetProcessor {
             if (_glbViewer == null) return;
 
             Dispatcher.Invoke(() => {
-                // Скрываем FBX viewer (HelixViewport3D)
-                var viewportBorder = viewPort3d.Parent as Border;
-                if (viewportBorder != null) {
-                    viewportBorder.Child = null;
-                    viewportBorder.Child = _glbViewer;
-                }
+                try {
+                    // Сохраняем ссылку на Border контейнер при первом переключении
+                    if (_viewportBorderContainer == null) {
+                        _viewportBorderContainer = viewPort3d.Parent as Border;
+                    }
 
-                _isGlbViewerActive = true;
-                LodLogger.Info("Switched to GLB viewer");
+                    if (_viewportBorderContainer != null) {
+                        // Удаляем FBX viewer из контейнера
+                        _viewportBorderContainer.Child = null;
+
+                        // Добавляем GLB viewer
+                        _viewportBorderContainer.Child = _glbViewer;
+                    }
+
+                    _isGlbViewerActive = true;
+                    LodLogger.Info("Switched to GLB viewer");
+                } catch (Exception ex) {
+                    LodLogger.Error(ex, "Failed to switch to GLB viewer");
+                }
             });
         }
 
@@ -194,14 +209,26 @@ namespace AssetProcessor {
         /// </summary>
         private void SwitchToFbxViewer() {
             Dispatcher.Invoke(() => {
-                var viewportBorder = viewPort3d.Parent as Border;
-                if (viewportBorder != null) {
-                    viewportBorder.Child = null;
-                    viewportBorder.Child = viewPort3d;
-                }
+                try {
+                    if (_viewportBorderContainer != null) {
+                        // Удаляем GLB viewer из контейнера
+                        _viewportBorderContainer.Child = null;
 
-                _isGlbViewerActive = false;
-                LodLogger.Info("Switched to FBX viewer");
+                        // Очищаем GLB viewer перед переключением
+                        _glbViewer?.Clear();
+
+                        // Возвращаем FBX viewer
+                        _viewportBorderContainer.Child = viewPort3d;
+
+                        // Сбрасываем viewport (очищаем старые модели)
+                        ResetViewport();
+                    }
+
+                    _isGlbViewerActive = false;
+                    LodLogger.Info("Switched to FBX viewer");
+                } catch (Exception ex) {
+                    LodLogger.Error(ex, "Failed to switch to FBX viewer");
+                }
             });
         }
 

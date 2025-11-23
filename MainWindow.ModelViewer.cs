@@ -11,7 +11,8 @@ namespace AssetProcessor {
     /// </summary>
     public partial class MainWindow {
         private CoordinateSystemVisual3D? _pivotVisual;
-        private ModelVisual3D? _humanSilhouette; // Силуэт человека для масштаба
+        private ModelVisual3D? _humanSilhouette; // Силуэт человека для масштаба (billboard плоскость)
+        private RotateTransform3D? _humanBillboardRotation; // Rotation для billboard эффекта
         private bool _isWireframeMode = false;
         private bool _isZUp = false; // Y-up по умолчанию
         private readonly List<LinesVisual3D> _wireframeLines = new(); // Линии для wireframe
@@ -77,10 +78,15 @@ namespace AssetProcessor {
             if (showHuman) {
                 UpdateHumanSilhouette();
             } else {
+                // Останавливаем billboard обновление
+                StopBillboardUpdate();
+
                 // Убираем силуэт
                 if (_humanSilhouette != null && viewPort3d.Children.Contains(_humanSilhouette)) {
                     viewPort3d.Children.Remove(_humanSilhouette);
                 }
+                _humanSilhouette = null;
+                _humanBillboardRotation = null;
             }
         }
 
@@ -318,7 +324,7 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Создаёт или обновляет силуэт человека (1.8м) для понимания масштаба
+        /// Создаёт или обновляет силуэт человека (1.8м) как billboard плоскость 1:2
         /// </summary>
         private void UpdateHumanSilhouette() {
             // Проверка что viewport инициализирован
@@ -329,36 +335,53 @@ namespace AssetProcessor {
                 viewPort3d.Children.Remove(_humanSilhouette);
             }
 
-            // Создаём новый силуэт (простая капсула: цилиндр + сфера для головы)
+            // Создаём плоскость 1:2 (0.9м x 1.8м) с центром на высоте 0.9м
             var silhouette = new Model3DGroup();
+            var planeMesh = new MeshBuilder();
 
-            // Тело (цилиндр 0.4м диаметр, 1.5м высота от 0 до 1.5)
-            var bodyMesh = new MeshBuilder();
-            bodyMesh.AddCylinder(new Point3D(0, 0.75, 0), new Point3D(0, 0, 0), 0.2, 16);
+            // Плоскость в плоскости XY (перпендикулярна оси Z), центр на высоте Y=0.9м
+            // Размеры: ширина 0.9м, высота 1.8м
+            planeMesh.AddQuad(
+                new Point3D(-0.45, 0, 0),    // нижний левый
+                new Point3D(0.45, 0, 0),     // нижний правый
+                new Point3D(0.45, 1.8, 0),   // верхний правый
+                new Point3D(-0.45, 1.8, 0),  // верхний левый
+                new Vector3D(0, 0, 1)        // нормаль вперёд (для front face)
+            );
 
-            // Голова (сфера 0.2м радиус на высоте 1.7м)
-            bodyMesh.AddSphere(new Point3D(0, 1.7, 0), 0.2, 12, 12);
+            var geometry = planeMesh.ToMesh();
 
-            var geometry = bodyMesh.ToMesh();
-
-            // Используем EmissiveMaterial для unlit отображения (полупрозрачный зелёный)
+            // EmissiveMaterial для unlit отображения (полупрозрачный зелёный)
             var material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(100, 50, 255, 50))));
             material.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(150, 50, 200, 50))));
 
             var model = new GeometryModel3D(geometry, material);
-            model.BackMaterial = material;
+            model.BackMaterial = material; // Двусторонний рендеринг
+
             silhouette.Children.Add(model);
 
             _humanSilhouette = new ModelVisual3D { Content = silhouette };
 
-            // Применяем трансформацию up vector если нужно
+            // Создаём Transform3DGroup для комбинации billboard rotation + up vector
+            var transformGroup = new Transform3DGroup();
+
+            // Billboard rotation (будет обновляться каждый кадр)
+            _humanBillboardRotation = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0));
+            transformGroup.Children.Add(_humanBillboardRotation);
+
+            // Применяем трансформацию up vector если нужно (Z-up поворот на -90° вокруг X)
             if (_isZUp) {
-                var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
-                _humanSilhouette.Transform = new RotateTransform3D(rotation);
+                var upRotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
+                transformGroup.Children.Add(new RotateTransform3D(upRotation));
             }
 
+            _humanSilhouette.Transform = transformGroup;
+
             viewPort3d.Children.Add(_humanSilhouette);
+
+            // Запускаем billboard обновление если ещё не запущено
+            StartBillboardUpdate();
         }
 
         /// <summary>
@@ -383,6 +406,70 @@ namespace AssetProcessor {
             // Pivot = 20% от максимального размера модели (но не меньше 0.5 и не больше 5)
             double pivotSize = Math.Max(0.5, Math.Min(5.0, maxDimension * 0.2));
             return pivotSize;
+        }
+
+        /// <summary>
+        /// Запускает обновление billboard rotation (cylindrical billboard - только горизонтальный поворот)
+        /// </summary>
+        private void StartBillboardUpdate() {
+            // Подписываемся на CompositionTarget.Rendering только если ещё не подписаны
+            // Проверяем через weak event чтобы не создавать дубликаты
+            System.Windows.Media.CompositionTarget.Rendering -= UpdateBillboard;
+            System.Windows.Media.CompositionTarget.Rendering += UpdateBillboard;
+        }
+
+        /// <summary>
+        /// Останавливает обновление billboard rotation
+        /// </summary>
+        private void StopBillboardUpdate() {
+            System.Windows.Media.CompositionTarget.Rendering -= UpdateBillboard;
+        }
+
+        /// <summary>
+        /// Обновляет billboard rotation каждый кадр (cylindrical billboard - только Y-axis rotation)
+        /// </summary>
+        private void UpdateBillboard(object? sender, EventArgs e) {
+            // Проверяем что всё инициализировано
+            if (_humanSilhouette == null || _humanBillboardRotation == null || viewPort3d?.Camera == null) {
+                return;
+            }
+
+            // Получаем позицию камеры
+            var camera = viewPort3d.Camera as PerspectiveCamera;
+            if (camera == null) return;
+
+            var cameraPos = camera.Position;
+            var billboardPos = new Point3D(0, 0, 0); // Плоскость стоит в origin
+
+            // Вычисляем направление от billboard к камере
+            var direction = cameraPos - billboardPos;
+
+            // Для cylindrical billboard: проецируем на горизонтальную плоскость
+            // (убираем вертикальную компоненту в зависимости от Up Vector)
+            double angle;
+            if (_isZUp) {
+                // Z-up: проецируем на XY плоскость (убираем Z компоненту)
+                direction.Z = 0;
+                // Вычисляем угол вокруг Z оси
+                angle = Math.Atan2(direction.Y, direction.X) * (180.0 / Math.PI);
+                // Поворачиваем вокруг Z (up vector в Z-up режиме)
+                var rotation = _humanBillboardRotation.Rotation as AxisAngleRotation3D;
+                if (rotation != null) {
+                    rotation.Axis = new Vector3D(0, 0, 1);
+                    rotation.Angle = angle - 90; // -90 чтобы плоскость смотрела на камеру
+                }
+            } else {
+                // Y-up: проецируем на XZ плоскость (убираем Y компоненту)
+                direction.Y = 0;
+                // Вычисляем угол вокруг Y оси
+                angle = Math.Atan2(direction.X, direction.Z) * (180.0 / Math.PI);
+                // Поворачиваем вокруг Y (up vector в Y-up режиме)
+                var rotation = _humanBillboardRotation.Rotation as AxisAngleRotation3D;
+                if (rotation != null) {
+                    rotation.Axis = new Vector3D(0, 1, 0);
+                    rotation.Angle = angle;
+                }
+            }
         }
     }
 }

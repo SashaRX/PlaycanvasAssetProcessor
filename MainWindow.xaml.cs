@@ -1943,6 +1943,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             try {
+                // Останавливаем billboard обновление
+                StopBillboardUpdate();
+
                 cancellationTokenSource?.Cancel();
                 textureLoadCancellation?.Cancel();
 

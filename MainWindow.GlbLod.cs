@@ -200,24 +200,12 @@ namespace AssetProcessor {
             foreach (var mesh in scene.Meshes) {
                 var builder = new MeshBuilder();
 
-                // Проверяем наличие UV координат для всех вершин
-                bool hasTextureCoords = mesh.HasTextureCoords(0) &&
-                                       mesh.TextureCoordinateChannels[0] != null &&
-                                       mesh.TextureCoordinateChannels[0].Count == mesh.VertexCount;
-
                 // Вершины и нормали
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
                     builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                     builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
-
-                    // Добавляем текстурные координаты только если они есть для ВСЕХ вершин
-                    if (hasTextureCoords) {
-                        builder.TextureCoordinates.Add(new System.Windows.Point(
-                            mesh.TextureCoordinateChannels[0][i].X,
-                            mesh.TextureCoordinateChannels[0][i].Y));
-                    }
                 }
 
                 // Индексы
@@ -229,6 +217,10 @@ namespace AssetProcessor {
                         builder.TriangleIndices.Add(face.Indices[2]);
                     }
                 }
+
+                // НЕ добавляем текстурные координаты - они вызывают проблемы
+                // MeshBuilder требует либо УВ для ВСЕХ вершин, либо вообще никаких
+                // Пока используем только геометрию без текстур
 
                 var geometry = builder.ToMesh(true);
                 var material = new DiffuseMaterial(new SolidColorBrush(Colors.Gray));

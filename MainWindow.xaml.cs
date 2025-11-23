@@ -47,7 +47,7 @@ namespace AssetProcessor {
 
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
-        private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
+        private readonly List<string> supportedModelFormats = [".fbx", ".obj", ".glb"];
 
         private readonly SemaphoreSlim getAssetsSemaphore;
         private readonly SemaphoreSlim downloadSemaphore;

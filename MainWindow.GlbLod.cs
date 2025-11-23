@@ -12,6 +12,7 @@ using Assimp;
 using HelixToolkit.Wpf;
 using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Viewer;
+using AssetProcessor.ModelConversion.Settings;
 using AssetProcessor.Resources;
 using NLog;
 
@@ -109,7 +110,14 @@ namespace AssetProcessor {
                 // Создаём GlbLoader если его еще нет
                 if (_glbLoader == null) {
                     LodLogger.Info("Creating GlbLoader");
-                    _glbLoader = new GlbLoader();
+
+                    var modelConversionSettings = ModelConversionSettingsManager.LoadSettings();
+                    var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
+                        ? "gltfpack.exe"
+                        : modelConversionSettings.GltfPackExecutablePath;
+
+                    LodLogger.Info($"  gltfpack for meshopt decompression: {gltfPackPath}");
+                    _glbLoader = new GlbLoader(gltfPackPath);
                 }
 
                 // Загружаем все LOD сцены

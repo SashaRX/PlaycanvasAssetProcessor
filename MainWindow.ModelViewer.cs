@@ -415,43 +415,38 @@ namespace AssetProcessor {
             var silhouette = new Model3DGroup();
             var planeMesh = new MeshBuilder();
 
-            // Вертикальная плоскость в плоскости XY (Z=0, нормаль смотрит на +Z)
-            // Это правильная ориентация для cylindrical billboard rotation вокруг Y оси
-            // Нижний край на Y=0, верхний на Y=1.8, ширина по X
-            var p0 = new Point3D(-0.45, 0, 0);   // нижний левый
-            var p1 = new Point3D(0.45, 0, 0);    // нижний правый
-            var p2 = new Point3D(0.45, 1.8, 0);  // верхний правый
-            var p3 = new Point3D(-0.45, 1.8, 0); // верхний левый
-
-            // Добавляем два треугольника вручную для вертикальной плоскости
-            int baseIndex = planeMesh.Positions.Count;
+            // ВЕРТИКАЛЬНАЯ плоскость в YZ (X=0), высота по Z - для Z-up системы!
+            // Размер: 0.9м (ширина) x 1.8м (высота) - пропорции человека
+            var p0 = new Point3D(0, -0.45, 0);   // нижний левый
+            var p1 = new Point3D(0, 0.45, 0);    // нижний правый
+            var p2 = new Point3D(0, 0.45, 1.8);  // верхний правый (высота 1.8м!)
+            var p3 = new Point3D(0, -0.45, 1.8); // верхний левый
 
             planeMesh.Positions.Add(p0);
             planeMesh.Positions.Add(p1);
             planeMesh.Positions.Add(p2);
             planeMesh.Positions.Add(p3);
 
-            // Нормали (вперед, в направлении +Z, к камере по умолчанию)
-            var normal = new Vector3D(0, 0, 1);
+            // Нормали смотрят вперед по +X (перпендикулярно плоскости YZ)
+            var normal = new Vector3D(1, 0, 0);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
             planeMesh.Normals.Add(normal);
 
-            // UV координаты - rotate 90° CCW (если человек лежит вправо, поворачиваем на 90° против часовой)
-            planeMesh.TextureCoordinates.Add(new Point(1, 1)); // p0: нижний левый
-            planeMesh.TextureCoordinates.Add(new Point(0, 1)); // p1: нижний правый
-            planeMesh.TextureCoordinates.Add(new Point(0, 0)); // p2: верхний правый
-            planeMesh.TextureCoordinates.Add(new Point(1, 0)); // p3: верхний левый
+            // UV координаты
+            planeMesh.TextureCoordinates.Add(new Point(0, 1));
+            planeMesh.TextureCoordinates.Add(new Point(1, 1));
+            planeMesh.TextureCoordinates.Add(new Point(1, 0));
+            planeMesh.TextureCoordinates.Add(new Point(0, 0));
 
-            // Два треугольника (против часовой стрелки для front face)
-            planeMesh.TriangleIndices.Add(baseIndex + 0);
-            planeMesh.TriangleIndices.Add(baseIndex + 1);
-            planeMesh.TriangleIndices.Add(baseIndex + 2);
-
-            planeMesh.TriangleIndices.Add(baseIndex + 0);
-            planeMesh.TriangleIndices.Add(baseIndex + 2);
-            planeMesh.TriangleIndices.Add(baseIndex + 3);
+            // Два треугольника (CCW winding order)
+            planeMesh.TriangleIndices.Add(0);
+            planeMesh.TriangleIndices.Add(1);
+            planeMesh.TriangleIndices.Add(2);
+            planeMesh.TriangleIndices.Add(0);
+            planeMesh.TriangleIndices.Add(2);
+            planeMesh.TriangleIndices.Add(3);
 
             var geometry = planeMesh.ToMesh();
 
@@ -463,26 +458,29 @@ namespace AssetProcessor {
                 bitmap.BeginInit();
                 bitmap.UriSource = uri;
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.CreateOptions = BitmapCreateOptions.PreservePixelFormat; // Сохраняем альфа-канал
+                bitmap.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
                 bitmap.EndInit();
                 bitmap.Freeze();
 
-                var brush = new ImageBrush(bitmap);
-                brush.Opacity = 1.0; // Полная непрозрачность для brush, альфа берется из PNG
-                brush.Stretch = Stretch.Fill;
-                brush.ViewportUnits = BrushMappingMode.Absolute;
+                var brush = new ImageBrush(bitmap) {
+                    Opacity = 1.0, // Полная непрозрачность brush, альфа берется из PNG
+                    Stretch = Stretch.Fill,
+                    ViewportUnits = BrushMappingMode.Absolute
+                };
 
-                // Используем только EmissiveMaterial для unlit отображения с альфа-каналом
-                // EmissiveMaterial в WPF 3D лучше работает с прозрачностью для billboard
+                // Только EmissiveMaterial для unlit отображения с правильной прозрачностью
                 material = new EmissiveMaterial(brush);
+
+                LodLogger.Info("Loaded refman.png texture for billboard");
             } catch (Exception ex) {
-                // Fallback: если текстура не загрузилась, используем ярко-зелёный цвет (полная непрозрачность)
                 LodLogger.Warn($"Failed to load refman.png: {ex.Message}");
-                material = new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(255, 0, 255, 0)));
+                var fallbackBrush = new SolidColorBrush(Color.FromArgb(255, 0, 255, 0));
+                material = new EmissiveMaterial(fallbackBrush);
             }
 
-            var model = new GeometryModel3D(geometry, material);
-            model.BackMaterial = material; // Двусторонний рендеринг
+            var model = new GeometryModel3D(geometry, material){
+                BackMaterial = material // Двусторонний рендеринг
+            };
 
             silhouette.Children.Add(model);
 
@@ -589,17 +587,17 @@ namespace AssetProcessor {
             // Вычисляем направление от billboard к камере
             var direction = cameraPos - billboardPos;
 
-            // Cylindrical billboard: всегда в мировом Y-up пространстве
-            // Проецируем на XZ плоскость (убираем Y компоненту)
-            direction.Y = 0;
+            // Cylindrical billboard: вращение вокруг Z (вертикальной оси в Z-up системе)
+            // Проецируем на XY плоскость (убираем Z компоненту)
+            direction.Z = 0;
 
-            // Вычисляем угол вокруг Y оси
-            double angle = Math.Atan2(direction.X, direction.Z) * (180.0 / Math.PI);
+            // Вычисляем угол на XY плоскости вокруг Z оси
+            double angle = Math.Atan2(direction.Y, direction.X) * (180.0 / Math.PI);
 
-            // Поворачиваем вокруг Y (мировая вертикальная ось)
-            var rotation = _humanBillboardRotation.Rotation as AxisAngleRotation3D;
-            if (rotation != null) {
-                rotation.Axis = new Vector3D(0, 1, 0);
+            // Поворачиваем вокруг Z (вертикальная ось в Z-up)
+            if (_humanBillboardRotation.Rotation is AxisAngleRotation3D rotation)
+{
+                rotation.Axis = new Vector3D(0, 0, 1);
                 rotation.Angle = angle;
             }
         }

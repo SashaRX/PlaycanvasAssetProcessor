@@ -14,11 +14,6 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly string _executablePath;
 
-        /// <summary>
-        /// Путь к исполняемому файлу gltfpack
-        /// </summary>
-        public string ExecutablePath => _executablePath;
-
         public GltfPackWrapper(string? executablePath = null) {
             _executablePath = executablePath ?? "gltfpack.exe";
         }
@@ -101,7 +96,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     excludeTextures
                 );
 
-                Logger.Info($"gltfpack command: {_executablePath} {arguments}");
+                Logger.Debug($"gltfpack command: {_executablePath} {arguments}");
 
                 var startInfo = new ProcessStartInfo {
                     FileName = _executablePath,
@@ -208,11 +203,6 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 args.Add("-tr");
                 Logger.Info("gltfpack: Using -tr flag (textures will NOT be embedded)");
             }
-
-            // КРИТИЧНО: -kv сохраняет ВСЕ vertex attributes (включая UV), даже если они не используются
-            // Без этого флага gltfpack удаляет TEXCOORD_0 из моделей без текстур
-            args.Add("-kv");
-            Logger.Info("gltfpack: Using -kv flag (keeping all vertex attributes including unused UV)");
 
             // Упрощение геометрии
             if (lodSettings.SimplificationRatio < 1.0f) {

@@ -44,19 +44,7 @@
       "Bash(dotnet nuget search:*)",
       "Bash(dotnet restore:*)",
       "Bash(git merge-base:*)",
-      "Bash(xargs git log --oneline -1)",
-      "Bash(Select-String -Pattern \"Build succeeded|Build FAILED|error\" -Context 0,2)",
-      "WebFetch(domain:github.com)",
-      "Bash(cmd.exe /c \"taskkill /F /PID 14376\")",
-      "WebSearch",
-      "Bash(./FBX2glTF-windows-x86_64.exe --separate-textures --input \"C:\\project\\playcanvas_projects\\North Wind\\assets\\content\\models\\props\\oldMailBox\\oldMailBox.FBX\" --output \"D:\\Temp\\test_man_output\\oldMailBox\")",
-      "Bash(D:sourceProjectreposPlaycanvasAssetProcessorbinReleasenet9.0-windows10.0.26100.0win-x64gltfpack.exe --help)",
-      "Bash($null)",
-      "Bash(Select-String -Pattern \"Size|Length\")",
-      "Bash(python -c:*)",
-      "Bash(cat:*)",
-      "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" --help)",
-      "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" -h)"
+      "Bash(xargs git log --oneline -1)"
     ],
     "deny": [],
     "ask": []

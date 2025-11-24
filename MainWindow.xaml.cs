@@ -47,7 +47,7 @@ namespace AssetProcessor {
 
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
-        private readonly List<string> supportedModelFormats = [".fbx", ".obj"];//, ".glb"];
+        private readonly List<string> supportedModelFormats = [".fbx", ".obj", ".glb"];
 
         private readonly SemaphoreSlim getAssetsSemaphore;
         private readonly SemaphoreSlim downloadSemaphore;
@@ -1943,6 +1943,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             try {
+                // Останавливаем billboard обновление
+                StopBillboardUpdate();
+
                 cancellationTokenSource?.Cancel();
                 textureLoadCancellation?.Cancel();
 
@@ -3013,6 +3016,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     logService.LogInfo($"✓ Model processed successfully");
                     logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
                     logService.LogInfo($"  Manifest: {result.ManifestPath}");
+
+                    // Автоматически обновляем viewport с новыми GLB LOD файлами
+                    logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
+                    await TryLoadGlbLodAsync(selectedModel.Path);
+
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
@@ -3080,6 +3088,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     AppSettings.Default.ModelPreviewRowHeight = currentHeight;
                     AppSettings.Default.Save();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Обработчик нажатия клавиш для всего окна
+        /// </summary>
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) {
+            // F - Fit model to viewport (ZoomExtents)
+            if (e.Key == System.Windows.Input.Key.F) {
+                viewPort3d?.ZoomExtents();
+                e.Handled = true;
             }
         }
 

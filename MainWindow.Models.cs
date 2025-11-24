@@ -43,29 +43,37 @@ using AssetProcessor.TextureViewer;
 
 namespace AssetProcessor {
     public partial class MainWindow {
-        private void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+        private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
                     if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
-                                                                // Загружаем модель во вьюпорт (3D просмотрщик)
-                        LoadModel(selectedModel.Path);
-                        // Обновляем информацию о модели
-                        AssimpContext context = new();
-                        Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                        Mesh? mesh = scene.Meshes.FirstOrDefault();
+                        // Сначала пытаемся загрузить GLB LOD файлы
+                        await TryLoadGlbLodAsync(selectedModel.Path);
 
-                        if (mesh != null) {
-                            string? modelName = selectedModel.Name;
-                            int triangles = mesh.FaceCount;
-                            int vertices = mesh.VertexCount;
-                            int uvChannels = mesh.TextureCoordinateChannelCount;
+                        // Если GLB LOD не найдены, загружаем FBX модель в обычный вьюпорт
+                        if (!_isGlbViewerActive) {
+                            // Загружаем модель во вьюпорт (3D просмотрщик)
+                            LoadModel(selectedModel.Path);
 
-                            if (!String.IsNullOrEmpty(modelName)) {
-                                UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                            // Обновляем информацию о модели из FBX
+                            AssimpContext context = new();
+                            Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                            Mesh? mesh = scene.Meshes.FirstOrDefault();
+
+                            if (mesh != null) {
+                                string? modelName = selectedModel.Name;
+                                int triangles = mesh.FaceCount;
+                                int vertices = mesh.VertexCount;
+                                int uvChannels = mesh.TextureCoordinateChannelCount;
+
+                                if (!String.IsNullOrEmpty(modelName)) {
+                                    UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                                }
+
+                                UpdateUVImage(mesh);
                             }
-
-                            UpdateUVImage(mesh);
                         }
+                        // Если GLB viewer активен, информация уже обновлена в TryLoadGlbLodAsync
                     }
                 }
             }
@@ -129,6 +137,7 @@ namespace AssetProcessor {
                                 }
 
                                 Assimp.Vector3D uv = textureCoordinates[vertexIndex];
+                                // UV теперь корректные благодаря TexCoordBits=16
                                 points[i] = new Point(uv.X * width, (1 - uv.Y) * height);
                             }
 
@@ -243,8 +252,8 @@ namespace AssetProcessor {
                 ModelVisual3D visual3d = new() { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
-                ModelVisual3D pivotGizmo = MainWindowHelpers.CreatePivotGizmo(transformGroup);
-                viewPort3d.Children.Add(pivotGizmo);
+                // Применяем настройки viewer (wireframe, pivot, up vector)
+                ApplyViewerSettingsToModel();
 
                 viewPort3d.ZoomExtents();
 

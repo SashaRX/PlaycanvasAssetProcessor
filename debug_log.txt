@@ -1,0 +1,1188 @@
+23.11.25 15:01:39: Parsing material 'woodenFence_mat' from JSON
+23.11.25 15:01:39: Parsing material 'oldSofa_mat' from JSON
+23.11.25 15:01:39: Parsing material 'New Material Copy' from JSON
+23.11.25 15:01:39: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:39: Parsing material 'build_01_Doors_01_mat' from JSON
+23.11.25 15:01:39: Property glossMap resolved to texture ID 251660666
+23.11.25 15:01:39: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:39: Property opacityMap missing or null while parsing material
+23.11.25 15:01:39: Property normalMap resolved to texture ID 251660669
+23.11.25 15:01:39: Parsing material 'metalContainer_mat' from JSON
+23.11.25 15:01:39: Property diffuseMap resolved to texture ID 251660670
+23.11.25 15:01:39: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:39: Property specularMap missing or null while parsing material
+23.11.25 15:01:39: Property glossMap resolved to texture ID 251055550
+23.11.25 15:01:39: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:39: Property glossMap resolved to texture ID 251284120
+23.11.25 15:01:39: Property aoMap resolved to texture ID 252030375
+23.11.25 15:01:39: Property opacityMap missing or null while parsing material
+23.11.25 15:01:39: Property opacityMap missing or null while parsing material
+23.11.25 15:01:39: Property normalMap resolved to texture ID 251055551
+23.11.25 15:01:39: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:39: Property glossMap missing or null while parsing material
+23.11.25 15:01:39: Property opacityMap missing or null while parsing material
+23.11.25 15:01:39: Property diffuseMap resolved to texture ID 251055552
+23.11.25 15:01:39: Parsing material 'woodenFence_Old_mat' from JSON
+23.11.25 15:01:39: Property specularMap missing or null while parsing material
+23.11.25 15:01:39: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:39: Property glossMap resolved to texture ID 250669865
+23.11.25 15:01:39: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:39: Property opacityMap missing or null while parsing material
+23.11.25 15:01:39: Property normalMap resolved to texture ID 250669867
+23.11.25 15:01:39: Property diffuseMap resolved to texture ID 250669871
+23.11.25 15:01:39: Property aoMap resolved to texture ID 251055549
+23.11.25 15:01:39: Property specularMap missing or null while parsing material
+23.11.25 15:01:39: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:39: Property normalMap resolved to texture ID 251284121
+23.11.25 15:01:40: Property aoMap resolved to texture ID 250669863
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251284122
+23.11.25 15:01:40: Parsing material 'well_mat' from JSON
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property metalnessMap resolved to texture ID 251664214
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251664219
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251284119
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:39: Property normalMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251664221
+23.11.25 15:01:40: Property diffuseMap missing or null while parsing material
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251664220
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property aoMap missing or null while parsing material
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251664218
+23.11.25 15:01:40: Parsing material 'build_01_Brick_mat' from JSON
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251282698
+23.11.25 15:01:39: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 250682413
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251282708
+23.11.25 15:01:40: Parsing material 'concreteStairs_mat' from JSON
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251185649
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251185651
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251185652
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251282707
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'build_01_topBrick_mat' from JSON
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251234309
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251282697
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'woodenBench_01_mat' from JSON
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251234311
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251234310
+23.11.25 15:01:40: Property glossMap resolved to texture ID 250469149
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap resolved to texture ID 250469150
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251234306
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 250469151
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'New Material' from JSON
+23.11.25 15:01:40: Property aoMap resolved to texture ID 250469148
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251185648
+23.11.25 15:01:40: Parsing material 'New Material' from JSON
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap missing or null while parsing material
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap missing or null while parsing material
+23.11.25 15:01:40: Property diffuseMap missing or null while parsing material
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'build_01_topBrick_alpha_mat' from JSON
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'roofSide_mat' from JSON
+23.11.25 15:01:40: Property aoMap missing or null while parsing material
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251652980
+23.11.25 15:01:40: Parsing material 'stovePipe_01_mat' from JSON
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'foundation_01_mat' from JSON
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251652982
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251652983
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251085887
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251085888
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251652979
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251085889
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 250677511
+23.11.25 15:01:40: Parsing material 'build_03_Found_mat' from JSON
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251178672
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251085886
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251178673
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap resolved to texture ID 250677513
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 250677512
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251178674
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property aoMap resolved to texture ID 250677509
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:40: Property glossMap resolved to texture ID 251234309
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:40: Property opacityMap missing or null while parsing material
+23.11.25 15:01:40: Property aoMap resolved to texture ID 251178671
+23.11.25 15:01:40: Property normalMap resolved to texture ID 251234311
+23.11.25 15:01:40: Property normalMap resolved to texture ID 250682414
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 251234310
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property normalMap missing or null while parsing material
+23.11.25 15:01:40: Property diffuseMap missing or null while parsing material
+23.11.25 15:01:40: Parsing material 'foundation_02_mat' from JSON
+23.11.25 15:01:40: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:41: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:41: Property aoMap resolved to texture ID 251234306
+23.11.25 15:01:41: Property glossMap resolved to texture ID 251217566
+23.11.25 15:01:41: Parsing material 'oldMailBox_mat' from JSON
+23.11.25 15:01:41: Property opacityMap missing or null while parsing material
+23.11.25 15:01:41: Property metalnessMap resolved to texture ID 252507784
+23.11.25 15:01:41: Property normalMap resolved to texture ID 251217567
+23.11.25 15:01:41: Property glossMap resolved to texture ID 252507788
+23.11.25 15:01:41: Property diffuseMap resolved to texture ID 251217568
+23.11.25 15:01:41: Property opacityMap missing or null while parsing material
+23.11.25 15:01:41: Property specularMap missing or null while parsing material
+23.11.25 15:01:41: Property normalMap resolved to texture ID 252507790
+23.11.25 15:01:41: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:41: Property diffuseMap resolved to texture ID 252507791
+23.11.25 15:01:41: Property aoMap resolved to texture ID 251217565
+23.11.25 15:01:41: Property specularMap missing or null while parsing material
+23.11.25 15:01:40: Property specularMap missing or null while parsing material
+23.11.25 15:01:41: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:41: Property aoMap missing or null while parsing material
+23.11.25 15:01:41: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:41: Property aoMap resolved to texture ID 252507789
+23.11.25 15:01:41: Parsing material 'electricShield_01_mat' from JSON
+23.11.25 15:01:41: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:41: Property glossMap resolved to texture ID 250680217
+23.11.25 15:01:41: Property opacityMap missing or null while parsing material
+23.11.25 15:01:41: Property normalMap resolved to texture ID 250680218
+23.11.25 15:01:41: Property diffuseMap resolved to texture ID 250680219
+23.11.25 15:01:39: Parsing material 'dirtyLada_mat' from JSON
+23.11.25 15:01:41: Property specularMap missing or null while parsing material
+23.11.25 15:01:41: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:41: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:41: Property aoMap resolved to texture ID 250680216
+23.11.25 15:01:40: Property diffuseMap resolved to texture ID 250682415
+23.11.25 15:01:41: Property specularMap missing or null while parsing material
+23.11.25 15:01:41: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:41: Parsing material 'build_01_Win_01_mat' from JSON
+23.11.25 15:01:41: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:41: Property glossMap resolved to texture ID 251278243
+23.11.25 15:01:41: Property opacityMap missing or null while parsing material
+23.11.25 15:01:41: Property aoMap resolved to texture ID 250682412
+23.11.25 15:01:41: Property normalMap resolved to texture ID 251278245
+23.11.25 15:01:41: Property glossMap resolved to texture ID 252031666
+23.11.25 15:01:41: Property opacityMap missing or null while parsing material
+23.11.25 15:01:41: Parsing material 'oldTrailer_mat' from JSON
+23.11.25 15:01:41: Property metalnessMap resolved to texture ID 251659937
+23.11.25 15:01:41: Property glossMap resolved to texture ID 251659938
+23.11.25 15:01:41: Property opacityMap missing or null while parsing material
+23.11.25 15:01:41: Property normalMap resolved to texture ID 251659939
+23.11.25 15:01:41: Property diffuseMap resolved to texture ID 251659940
+23.11.25 15:01:41: Parsing material 'build_03_Wall_01_mat' from JSON
+23.11.25 15:01:41: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:41: Property specularMap missing or null while parsing material
+23.11.25 15:01:42: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:42: Property glossMap resolved to texture ID 251654042
+23.11.25 15:01:42: Property opacityMap missing or null while parsing material
+23.11.25 15:01:42: Property normalMap resolved to texture ID 251654044
+23.11.25 15:01:42: Property diffuseMap resolved to texture ID 251654043
+23.11.25 15:01:42: Property aoMap resolved to texture ID 251659936
+23.11.25 15:01:42: Property specularMap missing or null while parsing material
+23.11.25 15:01:42: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:42: Property aoMap resolved to texture ID 251654040
+23.11.25 15:01:42: Parsing material 'concreteBase_02_mat' from JSON
+23.11.25 15:01:41: Property diffuseMap resolved to texture ID 251278246
+23.11.25 15:01:42: Property specularMap missing or null while parsing material
+23.11.25 15:01:42: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:42: Property glossMap resolved to texture ID 250679483
+23.11.25 15:01:42: Property opacityMap missing or null while parsing material
+23.11.25 15:01:42: Property normalMap resolved to texture ID 250679484
+23.11.25 15:01:42: Parsing material 'build_01_winEdge_mat' from JSON
+23.11.25 15:01:42: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:42: Property glossMap resolved to texture ID 251214224
+23.11.25 15:01:42: Parsing material 'man_mat' from JSON
+23.11.25 15:01:42: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:42: Property glossMap missing or null while parsing material
+23.11.25 15:01:42: Property opacityMap missing or null while parsing material
+23.11.25 15:01:42: Property normalMap missing or null while parsing material
+23.11.25 15:01:42: Property diffuseMap missing or null while parsing material
+23.11.25 15:01:42: Property specularMap missing or null while parsing material
+23.11.25 15:01:42: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:42: Property aoMap missing or null while parsing material
+23.11.25 15:01:42: Property opacityMap missing or null while parsing material
+23.11.25 15:01:42: Property normalMap resolved to texture ID 251214225
+23.11.25 15:01:42: Property diffuseMap resolved to texture ID 251214226
+23.11.25 15:01:42: Parsing material 'milkCanister_mat' from JSON
+23.11.25 15:01:42: Property metalnessMap resolved to texture ID 252031529
+23.11.25 15:01:42: Property specularMap missing or null while parsing material
+23.11.25 15:01:42: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:42: Property aoMap resolved to texture ID 251214223
+23.11.25 15:01:41: Property normalMap resolved to texture ID 252031662
+23.11.25 15:01:42: Property diffuseMap resolved to texture ID 252031663
+23.11.25 15:01:42: Property glossMap resolved to texture ID 252031529
+23.11.25 15:01:42: Property diffuseMap resolved to texture ID 250679485
+23.11.25 15:01:43: Property opacityMap missing or null while parsing material
+23.11.25 15:01:43: Property normalMap resolved to texture ID 252031530
+23.11.25 15:01:43: Property diffuseMap resolved to texture ID 252031528
+23.11.25 15:01:43: Property specularMap missing or null while parsing material
+23.11.25 15:01:43: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:43: Property specularMap missing or null while parsing material
+23.11.25 15:01:43: Property aoMap resolved to texture ID 252031529
+23.11.25 15:01:43: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:43: Property aoMap resolved to texture ID 250679482
+23.11.25 15:01:42: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:43: Parsing material 'metalCan_01_mat' from JSON
+23.11.25 15:01:43: Property metalnessMap resolved to texture ID 250472117
+23.11.25 15:01:43: Property aoMap resolved to texture ID 251278242
+23.11.25 15:01:43: Property glossMap resolved to texture ID 250472117
+23.11.25 15:01:43: Property opacityMap missing or null while parsing material
+23.11.25 15:01:43: Parsing material 'build_01_brickCorn_mat' from JSON
+23.11.25 15:01:43: Property normalMap resolved to texture ID 250472116
+23.11.25 15:01:43: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:43: Property diffuseMap resolved to texture ID 250472118
+23.11.25 15:01:43: Property specularMap missing or null while parsing material
+23.11.25 15:01:43: Property glossMap resolved to texture ID 251275876
+23.11.25 15:01:43: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:43: Property opacityMap missing or null while parsing material
+23.11.25 15:01:43: Property normalMap resolved to texture ID 251275877
+23.11.25 15:01:43: Property diffuseMap resolved to texture ID 251275878
+23.11.25 15:01:43: Property aoMap resolved to texture ID 250472112
+23.11.25 15:01:43: Parsing material 'woodenWall_mat' from JSON
+23.11.25 15:01:43: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:43: Property glossMap resolved to texture ID 251085577
+23.11.25 15:01:43: Property specularMap missing or null while parsing material
+23.11.25 15:01:43: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:43: Property aoMap resolved to texture ID 251275875
+23.11.25 15:01:43: Property opacityMap missing or null while parsing material
+23.11.25 15:01:43: Parsing material 'stoveBarrel_mat' from JSON
+23.11.25 15:01:44: Property normalMap resolved to texture ID 251085578
+23.11.25 15:01:44: Property diffuseMap resolved to texture ID 251085579
+23.11.25 15:01:44: Property specularMap missing or null while parsing material
+23.11.25 15:01:44: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:44: Property aoMap resolved to texture ID 251085576
+23.11.25 15:01:43: Parsing material 'chimney_mat' from JSON
+23.11.25 15:01:44: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:44: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:44: Property glossMap resolved to texture ID 252031430
+23.11.25 15:01:44: Parsing material 'bunkerDoor_mat' from JSON
+23.11.25 15:01:44: Property glossMap resolved to texture ID 251662419
+23.11.25 15:01:44: Parsing material 'abandonedIronBox_mat' from JSON
+23.11.25 15:01:44: Property opacityMap resolved to texture ID 252031434
+23.11.25 15:01:44: Property normalMap resolved to texture ID 252031431
+23.11.25 15:01:44: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:44: Parsing material 'barrelBlue_mat' from JSON
+23.11.25 15:01:44: Property glossMap resolved to texture ID 240562919
+23.11.25 15:01:44: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:44: Property opacityMap missing or null while parsing material
+23.11.25 15:01:44: Property glossMap resolved to texture ID 250471311
+23.11.25 15:01:44: Property normalMap resolved to texture ID 240562912
+23.11.25 15:01:44: Property opacityMap missing or null while parsing material
+23.11.25 15:01:44: Property normalMap resolved to texture ID 250471312
+23.11.25 15:01:44: Property diffuseMap resolved to texture ID 250471314
+23.11.25 15:01:44: Property specularMap missing or null while parsing material
+23.11.25 15:01:44: Property diffuseMap resolved to texture ID 240562916
+23.11.25 15:01:44: Property specularMap missing or null while parsing material
+23.11.25 15:01:44: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:44: Property diffuseMap resolved to texture ID 252031433
+23.11.25 15:01:44: Property specularMap missing or null while parsing material
+23.11.25 15:01:44: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:44: Property aoMap resolved to texture ID 252031428
+23.11.25 15:01:44: Property aoMap resolved to texture ID 240562914
+23.11.25 15:01:44: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:45: Property aoMap resolved to texture ID 250471310
+23.11.25 15:01:42: Property specularMap missing or null while parsing material
+23.11.25 15:01:45: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:44: Property metalnessMap resolved to texture ID 251652476
+23.11.25 15:01:45: Property glossMap resolved to texture ID 251652477
+23.11.25 15:01:45: Property opacityMap missing or null while parsing material
+23.11.25 15:01:44: Property opacityMap missing or null while parsing material
+23.11.25 15:01:45: Property normalMap resolved to texture ID 251652478
+23.11.25 15:01:45: Property normalMap resolved to texture ID 251662420
+23.11.25 15:01:45: Property diffuseMap resolved to texture ID 251652479
+23.11.25 15:01:45: Property diffuseMap resolved to texture ID 251662421
+23.11.25 15:01:45: Property specularMap missing or null while parsing material
+23.11.25 15:01:45: Property specularMap missing or null while parsing material
+23.11.25 15:01:45: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:45: Property aoMap resolved to texture ID 251662418
+23.11.25 15:01:45: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:45: Property aoMap resolved to texture ID 252031664
+23.11.25 15:01:45: Property aoMap resolved to texture ID 251652475
+23.11.25 15:01:45: Parsing material 'groundPineNeedles2_mat' from JSON
+23.11.25 15:01:45: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:45: Property glossMap resolved to texture ID 252032095
+23.11.25 15:01:45: Property opacityMap missing or null while parsing material
+23.11.25 15:01:45: Property normalMap resolved to texture ID 252032097
+23.11.25 15:01:45: Property diffuseMap resolved to texture ID 252032098
+23.11.25 15:01:45: Property specularMap missing or null while parsing material
+23.11.25 15:01:45: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:45: Property aoMap resolved to texture ID 252032096
+23.11.25 15:01:46: Parsing material 'oldWheel_01_mat' from JSON
+23.11.25 15:01:46: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:46: Parsing material 'dev_gray_mat' from JSON
+23.11.25 15:01:46: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:46: Property glossMap missing or null while parsing material
+23.11.25 15:01:46: Property opacityMap missing or null while parsing material
+23.11.25 15:01:46: Property normalMap missing or null while parsing material
+23.11.25 15:01:46: Property glossMap resolved to texture ID 250668677
+23.11.25 15:01:46: Property opacityMap missing or null while parsing material
+23.11.25 15:01:46: Property diffuseMap missing or null while parsing material
+23.11.25 15:01:46: Property normalMap resolved to texture ID 250668676
+23.11.25 15:01:46: Property diffuseMap resolved to texture ID 250668678
+23.11.25 15:01:46: Property specularMap missing or null while parsing material
+23.11.25 15:01:46: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:46: Property specularMap missing or null while parsing material
+23.11.25 15:01:46: Property aoMap resolved to texture ID 250668673
+23.11.25 15:01:46: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:46: Property aoMap missing or null while parsing material
+23.11.25 15:01:47: Parsing material 'redChairs_mat' from JSON
+23.11.25 15:01:47: Property metalnessMap resolved to texture ID 250472218
+23.11.25 15:01:47: Property glossMap resolved to texture ID 250472221
+23.11.25 15:01:47: Property opacityMap missing or null while parsing material
+23.11.25 15:01:47: Parsing material 'woodenTableWhite_mat' from JSON
+23.11.25 15:01:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:47: Property glossMap resolved to texture ID 250420912
+23.11.25 15:01:47: Property opacityMap missing or null while parsing material
+23.11.25 15:01:47: Property normalMap resolved to texture ID 250472222
+23.11.25 15:01:47: Parsing material 'surface_' from JSON
+23.11.25 15:01:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:47: Property glossMap missing or null while parsing material
+23.11.25 15:01:47: Property opacityMap missing or null while parsing material
+23.11.25 15:01:47: Property normalMap missing or null while parsing material
+23.11.25 15:01:47: Property diffuseMap missing or null while parsing material
+23.11.25 15:01:47: Property specularMap missing or null while parsing material
+23.11.25 15:01:47: Property normalMap resolved to texture ID 250420915
+23.11.25 15:01:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:47: Property diffuseMap resolved to texture ID 250420916
+23.11.25 15:01:47: Property aoMap missing or null while parsing material
+23.11.25 15:01:47: Property specularMap missing or null while parsing material
+23.11.25 15:01:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:47: Property aoMap resolved to texture ID 250420911
+23.11.25 15:01:47: Property diffuseMap resolved to texture ID 250472217
+23.11.25 15:01:47: Parsing material 'airplaneWrecked_mat' from JSON
+23.11.25 15:01:47: Property specularMap missing or null while parsing material
+23.11.25 15:01:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:01:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:47: Property glossMap resolved to texture ID 240383580
+23.11.25 15:01:47: Property aoMap resolved to texture ID 250472368
+23.11.25 15:01:47: Property opacityMap missing or null while parsing material
+23.11.25 15:01:47: Property normalMap resolved to texture ID 240383578
+23.11.25 15:01:47: Property diffuseMap resolved to texture ID 240383579
+23.11.25 15:01:47: Property specularMap missing or null while parsing material
+23.11.25 15:01:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:01:47: Property aoMap resolved to texture ID 240383577
+23.11.25 15:02:47: Parsing material 'New Material Copy' from JSON
+23.11.25 15:02:47: Parsing material 'woodenFence_mat' from JSON
+23.11.25 15:02:47: Parsing material 'build_01_Brick_mat' from JSON
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap resolved to texture ID 250682413
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property normalMap missing or null while parsing material
+23.11.25 15:02:47: Property normalMap resolved to texture ID 250682414
+23.11.25 15:02:47: Property diffuseMap missing or null while parsing material
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 250682415
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property aoMap resolved to texture ID 250682412
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property aoMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap resolved to texture ID 251282698
+23.11.25 15:02:47: Parsing material 'New Material' from JSON
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Parsing material 'woodenFence_Old_mat' from JSON
+23.11.25 15:02:47: Property glossMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap resolved to texture ID 250669865
+23.11.25 15:02:47: Property normalMap missing or null while parsing material
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property diffuseMap missing or null while parsing material
+23.11.25 15:02:47: Property normalMap resolved to texture ID 250669867
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 250669871
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property aoMap missing or null while parsing material
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Parsing material 'build_01_topBrick_mat' from JSON
+23.11.25 15:02:47: Property aoMap resolved to texture ID 250669863
+23.11.25 15:02:47: Parsing material 'build_01_topBrick_alpha_mat' from JSON
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap resolved to texture ID 251234309
+23.11.25 15:02:47: Property glossMap resolved to texture ID 251234309
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property normalMap resolved to texture ID 251234311
+23.11.25 15:02:47: Property normalMap resolved to texture ID 251234311
+23.11.25 15:02:47: Property normalMap resolved to texture ID 251282708
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 251234310
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 251234310
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property aoMap resolved to texture ID 251234306
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 251282707
+23.11.25 15:02:47: Property aoMap resolved to texture ID 251234306
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Parsing material 'woodenBench_01_mat' from JSON
+23.11.25 15:02:47: Property aoMap resolved to texture ID 251282697
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap resolved to texture ID 250469149
+23.11.25 15:02:47: Parsing material 'stovePipe_01_mat' from JSON
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap resolved to texture ID 250677511
+23.11.25 15:02:47: Property normalMap resolved to texture ID 250469150
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 250469151
+23.11.25 15:02:47: Property normalMap resolved to texture ID 250677513
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 250677512
+23.11.25 15:02:47: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property aoMap resolved to texture ID 250469148
+23.11.25 15:02:47: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:47: Property aoMap resolved to texture ID 250677509
+23.11.25 15:02:47: Parsing material 'metalContainer_mat' from JSON
+23.11.25 15:02:47: Parsing material 'New Material' from JSON
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Parsing material 'well_mat' from JSON
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap resolved to texture ID 251664214
+23.11.25 15:02:47: Property glossMap resolved to texture ID 251664219
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property glossMap missing or null while parsing material
+23.11.25 15:02:47: Property opacityMap missing or null while parsing material
+23.11.25 15:02:47: Property normalMap missing or null while parsing material
+23.11.25 15:02:47: Property normalMap resolved to texture ID 251664221
+23.11.25 15:02:47: Parsing material 'concreteStairs_mat' from JSON
+23.11.25 15:02:47: Property diffuseMap resolved to texture ID 251664220
+23.11.25 15:02:48: Property specularMap missing or null while parsing material
+23.11.25 15:02:47: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:48: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:48: Property glossMap resolved to texture ID 251185649
+23.11.25 15:02:48: Property opacityMap missing or null while parsing material
+23.11.25 15:02:48: Property aoMap resolved to texture ID 251664218
+23.11.25 15:02:48: Property normalMap resolved to texture ID 251185651
+23.11.25 15:02:48: Property diffuseMap resolved to texture ID 251185652
+23.11.25 15:02:48: Property specularMap missing or null while parsing material
+23.11.25 15:02:48: Parsing material 'build_01_Doors_01_mat' from JSON
+23.11.25 15:02:48: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:48: Property aoMap resolved to texture ID 251185648
+23.11.25 15:02:48: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:48: Property glossMap resolved to texture ID 251284120
+23.11.25 15:02:48: Property opacityMap missing or null while parsing material
+23.11.25 15:02:48: Property normalMap resolved to texture ID 251284121
+23.11.25 15:02:47: Property diffuseMap missing or null while parsing material
+23.11.25 15:02:48: Property specularMap missing or null while parsing material
+23.11.25 15:02:48: Property diffuseMap resolved to texture ID 251284122
+23.11.25 15:02:48: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:48: Property specularMap missing or null while parsing material
+23.11.25 15:02:48: Property aoMap missing or null while parsing material
+23.11.25 15:02:48: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:48: Property aoMap resolved to texture ID 251284119
+23.11.25 15:02:48: Parsing material 'roofSide_mat' from JSON
+23.11.25 15:02:48: Parsing material 'build_03_Found_mat' from JSON
+23.11.25 15:02:48: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:48: Property glossMap resolved to texture ID 251652980
+23.11.25 15:02:48: Property opacityMap missing or null while parsing material
+23.11.25 15:02:48: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:48: Property glossMap resolved to texture ID 251178672
+23.11.25 15:02:48: Parsing material 'foundation_01_mat' from JSON
+23.11.25 15:02:48: Property normalMap resolved to texture ID 251652982
+23.11.25 15:02:48: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:48: Property diffuseMap resolved to texture ID 251652983
+23.11.25 15:02:48: Property glossMap resolved to texture ID 251085887
+23.11.25 15:02:48: Parsing material 'electricShield_01_mat' from JSON
+23.11.25 15:02:48: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:48: Property glossMap resolved to texture ID 250680217
+23.11.25 15:02:48: Property opacityMap missing or null while parsing material
+23.11.25 15:02:48: Property specularMap missing or null while parsing material
+23.11.25 15:02:48: Property opacityMap missing or null while parsing material
+23.11.25 15:02:48: Property normalMap resolved to texture ID 250680218
+23.11.25 15:02:49: Property normalMap resolved to texture ID 251085888
+23.11.25 15:02:49: Parsing material 'foundation_02_mat' from JSON
+23.11.25 15:02:49: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 251085889
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:49: Parsing material 'oldMailBox_mat' from JSON
+23.11.25 15:02:49: Property aoMap resolved to texture ID 251085886
+23.11.25 15:02:49: Property metalnessMap resolved to texture ID 252507784
+23.11.25 15:02:49: Property glossMap resolved to texture ID 252507788
+23.11.25 15:02:49: Property opacityMap missing or null while parsing material
+23.11.25 15:02:49: Property normalMap resolved to texture ID 252507790
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 252507791
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:49: Property aoMap resolved to texture ID 252507789
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 250680219
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Property glossMap resolved to texture ID 251217566
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:49: Property aoMap resolved to texture ID 250680216
+23.11.25 15:02:49: Property opacityMap missing or null while parsing material
+23.11.25 15:02:49: Property normalMap resolved to texture ID 251217567
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 251217568
+23.11.25 15:02:49: Property aoMap resolved to texture ID 251652979
+23.11.25 15:02:47: Parsing material 'dirtyLada_mat' from JSON
+23.11.25 15:02:49: Parsing material 'concreteBase_02_mat' from JSON
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Parsing material 'build_01_Win_01_mat' from JSON
+23.11.25 15:02:49: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:49: Property glossMap resolved to texture ID 251278243
+23.11.25 15:02:49: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:49: Property glossMap resolved to texture ID 250679483
+23.11.25 15:02:49: Property opacityMap missing or null while parsing material
+23.11.25 15:02:49: Property normalMap resolved to texture ID 251278245
+23.11.25 15:02:49: Property opacityMap missing or null while parsing material
+23.11.25 15:02:49: Property normalMap resolved to texture ID 250679484
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 250679485
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 251278246
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Property aoMap resolved to texture ID 251278242
+23.11.25 15:02:49: Parsing material 'groundPineNeedles2_mat' from JSON
+23.11.25 15:02:49: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:49: Property glossMap resolved to texture ID 252032095
+23.11.25 15:02:49: Property opacityMap missing or null while parsing material
+23.11.25 15:02:49: Property normalMap resolved to texture ID 252032097
+23.11.25 15:02:49: Property diffuseMap resolved to texture ID 252032098
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:49: Property aoMap resolved to texture ID 250679482
+23.11.25 15:02:49: Property specularMap missing or null while parsing material
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:50: Property aoMap resolved to texture ID 252032096
+23.11.25 15:02:49: Parsing material 'oldTrailer_mat' from JSON
+23.11.25 15:02:49: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:50: Property aoMap resolved to texture ID 251217565
+23.11.25 15:02:49: Parsing material 'build_03_Wall_01_mat' from JSON
+23.11.25 15:02:50: Property metalnessMap resolved to texture ID 251659937
+23.11.25 15:02:50: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:50: Property glossMap resolved to texture ID 251659938
+23.11.25 15:02:50: Property opacityMap missing or null while parsing material
+23.11.25 15:02:50: Property glossMap resolved to texture ID 251654042
+23.11.25 15:02:50: Property opacityMap missing or null while parsing material
+23.11.25 15:02:50: Property normalMap resolved to texture ID 251654044
+23.11.25 15:02:50: Parsing material 'build_01_winEdge_mat' from JSON
+23.11.25 15:02:50: Property normalMap resolved to texture ID 251659939
+23.11.25 15:02:50: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:50: Property glossMap resolved to texture ID 251214224
+23.11.25 15:02:50: Property opacityMap missing or null while parsing material
+23.11.25 15:02:50: Property diffuseMap resolved to texture ID 251659940
+23.11.25 15:02:50: Property specularMap missing or null while parsing material
+23.11.25 15:02:50: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:50: Property normalMap resolved to texture ID 251214225
+23.11.25 15:02:50: Property diffuseMap resolved to texture ID 251214226
+23.11.25 15:02:50: Property specularMap missing or null while parsing material
+23.11.25 15:02:50: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:50: Property aoMap resolved to texture ID 251214223
+23.11.25 15:02:50: Property diffuseMap resolved to texture ID 251654043
+23.11.25 15:02:50: Property aoMap resolved to texture ID 251659936
+23.11.25 15:02:50: Parsing material 'man_mat' from JSON
+23.11.25 15:02:50: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:50: Property glossMap missing or null while parsing material
+23.11.25 15:02:50: Parsing material 'milkCanister_mat' from JSON
+23.11.25 15:02:50: Property metalnessMap resolved to texture ID 252031529
+23.11.25 15:02:50: Property glossMap resolved to texture ID 252031529
+23.11.25 15:02:50: Property opacityMap missing or null while parsing material
+23.11.25 15:02:50: Property opacityMap missing or null while parsing material
+23.11.25 15:02:50: Property normalMap resolved to texture ID 252031530
+23.11.25 15:02:50: Property normalMap missing or null while parsing material
+23.11.25 15:02:50: Property diffuseMap missing or null while parsing material
+23.11.25 15:02:50: Property specularMap missing or null while parsing material
+23.11.25 15:02:50: Property specularMap missing or null while parsing material
+23.11.25 15:02:50: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:50: Property diffuseMap resolved to texture ID 252031528
+23.11.25 15:02:51: Property aoMap missing or null while parsing material
+23.11.25 15:02:50: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:51: Parsing material 'stoveBarrel_mat' from JSON
+23.11.25 15:02:51: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:51: Property specularMap missing or null while parsing material
+23.11.25 15:02:51: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:51: Property aoMap resolved to texture ID 252031529
+23.11.25 15:02:51: Property glossMap resolved to texture ID 252031430
+23.11.25 15:02:51: Property opacityMap resolved to texture ID 252031434
+23.11.25 15:02:51: Property aoMap resolved to texture ID 251654040
+23.11.25 15:02:51: Property normalMap resolved to texture ID 252031431
+23.11.25 15:02:48: Property opacityMap missing or null while parsing material
+23.11.25 15:02:51: Property diffuseMap resolved to texture ID 252031433
+23.11.25 15:02:51: Property specularMap missing or null while parsing material
+23.11.25 15:02:51: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:51: Property aoMap resolved to texture ID 252031428
+23.11.25 15:02:51: Parsing material 'woodenWall_mat' from JSON
+23.11.25 15:02:51: Parsing material 'metalCan_01_mat' from JSON
+23.11.25 15:02:51: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:51: Property glossMap resolved to texture ID 251085577
+23.11.25 15:02:51: Property opacityMap missing or null while parsing material
+23.11.25 15:02:51: Property normalMap resolved to texture ID 251085578
+23.11.25 15:02:51: Property diffuseMap resolved to texture ID 251085579
+23.11.25 15:02:51: Property specularMap missing or null while parsing material
+23.11.25 15:02:51: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:51: Property aoMap resolved to texture ID 251085576
+23.11.25 15:02:51: Parsing material 'build_01_brickCorn_mat' from JSON
+23.11.25 15:02:51: Property metalnessMap resolved to texture ID 250472117
+23.11.25 15:02:51: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:51: Property glossMap resolved to texture ID 251275876
+23.11.25 15:02:51: Property opacityMap missing or null while parsing material
+23.11.25 15:02:51: Parsing material 'bunkerDoor_mat' from JSON
+23.11.25 15:02:51: Property normalMap resolved to texture ID 251275877
+23.11.25 15:02:51: Property diffuseMap resolved to texture ID 251275878
+23.11.25 15:02:52: Property specularMap missing or null while parsing material
+23.11.25 15:02:51: Property metalnessMap resolved to texture ID 251652476
+23.11.25 15:02:52: Property glossMap resolved to texture ID 251652477
+23.11.25 15:02:52: Property opacityMap missing or null while parsing material
+23.11.25 15:02:52: Property normalMap resolved to texture ID 251652478
+23.11.25 15:02:52: Property diffuseMap resolved to texture ID 251652479
+23.11.25 15:02:52: Property specularMap missing or null while parsing material
+23.11.25 15:02:52: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:52: Property aoMap resolved to texture ID 251652475
+23.11.25 15:02:52: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:52: Property aoMap resolved to texture ID 251275875
+23.11.25 15:02:51: Parsing material 'chimney_mat' from JSON
+23.11.25 15:02:51: Property glossMap resolved to texture ID 250472117
+23.11.25 15:02:52: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:52: Property opacityMap missing or null while parsing material
+23.11.25 15:02:52: Property glossMap resolved to texture ID 251662419
+23.11.25 15:02:52: Property normalMap resolved to texture ID 250472116
+23.11.25 15:02:52: Parsing material 'abandonedIronBox_mat' from JSON
+23.11.25 15:02:52: Parsing material 'barrelBlue_mat' from JSON
+23.11.25 15:02:52: Property opacityMap missing or null while parsing material
+23.11.25 15:02:52: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:52: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:52: Property glossMap resolved to texture ID 250471311
+23.11.25 15:02:52: Property opacityMap missing or null while parsing material
+23.11.25 15:02:52: Property normalMap resolved to texture ID 250471312
+23.11.25 15:02:52: Property diffuseMap resolved to texture ID 250471314
+23.11.25 15:02:52: Property specularMap missing or null while parsing material
+23.11.25 15:02:52: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:52: Property aoMap resolved to texture ID 250471310
+23.11.25 15:02:52: Property diffuseMap resolved to texture ID 250472118
+23.11.25 15:02:52: Property specularMap missing or null while parsing material
+23.11.25 15:02:52: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:52: Property aoMap resolved to texture ID 250472112
+23.11.25 15:02:52: Property glossMap resolved to texture ID 240562919
+23.11.25 15:02:52: Property opacityMap missing or null while parsing material
+23.11.25 15:02:52: Property normalMap resolved to texture ID 240562912
+23.11.25 15:02:52: Property normalMap resolved to texture ID 251662420
+23.11.25 15:02:53: Property diffuseMap resolved to texture ID 240562916
+23.11.25 15:02:53: Property specularMap missing or null while parsing material
+23.11.25 15:02:53: Property diffuseMap resolved to texture ID 251662421
+23.11.25 15:02:53: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:53: Property aoMap resolved to texture ID 240562914
+23.11.25 15:02:49: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:53: Property specularMap missing or null while parsing material
+23.11.25 15:02:51: Property normalMap resolved to texture ID 251178673
+23.11.25 15:02:53: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:53: Property aoMap resolved to texture ID 251662418
+23.11.25 15:02:53: Property diffuseMap resolved to texture ID 251178674
+23.11.25 15:02:53: Property specularMap missing or null while parsing material
+23.11.25 15:02:53: Property glossMap resolved to texture ID 252031666
+23.11.25 15:02:53: Property opacityMap missing or null while parsing material
+23.11.25 15:02:53: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:53: Property normalMap resolved to texture ID 252031662
+23.11.25 15:02:53: Property diffuseMap resolved to texture ID 252031663
+23.11.25 15:02:53: Property aoMap resolved to texture ID 251178671
+23.11.25 15:02:53: Parsing material 'oldSofa_mat' from JSON
+23.11.25 15:02:53: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:53: Property specularMap missing or null while parsing material
+23.11.25 15:02:53: Property glossMap resolved to texture ID 251660666
+23.11.25 15:02:53: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:53: Property aoMap resolved to texture ID 252031664
+23.11.25 15:02:53: Property opacityMap missing or null while parsing material
+23.11.25 15:02:53: Property normalMap resolved to texture ID 251660669
+23.11.25 15:02:53: Property diffuseMap resolved to texture ID 251660670
+23.11.25 15:02:53: Property specularMap missing or null while parsing material
+23.11.25 15:02:53: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:54: Property aoMap resolved to texture ID 252030375
+23.11.25 15:02:47: Property glossMap resolved to texture ID 251055550
+23.11.25 15:02:54: Property opacityMap missing or null while parsing material
+23.11.25 15:02:54: Property normalMap resolved to texture ID 251055551
+23.11.25 15:02:54: Property diffuseMap resolved to texture ID 251055552
+23.11.25 15:02:54: Property specularMap missing or null while parsing material
+23.11.25 15:02:54: Parsing material 'oldWheel_01_mat' from JSON
+23.11.25 15:02:54: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:54: Property glossMap resolved to texture ID 250668677
+23.11.25 15:02:54: Property opacityMap missing or null while parsing material
+23.11.25 15:02:54: Parsing material 'dev_gray_mat' from JSON
+23.11.25 15:02:54: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:54: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:54: Property glossMap missing or null while parsing material
+23.11.25 15:02:55: Property opacityMap missing or null while parsing material
+23.11.25 15:02:55: Property normalMap missing or null while parsing material
+23.11.25 15:02:54: Property normalMap resolved to texture ID 250668676
+23.11.25 15:02:55: Property diffuseMap missing or null while parsing material
+23.11.25 15:02:55: Property specularMap missing or null while parsing material
+23.11.25 15:02:55: Property diffuseMap resolved to texture ID 250668678
+23.11.25 15:02:55: Property specularMap missing or null while parsing material
+23.11.25 15:02:55: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:55: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:55: Property aoMap missing or null while parsing material
+23.11.25 15:02:55: Parsing material 'redChairs_mat' from JSON
+23.11.25 15:02:55: Property aoMap resolved to texture ID 250668673
+23.11.25 15:02:55: Property metalnessMap resolved to texture ID 250472218
+23.11.25 15:02:55: Property glossMap resolved to texture ID 250472221
+23.11.25 15:02:55: Property aoMap resolved to texture ID 251055549
+23.11.25 15:02:55: Parsing material 'woodenTableWhite_mat' from JSON
+23.11.25 15:02:55: Property opacityMap missing or null while parsing material
+23.11.25 15:02:55: Parsing material 'surface_' from JSON
+23.11.25 15:02:55: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:55: Property glossMap resolved to texture ID 250420912
+23.11.25 15:02:55: Property opacityMap missing or null while parsing material
+23.11.25 15:02:56: Property normalMap resolved to texture ID 250420915
+23.11.25 15:02:56: Property diffuseMap resolved to texture ID 250420916
+23.11.25 15:02:56: Property specularMap missing or null while parsing material
+23.11.25 15:02:56: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:55: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:56: Property aoMap resolved to texture ID 250420911
+23.11.25 15:02:56: Property glossMap missing or null while parsing material
+23.11.25 15:02:56: Property opacityMap missing or null while parsing material
+23.11.25 15:02:56: Property normalMap missing or null while parsing material
+23.11.25 15:02:56: Property diffuseMap missing or null while parsing material
+23.11.25 15:02:56: Property specularMap missing or null while parsing material
+23.11.25 15:02:55: Parsing material 'airplaneWrecked_mat' from JSON
+23.11.25 15:02:56: Property metalnessMap missing or null while parsing material
+23.11.25 15:02:56: Property glossMap resolved to texture ID 240383580
+23.11.25 15:02:56: Property opacityMap missing or null while parsing material
+23.11.25 15:02:56: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:56: Property aoMap missing or null while parsing material
+23.11.25 15:02:56: Property normalMap resolved to texture ID 240383578
+23.11.25 15:02:55: Property normalMap resolved to texture ID 250472222
+23.11.25 15:02:56: Property diffuseMap resolved to texture ID 240383579
+23.11.25 15:02:56: Property diffuseMap resolved to texture ID 250472217
+23.11.25 15:02:56: Property specularMap missing or null while parsing material
+23.11.25 15:02:56: Property specularMap missing or null while parsing material
+23.11.25 15:02:56: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:56: Property emissiveMap missing or null while parsing material
+23.11.25 15:02:56: Property aoMap resolved to texture ID 250472368
+23.11.25 15:02:56: Property aoMap resolved to texture ID 240383577
+23.11.25 15:15:59: Parsing material 'dirtyLada_mat' from JSON
+23.11.25 15:15:59: Parsing material 'woodenFence_mat' from JSON
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property glossMap resolved to texture ID 252031666
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property glossMap resolved to texture ID 250682413
+23.11.25 15:15:59: Property normalMap resolved to texture ID 252031662
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property diffuseMap resolved to texture ID 252031663
+23.11.25 15:15:59: Property normalMap resolved to texture ID 250682414
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property diffuseMap resolved to texture ID 250682415
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property aoMap resolved to texture ID 252031664
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Property aoMap resolved to texture ID 250682412
+23.11.25 15:15:59: Parsing material 'New Material Copy' from JSON
+23.11.25 15:15:59: Parsing material 'build_01_Doors_01_mat' from JSON
+23.11.25 15:15:59: Parsing material 'well_mat' from JSON
+23.11.25 15:15:59: Parsing material 'oldSofa_mat' from JSON
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property glossMap resolved to texture ID 251284120
+23.11.25 15:15:59: Property glossMap resolved to texture ID 251660666
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property normalMap resolved to texture ID 251284121
+23.11.25 15:15:59: Property normalMap resolved to texture ID 251660669
+23.11.25 15:15:59: Property diffuseMap resolved to texture ID 251284122
+23.11.25 15:15:59: Property diffuseMap resolved to texture ID 251660670
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Property aoMap resolved to texture ID 251284119
+23.11.25 15:15:59: Property aoMap resolved to texture ID 252030375
+23.11.25 15:15:59: Property metalnessMap resolved to texture ID 251664214
+23.11.25 15:15:59: Parsing material 'New Material' from JSON
+23.11.25 15:15:59: Parsing material 'woodenFence_Old_mat' from JSON
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Parsing material 'New Material' from JSON
+23.11.25 15:15:59: Property glossMap missing or null while parsing material
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property glossMap missing or null while parsing material
+23.11.25 15:15:59: Property normalMap missing or null while parsing material
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property diffuseMap missing or null while parsing material
+23.11.25 15:15:59: Property normalMap missing or null while parsing material
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property diffuseMap missing or null while parsing material
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property aoMap missing or null while parsing material
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Parsing material 'metalContainer_mat' from JSON
+23.11.25 15:15:59: Property aoMap missing or null while parsing material
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Parsing material 'build_01_topBrick_alpha_mat' from JSON
+23.11.25 15:15:59: Property glossMap resolved to texture ID 251055550
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property normalMap resolved to texture ID 251055551
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:15:59: Property diffuseMap resolved to texture ID 251055552
+23.11.25 15:15:59: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property emissiveMap missing or null while parsing material
+23.11.25 15:15:59: Property glossMap resolved to texture ID 251234309
+23.11.25 15:15:59: Property opacityMap missing or null while parsing material
+23.11.25 15:15:59: Property aoMap resolved to texture ID 251055549
+23.11.25 15:15:59: Property normalMap resolved to texture ID 251234311
+23.11.25 15:15:59: Property glossMap resolved to texture ID 250669865
+23.11.25 15:16:00: Property diffuseMap resolved to texture ID 251234310
+23.11.25 15:16:00: Property specularMap missing or null while parsing material
+23.11.25 15:16:00: Property opacityMap missing or null while parsing material
+23.11.25 15:16:00: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:00: Property normalMap resolved to texture ID 250669867
+23.11.25 15:16:00: Property aoMap resolved to texture ID 251234306
+23.11.25 15:16:00: Property diffuseMap resolved to texture ID 250669871
+23.11.25 15:16:00: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Property glossMap resolved to texture ID 251664219
+23.11.25 15:15:59: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:00: Parsing material 'build_01_topBrick_mat' from JSON
+23.11.25 15:16:00: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:00: Parsing material 'woodenBench_01_mat' from JSON
+23.11.25 15:16:00: Property aoMap resolved to texture ID 250669863
+23.11.25 15:16:00: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:00: Parsing material 'stovePipe_01_mat' from JSON
+23.11.25 15:16:00: Parsing material 'concreteStairs_mat' from JSON
+23.11.25 15:16:00: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:00: Property glossMap resolved to texture ID 250469149
+23.11.25 15:16:00: Property glossMap resolved to texture ID 251185649
+23.11.25 15:16:00: Property opacityMap missing or null while parsing material
+23.11.25 15:16:00: Property normalMap resolved to texture ID 250469150
+23.11.25 15:16:00: Property diffuseMap resolved to texture ID 250469151
+23.11.25 15:16:00: Property specularMap missing or null while parsing material
+23.11.25 15:16:00: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:00: Property aoMap resolved to texture ID 250469148
+23.11.25 15:16:00: Property opacityMap missing or null while parsing material
+23.11.25 15:16:00: Property normalMap resolved to texture ID 251185651
+23.11.25 15:16:00: Property diffuseMap resolved to texture ID 251185652
+23.11.25 15:16:00: Property specularMap missing or null while parsing material
+23.11.25 15:16:00: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:00: Property aoMap resolved to texture ID 251185648
+23.11.25 15:16:00: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:00: Property glossMap resolved to texture ID 250677511
+23.11.25 15:16:00: Property opacityMap missing or null while parsing material
+23.11.25 15:16:00: Property opacityMap missing or null while parsing material
+23.11.25 15:16:00: Property normalMap resolved to texture ID 251664221
+23.11.25 15:16:00: Property normalMap resolved to texture ID 250677513
+23.11.25 15:16:00: Property glossMap missing or null while parsing material
+23.11.25 15:16:00: Property opacityMap missing or null while parsing material
+23.11.25 15:16:00: Property normalMap missing or null while parsing material
+23.11.25 15:16:00: Property diffuseMap resolved to texture ID 250677512
+23.11.25 15:16:00: Property diffuseMap resolved to texture ID 251664220
+23.11.25 15:16:00: Property specularMap missing or null while parsing material
+23.11.25 15:16:00: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:00: Property aoMap resolved to texture ID 251664218
+23.11.25 15:16:00: Parsing material 'roofSide_mat' from JSON
+23.11.25 15:16:00: Parsing material 'build_03_Found_mat' from JSON
+23.11.25 15:16:00: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:01: Property glossMap resolved to texture ID 251652980
+23.11.25 15:16:01: Property opacityMap missing or null while parsing material
+23.11.25 15:16:01: Property normalMap resolved to texture ID 251652982
+23.11.25 15:16:00: Property specularMap missing or null while parsing material
+23.11.25 15:16:01: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:01: Property aoMap resolved to texture ID 250677509
+23.11.25 15:16:01: Property diffuseMap resolved to texture ID 251652983
+23.11.25 15:16:01: Property specularMap missing or null while parsing material
+23.11.25 15:16:01: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:01: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:01: Property aoMap resolved to texture ID 251652979
+23.11.25 15:16:00: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:01: Parsing material 'foundation_01_mat' from JSON
+23.11.25 15:16:01: Property glossMap resolved to texture ID 251178672
+23.11.25 15:16:01: Parsing material 'build_01_Win_01_mat' from JSON
+23.11.25 15:16:01: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:01: Property glossMap resolved to texture ID 251085887
+23.11.25 15:16:01: Property opacityMap missing or null while parsing material
+23.11.25 15:16:01: Property normalMap resolved to texture ID 251085888
+23.11.25 15:16:01: Property diffuseMap resolved to texture ID 251085889
+23.11.25 15:16:01: Property specularMap missing or null while parsing material
+23.11.25 15:16:01: Property opacityMap missing or null while parsing material
+23.11.25 15:16:01: Property normalMap resolved to texture ID 251178673
+23.11.25 15:16:01: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:01: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:01: Property glossMap resolved to texture ID 251278243
+23.11.25 15:16:01: Property opacityMap missing or null while parsing material
+23.11.25 15:16:01: Property normalMap resolved to texture ID 251278245
+23.11.25 15:16:01: Property diffuseMap resolved to texture ID 251278246
+23.11.25 15:16:01: Property specularMap missing or null while parsing material
+23.11.25 15:16:01: Property aoMap resolved to texture ID 251085886
+23.11.25 15:16:01: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:01: Parsing material 'foundation_02_mat' from JSON
+23.11.25 15:16:01: Property aoMap resolved to texture ID 251278242
+23.11.25 15:16:01: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:01: Property glossMap resolved to texture ID 251217566
+23.11.25 15:16:01: Property opacityMap missing or null while parsing material
+23.11.25 15:16:01: Property normalMap resolved to texture ID 251217567
+23.11.25 15:16:01: Property diffuseMap resolved to texture ID 251217568
+23.11.25 15:16:01: Property specularMap missing or null while parsing material
+23.11.25 15:16:01: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:01: Property aoMap resolved to texture ID 251217565
+23.11.25 15:16:01: Parsing material 'oldMailBox_mat' from JSON
+23.11.25 15:16:01: Property metalnessMap resolved to texture ID 252507784
+23.11.25 15:16:02: Parsing material 'electricShield_01_mat' from JSON
+23.11.25 15:16:02: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:02: Property glossMap resolved to texture ID 252507788
+23.11.25 15:16:02: Property glossMap resolved to texture ID 250680217
+23.11.25 15:16:02: Property opacityMap missing or null while parsing material
+23.11.25 15:16:02: Property normalMap resolved to texture ID 250680218
+23.11.25 15:16:02: Property diffuseMap resolved to texture ID 250680219
+23.11.25 15:16:02: Property specularMap missing or null while parsing material
+23.11.25 15:16:02: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:02: Property opacityMap missing or null while parsing material
+23.11.25 15:16:02: Property aoMap resolved to texture ID 250680216
+23.11.25 15:16:02: Property normalMap resolved to texture ID 252507790
+23.11.25 15:16:01: Property diffuseMap resolved to texture ID 251178674
+23.11.25 15:16:01: Property glossMap resolved to texture ID 251234309
+23.11.25 15:16:02: Parsing material 'groundPineNeedles2_mat' from JSON
+23.11.25 15:16:02: Property diffuseMap resolved to texture ID 252507791
+23.11.25 15:16:02: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:02: Property specularMap missing or null while parsing material
+23.11.25 15:16:02: Property glossMap resolved to texture ID 252032095
+23.11.25 15:16:02: Property opacityMap missing or null while parsing material
+23.11.25 15:16:02: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:02: Property normalMap resolved to texture ID 252032097
+23.11.25 15:16:02: Property diffuseMap resolved to texture ID 252032098
+23.11.25 15:16:02: Property specularMap missing or null while parsing material
+23.11.25 15:16:02: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:02: Property aoMap resolved to texture ID 252032096
+23.11.25 15:16:02: Property aoMap resolved to texture ID 252507789
+23.11.25 15:16:02: Property specularMap missing or null while parsing material
+23.11.25 15:16:02: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:02: Property aoMap resolved to texture ID 251178671
+23.11.25 15:16:02: Property opacityMap missing or null while parsing material
+23.11.25 15:16:02: Parsing material 'concreteBase_02_mat' from JSON
+23.11.25 15:16:02: Parsing material 'build_03_Wall_01_mat' from JSON
+23.11.25 15:16:02: Parsing material 'oldTrailer_mat' from JSON
+23.11.25 15:16:02: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:02: Property metalnessMap resolved to texture ID 251659937
+23.11.25 15:16:02: Property glossMap resolved to texture ID 250679483
+23.11.25 15:16:02: Property opacityMap missing or null while parsing material
+23.11.25 15:16:02: Property normalMap resolved to texture ID 250679484
+23.11.25 15:16:02: Property glossMap resolved to texture ID 251659938
+23.11.25 15:16:02: Property diffuseMap resolved to texture ID 250679485
+23.11.25 15:16:02: Property specularMap missing or null while parsing material
+23.11.25 15:16:02: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:03: Property aoMap resolved to texture ID 250679482
+23.11.25 15:16:02: Property opacityMap missing or null while parsing material
+23.11.25 15:16:03: Property normalMap resolved to texture ID 251659939
+23.11.25 15:16:03: Property diffuseMap resolved to texture ID 251659940
+23.11.25 15:16:02: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:03: Property specularMap missing or null while parsing material
+23.11.25 15:16:03: Parsing material 'milkCanister_mat' from JSON
+23.11.25 15:16:03: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:03: Property metalnessMap resolved to texture ID 252031529
+23.11.25 15:16:03: Property aoMap resolved to texture ID 251659936
+23.11.25 15:16:03: Property glossMap resolved to texture ID 252031529
+23.11.25 15:16:03: Parsing material 'stoveBarrel_mat' from JSON
+23.11.25 15:16:03: Property opacityMap missing or null while parsing material
+23.11.25 15:16:03: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:03: Property glossMap resolved to texture ID 252031430
+23.11.25 15:16:03: Property normalMap resolved to texture ID 252031530
+23.11.25 15:16:03: Parsing material 'woodenWall_mat' from JSON
+23.11.25 15:16:03: Property diffuseMap resolved to texture ID 252031528
+23.11.25 15:16:03: Property glossMap resolved to texture ID 251654042
+23.11.25 15:16:03: Property specularMap missing or null while parsing material
+23.11.25 15:16:03: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:03: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:03: Property glossMap resolved to texture ID 251085577
+23.11.25 15:16:03: Property aoMap resolved to texture ID 252031529
+23.11.25 15:16:03: Property opacityMap missing or null while parsing material
+23.11.25 15:16:03: Parsing material 'metalCan_01_mat' from JSON
+23.11.25 15:16:03: Property normalMap resolved to texture ID 251085578
+23.11.25 15:16:03: Property diffuseMap resolved to texture ID 251085579
+23.11.25 15:16:03: Property metalnessMap resolved to texture ID 250472117
+23.11.25 15:16:03: Property specularMap missing or null while parsing material
+23.11.25 15:16:03: Property glossMap resolved to texture ID 250472117
+23.11.25 15:16:03: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:03: Property opacityMap missing or null while parsing material
+23.11.25 15:16:03: Property aoMap resolved to texture ID 251085576
+23.11.25 15:16:03: Property normalMap resolved to texture ID 250472116
+23.11.25 15:16:03: Property diffuseMap resolved to texture ID 250472118
+23.11.25 15:16:03: Parsing material 'chimney_mat' from JSON
+23.11.25 15:16:03: Property specularMap missing or null while parsing material
+23.11.25 15:16:04: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:04: Property aoMap resolved to texture ID 250472112
+23.11.25 15:16:03: Property opacityMap resolved to texture ID 252031434
+23.11.25 15:16:04: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:04: Property glossMap resolved to texture ID 251662419
+23.11.25 15:16:04: Property opacityMap missing or null while parsing material
+23.11.25 15:16:04: Property normalMap resolved to texture ID 251662420
+23.11.25 15:16:04: Property diffuseMap resolved to texture ID 251662421
+23.11.25 15:16:04: Property specularMap missing or null while parsing material
+23.11.25 15:16:03: Parsing material 'man_mat' from JSON
+23.11.25 15:16:04: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:04: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:04: Property aoMap resolved to texture ID 251662418
+23.11.25 15:16:04: Property normalMap resolved to texture ID 252031431
+23.11.25 15:16:04: Property glossMap missing or null while parsing material
+23.11.25 15:16:04: Parsing material 'bunkerDoor_mat' from JSON
+23.11.25 15:16:04: Property diffuseMap resolved to texture ID 252031433
+23.11.25 15:16:04: Parsing material 'build_01_winEdge_mat' from JSON
+23.11.25 15:16:04: Property metalnessMap resolved to texture ID 251652476
+23.11.25 15:16:04: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:04: Property specularMap missing or null while parsing material
+23.11.25 15:16:04: Property glossMap resolved to texture ID 251214224
+23.11.25 15:16:04: Property glossMap resolved to texture ID 251652477
+23.11.25 15:16:04: Property opacityMap missing or null while parsing material
+23.11.25 15:16:04: Property normalMap resolved to texture ID 251652478
+23.11.25 15:16:04: Property diffuseMap resolved to texture ID 251652479
+23.11.25 15:16:04: Property specularMap missing or null while parsing material
+23.11.25 15:16:04: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:04: Property aoMap resolved to texture ID 251652475
+23.11.25 15:16:04: Property opacityMap missing or null while parsing material
+23.11.25 15:16:04: Property normalMap resolved to texture ID 251214225
+23.11.25 15:16:04: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:04: Property aoMap resolved to texture ID 252031428
+23.11.25 15:16:04: Property diffuseMap resolved to texture ID 251214226
+23.11.25 15:16:04: Property specularMap missing or null while parsing material
+23.11.25 15:16:04: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:04: Property aoMap resolved to texture ID 251214223
+23.11.25 15:16:03: Property opacityMap missing or null while parsing material
+23.11.25 15:16:04: Parsing material 'abandonedIronBox_mat' from JSON
+23.11.25 15:16:04: Property opacityMap missing or null while parsing material
+23.11.25 15:16:05: Property normalMap missing or null while parsing material
+23.11.25 15:16:04: Parsing material 'barrelBlue_mat' from JSON
+23.11.25 15:16:05: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:05: Property glossMap resolved to texture ID 250471311
+23.11.25 15:16:05: Property opacityMap missing or null while parsing material
+23.11.25 15:16:05: Property normalMap resolved to texture ID 250471312
+23.11.25 15:16:05: Property diffuseMap resolved to texture ID 250471314
+23.11.25 15:16:05: Property specularMap missing or null while parsing material
+23.11.25 15:16:05: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:05: Property aoMap resolved to texture ID 250471310
+23.11.25 15:16:04: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:05: Property glossMap resolved to texture ID 240562919
+23.11.25 15:16:05: Property opacityMap missing or null while parsing material
+23.11.25 15:16:05: Property normalMap resolved to texture ID 240562912
+23.11.25 15:16:04: Property normalMap resolved to texture ID 251654044
+23.11.25 15:16:05: Property diffuseMap resolved to texture ID 251654043
+23.11.25 15:16:05: Property diffuseMap resolved to texture ID 240562916
+23.11.25 15:16:05: Property specularMap missing or null while parsing material
+23.11.25 15:16:05: Parsing material 'build_01_brickCorn_mat' from JSON
+23.11.25 15:16:05: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:05: Property aoMap resolved to texture ID 240562914
+23.11.25 15:16:05: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:05: Property glossMap resolved to texture ID 251275876
+23.11.25 15:16:05: Property diffuseMap missing or null while parsing material
+23.11.25 15:16:05: Property specularMap missing or null while parsing material
+23.11.25 15:16:05: Property opacityMap missing or null while parsing material
+23.11.25 15:16:05: Property specularMap missing or null while parsing material
+23.11.25 15:16:05: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:05: Property normalMap resolved to texture ID 251275877
+23.11.25 15:16:05: Property diffuseMap resolved to texture ID 251275878
+23.11.25 15:16:05: Property specularMap missing or null while parsing material
+23.11.25 15:16:05: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:05: Property aoMap resolved to texture ID 251654040
+23.11.25 15:16:05: Property aoMap resolved to texture ID 251275875
+23.11.25 15:16:05: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:05: Property aoMap missing or null while parsing material
+23.11.25 15:16:02: Property normalMap resolved to texture ID 251234311
+23.11.25 15:16:05: Property diffuseMap resolved to texture ID 251234310
+23.11.25 15:16:05: Property specularMap missing or null while parsing material
+23.11.25 15:15:59: Parsing material 'build_01_Brick_mat' from JSON
+23.11.25 15:16:05: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:06: Property aoMap resolved to texture ID 251234306
+23.11.25 15:16:00: Property diffuseMap missing or null while parsing material
+23.11.25 15:16:06: Property specularMap missing or null while parsing material
+23.11.25 15:16:06: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:06: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:06: Property glossMap resolved to texture ID 251282698
+23.11.25 15:16:06: Property aoMap missing or null while parsing material
+23.11.25 15:16:06: Property opacityMap missing or null while parsing material
+23.11.25 15:16:06: Property normalMap resolved to texture ID 251282708
+23.11.25 15:16:06: Property diffuseMap resolved to texture ID 251282707
+23.11.25 15:16:06: Property specularMap missing or null while parsing material
+23.11.25 15:16:06: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:06: Property aoMap resolved to texture ID 251282697
+23.11.25 15:16:06: Parsing material 'oldWheel_01_mat' from JSON
+23.11.25 15:16:06: Parsing material 'dev_gray_mat' from JSON
+23.11.25 15:16:06: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:06: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:07: Property glossMap missing or null while parsing material
+23.11.25 15:16:07: Property glossMap resolved to texture ID 250668677
+23.11.25 15:16:07: Property opacityMap missing or null while parsing material
+23.11.25 15:16:07: Parsing material 'redChairs_mat' from JSON
+23.11.25 15:16:07: Property metalnessMap resolved to texture ID 250472218
+23.11.25 15:16:07: Property normalMap missing or null while parsing material
+23.11.25 15:16:07: Property diffuseMap missing or null while parsing material
+23.11.25 15:16:07: Property specularMap missing or null while parsing material
+23.11.25 15:16:07: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:07: Parsing material 'woodenTableWhite_mat' from JSON
+23.11.25 15:16:07: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:07: Property glossMap resolved to texture ID 250420912
+23.11.25 15:16:07: Property aoMap missing or null while parsing material
+23.11.25 15:16:07: Property opacityMap missing or null while parsing material
+23.11.25 15:16:07: Property normalMap resolved to texture ID 250420915
+23.11.25 15:16:07: Property diffuseMap resolved to texture ID 250420916
+23.11.25 15:16:07: Property specularMap missing or null while parsing material
+23.11.25 15:16:07: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:07: Property aoMap resolved to texture ID 250420911
+23.11.25 15:16:07: Parsing material 'airplaneWrecked_mat' from JSON
+23.11.25 15:16:07: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:07: Property glossMap resolved to texture ID 240383580
+23.11.25 15:16:07: Property opacityMap missing or null while parsing material
+23.11.25 15:16:07: Property normalMap resolved to texture ID 240383578
+23.11.25 15:16:07: Property diffuseMap resolved to texture ID 240383579
+23.11.25 15:16:07: Property specularMap missing or null while parsing material
+23.11.25 15:16:07: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:07: Property aoMap resolved to texture ID 240383577
+23.11.25 15:16:07: Parsing material 'surface_' from JSON
+23.11.25 15:16:07: Property metalnessMap missing or null while parsing material
+23.11.25 15:16:07: Property glossMap missing or null while parsing material
+23.11.25 15:16:07: Property opacityMap missing or null while parsing material
+23.11.25 15:16:07: Property normalMap missing or null while parsing material
+23.11.25 15:16:07: Property diffuseMap missing or null while parsing material
+23.11.25 15:16:08: Property specularMap missing or null while parsing material
+23.11.25 15:16:08: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:07: Property glossMap resolved to texture ID 250472221
+23.11.25 15:16:08: Property opacityMap missing or null while parsing material
+23.11.25 15:16:08: Property normalMap resolved to texture ID 250472222
+23.11.25 15:16:08: Property diffuseMap resolved to texture ID 250472217
+23.11.25 15:16:08: Property aoMap missing or null while parsing material
+23.11.25 15:16:08: Property specularMap missing or null while parsing material
+23.11.25 15:16:08: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:07: Property opacityMap missing or null while parsing material
+23.11.25 15:16:08: Property aoMap resolved to texture ID 250472368
+23.11.25 15:16:08: Property normalMap resolved to texture ID 250668676
+23.11.25 15:16:08: Property diffuseMap resolved to texture ID 250668678
+23.11.25 15:16:08: Property specularMap missing or null while parsing material
+23.11.25 15:16:08: Property emissiveMap missing or null while parsing material
+23.11.25 15:16:08: Property aoMap resolved to texture ID 250668673

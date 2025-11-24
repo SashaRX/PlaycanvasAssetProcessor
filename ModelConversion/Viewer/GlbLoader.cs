@@ -24,165 +24,38 @@ namespace AssetProcessor.ModelConversion.Viewer {
 
         /// <summary>
         /// Загружает GLB файл
-        /// Автоматически декодирует quantization и декомпрессирует EXT_meshopt_compression
+        /// Автоматически декомпрессирует EXT_meshopt_compression если нужно
         /// </summary>
         public async Task<Scene?> LoadGlbAsync(string glbPath) {
             try {
                 Logger.Info($"Loading GLB: {glbPath}");
 
-                // CRITICAL FIX: Assimp не поддерживает KHR_mesh_quantization!
-                // Всегда декодируем через gltfpack, который правильно декодирует quantization
-                Logger.Info("Decoding GLB through gltfpack (removes quantization + meshopt compression)");
+                // Проверяем наличие EXT_meshopt_compression
+                if (await HasMeshOptCompressionAsync(glbPath)) {
+                    Logger.Info("GLB contains EXT_meshopt_compression, decompressing...");
 
-                var decodedPath = await DecodeGlbAsync(glbPath);
+                    // Декомпрессируем через gltfpack
+                    var decompressedPath = await DecompressMeshOptAsync(glbPath);
 
-                if (decodedPath == null) {
-                    Logger.Error("Failed to decode GLB");
-                    return null;
+                    if (decompressedPath == null) {
+                        Logger.Error("Failed to decompress meshopt GLB");
+                        return null;
+                    }
+
+                    // Загружаем декомпрессированный файл
+                    var scene = _assimpContext.ImportFile(decompressedPath);
+                    Logger.Info($"Loaded decompressed GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
+                    return scene;
+                } else {
+                    // Прямая загрузка (Quantization only)
+                    Logger.Info("Loading GLB directly (no meshopt compression)");
+                    var scene = _assimpContext.ImportFile(glbPath);
+                    Logger.Info($"Loaded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
+                    return scene;
                 }
-
-                // Загружаем декодированный файл
-                var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
-                var scene = _assimpContext.ImportFile(decodedPath, postProcess);
-                Logger.Info($"Loaded decoded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
-
-                // DEBUG: Проверяем UV координаты в загруженной сцене
-                for (int i = 0; i < scene.MeshCount; i++) {
-                    var mesh = scene.Meshes[i];
-                    Logger.Info($"  Mesh {i}: {mesh.VertexCount} verts, TextureCoordinateChannelCount={mesh.TextureCoordinateChannelCount}, HasTextureCoords(0)={mesh.HasTextureCoords(0)}");
-                }
-
-                return scene;
             } catch (Exception ex) {
                 Logger.Error(ex, $"Failed to load GLB: {glbPath}");
                 return null;
-            }
-        }
-
-        /// <summary>
-        /// Декодирует GLB файл через gltfpack (убирает quantization и meshopt compression)
-        /// </summary>
-        private async Task<string?> DecodeGlbAsync(string inputPath) {
-            try {
-                // Проверяем кэш
-                if (_decompressCache.TryGetValue(inputPath, out var cachedPath)) {
-                    if (File.Exists(cachedPath)) {
-                        Logger.Info($"Using cached decoded file: {cachedPath}");
-                        return cachedPath;
-                    } else {
-                        _decompressCache.Remove(inputPath);
-                    }
-                }
-
-                if (_gltfPackWrapper == null) {
-                    Logger.Error("gltfpack not available for decoding");
-                    return null;
-                }
-
-                // Создаём временный файл
-                var tempDir = Path.Combine(Path.GetTempPath(), "TexTool_GlbDecode");
-                Directory.CreateDirectory(tempDir);
-
-                var fileName = Path.GetFileNameWithoutExtension(inputPath);
-                var outputPath = Path.Combine(tempDir, $"{fileName}_decoded.glb");
-
-                Logger.Info($"Decoding GLB: {inputPath} -> {outputPath}");
-
-                // DEBUG: Проверяем ОРИГИНАЛЬНЫЙ GLB перед декодированием
-                Logger.Info("=== Inspecting ORIGINAL GLB (before decode) ===");
-                await InspectGlbAttributesAsync(inputPath);
-
-                // gltfpack с -noq декодирует quantization (KHR_mesh_quantization)
-                // Флаг -noq означает "не применять квантование", что деквантует данные в float
-                // Флаг -kv сохраняет ВСЕ vertex attributes (включая UV), даже если они не используются материалом
-                var startInfo = new System.Diagnostics.ProcessStartInfo {
-                    FileName = _gltfPackWrapper.ExecutablePath,
-                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq -kv -v",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = System.Diagnostics.Process.Start(startInfo);
-                if (process == null) {
-                    Logger.Error("Failed to start gltfpack process");
-                    return null;
-                }
-
-                await process.WaitForExitAsync();
-
-                // Читаем вывод gltfpack для диагностики
-                var stdout = await process.StandardOutput.ReadToEndAsync();
-                var stderr = await process.StandardError.ReadToEndAsync();
-
-                if (!string.IsNullOrEmpty(stdout)) {
-                    Logger.Info($"gltfpack stdout: {stdout}");
-                }
-                if (!string.IsNullOrEmpty(stderr)) {
-                    Logger.Info($"gltfpack stderr: {stderr}");
-                }
-
-                if (process.ExitCode == 0 && File.Exists(outputPath)) {
-                    Logger.Info($"Successfully decoded GLB: {outputPath}");
-
-                    // DEBUG: Проверяем, есть ли TEXCOORD в декодированном GLB
-                    Logger.Info("=== Inspecting DECODED GLB (after gltfpack -noq) ===");
-                    await InspectGlbAttributesAsync(outputPath);
-
-                    // Кэшируем результат
-                    _decompressCache[inputPath] = outputPath;
-
-                    return outputPath;
-                } else {
-                    Logger.Error($"gltfpack decode failed with exit code {process.ExitCode}");
-                    return null;
-                }
-            } catch (Exception ex) {
-                Logger.Error(ex, "Failed to decode GLB");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Инспектирует атрибуты в GLB файле (проверяет наличие TEXCOORD)
-        /// </summary>
-        private async Task InspectGlbAttributesAsync(string glbPath) {
-            try {
-                using var fs = new FileStream(glbPath, FileMode.Open, FileAccess.Read);
-                using var br = new BinaryReader(fs);
-
-                // Читаем GLB header
-                var magic = br.ReadUInt32();
-                if (magic != 0x46546C67) return;
-
-                var version = br.ReadUInt32();
-                var length = br.ReadUInt32();
-
-                // Читаем первый chunk (JSON)
-                var chunkLength = br.ReadUInt32();
-                var chunkType = br.ReadUInt32();
-
-                if (chunkType != 0x4E4F534A) return;
-
-                // Читаем JSON данные
-                var jsonBytes = br.ReadBytes((int)chunkLength);
-                var json = Encoding.UTF8.GetString(jsonBytes);
-
-                Logger.Info("=== GLB JSON Content (first 2000 chars) ===");
-                Logger.Info(json.Length > 2000 ? json.Substring(0, 2000) + "..." : json);
-
-                // Проверяем наличие TEXCOORD
-                var hasTexCoord = json.Contains("TEXCOORD");
-                Logger.Info($"GLB contains TEXCOORD attributes: {hasTexCoord}");
-
-                if (hasTexCoord) {
-                    // Подсчитываем количество TEXCOORD упоминаний
-                    var count = System.Text.RegularExpressions.Regex.Matches(json, "TEXCOORD").Count;
-                    Logger.Info($"Found {count} TEXCOORD references in GLB JSON");
-                }
-            } catch (Exception ex) {
-                Logger.Warn(ex, "Failed to inspect GLB attributes");
             }
         }
 

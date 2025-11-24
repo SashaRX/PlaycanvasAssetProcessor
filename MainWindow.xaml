@@ -19,8 +19,7 @@
     DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}"
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
-    Title="MainWindow" Height="684" Width="942"
-    KeyDown="Window_KeyDown">
+    Title="MainWindow" Height="684" Width="942">
 
     <Window.Resources>
         <help:SizeConverter x:Key="SizeConverter" />
@@ -859,210 +858,41 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition x:Name="ModelViewportRow" Height="300" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
                                 <!-- Model Info Panel (ABOVE viewport) -->
                                 <Border Grid.Row="0" Background="#DD000000" BorderThickness="0,0,0,1" BorderBrush="#FF555555" Padding="6,4">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
-                                            <TextBlock x:Name="ModelNameTextBlock"
-                                                      Text="Model Name:"
-                                                      Foreground="White"
-                                                      FontSize="10"
-                                                      FontWeight="SemiBold"
-                                                      Margin="0,0,0,2" />
-                                            <TextBlock x:Name="ModelTrianglesTextBlock"
-                                                      Text="Triangles:"
-                                                      Foreground="#FFCCCCCC"
-                                                      FontSize="9"
-                                                      Margin="0,0,0,1" />
-                                        </StackPanel>
-
-                                        <!-- Viewer Controls (Right Column) -->
-                                        <StackPanel Grid.Column="1" Orientation="Vertical">
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                <CheckBox x:Name="ShowPivotCheckBox"
-                                                         Content="Pivot"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
-                                                         Checked="ShowPivotCheckBox_Changed"
-                                                         Unchecked="ShowPivotCheckBox_Changed" />
-                                                <CheckBox x:Name="ShowWireframeCheckBox"
-                                                         Content="Wireframe"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
-                                                         Checked="ShowWireframeCheckBox_Changed"
-                                                         Unchecked="ShowWireframeCheckBox_Changed" />
-                                                <CheckBox x:Name="ShowHumanCheckBox"
-                                                         Content="1.8m"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
-                                                         Checked="ShowHumanCheckBox_Changed"
-                                                         Unchecked="ShowHumanCheckBox_Changed"
-                                                         IsChecked="True" />
-                                                <TextBlock Text="Up:"
-                                                          Foreground="White"
-                                                          FontSize="9"
-                                                          VerticalAlignment="Center"
-                                                          Margin="0,0,4,0" />
-                                                <ComboBox x:Name="UpVectorComboBox"
-                                                         FontSize="9"
-                                                         Width="40"
-                                                         Height="18"
-                                                         Padding="4,0"
-                                                         SelectionChanged="UpVectorComboBox_SelectionChanged">
-                                                    <ComboBoxItem Content="Y" IsSelected="True" />
-                                                    <ComboBoxItem Content="Z" />
-                                                </ComboBox>
-                                            </StackPanel>
-                                            <TextBlock x:Name="ModelCurrentLodTextBlock"
-                                                      x:FieldModifier="private"
-                                                      Text="Current LOD: FBX"
-                                                      Foreground="#FFCCCCCC"
-                                                      FontSize="9"
-                                                      Margin="0,0,0,1"
-                                                      Visibility="Collapsed" />
-                                            <TextBlock x:Name="ModelVerticesTextBlock"
-                                                      Text="Vertices:"
-                                                      Foreground="#FFCCCCCC"
-                                                      FontSize="9"
-                                                      Margin="0,0,0,1" />
-                                            <TextBlock x:Name="ModelUVChannelsTextBlock"
-                                                      Text="UV Channels:"
-                                                      Foreground="#FFAAAAAA"
-                                                      FontSize="9" />
-                                        </StackPanel>
-                                    </Grid>
+                                    <StackPanel Orientation="Vertical">
+                                        <TextBlock x:Name="ModelNameTextBlock"
+                                                  Text="Model Name:"
+                                                  Foreground="White"
+                                                  FontSize="10"
+                                                  FontWeight="SemiBold"
+                                                  Margin="0,0,0,2" />
+                                        <TextBlock x:Name="ModelTrianglesTextBlock"
+                                                  Text="Triangles:"
+                                                  Foreground="#FFCCCCCC"
+                                                  FontSize="9"
+                                                  Margin="0,0,0,1" />
+                                        <TextBlock x:Name="ModelVerticesTextBlock"
+                                                  Text="Vertices:"
+                                                  Foreground="#FFCCCCCC"
+                                                  FontSize="9"
+                                                  Margin="0,0,0,1" />
+                                        <TextBlock x:Name="ModelUVChannelsTextBlock"
+                                                  Text="UV Channels:"
+                                                  Foreground="#FFAAAAAA"
+                                                  FontSize="9" />
+                                    </StackPanel>
                                 </Border>
 
                                 <!-- 3D Viewport -->
-                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
-                                    <helix:HelixViewport3D x:Name="viewPort3d"
-                                                          ZoomExtentsWhenLoaded="true"
-                                                          ShowCoordinateSystem="false"
-                                                          ShowViewCube="true">
+                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128">
+                                    <helix:HelixViewport3D x:Name="viewPort3d" ZoomExtentsWhenLoaded="true">
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>
                                 </Border>
-
-                                <!-- GridSplitter for resizing viewport -->
-                                <GridSplitter Grid.Row="2"
-                                              Height="6"
-                                              Margin="0,4,0,4"
-                                              Background="#FFE0E0E0"
-                                              HorizontalAlignment="Stretch"
-                                              ResizeDirection="Rows"
-                                              ResizeBehavior="PreviousAndNext"
-                                              ShowsPreview="False"
-                                              Cursor="SizeNS"
-                                              DragDelta="ModelViewportGridSplitter_DragDelta" />
-
-                                <!-- LOD Controls Panel (BELOW viewport, like texture mipmaps) -->
-                                <StackPanel x:Name="LodControlsPanel" Grid.Row="3" Orientation="Vertical" Margin="6,4,6,6" Visibility="Collapsed">
-                                    <!-- LOD Quick Switch Buttons -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="LOD:"
-                                                  Foreground="#FF333333"
-                                                  FontSize="10"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,6,0" />
-                                        <Button x:Name="LodButton0"
-                                               Content="LOD0"
-                                               Click="LodButton_Click"
-                                               Tag="0"
-                                               Width="50"
-                                               Height="22"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="Black" />
-                                        <Button x:Name="LodButton1"
-                                               Content="LOD1"
-                                               Click="LodButton_Click"
-                                               Tag="1"
-                                               Width="50"
-                                               Height="22"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="Black" />
-                                        <Button x:Name="LodButton2"
-                                               Content="LOD2"
-                                               Click="LodButton_Click"
-                                               Tag="2"
-                                               Width="50"
-                                               Height="22"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="Black" />
-                                        <Button x:Name="LodButton3"
-                                               Content="LOD3"
-                                               Click="LodButton_Click"
-                                               Tag="3"
-                                               Width="50"
-                                               Height="22"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="Black" />
-                                    </StackPanel>
-
-                                    <!-- LOD Information DataGrid -->
-                                    <Border Background="#AAFFFFFF" Padding="4" HorizontalAlignment="Left">
-                                        <DataGrid x:Name="LodInformationGrid"
-                                                 AutoGenerateColumns="False"
-                                                 HeadersVisibility="Column"
-                                                 CanUserAddRows="False"
-                                                 CanUserDeleteRows="False"
-                                                 CanUserReorderColumns="False"
-                                                 CanUserResizeRows="False"
-                                                 IsReadOnly="True"
-                                                 SelectionMode="Single"
-                                                 GridLinesVisibility="Horizontal"
-                                                 Background="Transparent"
-                                                 RowBackground="#44FFFFFF"
-                                                 AlternatingRowBackground="#22FFFFFF"
-                                                 FontSize="9"
-                                                 RowHeight="20"
-                                                 MaxHeight="120"
-                                                 SelectionChanged="LodInformationGrid_SelectionChanged">
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="LOD" Binding="{Binding LodName}" Width="50" />
-                                                <DataGridTextColumn Header="Triangles" Binding="{Binding TriangleCount, StringFormat=N0}" Width="80" />
-                                                <DataGridTextColumn Header="Vertices" Binding="{Binding VertexCount, StringFormat=N0}" Width="80" />
-                                                <DataGridTextColumn Header="Size" Binding="{Binding FileSizeFormatted}" Width="70" />
-                                            </DataGrid.Columns>
-                                            <DataGrid.Resources>
-                                                <Style TargetType="DataGridColumnHeader">
-                                                    <Setter Property="Background" Value="#FF555555" />
-                                                    <Setter Property="Foreground" Value="White" />
-                                                    <Setter Property="FontSize" Value="9" />
-                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                    <Setter Property="Padding" Value="4,2" />
-                                                    <Setter Property="BorderBrush" Value="#FF777777" />
-                                                    <Setter Property="BorderThickness" Value="0,0,1,1" />
-                                                </Style>
-                                                <Style TargetType="DataGridCell">
-                                                    <Setter Property="Foreground" Value="#FF333333" />
-                                                    <Setter Property="BorderThickness" Value="0" />
-                                                    <Setter Property="Padding" Value="4,2" />
-                                                </Style>
-                                            </DataGrid.Resources>
-                                        </DataGrid>
-                                    </Border>
-                                </StackPanel>
                             </Grid>
                         </Expander>
 

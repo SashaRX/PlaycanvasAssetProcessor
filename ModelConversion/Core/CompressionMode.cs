@@ -41,11 +41,9 @@ namespace AssetProcessor.ModelConversion.Core {
 
         /// <summary>
         /// Биты для текстурных координат (UV)
-        /// Диапазон: 1-16, рекомендуется 16 для предотвращения ошибок денормализации
-        /// ВАЖНО: gltfpack и Assimp денормализуют UNSIGNED_SHORT как 16-бит (делят на 65535)
-        /// Поэтому используем 16 бит, чтобы избежать потери точности (12 бит → 16x ошибка!)
+        /// Диапазон: 1-16, по умолчанию 12
         /// </summary>
-        public int TexCoordBits { get; set; } = 16;
+        public int TexCoordBits { get; set; } = 12;
 
         /// <summary>
         /// Биты для нормалей
@@ -66,7 +64,7 @@ namespace AssetProcessor.ModelConversion.Core {
         public static QuantizationSettings CreateDefault() {
             return new QuantizationSettings {
                 PositionBits = 14,
-                TexCoordBits = 16,  // 16 бит для корректной денормализации (избегаем 12-бит bug)
+                TexCoordBits = 12,
                 NormalBits = 8,
                 ColorBits = 8
             };
@@ -78,7 +76,7 @@ namespace AssetProcessor.ModelConversion.Core {
         public static QuantizationSettings CreateHighQuality() {
             return new QuantizationSettings {
                 PositionBits = 16,
-                TexCoordBits = 16,  // 16 бит для корректной денормализации
+                TexCoordBits = 14,
                 NormalBits = 10,
                 ColorBits = 10
             };
@@ -90,7 +88,7 @@ namespace AssetProcessor.ModelConversion.Core {
         public static QuantizationSettings CreateMinSize() {
             return new QuantizationSettings {
                 PositionBits = 12,
-                TexCoordBits = 16,  // 16 бит для корректной денормализации (даже для min size!)
+                TexCoordBits = 10,
                 NormalBits = 8,
                 ColorBits = 8
             };

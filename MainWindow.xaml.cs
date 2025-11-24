@@ -152,6 +152,9 @@ namespace AssetProcessor {
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
+
+            // Инициализация GLB LOD компонентов
+            InitializeGlbLodComponents();
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
 
@@ -1946,6 +1949,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Останавливаем billboard обновление
                 StopBillboardUpdate();
 
+                // Очищаем GLB viewer ресурсы
+                CleanupGlbViewer();
+
                 cancellationTokenSource?.Cancel();
                 textureLoadCancellation?.Cancel();
 
@@ -3096,7 +3102,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// </summary>
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) {
             // F - Fit model to viewport (ZoomExtents)
+            // Обрабатываем только если фокус не в текстовом поле ввода
             if (e.Key == System.Windows.Input.Key.F) {
+                // Проверяем, что фокус не в текстовом поле ввода
+                var focusedElement = System.Windows.Input.Keyboard.FocusedElement;
+                if (focusedElement is System.Windows.Controls.TextBox || 
+                    focusedElement is System.Windows.Controls.PasswordBox ||
+                    focusedElement is System.Windows.Controls.RichTextBox) {
+                    // Фокус в текстовом поле - не обрабатываем клавишу F
+                    return;
+                }
+
                 viewPort3d?.ZoomExtents();
                 e.Handled = true;
             }

@@ -137,19 +137,27 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"Loaded {_lodScenes.Count} LOD scenes");
 
+                // Проверяем, что хотя бы один LOD был успешно загружен
+                if (_lodScenes.Count == 0) {
+                    LodLogger.Warn("No LOD scenes were successfully loaded, hiding GLB LOD UI");
+                    HideGlbLodUI();
+                    return;
+                }
+
                 // Отображаем LOD0 в существующем viewport
                 // zoomToFit=true только при первой загрузке модели
                 if (_lodScenes.ContainsKey(LodLevel.LOD0)) {
                     LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
-                } else if (_lodScenes.Count > 0) {
+                } else {
                     var firstLod = _lodScenes.Keys.First();
                     LoadGlbModelToViewport(firstLod, zoomToFit: true);
                 }
 
                 _isGlbViewerActive = true;
 
-                // Выбираем LOD0 по умолчанию
-                SelectLod(LodLevel.LOD0);
+                // Выбираем первый доступный LOD по умолчанию (LOD0 если существует, иначе первый в списке)
+                var defaultLod = _lodScenes.ContainsKey(LodLevel.LOD0) ? LodLevel.LOD0 : _lodScenes.Keys.First();
+                SelectLod(defaultLod);
 
                 LodLogger.Info("GLB LOD preview loaded successfully");
 
@@ -188,9 +196,24 @@ namespace AssetProcessor {
 
                 // ИСПРАВЛЕНИЕ: GLB модели инвертированы по вертикали
                 // Применяем Scale(-1) по Y оси для корректной ориентации
-                var transformGroup = new Transform3DGroup();
-                transformGroup.Children.Add(new ScaleTransform3D(1, -1, 1));
-                modelGroup.Transform = transformGroup;
+                // ВАЖНО: Масштабирование должно применяться ПЕРЕД трансляцией (центрированием)
+                // чтобы центрирование работало корректно после Y-flip
+                var existingTransform = modelGroup.Transform as Transform3DGroup;
+                if (existingTransform != null) {
+                    // Вставляем масштабирование в начало списка трансформаций
+                    // чтобы оно применялось ПЕРЕД трансляцией
+                    existingTransform.Children.Insert(0, new ScaleTransform3D(1, -1, 1));
+                } else {
+                    // Если трансформация не Transform3DGroup, создаём новую группу
+                    var transformGroup = new Transform3DGroup();
+                    // Сначала масштабирование (Y-flip)
+                    transformGroup.Children.Add(new ScaleTransform3D(1, -1, 1));
+                    // Затем существующая трансформация (центрирование)
+                    if (modelGroup.Transform != null) {
+                        transformGroup.Children.Add(modelGroup.Transform);
+                    }
+                    modelGroup.Transform = transformGroup;
+                }
 
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };

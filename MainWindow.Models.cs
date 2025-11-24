@@ -43,40 +43,52 @@ using AssetProcessor.TextureViewer;
 
 namespace AssetProcessor {
     public partial class MainWindow {
-        private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
-                if (!string.IsNullOrEmpty(selectedModel.Path)) {
-                    if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
-                        // Сначала пытаемся загрузить GLB LOD файлы
-                        await TryLoadGlbLodAsync(selectedModel.Path);
+        private void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Используем Dispatcher.InvokeAsync для выполнения async кода в UI потоке
+            // с правильной обработкой всех исключений, включая те, что возникают после await
+            _ = Dispatcher.InvokeAsync(async () => {
+                try {
+                    if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
+                        if (!string.IsNullOrEmpty(selectedModel.Path)) {
+                            if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
+                                // Сначала пытаемся загрузить GLB LOD файлы
+                                await TryLoadGlbLodAsync(selectedModel.Path);
 
-                        // Если GLB LOD не найдены, загружаем FBX модель в обычный вьюпорт
-                        if (!_isGlbViewerActive) {
-                            // Загружаем модель во вьюпорт (3D просмотрщик)
-                            LoadModel(selectedModel.Path);
+                                // Если GLB LOD не найдены, загружаем FBX модель в обычный вьюпорт
+                                if (!_isGlbViewerActive) {
+                                    // Загружаем модель во вьюпорт (3D просмотрщик)
+                                    LoadModel(selectedModel.Path);
 
-                            // Обновляем информацию о модели из FBX
-                            AssimpContext context = new();
-                            Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                            Mesh? mesh = scene.Meshes.FirstOrDefault();
+                                    // Обновляем информацию о модели из FBX
+                                    AssimpContext context = new();
+                                    Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                                    Mesh? mesh = scene.Meshes.FirstOrDefault();
 
-                            if (mesh != null) {
-                                string? modelName = selectedModel.Name;
-                                int triangles = mesh.FaceCount;
-                                int vertices = mesh.VertexCount;
-                                int uvChannels = mesh.TextureCoordinateChannelCount;
+                                    if (mesh != null) {
+                                        string? modelName = selectedModel.Name;
+                                        int triangles = mesh.FaceCount;
+                                        int vertices = mesh.VertexCount;
+                                        int uvChannels = mesh.TextureCoordinateChannelCount;
 
-                                if (!String.IsNullOrEmpty(modelName)) {
-                                    UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                                        if (!String.IsNullOrEmpty(modelName)) {
+                                            UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                                        }
+
+                                        UpdateUVImage(mesh);
+                                    }
                                 }
-
-                                UpdateUVImage(mesh);
+                                // Если GLB viewer активен, информация уже обновлена в TryLoadGlbLodAsync
                             }
                         }
-                        // Если GLB viewer активен, информация уже обновлена в TryLoadGlbLodAsync
                     }
+                } catch (Exception ex) {
+                    // Логируем исключение и показываем пользователю сообщение
+                    // Все исключения, включая те, что возникают после await, будут перехвачены здесь
+                    var logger = NLog.LogManager.GetCurrentClassLogger();
+                    logger.Error(ex, "Error in ModelsDataGrid_SelectionChanged");
+                    MessageBox.Show($"Ошибка при загрузке модели: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
-            }
+            }, System.Windows.Threading.DispatcherPriority.Normal);
         }
 
         private void UpdateModelInfo(string modelName, int triangles, int vertices, int uvChannels) {

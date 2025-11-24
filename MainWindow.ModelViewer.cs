@@ -19,6 +19,7 @@ namespace AssetProcessor {
         private bool _isZUp = false; // Y-up по умолчанию
         private readonly List<LinesVisual3D> _wireframeLines = new(); // Линии для wireframe
         private readonly Dictionary<GeometryModel3D, Material> _originalMaterials = new(); // Оригинальные материалы
+        private bool _isBillboardUpdateActive = false; // Флаг для предотвращения дублирования подписок на UpdateBillboard
 
         /// <summary>
         /// Обработчик изменения чекбокса "Show Pivot"
@@ -216,12 +217,12 @@ namespace AssetProcessor {
                 points.Freeze(); // Замораживаем для максимальной производительности
 
                 // Создаём LinesVisual3D и назначаем замороженную коллекцию
-                var wireframe = new LinesVisual3D {
+                var wireframe = new LinesVisual3D{
                     Color = Colors.White,
                     Thickness = 1,
-                    Points = points // Назначаем готовую замороженную коллекцию
+                    Points = points, // Назначаем готовую замороженную коллекцию
+                    Transform = modelGroup.Transform
                 };
-                wireframe.Transform = modelGroup.Transform;
 
                 _wireframeLines.Add(wireframe);
                 viewPort3d.Children.Add(wireframe);
@@ -555,17 +556,25 @@ namespace AssetProcessor {
         /// Запускает обновление billboard rotation (cylindrical billboard - только горизонтальный поворот)
         /// </summary>
         private void StartBillboardUpdate() {
-            // Подписываемся на CompositionTarget.Rendering только если ещё не подписаны
-            // Проверяем через weak event чтобы не создавать дубликаты
-            System.Windows.Media.CompositionTarget.Rendering -= UpdateBillboard;
+            // Предотвращаем дублирование подписок
+            if (_isBillboardUpdateActive) {
+                return;
+            }
+
             System.Windows.Media.CompositionTarget.Rendering += UpdateBillboard;
+            _isBillboardUpdateActive = true;
         }
 
         /// <summary>
         /// Останавливает обновление billboard rotation
         /// </summary>
         private void StopBillboardUpdate() {
+            if (!_isBillboardUpdateActive) {
+                return;
+            }
+
             System.Windows.Media.CompositionTarget.Rendering -= UpdateBillboard;
+            _isBillboardUpdateActive = false;
         }
 
         /// <summary>
@@ -578,8 +587,7 @@ namespace AssetProcessor {
             }
 
             // Получаем позицию камеры
-            var camera = viewPort3d.Camera as PerspectiveCamera;
-            if (camera == null) return;
+            if (viewPort3d.Camera is not PerspectiveCamera camera) return;
 
             var cameraPos = camera.Position;
             var billboardPos = new Point3D(_humanSilhouetteOffsetX, 0, 0); // Адаптивное смещение в сторону по X
@@ -587,16 +595,15 @@ namespace AssetProcessor {
             // Вычисляем направление от billboard к камере
             var direction = cameraPos - billboardPos;
 
-            // Cylindrical billboard: вращение вокруг Z (вертикальной оси в Z-up системе)
-            // Проецируем на XY плоскость (убираем Z компоненту)
+            // Cylindrical billboard: вращение вокруг Y (вертикальной оси в Y-up системе)
+            // Проецируем на XY плоскость (убираем Y компоненту)
             direction.Z = 0;
 
-            // Вычисляем угол на XY плоскости вокруг Z оси
+            // Вычисляем угол на XZ плоскости вокруг Z оси
             double angle = Math.Atan2(direction.Y, direction.X) * (180.0 / Math.PI);
 
-            // Поворачиваем вокруг Z (вертикальная ось в Z-up)
-            if (_humanBillboardRotation.Rotation is AxisAngleRotation3D rotation)
-{
+            // Поворачиваем вокруг Z (вертикальная ось в Z-up системе)
+            if (_humanBillboardRotation.Rotation is AxisAngleRotation3D rotation) {
                 rotation.Axis = new Vector3D(0, 0, 1);
                 rotation.Angle = angle;
             }

@@ -226,6 +226,7 @@ namespace AssetProcessor {
 
             foreach (var mesh in scene.Meshes) {
                 LodLogger.Info($"Processing mesh: {mesh.VertexCount} vertices, {mesh.FaceCount} faces, HasUVs={mesh.HasTextureCoords(0)}");
+                LodLogger.Info($"  TextureCoordinateChannelCount={mesh.TextureCoordinateChannelCount}");
 
                 // Логируем первые 5 вершин из Assimp для диагностики
                 LodLogger.Info($"First 5 vertices from Assimp:");
@@ -243,6 +244,26 @@ namespace AssetProcessor {
                     var normal = mesh.Normals[i];
                     geometry.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                     geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+                }
+
+                // UV координаты (если есть)
+                if (mesh.TextureCoordinateChannelCount > 0 && mesh.HasTextureCoords(0)) {
+                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates");
+
+                    // Загружаем UV из Assimp (теперь они корректные благодаря TexCoordBits=16)
+                    for (int i = 0; i < mesh.VertexCount; i++) {
+                        var uv = mesh.TextureCoordinateChannels[0][i];
+                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
+                    }
+
+                    // Логируем первые 5 UV для проверки
+                    LodLogger.Info($"  First 5 UVs:");
+                    for (int i = 0; i < Math.Min(5, geometry.TextureCoordinates.Count); i++) {
+                        var uv = geometry.TextureCoordinates[i];
+                        LodLogger.Info($"    UV {i}: ({uv.X:F4}, {uv.Y:F4})");
+                    }
+                } else {
+                    LodLogger.Info($"  No UV coordinates found (ChannelCount={mesh.TextureCoordinateChannelCount})");
                 }
 
                 // Индексы

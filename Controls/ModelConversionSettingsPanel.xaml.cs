@@ -31,7 +31,7 @@ namespace AssetProcessor.Controls {
 
             // Quantization Settings (Default preset values)
             PositionBitsSlider.Value = 14;
-            TexCoordBitsSlider.Value = 12;
+            TexCoordBitsSlider.Value = 16;  // 16 бит для корректной денормализации (избегаем 12-бит bug)
             NormalBitsSlider.Value = 10;
             ColorBitsSlider.Value = 8;
 

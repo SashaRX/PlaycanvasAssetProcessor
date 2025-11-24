@@ -78,6 +78,9 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 Logger.Info($"Base GLB created: {fbxResult.OutputFilePath} ({fbxResult.OutputFileSize} bytes)");
                 result.BaseGlbPath = fbxResult.OutputFilePath!;
 
+                // DEBUG: Проверяем UV после FBX2glTF
+                await InspectGlbUVAsync(fbxResult.OutputFilePath!, "BASE GLB (after FBX2glTF)");
+
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
                     Logger.Info("=== STEP B & C: LOD GENERATION ===");
@@ -110,6 +113,9 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         }
 
                         Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
+
+                        // DEBUG: Проверяем UV после gltfpack
+                        await InspectGlbUVAsync(lodOutputPath, $"{lodName} (after gltfpack)");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 
@@ -171,7 +177,8 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 }
 
                 // Cleanup промежуточных файлов
-                if (settings.CleanupIntermediateFiles) {
+                // ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ОТЛАДКИ UV
+                if (false && settings.CleanupIntermediateFiles) {
                     Logger.Info("=== CLEANUP INTERMEDIATE FILES ===");
                     try {
                         if (Directory.Exists(buildDir)) {
@@ -199,6 +206,93 @@ namespace AssetProcessor.ModelConversion.Pipeline {
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Проверяет UV координаты в GLB файле для диагностики
+        /// </summary>
+        private async Task InspectGlbUVAsync(string glbPath, string stage) {
+            try {
+                Logger.Info($"=== UV INSPECTION: {stage} ===");
+                Logger.Info($"File: {glbPath}");
+
+                // Читаем GLB файл
+                using var fileStream = File.OpenRead(glbPath);
+                using var reader = new BinaryReader(fileStream);
+
+                // Читаем GLB header (12 bytes)
+                var magic = reader.ReadUInt32();  // должно быть 0x46546C67 ('glTF')
+                var version = reader.ReadUInt32();
+                var length = reader.ReadUInt32();
+
+                // Читаем JSON chunk header (8 bytes)
+                var jsonLength = reader.ReadUInt32();
+                var jsonType = reader.ReadUInt32();  // должно быть 0x4E4F534A ('JSON')
+
+                // Читаем JSON content
+                var jsonBytes = reader.ReadBytes((int)jsonLength);
+                var jsonText = System.Text.Encoding.UTF8.GetString(jsonBytes);
+
+                // Парсим JSON
+                var gltf = System.Text.Json.JsonDocument.Parse(jsonText);
+
+                // Проверяем наличие TEXCOORD в примитивах
+                bool foundTexcoord = false;
+                if (gltf.RootElement.TryGetProperty("meshes", out var meshes)) {
+                    int meshIndex = 0;
+                    foreach (var mesh in meshes.EnumerateArray()) {
+                        if (mesh.TryGetProperty("primitives", out var primitives)) {
+                            int primIndex = 0;
+                            foreach (var prim in primitives.EnumerateArray()) {
+                                if (prim.TryGetProperty("attributes", out var attrs)) {
+                                    if (attrs.TryGetProperty("TEXCOORD_0", out var texcoord)) {
+                                        var accessorIdx = texcoord.GetInt32();
+                                        Logger.Info($"  Mesh {meshIndex} Primitive {primIndex}: TEXCOORD_0 found (accessor {accessorIdx})");
+
+                                        // Читаем информацию об accessor
+                                        if (gltf.RootElement.TryGetProperty("accessors", out var accessors)) {
+                                            var accessor = accessors[accessorIdx];
+                                            var componentType = accessor.GetProperty("componentType").GetInt32();
+                                            var count = accessor.GetProperty("count").GetInt32();
+                                            var normalized = accessor.TryGetProperty("normalized", out var n) ? n.GetBoolean() : false;
+
+                                            string compTypeName = componentType switch {
+                                                5126 => "FLOAT",
+                                                5123 => "UNSIGNED_SHORT",
+                                                _ => componentType.ToString()
+                                            };
+
+                                            Logger.Info($"    Component Type: {compTypeName} ({componentType}), Count: {count}, Normalized: {normalized}");
+
+                                            // Проверяем min/max если есть
+                                            if (accessor.TryGetProperty("min", out var min) && accessor.TryGetProperty("max", out var max)) {
+                                                var minU = min[0].GetDouble();
+                                                var minV = min[1].GetDouble();
+                                                var maxU = max[0].GetDouble();
+                                                var maxV = max[1].GetDouble();
+                                                Logger.Info($"    UV Range: U=[{minU:F4}, {maxU:F4}], V=[{minV:F4}, {maxV:F4}]");
+                                            } else {
+                                                Logger.Warn("    No min/max data for UV accessor");
+                                            }
+                                        }
+
+                                        foundTexcoord = true;
+                                    }
+                                }
+                                primIndex++;
+                            }
+                        }
+                        meshIndex++;
+                    }
+                }
+
+                if (!foundTexcoord) {
+                    Logger.Warn("  NO TEXCOORD_0 found in any mesh primitive!");
+                }
+
+            } catch (Exception ex) {
+                Logger.Error(ex, $"Failed to inspect UV in {glbPath}");
+            }
         }
 
         /// <summary>

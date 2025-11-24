@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Assimp;
+using Assimp.Configs;
 using NLog;
 
 namespace AssetProcessor.ModelConversion.Wrappers {
@@ -79,14 +81,16 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     // ВАЖНО: --separate-textures БЕЗ --binary создает .gltf (JSON) + .bin + внешние текстуры
                     // Текстуры НЕ встраиваются в файл, остаются внешними
                     // gltfpack затем конвертирует .gltf -> .glb с сохранением внешних текстур через -tr
+                    // БЕЗ --keep-attribute - экспортируем ВСЕ атрибуты из FBX (включая UV)
                     arguments = $"--separate-textures --input \"{inputPath}\" --output \"{outputPath}\"";
                     expectedExtension = ".gltf";
-                    Logger.Info("FBX2glTF: Using .gltf format with --separate-textures (textures will be external)");
+                    Logger.Info("FBX2glTF: Using .gltf format with --separate-textures (textures will be external), exporting all attributes");
                 } else {
                     // --binary создает .glb (binary) с встроенными текстурами
+                    // БЕЗ --keep-attribute - экспортируем ВСЕ атрибуты из FBX (включая UV)
                     arguments = $"--binary --input \"{inputPath}\" --output \"{outputPath}\"";
                     expectedExtension = ".glb";
-                    Logger.Info("FBX2glTF: Using .glb format with embedded textures");
+                    Logger.Info("FBX2glTF: Using .glb format with embedded textures, exporting all attributes");
                 }
 
                 Logger.Debug($"FBX2glTF command: {_executablePath} {arguments}");

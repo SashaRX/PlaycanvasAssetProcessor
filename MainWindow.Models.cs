@@ -137,6 +137,7 @@ namespace AssetProcessor {
                                 }
 
                                 Assimp.Vector3D uv = textureCoordinates[vertexIndex];
+                                // UV теперь корректные благодаря TexCoordBits=16
                                 points[i] = new Point(uv.X * width, (1 - uv.Y) * height);
                             }
 

@@ -101,7 +101,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     excludeTextures
                 );
 
-                Logger.Debug($"gltfpack command: {_executablePath} {arguments}");
+                Logger.Info($"gltfpack command: {_executablePath} {arguments}");
 
                 var startInfo = new ProcessStartInfo {
                     FileName = _executablePath,
@@ -208,6 +208,11 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 args.Add("-tr");
                 Logger.Info("gltfpack: Using -tr flag (textures will NOT be embedded)");
             }
+
+            // КРИТИЧНО: -kv сохраняет ВСЕ vertex attributes (включая UV), даже если они не используются
+            // Без этого флага gltfpack удаляет TEXCOORD_0 из моделей без текстур
+            args.Add("-kv");
+            Logger.Info("gltfpack: Using -kv flag (keeping all vertex attributes including unused UV)");
 
             // Упрощение геометрии
             if (lodSettings.SimplificationRatio < 1.0f) {

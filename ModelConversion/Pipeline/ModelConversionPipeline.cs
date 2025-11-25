@@ -186,7 +186,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         }
 
                         // Удаляем текстуры, которые FBX2glTF может создать рядом с выходным файлом
-                        var modelDir = Path.GetDirectoryName(inputPath);
+                        var modelDir = Path.GetDirectoryName(inputFbxPath);
                         if (!string.IsNullOrEmpty(modelDir)) {
                             var textureExtensions = new[] { "*.png", "*.jpg", "*.jpeg", "*.tga", "*.bmp" };
                             foreach (var ext in textureExtensions) {

@@ -367,13 +367,13 @@ namespace AssetProcessor {
                 }
 
                 // UV координаты (если есть)
-                // GLB/glTF имеет UV origin вверху-слева (как WPF), копируем напрямую
+                // UV координаты - flip U из-за Y↔Z swap и инверсии winding order
                 if (mesh.TextureCoordinateChannelCount > 0 && mesh.HasTextureCoords(0)) {
-                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates");
+                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates (U flipped)");
 
                     for (int i = 0; i < mesh.VertexCount; i++) {
                         var uv = mesh.TextureCoordinateChannels[0][i];
-                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
+                        geometry.TextureCoordinates.Add(new Point(1.0 - uv.X, uv.Y));
                     }
 
                     // Логируем первые 5 UV для проверки
@@ -497,10 +497,11 @@ namespace AssetProcessor {
                 }
 
                 // UV координаты (SharpGLTF уже декодировал quantization!)
+                // ВАЖНО: При Y↔Z swap и инверсии winding order нужно также flip U координату
                 if (meshData.TextureCoordinates.Count > 0) {
-                    LodLogger.Info($"[SharpGLTF→WPF]   Adding {meshData.TextureCoordinates.Count} UV coordinates");
+                    LodLogger.Info($"[SharpGLTF→WPF]   Adding {meshData.TextureCoordinates.Count} UV coordinates (U flipped for axis swap)");
                     foreach (var uv in meshData.TextureCoordinates) {
-                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
+                        geometry.TextureCoordinates.Add(new Point(1.0 - uv.X, uv.Y));
                     }
 
                     // Логируем первые 5 UV

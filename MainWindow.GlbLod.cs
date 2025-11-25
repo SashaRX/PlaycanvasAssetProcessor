@@ -509,7 +509,7 @@ namespace AssetProcessor {
 
                 // Обновляем UI
                 Dispatcher.Invoke(() => {
-                    UvPrimaryImage.Source = bitmap;
+                    UVImage.Source = bitmap;
                 });
 
                 LodLogger.Info($"[UV Preview] Updated with {meshData.TextureCoordinates.Count} UV coordinates");

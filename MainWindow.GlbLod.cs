@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Media.Imaging;
 using Assimp;
 using HelixToolkit.Wpf;
 using AssetProcessor.ModelConversion.Core;
@@ -22,8 +24,8 @@ namespace AssetProcessor {
     /// </summary>
     public partial class MainWindow {
         private static readonly Logger LodLogger = LogManager.GetCurrentClassLogger();
-        private GlbLoader? _glbLoader;
-        private Dictionary<LodLevel, Scene> _lodScenes = new();
+        private SharpGlbLoader? _sharpGlbLoader;
+        private Dictionary<LodLevel, SharpGlbLoader.GlbData> _lodGlbData = new();
         private Dictionary<LodLevel, GlbLodHelper.LodInfo> _currentLodInfos = new();
         private Dictionary<LodLevel, GlbQuantizationAnalyzer.UVQuantizationInfo> _lodQuantizationInfos = new();
         private ObservableCollection<LodDisplayInfo> _lodDisplayItems = new();
@@ -44,14 +46,13 @@ namespace AssetProcessor {
         /// </summary>
         private void CleanupGlbViewer() {
             try {
-                _lodScenes.Clear();
+                _lodGlbData.Clear();
                 _currentLodInfos.Clear();
                 _lodQuantizationInfos.Clear();
                 _lodDisplayItems.Clear();
                 _isGlbViewerActive = false;
                 _currentFbxPath = null;
-                _glbLoader?.ClearCache();
-                _glbLoader?.Dispose();
+                _sharpGlbLoader?.Dispose();
                 LodLogger.Info("GLB viewer cleaned up");
             } catch (Exception ex) {
                 LodLogger.Error(ex, "Failed to cleanup GLB viewer");
@@ -112,21 +113,14 @@ namespace AssetProcessor {
                 // Заполняем DataGrid
                 PopulateLodDataGrid();
 
-                // Создаём GlbLoader если его еще нет
-                if (_glbLoader == null) {
-                    LodLogger.Info("Creating GlbLoader");
-
-                    var modelConversionSettings = ModelConversionSettingsManager.LoadSettings();
-                    var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
-                        ? "gltfpack.exe"
-                        : modelConversionSettings.GltfPackExecutablePath;
-
-                    LodLogger.Info($"  gltfpack for meshopt decompression: {gltfPackPath}");
-                    _glbLoader = new GlbLoader(gltfPackPath);
+                // Создаём SharpGlbLoader если его еще нет
+                if (_sharpGlbLoader == null) {
+                    LodLogger.Info("Creating SharpGlbLoader (uses SharpGLTF with native KHR_mesh_quantization support)");
+                    _sharpGlbLoader = new SharpGlbLoader();
                 }
 
-                // Загружаем все LOD сцены и анализируем квантование
-                _lodScenes.Clear();
+                // Загружаем все LOD данные через SharpGLTF
+                _lodGlbData.Clear();
                 _lodQuantizationInfos.Clear();
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
 
@@ -136,24 +130,27 @@ namespace AssetProcessor {
 
                     LodLogger.Info($"  Loading {lodLevel}: {glbPath}");
 
-                    // Анализируем квантование ПЕРЕД загрузкой (из оригинального GLB)
+                    // Анализируем квантование (для информационных целей)
                     var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
                     _lodQuantizationInfos[lodLevel] = quantInfo;
 
-                    var scene = await _glbLoader.LoadGlbAsync(glbPath);
-                    if (scene != null) {
-                        _lodScenes[lodLevel] = scene;
+                    // Загружаем через SharpGLTF (автоматически декодирует KHR_mesh_quantization)
+                    var glbData = _sharpGlbLoader.LoadGlb(glbPath);
+                    if (glbData.Success) {
+                        _lodGlbData[lodLevel] = glbData;
+                    } else {
+                        LodLogger.Error($"Failed to load {lodLevel}: {glbData.Error}");
                     }
                 }
 
-                LodLogger.Info($"Loaded {_lodScenes.Count} LOD scenes");
+                LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes via SharpGLTF");
 
                 // Отображаем LOD0 в существующем viewport
                 // zoomToFit=true только при первой загрузке модели
-                if (_lodScenes.ContainsKey(LodLevel.LOD0)) {
+                if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {
                     LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
-                } else if (_lodScenes.Count > 0) {
-                    var firstLod = _lodScenes.Keys.First();
+                } else if (_lodGlbData.Count > 0) {
+                    var firstLod = _lodGlbData.Keys.First();
                     LoadGlbModelToViewport(firstLod, zoomToFit: true);
                 }
 
@@ -171,17 +168,17 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Загружает GLB модель в существующий viewPort3d
+        /// Загружает GLB модель в существующий viewPort3d (через SharpGLTF)
         /// </summary>
         /// <param name="zoomToFit">Выполнить ZoomExtents после загрузки (только при первой загрузке модели)</param>
         private void LoadGlbModelToViewport(LodLevel lodLevel, bool zoomToFit = false) {
             try {
-                if (!_lodScenes.TryGetValue(lodLevel, out var scene)) {
-                    LodLogger.Warn($"LOD {lodLevel} scene not found");
+                if (!_lodGlbData.TryGetValue(lodLevel, out var glbData)) {
+                    LodLogger.Warn($"LOD {lodLevel} data not found");
                     return;
                 }
 
-                LodLogger.Info($"Loading GLB LOD{(int)lodLevel} to viewport: {scene.MeshCount} meshes");
+                LodLogger.Info($"Loading GLB LOD{(int)lodLevel} to viewport: {glbData.Meshes.Count} meshes (SharpGLTF)");
 
                 // Очищаем только модели, оставляя освещение (аналогично LoadModel)
                 var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
@@ -194,10 +191,8 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                // Конвертируем Assimp Scene в WPF модель
-                // GLB уже имеет правильную ориентацию UV (top-left origin как WPF)
-                // НЕ нужно никаких ручных преобразований UV!
-                var modelGroup = ConvertAssimpSceneToWpfModel(scene);
+                // Конвертируем SharpGLTF данные в WPF модель
+                var modelGroup = ConvertSharpGlbToWpfModel(glbData);
 
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };
@@ -207,9 +202,9 @@ namespace AssetProcessor {
                 ApplyViewerSettingsToModel();
 
                 // Обновляем UV preview (берём первую mesh с UV координатами)
-                var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
+                var meshWithUV = glbData.Meshes.FirstOrDefault(m => m.TextureCoordinates.Count > 0);
                 if (meshWithUV != null) {
-                    UpdateUVImage(meshWithUV, flipV: false); // GLB имеет top-left UV origin
+                    UpdateUVImageFromSharpGlb(meshWithUV);
                 }
 
                 // Центрируем камеру только при первой загрузке модели
@@ -218,7 +213,7 @@ namespace AssetProcessor {
                 }
 
                 _currentLod = lodLevel;
-                LodLogger.Info($"Loaded GLB LOD{(int)lodLevel} successfully");
+                LodLogger.Info($"Loaded GLB LOD{(int)lodLevel} successfully via SharpGLTF");
 
             } catch (Exception ex) {
                 LodLogger.Error(ex, $"Failed to load GLB LOD {lodLevel} to viewport");
@@ -356,6 +351,213 @@ namespace AssetProcessor {
         }
 
         /// <summary>
+        /// Конвертирует SharpGLTF данные в WPF Model3DGroup
+        /// SharpGLTF автоматически декодирует KHR_mesh_quantization
+        ///
+        /// ВАЖНО: FBX2glTF выводит геометрию в Z-up координатной системе,
+        /// а WPF/glTF требует Y-up. Поэтому мы меняем Y↔Z при загрузке.
+        /// </summary>
+        private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
+            var modelGroup = new Model3DGroup();
+
+            foreach (var meshData in glbData.Meshes) {
+                LodLogger.Info($"[SharpGLTF→WPF] Processing mesh: {meshData.Positions.Count} vertices, {meshData.Indices.Count / 3} triangles, HasUVs={meshData.TextureCoordinates.Count > 0}");
+
+                var geometry = new MeshGeometry3D();
+
+                // Вершины и нормали
+                // AXIS FIX: FBX2glTF outputs Z-up, but WPF requires Y-up
+                // Swap Y and Z: new_Y = old_Z, new_Z = old_Y
+                for (int i = 0; i < meshData.Positions.Count; i++) {
+                    var pos = meshData.Positions[i];
+                    // Swap Y ↔ Z to convert from Z-up to Y-up
+                    geometry.Positions.Add(new Point3D(pos.X, pos.Z, pos.Y));
+
+                    if (i < meshData.Normals.Count) {
+                        var normal = meshData.Normals[i];
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
+                    }
+                }
+
+                // UV координаты (SharpGLTF уже декодировал quantization!)
+                if (meshData.TextureCoordinates.Count > 0) {
+                    LodLogger.Info($"[SharpGLTF→WPF]   Adding {meshData.TextureCoordinates.Count} UV coordinates");
+                    foreach (var uv in meshData.TextureCoordinates) {
+                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
+                    }
+
+                    // Логируем первые 5 UV
+                    LodLogger.Info($"[SharpGLTF→WPF]   First 5 UVs in WPF geometry:");
+                    for (int i = 0; i < Math.Min(5, meshData.TextureCoordinates.Count); i++) {
+                        var uv = meshData.TextureCoordinates[i];
+                        LodLogger.Info($"[SharpGLTF→WPF]     [{i}]: ({uv.X:F6}, {uv.Y:F6})");
+                    }
+                }
+
+                // Индексы (инвертируем winding order из-за Y↔Z swap)
+                for (int i = 0; i < meshData.Indices.Count; i += 3) {
+                    if (i + 2 < meshData.Indices.Count) {
+                        geometry.TriangleIndices.Add(meshData.Indices[i]);
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]); // Swapped
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]); // Swapped
+                    }
+                }
+
+                LodLogger.Info($"[SharpGLTF→WPF]   Geometry: {geometry.Positions.Count} positions, {geometry.TriangleIndices.Count / 3} triangles");
+
+                // Материал
+                var frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
+                var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.Red));
+                var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(40, 40, 40)));
+
+                var materialGroup = new MaterialGroup();
+                materialGroup.Children.Add(frontMaterial);
+                materialGroup.Children.Add(emissiveMaterial);
+
+                var model = new GeometryModel3D(geometry, materialGroup);
+                model.BackMaterial = backMaterial;
+                modelGroup.Children.Add(model);
+            }
+
+            // Логируем bounds
+            var minX = double.MaxValue;
+            var minY = double.MaxValue;
+            var minZ = double.MaxValue;
+            var maxX = double.MinValue;
+            var maxY = double.MinValue;
+            var maxZ = double.MinValue;
+
+            foreach (var child in modelGroup.Children) {
+                if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
+                    foreach (var pos in mesh.Positions) {
+                        minX = Math.Min(minX, pos.X);
+                        minY = Math.Min(minY, pos.Y);
+                        minZ = Math.Min(minZ, pos.Z);
+                        maxX = Math.Max(maxX, pos.X);
+                        maxY = Math.Max(maxY, pos.Y);
+                        maxZ = Math.Max(maxZ, pos.Z);
+                    }
+                }
+            }
+
+            var sizeX = maxX - minX;
+            var sizeY = maxY - minY;
+            var sizeZ = maxZ - minZ;
+
+            LodLogger.Info($"[SharpGLTF→WPF] Model bounds: min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
+            LodLogger.Info($"[SharpGLTF→WPF] Model size (Y=height): {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
+
+            return modelGroup;
+        }
+
+        /// <summary>
+        /// Обновляет UV preview из SharpGLTF mesh данных
+        /// </summary>
+        private void UpdateUVImageFromSharpGlb(SharpGlbLoader.MeshData meshData) {
+            try {
+                if (meshData.TextureCoordinates.Count == 0) {
+                    LodLogger.Warn("[UV Preview] No UV coordinates in mesh");
+                    return;
+                }
+
+                const int width = 512;
+                const int height = 512;
+
+                // Создаём bitmap для UV preview
+                var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+
+                // Рисуем UV wireframe
+                var points = new Point[meshData.TextureCoordinates.Count];
+                for (int i = 0; i < meshData.TextureCoordinates.Count; i++) {
+                    var uv = meshData.TextureCoordinates[i];
+                    // UV уже в правильном формате (0-1 range, top-left origin)
+                    points[i] = new Point(uv.X * width, uv.Y * height);
+                }
+
+                // Рисуем треугольники
+                bitmap.Lock();
+                try {
+                    var pixels = new byte[width * height * 4];
+
+                    // Заполняем фон тёмно-серым
+                    for (int i = 0; i < pixels.Length; i += 4) {
+                        pixels[i] = 40;     // B
+                        pixels[i + 1] = 40; // G
+                        pixels[i + 2] = 40; // R
+                        pixels[i + 3] = 255; // A
+                    }
+
+                    // Рисуем UV треугольники
+                    for (int i = 0; i < meshData.Indices.Count; i += 3) {
+                        if (i + 2 >= meshData.Indices.Count) break;
+
+                        var i0 = meshData.Indices[i];
+                        var i1 = meshData.Indices[i + 1];
+                        var i2 = meshData.Indices[i + 2];
+
+                        if (i0 >= points.Length || i1 >= points.Length || i2 >= points.Length) continue;
+
+                        DrawLine(pixels, width, height, points[i0], points[i1], 0, 255, 0); // Green
+                        DrawLine(pixels, width, height, points[i1], points[i2], 0, 255, 0);
+                        DrawLine(pixels, width, height, points[i2], points[i0], 0, 255, 0);
+                    }
+
+                    bitmap.WritePixels(new Int32Rect(0, 0, width, height), pixels, width * 4, 0);
+                } finally {
+                    bitmap.Unlock();
+                }
+
+                // Обновляем UI
+                Dispatcher.Invoke(() => {
+                    UvPrimaryImage.Source = bitmap;
+                });
+
+                LodLogger.Info($"[UV Preview] Updated with {meshData.TextureCoordinates.Count} UV coordinates");
+
+            } catch (Exception ex) {
+                LodLogger.Error(ex, "[UV Preview] Failed to update UV image");
+            }
+        }
+
+        /// <summary>
+        /// Рисует линию на bitmap (Bresenham's algorithm)
+        /// </summary>
+        private void DrawLine(byte[] pixels, int width, int height, Point p0, Point p1, byte r, byte g, byte b) {
+            int x0 = (int)Math.Clamp(p0.X, 0, width - 1);
+            int y0 = (int)Math.Clamp(p0.Y, 0, height - 1);
+            int x1 = (int)Math.Clamp(p1.X, 0, width - 1);
+            int y1 = (int)Math.Clamp(p1.Y, 0, height - 1);
+
+            int dx = Math.Abs(x1 - x0);
+            int dy = Math.Abs(y1 - y0);
+            int sx = x0 < x1 ? 1 : -1;
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx - dy;
+
+            while (true) {
+                int idx = (y0 * width + x0) * 4;
+                if (idx >= 0 && idx + 3 < pixels.Length) {
+                    pixels[idx] = b;
+                    pixels[idx + 1] = g;
+                    pixels[idx + 2] = r;
+                    pixels[idx + 3] = 255;
+                }
+
+                if (x0 == x1 && y0 == y1) break;
+
+                int e2 = 2 * err;
+                if (e2 > -dy) {
+                    err -= dy;
+                    x0 += sx;
+                }
+                if (e2 < dx) {
+                    err += dx;
+                    y0 += sy;
+                }
+            }
+        }
+
+        /// <summary>
         /// Показывает UI элементы для работы с LOD
         /// </summary>
         private void ShowGlbLodUI() {
@@ -377,7 +579,7 @@ namespace AssetProcessor {
                 _currentLodInfos.Clear();
                 _lodQuantizationInfos.Clear();
                 _lodDisplayItems.Clear();
-                _lodScenes.Clear();
+                _lodGlbData.Clear();
                 _isGlbViewerActive = false;
             });
         }

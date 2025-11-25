@@ -5,13 +5,25 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:core="clr-namespace:AssetProcessor.ModelConversion.Core"
              mc:Ignorable="d"
-             d:DesignHeight="700" d:DesignWidth="280">
+             d:DesignHeight="900" d:DesignWidth="280">
 
     <UserControl.Resources>
         <!-- Enum Data Providers -->
         <ObjectDataProvider x:Key="CompressionModeValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionMode}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="core:CompressionMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ModelSourceTypeValues" MethodName="GetValues" ObjectType="{x:Type core:ModelSourceType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ModelSourceType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="VertexPositionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:VertexPositionFormat}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:VertexPositionFormat"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
@@ -90,6 +102,14 @@
             <!-- 1. BASIC SETTINGS -->
             <Expander Header="Basic Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
                 <StackPanel Margin="2,1,0,0">
+                    <TextBlock Text="Source Type:" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="SourceTypeComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource ModelSourceTypeValues}}"
+                              SelectedIndex="0"
+                              Margin="0,0,0,2"
+                              ToolTip="FBX requires FBX2glTF conversion, GLB goes directly to gltfpack"/>
+
                     <CheckBox x:Name="GenerateLodsCheckBox" Content="Generate LODs" IsChecked="True" Margin="0,0,0,2"
                               ToolTip="Generate LOD levels (LOD0-LOD3)"/>
 
@@ -263,7 +283,152 @@
                 </StackPanel>
             </Expander>
 
-            <!-- 4. QUICK PRESETS -->
+            <!-- 4. SIMPLIFICATION SETTINGS -->
+            <Expander Header="Simplification Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <TextBlock Text="Error Limit (0-1):" Style="{StaticResource LabelStyle}"
+                               ToolTip="Maximum simplification error (-se). Default 0.01 = 1% deviation"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="SimplificationErrorSlider" Grid.Column="0"
+                                Minimum="0.001" Maximum="0.1" Value="0.01"
+                                TickFrequency="0.001" IsSnapToTickEnabled="False"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=SimplificationErrorSlider, Path=Value, StringFormat={}{0:F3}}"
+                                   Width="35" TextAlignment="Right"/>
+                    </Grid>
+
+                    <CheckBox x:Name="PermissiveSimplificationCheckBox" Content="Permissive (-sp)" Margin="0,0,0,2"
+                              ToolTip="Allow simplification across attribute discontinuities (seams)"/>
+
+                    <CheckBox x:Name="LockBorderVerticesCheckBox" Content="Lock Border Vertices (-slb)" Margin="0,0,0,2"
+                              ToolTip="Lock border vertices to avoid gaps on connected meshes"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 5. VERTEX ATTRIBUTES -->
+            <Expander Header="Vertex Attributes" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <TextBlock Text="Position Format:" Style="{StaticResource LabelStyle}"/>
+                    <ComboBox x:Name="PositionFormatComboBox"
+                              Style="{StaticResource ReadableComboBoxStyle}"
+                              ItemsSource="{Binding Source={StaticResource VertexPositionFormatValues}}"
+                              SelectedIndex="0"
+                              Margin="0,0,0,2"
+                              ToolTip="Integer (-vpi), Normalized (-vpn), or Float (-vpf)"/>
+
+                    <CheckBox x:Name="FloatTexCoordsCheckBox" Content="Float UVs (-vtf)" Margin="0,0,0,2"
+                              ToolTip="Use float for texture coordinates (disables UV quantization). Fixes 12-bit denormalization bug!"/>
+
+                    <CheckBox x:Name="FloatNormalsCheckBox" Content="Float Normals (-vnf)" Margin="0,0,0,2"
+                              ToolTip="Use float for normals (disables normal quantization)"/>
+
+                    <CheckBox x:Name="InterleavedAttributesCheckBox" Content="Interleaved (-vi)" Margin="0,0,0,2"
+                              ToolTip="Use interleaved vertex attributes (reduces compression efficiency)"/>
+
+                    <CheckBox x:Name="KeepVertexAttributesCheckBox" Content="Keep All Attributes (-kv)" IsChecked="True" Margin="0,0,0,2"
+                              ToolTip="Keep vertex attributes even if unused (required for UV on textureless models)"/>
+
+                    <CheckBox x:Name="FlipUVsCheckBox" Content="Flip UVs" Margin="0,0,0,2"
+                              ToolTip="Invert UV coordinates vertically"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 6. ANIMATION SETTINGS -->
+            <Expander Header="Animation Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <TextBlock Text="Translation Bits (1-24):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="AnimTranslationBitsSlider" Grid.Column="0"
+                                Minimum="1" Maximum="24" Value="16"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AnimTranslationBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="Rotation Bits (4-16):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="AnimRotationBitsSlider" Grid.Column="0"
+                                Minimum="4" Maximum="16" Value="12"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AnimRotationBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="Scale Bits (1-24):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="AnimScaleBitsSlider" Grid.Column="0"
+                                Minimum="1" Maximum="24" Value="16"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AnimScaleBitsSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="Frame Rate (Hz):" Style="{StaticResource LabelStyle}"/>
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="AnimFrameRateSlider" Grid.Column="0"
+                                Minimum="0" Maximum="120" Value="30"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Margin="0,0,2,0"
+                                ToolTip="0 = disable resampling"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AnimFrameRateSlider, Path=Value}"
+                                   Width="25" TextAlignment="Right"/>
+                    </Grid>
+
+                    <CheckBox x:Name="KeepConstantTracksCheckBox" Content="Keep Constant Tracks (-ac)" Margin="0,0,0,2"
+                              ToolTip="Keep constant animation tracks even if they don't modify the transform"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 7. SCENE OPTIONS -->
+            <Expander Header="Scene Options" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
+                <StackPanel Margin="2,1,0,0">
+                    <CheckBox x:Name="KeepNamedNodesCheckBox" Content="Keep Named Nodes (-kn)" Margin="0,0,0,2"
+                              ToolTip="Keep named nodes for external transformation"/>
+
+                    <CheckBox x:Name="KeepNamedMaterialsCheckBox" Content="Keep Named Materials (-km)" Margin="0,0,0,2"
+                              ToolTip="Keep named materials (disables material merging)"/>
+
+                    <CheckBox x:Name="KeepExtrasCheckBox" Content="Keep Extras (-ke)" Margin="0,0,0,2"
+                              ToolTip="Keep extras data from glTF"/>
+
+                    <CheckBox x:Name="MergeMeshInstancesCheckBox" Content="Merge Mesh Instances (-mm)" Margin="0,0,0,2"
+                              ToolTip="Merge instances of the same mesh"/>
+
+                    <CheckBox x:Name="UseGpuInstancingCheckBox" Content="GPU Instancing (-mi)" Margin="0,0,0,2"
+                              ToolTip="Use EXT_mesh_gpu_instancing for multiple instances"/>
+
+                    <CheckBox x:Name="CompressedWithFallbackCheckBox" Content="Compressed with Fallback (-cf)" Margin="0,0,0,2"
+                              ToolTip="Produce compressed file with fallback for loaders without compression support"/>
+
+                    <CheckBox x:Name="DisableQuantizationCheckBox" Content="Disable Quantization (-noq)" Margin="0,0,0,2"
+                              ToolTip="Disable all quantization (produces larger files without extensions)"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- 8. QUICK PRESETS -->
             <Expander Header="Quick Presets" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
                     <Button Content="Default" x:Name="ApplyDefaultPresetButton" Height="22" Margin="0,0,0,1"

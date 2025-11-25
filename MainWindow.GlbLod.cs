@@ -290,12 +290,16 @@ namespace AssetProcessor {
                     LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates (scale={uvScale:F3})");
 
                     // Загружаем UV из Assimp с применением масштаба для коррекции квантования
-                    // ВАЖНО: Для GLB нужно флипнуть V координату (1 - V) для соответствия с FBX
-                    // GLB имеет UV origin вверху, FBX (после FlipUVs) тоже, но UV preview ожидает определённый формат
+                    // ВАЖНО: Порядок операций критичен!
+                    // 1. Сначала применяем scale (для коррекции 12-бит квантования)
+                    // 2. Затем flip V (для соответствия UV preview формату)
                     for (int i = 0; i < mesh.VertexCount; i++) {
                         var uv = mesh.TextureCoordinateChannels[0][i];
-                        // Применяем scale и flip V для корректного отображения в UV preview
-                        geometry.TextureCoordinates.Add(new Point(uv.X * uvScale, (1.0f - uv.Y) * uvScale));
+                        // Правильный порядок: scale → flip
+                        float scaledU = uv.X * uvScale;
+                        float scaledV = uv.Y * uvScale;
+                        float flippedV = 1.0f - scaledV;
+                        geometry.TextureCoordinates.Add(new Point(scaledU, flippedV));
                     }
 
                     // Логируем первые 5 UV для проверки

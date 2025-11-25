@@ -194,22 +194,30 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                // Получаем UV scale из анализатора квантования
-                // gltfpack -noq НЕ декодирует квантование UV - он только отключает квантование на выходе
-                // Поэтому нужно вручную масштабировать UV если обнаружено 12-бит квантование
+                // Анализируем UV scale на основе РЕАЛЬНЫХ данных из Assimp, а не метаданных GLB
+                // gltfpack -noq декодирует квантование, поэтому смотрим на фактические UV значения
                 float uvScale = 1.0f;
-                if (_lodQuantizationInfos.TryGetValue(lodLevel, out var quantInfo)) {
-                    LodLogger.Info($"  GLB quantization info: IsQuantized={quantInfo.IsQuantized}, " +
-                                   $"ComponentType={quantInfo.ComponentType}, Normalized={quantInfo.Normalized}");
-                    if (quantInfo.Max != null && quantInfo.Max.Length >= 2) {
-                        LodLogger.Info($"  Original UV max: ({quantInfo.Max[0]:F4}, {quantInfo.Max[1]:F4})");
+                var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
+                if (meshWithUV != null && meshWithUV.TextureCoordinateChannels[0].Count > 0) {
+                    // Находим максимальное UV значение в реальных данных
+                    float maxU = 0, maxV = 0;
+                    foreach (var uv in meshWithUV.TextureCoordinateChannels[0]) {
+                        if (uv.X > maxU) maxU = uv.X;
+                        if (uv.Y > maxV) maxV = uv.Y;
                     }
+                    float maxUV = Math.Max(maxU, maxV);
 
-                    if (GlbQuantizationAnalyzer.NeedsUVScaling(quantInfo)) {
-                        uvScale = quantInfo.UVScale;
-                        LodLogger.Info($"  Applying UV scale correction: {uvScale:F3}x");
+                    LodLogger.Info($"  Actual UV max from Assimp: U={maxU:F4}, V={maxV:F4}");
+
+                    // Если max UV < 0.1, значит квантование НЕ было декодировано
+                    // и нужно применить scale для 12-бит (4095/65535 ≈ 0.0625)
+                    if (maxUV < 0.1f && maxUV > 0.01f) {
+                        // Вычисляем scale на основе реального max значения
+                        // Предполагаем что оригинальный UV должен быть близок к 1.0
+                        uvScale = 1.0f / maxUV;
+                        LodLogger.Info($"  Detected unscaled UV (max={maxUV:F4}), applying scale: {uvScale:F3}x");
                     } else {
-                        LodLogger.Info($"  UV scale correction not needed (scale={quantInfo.UVScale:F3})");
+                        LodLogger.Info($"  UV values appear correct (max={maxUV:F4}), no scale needed");
                     }
                 }
 

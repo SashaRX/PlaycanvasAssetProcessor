@@ -177,8 +177,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 }
 
                 // Cleanup промежуточных файлов
-                // ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ОТЛАДКИ UV
-                if (false && settings.CleanupIntermediateFiles) {
+                if (settings.CleanupIntermediateFiles) {
                     Logger.Info("=== CLEANUP INTERMEDIATE FILES ===");
                     try {
                         if (Directory.Exists(buildDir)) {

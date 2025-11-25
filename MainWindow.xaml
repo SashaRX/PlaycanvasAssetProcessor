@@ -970,8 +970,39 @@
 
                                 <!-- LOD Controls Panel (BELOW viewport, like texture mipmaps) -->
                                 <StackPanel x:Name="LodControlsPanel" Grid.Row="3" Orientation="Vertical" Margin="6,4,6,6" Visibility="Collapsed">
-                                    <!-- LOD Quick Switch Buttons -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <!-- Source Type Switch (FBX/GLB) -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="Source:"
+                                                  Foreground="#FF333333"
+                                                  FontSize="10"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,6,0" />
+                                        <Button x:Name="SourceFbxButton"
+                                               Content="FBX"
+                                               Click="SourceTypeButton_Click"
+                                               Tag="FBX"
+                                               Width="45"
+                                               Height="20"
+                                               Margin="2,0"
+                                               FontSize="9"
+                                               Padding="2"
+                                               BorderBrush="Black"
+                                               ToolTip="Show original FBX model" />
+                                        <Button x:Name="SourceGlbButton"
+                                               Content="GLB"
+                                               Click="SourceTypeButton_Click"
+                                               Tag="GLB"
+                                               Width="45"
+                                               Height="20"
+                                               Margin="2,0"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Padding="2"
+                                               BorderBrush="Black"
+                                               ToolTip="Show converted GLB model" />
+
+                                        <Separator Width="10" Background="Transparent" />
+
                                         <TextBlock Text="LOD:"
                                                   Foreground="#FF333333"
                                                   FontSize="10"
@@ -981,8 +1012,8 @@
                                                Content="LOD0"
                                                Click="LodButton_Click"
                                                Tag="0"
-                                               Width="50"
-                                               Height="22"
+                                               Width="45"
+                                               Height="20"
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
@@ -991,8 +1022,8 @@
                                                Content="LOD1"
                                                Click="LodButton_Click"
                                                Tag="1"
-                                               Width="50"
-                                               Height="22"
+                                               Width="45"
+                                               Height="20"
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
@@ -1001,8 +1032,8 @@
                                                Content="LOD2"
                                                Click="LodButton_Click"
                                                Tag="2"
-                                               Width="50"
-                                               Height="22"
+                                               Width="45"
+                                               Height="20"
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
@@ -1011,8 +1042,8 @@
                                                Content="LOD3"
                                                Click="LodButton_Click"
                                                Tag="3"
-                                               Width="50"
-                                               Height="22"
+                                               Width="45"
+                                               Height="20"
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"

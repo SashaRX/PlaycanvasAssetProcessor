@@ -25,9 +25,11 @@ namespace AssetProcessor {
         private GlbLoader? _glbLoader;
         private Dictionary<LodLevel, Scene> _lodScenes = new();
         private Dictionary<LodLevel, GlbLodHelper.LodInfo> _currentLodInfos = new();
+        private Dictionary<LodLevel, GlbQuantizationAnalyzer.UVQuantizationInfo> _lodQuantizationInfos = new();
         private ObservableCollection<LodDisplayInfo> _lodDisplayItems = new();
         private bool _isGlbViewerActive = false;
         private LodLevel _currentLod = LodLevel.LOD0;
+        private string? _currentFbxPath;  // Путь к FBX для переключения Source Type
 
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
@@ -44,8 +46,10 @@ namespace AssetProcessor {
             try {
                 _lodScenes.Clear();
                 _currentLodInfos.Clear();
+                _lodQuantizationInfos.Clear();
                 _lodDisplayItems.Clear();
                 _isGlbViewerActive = false;
+                _currentFbxPath = null;
                 _glbLoader?.ClearCache();
                 _glbLoader?.Dispose();
                 LodLogger.Info("GLB viewer cleaned up");
@@ -89,6 +93,7 @@ namespace AssetProcessor {
         private async Task TryLoadGlbLodAsync(string fbxPath) {
             try {
                 LodLogger.Info($"Checking for GLB LOD files: {fbxPath}");
+                _currentFbxPath = fbxPath;  // Сохраняем для переключения Source Type
 
                 // Ищем GLB LOD файлы
                 _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
@@ -120,8 +125,9 @@ namespace AssetProcessor {
                     _glbLoader = new GlbLoader(gltfPackPath);
                 }
 
-                // Загружаем все LOD сцены
+                // Загружаем все LOD сцены и анализируем квантование
                 _lodScenes.Clear();
+                _lodQuantizationInfos.Clear();
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
 
                 foreach (var kvp in lodFilePaths) {
@@ -129,6 +135,11 @@ namespace AssetProcessor {
                     var glbPath = kvp.Value;
 
                     LodLogger.Info($"  Loading {lodLevel}: {glbPath}");
+
+                    // Анализируем квантование ПЕРЕД загрузкой (из оригинального GLB)
+                    var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
+                    _lodQuantizationInfos[lodLevel] = quantInfo;
+
                     var scene = await _glbLoader.LoadGlbAsync(glbPath);
                     if (scene != null) {
                         _lodScenes[lodLevel] = scene;
@@ -183,8 +194,17 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
+                // Получаем информацию о квантовании для текущего LOD
+                float uvScale = 1.0f;
+                if (_lodQuantizationInfos.TryGetValue(lodLevel, out var quantInfo)) {
+                    uvScale = quantInfo.UVScale;
+                    if (GlbQuantizationAnalyzer.NeedsUVScaling(quantInfo)) {
+                        LodLogger.Info($"  Applying UV scale correction: {uvScale:F3}x");
+                    }
+                }
+
                 // Конвертируем Assimp Scene в WPF модель
-                var modelGroup = ConvertAssimpSceneToWpfModel(scene);
+                var modelGroup = ConvertAssimpSceneToWpfModel(scene, uvScale);
 
                 // ИСПРАВЛЕНИЕ: GLB модели инвертированы по вертикали
                 // Применяем Scale(-1) по Y оси для корректной ориентации
@@ -221,7 +241,9 @@ namespace AssetProcessor {
         /// <summary>
         /// Конвертирует Assimp Scene в WPF Model3DGroup (аналогично LoadModel)
         /// </summary>
-        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
+        /// <param name="scene">Assimp Scene</param>
+        /// <param name="uvScale">Масштаб UV для коррекции квантования (1.0 = без коррекции)</param>
+        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene, float uvScale = 1.0f) {
             var modelGroup = new Model3DGroup();
 
             foreach (var mesh in scene.Meshes) {
@@ -248,16 +270,17 @@ namespace AssetProcessor {
 
                 // UV координаты (если есть)
                 if (mesh.TextureCoordinateChannelCount > 0 && mesh.HasTextureCoords(0)) {
-                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates");
+                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates (scale={uvScale:F3})");
 
-                    // Загружаем UV из Assimp (теперь они корректные благодаря TexCoordBits=16)
+                    // Загружаем UV из Assimp с применением масштаба для коррекции квантования
                     for (int i = 0; i < mesh.VertexCount; i++) {
                         var uv = mesh.TextureCoordinateChannels[0][i];
-                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
+                        // Применяем масштаб для коррекции квантования UV
+                        geometry.TextureCoordinates.Add(new Point(uv.X * uvScale, uv.Y * uvScale));
                     }
 
                     // Логируем первые 5 UV для проверки
-                    LodLogger.Info($"  First 5 UVs:");
+                    LodLogger.Info($"  First 5 UVs (after scale):");
                     for (int i = 0; i < Math.Min(5, geometry.TextureCoordinates.Count); i++) {
                         var uv = geometry.TextureCoordinates[i];
                         LodLogger.Info($"    UV {i}: ({uv.X:F4}, {uv.Y:F4})");
@@ -362,6 +385,7 @@ namespace AssetProcessor {
 
                 // Очищаем данные
                 _currentLodInfos.Clear();
+                _lodQuantizationInfos.Clear();
                 _lodDisplayItems.Clear();
                 _lodScenes.Clear();
                 _isGlbViewerActive = false;
@@ -484,6 +508,136 @@ namespace AssetProcessor {
             ModelViewportRow.Height = new GridLength(desiredHeight);
 
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// Текущий режим отображения: FBX или GLB
+        /// </summary>
+        private bool _isShowingFbx = false;
+
+        /// <summary>
+        /// Обработчик клика по кнопкам Source Type (FBX/GLB)
+        /// </summary>
+        private void SourceTypeButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is Button button && button.Tag is string tagStr) {
+                bool showFbx = tagStr == "FBX";
+
+                if (showFbx == _isShowingFbx) {
+                    return; // Уже показываем этот тип
+                }
+
+                _isShowingFbx = showFbx;
+
+                // Обновляем UI кнопок
+                SourceFbxButton.FontWeight = showFbx ? FontWeights.Bold : FontWeights.Normal;
+                SourceGlbButton.FontWeight = showFbx ? FontWeights.Normal : FontWeights.Bold;
+
+                // Включаем/выключаем LOD кнопки
+                LodButton0.IsEnabled = !showFbx;
+                LodButton1.IsEnabled = !showFbx && _currentLodInfos.ContainsKey(LodLevel.LOD1);
+                LodButton2.IsEnabled = !showFbx && _currentLodInfos.ContainsKey(LodLevel.LOD2);
+                LodButton3.IsEnabled = !showFbx && _currentLodInfos.ContainsKey(LodLevel.LOD3);
+
+                if (showFbx) {
+                    // Показываем FBX модель
+                    SwitchToFbxView();
+                } else {
+                    // Показываем GLB модель
+                    SwitchToGlbView();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Переключает вьюпорт на FBX модель
+        /// </summary>
+        private void SwitchToFbxView() {
+            try {
+                if (string.IsNullOrEmpty(_currentFbxPath)) {
+                    LodLogger.Warn("No FBX path available for switching");
+                    return;
+                }
+
+                LodLogger.Info($"Switching to FBX view: {_currentFbxPath}");
+
+                // Загружаем FBX модель (используем существующий метод LoadModel)
+                // Это вызовет LoadModel который загрузит FBX и отобразит его
+                Dispatcher.Invoke(() => {
+                    ModelCurrentLodTextBlock.Text = "Current: FBX (Original)";
+                });
+
+                // Загружаем FBX напрямую через Assimp без конвертации
+                LoadFbxModelDirectly(_currentFbxPath);
+
+            } catch (Exception ex) {
+                LodLogger.Error(ex, "Failed to switch to FBX view");
+            }
+        }
+
+        /// <summary>
+        /// Переключает вьюпорт на GLB модель
+        /// </summary>
+        private void SwitchToGlbView() {
+            try {
+                LodLogger.Info("Switching to GLB view");
+
+                // Загружаем текущий LOD
+                LoadGlbModelToViewport(_currentLod);
+
+            } catch (Exception ex) {
+                LodLogger.Error(ex, "Failed to switch to GLB view");
+            }
+        }
+
+        /// <summary>
+        /// Загружает FBX модель напрямую (без GLB конвертации)
+        /// </summary>
+        private void LoadFbxModelDirectly(string fbxPath) {
+            try {
+                using var context = new AssimpContext();
+                var scene = context.ImportFile(fbxPath,
+                    PostProcessSteps.Triangulate |
+                    PostProcessSteps.GenerateNormals |
+                    PostProcessSteps.FlipUVs);
+
+                if (scene == null || !scene.HasMeshes) {
+                    LodLogger.Error("Failed to load FBX: no meshes");
+                    return;
+                }
+
+                LodLogger.Info($"Loaded FBX: {scene.MeshCount} meshes");
+
+                // Очищаем viewport
+                var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
+                foreach (var model in modelsToRemove) {
+                    viewPort3d.Children.Remove(model);
+                }
+
+                if (!viewPort3d.Children.OfType<DefaultLights>().Any()) {
+                    viewPort3d.Children.Add(new DefaultLights());
+                }
+
+                // Конвертируем в WPF модель (без UV scale для FBX)
+                var modelGroup = ConvertAssimpSceneToWpfModel(scene, 1.0f);
+
+                // Добавляем в viewport
+                var visual3d = new ModelVisual3D { Content = modelGroup };
+                viewPort3d.Children.Add(visual3d);
+
+                // Применяем настройки viewer
+                ApplyViewerSettingsToModel();
+
+                // Обновляем UV preview
+                var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
+                if (meshWithUV != null) {
+                    UpdateUVImage(meshWithUV);
+                }
+
+                LodLogger.Info("FBX model loaded successfully");
+
+            } catch (Exception ex) {
+                LodLogger.Error(ex, $"Failed to load FBX model: {fbxPath}");
+            }
         }
     }
 }

@@ -358,22 +358,22 @@ namespace AssetProcessor {
                 // Вершины и нормали
                 // AXIS FIX: FBX2glTF outputs Z-up, but WPF/glTF requires Y-up
                 // Swap Y and Z: new_Y = old_Z, new_Z = old_Y
+                // Negate X to fix horizontal mirror (handedness change)
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
-                    // Swap Y ↔ Z to convert from Z-up to Y-up
-                    geometry.Positions.Add(new Point3D(vertex.X, vertex.Z, vertex.Y));
-                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
+                    // Swap Y ↔ Z and negate X to fix mirroring
+                    geometry.Positions.Add(new Point3D(-vertex.X, vertex.Z, vertex.Y));
+                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
                 }
 
                 // UV координаты (если есть)
-                // UV координаты - flip U из-за Y↔Z swap и инверсии winding order
                 if (mesh.TextureCoordinateChannelCount > 0 && mesh.HasTextureCoords(0)) {
-                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates (U flipped)");
+                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates");
 
                     for (int i = 0; i < mesh.VertexCount; i++) {
                         var uv = mesh.TextureCoordinateChannels[0][i];
-                        geometry.TextureCoordinates.Add(new Point(1.0 - uv.X, uv.Y));
+                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
                     }
 
                     // Логируем первые 5 UV для проверки
@@ -485,23 +485,23 @@ namespace AssetProcessor {
                 // Вершины и нормали
                 // AXIS FIX: FBX2glTF outputs Z-up, but WPF requires Y-up
                 // Swap Y and Z: new_Y = old_Z, new_Z = old_Y
+                // Negate X to fix horizontal mirror (handedness change)
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
-                    // Swap Y ↔ Z to convert from Z-up to Y-up
-                    geometry.Positions.Add(new Point3D(pos.X, pos.Z, pos.Y));
+                    // Swap Y ↔ Z and negate X to fix mirroring
+                    geometry.Positions.Add(new Point3D(-pos.X, pos.Z, pos.Y));
 
                     if (i < meshData.Normals.Count) {
                         var normal = meshData.Normals[i];
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
                     }
                 }
 
                 // UV координаты (SharpGLTF уже декодировал quantization!)
-                // ВАЖНО: При Y↔Z swap и инверсии winding order нужно также flip U координату
                 if (meshData.TextureCoordinates.Count > 0) {
-                    LodLogger.Info($"[SharpGLTF→WPF]   Adding {meshData.TextureCoordinates.Count} UV coordinates (U flipped for axis swap)");
+                    LodLogger.Info($"[SharpGLTF→WPF]   Adding {meshData.TextureCoordinates.Count} UV coordinates");
                     foreach (var uv in meshData.TextureCoordinates) {
-                        geometry.TextureCoordinates.Add(new Point(1.0 - uv.X, uv.Y));
+                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
                     }
 
                     // Логируем первые 5 UV

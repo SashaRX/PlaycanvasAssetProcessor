@@ -194,48 +194,10 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                // Анализируем UV scale на основе РЕАЛЬНЫХ данных из Assimp, а не метаданных GLB
-                // gltfpack -noq декодирует квантование, поэтому смотрим на фактические UV значения
-                float uvScale = 1.0f;
-                var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
-                if (meshWithUV != null && meshWithUV.TextureCoordinateChannels[0].Count > 0) {
-                    // Находим максимальное UV значение в реальных данных
-                    float maxU = 0, maxV = 0;
-                    foreach (var uv in meshWithUV.TextureCoordinateChannels[0]) {
-                        if (uv.X > maxU) maxU = uv.X;
-                        if (uv.Y > maxV) maxV = uv.Y;
-                    }
-                    float maxUV = Math.Max(maxU, maxV);
-
-                    LodLogger.Info($"  Actual UV max from Assimp: U={maxU:F4}, V={maxV:F4}");
-
-                    // Если max UV < 0.1, значит квантование НЕ было декодировано
-                    // и нужно применить scale для 12-бит (4095/65535 ≈ 0.0625)
-                    if (maxUV < 0.1f && maxUV > 0.01f) {
-                        // Вычисляем scale на основе реального max значения
-                        // Предполагаем что оригинальный UV должен быть близок к 1.0
-                        uvScale = 1.0f / maxUV;
-                        LodLogger.Info($"  Detected unscaled UV (max={maxUV:F4}), applying scale: {uvScale:F3}x");
-                    } else {
-                        LodLogger.Info($"  UV values appear correct (max={maxUV:F4}), no scale needed");
-                    }
-                }
-
-                // Конвертируем Assimp Scene в WPF модель с UV scale если нужно
-                var modelGroup = ConvertAssimpSceneToWpfModel(scene, uvScale);
-
-                // GLB модели требуют инверсии по Y для корректного отображения
-                // (разница в системах координат между glTF и WPF viewport)
-                if (modelGroup.Transform is Transform3DGroup existingTransform) {
-                    existingTransform.Children.Insert(0, new ScaleTransform3D(1, -1, 1));
-                } else {
-                    var flipTransform = new Transform3DGroup();
-                    flipTransform.Children.Add(new ScaleTransform3D(1, -1, 1));
-                    if (modelGroup.Transform != null) {
-                        flipTransform.Children.Add(modelGroup.Transform);
-                    }
-                    modelGroup.Transform = flipTransform;
-                }
+                // Конвертируем Assimp Scene в WPF модель
+                // GLB уже имеет правильную ориентацию UV (top-left origin как WPF)
+                // НЕ нужно никаких ручных преобразований UV!
+                var modelGroup = ConvertAssimpSceneToWpfModel(scene);
 
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };
@@ -247,7 +209,7 @@ namespace AssetProcessor {
                 // Обновляем UV preview (берём первую mesh с UV координатами)
                 var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
                 if (meshWithUV != null) {
-                    UpdateUVImage(meshWithUV);
+                    UpdateUVImage(meshWithUV, flipV: false); // GLB имеет top-left UV origin
                 }
 
                 // Центрируем камеру только при первой загрузке модели
@@ -264,11 +226,11 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Конвертирует Assimp Scene в WPF Model3DGroup (аналогично LoadModel)
+        /// Конвертирует Assimp Scene в WPF Model3DGroup
+        /// UV координаты копируются напрямую без преобразований
+        /// (GLB уже имеет top-left UV origin, как WPF)
         /// </summary>
-        /// <param name="scene">Assimp Scene</param>
-        /// <param name="uvScale">Масштаб UV для коррекции квантования (1.0 = без коррекции)</param>
-        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene, float uvScale = 1.0f) {
+        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
             var modelGroup = new Model3DGroup();
 
             foreach (var mesh in scene.Meshes) {
@@ -294,30 +256,25 @@ namespace AssetProcessor {
                 }
 
                 // UV координаты (если есть)
+                // GLB/glTF имеет UV origin вверху-слева (как WPF), копируем напрямую
                 if (mesh.TextureCoordinateChannelCount > 0 && mesh.HasTextureCoords(0)) {
-                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates (scale={uvScale:F3})");
+                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates");
 
-                    // Загружаем UV из Assimp с применением масштаба для коррекции квантования
-                    // ВАЖНО: Порядок операций критичен!
-                    // 1. Сначала применяем scale (для коррекции 12-бит квантования)
-                    // 2. Затем flip V (для соответствия UV preview формату)
                     for (int i = 0; i < mesh.VertexCount; i++) {
                         var uv = mesh.TextureCoordinateChannels[0][i];
-                        // Правильный порядок: scale → flip
-                        float scaledU = uv.X * uvScale;
-                        float scaledV = uv.Y * uvScale;
-                        float flippedV = 1.0f - scaledV;
-                        geometry.TextureCoordinates.Add(new Point(scaledU, flippedV));
+                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
                     }
 
                     // Логируем первые 5 UV для проверки
-                    LodLogger.Info($"  First 5 UVs (after scale and V-flip):");
-                    for (int i = 0; i < Math.Min(5, geometry.TextureCoordinates.Count); i++) {
-                        var uv = geometry.TextureCoordinates[i];
-                        LodLogger.Info($"    UV {i}: ({uv.X:F4}, {uv.Y:F4})");
+                    if (mesh.VertexCount > 0) {
+                        LodLogger.Info($"  First 5 UVs:");
+                        for (int i = 0; i < Math.Min(5, mesh.VertexCount); i++) {
+                            var uv = mesh.TextureCoordinateChannels[0][i];
+                            LodLogger.Info($"    UV {i}: ({uv.X:F4}, {uv.Y:F4})");
+                        }
                     }
                 } else {
-                    LodLogger.Info($"  No UV coordinates found (ChannelCount={mesh.TextureCoordinateChannelCount})");
+                    LodLogger.Info($"  No UV coordinates found");
                 }
 
                 // Индексы
@@ -661,7 +618,7 @@ namespace AssetProcessor {
                 // Обновляем UV preview
                 var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
                 if (meshWithUV != null) {
-                    UpdateUVImage(meshWithUV);
+                    UpdateUVImage(meshWithUV, flipV: false); // GLB имеет top-left UV origin
                 }
 
                 LodLogger.Info("FBX model loaded successfully");

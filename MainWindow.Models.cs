@@ -88,12 +88,17 @@ namespace AssetProcessor {
             });
         }
 
-        private void UpdateUVImage(Mesh mesh) {
+        /// <summary>
+        /// Обновляет UV preview изображения
+        /// </summary>
+        /// <param name="mesh">Assimp mesh с UV координатами</param>
+        /// <param name="flipV">True для FBX (загружен с FlipUVs), False для GLB (естественный top-left origin)</param>
+        private void UpdateUVImage(Mesh mesh, bool flipV = true) {
             const int width = 512;
             const int height = 512;
 
-            BitmapSource primaryUv = CreateUvBitmapSource(mesh, 0, width, height);
-            BitmapSource secondaryUv = CreateUvBitmapSource(mesh, 1, width, height);
+            BitmapSource primaryUv = CreateUvBitmapSource(mesh, 0, width, height, flipV);
+            BitmapSource secondaryUv = CreateUvBitmapSource(mesh, 1, width, height, flipV);
 
             Dispatcher.Invoke(() => {
                 UVImage.Source = primaryUv;
@@ -101,7 +106,11 @@ namespace AssetProcessor {
             });
         }
 
-        private static BitmapSource CreateUvBitmapSource(Mesh mesh, int channelIndex, int width, int height) {
+        /// <summary>
+        /// Создаёт bitmap с UV развёрткой
+        /// </summary>
+        /// <param name="flipV">True для FBX (отменяет FlipUVs для показа оригинальной развёртки), False для GLB</param>
+        private static BitmapSource CreateUvBitmapSource(Mesh mesh, int channelIndex, int width, int height, bool flipV = true) {
             DrawingVisual visual = new();
 
             using (DrawingContext drawingContext = visual.RenderOpen()) {
@@ -137,8 +146,10 @@ namespace AssetProcessor {
                                 }
 
                                 Assimp.Vector3D uv = textureCoordinates[vertexIndex];
-                                // UV теперь корректные благодаря TexCoordBits=16
-                                points[i] = new Point(uv.X * width, (1 - uv.Y) * height);
+                                // flipV: для FBX (после FlipUVs) нужно отменить flip чтобы показать оригинальную развёртку
+                                // для GLB (без FlipUVs) показываем как есть (top-left origin)
+                                float displayV = flipV ? (1 - uv.Y) : uv.Y;
+                                points[i] = new Point(uv.X * width, displayV * height);
                             }
 
                             if (!isValidFace) {

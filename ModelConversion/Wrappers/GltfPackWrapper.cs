@@ -286,8 +286,9 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 switch (compressionMode) {
                     case CompressionMode.Quantization:
                         // KHR_mesh_quantization (совместимо с редакторами)
-                        args.Add("-kn"); // quantize normal
-                        args.Add("-km"); // quantize mesh
+                        // Примечание: -kn и -km НЕ относятся к квантованию!
+                        // Они означают "keep named nodes" и "keep named materials"
+                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
                         break;
 
                     case CompressionMode.MeshOpt:
@@ -297,8 +298,9 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                         } else {
                             args.Add("-c");
                         }
-                        args.Add("-kn");
-                        args.Add("-km");
+                        // Примечание: -kn и -km НЕ относятся к сжатию!
+                        // Они означают "keep named nodes" и "keep named materials"
+                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
                         break;
 
                     case CompressionMode.MeshOptAggressive:

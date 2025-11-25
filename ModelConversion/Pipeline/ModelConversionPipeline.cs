@@ -102,6 +102,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                             lodSettings,
                             settings.CompressionMode,
                             settings.Quantization,
+                            settings.AdvancedSettings,
                             generateReport: settings.GenerateQAReport,
                             excludeTextures: settings.ExcludeTextures
                         );

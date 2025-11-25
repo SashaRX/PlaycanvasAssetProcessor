@@ -79,7 +79,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 result.BaseGlbPath = fbxResult.OutputFilePath!;
 
                 // DEBUG: Проверяем UV после FBX2glTF
-                await InspectGlbUVAsync(fbxResult.OutputFilePath!, "BASE GLB (after FBX2glTF)");
+                InspectGlbUV(fbxResult.OutputFilePath!, "BASE GLB (after FBX2glTF)");
 
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
@@ -115,7 +115,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
 
                         // DEBUG: Проверяем UV после gltfpack
-                        await InspectGlbUVAsync(lodOutputPath, $"{lodName} (after gltfpack)");
+                        InspectGlbUV(lodOutputPath, $"{lodName} (after gltfpack)");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 
@@ -211,7 +211,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
         /// <summary>
         /// Проверяет UV координаты в GLB файле для диагностики
         /// </summary>
-        private async Task InspectGlbUVAsync(string glbPath, string stage) {
+        private void InspectGlbUV(string glbPath, string stage) {
             try {
                 Logger.Info($"=== UV INSPECTION: {stage} ===");
                 Logger.Info($"File: {glbPath}");

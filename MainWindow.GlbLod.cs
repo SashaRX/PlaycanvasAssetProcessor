@@ -62,69 +62,62 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Ищет и загружает albedo текстуру для модели по naming convention
+        /// Ищет и загружает albedo текстуру для модели из таблицы материалов.
+        /// Использует viewModel.Materials и viewModel.Textures для поиска по ID.
         /// </summary>
         private ImageBrush? FindAndLoadAlbedoTexture(string fbxPath) {
             try {
-                var directory = System.IO.Path.GetDirectoryName(fbxPath);
-                if (string.IsNullOrEmpty(directory)) return null;
-
                 var modelName = System.IO.Path.GetFileNameWithoutExtension(fbxPath);
+                LodLogger.Info($"[Texture] Looking for albedo texture for model: {modelName}");
 
-                // Суффиксы для albedo текстур
-                var albedoSuffixes = new[] { "_albedo", "_diffuse", "_color", "_basecolor", "_base_color", "_d", "" };
-                var extensions = new[] { ".png", ".jpg", ".jpeg", ".tga", ".bmp" };
+                // Ищем материал по имени модели (модель "chair" -> материал "chair_mat" или "chair")
+                var materialNames = new[] {
+                    modelName + "_mat",
+                    modelName,
+                    modelName.ToLowerInvariant() + "_mat",
+                    modelName.ToLowerInvariant()
+                };
 
-                // Ищем в директории модели и в родительской (textures часто рядом)
-                var searchDirs = new List<string> { directory };
-
-                // Также ищем в соседних папках textures, Textures
-                var parentDir = System.IO.Path.GetDirectoryName(directory);
-                if (!string.IsNullOrEmpty(parentDir)) {
-                    searchDirs.Add(parentDir);
-                    var texturesDir = System.IO.Path.Combine(parentDir, "textures");
-                    if (System.IO.Directory.Exists(texturesDir)) searchDirs.Add(texturesDir);
-                    texturesDir = System.IO.Path.Combine(parentDir, "Textures");
-                    if (System.IO.Directory.Exists(texturesDir)) searchDirs.Add(texturesDir);
-                }
-
-                foreach (var searchDir in searchDirs) {
-                    if (!System.IO.Directory.Exists(searchDir)) continue;
-
-                    foreach (var suffix in albedoSuffixes) {
-                        foreach (var ext in extensions) {
-                            var texturePath = System.IO.Path.Combine(searchDir, modelName + suffix + ext);
-                            if (System.IO.File.Exists(texturePath)) {
-                                LodLogger.Info($"[Texture] Found albedo: {texturePath}");
-                                return LoadTextureAsBrush(texturePath);
-                            }
-                        }
+                MaterialResource? material = null;
+                foreach (var matName in materialNames) {
+                    material = viewModel.Materials.FirstOrDefault(m =>
+                        string.Equals(m.Name, matName, StringComparison.OrdinalIgnoreCase));
+                    if (material != null) {
+                        LodLogger.Info($"[Texture] Found material: {material.Name} (ID: {material.ID})");
+                        break;
                     }
-
-                    // Также ищем файлы содержащие имя модели и albedo/diffuse в имени
-                    try {
-                        var files = System.IO.Directory.GetFiles(searchDir);
-                        foreach (var file in files) {
-                            var fileName = System.IO.Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
-                            var fileExt = System.IO.Path.GetExtension(file).ToLowerInvariant();
-
-                            if (!extensions.Contains(fileExt)) continue;
-
-                            // Проверяем что файл относится к этой модели и является albedo
-                            if (fileName.Contains(modelName.ToLowerInvariant()) &&
-                                (fileName.Contains("albedo") || fileName.Contains("diffuse") || fileName.Contains("color"))) {
-                                LodLogger.Info($"[Texture] Found albedo (by pattern): {file}");
-                                return LoadTextureAsBrush(file);
-                            }
-                        }
-                    } catch { /* ignore search errors */ }
                 }
 
-                LodLogger.Info($"[Texture] No albedo texture found for {modelName}");
-                return null;
+                if (material == null) {
+                    LodLogger.Info($"[Texture] No material found for model: {modelName}");
+                    return null;
+                }
+
+                // Получаем ID текстуры из материала
+                var diffuseMapId = material.DiffuseMapId;
+                if (!diffuseMapId.HasValue) {
+                    LodLogger.Info($"[Texture] Material {material.Name} has no DiffuseMapId");
+                    return null;
+                }
+
+                // Ищем текстуру по ID в таблице текстур
+                var texture = viewModel.Textures.FirstOrDefault(t => t.ID == diffuseMapId.Value);
+                if (texture == null) {
+                    LodLogger.Info($"[Texture] Texture with ID {diffuseMapId.Value} not found in textures table");
+                    return null;
+                }
+
+                // Загружаем текстуру по пути
+                if (string.IsNullOrEmpty(texture.Path) || !System.IO.File.Exists(texture.Path)) {
+                    LodLogger.Info($"[Texture] Texture file not found: {texture.Path}");
+                    return null;
+                }
+
+                LodLogger.Info($"[Texture] Found albedo from material table: {texture.Name} (ID: {texture.ID}) -> {texture.Path}");
+                return LoadTextureAsBrush(texture.Path);
 
             } catch (Exception ex) {
-                LodLogger.Warn(ex, "Failed to find albedo texture");
+                LodLogger.Warn(ex, "Failed to find albedo texture from materials table");
                 return null;
             }
         }

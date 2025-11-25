@@ -335,8 +335,11 @@ namespace AssetProcessor {
         /// UV координаты копируются напрямую без преобразований
         /// (GLB уже имеет top-left UV origin, как WPF)
         ///
-        /// ВАЖНО: FBX2glTF выводит геометрию в Z-up координатной системе,
-        /// а WPF/glTF требует Y-up. Поэтому мы меняем Y↔Z при загрузке.
+        /// Координатные системы:
+        /// - FBX может быть Z-up или Y-up (зависит от 3D редактора)
+        /// - GLB/glTF спецификация требует Y-up (FBX2glTF конвертирует автоматически)
+        /// - WPF использует Y-up правую систему координат
+        /// - Преобразование осей и инверсия X для правильного отображения
         /// </summary>
         private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
             var modelGroup = new Model3DGroup();
@@ -356,13 +359,12 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // AXIS FIX: FBX2glTF outputs Z-up, but WPF/glTF requires Y-up
-                // Swap Y and Z: new_Y = old_Z, new_Z = old_Y
-                // Negate X to fix horizontal mirror (handedness change)
+                // AXIS FIX: Преобразование из Assimp в WPF координатную систему
+                // Swap Y ↔ Z и инверсия X для правильного отображения
+                // (учитывает различия в handedness координатных систем)
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
-                    // Swap Y ↔ Z and negate X to fix mirroring
                     geometry.Positions.Add(new Point3D(-vertex.X, vertex.Z, vertex.Y));
                     geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
                 }
@@ -469,8 +471,10 @@ namespace AssetProcessor {
         /// Конвертирует SharpGLTF данные в WPF Model3DGroup
         /// SharpGLTF автоматически декодирует KHR_mesh_quantization
         ///
-        /// ВАЖНО: FBX2glTF выводит геометрию в Z-up координатной системе,
-        /// а WPF/glTF требует Y-up. Поэтому мы меняем Y↔Z при загрузке.
+        /// Координатные системы:
+        /// - GLB/glTF спецификация требует Y-up (FBX2glTF конвертирует из исходной FBX)
+        /// - WPF использует Y-up правую систему координат
+        /// - Преобразование осей и инверсия X для правильного отображения в WPF
         /// </summary>
         private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
             var modelGroup = new Model3DGroup();
@@ -481,12 +485,11 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // AXIS FIX: FBX2glTF outputs Z-up, but WPF requires Y-up
-                // Swap Y and Z: new_Y = old_Z, new_Z = old_Y
-                // Negate X to fix horizontal mirror (handedness change)
+                // AXIS FIX: Преобразование из glTF в WPF координатную систему
+                // Swap Y ↔ Z и инверсия X для правильного отображения
+                // (учитывает различия в handedness координатных систем)
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
-                    // Swap Y ↔ Z and negate X to fix mirroring
                     geometry.Positions.Add(new Point3D(-pos.X, pos.Z, pos.Y));
 
                     if (i < meshData.Normals.Count) {

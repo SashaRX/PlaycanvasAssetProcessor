@@ -336,20 +336,31 @@ namespace AssetProcessor {
         /// (GLB уже имеет top-left UV origin, как WPF)
         ///
         /// Координатные системы:
-        /// - FBX может быть Z-up или Y-up (зависит от 3D редактора)
-        /// - GLB/glTF спецификация требует Y-up (FBX2glTF конвертирует автоматически)
-        /// - WPF использует Y-up правую систему координат
-        /// - Преобразование осей и инверсия X для правильного отображения
+        /// - FBX может быть Z-up (3ds Max) или Y-up (Maya, Blender)
+        /// - WPF использует Y-up левую систему координат
+        /// - Определяем UpAxis из метаданных FBX и применяем соответствующее преобразование
         /// </summary>
         private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
             var modelGroup = new Model3DGroup();
+
+            // Определяем координатную систему FBX из метаданных
+            // UpAxis: 0 = X, 1 = Y, 2 = Z (default = 2 для 3ds Max)
+            bool isZUp = true; // По умолчанию Z-up (3ds Max)
+            if (scene.Metadata != null && scene.Metadata.TryGetValue("UpAxis", out var upAxisEntry)) {
+                if (upAxisEntry.Data is int upAxis) {
+                    isZUp = upAxis == 2; // 2 = Z-up, 1 = Y-up
+                    LodLogger.Info($"FBX UpAxis from metadata: {upAxis} (isZUp={isZUp})");
+                }
+            } else {
+                LodLogger.Info("FBX UpAxis metadata not found, assuming Z-up (3ds Max default)");
+            }
 
             foreach (var mesh in scene.Meshes) {
                 LodLogger.Info($"Processing mesh: {mesh.VertexCount} vertices, {mesh.FaceCount} faces, HasUVs={mesh.HasTextureCoords(0)}");
                 LodLogger.Info($"  TextureCoordinateChannelCount={mesh.TextureCoordinateChannelCount}");
 
-                // Логируем первые 5 вершин из Assimp для диагностики (до преобразования осей)
-                LodLogger.Info($"First 5 vertices from Assimp (before Y↔Z swap):");
+                // Логируем первые 5 вершин из Assimp для диагностики (до преобразования)
+                LodLogger.Info($"First 5 vertices from Assimp (before axis transform, isZUp={isZUp}):");
                 for (int i = 0; i < Math.Min(5, mesh.VertexCount); i++) {
                     var v = mesh.Vertices[i];
                     LodLogger.Info($"  Vertex {i}: ({v.X:F4}, {v.Y:F4}, {v.Z:F4})");
@@ -359,14 +370,22 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // AXIS FIX: Преобразование из Assimp в WPF координатную систему
-                // Swap Y ↔ Z и инверсия X для правильного отображения
-                // (учитывает различия в handedness координатных систем)
+                // AXIS FIX: FBX (right-handed) → WPF (Y-up, left-handed)
+                // Z-up FBX: swap Y↔Z, затем negate X для handedness
+                // Y-up FBX: только negate X для handedness
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
-                    geometry.Positions.Add(new Point3D(-vertex.X, vertex.Z, vertex.Y));
-                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
+
+                    if (isZUp) {
+                        // Z-up → Y-up: swap Y↔Z, negate X для handedness
+                        geometry.Positions.Add(new Point3D(-vertex.X, vertex.Z, vertex.Y));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
+                    } else {
+                        // Y-up → Y-up: только negate X для handedness
+                        geometry.Positions.Add(new Point3D(-vertex.X, vertex.Y, vertex.Z));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Y, normal.Z));
+                    }
                 }
 
                 // UV координаты (если есть)
@@ -402,8 +421,8 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"Geometry created: Positions={geometry.Positions.Count}, Normals={geometry.Normals.Count}, TexCoords={geometry.TextureCoordinates.Count}, Indices={geometry.TriangleIndices.Count}");
 
-                // Логируем первые 5 вершин из geometry.Positions для проверки (после Y↔Z swap)
-                LodLogger.Info($"First 5 vertices in geometry.Positions (after Y↔Z swap):");
+                // Логируем первые 5 вершин из geometry.Positions для проверки (после axis transform)
+                LodLogger.Info($"First 5 vertices in geometry.Positions (after axis transform, isZUp={isZUp}):");
                 for (int i = 0; i < Math.Min(5, geometry.Positions.Count); i++) {
                     var p = geometry.Positions[i];
                     LodLogger.Info($"  Position {i}: ({p.X:F4}, {p.Y:F4}, {p.Z:F4})");
@@ -485,16 +504,17 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // AXIS FIX: Преобразование из glTF в WPF координатную систему
-                // Swap Y ↔ Z и инверсия X для правильного отображения
-                // (учитывает различия в handedness координатных систем)
+                // AXIS FIX: glTF (Y-up, right-handed) → WPF (Y-up, left-handed)
+                // glTF уже Y-up по спецификации, WPF тоже Y-up
+                // Для смены handedness: инверсия X (правая система → левая)
+                // НЕ НУЖЕН swap Y↔Z - обе системы Y-up!
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
-                    geometry.Positions.Add(new Point3D(-pos.X, pos.Z, pos.Y));
+                    geometry.Positions.Add(new Point3D(-pos.X, pos.Y, pos.Z));
 
                     if (i < meshData.Normals.Count) {
                         var normal = meshData.Normals[i];
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Y, normal.Z));
                     }
                 }
 

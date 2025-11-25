@@ -42,9 +42,9 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 }
 
                 // Загружаем декодированный файл
-                // ВАЖНО: FlipUVs нужен для согласованности с FBX загрузкой и UV preview
-                // UV preview использует (1 - uv.Y), поэтому все источники должны быть с FlipUVs
-                var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals | PostProcessSteps.FlipUVs;
+                // НЕ используем FlipUVs - GLB/glTF уже имеет корректную ориентацию UV
+                // FlipUVs нужен только для FBX при загрузке
+                var postProcess = PostProcessSteps.Triangulate | PostProcessSteps.GenerateSmoothNormals;
                 var scene = _assimpContext.ImportFile(decodedPath, postProcess);
                 Logger.Info($"Loaded decoded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
 

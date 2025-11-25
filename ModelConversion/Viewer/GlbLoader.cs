@@ -48,10 +48,57 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 var scene = _assimpContext.ImportFile(decodedPath, postProcess);
                 Logger.Info($"Loaded decoded GLB: {scene.MeshCount} meshes, {scene.MaterialCount} materials");
 
-                // DEBUG: Проверяем UV координаты в загруженной сцене
+                // DEBUG: Детальная проверка UV координат
                 for (int i = 0; i < scene.MeshCount; i++) {
                     var mesh = scene.Meshes[i];
                     Logger.Info($"  Mesh {i}: {mesh.VertexCount} verts, TextureCoordinateChannelCount={mesh.TextureCoordinateChannelCount}, HasTextureCoords(0)={mesh.HasTextureCoords(0)}");
+
+                    // Вычисляем bounding box для диагностики размера модели
+                    if (mesh.VertexCount > 0) {
+                        float minX = float.MaxValue, maxX = float.MinValue;
+                        float minY = float.MaxValue, maxY = float.MinValue;
+                        float minZ = float.MaxValue, maxZ = float.MinValue;
+                        foreach (var v in mesh.Vertices) {
+                            if (v.X < minX) minX = v.X;
+                            if (v.X > maxX) maxX = v.X;
+                            if (v.Y < minY) minY = v.Y;
+                            if (v.Y > maxY) maxY = v.Y;
+                            if (v.Z < minZ) minZ = v.Z;
+                            if (v.Z > maxZ) maxZ = v.Z;
+                        }
+                        float sizeX = maxX - minX;
+                        float sizeY = maxY - minY;
+                        float sizeZ = maxZ - minZ;
+                        Logger.Info($"    Position Bounds: X=[{minX:F3}, {maxX:F3}], Y=[{minY:F3}, {maxY:F3}], Z=[{minZ:F3}, {maxZ:F3}]");
+                        Logger.Info($"    Model Size: {sizeX:F3} x {sizeY:F3} x {sizeZ:F3}");
+                    }
+
+                    if (mesh.HasTextureCoords(0) && mesh.TextureCoordinateChannels[0].Count > 0) {
+                        // Вычисляем min/max UV для диагностики
+                        float minU = float.MaxValue, maxU = float.MinValue;
+                        float minV = float.MaxValue, maxV = float.MinValue;
+                        foreach (var uv in mesh.TextureCoordinateChannels[0]) {
+                            if (uv.X < minU) minU = uv.X;
+                            if (uv.X > maxU) maxU = uv.X;
+                            if (uv.Y < minV) minV = uv.Y;
+                            if (uv.Y > maxV) maxV = uv.Y;
+                        }
+                        Logger.Info($"    UV Range: U=[{minU:F6}, {maxU:F6}], V=[{minV:F6}, {maxV:F6}]");
+
+                        // Проверяем если UV квантованы (очень маленький диапазон)
+                        float uvMaxRange = Math.Max(maxU, maxV);
+                        if (uvMaxRange < 0.1f) {
+                            Logger.Warn($"    WARNING: UV values appear QUANTIZED! Max={uvMaxRange:F6}");
+                            Logger.Warn($"    gltfpack -noq НЕ декодировал квантование UV!");
+                        }
+
+                        // Первые 5 UV для примера
+                        Logger.Info($"    First 5 UVs:");
+                        for (int j = 0; j < Math.Min(5, mesh.TextureCoordinateChannels[0].Count); j++) {
+                            var uv = mesh.TextureCoordinateChannels[0][j];
+                            Logger.Info($"      UV[{j}]: ({uv.X:F6}, {uv.Y:F6})");
+                        }
+                    }
                 }
 
                 return scene;

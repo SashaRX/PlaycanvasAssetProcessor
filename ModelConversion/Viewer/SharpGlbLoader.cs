@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text;
 using NLog;
 using SharpGLTF.Schema2;
+using SharpGLTF.Validation;
 
 namespace AssetProcessor.ModelConversion.Viewer {
     /// <summary>
@@ -70,7 +71,24 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 }
 
                 // Загружаем модель (декодированную или оригинальную)
-                var model = ModelRoot.Load(pathToLoad);
+                // Используем ValidationMode.Skip чтобы игнорировать ошибки текстур
+                // (нам нужна только геометрия для viewer)
+                var readSettings = new ReadSettings {
+                    Validation = ValidationMode.Skip
+                };
+
+                ModelRoot model;
+                try {
+                    model = ModelRoot.Load(pathToLoad, readSettings);
+                } catch (Exception ex) when (ex.InnerException is FileNotFoundException || ex is FileNotFoundException) {
+                    // Если файл текстуры не найден, пробуем загрузить с кастомным FileReader
+                    Logger.Warn($"[SharpGLTF] Texture file not found, trying to load without textures: {ex.Message}");
+                    model = LoadWithoutTextures(pathToLoad);
+                } catch (Exception ex) when (ex.Message.Contains("PNG") || ex.Message.Contains("Invalid")) {
+                    // Если текстура повреждена, пробуем загрузить без текстур
+                    Logger.Warn($"[SharpGLTF] Invalid texture data, trying to load without textures: {ex.Message}");
+                    model = LoadWithoutTextures(pathToLoad);
+                }
 
                 Logger.Info($"[SharpGLTF] Loaded: {model.LogicalMeshes.Count} meshes, {model.LogicalMaterials.Count} materials");
 
@@ -220,6 +238,65 @@ namespace AssetProcessor.ModelConversion.Viewer {
             }
 
             return normals.ToList();
+        }
+
+        /// <summary>
+        /// Загружает GLB без текстур (используется когда текстуры отсутствуют или повреждены)
+        /// </summary>
+        private ModelRoot LoadWithoutTextures(string glbPath) {
+            Logger.Info($"[SharpGLTF] Loading without textures: {glbPath}");
+
+            // Создаём ReadContext с кастомным FileReader который возвращает пустые данные для текстур
+            var directory = Path.GetDirectoryName(glbPath) ?? ".";
+            var readContext = ReadContext.Create(fileName => {
+                var fullPath = Path.Combine(directory, fileName);
+
+                // Для текстур возвращаем минимальный валидный 1x1 PNG
+                if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                    fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                    fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)) {
+                    Logger.Info($"[SharpGLTF] Skipping texture: {fileName}");
+                    // Минимальный 1x1 красный PNG для заглушки
+                    return new ArraySegment<byte>(CreateMinimalPng());
+                }
+
+                // Для остальных файлов читаем нормально
+                if (File.Exists(fullPath)) {
+                    return new ArraySegment<byte>(File.ReadAllBytes(fullPath));
+                }
+
+                throw new FileNotFoundException($"File not found: {fullPath}");
+            });
+
+            readContext.Validation = ValidationMode.Skip;
+
+            using var stream = File.OpenRead(glbPath);
+            return readContext.ReadSchema2(stream);
+        }
+
+        /// <summary>
+        /// Создаёт минимальный валидный 1x1 PNG (красный пиксель)
+        /// </summary>
+        private static byte[] CreateMinimalPng() {
+            // Минимальный 1x1 красный PNG (67 bytes)
+            return new byte[] {
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR length
+                0x49, 0x48, 0x44, 0x52, // IHDR
+                0x00, 0x00, 0x00, 0x01, // width = 1
+                0x00, 0x00, 0x00, 0x01, // height = 1
+                0x08, 0x02,             // 8-bit RGB
+                0x00, 0x00, 0x00,       // compression, filter, interlace
+                0x90, 0x77, 0x53, 0xDE, // IHDR CRC
+                0x00, 0x00, 0x00, 0x0C, // IDAT length
+                0x49, 0x44, 0x41, 0x54, // IDAT
+                0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, // compressed data (red pixel)
+                0x01, 0x01, 0x01, 0x00, // IDAT CRC
+                0xF8, 0x17, 0xC5, 0xA3,
+                0x00, 0x00, 0x00, 0x00, // IEND length
+                0x49, 0x45, 0x4E, 0x44, // IEND
+                0xAE, 0x42, 0x60, 0x82  // IEND CRC
+            };
         }
 
         /// <summary>

@@ -388,15 +388,13 @@ namespace AssetProcessor {
                     LodLogger.Info($"  No UV coordinates found");
                 }
 
-                // Индексы
-                // ВАЖНО: При замене Y↔Z меняется handedness координатной системы,
-                // поэтому нужно инвертировать winding order треугольников (swap indices 1 и 2)
+                // Индексы - оригинальный порядок (X negation уже исправляет handedness)
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
                         geometry.TriangleIndices.Add(face.Indices[0]);
-                        geometry.TriangleIndices.Add(face.Indices[2]); // Swapped with [1]
-                        geometry.TriangleIndices.Add(face.Indices[1]); // Swapped with [2]
+                        geometry.TriangleIndices.Add(face.Indices[1]);
+                        geometry.TriangleIndices.Add(face.Indices[2]);
                     }
                 }
 
@@ -512,12 +510,12 @@ namespace AssetProcessor {
                     }
                 }
 
-                // Индексы (инвертируем winding order из-за Y↔Z swap)
+                // Индексы - оригинальный порядок (X negation уже исправляет handedness)
                 for (int i = 0; i < meshData.Indices.Count; i += 3) {
                     if (i + 2 < meshData.Indices.Count) {
                         geometry.TriangleIndices.Add(meshData.Indices[i]);
-                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]); // Swapped
-                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]); // Swapped
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
                     }
                 }
 

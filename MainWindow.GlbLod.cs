@@ -409,13 +409,15 @@ namespace AssetProcessor {
                     LodLogger.Info($"  No UV coordinates found");
                 }
 
-                // Индексы - оригинальный порядок (X negation уже исправляет handedness)
+                // Индексы - РЕВЕРС winding order для исправления handedness после X negation
+                // При зеркалировании (negate X) грани "выворачиваются", нужно поменять порядок вершин
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
+                        // Реверс: [0,1,2] → [0,2,1] для исправления winding
                         geometry.TriangleIndices.Add(face.Indices[0]);
-                        geometry.TriangleIndices.Add(face.Indices[1]);
                         geometry.TriangleIndices.Add(face.Indices[2]);
+                        geometry.TriangleIndices.Add(face.Indices[1]);
                     }
                 }
 
@@ -533,12 +535,14 @@ namespace AssetProcessor {
                     }
                 }
 
-                // Индексы - оригинальный порядок (X negation уже исправляет handedness)
+                // Индексы - РЕВЕРС winding order для исправления handedness после X negation
+                // При зеркалировании (negate X) грани "выворачиваются", нужно поменять порядок вершин
                 for (int i = 0; i < meshData.Indices.Count; i += 3) {
                     if (i + 2 < meshData.Indices.Count) {
+                        // Реверс: [0,1,2] → [0,2,1] для исправления winding
                         geometry.TriangleIndices.Add(meshData.Indices[i]);
-                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
                         geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
                     }
                 }
 

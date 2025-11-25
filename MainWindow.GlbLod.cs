@@ -187,6 +187,9 @@ namespace AssetProcessor {
                 LodLogger.Info($"Checking for GLB LOD files: {fbxPath}");
                 _currentFbxPath = fbxPath;  // Сохраняем для переключения Source Type
 
+                // Загружаем albedo текстуру из таблицы материалов (независимо от наличия GLB)
+                _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
+
                 // Ищем GLB LOD файлы
                 _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
 
@@ -216,9 +219,6 @@ namespace AssetProcessor {
                     LodLogger.Info("SharpGLTF handles KHR_mesh_quantization, gltfpack decodes EXT_meshopt_compression");
                     _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
                 }
-
-                // Ищем и загружаем albedo текстуру для preview
-                _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
 
                 // Загружаем все LOD данные через SharpGLTF
                 _lodGlbData.Clear();

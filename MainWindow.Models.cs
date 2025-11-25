@@ -245,7 +245,10 @@ namespace AssetProcessor {
                     }
 
                     MeshGeometry3D geometry = builder.ToMesh(true);
-                    DiffuseMaterial material = new(new SolidColorBrush(Colors.Gray));
+                    // Используем albedo текстуру из материалов если она загружена
+                    DiffuseMaterial material = (_cachedAlbedoBrush != null && geometry.TextureCoordinates.Count > 0)
+                        ? new DiffuseMaterial(_cachedAlbedoBrush)
+                        : new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
                     GeometryModel3D model = new(geometry, material);
                     modelGroup.Children.Add(model);
 

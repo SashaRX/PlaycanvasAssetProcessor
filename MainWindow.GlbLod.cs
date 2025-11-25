@@ -152,6 +152,15 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes via SharpGLTF");
 
+                // Если ни один GLB не загрузился - fallback на FBX
+                if (_lodGlbData.Count == 0) {
+                    LodLogger.Warn("All GLB files failed to load, falling back to FBX viewer");
+                    HideGlbLodUI();
+                    // Загружаем FBX напрямую
+                    LoadFbxModelDirectly(fbxPath);
+                    return;
+                }
+
                 // Отображаем LOD0 в существующем viewport
                 // zoomToFit=true только при первой загрузке модели
                 if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {

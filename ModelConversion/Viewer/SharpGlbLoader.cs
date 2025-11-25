@@ -22,7 +22,8 @@ namespace AssetProcessor.ModelConversion.Viewer {
         public class MeshData {
             public List<Vector3> Positions { get; set; } = new();
             public List<Vector3> Normals { get; set; } = new();
-            public List<Vector2> TextureCoordinates { get; set; } = new();
+            public List<Vector2> TextureCoordinates { get; set; } = new();  // UV0
+            public List<Vector2> TextureCoordinates2 { get; set; } = new(); // UV1 (lightmap)
             public List<int> Indices { get; set; } = new();
             public string Name { get; set; } = string.Empty;
         }
@@ -143,12 +144,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                             Logger.Warn($"[SharpGLTF]   No normals, will generate later");
                         }
 
-                        // Получаем UV координаты
+                        // Получаем UV0 координаты
                         var texCoordAccessor = primitive.GetVertexAccessor("TEXCOORD_0");
                         if (texCoordAccessor != null) {
                             var uvs = texCoordAccessor.AsVector2Array();
                             meshData.TextureCoordinates.AddRange(uvs);
-                            Logger.Info($"[SharpGLTF]   UVs: {uvs.Count}");
+                            Logger.Info($"[SharpGLTF]   UV0: {uvs.Count}");
 
                             // Логируем UV range
                             if (uvs.Count > 0) {
@@ -156,21 +157,31 @@ namespace AssetProcessor.ModelConversion.Viewer {
                                 var maxU = uvs.Max(uv => uv.X);
                                 var minV = uvs.Min(uv => uv.Y);
                                 var maxV = uvs.Max(uv => uv.Y);
-                                Logger.Info($"[SharpGLTF]   UV range: U=[{minU:F6}, {maxU:F6}], V=[{minV:F6}, {maxV:F6}]");
+                                Logger.Info($"[SharpGLTF]   UV0 range: U=[{minU:F6}, {maxU:F6}], V=[{minV:F6}, {maxV:F6}]");
 
                                 // Проверяем квантованные UV
                                 if (maxU < 0.1f && maxV < 0.1f) {
-                                    Logger.Warn($"[SharpGLTF]   WARNING: UV values appear QUANTIZED or very small!");
-                                }
-
-                                // Первые 5 UV
-                                Logger.Info($"[SharpGLTF]   First 5 UVs:");
-                                for (int i = 0; i < Math.Min(5, uvs.Count); i++) {
-                                    Logger.Info($"[SharpGLTF]     [{i}]: ({uvs[i].X:F6}, {uvs[i].Y:F6})");
+                                    Logger.Warn($"[SharpGLTF]   WARNING: UV0 values appear QUANTIZED or very small!");
                                 }
                             }
                         } else {
                             Logger.Warn($"[SharpGLTF]   No TEXCOORD_0 found");
+                        }
+
+                        // Получаем UV1 координаты (lightmap)
+                        var texCoord1Accessor = primitive.GetVertexAccessor("TEXCOORD_1");
+                        if (texCoord1Accessor != null) {
+                            var uvs1 = texCoord1Accessor.AsVector2Array();
+                            meshData.TextureCoordinates2.AddRange(uvs1);
+                            Logger.Info($"[SharpGLTF]   UV1 (lightmap): {uvs1.Count}");
+
+                            if (uvs1.Count > 0) {
+                                var minU = uvs1.Min(uv => uv.X);
+                                var maxU = uvs1.Max(uv => uv.X);
+                                var minV = uvs1.Min(uv => uv.Y);
+                                var maxV = uvs1.Max(uv => uv.Y);
+                                Logger.Info($"[SharpGLTF]   UV1 range: U=[{minU:F6}, {maxU:F6}], V=[{minV:F6}, {maxV:F6}]");
+                            }
                         }
 
                         // Получаем индексы

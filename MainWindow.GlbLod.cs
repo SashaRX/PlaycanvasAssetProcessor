@@ -194,23 +194,34 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                // Получаем информацию о квантовании для текущего LOD
-                float uvScale = 1.0f;
+                // NOTE: UV scale correction is NOT needed!
+                // GlbLoader uses gltfpack -noq to decode the GLB, which automatically
+                // converts quantized UVs back to proper float values (0-1 range).
+                // The quantization analyzer is kept for informational logging only.
                 if (_lodQuantizationInfos.TryGetValue(lodLevel, out var quantInfo)) {
-                    uvScale = quantInfo.UVScale;
-                    if (GlbQuantizationAnalyzer.NeedsUVScaling(quantInfo)) {
-                        LodLogger.Info($"  Applying UV scale correction: {uvScale:F3}x");
+                    LodLogger.Info($"  GLB quantization info: IsQuantized={quantInfo.IsQuantized}, " +
+                                   $"ComponentType={quantInfo.ComponentType}, Normalized={quantInfo.Normalized}");
+                    if (quantInfo.Max != null && quantInfo.Max.Length >= 2) {
+                        LodLogger.Info($"  Original UV max: ({quantInfo.Max[0]:F4}, {quantInfo.Max[1]:F4})");
                     }
+                    LodLogger.Info($"  UV scale correction NOT applied (gltfpack -noq handles decoding)");
                 }
 
-                // Конвертируем Assimp Scene в WPF модель
-                var modelGroup = ConvertAssimpSceneToWpfModel(scene, uvScale);
+                // Конвертируем Assimp Scene в WPF модель (без UV scale - gltfpack уже декодировал)
+                var modelGroup = ConvertAssimpSceneToWpfModel(scene);
 
-                // ИСПРАВЛЕНИЕ: GLB модели инвертированы по вертикали
-                // Применяем Scale(-1) по Y оси для корректной ориентации
-                var transformGroup = new Transform3DGroup();
-                transformGroup.Children.Add(new ScaleTransform3D(1, -1, 1));
-                modelGroup.Transform = transformGroup;
+                // ИСПРАВЛЕНИЕ: GLB модели могут быть инвертированы по вертикали
+                // Добавляем Scale(-1) по Y оси к существующему transform (центрирование)
+                if (modelGroup.Transform is Transform3DGroup existingTransform) {
+                    existingTransform.Children.Insert(0, new ScaleTransform3D(1, -1, 1));
+                } else {
+                    var transformGroup = new Transform3DGroup();
+                    transformGroup.Children.Add(new ScaleTransform3D(1, -1, 1));
+                    if (modelGroup.Transform != null) {
+                        transformGroup.Children.Add(modelGroup.Transform);
+                    }
+                    modelGroup.Transform = transformGroup;
+                }
 
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };
@@ -242,8 +253,7 @@ namespace AssetProcessor {
         /// Конвертирует Assimp Scene в WPF Model3DGroup (аналогично LoadModel)
         /// </summary>
         /// <param name="scene">Assimp Scene</param>
-        /// <param name="uvScale">Масштаб UV для коррекции квантования (1.0 = без коррекции)</param>
-        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene, float uvScale = 1.0f) {
+        private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
             var modelGroup = new Model3DGroup();
 
             foreach (var mesh in scene.Meshes) {
@@ -270,17 +280,16 @@ namespace AssetProcessor {
 
                 // UV координаты (если есть)
                 if (mesh.TextureCoordinateChannelCount > 0 && mesh.HasTextureCoords(0)) {
-                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates (scale={uvScale:F3})");
+                    LodLogger.Info($"  Found UV channel 0, copying {mesh.VertexCount} UV coordinates");
 
-                    // Загружаем UV из Assimp с применением масштаба для коррекции квантования
+                    // Загружаем UV из Assimp (gltfpack -noq уже декодировал квантование)
                     for (int i = 0; i < mesh.VertexCount; i++) {
                         var uv = mesh.TextureCoordinateChannels[0][i];
-                        // Применяем масштаб для коррекции квантования UV
-                        geometry.TextureCoordinates.Add(new Point(uv.X * uvScale, uv.Y * uvScale));
+                        geometry.TextureCoordinates.Add(new Point(uv.X, uv.Y));
                     }
 
                     // Логируем первые 5 UV для проверки
-                    LodLogger.Info($"  First 5 UVs (after scale):");
+                    LodLogger.Info($"  First 5 UVs (from decoded GLB):");
                     for (int i = 0; i < Math.Min(5, geometry.TextureCoordinates.Count); i++) {
                         var uv = geometry.TextureCoordinates[i];
                         LodLogger.Info($"    UV {i}: ({uv.X:F4}, {uv.Y:F4})");
@@ -617,8 +626,8 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                // Конвертируем в WPF модель (без UV scale для FBX)
-                var modelGroup = ConvertAssimpSceneToWpfModel(scene, 1.0f);
+                // Конвертируем в WPF модель
+                var modelGroup = ConvertAssimpSceneToWpfModel(scene);
 
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };

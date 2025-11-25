@@ -115,8 +115,15 @@ namespace AssetProcessor {
 
                 // Создаём SharpGlbLoader если его еще нет
                 if (_sharpGlbLoader == null) {
-                    LodLogger.Info("Creating SharpGlbLoader (uses SharpGLTF with native KHR_mesh_quantization support)");
-                    _sharpGlbLoader = new SharpGlbLoader();
+                    // Загружаем путь к gltfpack из настроек
+                    var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
+                    var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
+                        ? "gltfpack.exe"
+                        : modelConversionSettings.GltfPackExecutablePath;
+
+                    LodLogger.Info($"Creating SharpGlbLoader with gltfpack: {gltfPackPath}");
+                    LodLogger.Info("SharpGLTF handles KHR_mesh_quantization, gltfpack decodes EXT_meshopt_compression");
+                    _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
                 }
 
                 // Загружаем все LOD данные через SharpGLTF

@@ -1,14 +1,19 @@
+using System.Diagnostics;
+using System.IO;
 using System.Numerics;
+using System.Text;
 using NLog;
 using SharpGLTF.Schema2;
 
 namespace AssetProcessor.ModelConversion.Viewer {
     /// <summary>
     /// Загрузчик GLB файлов на основе SharpGLTF
-    /// Правильно обрабатывает KHR_mesh_quantization и EXT_meshopt_compression
+    /// Правильно обрабатывает KHR_mesh_quantization через декодирование gltfpack
     /// </summary>
     public class SharpGlbLoader : IDisposable {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private readonly string? _gltfPackPath;
+        private readonly Dictionary<string, string> _decodeCache = new();
 
         /// <summary>
         /// Данные меша для рендеринга в WPF
@@ -31,7 +36,16 @@ namespace AssetProcessor.ModelConversion.Viewer {
         }
 
         /// <summary>
-        /// Загружает GLB файл напрямую через SharpGLTF
+        /// Создаёт загрузчик с указанием пути к gltfpack
+        /// </summary>
+        /// <param name="gltfPackPath">Путь к gltfpack.exe для декодирования meshopt compression</param>
+        public SharpGlbLoader(string? gltfPackPath = null) {
+            _gltfPackPath = gltfPackPath;
+        }
+
+        /// <summary>
+        /// Загружает GLB файл через SharpGLTF
+        /// Если файл содержит EXT_meshopt_compression, сначала декодирует через gltfpack
         /// SharpGLTF автоматически декодирует KHR_mesh_quantization
         /// </summary>
         public GlbData LoadGlb(string glbPath) {
@@ -40,8 +54,23 @@ namespace AssetProcessor.ModelConversion.Viewer {
             try {
                 Logger.Info($"[SharpGLTF] Loading GLB: {glbPath}");
 
-                // Загружаем модель
-                var model = ModelRoot.Load(glbPath);
+                // Проверяем, содержит ли файл EXT_meshopt_compression
+                var pathToLoad = glbPath;
+                if (HasMeshOptCompression(glbPath)) {
+                    Logger.Info($"[SharpGLTF] GLB contains EXT_meshopt_compression, decoding via gltfpack first...");
+
+                    var decodedPath = DecodeGlbWithGltfpack(glbPath);
+                    if (decodedPath == null) {
+                        result.Success = false;
+                        result.Error = "Failed to decode meshopt compression via gltfpack";
+                        return result;
+                    }
+                    pathToLoad = decodedPath;
+                    Logger.Info($"[SharpGLTF] Using decoded file: {pathToLoad}");
+                }
+
+                // Загружаем модель (декодированную или оригинальную)
+                var model = ModelRoot.Load(pathToLoad);
 
                 Logger.Info($"[SharpGLTF] Loaded: {model.LogicalMeshes.Count} meshes, {model.LogicalMaterials.Count} materials");
 
@@ -193,8 +222,129 @@ namespace AssetProcessor.ModelConversion.Viewer {
             return normals.ToList();
         }
 
+        /// <summary>
+        /// Проверяет наличие EXT_meshopt_compression в GLB
+        /// </summary>
+        private bool HasMeshOptCompression(string glbPath) {
+            try {
+                using var fs = new FileStream(glbPath, FileMode.Open, FileAccess.Read);
+                using var br = new BinaryReader(fs);
+
+                // Читаем GLB header
+                var magic = br.ReadUInt32(); // 0x46546C67 ("glTF")
+                if (magic != 0x46546C67) return false;
+
+                var version = br.ReadUInt32();
+                var length = br.ReadUInt32();
+
+                // Читаем первый chunk (JSON)
+                var chunkLength = br.ReadUInt32();
+                var chunkType = br.ReadUInt32(); // 0x4E4F534A ("JSON")
+                if (chunkType != 0x4E4F534A) return false;
+
+                // Читаем JSON данные
+                var jsonBytes = br.ReadBytes((int)chunkLength);
+                var json = Encoding.UTF8.GetString(jsonBytes);
+
+                return json.Contains("EXT_meshopt_compression");
+            } catch (Exception ex) {
+                Logger.Warn(ex, $"Failed to check meshopt compression in {glbPath}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Декодирует GLB через gltfpack (убирает meshopt compression и quantization)
+        /// </summary>
+        private string? DecodeGlbWithGltfpack(string inputPath) {
+            try {
+                // Проверяем кэш
+                if (_decodeCache.TryGetValue(inputPath, out var cachedPath)) {
+                    if (File.Exists(cachedPath)) {
+                        Logger.Info($"[SharpGLTF] Using cached decoded file: {cachedPath}");
+                        return cachedPath;
+                    }
+                    _decodeCache.Remove(inputPath);
+                }
+
+                if (string.IsNullOrEmpty(_gltfPackPath) || !File.Exists(_gltfPackPath)) {
+                    Logger.Error($"[SharpGLTF] gltfpack not available at: {_gltfPackPath}");
+                    return null;
+                }
+
+                // Создаём временный файл
+                var tempDir = Path.Combine(Path.GetTempPath(), "SharpGlbLoader_Decode");
+                Directory.CreateDirectory(tempDir);
+
+                var fileName = Path.GetFileNameWithoutExtension(inputPath);
+                var outputPath = Path.Combine(tempDir, $"{fileName}_decoded_{Guid.NewGuid():N}.glb");
+
+                Logger.Info($"[SharpGLTF] Decoding via gltfpack: {inputPath} -> {outputPath}");
+
+                // gltfpack -noq декодирует quantization
+                // -kv сохраняет все vertex attributes
+                // -vtf использует float для UV
+                // -vpf использует float для позиций
+                var startInfo = new ProcessStartInfo {
+                    FileName = _gltfPackPath,
+                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq -kv -vtf -vpf -v",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null) {
+                    Logger.Error("[SharpGLTF] Failed to start gltfpack process");
+                    return null;
+                }
+
+                process.WaitForExit(30000); // 30 sec timeout
+
+                var stdout = process.StandardOutput.ReadToEnd();
+                var stderr = process.StandardError.ReadToEnd();
+
+                if (!string.IsNullOrEmpty(stdout)) {
+                    Logger.Info($"[SharpGLTF] gltfpack stdout: {stdout}");
+                }
+                if (!string.IsNullOrEmpty(stderr)) {
+                    Logger.Info($"[SharpGLTF] gltfpack stderr: {stderr}");
+                }
+
+                if (process.ExitCode == 0 && File.Exists(outputPath)) {
+                    Logger.Info($"[SharpGLTF] Successfully decoded GLB: {outputPath}");
+                    _decodeCache[inputPath] = outputPath;
+                    return outputPath;
+                } else {
+                    Logger.Error($"[SharpGLTF] gltfpack decode failed with exit code {process.ExitCode}");
+                    return null;
+                }
+            } catch (Exception ex) {
+                Logger.Error(ex, "[SharpGLTF] Failed to decode GLB via gltfpack");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Очищает кэш декодированных файлов
+        /// </summary>
+        public void ClearCache() {
+            foreach (var cachedFile in _decodeCache.Values) {
+                try {
+                    if (File.Exists(cachedFile)) {
+                        File.Delete(cachedFile);
+                    }
+                } catch (Exception ex) {
+                    Logger.Warn(ex, $"[SharpGLTF] Failed to delete cached file: {cachedFile}");
+                }
+            }
+            _decodeCache.Clear();
+            Logger.Info("[SharpGLTF] Cleared decode cache");
+        }
+
         public void Dispose() {
-            // SharpGLTF не требует явного освобождения ресурсов
+            ClearCache();
         }
     }
 }

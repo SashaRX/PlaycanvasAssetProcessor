@@ -320,7 +320,7 @@ namespace AssetProcessor {
                 LodLogger.Info($"Mesh created successfully");
             }
 
-            // Вычисление bounds вручную из всех вершин (modelGroup.Bounds не работает до добавления в viewport)
+            // Вычисление bounds вручную из всех вершин (для логирования)
             var minX = double.MaxValue;
             var minY = double.MaxValue;
             var minZ = double.MaxValue;
@@ -344,19 +344,13 @@ namespace AssetProcessor {
             var sizeX = maxX - minX;
             var sizeY = maxY - minY;
             var sizeZ = maxZ - minZ;
-            var centerOffset = new System.Windows.Media.Media3D.Vector3D(
-                -(minX + sizeX / 2),
-                -(minY + sizeY / 2),
-                -(minZ + sizeZ / 2)
-            );
 
             LodLogger.Info($"Model bounds (after Y↔Z swap): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
             LodLogger.Info($"Model size (Y=height): {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
-            LodLogger.Info($"Center offset: X={centerOffset.X:F2}, Y={centerOffset.Y:F2}, Z={centerOffset.Z:F2}");
+            LodLogger.Info($"Model pivot preserved (no auto-centering)");
 
-            var transformGroup = new Transform3DGroup();
-            transformGroup.Children.Add(new TranslateTransform3D(centerOffset));
-            modelGroup.Transform = transformGroup;
+            // НЕ центрируем модель - сохраняем оригинальный pivot из файла
+            // Камера подстроится через ZoomExtents()
 
             return modelGroup;
         }

@@ -53,10 +53,19 @@ namespace AssetProcessor.ModelConversion.Viewer {
             public int EstimatedBits { get; set; } = 16;
 
             /// <summary>
-            /// Масштаб для коррекции UV (1.0 = без коррекции)
-            /// Используется когда UV квантованы неправильно
+            /// Масштаб для коррекции U (1.0 = без коррекции)
             /// </summary>
-            public float UVScale { get; set; } = 1.0f;
+            public float UVScaleU { get; set; } = 1.0f;
+
+            /// <summary>
+            /// Масштаб для коррекции V (1.0 = без коррекции)
+            /// </summary>
+            public float UVScaleV { get; set; } = 1.0f;
+
+            /// <summary>
+            /// Масштаб для коррекции UV (для обратной совместимости, берёт max из U и V)
+            /// </summary>
+            public float UVScale => Math.Max(UVScaleU, UVScaleV);
 
             /// <summary>
             /// Описание проблемы с квантованием (если есть)
@@ -182,49 +191,34 @@ namespace AssetProcessor.ModelConversion.Viewer {
         }
 
         /// <summary>
-        /// Вычисляет масштаб UV на основе параметров квантования
+        /// Вычисляет масштаб UV на основе параметров квантования (раздельно для U и V)
         /// </summary>
         private static void CalculateUVScale(UVQuantizationInfo info) {
             // Если float - масштаб не нужен
             if (info.ComponentType == 5126) { // GL_FLOAT
                 info.EstimatedBits = 32;
-                info.UVScale = 1.0f;
+                info.UVScaleU = 1.0f;
+                info.UVScaleV = 1.0f;
                 return;
             }
 
             // Если UNSIGNED_SHORT normalized
             if (info.ComponentType == 5123 && info.Normalized) { // GL_UNSIGNED_SHORT
-                // Проверяем max значение чтобы понять количество бит
+                // Проверяем max значение чтобы понять количество бит для каждой оси
                 if (info.Max != null && info.Max.Length >= 2) {
                     float maxU = info.Max[0];
                     float maxV = info.Max[1];
-                    float maxVal = Math.Max(maxU, maxV);
 
-                    // Если max около 1.0 - нормальные 16-бит UV
-                    if (maxVal > 0.9f) {
-                        info.EstimatedBits = 16;
-                        info.UVScale = 1.0f;
-                    }
-                    // Если max около 0.0625 - это 12-бит квантование читаемое как 16-бит
-                    // 4095 / 65535 = 0.0625
-                    else if (maxVal < 0.1f && maxVal > 0.05f) {
-                        info.EstimatedBits = 12;
-                        // Масштаб для коррекции: 65535 / 4095 = 16.003
-                        info.UVScale = 65535.0f / 4095.0f; // ~16
-                        info.Issue = $"12-bit UV quantization detected (max={maxVal:F4}), applying 16x scale correction";
-                    }
-                    // Если max меньше - определяем по формуле
-                    else if (maxVal > 0.0f) {
-                        // Вычисляем количество бит: bits = log2((max * 65535) + 1)
-                        int estimatedBits = (int)Math.Ceiling(Math.Log2((maxVal * 65535) + 1));
-                        info.EstimatedBits = Math.Clamp(estimatedBits, 1, 16);
+                    // Вычисляем масштаб отдельно для U и V
+                    info.UVScaleU = CalculateAxisScale(maxU, out int bitsU);
+                    info.UVScaleV = CalculateAxisScale(maxV, out int bitsV);
+                    info.EstimatedBits = Math.Min(bitsU, bitsV);
 
-                        int maxIntValue = (1 << info.EstimatedBits) - 1;
-                        info.UVScale = 65535.0f / maxIntValue;
-
-                        if (info.EstimatedBits < 16) {
-                            info.Issue = $"{info.EstimatedBits}-bit UV quantization detected (max={maxVal:F4}), applying {info.UVScale:F1}x scale correction";
-                        }
+                    // Логируем если оси имеют разный масштаб
+                    if (Math.Abs(info.UVScaleU - info.UVScaleV) > 0.01f) {
+                        info.Issue = $"Different UV scale per axis: U={info.UVScaleU:F2}x (max={maxU:F4}), V={info.UVScaleV:F2}x (max={maxV:F4})";
+                    } else if (info.UVScaleU > 1.01f) {
+                        info.Issue = $"{info.EstimatedBits}-bit UV quantization detected, applying {info.UVScaleU:F1}x scale correction";
                     }
                 }
             }
@@ -232,9 +226,35 @@ namespace AssetProcessor.ModelConversion.Viewer {
             // UNSIGNED_BYTE normalized
             if (info.ComponentType == 5121 && info.Normalized) { // GL_UNSIGNED_BYTE
                 info.EstimatedBits = 8;
-                // 8-bit нормализуется делением на 255, масштаб не нужен
-                info.UVScale = 1.0f;
+                info.UVScaleU = 1.0f;
+                info.UVScaleV = 1.0f;
             }
+        }
+
+        /// <summary>
+        /// Вычисляет масштаб для одной оси UV
+        /// </summary>
+        private static float CalculateAxisScale(float maxVal, out int estimatedBits) {
+            // Если max около 1.0 - нормальные 16-бит UV
+            if (maxVal > 0.9f) {
+                estimatedBits = 16;
+                return 1.0f;
+            }
+            // Если max около 0.0625 - это 12-бит квантование
+            else if (maxVal < 0.1f && maxVal > 0.05f) {
+                estimatedBits = 12;
+                return 65535.0f / 4095.0f; // ~16
+            }
+            // Если max меньше - определяем по формуле
+            else if (maxVal > 0.0f) {
+                estimatedBits = (int)Math.Ceiling(Math.Log2((maxVal * 65535) + 1));
+                estimatedBits = Math.Clamp(estimatedBits, 1, 16);
+                int maxIntValue = (1 << estimatedBits) - 1;
+                return 65535.0f / maxIntValue;
+            }
+
+            estimatedBits = 16;
+            return 1.0f;
         }
 
         /// <summary>
@@ -256,7 +276,7 @@ namespace AssetProcessor.ModelConversion.Viewer {
             }
 
             Logger.Info($"  Estimated bits: {info.EstimatedBits}");
-            Logger.Info($"  UV scale correction: {info.UVScale:F3}");
+            Logger.Info($"  UV scale correction: U={info.UVScaleU:F3}, V={info.UVScaleV:F3}");
 
             if (!string.IsNullOrEmpty(info.Issue)) {
                 Logger.Warn($"  Issue: {info.Issue}");
@@ -279,7 +299,8 @@ namespace AssetProcessor.ModelConversion.Viewer {
         /// Определяет нужно ли применять масштаб UV при загрузке
         /// </summary>
         public static bool NeedsUVScaling(UVQuantizationInfo info) {
-            return info.UVScale > 1.001f || info.UVScale < 0.999f;
+            return info.UVScaleU > 1.001f || info.UVScaleU < 0.999f ||
+                   info.UVScaleV > 1.001f || info.UVScaleV < 0.999f;
         }
     }
 }

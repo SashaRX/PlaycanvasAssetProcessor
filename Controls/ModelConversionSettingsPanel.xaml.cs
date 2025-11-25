@@ -21,7 +21,6 @@ namespace AssetProcessor.Controls {
             _isLoading = true;
 
             // Basic Settings
-            SourceTypeComboBox.SelectedItem = ModelSourceType.FBX;
             GenerateLodsCheckBox.IsChecked = true;
             CompressionModeComboBox.SelectedItem = CompressionMode.Quantization;
             GenerateBothTracksCheckBox.IsChecked = true;
@@ -117,9 +116,8 @@ namespace AssetProcessor.Controls {
                 DisableQuantization = DisableQuantizationCheckBox.IsChecked ?? false
             };
 
-            var sourceType = SourceTypeComboBox.SelectedItem != null
-                ? (ModelSourceType)SourceTypeComboBox.SelectedItem
-                : ModelSourceType.FBX;
+            // Always use FBX as source (GLB goes directly, FBX needs conversion)
+            var sourceType = ModelSourceType.FBX;
 
             var compressionMode = CompressionModeComboBox.SelectedItem != null
                 ? (CompressionMode)CompressionModeComboBox.SelectedItem
@@ -172,7 +170,6 @@ namespace AssetProcessor.Controls {
             _isLoading = true;
 
             // Basic Settings
-            SourceTypeComboBox.SelectedItem = settings.SourceType;
             GenerateLodsCheckBox.IsChecked = settings.GenerateLods;
             CompressionModeComboBox.SelectedItem = settings.CompressionMode;
             GenerateBothTracksCheckBox.IsChecked = settings.GenerateBothTracks;

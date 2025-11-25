@@ -177,13 +177,35 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 }
 
                 // Cleanup промежуточных файлов
-                // ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ОТЛАДКИ UV
-                if (false && settings.CleanupIntermediateFiles) {
+                if (settings.CleanupIntermediateFiles) {
                     Logger.Info("=== CLEANUP INTERMEDIATE FILES ===");
                     try {
                         if (Directory.Exists(buildDir)) {
                             Directory.Delete(buildDir, recursive: true);
                             Logger.Info($"Deleted build directory: {buildDir}");
+                        }
+
+                        // Удаляем текстуры, которые FBX2glTF может создать рядом с выходным файлом
+                        var modelDir = Path.GetDirectoryName(inputPath);
+                        if (!string.IsNullOrEmpty(modelDir)) {
+                            var textureExtensions = new[] { "*.png", "*.jpg", "*.jpeg", "*.tga", "*.bmp" };
+                            foreach (var ext in textureExtensions) {
+                                var textures = Directory.GetFiles(modelDir, ext);
+                                foreach (var texture in textures) {
+                                    // Удаляем только если это текстура созданная конвертером (рядом с .glb файлами)
+                                    var fileName = Path.GetFileName(texture);
+                                    if (fileName.StartsWith("texture_") || fileName.Contains("_baseColor") ||
+                                        fileName.Contains("_normal") || fileName.Contains("_metallic") ||
+                                        fileName.Contains("_roughness") || fileName.Contains("_emissive")) {
+                                        try {
+                                            File.Delete(texture);
+                                            Logger.Info($"Deleted texture: {texture}");
+                                        } catch (Exception texEx) {
+                                            Logger.Warn($"Failed to delete texture {texture}: {texEx.Message}");
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } catch (Exception ex) {
                         Logger.Warn($"Failed to cleanup build directory: {ex.Message}");

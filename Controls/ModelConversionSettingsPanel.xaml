@@ -15,12 +15,6 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <ObjectDataProvider x:Key="ModelSourceTypeValues" MethodName="GetValues" ObjectType="{x:Type core:ModelSourceType}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="core:ModelSourceType"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
-
         <ObjectDataProvider x:Key="VertexPositionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:VertexPositionFormat}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="core:VertexPositionFormat"/>
@@ -102,14 +96,6 @@
             <!-- 1. BASIC SETTINGS -->
             <Expander Header="Basic Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
                 <StackPanel Margin="2,1,0,0">
-                    <TextBlock Text="Source Type:" Style="{StaticResource LabelStyle}"/>
-                    <ComboBox x:Name="SourceTypeComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
-                              ItemsSource="{Binding Source={StaticResource ModelSourceTypeValues}}"
-                              SelectedIndex="0"
-                              Margin="0,0,0,2"
-                              ToolTip="FBX requires FBX2glTF conversion, GLB goes directly to gltfpack"/>
-
                     <CheckBox x:Name="GenerateLodsCheckBox" Content="Generate LODs" IsChecked="True" Margin="0,0,0,2"
                               ToolTip="Generate LOD levels (LOD0-LOD3)"/>
 

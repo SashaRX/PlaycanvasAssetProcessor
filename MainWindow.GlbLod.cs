@@ -210,19 +210,6 @@ namespace AssetProcessor {
                 // Конвертируем Assimp Scene в WPF модель (без UV scale - gltfpack уже декодировал)
                 var modelGroup = ConvertAssimpSceneToWpfModel(scene);
 
-                // ИСПРАВЛЕНИЕ: GLB модели могут быть инвертированы по вертикали
-                // Добавляем Scale(-1) по Y оси к существующему transform (центрирование)
-                if (modelGroup.Transform is Transform3DGroup existingTransform) {
-                    existingTransform.Children.Insert(0, new ScaleTransform3D(1, -1, 1));
-                } else {
-                    var transformGroup = new Transform3DGroup();
-                    transformGroup.Children.Add(new ScaleTransform3D(1, -1, 1));
-                    if (modelGroup.Transform != null) {
-                        transformGroup.Children.Add(modelGroup.Transform);
-                    }
-                    modelGroup.Transform = transformGroup;
-                }
-
                 // Добавляем в viewport
                 var visual3d = new ModelVisual3D { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);

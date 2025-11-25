@@ -284,12 +284,14 @@ namespace AssetProcessor {
                 }
 
                 // Индексы
+                // ВАЖНО: При замене Y↔Z меняется handedness координатной системы,
+                // поэтому нужно инвертировать winding order треугольников (swap indices 1 и 2)
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
                         geometry.TriangleIndices.Add(face.Indices[0]);
-                        geometry.TriangleIndices.Add(face.Indices[1]);
-                        geometry.TriangleIndices.Add(face.Indices[2]);
+                        geometry.TriangleIndices.Add(face.Indices[2]); // Swapped with [1]
+                        geometry.TriangleIndices.Add(face.Indices[1]); // Swapped with [2]
                     }
                 }
 

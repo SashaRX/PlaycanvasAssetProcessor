@@ -32,6 +32,7 @@ namespace AssetProcessor {
         private bool _isGlbViewerActive = false;
         private LodLevel _currentLod = LodLevel.LOD0;
         private string? _currentFbxPath;  // Путь к FBX для переключения Source Type
+        private ImageBrush? _cachedAlbedoBrush;  // Кэшированная albedo текстура для preview
 
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
@@ -52,10 +53,107 @@ namespace AssetProcessor {
                 _lodDisplayItems.Clear();
                 _isGlbViewerActive = false;
                 _currentFbxPath = null;
+                _cachedAlbedoBrush = null;
                 _sharpGlbLoader?.Dispose();
                 LodLogger.Info("GLB viewer cleaned up");
             } catch (Exception ex) {
                 LodLogger.Error(ex, "Failed to cleanup GLB viewer");
+            }
+        }
+
+        /// <summary>
+        /// Ищет и загружает albedo текстуру для модели по naming convention
+        /// </summary>
+        private ImageBrush? FindAndLoadAlbedoTexture(string fbxPath) {
+            try {
+                var directory = System.IO.Path.GetDirectoryName(fbxPath);
+                if (string.IsNullOrEmpty(directory)) return null;
+
+                var modelName = System.IO.Path.GetFileNameWithoutExtension(fbxPath);
+
+                // Суффиксы для albedo текстур
+                var albedoSuffixes = new[] { "_albedo", "_diffuse", "_color", "_basecolor", "_base_color", "_d", "" };
+                var extensions = new[] { ".png", ".jpg", ".jpeg", ".tga", ".bmp" };
+
+                // Ищем в директории модели и в родительской (textures часто рядом)
+                var searchDirs = new List<string> { directory };
+
+                // Также ищем в соседних папках textures, Textures
+                var parentDir = System.IO.Path.GetDirectoryName(directory);
+                if (!string.IsNullOrEmpty(parentDir)) {
+                    searchDirs.Add(parentDir);
+                    var texturesDir = System.IO.Path.Combine(parentDir, "textures");
+                    if (System.IO.Directory.Exists(texturesDir)) searchDirs.Add(texturesDir);
+                    texturesDir = System.IO.Path.Combine(parentDir, "Textures");
+                    if (System.IO.Directory.Exists(texturesDir)) searchDirs.Add(texturesDir);
+                }
+
+                foreach (var searchDir in searchDirs) {
+                    if (!System.IO.Directory.Exists(searchDir)) continue;
+
+                    foreach (var suffix in albedoSuffixes) {
+                        foreach (var ext in extensions) {
+                            var texturePath = System.IO.Path.Combine(searchDir, modelName + suffix + ext);
+                            if (System.IO.File.Exists(texturePath)) {
+                                LodLogger.Info($"[Texture] Found albedo: {texturePath}");
+                                return LoadTextureAsBrush(texturePath);
+                            }
+                        }
+                    }
+
+                    // Также ищем файлы содержащие имя модели и albedo/diffuse в имени
+                    try {
+                        var files = System.IO.Directory.GetFiles(searchDir);
+                        foreach (var file in files) {
+                            var fileName = System.IO.Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
+                            var fileExt = System.IO.Path.GetExtension(file).ToLowerInvariant();
+
+                            if (!extensions.Contains(fileExt)) continue;
+
+                            // Проверяем что файл относится к этой модели и является albedo
+                            if (fileName.Contains(modelName.ToLowerInvariant()) &&
+                                (fileName.Contains("albedo") || fileName.Contains("diffuse") || fileName.Contains("color"))) {
+                                LodLogger.Info($"[Texture] Found albedo (by pattern): {file}");
+                                return LoadTextureAsBrush(file);
+                            }
+                        }
+                    } catch { /* ignore search errors */ }
+                }
+
+                LodLogger.Info($"[Texture] No albedo texture found for {modelName}");
+                return null;
+
+            } catch (Exception ex) {
+                LodLogger.Warn(ex, "Failed to find albedo texture");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Загружает текстуру как ImageBrush для WPF 3D
+        /// </summary>
+        private ImageBrush? LoadTextureAsBrush(string texturePath) {
+            try {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(texturePath, UriKind.Absolute);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze(); // Для thread-safety
+
+                var brush = new ImageBrush(bitmap) {
+                    ViewportUnits = BrushMappingMode.Absolute,
+                    TileMode = TileMode.Tile,
+                    Viewport = new Rect(0, 0, 1, 1),
+                    ViewboxUnits = BrushMappingMode.RelativeToBoundingBox
+                };
+
+                LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})");
+                return brush;
+
+            } catch (Exception ex) {
+                LodLogger.Warn(ex, $"Failed to load texture: {texturePath}");
+                return null;
             }
         }
 
@@ -125,6 +223,9 @@ namespace AssetProcessor {
                     LodLogger.Info("SharpGLTF handles KHR_mesh_quantization, gltfpack decodes EXT_meshopt_compression");
                     _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
                 }
+
+                // Ищем и загружаем albedo текстуру для preview
+                _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
 
                 // Загружаем все LOD данные через SharpGLTF
                 _lodGlbData.Clear();
@@ -315,17 +416,24 @@ namespace AssetProcessor {
                     LodLogger.Info($"  Position {i}: ({p.X:F4}, {p.Y:F4}, {p.Z:F4})");
                 }
 
-                // Create two-sided material with emissive properties for visibility
-                var frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
-                var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.Red)); // Red for debugging backfaces
-                var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(40, 40, 40)));
+                // Create two-sided material - используем albedo текстуру если загружена
+                DiffuseMaterial frontMaterial;
+                if (_cachedAlbedoBrush != null && geometry.TextureCoordinates.Count > 0) {
+                    frontMaterial = new DiffuseMaterial(_cachedAlbedoBrush);
+                    LodLogger.Info($"Using albedo texture for material");
+                } else {
+                    frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
+                }
+
+                var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.DarkRed));
+                var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(30, 30, 30)));
 
                 var materialGroup = new MaterialGroup();
                 materialGroup.Children.Add(frontMaterial);
                 materialGroup.Children.Add(emissiveMaterial);
 
                 var model = new GeometryModel3D(geometry, materialGroup);
-                model.BackMaterial = backMaterial; // Ensure backfaces are visible
+                model.BackMaterial = backMaterial;
                 modelGroup.Children.Add(model);
 
                 LodLogger.Info($"Mesh created successfully");
@@ -421,10 +529,17 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"[SharpGLTF→WPF]   Geometry: {geometry.Positions.Count} positions, {geometry.TriangleIndices.Count / 3} triangles");
 
-                // Материал
-                var frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
-                var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.Red));
-                var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(40, 40, 40)));
+                // Материал - используем albedo текстуру если она загружена
+                DiffuseMaterial frontMaterial;
+                if (_cachedAlbedoBrush != null && geometry.TextureCoordinates.Count > 0) {
+                    frontMaterial = new DiffuseMaterial(_cachedAlbedoBrush);
+                    LodLogger.Info($"[SharpGLTF→WPF]   Using albedo texture for material");
+                } else {
+                    frontMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.LightGray));
+                }
+
+                var backMaterial = new DiffuseMaterial(new SolidColorBrush(Colors.DarkRed));
+                var emissiveMaterial = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(30, 30, 30)));
 
                 var materialGroup = new MaterialGroup();
                 materialGroup.Children.Add(frontMaterial);
@@ -802,6 +917,11 @@ namespace AssetProcessor {
         /// </summary>
         private void LoadFbxModelDirectly(string fbxPath) {
             try {
+                // Загружаем текстуру если ещё не загружена
+                if (_cachedAlbedoBrush == null) {
+                    _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
+                }
+
                 using var context = new AssimpContext();
                 var scene = context.ImportFile(fbxPath,
                     PostProcessSteps.Triangulate |

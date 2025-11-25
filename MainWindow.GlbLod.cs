@@ -229,6 +229,9 @@ namespace AssetProcessor {
         /// Конвертирует Assimp Scene в WPF Model3DGroup
         /// UV координаты копируются напрямую без преобразований
         /// (GLB уже имеет top-left UV origin, как WPF)
+        ///
+        /// ВАЖНО: FBX2glTF выводит геометрию в Z-up координатной системе,
+        /// а WPF/glTF требует Y-up. Поэтому мы меняем Y↔Z при загрузке.
         /// </summary>
         private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
             var modelGroup = new Model3DGroup();
@@ -237,8 +240,8 @@ namespace AssetProcessor {
                 LodLogger.Info($"Processing mesh: {mesh.VertexCount} vertices, {mesh.FaceCount} faces, HasUVs={mesh.HasTextureCoords(0)}");
                 LodLogger.Info($"  TextureCoordinateChannelCount={mesh.TextureCoordinateChannelCount}");
 
-                // Логируем первые 5 вершин из Assimp для диагностики
-                LodLogger.Info($"First 5 vertices from Assimp:");
+                // Логируем первые 5 вершин из Assimp для диагностики (до преобразования осей)
+                LodLogger.Info($"First 5 vertices from Assimp (before Y↔Z swap):");
                 for (int i = 0; i < Math.Min(5, mesh.VertexCount); i++) {
                     var v = mesh.Vertices[i];
                     LodLogger.Info($"  Vertex {i}: ({v.X:F4}, {v.Y:F4}, {v.Z:F4})");
@@ -248,11 +251,14 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
+                // AXIS FIX: FBX2glTF outputs Z-up, but WPF/glTF requires Y-up
+                // Swap Y and Z: new_Y = old_Z, new_Z = old_Y
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
-                    geometry.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
-                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+                    // Swap Y ↔ Z to convert from Z-up to Y-up
+                    geometry.Positions.Add(new Point3D(vertex.X, vertex.Z, vertex.Y));
+                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
                 }
 
                 // UV координаты (если есть)
@@ -289,8 +295,8 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"Geometry created: Positions={geometry.Positions.Count}, Normals={geometry.Normals.Count}, TexCoords={geometry.TextureCoordinates.Count}, Indices={geometry.TriangleIndices.Count}");
 
-                // Логируем первые 5 вершин из geometry.Positions для проверки
-                LodLogger.Info($"First 5 vertices in geometry.Positions:");
+                // Логируем первые 5 вершин из geometry.Positions для проверки (после Y↔Z swap)
+                LodLogger.Info($"First 5 vertices in geometry.Positions (after Y↔Z swap):");
                 for (int i = 0; i < Math.Min(5, geometry.Positions.Count); i++) {
                     var p = geometry.Positions[i];
                     LodLogger.Info($"  Position {i}: ({p.X:F4}, {p.Y:F4}, {p.Z:F4})");
@@ -342,8 +348,8 @@ namespace AssetProcessor {
                 -(minZ + sizeZ / 2)
             );
 
-            LodLogger.Info($"Model bounds: min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
-            LodLogger.Info($"Model size: {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
+            LodLogger.Info($"Model bounds (after Y↔Z swap): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
+            LodLogger.Info($"Model size (Y=height): {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
             LodLogger.Info($"Center offset: X={centerOffset.X:F2}, Y={centerOffset.Y:F2}, Z={centerOffset.Z:F2}");
 
             var transformGroup = new Transform3DGroup();

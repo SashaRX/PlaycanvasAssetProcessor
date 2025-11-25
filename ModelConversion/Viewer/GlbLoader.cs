@@ -144,9 +144,11 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 // gltfpack с -noq декодирует quantization (KHR_mesh_quantization)
                 // Флаг -noq означает "не применять квантование", что деквантует данные в float
                 // Флаг -kv сохраняет ВСЕ vertex attributes (включая UV), даже если они не используются материалом
+                // Флаг -vtf использует float для текстурных координат (дополнительная гарантия отсутствия квантования UV)
+                // Флаг -vpf использует float для позиций вершин
                 var startInfo = new System.Diagnostics.ProcessStartInfo {
                     FileName = _gltfPackWrapper.ExecutablePath,
-                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq -kv -v",
+                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq -kv -vtf -vpf -v",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

@@ -349,8 +349,8 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     return null;
                 }
 
-                // Создаём временный файл
-                var tempDir = Path.Combine(Path.GetTempPath(), "SharpGlbLoader_Decode");
+                // Создаём временный файл (v2 - с -tr флагом для удаления текстур)
+                var tempDir = Path.Combine(Path.GetTempPath(), "SharpGlbLoader_Decode_v2");
                 Directory.CreateDirectory(tempDir);
 
                 var fileName = Path.GetFileNameWithoutExtension(inputPath);
@@ -362,9 +362,10 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 // -kv сохраняет все vertex attributes
                 // -vtf использует float для UV
                 // -vpf использует float для позиций
+                // -tr убирает текстуры (они обрабатываются отдельно, для viewer не нужны)
                 var startInfo = new ProcessStartInfo {
                     FileName = _gltfPackPath,
-                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq -kv -vtf -vpf -v",
+                    Arguments = $"-i \"{inputPath}\" -o \"{outputPath}\" -noq -kv -vtf -vpf -tr -v",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

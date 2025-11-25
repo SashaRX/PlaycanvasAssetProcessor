@@ -370,21 +370,21 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // AXIS FIX: FBX (right-handed) → WPF (Y-up, left-handed)
-                // Z-up FBX: swap Y↔Z, затем negate X для handedness
-                // Y-up FBX: только negate X для handedness
+                // FBX (right-handed) и WPF (right-handed) - одинаковые handedness!
+                // Z-up FBX: только swap Y↔Z для преобразования в Y-up
+                // Y-up FBX: никаких преобразований не нужно
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
 
                     if (isZUp) {
-                        // Z-up → Y-up: swap Y↔Z, negate X для handedness
-                        geometry.Positions.Add(new Point3D(-vertex.X, vertex.Z, vertex.Y));
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Z, normal.Y));
+                        // Z-up → Y-up: только swap Y↔Z
+                        geometry.Positions.Add(new Point3D(vertex.X, vertex.Z, vertex.Y));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
                     } else {
-                        // Y-up → Y-up: только negate X для handedness
-                        geometry.Positions.Add(new Point3D(-vertex.X, vertex.Y, vertex.Z));
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Y, normal.Z));
+                        // Y-up → Y-up: просто копируем
+                        geometry.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
                     }
                 }
 
@@ -409,15 +409,13 @@ namespace AssetProcessor {
                     LodLogger.Info($"  No UV coordinates found");
                 }
 
-                // Индексы - РЕВЕРС winding order для исправления handedness после X negation
-                // При зеркалировании (negate X) грани "выворачиваются", нужно поменять порядок вершин
+                // Индексы - оригинальный порядок (handedness совпадает)
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
-                        // Реверс: [0,1,2] → [0,2,1] для исправления winding
                         geometry.TriangleIndices.Add(face.Indices[0]);
-                        geometry.TriangleIndices.Add(face.Indices[2]);
                         geometry.TriangleIndices.Add(face.Indices[1]);
+                        geometry.TriangleIndices.Add(face.Indices[2]);
                     }
                 }
 
@@ -506,17 +504,15 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // AXIS FIX: glTF (Y-up, right-handed) → WPF (Y-up, left-handed)
-                // glTF уже Y-up по спецификации, WPF тоже Y-up
-                // Для смены handedness: инверсия X (правая система → левая)
-                // НЕ НУЖЕН swap Y↔Z - обе системы Y-up!
+                // glTF (Y-up, right-handed) и WPF (Y-up, right-handed) - одинаковые системы!
+                // Никаких преобразований не нужно - просто копируем координаты
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
-                    geometry.Positions.Add(new Point3D(-pos.X, pos.Y, pos.Z));
+                    geometry.Positions.Add(new Point3D(pos.X, pos.Y, pos.Z));
 
                     if (i < meshData.Normals.Count) {
                         var normal = meshData.Normals[i];
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(-normal.X, normal.Y, normal.Z));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
                     }
                 }
 
@@ -535,14 +531,12 @@ namespace AssetProcessor {
                     }
                 }
 
-                // Индексы - РЕВЕРС winding order для исправления handedness после X negation
-                // При зеркалировании (negate X) грани "выворачиваются", нужно поменять порядок вершин
+                // Индексы - оригинальный порядок (координатные системы совпадают)
                 for (int i = 0; i < meshData.Indices.Count; i += 3) {
                     if (i + 2 < meshData.Indices.Count) {
-                        // Реверс: [0,1,2] → [0,2,1] для исправления winding
                         geometry.TriangleIndices.Add(meshData.Indices[i]);
-                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
                         geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
                     }
                 }
 

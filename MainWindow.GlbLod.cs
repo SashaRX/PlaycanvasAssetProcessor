@@ -971,7 +971,9 @@ namespace AssetProcessor {
                 // Обновляем UV preview
                 var meshWithUV = scene.Meshes.FirstOrDefault(m => m.HasTextureCoords(0));
                 if (meshWithUV != null) {
-                    UpdateUVImage(meshWithUV, flipV: false); // GLB имеет top-left UV origin
+                    // FBX загружается с PostProcessSteps.FlipUVs, поэтому нужно flipV: true
+                    // чтобы отменить переворот для корректного отображения оригинальной развёртки
+                    UpdateUVImage(meshWithUV, flipV: true);
                 }
 
                 LodLogger.Info("FBX model loaded successfully");

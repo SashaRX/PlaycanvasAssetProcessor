@@ -2982,7 +2982,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 // Get settings from ModelConversionSettingsPanel
-                var settings = ModelConversionSettingsPanel.GetSettings();
+                // Передаём путь к файлу для автоматического определения типа источника (FBX/GLB)
+                var settings = ModelConversionSettingsPanel.GetSettings(selectedModel.Path);
 
                 // Create output directory
                 var modelName = Path.GetFileNameWithoutExtension(selectedModel.Path);

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using AssetProcessor.ModelConversion.Core;
@@ -73,7 +74,8 @@ namespace AssetProcessor.Controls {
         /// <summary>
         /// Получает текущие настройки конвертации модели
         /// </summary>
-        public ModelConversionSettings GetSettings() {
+        /// <param name="filePath">Путь к файлу модели (опционально, для определения типа источника)</param>
+        public ModelConversionSettings GetSettings(string? filePath = null) {
             var quantization = new QuantizationSettings {
                 PositionBits = (int)PositionBitsSlider.Value,
                 TexCoordBits = (int)TexCoordBitsSlider.Value,
@@ -116,8 +118,17 @@ namespace AssetProcessor.Controls {
                 DisableQuantization = DisableQuantizationCheckBox.IsChecked ?? false
             };
 
-            // Always use FBX as source (GLB goes directly, FBX needs conversion)
-            var sourceType = ModelSourceType.FBX;
+            // Определяем тип источника по расширению файла
+            var sourceType = ModelSourceType.FBX; // По умолчанию FBX
+            if (!string.IsNullOrEmpty(filePath)) {
+                var extension = Path.GetExtension(filePath).ToLowerInvariant();
+                if (extension == ".glb" || extension == ".gltf") {
+                    sourceType = ModelSourceType.GLB;
+                } else if (extension == ".fbx") {
+                    sourceType = ModelSourceType.FBX;
+                }
+                // Если расширение неизвестно, остаётся FBX по умолчанию
+            }
 
             var compressionMode = CompressionModeComboBox.SelectedItem != null
                 ? (CompressionMode)CompressionModeComboBox.SelectedItem

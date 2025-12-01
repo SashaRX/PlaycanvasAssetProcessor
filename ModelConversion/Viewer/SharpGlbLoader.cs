@@ -122,14 +122,9 @@ namespace AssetProcessor.ModelConversion.Viewer {
                             var positions = positionAccessor.AsVector3Array();
                             foreach (var p in positions) {
                                 var transformed = Vector3.Transform(p, world);
-
-                                // glTF: праворукая СК, +Y вверх, -Z вперёд. В WPF камера смотрит вдоль -Z, т.е. +Z направлен к пользователю.
-                                // Чтобы forward остался вперёд, инвертируем Z после применения WorldMatrix.
-                                transformed.Z = -transformed.Z;
-
                                 meshData.Positions.Add(transformed);
                             }
-                            Logger.Info($"[SharpGLTF]   Positions: {positions.Count} (with node transform, Z flipped for WPF forward)");
+                            Logger.Info($"[SharpGLTF]   Positions: {positions.Count} (with node transform, glTF right-handed preserved)");
 
                             // Логируем bounds
                             if (meshData.Positions.Count > 0) {
@@ -157,14 +152,10 @@ namespace AssetProcessor.ModelConversion.Viewer {
                             var normals = normalAccessor.AsVector3Array();
                             foreach (var nrm in normals) {
                                 var transformedNormal = Vector3.TransformNormal(nrm, normalMatrix);
-
-                                // Согласуем нормали с инверсией позиции по Z
-                                transformedNormal.Z = -transformedNormal.Z;
-
                                 transformedNormal = Vector3.Normalize(transformedNormal);
                                 meshData.Normals.Add(transformedNormal);
                             }
-                            Logger.Info($"[SharpGLTF]   Normals: {meshData.Normals.Count} (with node transform, Z flipped for WPF forward)");
+                            Logger.Info($"[SharpGLTF]   Normals: {meshData.Normals.Count} (with node transform, no axis flip)");
                         } else {
                             // Генерируем плоские нормали если нет
                             Logger.Warn($"[SharpGLTF]   No normals, will generate later");
@@ -215,23 +206,16 @@ namespace AssetProcessor.ModelConversion.Viewer {
                         if (indexAccessor != null) {
                             var indices = indexAccessor.AsIndicesArray();
 
-                            // После инверсии Z корректируем winding, чтобы лицевые стороны остались правильными
-                            for (int i = 0; i < indices.Count; i += 3) {
-                                if (i + 2 >= indices.Count) break;
+                            for (int i = 0; i < indices.Count; i++) {
                                 meshData.Indices.Add((int)indices[i]);
-                                meshData.Indices.Add((int)indices[i + 2]);
-                                meshData.Indices.Add((int)indices[i + 1]);
                             }
-                            Logger.Info($"[SharpGLTF]   Indices: {meshData.Indices.Count} ({meshData.Indices.Count / 3} triangles) with winding fix after Z flip");
+                            Logger.Info($"[SharpGLTF]   Indices: {meshData.Indices.Count} ({meshData.Indices.Count / 3} triangles) copied as-is (glTF winding)");
                         } else {
-                            // Non-indexed geometry - создаём sequential indices с поправкой winding под инвертированный Z
-                            for (int i = 0; i < meshData.Positions.Count; i += 3) {
-                                if (i + 2 >= meshData.Positions.Count) break;
+                            // Non-indexed geometry - создаём sequential indices без изменения порядка
+                            for (int i = 0; i < meshData.Positions.Count; i++) {
                                 meshData.Indices.Add(i);
-                                meshData.Indices.Add(i + 2);
-                                meshData.Indices.Add(i + 1);
                             }
-                            Logger.Info($"[SharpGLTF]   Non-indexed, created {meshData.Indices.Count} sequential indices with winding fix");
+                            Logger.Info($"[SharpGLTF]   Non-indexed, created {meshData.Indices.Count} sequential indices (no winding changes)");
                         }
 
                         // Генерируем нормали если нет

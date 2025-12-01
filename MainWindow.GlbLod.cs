@@ -337,7 +337,7 @@ namespace AssetProcessor {
         ///
         /// Координатные системы:
         /// - FBX может быть Z-up (3ds Max) или Y-up (Maya, Blender)
-        /// - WPF использует Y-up левую систему координат
+        /// - WPF использует Y-up правую систему координат
         /// - Определяем UpAxis из метаданных FBX и применяем соответствующее преобразование
         /// </summary>
         private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
@@ -370,8 +370,8 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // FBX/glTF хранятся в правой СК (+Z вперёд), WPF Viewport3D использует левую СК (+Z к камере)
-                // Поэтому после нормализации up-axis дополнительно инвертируем Z, чтобы перейти в левую СК WPF
+                // FBX/glTF и WPF Viewport3D используют правую систему координат (X вправо, Y вверх, Z к камере).
+                // Приводим только up-axis (Z-up → Y-up), без инверсии знаков, чтобы не переворачивать модель.
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
@@ -399,9 +399,8 @@ namespace AssetProcessor {
                         nz = normal.Z;
                     }
 
-                    // Праворукая → леворукая: инвертируем Z
-                    geometry.Positions.Add(new Point3D(x, y, -z));
-                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(nx, ny, -nz));
+                    geometry.Positions.Add(new Point3D(x, y, z));
+                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(nx, ny, nz));
                 }
 
                 // UV координаты (если есть)
@@ -425,13 +424,13 @@ namespace AssetProcessor {
                     LodLogger.Info($"  No UV coordinates found");
                 }
 
-                // Индексы: после инверсии Z нужно развернуть порядок для сохранения лицевой стороны
+                // Индексы копируем напрямую (WPF тоже использует правую СК, инверсия winding не требуется)
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
                         geometry.TriangleIndices.Add(face.Indices[0]);
-                        geometry.TriangleIndices.Add(face.Indices[2]);
                         geometry.TriangleIndices.Add(face.Indices[1]);
+                        geometry.TriangleIndices.Add(face.Indices[2]);
                     }
                 }
 
@@ -492,7 +491,7 @@ namespace AssetProcessor {
             var sizeY = maxY - minY;
             var sizeZ = maxZ - minZ;
 
-            LodLogger.Info($"Model bounds (after axis conversion + Z flip): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
+            LodLogger.Info($"Model bounds (after axis conversion): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
             LodLogger.Info($"Model size (Y=height): {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
             LodLogger.Info($"Model pivot preserved (no auto-centering)");
 
@@ -508,8 +507,8 @@ namespace AssetProcessor {
         ///
         /// Координатные системы:
         /// - GLB/glTF спецификация требует Y-up (FBX2glTF конвертирует из исходной FBX)
-        /// - Viewport3D использует левую систему координат (+Z к камере)
-        /// - Инвертируем Z и переворачиваем winding, чтобы сохранить ориентацию моделей
+        /// - Viewport3D использует такую же правую систему координат (+Z к камере)
+        /// - Достаточно прямого копирования вершин/индексов без разворотов, чтобы избежать переворота модели
         /// </summary>
         private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
             var modelGroup = new Model3DGroup();
@@ -520,15 +519,14 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // glTF хранится в правой СК (Y-up), а Viewport3D — в левой.
-                // Инвертируем Z, чтобы перейти в левую СК и сохранить ориентацию нормалей.
+                // glTF и WPF Viewport3D имеют одинаковую правую СК, поэтому копируем напрямую.
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
-                    geometry.Positions.Add(new Point3D(pos.X, pos.Y, -pos.Z));
+                    geometry.Positions.Add(new Point3D(pos.X, pos.Y, pos.Z));
 
                     if (i < meshData.Normals.Count) {
                         var normal = meshData.Normals[i];
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, -normal.Z));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
                     }
                 }
 
@@ -547,12 +545,12 @@ namespace AssetProcessor {
                     }
                 }
 
-                // Индексы: при инверсии Z разворачиваем треугольник, чтобы сохранить лицевую сторону
+                // Индексы копируем напрямую, т.к. handedness совпадает.
                 for (int i = 0; i < meshData.Indices.Count; i += 3) {
                     if (i + 2 < meshData.Indices.Count) {
                         geometry.TriangleIndices.Add(meshData.Indices[i]);
-                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
                         geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
                     }
                 }
 

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Text;
+using System.Linq;
 using NLog;
 using SharpGLTF.Schema2;
 using SharpGLTF.Validation;
@@ -98,37 +99,49 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     Logger.Info($"[SharpGLTF] Extensions used: {string.Join(", ", model.ExtensionsUsed)}");
                 }
 
-                // Обрабатываем каждый mesh
-                foreach (var logicalMesh in model.LogicalMeshes) {
-                    Logger.Info($"[SharpGLTF] Processing mesh: {logicalMesh.Name ?? "unnamed"}, {logicalMesh.Primitives.Count} primitives");
+                // Обрабатываем каждый узел сцены (важно применять его WorldMatrix, иначе оси могут быть перевёрнуты)
+                foreach (var node in model.LogicalNodes.Where(n => n.Mesh != null)) {
+                    var world = node.WorldMatrix;
+                    Logger.Info($"[SharpGLTF] Processing node: {node.Name ?? "unnamed"}, mesh={node.Mesh?.Name ?? "mesh"}, world={world}");
 
-                    foreach (var primitive in logicalMesh.Primitives) {
+                    // Матрица для преобразования нормалей (inverse transpose без трансляции)
+                    if (!Matrix4x4.Invert(world, out var inverted)) {
+                        Logger.Warn("[SharpGLTF]   Failed to invert world matrix, using Identity for normals");
+                        inverted = Matrix4x4.Identity;
+                    }
+                    var normalMatrix = Matrix4x4.Transpose(inverted);
+
+                    foreach (var primitive in node.Mesh!.Primitives) {
                         var meshData = new MeshData {
-                            Name = logicalMesh.Name ?? "mesh"
+                            Name = node.Mesh.Name ?? "mesh"
                         };
 
                         // Получаем позиции
                         var positionAccessor = primitive.GetVertexAccessor("POSITION");
                         if (positionAccessor != null) {
                             var positions = positionAccessor.AsVector3Array();
-                            meshData.Positions.AddRange(positions);
-                            Logger.Info($"[SharpGLTF]   Positions: {positions.Count}");
+                            foreach (var p in positions) {
+                                var transformed = Vector3.Transform(p, world);
+                                meshData.Positions.Add(transformed);
+                            }
+                            Logger.Info($"[SharpGLTF]   Positions: {positions.Count} (with node transform)");
 
                             // Логируем bounds
-                            if (positions.Count > 0) {
-                                var minX = positions.Min(p => p.X);
-                                var maxX = positions.Max(p => p.X);
-                                var minY = positions.Min(p => p.Y);
-                                var maxY = positions.Max(p => p.Y);
-                                var minZ = positions.Min(p => p.Z);
-                                var maxZ = positions.Max(p => p.Z);
+                            if (meshData.Positions.Count > 0) {
+                                var minX = meshData.Positions.Min(p => p.X);
+                                var maxX = meshData.Positions.Max(p => p.X);
+                                var minY = meshData.Positions.Min(p => p.Y);
+                                var maxY = meshData.Positions.Max(p => p.Y);
+                                var minZ = meshData.Positions.Min(p => p.Z);
+                                var maxZ = meshData.Positions.Max(p => p.Z);
                                 Logger.Info($"[SharpGLTF]   Position bounds: X=[{minX:F3}, {maxX:F3}], Y=[{minY:F3}, {maxY:F3}], Z=[{minZ:F3}, {maxZ:F3}]");
                                 Logger.Info($"[SharpGLTF]   Model size: {maxX - minX:F3} x {maxY - minY:F3} x {maxZ - minZ:F3}");
 
                                 // Первые 5 позиций
-                                Logger.Info($"[SharpGLTF]   First 5 positions:");
-                                for (int i = 0; i < Math.Min(5, positions.Count); i++) {
-                                    Logger.Info($"[SharpGLTF]     [{i}]: ({positions[i].X:F4}, {positions[i].Y:F4}, {positions[i].Z:F4})");
+                                Logger.Info($"[SharpGLTF]   First 5 positions (world space):");
+                                for (int i = 0; i < Math.Min(5, meshData.Positions.Count); i++) {
+                                    var p = meshData.Positions[i];
+                                    Logger.Info($"[SharpGLTF]     [{i}]: ({p.X:F4}, {p.Y:F4}, {p.Z:F4})");
                                 }
                             }
                         }
@@ -137,8 +150,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                         var normalAccessor = primitive.GetVertexAccessor("NORMAL");
                         if (normalAccessor != null) {
                             var normals = normalAccessor.AsVector3Array();
-                            meshData.Normals.AddRange(normals);
-                            Logger.Info($"[SharpGLTF]   Normals: {normals.Count}");
+                            foreach (var nrm in normals) {
+                                var transformedNormal = Vector3.TransformNormal(nrm, normalMatrix);
+                                transformedNormal = Vector3.Normalize(transformedNormal);
+                                meshData.Normals.Add(transformedNormal);
+                            }
+                            Logger.Info($"[SharpGLTF]   Normals: {meshData.Normals.Count} (with node transform)");
                         } else {
                             // Генерируем плоские нормали если нет
                             Logger.Warn($"[SharpGLTF]   No normals, will generate later");

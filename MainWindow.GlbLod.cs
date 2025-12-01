@@ -370,22 +370,38 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // FBX (right-handed) и WPF (right-handed) - одинаковые handedness!
-                // Z-up FBX: только swap Y↔Z для преобразования в Y-up
-                // Y-up FBX: никаких преобразований не нужно
+                // FBX/glTF хранятся в правой СК (+Z вперёд), WPF Viewport3D использует левую СК (+Z к камере)
+                // Поэтому после нормализации up-axis дополнительно инвертируем Z, чтобы перейти в левую СК WPF
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
 
+                    double x, y, z;
+                    double nx, ny, nz;
+
                     if (isZUp) {
-                        // Z-up → Y-up: только swap Y↔Z
-                        geometry.Positions.Add(new Point3D(vertex.X, vertex.Z, vertex.Y));
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
+                        // Z-up → Y-up: swap Y↔Z
+                        x = vertex.X;
+                        y = vertex.Z;
+                        z = vertex.Y;
+
+                        nx = normal.X;
+                        ny = normal.Z;
+                        nz = normal.Y;
                     } else {
                         // Y-up → Y-up: просто копируем
-                        geometry.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+                        x = vertex.X;
+                        y = vertex.Y;
+                        z = vertex.Z;
+
+                        nx = normal.X;
+                        ny = normal.Y;
+                        nz = normal.Z;
                     }
+
+                    // Праворукая → леворукая: инвертируем Z
+                    geometry.Positions.Add(new Point3D(x, y, -z));
+                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(nx, ny, -nz));
                 }
 
                 // UV координаты (если есть)
@@ -409,13 +425,13 @@ namespace AssetProcessor {
                     LodLogger.Info($"  No UV coordinates found");
                 }
 
-                // Индексы - оригинальный порядок (handedness совпадает)
+                // Индексы: после инверсии Z нужно развернуть порядок для сохранения лицевой стороны
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
                         geometry.TriangleIndices.Add(face.Indices[0]);
-                        geometry.TriangleIndices.Add(face.Indices[1]);
                         geometry.TriangleIndices.Add(face.Indices[2]);
+                        geometry.TriangleIndices.Add(face.Indices[1]);
                     }
                 }
 
@@ -476,7 +492,7 @@ namespace AssetProcessor {
             var sizeY = maxY - minY;
             var sizeZ = maxZ - minZ;
 
-            LodLogger.Info($"Model bounds (after Y↔Z swap): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
+            LodLogger.Info($"Model bounds (after axis conversion + Z flip): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
             LodLogger.Info($"Model size (Y=height): {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
             LodLogger.Info($"Model pivot preserved (no auto-centering)");
 
@@ -492,8 +508,8 @@ namespace AssetProcessor {
         ///
         /// Координатные системы:
         /// - GLB/glTF спецификация требует Y-up (FBX2glTF конвертирует из исходной FBX)
-        /// - WPF использует Y-up правую систему координат
-        /// - Преобразование осей и инверсия X для правильного отображения в WPF
+        /// - Viewport3D использует левую систему координат (+Z к камере)
+        /// - Инвертируем Z и переворачиваем winding, чтобы сохранить ориентацию моделей
         /// </summary>
         private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
             var modelGroup = new Model3DGroup();
@@ -504,15 +520,15 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // glTF (Y-up, right-handed) и WPF (Y-up, right-handed) - одинаковые системы!
-                // Никаких преобразований не нужно - просто копируем координаты
+                // glTF хранится в правой СК (Y-up), а Viewport3D — в левой.
+                // Инвертируем Z, чтобы перейти в левую СК и сохранить ориентацию нормалей.
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
-                    geometry.Positions.Add(new Point3D(pos.X, pos.Y, pos.Z));
+                    geometry.Positions.Add(new Point3D(pos.X, pos.Y, -pos.Z));
 
                     if (i < meshData.Normals.Count) {
                         var normal = meshData.Normals[i];
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, -normal.Z));
                     }
                 }
 
@@ -531,12 +547,12 @@ namespace AssetProcessor {
                     }
                 }
 
-                // Индексы - оригинальный порядок (координатные системы совпадают)
+                // Индексы: при инверсии Z разворачиваем треугольник, чтобы сохранить лицевую сторону
                 for (int i = 0; i < meshData.Indices.Count; i += 3) {
                     if (i + 2 < meshData.Indices.Count) {
                         geometry.TriangleIndices.Add(meshData.Indices[i]);
-                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
                         geometry.TriangleIndices.Add(meshData.Indices[i + 2]);
+                        geometry.TriangleIndices.Add(meshData.Indices[i + 1]);
                     }
                 }
 

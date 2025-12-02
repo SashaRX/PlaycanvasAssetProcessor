@@ -12,7 +12,6 @@ using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using Assimp;
 using HelixToolkit.Wpf;
-using MediaVector3D = System.Windows.Media.Media3D.Vector3D;
 using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Viewer;
 using AssetProcessor.ModelConversion.Settings;
@@ -34,9 +33,6 @@ namespace AssetProcessor {
         private LodLevel _currentLod = LodLevel.LOD0;
         private string? _currentFbxPath;  // Путь к FBX для переключения Source Type
         private ImageBrush? _cachedAlbedoBrush;  // Кэшированная albedo текстура для preview
-        private static readonly RotateTransform3D GltfForwardToWpfRotation =
-            new RotateTransform3D(new AxisAngleRotation3D(new MediaVector3D(0, 1, 0), 180));
-
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
         /// </summary>
@@ -518,13 +514,6 @@ namespace AssetProcessor {
         /// </summary>
         private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
             var modelGroup = new Model3DGroup();
-
-            // glTF ориентирован вдоль -Z, тогда как WPF смотрит вдоль +Z. Добавляем
-            // разворот на 180° вокруг Y, чтобы pivot и стрелки соответствовали реальной сцене
-            // без смены handedness и без воздействия на мировые узловые матрицы glTF.
-            var baseTransform = new Transform3DGroup();
-            baseTransform.Children.Add(GltfForwardToWpfRotation);
-            modelGroup.Transform = baseTransform;
 
             foreach (var meshData in glbData.Meshes) {
                 LodLogger.Info($"[SharpGLTF→WPF] Processing mesh: {meshData.Positions.Count} vertices, {meshData.Indices.Count / 3} triangles, HasUVs={meshData.TextureCoordinates.Count > 0}");

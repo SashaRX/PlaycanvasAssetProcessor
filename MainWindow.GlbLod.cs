@@ -33,6 +33,8 @@ namespace AssetProcessor {
         private LodLevel _currentLod = LodLevel.LOD0;
         private string? _currentFbxPath;  // Путь к FBX для переключения Source Type
         private ImageBrush? _cachedAlbedoBrush;  // Кэшированная albedo текстура для preview
+        private static readonly RotateTransform3D GltfForwardToWpfRotation =
+            new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180));
 
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
@@ -474,15 +476,18 @@ namespace AssetProcessor {
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
+            var transform = modelGroup.Transform ?? Transform3D.Identity;
+
             foreach (var child in modelGroup.Children) {
                 if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
                     foreach (var pos in mesh.Positions) {
-                        minX = Math.Min(minX, pos.X);
-                        minY = Math.Min(minY, pos.Y);
-                        minZ = Math.Min(minZ, pos.Z);
-                        maxX = Math.Max(maxX, pos.X);
-                        maxY = Math.Max(maxY, pos.Y);
-                        maxZ = Math.Max(maxZ, pos.Z);
+                        var transformed = transform.Transform(pos);
+                        minX = Math.Min(minX, transformed.X);
+                        minY = Math.Min(minY, transformed.Y);
+                        minZ = Math.Min(minZ, transformed.Z);
+                        maxX = Math.Max(maxX, transformed.X);
+                        maxY = Math.Max(maxY, transformed.Y);
+                        maxZ = Math.Max(maxZ, transformed.Z);
                     }
                 }
             }
@@ -512,6 +517,13 @@ namespace AssetProcessor {
         /// </summary>
         private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
             var modelGroup = new Model3DGroup();
+
+            // glTF ориентирован вдоль -Z, тогда как WPF смотрит вдоль +Z. Добавляем
+            // разворот на 180° вокруг Y, чтобы pivot и стрелки соответствовали реальной сцене
+            // без смены handedness и без воздействия на мировые узловые матрицы glTF.
+            var baseTransform = new Transform3DGroup();
+            baseTransform.Children.Add(GltfForwardToWpfRotation);
+            modelGroup.Transform = baseTransform;
 
             foreach (var meshData in glbData.Meshes) {
                 LodLogger.Info($"[SharpGLTF→WPF] Processing mesh: {meshData.Positions.Count} vertices, {meshData.Indices.Count / 3} triangles, HasUVs={meshData.TextureCoordinates.Count > 0}");
@@ -585,15 +597,18 @@ namespace AssetProcessor {
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
+            var transform = modelGroup.Transform ?? Transform3D.Identity;
+
             foreach (var child in modelGroup.Children) {
                 if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
                     foreach (var pos in mesh.Positions) {
-                        minX = Math.Min(minX, pos.X);
-                        minY = Math.Min(minY, pos.Y);
-                        minZ = Math.Min(minZ, pos.Z);
-                        maxX = Math.Max(maxX, pos.X);
-                        maxY = Math.Max(maxY, pos.Y);
-                        maxZ = Math.Max(maxZ, pos.Z);
+                        var transformed = transform.Transform(pos);
+                        minX = Math.Min(minX, transformed.X);
+                        minY = Math.Min(minY, transformed.Y);
+                        minZ = Math.Min(minZ, transformed.Z);
+                        maxX = Math.Max(maxX, transformed.X);
+                        maxY = Math.Max(maxY, transformed.Y);
+                        maxZ = Math.Max(maxZ, transformed.Z);
                     }
                 }
             }

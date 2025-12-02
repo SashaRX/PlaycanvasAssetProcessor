@@ -579,6 +579,14 @@ namespace AssetProcessor {
                 modelGroup.Children.Add(model);
             }
 
+            // Базовый разворот glTF -> WPF: glTF смотрит вдоль +Z вперёд, камера HelixToolkit направлена по -Z.
+            // Разворачиваем сцену на 180° вокруг Y, чтобы forward совпадал с кубом навигации и pivot.
+            var baseTransform = new Transform3DGroup();
+            baseTransform.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)));
+            modelGroup.Transform = baseTransform;
+
+            LodLogger.Info("[SharpGLTF→WPF] Applied base Y-rotation 180° to align forward with HelixToolkit camera");
+
             // Логируем bounds
             var minX = double.MaxValue;
             var minY = double.MaxValue;

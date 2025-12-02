@@ -12,6 +12,7 @@ using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using Assimp;
 using HelixToolkit.Wpf;
+using MediaVector3D = System.Windows.Media.Media3D.Vector3D;
 using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Viewer;
 using AssetProcessor.ModelConversion.Settings;
@@ -34,7 +35,7 @@ namespace AssetProcessor {
         private string? _currentFbxPath;  // Путь к FBX для переключения Source Type
         private ImageBrush? _cachedAlbedoBrush;  // Кэшированная albedo текстура для preview
         private static readonly RotateTransform3D GltfForwardToWpfRotation =
-            new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180));
+            new RotateTransform3D(new AxisAngleRotation3D(new MediaVector3D(0, 1, 0), 180));
 
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)

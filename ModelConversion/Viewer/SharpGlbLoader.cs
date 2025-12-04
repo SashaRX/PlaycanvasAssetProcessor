@@ -90,6 +90,19 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     // Если текстура повреждена, пробуем загрузить без текстур
                     Logger.Warn($"[SharpGLTF] Invalid texture data, trying to load without textures: {ex.Message}");
                     model = LoadWithoutTextures(pathToLoad);
+                } catch (Exception ex) {
+                    // КРИТИЧНО: Обрабатываем любые другие исключения, которые не были обработаны выше
+                    // Пытаемся загрузить без текстур как последний fallback
+                    Logger.Warn($"[SharpGLTF] Unexpected error during model load, trying to load without textures: {ex.GetType().Name}: {ex.Message}");
+                    try {
+                        model = LoadWithoutTextures(pathToLoad);
+                    } catch (Exception fallbackEx) {
+                        // Если fallback тоже не работает, устанавливаем ошибку и возвращаем
+                        Logger.Error($"[SharpGLTF] Failed to load model even without textures: {fallbackEx.GetType().Name}: {fallbackEx.Message}");
+                        result.Success = false;
+                        result.Error = $"Failed to load GLB: {ex.GetType().Name}: {ex.Message}. Fallback also failed: {fallbackEx.Message}";
+                        return result;
+                    }
                 }
 
                 Logger.Info($"[SharpGLTF] Loaded: {model.LogicalMeshes.Count} meshes, {model.LogicalMaterials.Count} materials");

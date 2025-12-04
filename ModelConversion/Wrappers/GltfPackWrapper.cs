@@ -335,16 +335,22 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             // VERTEX POSITION FORMAT
             // ============================================
 
-            switch (settings.PositionFormat) {
-                case VertexPositionFormat.Integer:
-                    args.Add("-vpi");
-                    break;
-                case VertexPositionFormat.Normalized:
-                    args.Add("-vpn");
-                    break;
-                case VertexPositionFormat.Float:
-                    args.Add("-vpf");
-                    break;
+            // КРИТИЧНО: Флаги формата позиций добавляются только если квантование не отключено
+            // Когда -noq установлен, квантование полностью отключено, и флаги формата могут конфликтовать
+            if (!settings.DisableQuantization) {
+                switch (settings.PositionFormat) {
+                    case VertexPositionFormat.Integer:
+                        args.Add("-vpi");
+                        break;
+                    case VertexPositionFormat.Normalized:
+                        args.Add("-vpn");
+                        break;
+                    case VertexPositionFormat.Float:
+                        args.Add("-vpf");
+                        break;
+                }
+            } else {
+                Logger.Info("gltfpack: Skipping position format flags (quantization disabled with -noq)");
             }
 
             // ============================================
@@ -386,6 +392,21 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             }
             if (settings.UseGpuInstancing) {
                 args.Add("-mi");
+            }
+
+            // ============================================
+            // UV TRANSFORMATIONS
+            // ============================================
+
+            // Инвертировать UV по вертикали
+            // ВАЖНО: gltfpack НЕ поддерживает флаг -flipuv напрямую
+            // Этот флаг будет проигнорирован gltfpack, что приведёт к неработающей настройке
+            // Для инверсии UV требуется пост-обработка после конвертации (не реализовано)
+            // Показываем предупреждение пользователю, что настройка не будет применена
+            if (settings.FlipUVs) {
+                Logger.Warn("gltfpack: FlipUVs setting is enabled, but gltfpack does NOT support -flipuv flag. UV coordinates will NOT be flipped. Post-processing required for UV flipping (not implemented).");
+                // НЕ добавляем флаг -flipuv, так как он не поддерживается и будет проигнорирован
+                // TODO: Реализовать пост-обработку UV координат для инверсии по вертикали
             }
 
             // ============================================

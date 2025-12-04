@@ -1,4 +1,4 @@
-п»їusing AssetProcessor.Helpers;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -26,7 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs РґР»СЏ GridSplitter
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -46,16 +46,16 @@ namespace AssetProcessor {
         private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
-                    if (selectedModel.Status == "Downloaded") { // Р•СЃР»Рё РјРѕРґРµР»СЊ СѓР¶Рµ Р·Р°РіСЂСѓР¶РµРЅР°
-                        // РЎРЅР°С‡Р°Р»Р° РїС‹С‚Р°РµРјСЃСЏ Р·Р°РіСЂСѓР·РёС‚СЊ GLB LOD С„Р°Р№Р»С‹
+                    if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
+                        // Сначала пытаемся загрузить GLB LOD файлы
                         await TryLoadGlbLodAsync(selectedModel.Path);
 
-                        // Р•СЃР»Рё GLB LOD РЅРµ РЅР°Р№РґРµРЅС‹, Р·Р°РіСЂСѓР¶Р°РµРј FBX РјРѕРґРµР»СЊ РІ РѕР±С‹С‡РЅС‹Р№ РІСЊСЋРїРѕСЂС‚
+                        // Если GLB LOD не найдены, загружаем FBX модель в обычный вьюпорт
                         if (!_isGlbViewerActive) {
-                            // Р—Р°РіСЂСѓР¶Р°РµРј РјРѕРґРµР»СЊ РІРѕ РІСЊСЋРїРѕСЂС‚ (3D РїСЂРѕСЃРјРѕС‚СЂС‰РёРє)
+                            // Загружаем модель во вьюпорт (3D просмотрщик)
                             LoadModel(selectedModel.Path);
 
-                            // РћР±РЅРѕРІР»СЏРµРј РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РјРѕРґРµР»Рё РёР· FBX
+                            // Обновляем информацию о модели из FBX
                             AssimpContext context = new();
                             Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
                             Mesh? mesh = scene.Meshes.FirstOrDefault();
@@ -73,7 +73,7 @@ namespace AssetProcessor {
                                 UpdateUVImage(mesh);
                             }
                         }
-                        // Р•СЃР»Рё GLB viewer Р°РєС‚РёРІРµРЅ, РёРЅС„РѕСЂРјР°С†РёСЏ СѓР¶Рµ РѕР±РЅРѕРІР»РµРЅР° РІ TryLoadGlbLodAsync
+                        // Если GLB viewer активен, информация уже обновлена в TryLoadGlbLodAsync
                     }
                 }
             }
@@ -89,10 +89,10 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// РћР±РЅРѕРІР»СЏРµС‚ UV preview РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+        /// Обновляет UV preview изображения
         /// </summary>
-        /// <param name="mesh">Assimp mesh СЃ UV РєРѕРѕСЂРґРёРЅР°С‚Р°РјРё</param>
-        /// <param name="flipV">True РґР»СЏ FBX (Р·Р°РіСЂСѓР¶РµРЅ СЃ FlipUVs), False РґР»СЏ GLB (РµСЃС‚РµСЃС‚РІРµРЅРЅС‹Р№ top-left origin)</param>
+        /// <param name="mesh">Assimp mesh с UV координатами</param>
+        /// <param name="flipV">True для FBX (загружен с FlipUVs), False для GLB (естественный top-left origin)</param>
         private void UpdateUVImage(Mesh mesh, bool flipV = true) {
             const int width = 512;
             const int height = 512;
@@ -107,9 +107,9 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// РЎРѕР·РґР°С‘С‚ bitmap СЃ UV СЂР°Р·РІС‘СЂС‚РєРѕР№
+        /// Создаёт bitmap с UV развёрткой
         /// </summary>
-        /// <param name="flipV">True РґР»СЏ FBX (РѕС‚РјРµРЅСЏРµС‚ FlipUVs РґР»СЏ РїРѕРєР°Р·Р° РѕСЂРёРіРёРЅР°Р»СЊРЅРѕР№ СЂР°Р·РІС‘СЂС‚РєРё), False РґР»СЏ GLB</param>
+        /// <param name="flipV">True для FBX (отменяет FlipUVs для показа оригинальной развёртки), False для GLB</param>
         private static BitmapSource CreateUvBitmapSource(Mesh mesh, int channelIndex, int width, int height, bool flipV = true) {
             DrawingVisual visual = new();
 
@@ -146,8 +146,8 @@ namespace AssetProcessor {
                                 }
 
                                 Assimp.Vector3D uv = textureCoordinates[vertexIndex];
-                                // flipV: РґР»СЏ FBX (РїРѕСЃР»Рµ FlipUVs) РЅСѓР¶РЅРѕ РѕС‚РјРµРЅРёС‚СЊ flip С‡С‚РѕР±С‹ РїРѕРєР°Р·Р°С‚СЊ РѕСЂРёРіРёРЅР°Р»СЊРЅСѓСЋ СЂР°Р·РІС‘СЂС‚РєСѓ
-                                // РґР»СЏ GLB (Р±РµР· FlipUVs) РїРѕРєР°Р·С‹РІР°РµРј РєР°Рє РµСЃС‚СЊ (top-left origin)
+                                // flipV: для FBX (после FlipUVs) нужно отменить flip чтобы показать оригинальную развёртку
+                                // для GLB (без FlipUVs) показываем как есть (top-left origin)
                                 float displayV = flipV ? (1 - uv.Y) : uv.Y;
                                 points[i] = new Point(uv.X * width, displayV * height);
                             }
@@ -181,7 +181,7 @@ namespace AssetProcessor {
             try {
                 viewPort3d.RotateGesture = new MouseGesture(MouseAction.LeftClick);
 
-                // РћС‡РёС‰Р°РµРј С‚РѕР»СЊРєРѕ РјРѕРґРµР»Рё, РѕСЃС‚Р°РІР»СЏСЏ РѕСЃРІРµС‰РµРЅРёРµ
+                // Очищаем только модели, оставляя освещение
                 List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
                 foreach (ModelVisual3D? model in modelsToRemove) {
                     viewPort3d.Children.Remove(model);
@@ -221,7 +221,7 @@ namespace AssetProcessor {
                         builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                         builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 
-                        // Р”РѕР±Р°РІР»СЏРµРј С‚РµРєСЃС‚СѓСЂРЅС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹, РµСЃР»Рё РѕРЅРё РµСЃС‚СЊ
+                        // Добавляем текстурные координаты, если они есть
                         if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
                             builder.TextureCoordinates.Add(new System.Windows.Point(mesh.TextureCoordinateChannels[0][i].X, mesh.TextureCoordinateChannels[0][i].Y));
                         }
@@ -245,7 +245,7 @@ namespace AssetProcessor {
                     }
 
                     MeshGeometry3D geometry = builder.ToMesh(true);
-                    // РСЃРїРѕР»СЊР·СѓРµРј albedo С‚РµРєСЃС‚СѓСЂСѓ РёР· РјР°С‚РµСЂРёР°Р»РѕРІ РµСЃР»Рё РѕРЅР° Р·Р°РіСЂСѓР¶РµРЅР°
+                    // Используем albedo текстуру из материалов если она загружена
                     DiffuseMaterial material = (_cachedAlbedoBrush != null && geometry.TextureCoordinates.Count > 0)
                         ? new DiffuseMaterial(_cachedAlbedoBrush)
                         : new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
@@ -266,7 +266,7 @@ namespace AssetProcessor {
                 ModelVisual3D visual3d = new() { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
-                // РџСЂРёРјРµРЅСЏРµРј РЅР°СЃС‚СЂРѕР№РєРё viewer (wireframe, pivot, up vector)
+                // Применяем настройки viewer (wireframe, pivot, up vector)
                 ApplyViewerSettingsToModel();
 
                 viewPort3d.ZoomExtents();
@@ -282,7 +282,7 @@ namespace AssetProcessor {
         }
 
         private void ResetViewport() {
-            // РћС‡РёС‰Р°РµРј С‚РѕР»СЊРєРѕ РјРѕРґРµР»Рё, РѕСЃС‚Р°РІР»СЏСЏ РѕСЃРІРµС‰РµРЅРёРµ
+            // Очищаем только модели, оставляя освещение
             List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
             foreach (ModelVisual3D model in modelsToRemove) {
                 viewPort3d.Children.Remove(model);

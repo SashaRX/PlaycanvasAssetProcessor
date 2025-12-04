@@ -90,8 +90,9 @@ namespace AssetProcessor.Controls {
                 LockBorderVertices = LockBorderVerticesCheckBox.IsChecked ?? false,
 
                 // Vertex Attributes
-                PositionFormat = PositionFormatComboBox.SelectedItem != null
-                    ? (VertexPositionFormat)PositionFormatComboBox.SelectedItem
+                // Безопасное приведение типа с проверкой: используем as для защиты от InvalidCastException
+                PositionFormat = PositionFormatComboBox.SelectedItem is VertexPositionFormat format
+                    ? format
                     : VertexPositionFormat.Integer,
                 FloatTexCoords = FloatTexCoordsCheckBox.IsChecked ?? false,
                 FloatNormals = FloatNormalsCheckBox.IsChecked ?? false,

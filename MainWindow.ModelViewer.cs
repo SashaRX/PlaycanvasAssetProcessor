@@ -355,8 +355,8 @@ namespace AssetProcessor {
 
                     // Добавляем новую up vector трансформацию
                     if (_isZUp) {
-                        // Поворот на -90° вокруг X для преобразования Y-up в Z-up
-                        var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
+                        // Поворот на +90° вокруг X для преобразования Y-up в Z-up (Z вверх, Y вперёд)
+                        var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), 90);
                         var rotateTransform = new RotateTransform3D(rotation);
                         // Добавляем ПОСЛЕ ScaleTransform (если он есть)
                         currentTransform.Children.Add(rotateTransform);
@@ -367,7 +367,7 @@ namespace AssetProcessor {
             // Также обновляем pivot если он есть
             if (_pivotVisual != null) {
                 if (_isZUp) {
-                    var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), -90);
+                    var rotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), 90);
                     _pivotVisual.Transform = new RotateTransform3D(rotation);
                 } else {
                     _pivotVisual.Transform = Transform3D.Identity;

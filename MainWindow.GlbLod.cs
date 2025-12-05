@@ -33,7 +33,6 @@ namespace AssetProcessor {
         private LodLevel _currentLod = LodLevel.LOD0;
         private string? _currentFbxPath;  // Путь к FBX для переключения Source Type
         private ImageBrush? _cachedAlbedoBrush;  // Кэшированная albedo текстура для preview
-
         /// <summary>
         /// Инициализация GLB LOD компонентов (вызывается из конструктора MainWindow)
         /// </summary>
@@ -337,7 +336,7 @@ namespace AssetProcessor {
         ///
         /// Координатные системы:
         /// - FBX может быть Z-up (3ds Max) или Y-up (Maya, Blender)
-        /// - WPF использует Y-up левую систему координат
+        /// - WPF использует Y-up правую систему координат
         /// - Определяем UpAxis из метаданных FBX и применяем соответствующее преобразование
         /// </summary>
         private Model3DGroup ConvertAssimpSceneToWpfModel(Scene scene) {
@@ -370,22 +369,37 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // FBX (right-handed) и WPF (right-handed) - одинаковые handedness!
-                // Z-up FBX: только swap Y↔Z для преобразования в Y-up
-                // Y-up FBX: никаких преобразований не нужно
+                // FBX/glTF и WPF Viewport3D используют правую систему координат (X вправо, Y вверх, Z к камере).
+                // Приводим только up-axis (Z-up → Y-up), без инверсии знаков, чтобы не переворачивать модель.
                 for (int i = 0; i < mesh.VertexCount; i++) {
                     var vertex = mesh.Vertices[i];
                     var normal = mesh.Normals[i];
 
+                    double x, y, z;
+                    double nx, ny, nz;
+
                     if (isZUp) {
-                        // Z-up → Y-up: только swap Y↔Z
-                        geometry.Positions.Add(new Point3D(vertex.X, vertex.Z, vertex.Y));
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Z, normal.Y));
+                        // Z-up → Y-up: swap Y↔Z
+                        x = vertex.X;
+                        y = vertex.Z;
+                        z = vertex.Y;
+
+                        nx = normal.X;
+                        ny = normal.Z;
+                        nz = normal.Y;
                     } else {
                         // Y-up → Y-up: просто копируем
-                        geometry.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
-                        geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
+                        x = vertex.X;
+                        y = vertex.Y;
+                        z = vertex.Z;
+
+                        nx = normal.X;
+                        ny = normal.Y;
+                        nz = normal.Z;
                     }
+
+                    geometry.Positions.Add(new Point3D(x, y, z));
+                    geometry.Normals.Add(new System.Windows.Media.Media3D.Vector3D(nx, ny, nz));
                 }
 
                 // UV координаты (если есть)
@@ -409,7 +423,7 @@ namespace AssetProcessor {
                     LodLogger.Info($"  No UV coordinates found");
                 }
 
-                // Индексы - оригинальный порядок (handedness совпадает)
+                // Индексы копируем напрямую (WPF тоже использует правую СК, инверсия winding не требуется)
                 for (int i = 0; i < mesh.FaceCount; i++) {
                     var face = mesh.Faces[i];
                     if (face.IndexCount == 3) {
@@ -459,15 +473,18 @@ namespace AssetProcessor {
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
+            var transform = modelGroup.Transform ?? Transform3D.Identity;
+
             foreach (var child in modelGroup.Children) {
                 if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
                     foreach (var pos in mesh.Positions) {
-                        minX = Math.Min(minX, pos.X);
-                        minY = Math.Min(minY, pos.Y);
-                        minZ = Math.Min(minZ, pos.Z);
-                        maxX = Math.Max(maxX, pos.X);
-                        maxY = Math.Max(maxY, pos.Y);
-                        maxZ = Math.Max(maxZ, pos.Z);
+                        var transformed = transform.Transform(pos);
+                        minX = Math.Min(minX, transformed.X);
+                        minY = Math.Min(minY, transformed.Y);
+                        minZ = Math.Min(minZ, transformed.Z);
+                        maxX = Math.Max(maxX, transformed.X);
+                        maxY = Math.Max(maxY, transformed.Y);
+                        maxZ = Math.Max(maxZ, transformed.Z);
                     }
                 }
             }
@@ -476,7 +493,7 @@ namespace AssetProcessor {
             var sizeY = maxY - minY;
             var sizeZ = maxZ - minZ;
 
-            LodLogger.Info($"Model bounds (after Y↔Z swap): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
+            LodLogger.Info($"Model bounds (after axis conversion): min=({minX:F2}, {minY:F2}, {minZ:F2}), max=({maxX:F2}, {maxY:F2}, {maxZ:F2})");
             LodLogger.Info($"Model size (Y=height): {sizeX:F2} x {sizeY:F2} x {sizeZ:F2}");
             LodLogger.Info($"Model pivot preserved (no auto-centering)");
 
@@ -492,8 +509,8 @@ namespace AssetProcessor {
         ///
         /// Координатные системы:
         /// - GLB/glTF спецификация требует Y-up (FBX2glTF конвертирует из исходной FBX)
-        /// - WPF использует Y-up правую систему координат
-        /// - Преобразование осей и инверсия X для правильного отображения в WPF
+        /// - Viewport3D использует такую же правую систему координат (+Z к камере)
+        /// - Достаточно прямого копирования вершин/индексов без разворотов, чтобы избежать переворота модели
         /// </summary>
         private Model3DGroup ConvertSharpGlbToWpfModel(SharpGlbLoader.GlbData glbData) {
             var modelGroup = new Model3DGroup();
@@ -504,8 +521,7 @@ namespace AssetProcessor {
                 var geometry = new MeshGeometry3D();
 
                 // Вершины и нормали
-                // glTF (Y-up, right-handed) и WPF (Y-up, right-handed) - одинаковые системы!
-                // Никаких преобразований не нужно - просто копируем координаты
+                // glTF и WPF Viewport3D имеют одинаковую правую СК, поэтому копируем напрямую.
                 for (int i = 0; i < meshData.Positions.Count; i++) {
                     var pos = meshData.Positions[i];
                     geometry.Positions.Add(new Point3D(pos.X, pos.Y, pos.Z));
@@ -531,7 +547,7 @@ namespace AssetProcessor {
                     }
                 }
 
-                // Индексы - оригинальный порядок (координатные системы совпадают)
+                // Индексы копируем напрямую, т.к. handedness совпадает.
                 for (int i = 0; i < meshData.Indices.Count; i += 3) {
                     if (i + 2 < meshData.Indices.Count) {
                         geometry.TriangleIndices.Add(meshData.Indices[i]);
@@ -563,6 +579,14 @@ namespace AssetProcessor {
                 modelGroup.Children.Add(model);
             }
 
+            // Базовый разворот glTF -> WPF: glTF смотрит вдоль +Z вперёд, камера HelixToolkit направлена по -Z.
+            // Разворачиваем сцену на 180° вокруг Y, чтобы forward совпадал с кубом навигации и pivot.
+            var baseTransform = new Transform3DGroup();
+            baseTransform.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new System.Windows.Media.Media3D.Vector3D(0, 1, 0), 180)));
+            modelGroup.Transform = baseTransform;
+
+            LodLogger.Info("[SharpGLTF→WPF] Applied base Y-rotation 180° to align forward with HelixToolkit camera");
+
             // Логируем bounds
             var minX = double.MaxValue;
             var minY = double.MaxValue;
@@ -571,15 +595,18 @@ namespace AssetProcessor {
             var maxY = double.MinValue;
             var maxZ = double.MinValue;
 
+            var transform = modelGroup.Transform ?? Transform3D.Identity;
+
             foreach (var child in modelGroup.Children) {
                 if (child is GeometryModel3D geoModel && geoModel.Geometry is MeshGeometry3D mesh) {
                     foreach (var pos in mesh.Positions) {
-                        minX = Math.Min(minX, pos.X);
-                        minY = Math.Min(minY, pos.Y);
-                        minZ = Math.Min(minZ, pos.Z);
-                        maxX = Math.Max(maxX, pos.X);
-                        maxY = Math.Max(maxY, pos.Y);
-                        maxZ = Math.Max(maxZ, pos.Z);
+                        var transformed = transform.Transform(pos);
+                        minX = Math.Min(minX, transformed.X);
+                        minY = Math.Min(minY, transformed.Y);
+                        minZ = Math.Min(minZ, transformed.Z);
+                        maxX = Math.Max(maxX, transformed.X);
+                        maxY = Math.Max(maxY, transformed.Y);
+                        maxZ = Math.Max(maxZ, transformed.Z);
                     }
                 }
             }

@@ -248,6 +248,22 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     args.Add("-cc");
                     break;
 
+                case CompressionMode.MeshOptKHR:
+                    // KHR_meshopt_compression (meshoptimizer 1.0+)
+                    // -cz эквивалентно -ce khr -cc (лучшее сжатие)
+                    // ВАЖНО: Требует кастомный WASM декодер на клиенте!
+                    args.Add("-cz");
+                    Logger.Info("gltfpack: Using KHR_meshopt_compression (-cz) - requires custom WASM decoder");
+                    break;
+
+                case CompressionMode.MeshOptKHRWithFallback:
+                    // KHR_meshopt_compression + fallback буфер для совместимости
+                    // -cf создаёт несжатый fallback для старых браузеров/движков
+                    args.Add("-cz");
+                    args.Add("-cf");
+                    Logger.Info("gltfpack: Using KHR_meshopt_compression with fallback (-cz -cf)");
+                    break;
+
                 case CompressionMode.None:
                     // Без сжатия
                     break;

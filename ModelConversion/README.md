@@ -1,15 +1,15 @@
 # ModelConversion Pipeline
 
-Офлайн-конвейер для конвертации FBX моделей в оптимизированные GLB с автоматической генерацией LOD (Level of Detail) цепочки.
+Офлайн-конвейер для конвертации FBX/glTF/GLB моделей в оптимизированные GLB с автоматической генерацией LOD (Level of Detail) цепочки.
 
 ## Обзор
 
 ModelConversion - это комплексный пайплайн для обработки 3D моделей, ориентированный на веб-рантайм (PlayCanvas) и офлайн-проверку в редакторах. Пайплайн автоматизирует следующие задачи:
 
-1. **Конвертация FBX → GLB**: Стабильная конвертация исходных FBX в glTF 2.0 бинарный формат
+1. **Конвертация FBX/glTF → GLB**: Конвертация исходных FBX или прямой glTF/GLB вход в оптимизированный формат
 2. **Генерация LOD цепочки**: Автоматическое создание 4 уровней детализации (LOD0-LOD3)
 3. **Оптимизация геометрии**: Упрощение сетки с сохранением визуального качества
-4. **Сжатие**: Квантование и опциональная EXT_meshopt_compression для минимальных размеров
+4. **Сжатие**: Квантование, EXT_meshopt_compression или KHR_meshopt_compression (meshoptimizer 1.0+)
 5. **QA отчёты**: Автоматическая валидация результатов по критериям приёмки
 
 ## Архитектура
@@ -88,6 +88,175 @@ gltfpack -v
 
 **Рантайм требования:** Для корректного воспроизведения EXT_meshopt_compression необходим **MeshoptDecoder 1.0** (или новее) в браузере/движке, иначе декодирование может выдавать артефакты из-за несовпадения формата байт-кода в 1.0.
 
+## Экспорт из 3ds Max
+
+### Прямой glTF экспорт (рекомендуется для 3ds Max 2025+)
+
+3ds Max 2025 поддерживает нативный экспорт в glTF. Это предпочтительный способ, так как исключает промежуточное преобразование через FBX.
+
+**File → Export → glTF (.gltf/.glb)**
+
+**Рекомендуемые настройки:**
+
+| Параметр | Значение | Примечание |
+|----------|----------|------------|
+| Format | GLB (Binary) | Один файл, проще в работе |
+| Embed Textures | OFF | Текстуры обрабатываются отдельно через TextureConversion |
+| Include Geometry | ON | - |
+| Include Materials | ON | Только параметры, не текстуры |
+| Include Cameras | OFF | Не нужно для моделей |
+| Include Lights | OFF | Не нужно для моделей |
+
+### FBX экспорт (альтернатива)
+
+Если glTF экспорт недоступен, используйте FBX с последующей конвертацией через FBX2glTF.
+
+**Рекомендуемые настройки FBX Export:**
+
+| Параметр | Значение | Примечание |
+|----------|----------|------------|
+| **Axis Conversion** | **Y-Up** | glTF использует Y-up, 3ds Max — Z-up |
+| Units | Automatic / Meters | glTF стандарт — метры |
+| Scale Factor | 1.0 | Без масштабирования |
+| Triangulate | ON | Избегаем N-gons |
+| Preserve Edge Orientation | ON | Сохраняем нормали |
+| Skin/Bone influences | ≤ 4 | Лимит glTF 2.0 |
+
+**Важно про Axis Conversion:**
+- 3ds Max использует **Z-up** (нельзя изменить внутри программы)
+- glTF стандарт использует **Y-up**
+- При экспорте FBX выберите **Y-Up** для автоматической конвертации
+- Конвертация применяется только к корневым объектам
+- Если на корневом объекте есть анимация, кривые будут ресемплированы
+
+### Прямой glTF/GLB вход в пайплайн
+
+Пайплайн автоматически определяет формат входного файла:
+
+```csharp
+// FBX вход — проходит через FBX2glTF
+var result = await pipeline.ConvertAsync("model.fbx", outputDir, settings);
+
+// glTF/GLB вход — напрямую в gltfpack (пропускает FBX2glTF)
+var result = await pipeline.ConvertAsync("model.glb", outputDir, settings);
+var result = await pipeline.ConvertAsync("model.gltf", outputDir, settings);
+```
+
+При glTF/GLB входе:
+- FBX2glTF **не требуется** (можно не указывать путь)
+- Файл передаётся напрямую в gltfpack для оптимизации и LOD генерации
+- Поддерживаются оба формата: `.gltf` (JSON + bin) и `.glb` (binary)
+
+## KHR_meshopt_compression (meshoptimizer 1.0+)
+
+### Описание
+
+`KHR_meshopt_compression` — новое расширение Khronos (draft), обеспечивающее лучшее сжатие чем `EXT_meshopt_compression`. Доступно начиная с meshoptimizer 1.0.
+
+**Преимущества:**
+- Лучший коэффициент сжатия (~10-20% меньше чем EXT)
+- Стандартизированный формат Khronos
+
+**Ограничения:**
+- Ограниченная поддержка в движках (на декабрь 2024)
+- Требует кастомный WASM декодер (см. раздел ниже)
+- PlayCanvas/Three.js пока не поддерживают нативно
+
+### Режимы сжатия
+
+| Режим | Флаги gltfpack | Описание |
+|-------|----------------|----------|
+| `Quantization` | `-kn -km` | Только квантование (KHR_mesh_quantization) |
+| `MeshOpt` | `-c` | EXT_meshopt_compression |
+| `MeshOptAggressive` | `-cc` | EXT_meshopt_compression + дополнительное сжатие |
+| `MeshOptKHR` | `-cz` | **KHR_meshopt_compression** (лучшее сжатие) |
+| `MeshOptKHRWithFallback` | `-cz -cf` | KHR + несжатый fallback буфер |
+
+### Когда использовать KHR
+
+**Используйте `MeshOptKHR` когда:**
+- Контролируете рантайм и можете встроить кастомный декодер
+- Максимальное сжатие критично
+- Готовы собрать и поддерживать WASM декодер
+
+**Используйте `MeshOptKHRWithFallback` когда:**
+- Нужна совместимость со старыми браузерами/движками
+- Готовы к увеличению размера файла (два буфера)
+
+**Используйте `MeshOptAggressive` (EXT) когда:**
+- Нужна широкая совместимость
+- Используете стандартные движки (PlayCanvas, Three.js, Babylon.js)
+
+## Сборка WASM декодера для KHR_meshopt_compression
+
+### Требования
+
+- [Emscripten SDK](https://emscripten.org/) (emsdk 3.1.50+)
+- meshoptimizer 1.0 исходники
+- Make или CMake
+
+### Пошаговая сборка
+
+```bash
+# 1. Клонируем meshoptimizer
+git clone https://github.com/zeux/meshoptimizer.git
+cd meshoptimizer
+git checkout v1.0
+
+# 2. Активируем Emscripten
+source /path/to/emsdk/emsdk_env.sh
+
+# 3. Собираем WASM декодер
+cd js
+make decoder
+
+# Результат: meshopt_decoder.js + meshopt_decoder.wasm
+```
+
+### Структура выходных файлов
+
+```
+js/
+├── meshopt_decoder.js      # ES module loader
+├── meshopt_decoder.wasm    # WASM binary
+└── meshopt_decoder.cjs     # CommonJS вариант (для Node.js)
+```
+
+### Интеграция в PlayCanvas
+
+```javascript
+// 1. Импортируем декодер (ES modules, meshoptimizer 1.0+)
+import { MeshoptDecoder } from './meshopt_decoder.js';
+
+// 2. Инициализируем
+await MeshoptDecoder.ready;
+
+// 3. Регистрируем в PlayCanvas
+app.loader.getHandler('container').decoders = {
+    'meshopt': MeshoptDecoder  // Работает для EXT и KHR
+};
+
+// 4. Загружаем модель
+const asset = new pc.Asset('model', 'container', {
+    url: 'model_lod0.glb'
+});
+app.assets.add(asset);
+app.assets.load(asset);
+```
+
+### Важные изменения в meshoptimizer 1.0
+
+1. **ES Modules по умолчанию** — JavaScript bindings теперь используют ES modules вместо CommonJS
+2. **Vertex encoding v1** — новый формат по умолчанию, требует декодер 0.23+
+3. **KHR extension** — поддерживается только декодером 1.0+
+
+### Размер WASM
+
+| Вариант | Размер (gzip) |
+|---------|---------------|
+| meshopt_decoder.wasm | ~15 KB |
+| meshopt_decoder.js | ~3 KB |
+
 ## Использование GUI
 
 ### Открытие окна конвертации моделей
@@ -164,6 +333,15 @@ gltfpack -v
 4. **MeshOptAggressive**: EXT_meshopt_compression с дополнительным сжатием
    - Флаг gltfpack: `-cc`
    - Ещё меньший размер, чуть медленнее декодирование
+5. **MeshOptKHR**: KHR_meshopt_compression (meshoptimizer 1.0+)
+   - Флаг gltfpack: `-cz`
+   - Лучшее сжатие (~10-20% меньше чем EXT)
+   - Требует кастомный WASM декодер 1.0+
+   - Ограниченная поддержка в движках
+6. **MeshOptKHRWithFallback**: KHR_meshopt_compression + fallback
+   - Флаги gltfpack: `-cz -cf`
+   - Два буфера: сжатый (KHR) + несжатый fallback
+   - Для совместимости со старыми браузерами/движками
 
 ### Квантование вершин
 

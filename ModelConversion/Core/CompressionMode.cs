@@ -26,7 +26,23 @@ namespace AssetProcessor.ModelConversion.Core {
         /// EXT_meshopt_compression с дополнительным сжатием
         /// Флаг: -cc
         /// </summary>
-        MeshOptAggressive
+        MeshOptAggressive,
+
+        /// <summary>
+        /// KHR_meshopt_compression (meshoptimizer 1.0+)
+        /// Лучшее сжатие чем EXT, но требует кастомный WASM декодер
+        /// Флаг: -cz (эквивалентно -ce khr -cc)
+        /// ВАЖНО: Ограниченная поддержка в движках, требуется собственный декодер
+        /// </summary>
+        MeshOptKHR,
+
+        /// <summary>
+        /// KHR_meshopt_compression с fallback буфером
+        /// Создаёт два буфера: сжатый (KHR) + несжатый fallback
+        /// Флаги: -cz -cf
+        /// Для совместимости со старыми браузерами/движками
+        /// </summary>
+        MeshOptKHRWithFallback
     }
 
     /// <summary>

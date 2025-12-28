@@ -319,13 +319,17 @@
                                 Background="#FFD6D6D6"
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                VirtualizingPanel.ScrollUnit="Pixel"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
-                                ScrollViewer.CanContentScroll="False">
-                            <DataGrid.LayoutTransform>
+                                ScrollViewer.CanContentScroll="True">
+                            <DataGrid.RenderTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
-                            </DataGrid.LayoutTransform>
+                            </DataGrid.RenderTransform>
+                            <DataGrid.RenderTransformOrigin>
+                                <Point X="0" Y="0"/>
+                            </DataGrid.RenderTransformOrigin>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureColumnHeaderContextMenu}"/>
@@ -334,46 +338,27 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
+                                    <!-- RowBackground computed in ViewModel - single binding instead of 6 DataTriggers -->
+                                    <Setter Property="Background" Value="{Binding RowBackground}"/>
                                     <Style.Triggers>
-                                        <!-- ВСЕ выделенные текстуры: СИНИЙ ФОН (приоритет выше, чем TextureType) -->
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
-                                            <Setter Property="Background" Value="#3399FF"/>
-                                        </DataTrigger>
-                                        <!-- Color ORM textures with pink/purple background (только для НЕвыбранных) -->
+                                        <!-- ORM texture border -->
                                         <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
-                                            <Setter Property="Background" Value="#C96391"/>
                                             <Setter Property="BorderBrush" Value="#A04070"/>
                                             <Setter Property="BorderThickness" Value="2,0,2,0"/>
                                         </DataTrigger>
-                                        <!-- Color by TextureType (только для НЕвыбранных и НЕ ORM) -->
-                                        <DataTrigger Binding="{Binding TextureType}" Value="Normal">
-                                            <Setter Property="Background" Value="#8080FF"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding TextureType}" Value="Albedo">
-                                            <Setter Property="Background" Value="#9C7F25"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding TextureType}" Value="Gloss">
-                                            <Setter Property="Background" Value="#808080"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding TextureType}" Value="AO">
-                                            <Setter Property="Background" Value="#FFFFFF"/>
-                                        </DataTrigger>
+                                        <!-- Selection override (highest priority) -->
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#3399FF"/>
+                                        </Trigger>
                                     </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.CellStyle>
                                 <Style TargetType="DataGridCell">
                                     <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="Background" Value="Transparent"/>
                                     <Style.Triggers>
-                                        <!-- Make cells transparent by default -->
-                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="False">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                        </DataTrigger>
-                                        <!-- For ORM textures, cells should also be pink/purple (только для НЕвыбранных) -->
-                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
-                                            <Setter Property="Background" Value="#C96391"/>
-                                        </DataTrigger>
-                                        <!-- ВСЕ выделенные: СИНИЙ ФОН + белый текст (одинаково для всех!) -->
+                                        <!-- Selection: blue background + white text -->
                                         <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
                                             <Setter Property="Background" Value="#3399FF"/>
                                             <Setter Property="Foreground" Value="White"/>
@@ -472,14 +457,18 @@
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Standard"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
-                              ScrollViewer.CanContentScroll="False">
-                            <DataGrid.LayoutTransform>
+                              ScrollViewer.CanContentScroll="True">
+                            <DataGrid.RenderTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
-                            </DataGrid.LayoutTransform>
+                            </DataGrid.RenderTransform>
+                            <DataGrid.RenderTransformOrigin>
+                                <Point X="0" Y="0"/>
+                            </DataGrid.RenderTransformOrigin>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
@@ -554,14 +543,18 @@
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Standard"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
-                              ScrollViewer.CanContentScroll="False">
-                        <DataGrid.LayoutTransform>
+                              ScrollViewer.CanContentScroll="True">
+                        <DataGrid.RenderTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
-                        </DataGrid.LayoutTransform>
+                        </DataGrid.RenderTransform>
+                        <DataGrid.RenderTransformOrigin>
+                            <Point X="0" Y="0"/>
+                        </DataGrid.RenderTransformOrigin>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>

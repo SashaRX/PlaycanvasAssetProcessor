@@ -1,9 +1,44 @@
-﻿namespace AssetProcessor.Resources {
+﻿using System.Windows.Media;
+
+namespace AssetProcessor.Resources {
     public class TextureResource : BaseResource {
         /// <summary>
         /// Флаг для определения ORM текстуры в UI (переопределяется в ORMTextureResource)
         /// </summary>
         public virtual bool IsORMTexture => false;
+
+        // Cached brushes for row background (performance optimization - avoid DataTriggers)
+        private static readonly Brush OrmBrush = new SolidColorBrush(Color.FromRgb(0xC9, 0x63, 0x91));
+        private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0xFF));
+        private static readonly Brush AlbedoBrush = new SolidColorBrush(Color.FromRgb(0x9C, 0x7F, 0x25));
+        private static readonly Brush GlossBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+        private static readonly Brush AoBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+        private static readonly Brush TransparentBrush = Brushes.Transparent;
+
+        static TextureResource() {
+            // Freeze brushes for better performance (cross-thread access)
+            OrmBrush.Freeze();
+            NormalBrush.Freeze();
+            AlbedoBrush.Freeze();
+            GlossBrush.Freeze();
+            AoBrush.Freeze();
+        }
+
+        /// <summary>
+        /// Computed row background color based on texture type (replaces DataTriggers for performance)
+        /// </summary>
+        public Brush RowBackground {
+            get {
+                if (IsORMTexture) return OrmBrush;
+                return TextureType switch {
+                    "Normal" => NormalBrush,
+                    "Albedo" => AlbedoBrush,
+                    "Gloss" => GlossBrush,
+                    "AO" => AoBrush,
+                    _ => TransparentBrush
+                };
+            }
+        }
 
         private int[] resolution = new int[2];
         private int[] resizeResolution = new int[2];
@@ -25,10 +60,10 @@
             get => resolution;
             set {
                 resolution = value;
-                // Кэшируем вычисляемое значение для быстрой сортировки
+                // Cache computed value for fast sorting (ResolutionArea used only for SortMemberPath, no binding)
                 resolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : null;
                 OnPropertyChanged(nameof(Resolution));
-                OnPropertyChanged(nameof(ResolutionArea));
+                // ResolutionArea notification removed - used only for sorting, not displayed
             }
         }
 
@@ -36,10 +71,10 @@
             get => resizeResolution;
             set {
                 resizeResolution = value;
-                // Кэшируем вычисляемое значение для быстрой сортировки
+                // Cache computed value for fast sorting (ResizeResolutionArea used only for SortMemberPath, no binding)
                 resizeResolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : null;
                 OnPropertyChanged(nameof(ResizeResolution));
-                OnPropertyChanged(nameof(ResizeResolutionArea));
+                // ResizeResolutionArea notification removed - used only for sorting, not displayed
             }
         }
 
@@ -54,8 +89,11 @@
         public string? TextureType {
             get => textureType;
             set {
-                textureType = value;
-                OnPropertyChanged(nameof(TextureType));
+                if (textureType != value) {
+                    textureType = value;
+                    OnPropertyChanged(nameof(TextureType));
+                    OnPropertyChanged(nameof(RowBackground)); // Update row color
+                }
             }
         }
 

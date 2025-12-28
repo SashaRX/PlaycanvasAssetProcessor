@@ -25,19 +25,19 @@ namespace AssetProcessor.ModelConversion.Pipeline {
         }
 
         /// <summary>
-        /// Конвертирует FBX в оптимизированные GLB с LOD цепочкой
+        /// Конвертирует FBX/glTF/GLB в оптимизированные GLB с LOD цепочкой
         /// </summary>
-        /// <param name="inputFbxPath">Путь к FBX файлу</param>
+        /// <param name="inputPath">Путь к FBX, glTF или GLB файлу</param>
         /// <param name="outputDirectory">Директория для выходных файлов</param>
         /// <param name="settings">Настройки конвертации</param>
         /// <returns>Результат конвертации</returns>
         public async Task<ModelConversionResult> ConvertAsync(
-            string inputFbxPath,
+            string inputPath,
             string outputDirectory,
             ModelConversionSettings settings) {
 
             var result = new ModelConversionResult {
-                InputPath = inputFbxPath,
+                InputPath = inputPath,
                 OutputDirectory = outputDirectory
             };
 
@@ -45,12 +45,16 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
             try {
                 Logger.Info($"=== MODEL CONVERSION PIPELINE START ===");
-                Logger.Info($"Input: {inputFbxPath}");
+                Logger.Info($"Input: {inputPath}");
                 Logger.Info($"Output: {outputDirectory}");
                 Logger.Info($"Settings: Generate LODs={settings.GenerateLods}, Compression={settings.CompressionMode}");
 
+                // Определяем формат входного файла
+                var inputExtension = Path.GetExtension(inputPath).ToLowerInvariant();
+                var isGltfInput = inputExtension is ".gltf" or ".glb";
+
                 // Проверяем доступность инструментов
-                if (!await _fbx2glTFWrapper.IsAvailableAsync()) {
+                if (!isGltfInput && !await _fbx2glTFWrapper.IsAvailableAsync()) {
                     throw new Exception("FBX2glTF not available. Please install it or specify path.");
                 }
 
@@ -63,23 +67,39 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 var buildDir = Path.Combine(outputDirectory, "build");
                 Directory.CreateDirectory(buildDir);
 
-                var modelName = Path.GetFileNameWithoutExtension(inputFbxPath);
+                var modelName = Path.GetFileNameWithoutExtension(inputPath);
 
-                // ШАГ A: FBX → базовый GLB (без сжатия)
-                Logger.Info("=== STEP A: FBX → BASE GLB ===");
-                Logger.Info($"Exclude textures: {settings.ExcludeTextures} (textures will be processed separately)");
-                var baseGlbPath = Path.Combine(buildDir, modelName);
-                var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputFbxPath, baseGlbPath, settings.ExcludeTextures);
+                string baseGltfPath;
 
-                if (!fbxResult.Success) {
-                    throw new Exception($"FBX2glTF conversion failed: {fbxResult.Error}");
+                if (isGltfInput) {
+                    // ШАГ A: Прямой glTF/GLB вход (из 3ds Max или другого DCC)
+                    Logger.Info("=== STEP A: DIRECT glTF/GLB INPUT ===");
+                    Logger.Info($"Input format: {inputExtension.ToUpper()} (skipping FBX2glTF conversion)");
+
+                    // Используем входной файл напрямую
+                    baseGltfPath = inputPath;
+                    result.BaseGlbPath = inputPath;
+
+                    // DEBUG: Проверяем UV
+                    InspectGlbUV(inputPath, $"INPUT {inputExtension.ToUpper()} (direct)");
+                } else {
+                    // ШАГ A: FBX → базовый GLB (без сжатия)
+                    Logger.Info("=== STEP A: FBX → BASE GLB ===");
+                    Logger.Info($"Exclude textures: {settings.ExcludeTextures} (textures will be processed separately)");
+                    var baseGlbPathNoExt = Path.Combine(buildDir, modelName);
+                    var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputPath, baseGlbPathNoExt, settings.ExcludeTextures);
+
+                    if (!fbxResult.Success) {
+                        throw new Exception($"FBX2glTF conversion failed: {fbxResult.Error}");
+                    }
+
+                    Logger.Info($"Base GLB created: {fbxResult.OutputFilePath} ({fbxResult.OutputFileSize} bytes)");
+                    baseGltfPath = fbxResult.OutputFilePath!;
+                    result.BaseGlbPath = baseGltfPath;
+
+                    // DEBUG: Проверяем UV после FBX2glTF
+                    InspectGlbUV(baseGltfPath, "BASE GLB (after FBX2glTF)");
                 }
-
-                Logger.Info($"Base GLB created: {fbxResult.OutputFilePath} ({fbxResult.OutputFileSize} bytes)");
-                result.BaseGlbPath = fbxResult.OutputFilePath!;
-
-                // DEBUG: Проверяем UV после FBX2glTF
-                InspectGlbUV(fbxResult.OutputFilePath!, "BASE GLB (after FBX2glTF)");
 
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
@@ -97,7 +117,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
 
                         var gltfResult = await _gltfPackWrapper.OptimizeAsync(
-                            fbxResult.OutputFilePath!,
+                            baseGltfPath,
                             lodOutputPath,
                             lodSettings,
                             settings.CompressionMode,

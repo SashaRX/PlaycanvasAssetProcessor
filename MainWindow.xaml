@@ -323,13 +323,10 @@
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True">
-                            <DataGrid.RenderTransform>
+                            <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
-                            </DataGrid.RenderTransform>
-                            <DataGrid.RenderTransformOrigin>
-                                <Point X="0" Y="0"/>
-                            </DataGrid.RenderTransformOrigin>
+                            </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureColumnHeaderContextMenu}"/>
@@ -462,13 +459,10 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True">
-                            <DataGrid.RenderTransform>
+                            <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
-                            </DataGrid.RenderTransform>
-                            <DataGrid.RenderTransformOrigin>
-                                <Point X="0" Y="0"/>
-                            </DataGrid.RenderTransformOrigin>
+                            </DataGrid.LayoutTransform>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
@@ -548,13 +542,10 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True">
-                        <DataGrid.RenderTransform>
+                        <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
-                        </DataGrid.RenderTransform>
-                        <DataGrid.RenderTransformOrigin>
-                            <Point X="0" Y="0"/>
-                        </DataGrid.RenderTransformOrigin>
+                        </DataGrid.LayoutTransform>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>

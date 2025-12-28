@@ -76,10 +76,7 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
-        private bool isSorting = false; // флаг для блокирования операций при сортировке
-        private DataGridSortManager? _texturesSortManager;
-        private DataGridSortManager? _modelsSortManager;
-        private DataGridSortManager? _materialsSortManager;
+        private bool isSorting = false; // ���� ��� ������������ �������� ����������
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // ������������ PresetManager ��� ��������� �������� ������ ��� ������ �������������
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
@@ -133,12 +130,6 @@ namespace AssetProcessor {
             ViewModel = this.viewModel;
 
             InitializeComponent();
-
-            // Initialize sort managers for DataGrids
-            _texturesSortManager = new DataGridSortManager(TexturesDataGrid);
-            _modelsSortManager = new DataGridSortManager(ModelsDataGrid);
-            _materialsSortManager = new DataGridSortManager(MaterialsDataGrid);
-
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -893,16 +884,89 @@ private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
 
 
 private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            _texturesSortManager?.HandleSorting(e);
-            isSorting = _texturesSortManager?.IsSorting ?? false;
+            OptimizeDataGridSorting(TexturesDataGrid, e);
         }
 
+        /// <summary>
+        /// ���������������� ���������� ���������� ��� ModelsDataGrid
+        /// </summary>
+        
+
+
         private void ModelsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            _modelsSortManager?.HandleSorting(e);
+            OptimizeDataGridSorting(ModelsDataGrid, e);
         }
 
         private void MaterialsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            _materialsSortManager?.HandleSorting(e);
+            OptimizeDataGridSorting(MaterialsDataGrid, e);
+        }
+
+        private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
+            try {
+                if (dataGrid == null || e == null || e.Column == null) {
+                    return;
+                }
+
+                e.Handled = true;
+
+                if (dataGrid.ItemsSource == null) {
+                    return;
+                }
+
+                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+                if (dataView == null) {
+                    return;
+                }
+
+                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending
+                    : ListSortDirection.Ascending;
+
+                string sortMemberPath = e.Column.SortMemberPath;
+                if (string.IsNullOrEmpty(sortMemberPath)) {
+                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
+                        sortMemberPath = binding.Path?.Path ?? "";
+                    }
+
+                    if (string.IsNullOrEmpty(sortMemberPath)) {
+                        e.Handled = false;
+                        return;
+                    }
+                }
+
+                isSorting = true;
+
+                try {
+                    // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
+                    if (dataView is ListCollectionView listView) {
+                        listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
+                    } else {
+                        // Fallback for non-ListCollectionView
+                        using (dataView.DeferRefresh()) {
+                            dataView.SortDescriptions.Clear();
+                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
+                        }
+                    }
+
+                    e.Column.SortDirection = direction;
+
+                    // Clear other columns' sort direction
+                    foreach (var column in dataGrid.Columns) {
+                        if (column != e.Column) {
+                            column.SortDirection = null;
+                        }
+                    }
+                } finally {
+                    Dispatcher.BeginInvoke(() => {
+                        isSorting = false;
+                    }, System.Windows.Threading.DispatcherPriority.Background);
+                }
+            } catch (Exception ex) {
+                logger.Error(ex, "Error in OptimizeDataGridSorting");
+                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
+                e.Handled = false;
+                isSorting = false;
+            }
         }
 
 #endregion

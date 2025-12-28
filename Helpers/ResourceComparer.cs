@@ -45,7 +45,7 @@ namespace AssetProcessor.Helpers {
                 "GroupName" => CompareString(GetGroupName(x), GetGroupName(y)),
 
                 // ModelResource properties
-                "UVChannels" => CompareInt(GetUVChannels(x), GetUVChannels(y)),
+                "UVChannels" => CompareNullableInt(GetUVChannels(x), GetUVChannels(y)),
 
                 // Default: use reflection as fallback
                 _ => CompareByReflection(x, y)
@@ -82,7 +82,7 @@ namespace AssetProcessor.Helpers {
         private static string? GetTextureType(object obj) => obj is TextureResource t ? t.TextureType : null;
         private static string? GetGroupName(object obj) => obj is TextureResource t ? t.GroupName : null;
 
-        private static int GetUVChannels(object obj) => obj is ModelResource m ? m.UVChannels : 0;
+        private static int? GetUVChannels(object obj) => obj is ModelResource m ? m.UVChannels : null;
 
         // Fallback for unknown properties
         private int CompareByReflection(object x, object y) {

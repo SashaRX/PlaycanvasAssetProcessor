@@ -896,7 +896,30 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Не перехватываем - пусть WPF обрабатывает сам
+            if (e.Column == null) return;
+            e.Handled = true;
+
+            // SortMemberPath для Resolution = "ResolutionArea", иначе из Binding
+            string sortPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn bc && bc.Binding is Binding b)
+                sortPath = b.Path?.Path ?? "";
+            if (string.IsNullOrEmpty(sortPath)) return;
+
+            // Toggle направления
+            var direction = e.Column.SortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+
+            // Очистить другие колонки
+            foreach (var col in dataGrid.Columns)
+                if (col != e.Column) col.SortDirection = null;
+
+            e.Column.SortDirection = direction;
+
+            // Применить сортировку по SortMemberPath
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            view?.SortDescriptions.Clear();
+            view?.SortDescriptions.Add(new SortDescription(sortPath, direction));
         }
 
 #endregion

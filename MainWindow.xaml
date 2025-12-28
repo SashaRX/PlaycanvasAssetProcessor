@@ -319,10 +319,17 @@
                                 Background="#FFD6D6D6"
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
-                                VirtualizingPanel.ScrollUnit="Pixel"
+                                VirtualizingPanel.ScrollUnit="Item"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
-                                ScrollViewer.CanContentScroll="True">
+                                ScrollViewer.CanContentScroll="True"
+                                ScrollViewer.IsDeferredScrollingEnabled="True">
+                            <DataGrid.Resources>
+                                <!-- Disable all animations for performance -->
+                                <Style TargetType="ScrollViewer">
+                                    <Setter Property="CanContentScroll" Value="True"/>
+                                </Style>
+                            </DataGrid.Resources>
                             <DataGrid.RenderTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -458,10 +465,11 @@
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
-                              VirtualizingPanel.ScrollUnit="Pixel"
+                              VirtualizingPanel.ScrollUnit="Item"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
-                              ScrollViewer.CanContentScroll="True">
+                              ScrollViewer.CanContentScroll="True"
+                              ScrollViewer.IsDeferredScrollingEnabled="True">
                             <DataGrid.RenderTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
@@ -544,10 +552,11 @@
                               Background="#FFD6D6D6"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
-                              VirtualizingPanel.ScrollUnit="Pixel"
+                              VirtualizingPanel.ScrollUnit="Item"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
-                              ScrollViewer.CanContentScroll="True">
+                              ScrollViewer.CanContentScroll="True"
+                              ScrollViewer.IsDeferredScrollingEnabled="True">
                         <DataGrid.RenderTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>

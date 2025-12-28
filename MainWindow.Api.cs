@@ -315,7 +315,7 @@ namespace AssetProcessor {
                         MetallicSource = metallicTexture,
                         Status = "Converted", // Already packed
                         Extension = ".ktx2",
-                        CompressionFormat = "ETC1S" // ORM textures use ETC1S by default
+                        CompressionFormat = TextureConversion.Core.CompressionFormat.ETC1S // ORM textures use ETC1S by default
                     };
 
                     // Извлекаем информацию о файле

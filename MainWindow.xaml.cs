@@ -897,47 +897,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            if (e.Column == null) return;
-
-            // Only handle columns with SortMemberPath (like Resolution -> ResolutionArea)
-            // Let WPF handle all other columns natively for correct toggle behavior
-            string sortMemberPath = e.Column.SortMemberPath;
-            if (string.IsNullOrEmpty(sortMemberPath)) {
-                // Clear our custom sort when switching to WPF-handled column
-                if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView lv) {
-                    lv.CustomSort = null;
-                }
-                _sortDirections.Clear();
-                return;
-            }
-
-            // Custom handling for SortMemberPath columns (Resolution)
-            e.Handled = true;
-
-            // Track direction in dictionary (CustomSort resets column.SortDirection)
-            var key = (dataGrid, sortMemberPath);
-            ListSortDirection direction;
-            if (_sortDirections.TryGetValue(key, out var lastDir)) {
-                direction = lastDir == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
-            } else {
-                direction = ListSortDirection.Ascending;
-            }
-            _sortDirections.Clear();
-            _sortDirections[key] = direction;
-
-            // Clear other columns visual
-            foreach (var col in dataGrid.Columns)
-                if (col != e.Column) col.SortDirection = null;
-
-            // Apply sorting via CustomSort using SortMemberPath
-            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
-                listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
-            }
-
-            // Set visual indicator after CustomSort
-            e.Column.SortDirection = direction;
+            // Empty - let WPF handle sorting natively
+            // Toggle works, but Resolution sorts by string not by ResolutionArea
         }
 
 #endregion

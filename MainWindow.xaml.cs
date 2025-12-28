@@ -922,7 +922,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             // Apply custom sort
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
+                // Clear any existing sort
+                listView.SortDescriptions.Clear();
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
+                listView.Refresh();
             }
         }
 
@@ -946,11 +949,27 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Scale slider changed - with LayoutTransform, WPF handles layout automatically
+        /// Scale slider changed - force star columns to recalculate
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            // LayoutTransform triggers automatic layout recalculation
-            // No manual intervention needed unlike RenderTransform
+            RefreshStarColumns(TexturesDataGrid);
+            RefreshStarColumns(ModelsDataGrid);
+            RefreshStarColumns(MaterialsDataGrid);
+        }
+
+        /// <summary>
+        /// Force star-width columns to recalculate by toggling their width
+        /// </summary>
+        private static void RefreshStarColumns(DataGrid? dataGrid) {
+            if (dataGrid == null || !dataGrid.IsLoaded) return;
+
+            foreach (var col in dataGrid.Columns) {
+                if (col.Width.IsStar) {
+                    var starValue = col.Width.Value;
+                    col.Width = new DataGridLength(0, DataGridLengthUnitType.Auto);
+                    col.Width = new DataGridLength(starValue, DataGridLengthUnitType.Star);
+                }
+            }
         }
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {

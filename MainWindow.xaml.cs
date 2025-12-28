@@ -926,15 +926,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 // Используем свой словарь для отслеживания направления сортировки
-                // вместо column.SortDirection, который может сбрасываться WPF
                 ListSortDirection direction;
                 if (_columnSortDirections.TryGetValue(e.Column, out var currentDirection)) {
-                    // Переключаем направление
                     direction = currentDirection == ListSortDirection.Ascending
                         ? ListSortDirection.Descending
                         : ListSortDirection.Ascending;
                 } else {
-                    // Первый клик - сортируем по возрастанию
                     direction = ListSortDirection.Ascending;
                 }
 
@@ -967,15 +964,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         }
                     }
 
-                    // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
-                    if (dataView is ListCollectionView listView) {
-                        listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
-                    } else {
-                        // Fallback for non-ListCollectionView
-                        using (dataView.DeferRefresh()) {
-                            dataView.SortDescriptions.Clear();
-                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
-                        }
+                    // Используем стандартный подход WPF с SortDescriptions
+                    using (dataView.DeferRefresh()) {
+                        dataView.SortDescriptions.Clear();
+                        dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
                     }
                 } finally {
                     isSorting = false;

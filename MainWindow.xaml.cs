@@ -896,43 +896,33 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             OptimizeDataGridSorting(MaterialsDataGrid, e);
         }
 
-        private readonly Dictionary<DataGrid, (string Header, ListSortDirection Dir)> _gridSortState = new();
-
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            if (e.Column == null) return;
-
-            string sortPath = e.Column.SortMemberPath;
-            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn bc && bc.Binding is Binding b)
-                sortPath = b.Path?.Path ?? "";
-            if (string.IsNullOrEmpty(sortPath)) return;
+            // Only handle columns with SortMemberPath (Resolution, Size, etc.)
+            // Let WPF handle all other columns natively
+            if (e.Column == null || string.IsNullOrEmpty(e.Column.SortMemberPath)) {
+                return; // Let WPF handle it
+            }
 
             e.Handled = true;
 
-            string header = e.Column.Header?.ToString() ?? "";
+            // Toggle direction
+            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
 
-            // Get current state for this grid
-            ListSortDirection newDir;
-            if (_gridSortState.TryGetValue(dataGrid, out var state) && state.Header == header) {
-                // Same column - toggle
-                newDir = state.Dir == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
-            } else {
-                // Different column - start ascending
-                newDir = ListSortDirection.Ascending;
-            }
-            _gridSortState[dataGrid] = (header, newDir);
-
-            // Clear indicators
+            // Clear other columns
             foreach (var col in dataGrid.Columns)
                 col.SortDirection = null;
 
-            // Sort
-            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView lv) {
-                lv.CustomSort = new ResourceComparer(sortPath, newDir);
+            // Use SortDescriptions (respects SortMemberPath)
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            if (view != null) {
+                using (view.DeferRefresh()) {
+                    view.SortDescriptions.Clear();
+                    view.SortDescriptions.Add(new SortDescription(e.Column.SortMemberPath, newDir));
+                }
             }
 
-            // Show indicator
             e.Column.SortDirection = newDir;
         }
 

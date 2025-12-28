@@ -78,6 +78,7 @@ namespace AssetProcessor {
         private const double DefaultPreviewContentHeight = 300.0;
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для ускорения загрузки данных
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
+        private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -905,21 +906,36 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 sortPath = b.Path?.Path ?? "";
             if (string.IsNullOrEmpty(sortPath)) return;
 
-            // Toggle направления
-            var direction = e.Column.SortDirection == ListSortDirection.Ascending
-                ? ListSortDirection.Descending
-                : ListSortDirection.Ascending;
+            // Use dictionary to track direction (WPF resets column.SortDirection after SortDescriptions)
+            var key = (dataGrid, sortPath);
+            ListSortDirection direction;
+            if (_sortDirections.TryGetValue(key, out var lastDir)) {
+                direction = lastDir == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending
+                    : ListSortDirection.Ascending;
+            } else {
+                direction = ListSortDirection.Ascending;
+            }
 
-            // Очистить другие колонки
+            // Clear other columns from dictionary and visual
+            var keysToRemove = _sortDirections.Keys.Where(k => k.Item1 == dataGrid && k.Item2 != sortPath).ToList();
+            foreach (var k in keysToRemove) _sortDirections.Remove(k);
             foreach (var col in dataGrid.Columns)
                 if (col != e.Column) col.SortDirection = null;
 
-            e.Column.SortDirection = direction;
+            // Store new direction
+            _sortDirections[key] = direction;
 
-            // Применить сортировку по SortMemberPath
+            // Apply sorting via SortDescriptions (uses SortMemberPath for correct numeric sorting)
             var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
             view?.SortDescriptions.Clear();
             view?.SortDescriptions.Add(new SortDescription(sortPath, direction));
+
+            // Set column visual indicator AFTER sorting (use BeginInvoke to run after WPF finishes)
+            var column = e.Column;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => {
+                column.SortDirection = direction;
+            });
         }
 
 #endregion

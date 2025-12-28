@@ -437,10 +437,12 @@ namespace AssetProcessor.ViewModels {
         private void PopulateResources(ProjectSyncResult result) {
             ArgumentNullException.ThrowIfNull(result);
 
-            Textures.Clear();
-            Models.Clear();
-            Materials.Clear();
-            Assets.Clear();
+            // Batch loading: collect all resources first, then assign collections once
+            // This triggers only ONE CollectionChanged event per collection instead of N events
+            var texturesList = new List<TextureResource>();
+            var modelsList = new List<ModelResource>();
+            var materialsList = new List<MaterialResource>();
+            var assetsList = new List<BaseResource>();
 
             Uri baseUri = new("https://playcanvas.com");
 
@@ -482,8 +484,8 @@ namespace AssetProcessor.ViewModels {
                             Parent = asset.Parent,
                             Extension = Path.GetExtension(resourcePath)
                         };
-                        Textures.Add(texture);
-                        Assets.Add(texture);
+                        texturesList.Add(texture);
+                        assetsList.Add(texture);
                         break;
 
                     case "model":
@@ -499,8 +501,8 @@ namespace AssetProcessor.ViewModels {
                             Parent = asset.Parent,
                             Extension = Path.GetExtension(resourcePath)
                         };
-                        Models.Add(model);
-                        Assets.Add(model);
+                        modelsList.Add(model);
+                        assetsList.Add(model);
                         break;
 
                     case "material":
@@ -512,11 +514,17 @@ namespace AssetProcessor.ViewModels {
                             Path = resourcePath,
                             Parent = asset.Parent
                         };
-                        Materials.Add(material);
-                        Assets.Add(material);
+                        materialsList.Add(material);
+                        assetsList.Add(material);
                         break;
                 }
             }
+
+            // Single assignment triggers only one PropertyChanged per collection
+            Textures = new ObservableCollection<TextureResource>(texturesList);
+            Models = new ObservableCollection<ModelResource>(modelsList);
+            Materials = new ObservableCollection<MaterialResource>(materialsList);
+            Assets = new ObservableCollection<BaseResource>(assetsList);
 
             IsDownloadButtonEnabled = Assets.Count > 0;
         }

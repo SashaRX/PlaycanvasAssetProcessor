@@ -60,16 +60,21 @@ namespace AssetProcessor.Resources {
         public string? Status {
             get => status;
             set {
-                status = value;
-                OnPropertyChanged(nameof(Status));
-                OnPropertyChanged(nameof(StatusOrProgress));
+                if (status != value) {
+                    status = value;
+                    OnPropertyChanged(nameof(Status));
+                    // StatusOrProgress is derived from Status, notify only when needed
+                    if (value != "Downloading") {
+                        OnPropertyChanged(nameof(StatusOrProgress));
+                    }
+                }
             }
         }
 
         public string? StatusOrProgress {
             get {
                 if (Status == "Downloading") {
-                    return $"{DownloadProgress}%";
+                    return $"{DownloadProgress:F0}%";
                 }
                 return Status;
             }
@@ -78,8 +83,15 @@ namespace AssetProcessor.Resources {
         public double DownloadProgress {
             get => downloadProgress;
             set {
-                downloadProgress = value;
-                OnPropertyChanged(nameof(DownloadProgress));
+                if (Math.Abs(downloadProgress - value) > 0.5) { // Throttle: notify only when change > 0.5%
+                    downloadProgress = value;
+                    OnPropertyChanged(nameof(DownloadProgress));
+                    if (Status == "Downloading") {
+                        OnPropertyChanged(nameof(StatusOrProgress));
+                    }
+                } else if (downloadProgress != value) {
+                    downloadProgress = value; // Update value but don't notify
+                }
             }
         }
 

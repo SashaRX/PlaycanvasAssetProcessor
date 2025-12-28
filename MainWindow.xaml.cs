@@ -897,28 +897,30 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Only handle columns with SortMemberPath (Resolution, Size, etc.)
-            // Let WPF handle all other columns natively
-            if (e.Column == null || string.IsNullOrEmpty(e.Column.SortMemberPath)) {
-                return; // Let WPF handle it
-            }
+            if (e.Column == null) return;
 
             e.Handled = true;
-            string sortPath = e.Column.SortMemberPath;
 
-            // Toggle direction based on current column state
+            // Get sort property: prefer SortMemberPath, fallback to binding path
+            string? sortPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn boundColumn) {
+                sortPath = (boundColumn.Binding as System.Windows.Data.Binding)?.Path.Path;
+            }
+            if (string.IsNullOrEmpty(sortPath)) return;
+
+            // Toggle direction: first click = Ascending, then toggle
             var newDir = e.Column.SortDirection == ListSortDirection.Ascending
                 ? ListSortDirection.Descending
                 : ListSortDirection.Ascending;
 
-            // Clear other columns BEFORE sorting
+            // Clear all columns' sort direction
             foreach (var col in dataGrid.Columns)
                 col.SortDirection = null;
 
-            // Set direction BEFORE CustomSort
+            // Set this column's direction
             e.Column.SortDirection = newDir;
 
-            // Use CustomSort with ResourceComparer (handles nulls)
+            // Apply custom sort
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
             }

@@ -76,8 +76,6 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
-        private bool isSorting = false; // Флаг для предотвращения повторной сортировки
-        private readonly Dictionary<DataGridColumn, ListSortDirection> _columnSortDirections = new(); // Храним состояние сортировки независимо от WPF
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для ускорения загрузки данных
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;

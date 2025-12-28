@@ -895,56 +895,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             OptimizeDataGridSorting(MaterialsDataGrid, e);
         }
 
-        // Словарь для отслеживания направления сортировки
-        private readonly Dictionary<string, ListSortDirection> _sortDirections = new();
-
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            if (e.Column == null) return;
-
-            e.Handled = true;
-
-            // Получаем SortMemberPath или Binding Path
-            string sortPath = e.Column.SortMemberPath;
-            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn boundColumn &&
-                boundColumn.Binding is Binding binding) {
-                sortPath = binding.Path?.Path ?? "";
-            }
-            if (string.IsNullOrEmpty(sortPath)) {
-                e.Handled = false;
-                return;
-            }
-
-            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-            if (view == null) {
-                e.Handled = false;
-                return;
-            }
-
-            // Определяем направление сортировки
-            string key = $"{dataGrid.Name}_{sortPath}";
-            ListSortDirection direction;
-            if (_sortDirections.TryGetValue(key, out var currentDir)) {
-                direction = currentDir == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
-            } else {
-                direction = ListSortDirection.Ascending;
-            }
-            _sortDirections[key] = direction;
-
-            // Очищаем другие колонки
-            foreach (var col in dataGrid.Columns) {
-                if (col != e.Column) {
-                    col.SortDirection = null;
-                }
-            }
-
-            // Устанавливаем индикатор
-            e.Column.SortDirection = direction;
-
-            // Применяем сортировку через SortDescriptions
-            view.SortDescriptions.Clear();
-            view.SortDescriptions.Add(new SortDescription(sortPath, direction));
+            // Не перехватываем - пусть WPF обрабатывает сам
         }
 
 #endregion

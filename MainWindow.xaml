@@ -321,7 +321,7 @@
                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                 VirtualizingPanel.ScrollUnit="Pixel"
                                 EnableRowVirtualization="True"
-                                EnableColumnVirtualization="True"
+                                EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True">
                             <DataGrid.RenderTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
@@ -460,7 +460,7 @@
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               VirtualizingPanel.ScrollUnit="Pixel"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="True"
+                              EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True">
                             <DataGrid.RenderTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
@@ -546,7 +546,7 @@
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               VirtualizingPanel.ScrollUnit="Pixel"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="True"
+                              EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True">
                         <DataGrid.RenderTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"

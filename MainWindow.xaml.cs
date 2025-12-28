@@ -907,6 +907,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
+                // Prevent re-entry during sorting
+                if (isSorting) {
+                    e.Handled = true;
+                    return;
+                }
+
                 e.Handled = true;
 
                 if (dataGrid.ItemsSource == null) {
@@ -937,6 +943,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 isSorting = true;
 
                 try {
+                    // Set SortDirection BEFORE Refresh to ensure correct state for next click
+                    e.Column.SortDirection = direction;
+
+                    // Clear other columns' sort direction
+                    foreach (var column in dataGrid.Columns) {
+                        if (column != e.Column) {
+                            column.SortDirection = null;
+                        }
+                    }
+
                     // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
                     if (dataView is ListCollectionView listView) {
                         listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
@@ -948,19 +964,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                             dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
                         }
                     }
-
-                    e.Column.SortDirection = direction;
-
-                    // Clear other columns' sort direction
-                    foreach (var column in dataGrid.Columns) {
-                        if (column != e.Column) {
-                            column.SortDirection = null;
-                        }
-                    }
                 } finally {
-                    Dispatcher.BeginInvoke(() => {
-                        isSorting = false;
-                    }, System.Windows.Threading.DispatcherPriority.Background);
+                    isSorting = false;
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in OptimizeDataGridSorting");

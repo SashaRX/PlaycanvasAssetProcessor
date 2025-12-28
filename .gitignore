@@ -363,4 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 error_log.txt
 info_log.txt
+debug_log.txt
+assets/
 nul

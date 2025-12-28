@@ -72,6 +72,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         /// <param name="lodSettings">Настройки LOD</param>
         /// <param name="compressionMode">Режим сжатия</param>
         /// <param name="quantization">Настройки квантования</param>
+        /// <param name="advancedSettings">Расширенные настройки gltfpack</param>
         /// <param name="generateReport">Генерировать ли отчет</param>
         /// <param name="excludeTextures">Не встраивать текстуры в GLB (использовать -tr флаг)</param>
         /// <returns>Результат оптимизации</returns>
@@ -81,6 +82,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             LodSettings lodSettings,
             CompressionMode compressionMode,
             QuantizationSettings? quantization = null,
+            GltfPackSettings? advancedSettings = null,
             bool generateReport = false,
             bool excludeTextures = true) {
 
@@ -97,6 +99,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     lodSettings,
                     compressionMode,
                     quantization,
+                    advancedSettings,
                     generateReport,
                     excludeTextures
                 );
@@ -194,10 +197,12 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             LodSettings lodSettings,
             CompressionMode compressionMode,
             QuantizationSettings? quantization,
+            GltfPackSettings? advancedSettings,
             bool generateReport,
             bool excludeTextures) {
 
             var args = new List<string>();
+            var settings = advancedSettings ?? GltfPackSettings.CreateDefault();
 
             // Входной и выходной файлы
             args.Add($"-i \"{inputPath}\"");
@@ -209,75 +214,205 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 Logger.Info("gltfpack: Using -tr flag (textures will NOT be embedded)");
             }
 
-            // КРИТИЧНО: -kv сохраняет ВСЕ vertex attributes (включая UV), даже если они не используются
-            // Без этого флага gltfpack удаляет TEXCOORD_0 из моделей без текстур
-            args.Add("-kv");
-            Logger.Info("gltfpack: Using -kv flag (keeping all vertex attributes including unused UV)");
+            // ============================================
+            // VERTEX ATTRIBUTES
+            // ============================================
 
-            // Упрощение геометрии
+            // -kv сохраняет ВСЕ vertex attributes (включая UV), даже если они не используются
+            if (settings.KeepVertexAttributes) {
+                args.Add("-kv");
+                Logger.Info("gltfpack: Using -kv flag (keeping all vertex attributes including unused UV)");
+            }
+
+            // Float texture coordinates (отключает квантование UV)
+            if (settings.FloatTexCoords) {
+                args.Add("-vtf");
+                Logger.Info("gltfpack: Using -vtf flag (float texture coordinates, no UV quantization)");
+            }
+
+            // Float normals
+            if (settings.FloatNormals) {
+                args.Add("-vnf");
+                Logger.Info("gltfpack: Using -vnf flag (float normals)");
+            }
+
+            // Interleaved attributes
+            if (settings.InterleavedAttributes) {
+                args.Add("-vi");
+            }
+
+            // ============================================
+            // SIMPLIFICATION
+            // ============================================
+
             if (lodSettings.SimplificationRatio < 1.0f) {
                 // КРИТИЧНО: Используем InvariantCulture чтобы получить "0.60" вместо "0,60"
-                // gltfpack не понимает запятую как десятичный разделитель
                 var simplificationStr = lodSettings.SimplificationRatio.ToString("F2", CultureInfo.InvariantCulture);
                 args.Add($"-si {simplificationStr}");
                 Logger.Debug($"Simplification argument: -si {simplificationStr}");
+
+                // Simplification error limit
+                if (settings.SimplificationError.HasValue) {
+                    var errorStr = settings.SimplificationError.Value.ToString("F3", CultureInfo.InvariantCulture);
+                    args.Add($"-se {errorStr}");
+                }
 
                 // Агрессивное упрощение
                 if (lodSettings.AggressiveSimplification) {
                     args.Add("-sa");
                 }
+
+                // Permissive simplification (через seams)
+                if (settings.PermissiveSimplification) {
+                    args.Add("-sp");
+                }
+
+                // Lock border vertices
+                if (settings.LockBorderVertices) {
+                    args.Add("-slb");
+                }
             }
 
-            // Режим сжатия
-            switch (compressionMode) {
-                case CompressionMode.Quantization:
-                    // KHR_mesh_quantization (совместимо с редакторами)
-                    args.Add("-kn"); // quantize normal
-                    args.Add("-km"); // quantize mesh
-                    break;
+            // ============================================
+            // COMPRESSION MODE
+            // ============================================
 
-                case CompressionMode.MeshOpt:
-                    // EXT_meshopt_compression
-                    args.Add("-c");
-                    args.Add("-kn");
-                    args.Add("-km");
-                    break;
+            // Отключение квантования полностью
+            if (settings.DisableQuantization) {
+                args.Add("-noq");
+                Logger.Info("gltfpack: Using -noq flag (quantization disabled)");
+            } else {
+                // Режим сжатия
+                switch (compressionMode) {
+                    case CompressionMode.Quantization:
+                        // KHR_mesh_quantization (совместимо с редакторами)
+                        // Примечание: -kn и -km НЕ относятся к квантованию!
+                        // Они означают "keep named nodes" и "keep named materials"
+                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
+                        break;
 
-                case CompressionMode.MeshOptAggressive:
-                    // EXT_meshopt_compression с дополнительным сжатием
-                    args.Add("-cc");
-                    break;
+                    case CompressionMode.MeshOpt:
+                        // EXT_meshopt_compression
+                        if (settings.CompressedWithFallback) {
+                            args.Add("-cf"); // compressed with fallback
+                        } else {
+                            args.Add("-c");
+                        }
+                        // Примечание: -kn и -km НЕ относятся к сжатию!
+                        // Они означают "keep named nodes" и "keep named materials"
+                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
+                        break;
 
-                case CompressionMode.MeshOptKHR:
-                    // KHR_meshopt_compression (meshoptimizer 1.0+)
-                    // -cz эквивалентно -ce khr -cc (лучшее сжатие)
-                    // ВАЖНО: Требует кастомный WASM декодер на клиенте!
-                    args.Add("-cz");
-                    Logger.Info("gltfpack: Using KHR_meshopt_compression (-cz) - requires custom WASM decoder");
-                    break;
+                    case CompressionMode.MeshOptAggressive:
+                        // EXT_meshopt_compression с дополнительным сжатием
+                        args.Add("-cc");
+                        break;
 
-                case CompressionMode.MeshOptKHRWithFallback:
-                    // KHR_meshopt_compression + fallback буфер для совместимости
-                    // -cf создаёт несжатый fallback для старых браузеров/движков
-                    args.Add("-cz");
-                    args.Add("-cf");
-                    Logger.Info("gltfpack: Using KHR_meshopt_compression with fallback (-cz -cf)");
-                    break;
+                    case CompressionMode.None:
+                        // Без сжатия
+                        break;
+                }
 
-                case CompressionMode.None:
-                    // Без сжатия
-                    break;
+                // Квантование (если указано и режим поддерживает)
+                if (quantization != null && compressionMode != CompressionMode.None) {
+                    args.Add($"-vp {quantization.PositionBits}");
+
+                    // Не добавляем -vt если используем float UVs
+                    if (!settings.FloatTexCoords) {
+                        args.Add($"-vt {quantization.TexCoordBits}");
+                    }
+
+                    // Не добавляем -vn если используем float normals
+                    if (!settings.FloatNormals) {
+                        args.Add($"-vn {quantization.NormalBits}");
+                    }
+
+                    args.Add($"-vc {quantization.ColorBits}");
+                }
             }
 
-            // Квантование (если указано и режим поддерживает)
-            if (quantization != null && compressionMode != CompressionMode.None) {
-                args.Add($"-vp {quantization.PositionBits}");
-                args.Add($"-vt {quantization.TexCoordBits}");
-                args.Add($"-vn {quantization.NormalBits}");
-                args.Add($"-vc {quantization.ColorBits}");
+            // ============================================
+            // VERTEX POSITION FORMAT
+            // ============================================
+
+            // КРИТИЧНО: Флаги формата позиций добавляются только если квантование не отключено
+            // Когда -noq установлен, квантование полностью отключено, и флаги формата могут конфликтовать
+            if (!settings.DisableQuantization) {
+                switch (settings.PositionFormat) {
+                    case VertexPositionFormat.Integer:
+                        args.Add("-vpi");
+                        break;
+                    case VertexPositionFormat.Normalized:
+                        args.Add("-vpn");
+                        break;
+                    case VertexPositionFormat.Float:
+                        args.Add("-vpf");
+                        break;
+                }
+            } else {
+                Logger.Info("gltfpack: Skipping position format flags (quantization disabled with -noq)");
             }
 
-            // Отчет
+            // ============================================
+            // ANIMATION SETTINGS
+            // ============================================
+
+            // Animation quantization (только если отличается от default)
+            if (settings.AnimationTranslationBits != 16) {
+                args.Add($"-at {settings.AnimationTranslationBits}");
+            }
+            if (settings.AnimationRotationBits != 12) {
+                args.Add($"-ar {settings.AnimationRotationBits}");
+            }
+            if (settings.AnimationScaleBits != 16) {
+                args.Add($"-as {settings.AnimationScaleBits}");
+            }
+            if (settings.AnimationFrameRate != 30) {
+                args.Add($"-af {settings.AnimationFrameRate}");
+            }
+            if (settings.KeepConstantAnimationTracks) {
+                args.Add("-ac");
+            }
+
+            // ============================================
+            // SCENE OPTIONS
+            // ============================================
+
+            if (settings.KeepNamedNodes) {
+                args.Add("-kn");
+            }
+            if (settings.KeepNamedMaterials) {
+                args.Add("-km");
+            }
+            if (settings.KeepExtras) {
+                args.Add("-ke");
+            }
+            if (settings.MergeMeshInstances) {
+                args.Add("-mm");
+            }
+            if (settings.UseGpuInstancing) {
+                args.Add("-mi");
+            }
+
+            // ============================================
+            // UV TRANSFORMATIONS
+            // ============================================
+
+            // Инвертировать UV по вертикали
+            // ВАЖНО: gltfpack НЕ поддерживает флаг -flipuv напрямую
+            // Этот флаг будет проигнорирован gltfpack, что приведёт к неработающей настройке
+            // Для инверсии UV требуется пост-обработка после конвертации (не реализовано)
+            // Показываем предупреждение пользователю, что настройка не будет применена
+            if (settings.FlipUVs) {
+                Logger.Warn("gltfpack: FlipUVs setting is enabled, but gltfpack does NOT support -flipuv flag. UV coordinates will NOT be flipped. Post-processing required for UV flipping (not implemented).");
+                // НЕ добавляем флаг -flipuv, так как он не поддерживается и будет проигнорирован
+                // TODO: Реализовать пост-обработку UV координат для инверсии по вертикали
+            }
+
+            // ============================================
+            // REPORT & VERBOSE
+            // ============================================
+
             if (generateReport) {
                 var reportPath = Path.ChangeExtension(outputPath, ".report.json");
                 args.Add($"-r \"{reportPath}\"");

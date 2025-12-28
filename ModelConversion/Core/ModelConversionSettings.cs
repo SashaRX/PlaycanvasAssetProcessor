@@ -4,6 +4,11 @@ namespace AssetProcessor.ModelConversion.Core {
     /// </summary>
     public class ModelConversionSettings {
         /// <summary>
+        /// Тип источника модели (FBX или GLB)
+        /// </summary>
+        public ModelSourceType SourceType { get; set; } = ModelSourceType.FBX;
+
+        /// <summary>
         /// Генерировать LOD цепочку (LOD0-LOD3)
         /// </summary>
         public bool GenerateLods { get; set; } = true;
@@ -22,6 +27,11 @@ namespace AssetProcessor.ModelConversion.Core {
         /// Настройки квантования (используется если CompressionMode = Quantization или MeshOpt*)
         /// </summary>
         public QuantizationSettings? Quantization { get; set; } = QuantizationSettings.CreateDefault();
+
+        /// <summary>
+        /// Расширенные настройки gltfpack
+        /// </summary>
+        public GltfPackSettings? AdvancedSettings { get; set; } = GltfPackSettings.CreateDefault();
 
         /// <summary>
         /// Гистерезис для переключения LOD (0.0-1.0)
@@ -63,10 +73,12 @@ namespace AssetProcessor.ModelConversion.Core {
         /// </summary>
         public static ModelConversionSettings CreateDefault() {
             return new ModelConversionSettings {
+                SourceType = ModelSourceType.FBX,
                 GenerateLods = true,
                 LodChain = LodSettings.CreateFullChain(),
                 CompressionMode = CompressionMode.Quantization,
                 Quantization = QuantizationSettings.CreateDefault(),
+                AdvancedSettings = GltfPackSettings.CreateDefault(),
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = false,
                 CleanupIntermediateFiles = true,
@@ -81,10 +93,12 @@ namespace AssetProcessor.ModelConversion.Core {
         /// </summary>
         public static ModelConversionSettings CreateProduction() {
             return new ModelConversionSettings {
+                SourceType = ModelSourceType.FBX,
                 GenerateLods = true,
                 LodChain = LodSettings.CreateFullChain(),
                 CompressionMode = CompressionMode.MeshOpt,
                 Quantization = QuantizationSettings.CreateDefault(),
+                AdvancedSettings = GltfPackSettings.CreateDefault(),
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = true, // Генерируем оба трека
                 CleanupIntermediateFiles = true,
@@ -99,10 +113,12 @@ namespace AssetProcessor.ModelConversion.Core {
         /// </summary>
         public static ModelConversionSettings CreateHighQuality() {
             return new ModelConversionSettings {
+                SourceType = ModelSourceType.FBX,
                 GenerateLods = true,
                 LodChain = LodSettings.CreateFullChain(),
                 CompressionMode = CompressionMode.MeshOpt,
                 Quantization = QuantizationSettings.CreateHighQuality(),
+                AdvancedSettings = GltfPackSettings.CreateHighQuality(),
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = true,
                 CleanupIntermediateFiles = true,
@@ -117,10 +133,12 @@ namespace AssetProcessor.ModelConversion.Core {
         /// </summary>
         public static ModelConversionSettings CreateMinSize() {
             return new ModelConversionSettings {
+                SourceType = ModelSourceType.FBX,
                 GenerateLods = true,
                 LodChain = LodSettings.CreateFullChain(),
                 CompressionMode = CompressionMode.MeshOptAggressive,
                 Quantization = QuantizationSettings.CreateMinSize(),
+                AdvancedSettings = GltfPackSettings.CreateMinSize(),
                 LodHysteresis = 0.02f,
                 GenerateBothTracks = false,
                 CleanupIntermediateFiles = true,

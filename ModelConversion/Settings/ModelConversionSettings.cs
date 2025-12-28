@@ -16,6 +16,11 @@ namespace AssetProcessor.ModelConversion.Settings {
         public bool IsEnabled { get; set; } = true;
 
         /// <summary>
+        /// Тип источника модели (FBX или GLB)
+        /// </summary>
+        public ModelSourceType SourceType { get; set; } = ModelSourceType.FBX;
+
+        /// <summary>
         /// Генерировать LOD цепочку
         /// </summary>
         public bool GenerateLods { get; set; } = true;
@@ -34,6 +39,11 @@ namespace AssetProcessor.ModelConversion.Settings {
         /// Настройки квантования
         /// </summary>
         public QuantizationSettingsData Quantization { get; set; } = QuantizationSettingsData.CreateDefault();
+
+        /// <summary>
+        /// Расширенные настройки gltfpack
+        /// </summary>
+        public GltfPackSettingsData AdvancedSettings { get; set; } = GltfPackSettingsData.CreateDefault();
 
         /// <summary>
         /// Настройки LOD уровней
@@ -71,10 +81,12 @@ namespace AssetProcessor.ModelConversion.Settings {
         /// </summary>
         public ModelConversionSettings ToModelConversionSettings() {
             return new ModelConversionSettings {
+                SourceType = SourceType,
                 GenerateLods = GenerateLods,
                 LodChain = LodChain.Select(l => l.ToLodSettings()).ToList(),
                 CompressionMode = CompressionMode,
                 Quantization = Quantization.ToQuantizationSettings(),
+                AdvancedSettings = AdvancedSettings.ToGltfPackSettings(),
                 LodHysteresis = LodHysteresis,
                 GenerateBothTracks = GenerateBothTracks,
                 CleanupIntermediateFiles = CleanupIntermediateFiles,
@@ -89,10 +101,12 @@ namespace AssetProcessor.ModelConversion.Settings {
         /// </summary>
         public static ModelConversionSettingsData FromModelConversionSettings(ModelConversionSettings settings) {
             return new ModelConversionSettingsData {
+                SourceType = settings.SourceType,
                 GenerateLods = settings.GenerateLods,
                 LodChain = settings.LodChain.Select(l => LodSettingsData.FromLodSettings(l)).ToList(),
                 CompressionMode = settings.CompressionMode,
                 Quantization = QuantizationSettingsData.FromQuantizationSettings(settings.Quantization ?? QuantizationSettings.CreateDefault()),
+                AdvancedSettings = GltfPackSettingsData.FromGltfPackSettings(settings.AdvancedSettings ?? GltfPackSettings.CreateDefault()),
                 LodHysteresis = settings.LodHysteresis,
                 GenerateBothTracks = settings.GenerateBothTracks,
                 CleanupIntermediateFiles = settings.CleanupIntermediateFiles,
@@ -166,6 +180,100 @@ namespace AssetProcessor.ModelConversion.Settings {
             return LodSettings.CreateFullChain()
                 .Select(l => FromLodSettings(l))
                 .ToList();
+        }
+    }
+
+    /// <summary>
+    /// Расширенные настройки gltfpack (сериализуемый формат)
+    /// </summary>
+    public class GltfPackSettingsData {
+        // Simplification
+        public float? SimplificationError { get; set; }
+        public bool PermissiveSimplification { get; set; }
+        public bool LockBorderVertices { get; set; }
+
+        // Vertex Position Format
+        public VertexPositionFormat PositionFormat { get; set; } = VertexPositionFormat.Integer;
+
+        // Vertex Attributes
+        public bool FloatTexCoords { get; set; }
+        public bool FloatNormals { get; set; }
+        public bool InterleavedAttributes { get; set; }
+        public bool KeepVertexAttributes { get; set; } = true;
+
+        // Animation
+        public int AnimationTranslationBits { get; set; } = 16;
+        public int AnimationRotationBits { get; set; } = 12;
+        public int AnimationScaleBits { get; set; } = 16;
+        public int AnimationFrameRate { get; set; } = 30;
+        public bool KeepConstantAnimationTracks { get; set; }
+
+        // Scene
+        public bool KeepNamedNodes { get; set; }
+        public bool KeepNamedMaterials { get; set; }
+        public bool KeepExtras { get; set; }
+        public bool MergeMeshInstances { get; set; }
+        public bool UseGpuInstancing { get; set; }
+
+        // Misc
+        public bool CompressedWithFallback { get; set; }
+        public bool DisableQuantization { get; set; }
+        public bool FlipUVs { get; set; }
+
+        public GltfPackSettings ToGltfPackSettings() {
+            return new GltfPackSettings {
+                SimplificationError = SimplificationError,
+                PermissiveSimplification = PermissiveSimplification,
+                LockBorderVertices = LockBorderVertices,
+                PositionFormat = PositionFormat,
+                FloatTexCoords = FloatTexCoords,
+                FloatNormals = FloatNormals,
+                InterleavedAttributes = InterleavedAttributes,
+                KeepVertexAttributes = KeepVertexAttributes,
+                AnimationTranslationBits = AnimationTranslationBits,
+                AnimationRotationBits = AnimationRotationBits,
+                AnimationScaleBits = AnimationScaleBits,
+                AnimationFrameRate = AnimationFrameRate,
+                KeepConstantAnimationTracks = KeepConstantAnimationTracks,
+                KeepNamedNodes = KeepNamedNodes,
+                KeepNamedMaterials = KeepNamedMaterials,
+                KeepExtras = KeepExtras,
+                MergeMeshInstances = MergeMeshInstances,
+                UseGpuInstancing = UseGpuInstancing,
+                CompressedWithFallback = CompressedWithFallback,
+                DisableQuantization = DisableQuantization,
+                FlipUVs = FlipUVs
+            };
+        }
+
+        public static GltfPackSettingsData FromGltfPackSettings(GltfPackSettings settings) {
+            return new GltfPackSettingsData {
+                SimplificationError = settings.SimplificationError,
+                PermissiveSimplification = settings.PermissiveSimplification,
+                LockBorderVertices = settings.LockBorderVertices,
+                PositionFormat = settings.PositionFormat,
+                FloatTexCoords = settings.FloatTexCoords,
+                FloatNormals = settings.FloatNormals,
+                InterleavedAttributes = settings.InterleavedAttributes,
+                KeepVertexAttributes = settings.KeepVertexAttributes,
+                AnimationTranslationBits = settings.AnimationTranslationBits,
+                AnimationRotationBits = settings.AnimationRotationBits,
+                AnimationScaleBits = settings.AnimationScaleBits,
+                AnimationFrameRate = settings.AnimationFrameRate,
+                KeepConstantAnimationTracks = settings.KeepConstantAnimationTracks,
+                KeepNamedNodes = settings.KeepNamedNodes,
+                KeepNamedMaterials = settings.KeepNamedMaterials,
+                KeepExtras = settings.KeepExtras,
+                MergeMeshInstances = settings.MergeMeshInstances,
+                UseGpuInstancing = settings.UseGpuInstancing,
+                CompressedWithFallback = settings.CompressedWithFallback,
+                DisableQuantization = settings.DisableQuantization,
+                FlipUVs = settings.FlipUVs
+            };
+        }
+
+        public static GltfPackSettingsData CreateDefault() {
+            return FromGltfPackSettings(GltfPackSettings.CreateDefault());
         }
     }
 

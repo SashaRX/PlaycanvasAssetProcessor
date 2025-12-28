@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using AssetProcessor.ModelConversion.Core;
@@ -38,19 +39,97 @@ namespace AssetProcessor.Controls {
             // LOD Settings
             LodHysteresisSlider.Value = 0.02;
 
+            // Simplification Settings
+            SimplificationErrorSlider.Value = 0.01;
+            PermissiveSimplificationCheckBox.IsChecked = false;
+            LockBorderVerticesCheckBox.IsChecked = false;
+
+            // Vertex Attributes
+            PositionFormatComboBox.SelectedItem = VertexPositionFormat.Integer;
+            FloatTexCoordsCheckBox.IsChecked = false;
+            FloatNormalsCheckBox.IsChecked = false;
+            InterleavedAttributesCheckBox.IsChecked = false;
+            KeepVertexAttributesCheckBox.IsChecked = true;
+            FlipUVsCheckBox.IsChecked = false;
+
+            // Animation Settings
+            AnimTranslationBitsSlider.Value = 16;
+            AnimRotationBitsSlider.Value = 12;
+            AnimScaleBitsSlider.Value = 16;
+            AnimFrameRateSlider.Value = 30;
+            KeepConstantTracksCheckBox.IsChecked = false;
+
+            // Scene Options
+            KeepNamedNodesCheckBox.IsChecked = false;
+            KeepNamedMaterialsCheckBox.IsChecked = false;
+            KeepExtrasCheckBox.IsChecked = false;
+            MergeMeshInstancesCheckBox.IsChecked = false;
+            UseGpuInstancingCheckBox.IsChecked = false;
+            CompressedWithFallbackCheckBox.IsChecked = false;
+            DisableQuantizationCheckBox.IsChecked = false;
+
             _isLoading = false;
         }
 
         /// <summary>
         /// Получает текущие настройки конвертации модели
         /// </summary>
-        public ModelConversionSettings GetSettings() {
+        /// <param name="filePath">Путь к файлу модели (опционально, для определения типа источника)</param>
+        public ModelConversionSettings GetSettings(string? filePath = null) {
             var quantization = new QuantizationSettings {
                 PositionBits = (int)PositionBitsSlider.Value,
                 TexCoordBits = (int)TexCoordBitsSlider.Value,
                 NormalBits = (int)NormalBitsSlider.Value,
                 ColorBits = (int)ColorBitsSlider.Value
             };
+
+            var advancedSettings = new GltfPackSettings {
+                // Simplification
+                SimplificationError = (float)SimplificationErrorSlider.Value,
+                PermissiveSimplification = PermissiveSimplificationCheckBox.IsChecked ?? false,
+                LockBorderVertices = LockBorderVerticesCheckBox.IsChecked ?? false,
+
+                // Vertex Attributes
+                // Безопасное приведение типа с проверкой: используем as для защиты от InvalidCastException
+                PositionFormat = PositionFormatComboBox.SelectedItem is VertexPositionFormat format
+                    ? format
+                    : VertexPositionFormat.Integer,
+                FloatTexCoords = FloatTexCoordsCheckBox.IsChecked ?? false,
+                FloatNormals = FloatNormalsCheckBox.IsChecked ?? false,
+                InterleavedAttributes = InterleavedAttributesCheckBox.IsChecked ?? false,
+                KeepVertexAttributes = KeepVertexAttributesCheckBox.IsChecked ?? true,
+                FlipUVs = FlipUVsCheckBox.IsChecked ?? false,
+
+                // Animation
+                AnimationTranslationBits = (int)AnimTranslationBitsSlider.Value,
+                AnimationRotationBits = (int)AnimRotationBitsSlider.Value,
+                AnimationScaleBits = (int)AnimScaleBitsSlider.Value,
+                AnimationFrameRate = (int)AnimFrameRateSlider.Value,
+                KeepConstantAnimationTracks = KeepConstantTracksCheckBox.IsChecked ?? false,
+
+                // Scene
+                KeepNamedNodes = KeepNamedNodesCheckBox.IsChecked ?? false,
+                KeepNamedMaterials = KeepNamedMaterialsCheckBox.IsChecked ?? false,
+                KeepExtras = KeepExtrasCheckBox.IsChecked ?? false,
+                MergeMeshInstances = MergeMeshInstancesCheckBox.IsChecked ?? false,
+                UseGpuInstancing = UseGpuInstancingCheckBox.IsChecked ?? false,
+
+                // Misc
+                CompressedWithFallback = CompressedWithFallbackCheckBox.IsChecked ?? false,
+                DisableQuantization = DisableQuantizationCheckBox.IsChecked ?? false
+            };
+
+            // Определяем тип источника по расширению файла
+            var sourceType = ModelSourceType.FBX; // По умолчанию FBX
+            if (!string.IsNullOrEmpty(filePath)) {
+                var extension = Path.GetExtension(filePath).ToLowerInvariant();
+                if (extension == ".glb" || extension == ".gltf") {
+                    sourceType = ModelSourceType.GLB;
+                } else if (extension == ".fbx") {
+                    sourceType = ModelSourceType.FBX;
+                }
+                // Если расширение неизвестно, остаётся FBX по умолчанию
+            }
 
             var compressionMode = CompressionModeComboBox.SelectedItem != null
                 ? (CompressionMode)CompressionModeComboBox.SelectedItem
@@ -81,10 +160,12 @@ namespace AssetProcessor.Controls {
             }
 
             return new ModelConversionSettings {
+                SourceType = sourceType,
                 GenerateLods = GenerateLodsCheckBox.IsChecked ?? true,
                 LodChain = lodChain,
                 CompressionMode = compressionMode,
                 Quantization = quantization,
+                AdvancedSettings = advancedSettings,
                 LodHysteresis = (float)LodHysteresisSlider.Value,
                 GenerateBothTracks = GenerateBothTracksCheckBox.IsChecked ?? true,
                 CleanupIntermediateFiles = CleanupIntermediateFilesCheckBox.IsChecked ?? true,
@@ -100,6 +181,7 @@ namespace AssetProcessor.Controls {
         public void LoadSettings(ModelConversionSettings settings) {
             _isLoading = true;
 
+            // Basic Settings
             GenerateLodsCheckBox.IsChecked = settings.GenerateLods;
             CompressionModeComboBox.SelectedItem = settings.CompressionMode;
             GenerateBothTracksCheckBox.IsChecked = settings.GenerateBothTracks;
@@ -109,11 +191,48 @@ namespace AssetProcessor.Controls {
             CleanupIntermediateFilesCheckBox.IsChecked = settings.CleanupIntermediateFiles;
             LodHysteresisSlider.Value = settings.LodHysteresis;
 
+            // Quantization Settings
             if (settings.Quantization != null) {
                 PositionBitsSlider.Value = settings.Quantization.PositionBits;
                 TexCoordBitsSlider.Value = settings.Quantization.TexCoordBits;
                 NormalBitsSlider.Value = settings.Quantization.NormalBits;
                 ColorBitsSlider.Value = settings.Quantization.ColorBits;
+            }
+
+            // Advanced Settings
+            if (settings.AdvancedSettings != null) {
+                var adv = settings.AdvancedSettings;
+
+                // Simplification
+                SimplificationErrorSlider.Value = adv.SimplificationError ?? 0.01;
+                PermissiveSimplificationCheckBox.IsChecked = adv.PermissiveSimplification;
+                LockBorderVerticesCheckBox.IsChecked = adv.LockBorderVertices;
+
+                // Vertex Attributes
+                PositionFormatComboBox.SelectedItem = adv.PositionFormat;
+                FloatTexCoordsCheckBox.IsChecked = adv.FloatTexCoords;
+                FloatNormalsCheckBox.IsChecked = adv.FloatNormals;
+                InterleavedAttributesCheckBox.IsChecked = adv.InterleavedAttributes;
+                KeepVertexAttributesCheckBox.IsChecked = adv.KeepVertexAttributes;
+                FlipUVsCheckBox.IsChecked = adv.FlipUVs;
+
+                // Animation
+                AnimTranslationBitsSlider.Value = adv.AnimationTranslationBits;
+                AnimRotationBitsSlider.Value = adv.AnimationRotationBits;
+                AnimScaleBitsSlider.Value = adv.AnimationScaleBits;
+                AnimFrameRateSlider.Value = adv.AnimationFrameRate;
+                KeepConstantTracksCheckBox.IsChecked = adv.KeepConstantAnimationTracks;
+
+                // Scene
+                KeepNamedNodesCheckBox.IsChecked = adv.KeepNamedNodes;
+                KeepNamedMaterialsCheckBox.IsChecked = adv.KeepNamedMaterials;
+                KeepExtrasCheckBox.IsChecked = adv.KeepExtras;
+                MergeMeshInstancesCheckBox.IsChecked = adv.MergeMeshInstances;
+                UseGpuInstancingCheckBox.IsChecked = adv.UseGpuInstancing;
+
+                // Misc
+                CompressedWithFallbackCheckBox.IsChecked = adv.CompressedWithFallback;
+                DisableQuantizationCheckBox.IsChecked = adv.DisableQuantization;
             }
 
             // Load LOD settings

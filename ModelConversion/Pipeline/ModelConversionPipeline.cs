@@ -122,6 +122,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                             lodSettings,
                             settings.CompressionMode,
                             settings.Quantization,
+                            settings.AdvancedSettings,
                             generateReport: settings.GenerateQAReport,
                             excludeTextures: settings.ExcludeTextures
                         );
@@ -197,14 +198,20 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 }
 
                 // Cleanup промежуточных файлов
-                // ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ОТЛАДКИ UV
-                if (false && settings.CleanupIntermediateFiles) {
+                if (settings.CleanupIntermediateFiles) {
                     Logger.Info("=== CLEANUP INTERMEDIATE FILES ===");
                     try {
+                        // КРИТИЧНО: Удаляем только buildDir, который содержит все промежуточные файлы
+                        // НЕ удаляем файлы из input directory - это может удалить пользовательские текстуры!
+                        // FBX2glTF создаёт текстуры в buildDir или его поддиректориях, которые удаляются вместе с buildDir
                         if (Directory.Exists(buildDir)) {
                             Directory.Delete(buildDir, recursive: true);
                             Logger.Info($"Deleted build directory: {buildDir}");
                         }
+
+                        // ПРИМЕЧАНИЕ: Удалён опасный код, который искал текстуры в input directory
+                        // Старый код мог удалить пользовательские файлы с именами типа "model_basecolor.png"
+                        // Все промежуточные текстуры уже удаляются вместе с buildDir (рекурсивное удаление)
                     } catch (Exception ex) {
                         Logger.Warn($"Failed to cleanup build directory: {ex.Message}");
                     }

@@ -326,7 +326,7 @@
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True"
-                                ScrollViewer.IsDeferredScrollingEnabled="True">
+                                ScrollViewer.IsDeferredScrollingEnabled="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -466,7 +466,7 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.IsDeferredScrollingEnabled="True">
+                              ScrollViewer.IsDeferredScrollingEnabled="False">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
@@ -553,7 +553,7 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.IsDeferredScrollingEnabled="True">
+                              ScrollViewer.IsDeferredScrollingEnabled="False">
                         <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>

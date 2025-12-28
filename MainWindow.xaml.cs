@@ -895,7 +895,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             OptimizeDataGridSorting(MaterialsDataGrid, e);
         }
 
-        // Словарь для отслеживания направления сортировки (WPF может сбрасывать SortDirection)
+        // Словарь для отслеживания направления сортировки
         private readonly Dictionary<string, ListSortDirection> _sortDirections = new();
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
@@ -903,18 +903,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             e.Handled = true;
 
-            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-            if (view is not ListCollectionView listView) return;
-
             // Получаем SortMemberPath или Binding Path
             string sortPath = e.Column.SortMemberPath;
             if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn boundColumn &&
                 boundColumn.Binding is Binding binding) {
                 sortPath = binding.Path?.Path ?? "";
             }
-            if (string.IsNullOrEmpty(sortPath)) return;
+            if (string.IsNullOrEmpty(sortPath)) {
+                e.Handled = false;
+                return;
+            }
 
-            // Определяем направление сортировки из нашего словаря
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            if (view == null) {
+                e.Handled = false;
+                return;
+            }
+
+            // Определяем направление сортировки
             string key = $"{dataGrid.Name}_{sortPath}";
             ListSortDirection direction;
             if (_sortDirections.TryGetValue(key, out var currentDir)) {
@@ -926,20 +932,19 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
             _sortDirections[key] = direction;
 
-            // Очищаем направления других колонок этого DataGrid
+            // Очищаем другие колонки
             foreach (var col in dataGrid.Columns) {
                 if (col != e.Column) {
                     col.SortDirection = null;
-                    string otherKey = $"{dataGrid.Name}_{col.SortMemberPath}";
-                    _sortDirections.Remove(otherKey);
                 }
             }
 
-            // Устанавливаем визуальный индикатор
+            // Устанавливаем индикатор
             e.Column.SortDirection = direction;
 
-            // Применяем сортировку через ResourceComparer
-            listView.CustomSort = new ResourceComparer(sortPath, direction);
+            // Применяем сортировку через SortDescriptions
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new SortDescription(sortPath, direction));
         }
 
 #endregion

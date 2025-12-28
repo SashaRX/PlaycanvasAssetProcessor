@@ -897,8 +897,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Empty - let WPF handle sorting natively
-            // Toggle works, but Resolution sorts by string not by ResolutionArea
+            if (e.Column == null) return;
+
+            // Get sort path (SortMemberPath or Binding path)
+            string sortPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn bc && bc.Binding is Binding b)
+                sortPath = b.Path?.Path ?? "";
+            if (string.IsNullOrEmpty(sortPath)) return;
+
+            e.Handled = true;
+
+            // Toggle direction based on current column state
+            var newDirection = e.Column.SortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+
+            // Clear all column directions
+            foreach (var col in dataGrid.Columns)
+                col.SortDirection = null;
+
+            // Set new direction on this column
+            e.Column.SortDirection = newDirection;
+
+            // Use CustomSort with ResourceComparer (handles nulls and mixed types)
+            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
+                listView.CustomSort = new ResourceComparer(sortPath, newDirection);
+            }
         }
 
 #endregion

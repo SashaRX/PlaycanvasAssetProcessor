@@ -76,7 +76,12 @@ namespace AssetProcessor.Helpers {
         private static int GetResolutionArea(object obj) => obj is TextureResource t ? t.ResolutionArea : 0;
         private static int GetResizeResolutionArea(object obj) => obj is TextureResource t ? t.ResizeResolutionArea : 0;
         private static long GetCompressedSize(object obj) => obj is TextureResource t ? t.CompressedSize : 0;
-        private static string? GetCompressionFormat(object obj) => obj is TextureResource t ? t.CompressionFormat : null;
+        private static string? GetCompressionFormat(object obj) {
+            // ORMTextureResource has 'new CompressionFormat' as enum, check it first
+            if (obj is ORMTextureResource orm) return orm.CompressionFormat.ToString();
+            if (obj is TextureResource t) return t.CompressionFormat;
+            return null;
+        }
         private static int GetMipmapCount(object obj) => obj is TextureResource t ? t.MipmapCount : 0;
         private static string? GetPresetName(object obj) => obj is TextureResource t ? t.PresetName : null;
         private static string? GetTextureType(object obj) => obj is TextureResource t ? t.TextureType : null;

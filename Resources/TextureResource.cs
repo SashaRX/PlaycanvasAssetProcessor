@@ -60,9 +60,10 @@ namespace AssetProcessor.Resources {
             get => resolution;
             set {
                 resolution = value;
-                // Cache computed value for fast sorting (ResolutionArea used only for SortMemberPath, no binding)
+                // Cache computed value for fast sorting
                 resolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : 0;
                 OnPropertyChanged(nameof(Resolution));
+                OnPropertyChanged(nameof(ResolutionArea)); // Notify for sorting
             }
         }
 
@@ -70,9 +71,10 @@ namespace AssetProcessor.Resources {
             get => resizeResolution;
             set {
                 resizeResolution = value;
-                // Cache computed value for fast sorting (ResizeResolutionArea used only for SortMemberPath, no binding)
+                // Cache computed value for fast sorting
                 resizeResolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : 0;
                 OnPropertyChanged(nameof(ResizeResolution));
+                OnPropertyChanged(nameof(ResizeResolutionArea)); // Notify for sorting
             }
         }
 

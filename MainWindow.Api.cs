@@ -313,13 +313,16 @@ namespace AssetProcessor {
                         AOSource = aoTexture,
                         GlossSource = glossTexture,
                         MetallicSource = metallicTexture,
-                        Status = "Converted" // Already packed
+                        Status = "Converted", // Already packed
+                        Extension = ".ktx2",
+                        CompressionFormat = "ETC1S" // ORM textures use ETC1S by default
                     };
 
                     // Извлекаем информацию о файле
                     if (File.Exists(ktx2Path)) {
                         var fileInfo = new FileInfo(ktx2Path);
                         ormTexture.CompressedSize = fileInfo.Length;
+                        ormTexture.Size = (int)fileInfo.Length; // For ORM, Size = CompressedSize
 
                         // Извлекаем метаданные из KTX2: resolution и mipmap count
                         try {

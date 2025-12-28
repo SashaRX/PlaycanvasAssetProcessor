@@ -2222,8 +2222,22 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                     var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
                                     if (File.Exists(ktx2Path)) {
                                         var fileInfo = new FileInfo(ktx2Path);
+                                        // Read KTX2 header to get mip levels
+                                        int mipLevels = 0;
+                                        try {
+                                            using var stream = File.OpenRead(ktx2Path);
+                                            using var reader = new BinaryReader(stream);
+                                            // KTX2 header: skip to levelCount at offset 40
+                                            reader.BaseStream.Seek(40, SeekOrigin.Begin);
+                                            mipLevels = (int)reader.ReadUInt32();
+                                        } catch {
+                                            // Ignore header read errors
+                                        }
                                         Dispatcher.InvokeAsync(() => {
                                             texture.CompressedSize = fileInfo.Length;
+                                            if (mipLevels > 0) {
+                                                texture.MipmapCount = mipLevels;
+                                            }
                                         });
                                     } else {
                                         // Check for .basis file as fallback

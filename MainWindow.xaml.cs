@@ -946,59 +946,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// ���������� ��������� �������� ������ - ������������� ��������� layout ��� ����������� ���������� �������
+        /// Scale slider changed - with LayoutTransform, WPF handles layout automatically
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            // ������������� ��������� layout DataGrid-�� ��� ��������� Width="*" ������� ��� ��������� ScaleTransform
-            ForceDataGridReflow(TexturesDataGrid);
-            ForceDataGridReflow(ModelsDataGrid);
-            ForceDataGridReflow(MaterialsDataGrid);
-        }
-
-        /// <summary>
-        /// ������������� layout DataGrid � ������ ScaleTransform, ������������� �������� "���������" �������.
-        /// </summary>
-        private static void ForceDataGridReflow(DataGrid? dataGrid) {
-            if (dataGrid == null || !dataGrid.IsLoaded) {
-                return;
-            }
-
-            dataGrid.Dispatcher.InvokeAsync(() => {
-                // ���������� ���������, ����� ����� ScaleTransform ��������� ������������ ��������� ������������
-                dataGrid.InvalidateMeasure();
-                dataGrid.InvalidateArrange();
-                dataGrid.UpdateLayout();
-
-                var starColumns = dataGrid.Columns
-                    .Where(c => c.Visibility == Visibility.Visible && c.Width.IsStar)
-                    .Select(c => new {
-                        Column = c,
-                        StarValue = c.Width.Value,
-                        DisplayIndex = c.DisplayIndex
-                    })
-                    .ToList();
-
-                if (starColumns.Count == 0) {
-                    return;
-                }
-
-                // ��������� �������� "���������" ������� � ���������� �� ������� �
-                // ��� ��������� ������ workaround (������/�������� �������),
-                // ������� �������������� ���������� DataGrid ����������� ������� ����� � �����.
-                foreach (var entry in starColumns) {
-                    entry.Column.Visibility = Visibility.Collapsed;
-                }
-
-                dataGrid.UpdateLayout();
-
-                foreach (var entry in starColumns) {
-                    entry.Column.Visibility = Visibility.Visible;
-                    entry.Column.DisplayIndex = entry.DisplayIndex;
-                    entry.Column.Width = new DataGridLength(entry.StarValue, DataGridLengthUnitType.Star);
-                }
-
-                dataGrid.UpdateLayout();
-            }, DispatcherPriority.Background);
+            // LayoutTransform triggers automatic layout recalculation
+            // No manual intervention needed unlike RenderTransform
         }
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {

@@ -895,9 +895,51 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             OptimizeDataGridSorting(MaterialsDataGrid, e);
         }
 
+        // Словарь для отслеживания направления сортировки (WPF может сбрасывать SortDirection)
+        private readonly Dictionary<string, ListSortDirection> _sortDirections = new();
+
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Пусть WPF сам обрабатывает сортировку - не перехватываем событие
-            // e.Handled = false по умолчанию
+            if (e.Column == null) return;
+
+            e.Handled = true;
+
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            if (view is not ListCollectionView listView) return;
+
+            // Получаем SortMemberPath или Binding Path
+            string sortPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn boundColumn &&
+                boundColumn.Binding is Binding binding) {
+                sortPath = binding.Path?.Path ?? "";
+            }
+            if (string.IsNullOrEmpty(sortPath)) return;
+
+            // Определяем направление сортировки из нашего словаря
+            string key = $"{dataGrid.Name}_{sortPath}";
+            ListSortDirection direction;
+            if (_sortDirections.TryGetValue(key, out var currentDir)) {
+                direction = currentDir == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending
+                    : ListSortDirection.Ascending;
+            } else {
+                direction = ListSortDirection.Ascending;
+            }
+            _sortDirections[key] = direction;
+
+            // Очищаем направления других колонок этого DataGrid
+            foreach (var col in dataGrid.Columns) {
+                if (col != e.Column) {
+                    col.SortDirection = null;
+                    string otherKey = $"{dataGrid.Name}_{col.SortMemberPath}";
+                    _sortDirections.Remove(otherKey);
+                }
+            }
+
+            // Устанавливаем визуальный индикатор
+            e.Column.SortDirection = direction;
+
+            // Применяем сортировку через ResourceComparer
+            listView.CustomSort = new ResourceComparer(sortPath, direction);
         }
 
 #endregion

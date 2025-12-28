@@ -898,16 +898,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
             if (e.Column == null) return;
+
+            // Only handle columns with SortMemberPath (like Resolution -> ResolutionArea)
+            // Let WPF handle all other columns natively for correct toggle behavior
+            string sortMemberPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortMemberPath)) {
+                // Clear our custom sort when switching to WPF-handled column
+                if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView lv) {
+                    lv.CustomSort = null;
+                }
+                _sortDirections.Clear();
+                return;
+            }
+
+            // Custom handling for SortMemberPath columns (Resolution)
             e.Handled = true;
 
-            // SortMemberPath для Resolution = "ResolutionArea", иначе из Binding
-            string sortPath = e.Column.SortMemberPath;
-            if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn bc && bc.Binding is Binding b)
-                sortPath = b.Path?.Path ?? "";
-            if (string.IsNullOrEmpty(sortPath)) return;
-
-            // Use dictionary to track direction (WPF resets column.SortDirection after SortDescriptions)
-            var key = (dataGrid, sortPath);
+            // Track direction in dictionary (CustomSort resets column.SortDirection)
+            var key = (dataGrid, sortMemberPath);
             ListSortDirection direction;
             if (_sortDirections.TryGetValue(key, out var lastDir)) {
                 direction = lastDir == ListSortDirection.Ascending
@@ -916,26 +924,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             } else {
                 direction = ListSortDirection.Ascending;
             }
+            _sortDirections.Clear();
+            _sortDirections[key] = direction;
 
-            // Clear other columns from dictionary and visual
-            var keysToRemove = _sortDirections.Keys.Where(k => k.Item1 == dataGrid && k.Item2 != sortPath).ToList();
-            foreach (var k in keysToRemove) _sortDirections.Remove(k);
+            // Clear other columns visual
             foreach (var col in dataGrid.Columns)
                 if (col != e.Column) col.SortDirection = null;
 
-            // Store new direction
-            _sortDirections[key] = direction;
-
-            // Apply sorting via CustomSort (handles null values and mixed types properly)
+            // Apply sorting via CustomSort using SortMemberPath
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
-                listView.CustomSort = new ResourceComparer(sortPath, direction);
+                listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
             }
 
-            // Set column visual indicator AFTER sorting (use BeginInvoke to run after WPF finishes)
-            var column = e.Column;
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => {
-                column.SortDirection = direction;
-            });
+            // Set visual indicator after CustomSort
+            e.Column.SortDirection = direction;
         }
 
 #endregion

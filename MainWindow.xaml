@@ -368,8 +368,8 @@
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
                                 <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="200" MinWidth="100"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="70" MinWidth="50"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="80" MinWidth="60"/>
-                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="90" MinWidth="70"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="80" MinWidth="60" SortMemberPath="Size"/>
+                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="90" MinWidth="70" SortMemberPath="CompressedSize"/>
                                 <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="100" MinWidth="80" SortMemberPath="ResolutionArea"/>
                                 <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="120" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>
                                 <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="100" MinWidth="80"/>
@@ -491,7 +491,7 @@
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="80" MinWidth="60" />
                                 <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="250" MinWidth="120"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60" SortMemberPath="Size"/>
                                 <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100" MinWidth="80"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="80" MinWidth="60"/>
                                 <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">

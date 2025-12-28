@@ -896,6 +896,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             OptimizeDataGridSorting(MaterialsDataGrid, e);
         }
 
+        private (DataGridColumn? Column, ListSortDirection Direction) _lastSort;
+
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
             if (e.Column == null) return;
 
@@ -907,37 +909,28 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             e.Handled = true;
 
-            // Track direction in dictionary - clear other columns first
-            var key = (dataGrid, sortPath);
-
-            // Remove all entries for this datagrid except current column
-            var toRemove = _sortDirections.Keys.Where(k => k.Item1 == dataGrid && k.Item2 != sortPath).ToList();
-            foreach (var k in toRemove) _sortDirections.Remove(k);
-
-            // Toggle direction
+            // Toggle: if same column, flip direction; otherwise start with Ascending
             ListSortDirection newDirection;
-            if (_sortDirections.TryGetValue(key, out var lastDir)) {
-                newDirection = lastDir == ListSortDirection.Ascending
+            if (_lastSort.Column == e.Column) {
+                newDirection = _lastSort.Direction == ListSortDirection.Ascending
                     ? ListSortDirection.Descending
                     : ListSortDirection.Ascending;
             } else {
                 newDirection = ListSortDirection.Ascending;
             }
-            _sortDirections[key] = newDirection;
+            _lastSort = (e.Column, newDirection);
+
+            // Clear all column indicators
+            foreach (var col in dataGrid.Columns)
+                col.SortDirection = null;
 
             // Apply sorting
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDirection);
             }
 
-            // Set visual indicators AFTER sorting (use Dispatcher to ensure it runs after WPF processing)
-            var column = e.Column;
-            var columns = dataGrid.Columns.ToList();
-            Dispatcher.BeginInvoke(() => {
-                foreach (var col in columns)
-                    col.SortDirection = null;
-                column.SortDirection = newDirection;
-            });
+            // Set indicator
+            e.Column.SortDirection = newDirection;
         }
 
 #endregion

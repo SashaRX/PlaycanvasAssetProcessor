@@ -76,7 +76,9 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
-        private bool isSorting = false; // ���� ��� ������������ �������� ����������
+        private DataGridSortManager? _texturesSortManager;
+        private DataGridSortManager? _modelsSortManager;
+        private DataGridSortManager? _materialsSortManager;
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // ������������ PresetManager ��� ��������� �������� ������ ��� ������ �������������
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
@@ -130,6 +132,12 @@ namespace AssetProcessor {
             ViewModel = this.viewModel;
 
             InitializeComponent();
+
+            // Initialize sort managers for each DataGrid
+            _texturesSortManager = new DataGridSortManager(TexturesDataGrid);
+            _modelsSortManager = new DataGridSortManager(ModelsDataGrid);
+            _materialsSortManager = new DataGridSortManager(MaterialsDataGrid);
+
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -168,9 +176,6 @@ namespace AssetProcessor {
 
             projectSelectionService.InitializeProjectsFolder(AppSettings.Default.ProjectsFolderPath);
             UpdateConnectionStatus(false);
-
-            TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
-            TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
 
             viewModel.ProjectSelectionChanged += ViewModel_ProjectSelectionChanged;
             viewModel.BranchSelectionChanged += ViewModel_BranchSelectionChanged;
@@ -845,8 +850,8 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
                 private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
 
 private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            // ���������� ������������� �� ����� ���������� ��� ���������
-            if (isSorting) {
+            // Skip row initialization during sorting for performance
+            if (_texturesSortManager?.IsSorting == true) {
                 return;
             }
 
@@ -877,96 +882,16 @@ private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
             isViewerVisible = !isViewerVisible;
         }
 
-        /// <summary>
-        /// ���������������� ���������� ���������� ��� TexturesDataGrid
-        /// </summary>
-        
-
-
-private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            OptimizeDataGridSorting(TexturesDataGrid, e);
+        private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+            _texturesSortManager?.HandleSorting(e);
         }
 
-        /// <summary>
-        /// ���������������� ���������� ���������� ��� ModelsDataGrid
-        /// </summary>
-        
-
-
         private void ModelsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            OptimizeDataGridSorting(ModelsDataGrid, e);
+            _modelsSortManager?.HandleSorting(e);
         }
 
         private void MaterialsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
-            OptimizeDataGridSorting(MaterialsDataGrid, e);
-        }
-
-        private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            try {
-                if (dataGrid == null || e == null || e.Column == null) {
-                    return;
-                }
-
-                e.Handled = true;
-
-                if (dataGrid.ItemsSource == null) {
-                    return;
-                }
-
-                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-                if (dataView == null) {
-                    return;
-                }
-
-                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
-
-                string sortMemberPath = e.Column.SortMemberPath;
-                if (string.IsNullOrEmpty(sortMemberPath)) {
-                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
-                        sortMemberPath = binding.Path?.Path ?? "";
-                    }
-
-                    if (string.IsNullOrEmpty(sortMemberPath)) {
-                        e.Handled = false;
-                        return;
-                    }
-                }
-
-                isSorting = true;
-
-                try {
-                    // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
-                    if (dataView is ListCollectionView listView) {
-                        listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
-                    } else {
-                        // Fallback for non-ListCollectionView
-                        using (dataView.DeferRefresh()) {
-                            dataView.SortDescriptions.Clear();
-                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
-                        }
-                    }
-
-                    e.Column.SortDirection = direction;
-
-                    // Clear other columns' sort direction
-                    foreach (var column in dataGrid.Columns) {
-                        if (column != e.Column) {
-                            column.SortDirection = null;
-                        }
-                    }
-                } finally {
-                    Dispatcher.BeginInvoke(() => {
-                        isSorting = false;
-                    }, System.Windows.Threading.DispatcherPriority.Background);
-                }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in OptimizeDataGridSorting");
-                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
-                e.Handled = false;
-                isSorting = false;
-            }
+            _materialsSortManager?.HandleSorting(e);
         }
 
 #endregion

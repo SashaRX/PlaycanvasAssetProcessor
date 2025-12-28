@@ -844,11 +844,6 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
                 private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
 
 private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            // ���������� ������������� �� ����� ���������� ��� ���������
-            if (isSorting) {
-                return;
-            }
-
             if (e?.Row?.DataContext is TextureResource texture) {
                 // Initialize conversion settings for the texture if not already set
                 // ��������� ������ ���� ���, ����� �� �������� ������� �������� ��� ������ �����������

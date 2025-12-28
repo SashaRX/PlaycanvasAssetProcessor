@@ -24,7 +24,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs пїЅпїЅпїЅ GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -42,8 +42,8 @@ using Newtonsoft.Json.Linq;
 
 namespace AssetProcessor {
     public partial class MainWindow : Window, INotifyPropertyChanged {
-        // Коллекции теперь в MainViewModel - удалены дублирующиеся объявления
-        // viewModel.Textures, viewModel.Models, viewModel.Materials, Assets теперь доступны через viewModel
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ MainViewModel - пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        // viewModel.Textures, viewModel.Models, viewModel.Materials, Assets пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ viewModel
 
         private readonly List<string> supportedFormats = [".png", ".jpg", ".jpeg"];
         private readonly List<string> excludedFormats = [".hdr", ".avif"];
@@ -65,36 +65,36 @@ namespace AssetProcessor {
         private readonly IPreviewRendererCoordinator previewRendererCoordinator;
         private readonly IAssetResourceService assetResourceService;
         private Dictionary<int, string> folderPaths = new();
-        private CancellationTokenSource? textureLoadCancellation; // Токен отмены для загрузки текстур
-        private GlobalTextureConversionSettings? globalTextureSettings; // Глобальные настройки конвертации текстур
-        private ConversionSettingsManager? conversionSettingsManager; // Менеджер параметров конвертации
-        private ConnectionState currentConnectionState = ConnectionState.Disconnected; // Текущее состояние подключения
-        private const int MaxPreviewSize = 2048; // Максимальный размер изображения для превью (высокое качество для детального просмотра)
-        private const int ThumbnailSize = 512; // Размер для быстрого превью (увеличено для лучшей читаемости)
+        private CancellationTokenSource? textureLoadCancellation; // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        private GlobalTextureConversionSettings? globalTextureSettings; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        private ConversionSettingsManager? conversionSettingsManager; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        private ConnectionState currentConnectionState = ConnectionState.Disconnected; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        private const int MaxPreviewSize = 2048; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
+        private const int ThumbnailSize = 512; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
         private const double MinPreviewColumnWidth = 256.0;
         private const double MaxPreviewColumnWidth = 512.0;
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
-        private bool isSorting = false; // Флаг для отслеживания процесса сортировки
-        private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для избежания создания нового при каждой инициализации
-        private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // Отслеживание текстур, для которых уже запущена проверка CompressedSize
+        private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // РљСЌС€РёСЂРѕРІР°РЅРЅС‹Р№ PresetManager РґР»СЏ СѓСЃРєРѕСЂРµРЅРёСЏ Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С…
+        private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ CompressedSize
+        private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
         private string? UserName => projectSelectionService.UserName;
 
-        // Projects и Branches теперь в MainViewModel - удалены дублирующиеся объявления
+        // Projects пїЅ Branches пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ MainViewModel - пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
-        /// Получает расшифрованный PlayCanvas API ключ из настроек.
-        /// Используется для всех вызовов PlayCanvas API для корректной работы с зашифрованным хранилищем.
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ PlayCanvas API пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ PlayCanvas API пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
         /// </summary>
         private static string? GetDecryptedApiKey() {
             if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out string? apiKey)) {
-                logger.Error("Не удалось расшифровать PlayCanvas API ключ из настроек");
+                logger.Error("пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ PlayCanvas API пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
                 return null;
             }
             return apiKey;
@@ -134,28 +134,28 @@ namespace AssetProcessor {
             ResetPreviewState();
             _ = InitializeOnStartup();
 
-            // Инициализация ConversionSettings
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ConversionSettings
             InitializeConversionSettings();
 
             viewModel.ConversionSettingsProvider = ConversionSettingsPanel;
             viewModel.TextureProcessingCompleted += ViewModel_TextureProcessingCompleted;
             viewModel.TexturePreviewLoaded += ViewModel_TexturePreviewLoaded;
 
-            // Подписка на события панели настроек конвертации
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
             ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
 
-            // Отображение версии приложения с информацией о бранче и коммите
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
-            // Заполнение ComboBox для Color Channel
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ComboBox пїЅпїЅпїЅ Color Channel
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
             ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
 
-            // Заполнение ComboBox для UV Channel
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ComboBox пїЅпїЅпїЅ UV Channel
             ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialDiffuseUVChannelComboBox);
             ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialSpecularUVChannelComboBox);
             ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
@@ -185,9 +185,9 @@ namespace AssetProcessor {
             this.Loaded += MainWindow_Loaded;
             CompositionTarget.Rendering += OnD3D11Rendering;
 
-            // Примечание: InitializeOnStartup() уже вызывается выше (строка 144)
-            // и корректно обрабатывает загрузку локальных файлов без показа MessageBox
-            // Пресеты инициализируются в TextureConversionSettingsPanel
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: InitializeOnStartup() пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅ 144)
+            // пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ MessageBox
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ TextureConversionSettingsPanel
         }
 
         private void ConversionSettingsPanel_AutoDetectRequested(object? sender, EventArgs e) {
@@ -328,7 +328,7 @@ namespace AssetProcessor {
             viewModel.SelectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
             viewModel.ProcessTexturesCommand.NotifyCanExecuteChanged();
 
-            // Отменяем предыдущую загрузку, если она еще выполняется
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             textureLoadCancellation?.Cancel();
             textureLoadCancellation = new CancellationTokenSource();
             CancellationToken cancellationToken = textureLoadCancellation.Token;
@@ -441,7 +441,7 @@ namespace AssetProcessor {
                 if (!string.IsNullOrEmpty(selectedTexture.Path)) {
                     logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Path is valid, entering main load block");
                     try {
-                        // Обновляем информацию о текстуре сразу
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
                         TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
                         TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
                         AssetProcessor.Helpers.SizeConverter sizeConverter = new();
@@ -517,7 +517,7 @@ namespace AssetProcessor {
                         }
                     } catch (OperationCanceledException) {
                         logService.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
-                        // Загрузка была отменена - это нормально
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     } catch (Exception ex) {
                         logService.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
                     }
@@ -788,7 +788,7 @@ namespace AssetProcessor {
                         if (loadToViewer && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                             texturePreviewService.OriginalBitmapSource = bitmapImage;
                             ShowOriginalImage();
-                            // НЕ применяем fitZoom для full resolution - это обновление кэша, зум уже установлен
+                            // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ fitZoom пїЅпїЅпїЅ full resolution - пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                         }
 
                         // Always update histogram when full-resolution image is loaded (even if showing KTX2)
@@ -799,7 +799,7 @@ namespace AssetProcessor {
                     });
                 }, cancellationToken);
             } catch (OperationCanceledException) {
-                // Прерывание загрузки допустимо при смене выбора
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
             }
         }
 
@@ -834,7 +834,7 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             double row1Height = ((RowDefinition)grid.RowDefinitions[0]).ActualHeight;
             double row2Height = ((RowDefinition)grid.RowDefinitions[1]).ActualHeight;
 
-            // Ограничение на минимальные размеры строк
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
             double minHeight = 137;
 
             if (row1Height < minHeight || row2Height < minHeight) {
@@ -845,21 +845,16 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
                 private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
 
 private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            // Пропускаем инициализацию во время сортировки для ускорения
-            if (isSorting) {
-                return;
-            }
-
             if (e?.Row?.DataContext is TextureResource texture) {
                 // Initialize conversion settings for the texture if not already set
-                // Проверяем только один раз, чтобы не вызывать тяжелые операции при каждой перерисовке
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 if (string.IsNullOrEmpty(texture.CompressionFormat)) {
                     InitializeTextureConversionSettings(texture);
                 }
 
-                // НЕ устанавливаем цвет фона здесь - он уже установлен через Style в XAML
-                // Это предотвращает лишние операции при каждой перерисовке строки во время сортировки
-                // Цвет фона управляется через DataTrigger в DataGrid.RowStyle
+                // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ - пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ Style пїЅ XAML
+                // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ DataTrigger пїЅ DataGrid.RowStyle
             }
         }
 
@@ -872,13 +867,13 @@ private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
                 PreviewColumn.Width = new GridLength(0);
             } else {
                 ToggleViewButton.Content = "<";
-                PreviewColumn.Width = new GridLength(300); // Вернуть исходную ширину
+                PreviewColumn.Width = new GridLength(300); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
             }
             isViewerVisible = !isViewerVisible;
         }
 
         /// <summary>
-        /// Оптимизированный обработчик сортировки для TexturesDataGrid
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ TexturesDataGrid
         /// </summary>
         
 
@@ -888,7 +883,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Оптимизированный обработчик сортировки для ModelsDataGrid
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ ModelsDataGrid
         /// </summary>
         
 
@@ -902,77 +897,30 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            try {
-                if (dataGrid == null || e == null || e.Column == null) {
-                    return;
-                }
+            // Only handle columns with SortMemberPath (Resolution, Size, etc.)
+            // Let WPF handle all other columns natively
+            if (e.Column == null || string.IsNullOrEmpty(e.Column.SortMemberPath)) {
+                return; // Let WPF handle it
+            }
 
-                e.Handled = true;
+            e.Handled = true;
+            string sortPath = e.Column.SortMemberPath;
 
-                if (dataGrid.ItemsSource == null) {
-                    return;
-                }
+            // Toggle direction based on current column state
+            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
 
-                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-                if (dataView == null) {
-                    return;
-                }
+            // Clear other columns BEFORE sorting
+            foreach (var col in dataGrid.Columns)
+                col.SortDirection = null;
 
-                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
+            // Set direction BEFORE CustomSort
+            e.Column.SortDirection = newDir;
 
-                string sortMemberPath = e.Column.SortMemberPath;
-                if (string.IsNullOrEmpty(sortMemberPath)) {
-                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
-                        sortMemberPath = binding.Path?.Path ?? "";
-                    }
-
-                    if (string.IsNullOrEmpty(sortMemberPath)) {
-                        e.Handled = false;
-                        return;
-                    }
-                }
-
-                isSorting = true;
-
-                try {
-                    // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
-                    if (dataView is ListCollectionView listView) {
-                        // Temporarily detach ItemsSource for faster sorting
-                        var itemsSource = dataGrid.ItemsSource;
-                        dataGrid.ItemsSource = null;
-
-                        listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
-
-                        // Reattach ItemsSource
-                        dataGrid.ItemsSource = itemsSource;
-                    } else {
-                        // Fallback for non-ListCollectionView
-                        using (dataView.DeferRefresh()) {
-                            dataView.SortDescriptions.Clear();
-                            dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
-                        }
-                    }
-
-                    e.Column.SortDirection = direction;
-
-                    // Clear other columns' sort direction
-                    foreach (var column in dataGrid.Columns) {
-                        if (column != e.Column) {
-                            column.SortDirection = null;
-                        }
-                    }
-                } finally {
-                    Dispatcher.BeginInvoke(() => {
-                        isSorting = false;
-                    }, System.Windows.Threading.DispatcherPriority.Background);
-                }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in OptimizeDataGridSorting");
-                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
-                e.Handled = false;
-                isSorting = false;
+            // Use CustomSort with ResourceComparer (handles nulls)
+            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
+                listView.CustomSort = new ResourceComparer(sortPath, newDir);
             }
         }
 
@@ -996,17 +944,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Обработчик изменения масштаба таблиц - принудительно обновляет layout для корректного растяжения колонок
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ layout пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            // Принудительно обновляем layout DataGrid-ов для пересчёта Width="*" колонок при изменении ScaleTransform
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ layout DataGrid-пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ Width="*" пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ScaleTransform
             ForceDataGridReflow(TexturesDataGrid);
             ForceDataGridReflow(ModelsDataGrid);
             ForceDataGridReflow(MaterialsDataGrid);
         }
 
         /// <summary>
-        /// Пересчитывает layout DataGrid с учётом ScaleTransform, принудительно обновляя "звёздочные" колонки.
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ layout DataGrid пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ ScaleTransform, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ" пїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
         /// </summary>
         private static void ForceDataGridReflow(DataGrid? dataGrid) {
             if (dataGrid == null || !dataGrid.IsLoaded) {
@@ -1014,7 +962,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             dataGrid.Dispatcher.InvokeAsync(() => {
-                // Сбрасываем измерения, чтобы новая ScaleTransform корректно распределила доступное пространство
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ ScaleTransform пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 dataGrid.InvalidateMeasure();
                 dataGrid.InvalidateArrange();
                 dataGrid.UpdateLayout();
@@ -1032,9 +980,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                // Полностью скрываем "звёздочные" колонки и возвращаем их обратно —
-                // это повторяет ручной workaround (скрыть/показать колонку),
-                // который гарантированно заставляет DataGrid пересчитать размеры шапки и строк.
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ" пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ
+                // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ workaround (пїЅпїЅпїЅпїЅпїЅпїЅ/пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ),
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ DataGrid пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ.
                 foreach (var entry in starColumns) {
                     entry.Column.Visibility = Visibility.Collapsed;
                 }
@@ -1143,7 +1091,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
 
 
-                // Установка выбранных элементов в ComboBox для Color Channel и UV Channel
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ ComboBox пїЅпїЅпїЅ Color Channel пїЅ UV Channel
                 MaterialDiffuseColorChannelComboBox.SelectedItem = parameters.DiffuseColorChannel?.ToString();
                 MaterialSpecularColorChannelComboBox.SelectedItem = parameters.SpecularColorChannel?.ToString();
                 MaterialMetalnessColorChannelComboBox.SelectedItem = parameters.MetalnessColorChannel?.ToString();
@@ -1163,7 +1111,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 colorRect.Background = new SolidColorBrush(color);
                 colorRect.Text = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 
-                // Установка выбранного цвета в ColorPicker
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ ColorPicker
                 colorPicker.SelectedColor = color;
             } else {
                 colorRect.Background = new SolidColorBrush(Colors.Transparent);
@@ -1174,13 +1122,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName, MaterialResource material) {
             if (hyperlink != null && expander != null) {
-                // Устанавливаем DataContext для hyperlink, чтобы он знал к какому материалу относится
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ DataContext пїЅпїЅпїЅ hyperlink, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 hyperlink.DataContext = material;
 
                 if (mapId.HasValue) {
                     TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
                     if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
-                        // Сохраняем ID в NavigateUri с пользовательской схемой для последующего извлечения
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ID пїЅ NavigateUri пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                         hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
                         hyperlink.Inlines.Clear();
                         hyperlink.Inlines.Add(texture.Name);
@@ -1202,21 +1150,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             if (sender is Hyperlink hyperlink)
             {
-                logger.Debug("Гиперссылка нажата. NavigateUri: {NavigateUri}; Текущий текст: {HyperlinkText}",
+                logger.Debug("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ. NavigateUri: {NavigateUri}; пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ: {HyperlinkText}",
                              hyperlink.NavigateUri,
                              string.Concat(hyperlink.Inlines.OfType<Run>().Select(r => r.Text)));
             }
             else
             {
-                logger.Warn("NavigateToTextureFromHyperlink вызван отправителем типа {SenderType}, ожидалась Hyperlink.", sender.GetType().FullName);
+                logger.Warn("NavigateToTextureFromHyperlink пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ {SenderType}, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ Hyperlink.", sender.GetType().FullName);
             }
 
-            logger.Debug("Детали клика по гиперссылке. Тип отправителя: {SenderType}; Тип DataContext: {DataContextType}; Тип выделения в таблице: {SelectedType}",
+            logger.Debug("пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {SenderType}; пїЅпїЅпїЅ DataContext: {DataContextType}; пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {SelectedType}",
                          sender.GetType().FullName,
                          (sender as FrameworkContentElement)?.DataContext?.GetType().FullName ?? "<null>",
                          MaterialsDataGrid.SelectedItem?.GetType().FullName ?? "<null>");
 
-            // 1) Пытаемся взять ID текстуры из Hyperlink.NavigateUri (мы сохраняем его при отрисовке)
+            // 1) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ ID пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ Hyperlink.NavigateUri (пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
             int? mapId = null;
             if (sender is Hyperlink link && link.NavigateUri != null &&
                 string.Equals(link.NavigateUri.Scheme, "texture", StringComparison.OrdinalIgnoreCase))
@@ -1228,11 +1176,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
             }
 
-            // 2) Если в NavigateUri нет значения, пробуем взять из материала
+            // 2) пїЅпїЅпїЅпїЅ пїЅ NavigateUri пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (!mapId.HasValue)
             {
                 if (material == null) {
-                    logger.Warn("Не удалось определить материал для гиперссылки {MapType}.", mapType);
+                    logger.Warn("пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MapType}.", mapType);
                     return;
                 }
 
@@ -1240,11 +1188,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
             material ??= new MaterialResource { Name = "<unknown>", ID = -1 };
             if (!mapId.HasValue) {
-                logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры {MapType}.", material.Name, material.ID, mapType);
+                logger.Info("пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MaterialName} ({MaterialId}) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MapType}.", material.Name, material.ID, mapType);
                 return;
             }
 
-            logger.Info("Запрос на переход к текстуре {MapType} с ID {TextureId} из материала {MaterialName} ({MaterialId}).",
+            logger.Info("пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MapType} пїЅ ID {TextureId} пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MaterialName} ({MaterialId}).",
                         mapType,
                         mapId.Value,
                         material.Name,
@@ -1253,7 +1201,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             Dispatcher.BeginInvoke(new Action(() => {
                 if (TexturesTabItem != null) {
                     tabControl.SelectedItem = TexturesTabItem;
-                    logger.Debug("Вкладка текстур активирована через TabControl.");
+                    logger.Debug("пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ TabControl.");
                 }
 
                 TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
@@ -1266,9 +1214,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     TexturesDataGrid.ScrollIntoView(texture);
                     TexturesDataGrid.Focus();
 
-                    logger.Info("Текстура {TextureName} (ID {TextureId}) выделена и прокручена в таблице текстур.", texture.Name, texture.ID);
+                    logger.Info("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {TextureName} (ID {TextureId}) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", texture.Name, texture.ID);
                 } else {
-                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", mapId.Value, viewModel.Textures.Count);
+                    logger.Error("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ ID {TextureId} пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {TextureCount}.", mapId.Value, viewModel.Textures.Count);
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
@@ -1299,13 +1247,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             if (sender is not System.Windows.Controls.Image image) {
-                logger.Warn("TexturePreview_MouseLeftButtonUp вызван отправителем типа {SenderType}, ожидался Image.", sender.GetType().FullName);
+                logger.Warn("TexturePreview_MouseLeftButtonUp пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ {SenderType}, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ Image.", sender.GetType().FullName);
                 return;
             }
 
             MaterialResource? material = MaterialsDataGrid.SelectedItem as MaterialResource;
             if (material == null) {
-                logger.Warn("Не удалось определить материал для предпросмотра текстуры.");
+                logger.Warn("пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.");
                 return;
             }
 
@@ -1321,18 +1269,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             };
 
             if (!textureId.HasValue) {
-                logger.Info("Для материала {MaterialName} ({MaterialId}) отсутствует идентификатор текстуры типа {TextureType}.",
+                logger.Info("пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MaterialName} ({MaterialId}) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ {TextureType}.",
                     material.Name, material.ID, textureType);
                 return;
             }
 
-            logger.Info("Клик по превью текстуры {TextureType} с ID {TextureId} из материала {MaterialName} ({MaterialId}).",
+            logger.Info("пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {TextureType} пїЅ ID {TextureId} пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {MaterialName} ({MaterialId}).",
                 textureType, textureId.Value, material.Name, material.ID);
 
             Dispatcher.BeginInvoke(new Action(() => {
                 if (TexturesTabItem != null) {
                     tabControl.SelectedItem = TexturesTabItem;
-                    logger.Debug("Вкладка текстур активирована через TabControl.");
+                    logger.Debug("пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ TabControl.");
                 }
 
                 TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
@@ -1345,16 +1293,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     TexturesDataGrid.ScrollIntoView(texture);
                     TexturesDataGrid.Focus();
 
-                    logger.Info("Текстура {TextureName} (ID {TextureId}) выделена и прокручена в таблице текстур.", texture.Name, texture.ID);
+                    logger.Info("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {TextureName} (ID {TextureId}) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ.", texture.Name, texture.ID);
                 } else {
-                    logger.Error("Текстура с ID {TextureId} не найдена в коллекции. Всего текстур: {TextureCount}.", textureId.Value, viewModel.Textures.Count);
+                    logger.Error("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ ID {TextureId} пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {TextureCount}.", textureId.Value, viewModel.Textures.Count);
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                // Обновляем выбранный материал в ViewModel для фильтрации текстур
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ ViewModel пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 if (DataContext is MainViewModel viewModel) {
                     viewModel.SelectedMaterial = selectedMaterial;
                 }
@@ -1365,27 +1313,27 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         CancellationToken.None);
                     if (materialParameters != null) {
                         selectedMaterial = materialParameters;
-                        DisplayMaterialParameters(selectedMaterial); // Передаем весь объект MaterialResource
+                        DisplayMaterialParameters(selectedMaterial); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ MaterialResource
                     }
                 }
 
-                // Автоматически переключаемся на вкладку текстур и выбираем связанную текстуру
-                // SwitchToTexturesTabAndSelectTexture(selectedMaterial); // Отключено: не переключаться автоматически при выборе материала
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                // SwitchToTexturesTabAndSelectTexture(selectedMaterial); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             }
         }
 
         private void SwitchToTexturesTabAndSelectTexture(MaterialResource material) {
             if (material == null) return;
 
-            // Переключаемся на вкладку текстур
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (TexturesTabItem != null) {
                 tabControl.SelectedItem = TexturesTabItem;
             }
 
-            // Ищем первую доступную текстуру, связанную с материалом
+            // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             TextureResource? textureToSelect = null;
 
-            // Проверяем различные типы текстур в порядке приоритета
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             var textureIds = new int?[] {
                 material.DiffuseMapId,
                 material.NormalMapId,
@@ -1405,7 +1353,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
             }
 
-            // Если найдена связанная текстура, выбираем её
+            // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ
             if (textureToSelect != null) {
                 Dispatcher.BeginInvoke(new Action(() => {
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
@@ -1416,10 +1364,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     TexturesDataGrid.ScrollIntoView(textureToSelect);
                     TexturesDataGrid.Focus();
 
-                    logger.Info($"Автоматически выбрана текстура {textureToSelect.Name} (ID {textureToSelect.ID}) для материала {material.Name} (ID {material.ID})");
+                    logger.Info($"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {textureToSelect.Name} (ID {textureToSelect.ID}) пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {material.Name} (ID {material.ID})");
                 }), System.Windows.Threading.DispatcherPriority.Loaded);
             } else {
-                logger.Info($"Для материала {material.Name} (ID {material.ID}) не найдено связанных текстур");
+                logger.Info($"пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ {material.Name} (ID {material.ID}) пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
             }
         }
 
@@ -1474,7 +1422,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialSpecularTintColorRect.Background = new SolidColorBrush(newColor);
                 MaterialSpecularTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
 
-                // Обновление данных материала
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                     selectedMaterial.SpecularTint = true;
                     selectedMaterial.Specular = [newColor.R, newColor.G, newColor.B];
@@ -1506,40 +1454,40 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void RecalculateIndices() {
-            // Синхронное обновление индексов для избежания race condition с DataGrid
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ race condition пїЅ DataGrid
             int index = 1;
             foreach (TextureResource texture in viewModel.Textures) {
                 texture.Index = index++;
-                // INotifyPropertyChanged автоматически обновит строку в DataGrid
+                // INotifyPropertyChanged пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ DataGrid
             }
 
             index = 1;
             foreach (ModelResource model in viewModel.Models) {
                 model.Index = index++;
-                // INotifyPropertyChanged автоматически обновит строку в DataGrid
+                // INotifyPropertyChanged пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ DataGrid
             }
 
             index = 1;
             foreach (MaterialResource material in viewModel.Materials) {
                 material.Index = index++;
-                // INotifyPropertyChanged автоматически обновит строку в DataGrid
+                // INotifyPropertyChanged пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ DataGrid
             }
 
-            // Items.Refresh() убран - INotifyPropertyChanged на Index автоматически обновляет UI
-            // Это устраняет полную перерисовку DataGrid и значительно ускоряет обновление
+            // Items.Refresh() пїЅпїЅпїЅпїЅпїЅ - INotifyPropertyChanged пїЅпїЅ Index пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI
+            // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ DataGrid пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
-            // UpdateLayout() вызывается только один раз в конце через DeferUpdateLayout()
-            // чтобы избежать множественных перерисовок при последовательных вызовах RecalculateIndices()
+            // UpdateLayout() пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ DeferUpdateLayout()
+            // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ RecalculateIndices()
         }
 
         private bool _layoutUpdatePending = false;
 
         /// <summary>
-        /// Отложенное обновление layout DataGrid для предотвращения множественных перерисовок
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ layout DataGrid пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void DeferUpdateLayout() {
             if (_layoutUpdatePending) {
-                return; // Уже запланировано обновление
+                return; // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             }
 
             _layoutUpdatePending = true;
@@ -1556,7 +1504,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private bool IsSupportedModelFormat(string extension) {
-            return supportedModelFormats.Contains(extension) && !excludedFormats.Contains(extension); // исправлено
+            return supportedModelFormats.Contains(extension) && !excludedFormats.Contains(extension); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         }
 
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
@@ -1572,7 +1520,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Обновляет текст и состояние динамической кнопки подключения
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void UpdateConnectionButton(ConnectionState newState) {
             logger.Info($"UpdateConnectionButton: Changing state from {currentConnectionState} to {newState}");
@@ -1619,7 +1567,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Обработчик клика по динамической кнопке подключения
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
@@ -1628,21 +1576,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 switch (currentConnectionState) {
                     case ConnectionState.Disconnected:
-                        // Подключаемся к PlayCanvas и загружаем список проектов
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ PlayCanvas пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                         logger.Info("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
                         logService.LogInfo("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
                         ConnectToPlayCanvas();
                         break;
 
                     case ConnectionState.UpToDate:
-                        // Проверяем наличие обновлений на сервере
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                         logger.Info("DynamicConnectionButton_Click: Calling RefreshFromServer");
                         logService.LogInfo("DynamicConnectionButton_Click: Calling RefreshFromServer");
                         await RefreshFromServer();
                         break;
 
                     case ConnectionState.NeedsDownload:
-                        // Скачиваем список ассетов + файлы
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ + пїЅпїЅпїЅпїЅпїЅ
                         logger.Info("DynamicConnectionButton_Click: Calling DownloadFromServer");
                         logService.LogInfo("DynamicConnectionButton_Click: Calling DownloadFromServer");
                         await DownloadFromServer();
@@ -1656,16 +1604,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Подключение к PlayCanvas - загружает список проектов и веток
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ PlayCanvas - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private void ConnectToPlayCanvas() {
-            // Вызываем существующий метод Connect
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ Connect
             Connect(null, null);
         }
 
         /// <summary>
-        /// Проверяет наличие обновлений на сервере (Refresh button)
-        /// Сравнивает hash локального assets_list.json с серверным
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (Refresh button)
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ hash пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ assets_list.json пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private async Task RefreshFromServer() {
             try {
@@ -1674,11 +1622,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 bool hasUpdates = await CheckForUpdates();
 
                 if (hasUpdates) {
-                    // Есть обновления - переключаем на кнопку Download
+                    // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ Download
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     MessageBox.Show("Updates available! Click Download to get them.", "Updates Found", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
-                    // Обновлений нет
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
                     MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             } catch (Exception ex) {
@@ -1690,7 +1638,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Скачивает список ассетов с сервера + загружает все файлы (Download button)
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ + пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (Download button)
         /// </summary>
         private async Task DownloadFromServer() {
             try {
@@ -1700,21 +1648,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
-                    // Загружаем список ассетов (assets_list.json) с сервера
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (assets_list.json) пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     logger.Info("DownloadFromServer: Loading assets list from server");
                     logService.LogInfo("DownloadFromServer: Loading assets list from server");
                     await TryConnect(cancellationTokenSource.Token);
 
-                    // Теперь скачиваем файлы (текстуры, модели, материалы)
+                    // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
                     logger.Info("DownloadFromServer: Starting file downloads");
                     logService.LogInfo("DownloadFromServer: Starting file downloads");
                     await Download(null, null);
                     logger.Info("DownloadFromServer: File downloads completed");
                     logService.LogInfo("DownloadFromServer: File downloads completed");
 
-                    // После успешной загрузки обновляем статус кнопки без перезагрузки данных
-                    // НЕ вызываем CheckProjectState(), так как он перезагрузит данные из JSON и сбросит статусы
-                    // Вместо этого просто проверяем наличие обновлений на сервере
+                    // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+                    // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ CheckProjectState(), пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ JSON пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                    // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     logger.Info("DownloadFromServer: Checking for updates on server after download");
                     logService.LogInfo("DownloadFromServer: Checking for updates on server after download");
                     bool hasUpdates = await CheckForUpdates();
@@ -1916,7 +1864,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             try {
-                // Останавливаем billboard обновление
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ billboard пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 StopBillboardUpdate();
 
                 cancellationTokenSource?.Cancel();
@@ -1950,17 +1898,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Инициализация ConversionSettings менеджера и UI
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ConversionSettings пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ UI
         /// </summary>
         private void InitializeConversionSettings() {
             try {
-                // Загружаем глобальные настройки
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 globalTextureSettings ??= TextureConversionSettingsManager.LoadSettings();
 
-                // Создаем менеджер настроек конвертации
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 conversionSettingsManager = new ConversionSettingsManager(globalTextureSettings);
 
-                // Загружаем UI элементы для ConversionSettings
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ ConversionSettings
                 PopulateConversionSettingsUI();
 
                 logger.Info("ConversionSettings initialized successfully");
@@ -1972,7 +1920,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Заполняет UI элементы ConversionSettings (пресеты и начальные значения)
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ConversionSettings (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
         /// </summary>
         private void PopulateConversionSettingsUI() {
             if (conversionSettingsManager == null) {
@@ -1981,13 +1929,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             try {
-                // Передаем ConversionSettingsManager в панель настроек конвертации
-                // КРИТИЧНО: Панель сама загрузит пресеты из ConversionSettingsSchema
-                // внутри SetConversionSettingsManager() - не дублируем код здесь!
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ConversionSettingsManager пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ ConversionSettingsSchema
+                // пїЅпїЅпїЅпїЅпїЅпїЅ SetConversionSettingsManager() - пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ!
                 if (ConversionSettingsPanel != null) {
                     ConversionSettingsPanel.SetConversionSettingsManager(conversionSettingsManager);
 
-                    // Логируем для проверки
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     logger.Info($"ConversionSettingsManager passed to panel. PresetComboBox items count: {ConversionSettingsPanel.PresetComboBox.Items.Count}");
                 }
 
@@ -1998,15 +1946,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Инициализация при запуске программы - подключается к серверу и загружает проекты
-        /// Если hash локального JSON совпадает с серверным - загружает локально
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        /// пїЅпїЅпїЅпїЅ hash пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ JSON пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private async Task InitializeOnStartup() {
             try {
                 logger.Info("=== InitializeOnStartup: Starting ===");
                 logService.LogInfo("=== Initializing on startup ===");
 
-                // Проверяем наличие API ключа и username
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ API пїЅпїЅпїЅпїЅпїЅ пїЅ username
                 if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
                     string.IsNullOrEmpty(AppSettings.Default.UserName)) {
                     logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
@@ -2015,7 +1963,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                // Подключаемся к серверу и загружаем список проектов
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 logger.Info("InitializeOnStartup: Connecting to PlayCanvas server...");
                 logService.LogInfo("Connecting to PlayCanvas server...");
                 await LoadLastSettings();
@@ -2029,8 +1977,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Умная загрузка ассетов: проверяет hash и загружает локально если актуально
-        /// Если hash отличается - загружает с сервера
+        /// пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ hash пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        /// пїЅпїЅпїЅпїЅ hash пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
         private async Task SmartLoadAssets() {
             try {
@@ -2083,7 +2031,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     }
                     logger.Info("SmartLoadAssets: Assets loaded successfully");
                 } else {
-                    // Локального файла нет - нужна загрузка
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     logger.Info("SmartLoadAssets: No local assets_list.json found - need to download");
                     logService.LogInfo("No local assets_list.json found - need to download");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
@@ -2204,31 +2152,31 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void LoadTextureConversionSettings(TextureResource texture) {
             logService.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
 
-            // КРИТИЧНО: Устанавливаем путь текущей текстуры для auto-detect normal map!
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ auto-detect normal map!
             ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
 
-            // КРИТИЧНО: Очищаем NormalMapPath чтобы auto-detect работал для НОВОЙ текстуры!
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅ NormalMapPath пїЅпїЅпїЅпїЅпїЅ auto-detect пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ!
             ConversionSettingsPanel.ClearNormalMapPath();
 
-            // КРИТИЧНО: ВСЕГДА auto-detect preset по имени файла ПЕРЕД загрузкой настроек!
-            // Это позволяет автоматически выбирать правильный preset для каждой текстуры
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅ auto-detect preset пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ!
+            // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ preset пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             var presetManager = new TextureConversion.Settings.PresetManager();
             var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
             logService.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");
 
             if (matchedPreset != null) {
-                // Нашли preset по имени файла (например "gloss" > "Gloss (Linear + Toksvig)")
+                // пїЅпїЅпїЅпїЅпїЅ preset пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ "gloss" > "Gloss (Linear + Toksvig)")
                 texture.PresetName = matchedPreset.Name;
                 logService.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
 
-                // Проверяем наличие preset в dropdown
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ preset пїЅ dropdown
                 var dropdownItems = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().ToList();
                 logService.LogInfo($"[LoadTextureConversionSettings] Dropdown contains {dropdownItems.Count} items: {string.Join(", ", dropdownItems)}");
 
                 bool presetExistsInDropdown = dropdownItems.Contains(matchedPreset.Name);
                 logService.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
 
-                // КРИТИЧНО: Устанавливаем preset БЕЗ триггера событий чтобы не блокировать загрузку текстуры!
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ preset пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ!
                 if (presetExistsInDropdown) {
                     logService.LogInfo($"[LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: {matchedPreset.Name}");
                     ConversionSettingsPanel.SetPresetSilently(matchedPreset.Name);
@@ -2237,7 +2185,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     ConversionSettingsPanel.SetPresetSilently("Custom");
                 }
             } else {
-                // Preset не найден по имени файла - используем "Custom"
+                // Preset пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ "Custom"
                 texture.PresetName = "";
                 logService.LogInfo($"No preset matched for '{texture.Name}', using Custom SILENTLY");
                 ConversionSettingsPanel.SetPresetSilently("Custom");
@@ -2245,7 +2193,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             logService.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");
 
-            // Загружаем default настройки для типа текстуры (если Custom)
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ default пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅ Custom)
             if (string.IsNullOrEmpty(texture.PresetName)) {
                 var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
                 var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
@@ -2261,9 +2209,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         // Initialize compression format and preset for texture without updating UI panel
-        // Оптимизировано: использует кэшированный PresetManager и откладывает проверку файлов
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ PresetManager пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
         private void InitializeTextureConversionSettings(TextureResource texture) {
-            // Быстрая инициализация без проверки файлов - это ускоряет перерисовку таблицы
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
             var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
                 MapTextureTypeToCore(textureType));
@@ -2272,21 +2220,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             texture.CompressionFormat = compression.CompressionFormat.ToString();
 
             // Auto-detect preset by filename if not already set
-            // Используем кэшированный PresetManager для избежания создания нового при каждой инициализации
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ PresetManager пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (string.IsNullOrEmpty(texture.PresetName)) {
                 var matchedPreset = cachedPresetManager.FindPresetByFileName(texture.Name ?? "");
                 texture.PresetName = matchedPreset?.Name ?? "";
             }
 
-            // Проверку файлов откладываем - она выполняется асинхронно и не блокирует UI
-            // Это критично для производительности при перерисовке таблицы
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI
+            // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (!string.IsNullOrEmpty(texture.Path) && texture.CompressedSize == 0) {
-                // Используем TryAdd для атомарной проверки и установки флага
-                // Это предотвращает race condition при множественных вызовах метода для одной текстуры
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ TryAdd пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+                // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ race condition пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 var lockObject = new object();
                 if (texturesBeingChecked.TryAdd(texture.Path, lockObject)) {
-                    // Проверяем файлы только если CompressedSize еще не установлен
-                    // Используем асинхронную проверку чтобы не блокировать UI
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ CompressedSize пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI
                     Task.Run(() => {
                         try {
                             if (File.Exists(texture.Path)) {
@@ -2298,8 +2246,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                     var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
                                     if (File.Exists(ktx2Path)) {
                                         var fileInfo = new FileInfo(ktx2Path);
+                                        // Read KTX2 header to get mip levels and compression format
+                                        int mipLevels = 0;
+                                        string? compressionFormat = null;
+                                        try {
+                                            using var stream = File.OpenRead(ktx2Path);
+                                            using var reader = new BinaryReader(stream);
+                                            // KTX2 header: levelCount at offset 40, supercompressionScheme at offset 44
+                                            reader.BaseStream.Seek(40, SeekOrigin.Begin);
+                                            mipLevels = (int)reader.ReadUInt32();
+                                            uint supercompression = reader.ReadUInt32();
+                                            // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                            compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                                        } catch {
+                                            // Ignore header read errors
+                                        }
                                         Dispatcher.InvokeAsync(() => {
                                             texture.CompressedSize = fileInfo.Length;
+                                            if (mipLevels > 0) {
+                                                texture.MipmapCount = mipLevels;
+                                            }
+                                            if (compressionFormat != null) {
+                                                texture.CompressionFormat = compressionFormat;
+                                            }
                                         });
                                     } else {
                                         // Check for .basis file as fallback
@@ -2314,9 +2283,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                 }
                             }
                         } catch {
-                            // Игнорируем ошибки при проверке файлов - это не критично для отображения
+                            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                         } finally {
-                            // Удаляем текстуру из словаря после завершения проверки
+                            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                             texturesBeingChecked.TryRemove(texture.Path, out _);
                         }
                     });
@@ -2356,45 +2325,45 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     ? MessageBoxImage.Information
                     : MessageBoxImage.Warning;
 
-                // Показываем MessageBox в UI потоке
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ MessageBox пїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ
                 await Dispatcher.InvokeAsync(() => {
                     MessageBox.Show(resultMessage, "Processing Complete", MessageBoxButton.OK, icon);
                 });
 
-                // Загружаем превью после показа MessageBox, чтобы не блокировать UI
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ MessageBox, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI
                 if (e.Result.PreviewTexture != null && viewModel.LoadKtxPreviewCommand is IAsyncRelayCommand<TextureResource?> command) {
                     try {
-                        // Выполняем команду напрямую (она уже async и не блокирует UI)
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅ пїЅпїЅпїЅ async пїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI)
                         await command.ExecuteAsync(e.Result.PreviewTexture);
                         
-                        // Обновляем UI в UI потоке после загрузки
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                         // Preview loading event will switch the viewer to KTX2 mode after the texture is loaded.
                     } catch (Exception ex) {
-                        logger.Warn(ex, "Ошибка при загрузке превью KTX2");
+                        logger.Warn(ex, "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ KTX2");
                     }
                 }
             } catch (Exception ex) {
-                logger.Error(ex, "Ошибка при обработке результатов конвертации");
+                logger.Error(ex, "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
             }
         }
 
-        private int _isLoadingTexture = 0; // 0 = false, 1 = true (используем int для Interlocked)
+        private int _isLoadingTexture = 0; // 0 = false, 1 = true (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ int пїЅпїЅпїЅ Interlocked)
 
         private async void ViewModel_TexturePreviewLoaded(object? sender, TexturePreviewLoadedEventArgs e) {
-            // Атомарная проверка и установка флага для защиты от повторной загрузки
-            // Используем CompareExchange для атомарной проверки и установки, чтобы избежать TOCTOU
-            // Пытаемся установить флаг в 1, если он был 0 (атомарная операция)
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ CompareExchange пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ TOCTOU
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ 1, пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ 0 (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
             int wasLoading = Interlocked.CompareExchange(ref _isLoadingTexture, 1, 0);
             if (wasLoading != 0) {
                 logger.Warn("Texture loading already in progress, skipping duplicate load");
-                // Важно: НЕ сбрасываем флаг, так как другой поток его установил и должен сбросить
-                // в своем finally блоке. Сброс флага, которым мы не владеем, нарушает взаимное исключение.
+                // пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                // пїЅ пїЅпїЅпїЅпїЅпїЅ finally пїЅпїЅпїЅпїЅпїЅ. пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
                 return;
             }
 
             try {
 
-                // Обновляем UI свойства в UI потоке с высоким приоритетом
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 bool rendererAvailable = false;
                 await Dispatcher.InvokeAsync(() => {
                     texturePreviewService.CurrentLoadedTexturePath = e.Texture.Path;
@@ -2410,10 +2379,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         UpdatePreviewSourceControls();
                     }
 
-                    // Проверяем доступность renderer в UI потоке
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ renderer пїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ
                     rendererAvailable = D3D11TextureViewer?.Renderer != null;
                     if (!rendererAvailable) {
-                        logger.Warn("D3D11 viewer или renderer отсутствует");
+                        logger.Warn("D3D11 viewer пїЅпїЅпїЅ renderer пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
                     }
                 });
 
@@ -2421,32 +2390,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                // Даем UI потоку возможность обработать другие сообщения перед тяжелыми операциями
+                // пїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 await Task.Yield();
 
-                // Выполняем LoadTexture в UI потоке, но с более низким приоритетом
-                // чтобы не блокировать другие UI операции
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ LoadTexture пїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 await Dispatcher.InvokeAsync(() => {
                     try {
                         if (D3D11TextureViewer?.Renderer == null) {
-                            logger.Warn("D3D11 renderer стал null во время загрузки");
+                            logger.Warn("D3D11 renderer пїЅпїЅпїЅпїЅ null пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
                             return;
                         }
                         D3D11TextureViewer.Renderer.LoadTexture(e.Preview.TextureData);
                     } catch (Exception ex) {
-                        logger.Error(ex, "Ошибка при загрузке текстуры в D3D11");
+                        logger.Error(ex, "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ D3D11");
                         return;
                     }
                 }, System.Windows.Threading.DispatcherPriority.Background);
 
-                // Еще раз даем UI потоку возможность обработать другие сообщения
+                // пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 await Task.Yield();
 
-                // Обновляем UI и выполняем Render
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ Render
                 await Dispatcher.InvokeAsync(() => {
                     try {
                         if (D3D11TextureViewer?.Renderer == null) {
-                            logger.Warn("D3D11 renderer стал null во время обновления UI");
+                            logger.Warn("D3D11 renderer пїЅпїЅпїЅпїЅ null пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI");
                             return;
                         }
 
@@ -2476,13 +2445,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                             }
                         }
                     } catch (Exception ex) {
-                        logger.Error(ex, "Ошибка при обновлении UI после загрузки текстуры");
+                        logger.Error(ex, "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
                     }
                 });
             } catch (Exception ex) {
-                logger.Error(ex, "Ошибка при обновлении превью KTX2");
+                logger.Error(ex, "пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ KTX2");
             } finally {
-                // Атомарно сбрасываем флаг
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
                 Interlocked.Exchange(ref _isLoadingTexture, 0);
             }
         }
@@ -2494,7 +2463,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 resultMessage += "\n\nError details:";
                 var errorsToShow = result.ErrorMessages.Take(10).ToList();
                 foreach (var error in errorsToShow) {
-                    resultMessage += $"\n• {error}";
+                    resultMessage += $"\nпїЅ {error}";
                 }
                 if (result.ErrorMessages.Count > 10) {
                     resultMessage += $"\n... and {result.ErrorMessages.Count - 10} more errors (see log file for details)";
@@ -2846,7 +2815,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         // Reads KTX2 file header to extract metadata (width, height, mip levels)
-        private async Task<(int Width, int Height, int MipLevels)> GetKtx2InfoAsync(string ktx2Path) {
+        private async Task<(int Width, int Height, int MipLevels, string CompressionFormat)> GetKtx2InfoAsync(string ktx2Path) {
             return await Task.Run(() => {
                 using var stream = File.OpenRead(ktx2Path);
                 using var reader = new BinaryReader(stream);
@@ -2861,6 +2830,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Bytes 32-35: layerCount (uint32) - skip
                 // Bytes 36-39: faceCount (uint32) - skip
                 // Bytes 40-43: levelCount (uint32)
+                // Bytes 44-47: supercompressionScheme (uint32)
 
                 reader.BaseStream.Seek(20, SeekOrigin.Begin);
                 int width = (int)reader.ReadUInt32();
@@ -2868,8 +2838,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 reader.BaseStream.Seek(40, SeekOrigin.Begin);
                 int mipLevels = (int)reader.ReadUInt32();
+                uint supercompression = reader.ReadUInt32();
+                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                string compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
 
-                return (width, height, mipLevels);
+                return (width, height, mipLevels, compressionFormat);
             });
         }
 
@@ -2955,7 +2928,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 // Get settings from ModelConversionSettingsPanel
-                // Передаём путь к файлу для автоматического определения типа источника (FBX/GLB)
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (FBX/GLB)
                 var settings = ModelConversionSettingsPanel.GetSettings(selectedModel.Path);
 
                 // Create output directory
@@ -2991,7 +2964,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
                     logService.LogInfo($"  Manifest: {result.ManifestPath}");
 
-                    // Автоматически обновляем viewport с новыми GLB LOD файлами
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ viewport пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ GLB LOD пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
                     await TryLoadGlbLodAsync(selectedModel.Path);
 
@@ -3055,7 +3028,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void ModelPreviewGridSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
-            // Сохраняем текущую высоту ModelPreviewRow в настройки
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ ModelPreviewRow пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (ModelPreviewRow != null) {
                 double currentHeight = ModelPreviewRow.ActualHeight;
                 if (currentHeight > 0 && currentHeight >= 200 && currentHeight <= 800) {
@@ -3066,7 +3039,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Обработчик нажатия клавиш для всего окна
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
         /// </summary>
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) {
             // F - Fit model to viewport (ZoomExtents)

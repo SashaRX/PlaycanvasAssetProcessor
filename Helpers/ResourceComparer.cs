@@ -35,8 +35,8 @@ namespace AssetProcessor.Helpers {
                 "Extension" => CompareString(GetExtension(x), GetExtension(y)),
 
                 // TextureResource properties
-                "ResolutionArea" => CompareNullableInt(GetResolutionArea(x), GetResolutionArea(y)),
-                "ResizeResolutionArea" => CompareNullableInt(GetResizeResolutionArea(x), GetResizeResolutionArea(y)),
+                "ResolutionArea" => CompareInt(GetResolutionArea(x), GetResolutionArea(y)),
+                "ResizeResolutionArea" => CompareInt(GetResizeResolutionArea(x), GetResizeResolutionArea(y)),
                 "CompressedSize" => CompareLong(GetCompressedSize(x), GetCompressedSize(y)),
                 "CompressionFormat" => CompareString(GetCompressionFormat(x), GetCompressionFormat(y)),
                 "MipmapCount" => CompareInt(GetMipmapCount(x), GetMipmapCount(y)),
@@ -73,10 +73,15 @@ namespace AssetProcessor.Helpers {
         private static string? GetStatus(object obj) => obj is BaseResource r ? r.Status : null;
         private static string? GetExtension(object obj) => obj is BaseResource r ? r.Extension : null;
 
-        private static int? GetResolutionArea(object obj) => obj is TextureResource t ? t.ResolutionArea : null;
-        private static int? GetResizeResolutionArea(object obj) => obj is TextureResource t ? t.ResizeResolutionArea : null;
+        private static int GetResolutionArea(object obj) => obj is TextureResource t ? t.ResolutionArea : 0;
+        private static int GetResizeResolutionArea(object obj) => obj is TextureResource t ? t.ResizeResolutionArea : 0;
         private static long GetCompressedSize(object obj) => obj is TextureResource t ? t.CompressedSize : 0;
-        private static string? GetCompressionFormat(object obj) => obj is TextureResource t ? t.CompressionFormat : null;
+        private static string? GetCompressionFormat(object obj) {
+            // ORMTextureResource has 'new CompressionFormat' as enum, check it first
+            if (obj is ORMTextureResource orm) return orm.CompressionFormat.ToString();
+            if (obj is TextureResource t) return t.CompressionFormat;
+            return null;
+        }
         private static int GetMipmapCount(object obj) => obj is TextureResource t ? t.MipmapCount : 0;
         private static string? GetPresetName(object obj) => obj is TextureResource t ? t.PresetName : null;
         private static string? GetTextureType(object obj) => obj is TextureResource t ? t.TextureType : null;

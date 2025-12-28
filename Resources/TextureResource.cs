@@ -42,8 +42,8 @@ namespace AssetProcessor.Resources {
 
         private int[] resolution = new int[2];
         private int[] resizeResolution = new int[2];
-        private int? resolutionArea = 0; // Кэшированное значение для быстрой сортировки (инициализировано как 0, так как resolution = [0,0])
-        private int? resizeResolutionArea = 0; // Кэшированное значение для быстрой сортировки (инициализировано как 0, так как resizeResolution = [0,0])
+        private int resolutionArea = 0; // Кэшированное значение для быстрой сортировки
+        private int resizeResolutionArea = 0; // Кэшированное значение для быстрой сортировки
         private string? groupName;
         private string? textureType;
         private string? compressionFormat;
@@ -60,10 +60,10 @@ namespace AssetProcessor.Resources {
             get => resolution;
             set {
                 resolution = value;
-                // Cache computed value for fast sorting (ResolutionArea used only for SortMemberPath, no binding)
-                resolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : null;
+                // Cache computed value for fast sorting
+                resolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : 0;
                 OnPropertyChanged(nameof(Resolution));
-                // ResolutionArea notification removed - used only for sorting, not displayed
+                OnPropertyChanged(nameof(ResolutionArea)); // Notify for sorting
             }
         }
 
@@ -71,10 +71,10 @@ namespace AssetProcessor.Resources {
             get => resizeResolution;
             set {
                 resizeResolution = value;
-                // Cache computed value for fast sorting (ResizeResolutionArea used only for SortMemberPath, no binding)
-                resizeResolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : null;
+                // Cache computed value for fast sorting
+                resizeResolutionArea = (value != null && value.Length >= 2) ? value[0] * value[1] : 0;
                 OnPropertyChanged(nameof(ResizeResolution));
-                // ResizeResolutionArea notification removed - used only for sorting, not displayed
+                OnPropertyChanged(nameof(ResizeResolutionArea)); // Notify for sorting
             }
         }
 
@@ -187,12 +187,12 @@ namespace AssetProcessor.Resources {
         /// <summary>
         /// Кэшированное значение площади разрешения для быстрой сортировки
         /// </summary>
-        public int? ResolutionArea => resolutionArea;
-        
+        public int ResolutionArea => resolutionArea;
+
         /// <summary>
         /// Кэшированное значение площади разрешения после изменения размера для быстрой сортировки
         /// </summary>
-        public int? ResizeResolutionArea => resizeResolutionArea;
+        public int ResizeResolutionArea => resizeResolutionArea;
 
         public static string DetermineTextureType(string textureName) {
             if (string.IsNullOrEmpty(textureName))

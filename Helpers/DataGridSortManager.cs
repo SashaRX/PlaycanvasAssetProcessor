@@ -54,15 +54,11 @@ namespace AssetProcessor.Helpers {
                 return;
             }
 
-            // Determine new direction based on tracked state
-            ListSortDirection newDirection;
-            if (_currentSortColumn == sortMemberPath) {
-                newDirection = _currentDirection == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
-            } else {
-                newDirection = ListSortDirection.Ascending;
-            }
+            // Use column's current SortDirection to determine next direction
+            // null or Descending -> Ascending, Ascending -> Descending
+            ListSortDirection newDirection = e.Column.SortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
 
             _currentSortColumn = sortMemberPath;
             _currentDirection = newDirection;

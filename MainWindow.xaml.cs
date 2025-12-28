@@ -907,8 +907,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             e.Handled = true;
 
-            // Track direction in dictionary (CustomSort resets column.SortDirection)
+            // Track direction in dictionary - clear other columns first
             var key = (dataGrid, sortPath);
+
+            // Remove all entries for this datagrid except current column
+            var toRemove = _sortDirections.Keys.Where(k => k.Item1 == dataGrid && k.Item2 != sortPath).ToList();
+            foreach (var k in toRemove) _sortDirections.Remove(k);
+
+            // Toggle direction
             ListSortDirection newDirection;
             if (_sortDirections.TryGetValue(key, out var lastDir)) {
                 newDirection = lastDir == ListSortDirection.Ascending
@@ -924,10 +930,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 listView.CustomSort = new ResourceComparer(sortPath, newDirection);
             }
 
-            // Set visual indicators after CustomSort
-            foreach (var col in dataGrid.Columns)
-                col.SortDirection = null;
-            e.Column.SortDirection = newDirection;
+            // Set visual indicators AFTER sorting (use Dispatcher to ensure it runs after WPF processing)
+            var column = e.Column;
+            var columns = dataGrid.Columns.ToList();
+            Dispatcher.BeginInvoke(() => {
+                foreach (var col in columns)
+                    col.SortDirection = null;
+                column.SortDirection = newDirection;
+            });
         }
 
 #endregion

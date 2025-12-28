@@ -2260,14 +2260,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                     var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
                                     if (File.Exists(ktx2Path)) {
                                         var fileInfo = new FileInfo(ktx2Path);
-                                        // Read KTX2 header to get mip levels
+                                        // Read KTX2 header to get mip levels and compression format
                                         int mipLevels = 0;
+                                        string? compressionFormat = null;
                                         try {
                                             using var stream = File.OpenRead(ktx2Path);
                                             using var reader = new BinaryReader(stream);
-                                            // KTX2 header: skip to levelCount at offset 40
+                                            // KTX2 header: levelCount at offset 40, supercompressionScheme at offset 44
                                             reader.BaseStream.Seek(40, SeekOrigin.Begin);
                                             mipLevels = (int)reader.ReadUInt32();
+                                            uint supercompression = reader.ReadUInt32();
+                                            // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                            compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
                                         } catch {
                                             // Ignore header read errors
                                         }
@@ -2275,6 +2279,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                             texture.CompressedSize = fileInfo.Length;
                                             if (mipLevels > 0) {
                                                 texture.MipmapCount = mipLevels;
+                                            }
+                                            if (compressionFormat != null) {
+                                                texture.CompressionFormat = compressionFormat;
                                             }
                                         });
                                     } else {
@@ -2822,7 +2829,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         // Reads KTX2 file header to extract metadata (width, height, mip levels)
-        private async Task<(int Width, int Height, int MipLevels)> GetKtx2InfoAsync(string ktx2Path) {
+        private async Task<(int Width, int Height, int MipLevels, string CompressionFormat)> GetKtx2InfoAsync(string ktx2Path) {
             return await Task.Run(() => {
                 using var stream = File.OpenRead(ktx2Path);
                 using var reader = new BinaryReader(stream);
@@ -2837,6 +2844,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Bytes 32-35: layerCount (uint32) - skip
                 // Bytes 36-39: faceCount (uint32) - skip
                 // Bytes 40-43: levelCount (uint32)
+                // Bytes 44-47: supercompressionScheme (uint32)
 
                 reader.BaseStream.Seek(20, SeekOrigin.Begin);
                 int width = (int)reader.ReadUInt32();
@@ -2844,8 +2852,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 reader.BaseStream.Seek(40, SeekOrigin.Begin);
                 int mipLevels = (int)reader.ReadUInt32();
+                uint supercompression = reader.ReadUInt32();
+                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                string compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
 
-                return (width, height, mipLevels);
+                return (width, height, mipLevels, compressionFormat);
             });
         }
 

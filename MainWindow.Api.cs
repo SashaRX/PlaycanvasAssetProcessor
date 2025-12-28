@@ -314,26 +314,30 @@ namespace AssetProcessor {
                         GlossSource = glossTexture,
                         MetallicSource = metallicTexture,
                         Status = "Converted", // Already packed
-                        Extension = ".ktx2",
-                        CompressionFormat = TextureConversion.Core.CompressionFormat.ETC1S // ORM textures use ETC1S by default
+                        Extension = ".ktx2"
                     };
 
-                    // Извлекаем информацию о файле
+                    // Извлекаем информацию о файле и метаданные из KTX2
                     if (File.Exists(ktx2Path)) {
                         var fileInfo = new FileInfo(ktx2Path);
                         ormTexture.CompressedSize = fileInfo.Length;
                         ormTexture.Size = (int)fileInfo.Length; // For ORM, Size = CompressedSize
 
-                        // Извлекаем метаданные из KTX2: resolution и mipmap count
+                        // Извлекаем метаданные из KTX2: resolution, mipmap count, compression format
                         try {
                             var ktxInfo = await GetKtx2InfoAsync(ktx2Path);
                             if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
                                 ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
                                 ormTexture.MipmapCount = ktxInfo.MipLevels;
-                                logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips");
+                                // Set compression format from KTX2 header
+                                ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
+                                    ? TextureConversion.Core.CompressionFormat.UASTC
+                                    : TextureConversion.Core.CompressionFormat.ETC1S;
+                                logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, {ktxInfo.CompressionFormat}");
                             }
                         } catch (Exception ex) {
                             logService.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
+                            ormTexture.CompressionFormat = TextureConversion.Core.CompressionFormat.ETC1S; // Default fallback
                         }
                     }
 

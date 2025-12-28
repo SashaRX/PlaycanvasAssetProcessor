@@ -936,64 +936,37 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 isSorting = true;
 
-                Style? originalRowStyle = null;
-                System.Windows.Media.Transform? originalLayoutTransform = null;
-                bool isTexturesGrid = dataGrid == TexturesDataGrid;
-
-                if (isTexturesGrid) {
-                    originalRowStyle = dataGrid.RowStyle;
-                    originalLayoutTransform = dataGrid.LayoutTransform;
-                }
-
                 try {
-                    dataGrid.BeginInit();
+                    // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
+                    if (dataView is ListCollectionView listView) {
+                        // Temporarily detach ItemsSource for faster sorting
+                        var itemsSource = dataGrid.ItemsSource;
+                        dataGrid.ItemsSource = null;
 
-                    if (isTexturesGrid && originalRowStyle != null) {
-                        var simpleRowStyle = new Style(typeof(DataGridRow));
-                        var contextMenuSetter = originalRowStyle.Setters.OfType<Setter>()
-                            .FirstOrDefault(s => s.Property == DataGridRow.ContextMenuProperty);
-                        if (contextMenuSetter != null) {
-                            simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuSetter.Value));
-                        } else {
-                            var contextMenuResource = dataGrid.TryFindResource("TextureRowContextMenu");
-                            if (contextMenuResource != null) {
-                                simpleRowStyle.Setters.Add(new Setter(DataGridRow.ContextMenuProperty, contextMenuResource));
-                            }
-                        }
-                        dataGrid.RowStyle = simpleRowStyle;
+                        listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
 
-                        dataGrid.LayoutTransform = null;
-                    }
-
-                    try {
+                        // Reattach ItemsSource
+                        dataGrid.ItemsSource = itemsSource;
+                    } else {
+                        // Fallback for non-ListCollectionView
                         using (dataView.DeferRefresh()) {
                             dataView.SortDescriptions.Clear();
                             dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
                         }
+                    }
 
-                        e.Column.SortDirection = direction;
-                    } finally {
-                        if (isTexturesGrid) {
-                            if (originalRowStyle != null) {
-                                dataGrid.RowStyle = originalRowStyle;
-                            }
-                            if (originalLayoutTransform != null) {
-                                dataGrid.LayoutTransform = originalLayoutTransform;
-                            }
+                    e.Column.SortDirection = direction;
+
+                    // Clear other columns' sort direction
+                    foreach (var column in dataGrid.Columns) {
+                        if (column != e.Column) {
+                            column.SortDirection = null;
                         }
-
-                        dataGrid.EndInit();
-
-                        Dispatcher.BeginInvoke(() => {
-                            isSorting = false;
-                        }, System.Windows.Threading.DispatcherPriority.Background);
                     }
                 } finally {
-                    if (isSorting) {
-                        Dispatcher.BeginInvoke(() => {
-                            isSorting = false;
-                        }, System.Windows.Threading.DispatcherPriority.Background);
-                    }
+                    Dispatcher.BeginInvoke(() => {
+                        isSorting = false;
+                    }, System.Windows.Threading.DispatcherPriority.Background);
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in OptimizeDataGridSorting");

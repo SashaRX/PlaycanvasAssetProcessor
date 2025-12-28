@@ -956,7 +956,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     // Use CustomSort with direct property access - 5-10x faster than SortDescription (no reflection)
                     if (dataView is ListCollectionView listView) {
                         listView.CustomSort = new ResourceComparer(sortMemberPath, direction);
-                        listView.Refresh();
                     } else {
                         // Fallback for non-ListCollectionView
                         using (dataView.DeferRefresh()) {

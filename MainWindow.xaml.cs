@@ -76,6 +76,7 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
+        private bool isSorting = false; // флаг для блокирования операций при сортировке
         private DataGridSortManager? _texturesSortManager;
         private DataGridSortManager? _modelsSortManager;
         private DataGridSortManager? _materialsSortManager;
@@ -133,7 +134,7 @@ namespace AssetProcessor {
 
             InitializeComponent();
 
-            // Initialize sort managers for each DataGrid
+            // Initialize sort managers for DataGrids
             _texturesSortManager = new DataGridSortManager(TexturesDataGrid);
             _modelsSortManager = new DataGridSortManager(ModelsDataGrid);
             _materialsSortManager = new DataGridSortManager(MaterialsDataGrid);
@@ -176,6 +177,9 @@ namespace AssetProcessor {
 
             projectSelectionService.InitializeProjectsFolder(AppSettings.Default.ProjectsFolderPath);
             UpdateConnectionStatus(false);
+
+            TexturesDataGrid.LoadingRow += TexturesDataGrid_LoadingRow;
+            TexturesDataGrid.Sorting += TexturesDataGrid_Sorting;
 
             viewModel.ProjectSelectionChanged += ViewModel_ProjectSelectionChanged;
             viewModel.BranchSelectionChanged += ViewModel_BranchSelectionChanged;
@@ -850,8 +854,8 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
                 private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
 
 private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            // Skip row initialization during sorting for performance
-            if (_texturesSortManager?.IsSorting == true) {
+            // ���������� ������������� �� ����� ���������� ��� ���������
+            if (isSorting) {
                 return;
             }
 
@@ -882,8 +886,15 @@ private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
             isViewerVisible = !isViewerVisible;
         }
 
-        private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
+        /// <summary>
+        /// ���������������� ���������� ���������� ��� TexturesDataGrid
+        /// </summary>
+        
+
+
+private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {
             _texturesSortManager?.HandleSorting(e);
+            isSorting = _texturesSortManager?.IsSorting ?? false;
         }
 
         private void ModelsDataGrid_Sorting(object? sender, DataGridSortingEventArgs e) {

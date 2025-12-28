@@ -896,12 +896,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             OptimizeDataGridSorting(MaterialsDataGrid, e);
         }
 
-        private (DataGridColumn? Column, ListSortDirection Direction) _lastSort;
+        private readonly Dictionary<DataGrid, (string Header, ListSortDirection Dir)> _gridSortState = new();
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
             if (e.Column == null) return;
 
-            // Get sort path (SortMemberPath or Binding path)
             string sortPath = e.Column.SortMemberPath;
             if (string.IsNullOrEmpty(sortPath) && e.Column is DataGridBoundColumn bc && bc.Binding is Binding b)
                 sortPath = b.Path?.Path ?? "";
@@ -909,28 +908,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             e.Handled = true;
 
-            // Toggle: if same column, flip direction; otherwise start with Ascending
-            ListSortDirection newDirection;
-            if (_lastSort.Column == e.Column) {
-                newDirection = _lastSort.Direction == ListSortDirection.Ascending
+            string header = e.Column.Header?.ToString() ?? "";
+
+            // Get current state for this grid
+            ListSortDirection newDir;
+            if (_gridSortState.TryGetValue(dataGrid, out var state) && state.Header == header) {
+                // Same column - toggle
+                newDir = state.Dir == ListSortDirection.Ascending
                     ? ListSortDirection.Descending
                     : ListSortDirection.Ascending;
             } else {
-                newDirection = ListSortDirection.Ascending;
+                // Different column - start ascending
+                newDir = ListSortDirection.Ascending;
             }
-            _lastSort = (e.Column, newDirection);
+            _gridSortState[dataGrid] = (header, newDir);
 
-            // Clear all column indicators
+            // Clear indicators
             foreach (var col in dataGrid.Columns)
                 col.SortDirection = null;
 
-            // Apply sorting
-            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
-                listView.CustomSort = new ResourceComparer(sortPath, newDirection);
+            // Sort
+            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView lv) {
+                lv.CustomSort = new ResourceComparer(sortPath, newDir);
             }
 
-            // Set indicator
-            e.Column.SortDirection = newDirection;
+            // Show indicator
+            e.Column.SortDirection = newDir;
         }
 
 #endregion

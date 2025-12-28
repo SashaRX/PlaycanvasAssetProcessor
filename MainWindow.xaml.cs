@@ -76,8 +76,9 @@ namespace AssetProcessor {
         private const double MinPreviewContentHeight = 128.0;
         private const double MaxPreviewContentHeight = double.PositiveInfinity;
         private const double DefaultPreviewContentHeight = 300.0;
-        private bool isSorting = false; // ���� ��� ������������ �������� ����������
-        private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // ������������ PresetManager ��� ��������� �������� ������ ��� ������ �������������
+        private bool isSorting = false; // Флаг для предотвращения повторной сортировки
+        private readonly Dictionary<DataGridColumn, ListSortDirection> _columnSortDirections = new(); // Храним состояние сортировки независимо от WPF
+        private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для ускорения загрузки данных
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
@@ -924,9 +925,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending
-                    ? ListSortDirection.Descending
-                    : ListSortDirection.Ascending;
+                // Используем свой словарь для отслеживания направления сортировки
+                // вместо column.SortDirection, который может сбрасываться WPF
+                ListSortDirection direction;
+                if (_columnSortDirections.TryGetValue(e.Column, out var currentDirection)) {
+                    // Переключаем направление
+                    direction = currentDirection == ListSortDirection.Ascending
+                        ? ListSortDirection.Descending
+                        : ListSortDirection.Ascending;
+                } else {
+                    // Первый клик - сортируем по возрастанию
+                    direction = ListSortDirection.Ascending;
+                }
 
                 string sortMemberPath = e.Column.SortMemberPath;
                 if (string.IsNullOrEmpty(sortMemberPath)) {
@@ -943,13 +953,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 isSorting = true;
 
                 try {
-                    // Set SortDirection BEFORE Refresh to ensure correct state for next click
+                    // Сохраняем направление в нашем словаре
+                    _columnSortDirections[e.Column] = direction;
+
+                    // Устанавливаем визуальный индикатор на колонке
                     e.Column.SortDirection = direction;
 
-                    // Clear other columns' sort direction
+                    // Очищаем другие колонки
                     foreach (var column in dataGrid.Columns) {
                         if (column != e.Column) {
                             column.SortDirection = null;
+                            _columnSortDirections.Remove(column);
                         }
                     }
 

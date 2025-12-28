@@ -903,81 +903,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            try {
-                if (dataGrid == null || e == null || e.Column == null) {
-                    return;
-                }
-
-                // Prevent re-entry during sorting
-                if (isSorting) {
-                    e.Handled = true;
-                    return;
-                }
-
-                e.Handled = true;
-
-                if (dataGrid.ItemsSource == null) {
-                    return;
-                }
-
-                ICollectionView dataView = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-                if (dataView == null) {
-                    return;
-                }
-
-                // Используем свой словарь для отслеживания направления сортировки
-                ListSortDirection direction;
-                if (_columnSortDirections.TryGetValue(e.Column, out var currentDirection)) {
-                    direction = currentDirection == ListSortDirection.Ascending
-                        ? ListSortDirection.Descending
-                        : ListSortDirection.Ascending;
-                } else {
-                    direction = ListSortDirection.Ascending;
-                }
-
-                string sortMemberPath = e.Column.SortMemberPath;
-                if (string.IsNullOrEmpty(sortMemberPath)) {
-                    if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is Binding binding) {
-                        sortMemberPath = binding.Path?.Path ?? "";
-                    }
-
-                    if (string.IsNullOrEmpty(sortMemberPath)) {
-                        e.Handled = false;
-                        return;
-                    }
-                }
-
-                isSorting = true;
-
-                try {
-                    // Сохраняем направление в нашем словаре
-                    _columnSortDirections[e.Column] = direction;
-
-                    // Устанавливаем визуальный индикатор на колонке
-                    e.Column.SortDirection = direction;
-
-                    // Очищаем другие колонки
-                    foreach (var column in dataGrid.Columns) {
-                        if (column != e.Column) {
-                            column.SortDirection = null;
-                            _columnSortDirections.Remove(column);
-                        }
-                    }
-
-                    // Используем стандартный подход WPF с SortDescriptions
-                    using (dataView.DeferRefresh()) {
-                        dataView.SortDescriptions.Clear();
-                        dataView.SortDescriptions.Add(new SortDescription(sortMemberPath, direction));
-                    }
-                } finally {
-                    isSorting = false;
-                }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in OptimizeDataGridSorting");
-                logService.LogError($"Error in OptimizeDataGridSorting: {ex.Message}");
-                e.Handled = false;
-                isSorting = false;
-            }
+            // Пусть WPF сам обрабатывает сортировку - не перехватываем событие
+            // e.Handled = false по умолчанию
         }
 
 #endregion

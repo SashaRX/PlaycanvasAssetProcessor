@@ -157,13 +157,16 @@ namespace AssetProcessor {
             switch (result.ResultType) {
                 case AssetProcessingResultType.Texture when result.Resource is TextureResource texture:
                     viewModel.Textures.Add(texture);
+                    viewModel.Assets.Add(texture);
                     UpdateTextureProgress();
                     break;
                 case AssetProcessingResultType.Model when result.Resource is ModelResource model:
                     viewModel.Models.Add(model);
+                    viewModel.Assets.Add(model);
                     break;
                 case AssetProcessingResultType.Material when result.Resource is MaterialResource material:
                     viewModel.Materials.Add(material);
+                    viewModel.Assets.Add(material);
                     break;
             }
         }
@@ -216,6 +219,7 @@ namespace AssetProcessor {
             viewModel.Textures.Clear();
             viewModel.Models.Clear();
             viewModel.Materials.Clear();
+            viewModel.Assets.Clear();
 
             List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
             int assetCount = supportedAssets.Count;
@@ -255,8 +259,14 @@ namespace AssetProcessor {
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
             DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
 
+            // Сканируем KTX2 файлы для получения информации о компрессии
+            ScanKtx2InfoForAllTextures();
+
             // Детектируем и загружаем локальные ORM текстуры
             await DetectAndLoadORMTextures();
+
+            // Start watching project folder for file deletions
+            StartFileWatcher();
         }
 
         /// <summary>
@@ -329,15 +339,18 @@ namespace AssetProcessor {
                             if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
                                 ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
                                 ormTexture.MipmapCount = ktxInfo.MipLevels;
-                                // Set compression format from KTX2 header
-                                ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
-                                    ? TextureConversion.Core.CompressionFormat.UASTC
-                                    : TextureConversion.Core.CompressionFormat.ETC1S;
-                                logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, {ktxInfo.CompressionFormat}");
+                                // Set compression format from KTX2 header only if it's Basis Universal
+                                if (!string.IsNullOrEmpty(ktxInfo.CompressionFormat)) {
+                                    ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
+                                        ? TextureConversion.Core.CompressionFormat.UASTC
+                                        : TextureConversion.Core.CompressionFormat.ETC1S;
+                                    logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, {ktxInfo.CompressionFormat}");
+                                } else {
+                                    logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, (no Basis compression)");
+                                }
                             }
                         } catch (Exception ex) {
                             logService.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
-                            ormTexture.CompressionFormat = TextureConversion.Core.CompressionFormat.ETC1S; // Default fallback
                         }
                     }
 

@@ -317,19 +317,20 @@
                                 CanUserResizeColumns="True"
                                 CanUserReorderColumns="True"
                                 Background="#FFD6D6D6"
+                                RowHeight="16"
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                 VirtualizingPanel.ScrollUnit="Pixel"
+                                VirtualizingPanel.CacheLength="100"
+                                VirtualizingPanel.CacheLengthUnit="Item"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
-                                ScrollViewer.CanContentScroll="True">
-                            <DataGrid.RenderTransform>
+                                ScrollViewer.CanContentScroll="True"
+                                ScrollViewer.IsDeferredScrollingEnabled="False">
+                            <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
-                            </DataGrid.RenderTransform>
-                            <DataGrid.RenderTransformOrigin>
-                                <Point X="0" Y="0"/>
-                            </DataGrid.RenderTransformOrigin>
+                            </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureColumnHeaderContextMenu}"/>
@@ -341,11 +342,6 @@
                                     <!-- RowBackground computed in ViewModel - single binding instead of 6 DataTriggers -->
                                     <Setter Property="Background" Value="{Binding RowBackground}"/>
                                     <Style.Triggers>
-                                        <!-- ORM texture border -->
-                                        <DataTrigger Binding="{Binding IsORMTexture}" Value="True">
-                                            <Setter Property="BorderBrush" Value="#A04070"/>
-                                            <Setter Property="BorderThickness" Value="2,0,2,0"/>
-                                        </DataTrigger>
                                         <!-- Selection override (highest priority) -->
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter Property="Background" Value="#3399FF"/>
@@ -369,7 +365,14 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
-                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="200" MinWidth="100"/>
+                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="200" MinWidth="30">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="ToolTip" Value="{Binding Name}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="70" MinWidth="50"/>
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="80" MinWidth="60" SortMemberPath="Size"/>
                                 <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="90" MinWidth="70" SortMemberPath="CompressedSize"/>
@@ -377,7 +380,14 @@
                                 <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="120" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>
                                 <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="100" MinWidth="80"/>
                                 <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="70" MinWidth="60"/>
-                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="120" MinWidth="90"/>
+                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="120" MinWidth="30">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="ToolTip" Value="{Binding PresetName}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -456,19 +466,20 @@
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
+                              RowHeight="16"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               VirtualizingPanel.ScrollUnit="Pixel"
+                              VirtualizingPanel.CacheLength="100"
+                              VirtualizingPanel.CacheLengthUnit="Item"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
-                              ScrollViewer.CanContentScroll="True">
-                            <DataGrid.RenderTransform>
+                              ScrollViewer.CanContentScroll="True"
+                              ScrollViewer.IsDeferredScrollingEnabled="False">
+                            <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
-                            </DataGrid.RenderTransform>
-                            <DataGrid.RenderTransformOrigin>
-                                <Point X="0" Y="0"/>
-                            </DataGrid.RenderTransformOrigin>
+                            </DataGrid.LayoutTransform>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
@@ -496,7 +507,14 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
                                 <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="80" MinWidth="60" />
-                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="250" MinWidth="120"/>
+                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="250" MinWidth="30">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="ToolTip" Value="{Binding Name}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60" SortMemberPath="Size"/>
                                 <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100" MinWidth="80"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="80" MinWidth="60"/>
@@ -542,19 +560,20 @@
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
                               Background="#FFD6D6D6"
+                              RowHeight="16"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               VirtualizingPanel.ScrollUnit="Pixel"
+                              VirtualizingPanel.CacheLength="100"
+                              VirtualizingPanel.CacheLengthUnit="Item"
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
-                              ScrollViewer.CanContentScroll="True">
-                        <DataGrid.RenderTransform>
+                              ScrollViewer.CanContentScroll="True"
+                              ScrollViewer.IsDeferredScrollingEnabled="False">
+                        <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
-                        </DataGrid.RenderTransform>
-                        <DataGrid.RenderTransformOrigin>
-                            <Point X="0" Y="0"/>
-                        </DataGrid.RenderTransformOrigin>
+                        </DataGrid.LayoutTransform>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>
@@ -591,7 +610,14 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40"/>
                             <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="300" MinWidth="150"/>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="300" MinWidth="30">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding Name}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                             <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

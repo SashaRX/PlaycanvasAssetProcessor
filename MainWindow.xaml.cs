@@ -79,6 +79,9 @@ namespace AssetProcessor {
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для ускорения загрузки данных
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
+        private FileSystemWatcher? projectFileWatcher; // Monitors project folder for file deletions
+        private readonly ConcurrentQueue<string> pendingDeletedPaths = new(); // Queue of paths to process
+        private int fileWatcherRefreshPending; // 0 = no refresh pending, 1 = refresh scheduled
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -321,6 +324,9 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Yield immediately to let UI respond (context menu, etc.)
+            await Task.Yield();
+
             logService.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
 
             // Update selection count in central control box
@@ -897,31 +903,46 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Only handle columns with SortMemberPath (Resolution, Size, etc.)
-            // Let WPF handle all other columns natively
-            if (e.Column == null || string.IsNullOrEmpty(e.Column.SortMemberPath)) {
-                return; // Let WPF handle it
-            }
+            if (e.Column == null) return;
 
             e.Handled = true;
-            string sortPath = e.Column.SortMemberPath;
+            var column = e.Column;
 
-            // Toggle direction based on current column state
-            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
+            // Get sort property
+            string sortPath = column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortPath)) {
+                if (column is DataGridBoundColumn boundCol && boundCol.Binding is Binding binding) {
+                    sortPath = binding.Path.Path;
+                }
+            }
+            if (string.IsNullOrEmpty(sortPath)) {
+                sortPath = column.Header?.ToString() ?? "";
+            }
+            if (string.IsNullOrEmpty(sortPath)) return;
+
+            // Read current state
+            var currentDir = column.SortDirection;
+
+            // Toggle
+            var newDir = (currentDir == ListSortDirection.Ascending)
                 ? ListSortDirection.Descending
                 : ListSortDirection.Ascending;
 
-            // Clear other columns BEFORE sorting
-            foreach (var col in dataGrid.Columns)
-                col.SortDirection = null;
+            // Clear other columns
+            foreach (var col in dataGrid.Columns) {
+                if (col != column)
+                    col.SortDirection = null;
+            }
 
-            // Set direction BEFORE CustomSort
-            e.Column.SortDirection = newDir;
-
-            // Use CustomSort with ResourceComparer (handles nulls)
+            // Apply CustomSort (SortDescriptions doesn't work with our types)
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
             }
+
+            // Set arrow via Dispatcher to ensure it happens after WPF processing
+            Dispatcher.BeginInvoke(new Action(() => {
+                column.SortDirection = newDir;
+            }), System.Windows.Threading.DispatcherPriority.Render);
         }
 
 #endregion
@@ -944,59 +965,27 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// ���������� ��������� �������� ������ - ������������� ��������� layout ��� ����������� ���������� �������
+        /// Scale slider changed - force star columns to recalculate
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            // ������������� ��������� layout DataGrid-�� ��� ��������� Width="*" ������� ��� ��������� ScaleTransform
-            ForceDataGridReflow(TexturesDataGrid);
-            ForceDataGridReflow(ModelsDataGrid);
-            ForceDataGridReflow(MaterialsDataGrid);
+            RefreshStarColumns(TexturesDataGrid);
+            RefreshStarColumns(ModelsDataGrid);
+            RefreshStarColumns(MaterialsDataGrid);
         }
 
         /// <summary>
-        /// ������������� layout DataGrid � ������ ScaleTransform, ������������� �������� "���������" �������.
+        /// Force star-width columns to recalculate by toggling their width
         /// </summary>
-        private static void ForceDataGridReflow(DataGrid? dataGrid) {
-            if (dataGrid == null || !dataGrid.IsLoaded) {
-                return;
+        private static void RefreshStarColumns(DataGrid? dataGrid) {
+            if (dataGrid == null || !dataGrid.IsLoaded) return;
+
+            foreach (var col in dataGrid.Columns) {
+                if (col.Width.IsStar) {
+                    var starValue = col.Width.Value;
+                    col.Width = new DataGridLength(0, DataGridLengthUnitType.Auto);
+                    col.Width = new DataGridLength(starValue, DataGridLengthUnitType.Star);
+                }
             }
-
-            dataGrid.Dispatcher.InvokeAsync(() => {
-                // ���������� ���������, ����� ����� ScaleTransform ��������� ������������ ��������� ������������
-                dataGrid.InvalidateMeasure();
-                dataGrid.InvalidateArrange();
-                dataGrid.UpdateLayout();
-
-                var starColumns = dataGrid.Columns
-                    .Where(c => c.Visibility == Visibility.Visible && c.Width.IsStar)
-                    .Select(c => new {
-                        Column = c,
-                        StarValue = c.Width.Value,
-                        DisplayIndex = c.DisplayIndex
-                    })
-                    .ToList();
-
-                if (starColumns.Count == 0) {
-                    return;
-                }
-
-                // ��������� �������� "���������" ������� � ���������� �� ������� �
-                // ��� ��������� ������ workaround (������/�������� �������),
-                // ������� �������������� ���������� DataGrid ����������� ������� ����� � �����.
-                foreach (var entry in starColumns) {
-                    entry.Column.Visibility = Visibility.Collapsed;
-                }
-
-                dataGrid.UpdateLayout();
-
-                foreach (var entry in starColumns) {
-                    entry.Column.Visibility = Visibility.Visible;
-                    entry.Column.DisplayIndex = entry.DisplayIndex;
-                    entry.Column.Width = new DataGridLength(entry.StarValue, DataGridLengthUnitType.Star);
-                }
-
-                dataGrid.UpdateLayout();
-            }, DispatcherPriority.Background);
         }
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
@@ -1499,6 +1488,90 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }, DispatcherPriority.Loaded);
         }
 
+        /// <summary>
+        /// Scans all textures for existing KTX2 files and populates CompressionFormat, MipmapCount, and CompressedSize.
+        /// Runs in background to avoid blocking UI.
+        /// </summary>
+        private void ScanKtx2InfoForAllTextures() {
+            // Take a snapshot of textures to process
+            var texturesToScan = viewModel.Textures.Where(t =>
+                !string.IsNullOrEmpty(t.Path) &&
+                t.CompressedSize == 0 &&
+                !(t is ORMTextureResource)).ToList();
+
+            if (texturesToScan.Count == 0) {
+                return;
+            }
+
+            logger.Info($"ScanKtx2InfoForAllTextures: Scanning {texturesToScan.Count} textures for KTX2 info");
+
+            Task.Run(() => {
+                int foundCount = 0;
+
+                foreach (var texture in texturesToScan) {
+                    try {
+                        if (string.IsNullOrEmpty(texture.Path)) continue;
+
+                        var sourceDir = Path.GetDirectoryName(texture.Path);
+                        var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
+
+                        if (string.IsNullOrEmpty(sourceDir) || string.IsNullOrEmpty(sourceFileName)) continue;
+
+                        // Check for .ktx2 file
+                        var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
+                        if (File.Exists(ktx2Path)) {
+                            var fileInfo = new FileInfo(ktx2Path);
+                            int mipLevels = 0;
+                            string? compressionFormat = null;
+
+                            try {
+                                using var stream = File.OpenRead(ktx2Path);
+                                using var reader = new BinaryReader(stream);
+                                // KTX2 header structure:
+                                // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
+                                // Bytes 40-43: levelCount (uint32)
+                                // Bytes 44-47: supercompressionScheme (uint32)
+                                reader.BaseStream.Seek(12, SeekOrigin.Begin);
+                                uint vkFormat = reader.ReadUInt32();
+
+                                reader.BaseStream.Seek(40, SeekOrigin.Begin);
+                                mipLevels = (int)reader.ReadUInt32();
+                                uint supercompression = reader.ReadUInt32();
+
+                                // Only set compression format for Basis Universal textures (vkFormat = 0)
+                                if (vkFormat == 0) {
+                                    // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                    compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                                }
+                                // vkFormat != 0 means raw texture format, no Basis compression
+                            } catch {
+                                // Ignore header read errors
+                            }
+
+                            // Update texture on UI thread
+                            Dispatcher.InvokeAsync(() => {
+                                texture.CompressedSize = fileInfo.Length;
+                                if (mipLevels > 0) {
+                                    texture.MipmapCount = mipLevels;
+                                }
+                                if (compressionFormat != null) {
+                                    texture.CompressionFormat = compressionFormat;
+                                }
+                            });
+
+                            foundCount++;
+                        }
+                    } catch {
+                        // Ignore errors for individual textures
+                    }
+                }
+
+                if (foundCount > 0) {
+                    logger.Info($"ScanKtx2InfoForAllTextures: Found KTX2 info for {foundCount} textures");
+                }
+            });
+        }
+
         private bool IsSupportedTextureFormat(string extension) {
             return supportedFormats.Contains(extension) && !excludedFormats.Contains(extension);
         }
@@ -1619,14 +1692,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 DynamicConnectionButton.IsEnabled = false;
 
-                bool hasUpdates = await CheckForUpdates();
+                // Re-scan file statuses to detect deleted files
+                RescanFileStatuses();
 
-                if (hasUpdates) {
-                    // ���� ���������� - ����������� �� ������ Download
+                bool hasUpdates = await CheckForUpdates();
+                bool hasMissingFiles = HasMissingFiles();
+
+                if (hasUpdates || hasMissingFiles) {
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    MessageBox.Show("Updates available! Click Download to get them.", "Updates Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                    string message = hasUpdates && hasMissingFiles
+                        ? "Updates available and missing files found! Click Download to get them."
+                        : hasUpdates
+                            ? "Updates available! Click Download to get them."
+                            : $"Missing files found! Click Download to get them.";
+                    MessageBox.Show(message, "Download Required", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
-                    // ���������� ���
                     MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             } catch (Exception ex) {
@@ -1638,7 +1718,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// ��������� ������ ������� � ������� + ��������� ��� ����� (Download button)
+        /// Downloads missing files (Download button)
+        /// Only syncs from server if there are actual server updates (hash changed)
         /// </summary>
         private async Task DownloadFromServer() {
             try {
@@ -1648,27 +1729,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
-                    // ��������� ������ ������� (assets_list.json) � �������
-                    logger.Info("DownloadFromServer: Loading assets list from server");
-                    logService.LogInfo("DownloadFromServer: Loading assets list from server");
-                    await TryConnect(cancellationTokenSource.Token);
+                    // Check if there are actual server updates (not just missing local files)
+                    bool hasServerUpdates = await CheckForUpdates();
 
-                    // ������ ��������� ����� (��������, ������, ���������)
+                    if (hasServerUpdates) {
+                        // Server has new/changed assets - need to sync the list first
+                        logger.Info("DownloadFromServer: Server has updates, syncing assets list");
+                        logService.LogInfo("DownloadFromServer: Server has updates, syncing assets list");
+                        await TryConnect(cancellationTokenSource.Token);
+                    } else {
+                        logger.Info("DownloadFromServer: No server updates, downloading missing files only");
+                        logService.LogInfo("DownloadFromServer: No server updates, downloading missing files only");
+                    }
+
+                    // Download files (textures, models, materials)
                     logger.Info("DownloadFromServer: Starting file downloads");
                     logService.LogInfo("DownloadFromServer: Starting file downloads");
                     await Download(null, null);
                     logger.Info("DownloadFromServer: File downloads completed");
                     logService.LogInfo("DownloadFromServer: File downloads completed");
 
-                    // ����� �������� �������� ��������� ������ ������ ��� ������������ ������
-                    // �� �������� CheckProjectState(), ��� ��� �� ������������ ������ �� JSON � ������� �������
-                    // ������ ����� ������ ��������� ������� ���������� �� �������
-                    logger.Info("DownloadFromServer: Checking for updates on server after download");
-                    logService.LogInfo("DownloadFromServer: Checking for updates on server after download");
-                    bool hasUpdates = await CheckForUpdates();
-                    
-                    if (hasUpdates) {
-                        logger.Info("DownloadFromServer: Updates still available - setting button to Download");
+                    // Check final state
+                    bool stillHasUpdates = await CheckForUpdates();
+                    bool stillHasMissingFiles = HasMissingFiles();
+
+                    if (stillHasUpdates || stillHasMissingFiles) {
+                        logger.Info("DownloadFromServer: Still has updates or missing files - keeping Download button");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     } else {
                         logger.Info("DownloadFromServer: Project is up to date - setting button to Refresh");
@@ -1676,7 +1762,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     }
                     logger.Info("DownloadFromServer: Button state updated");
-                    logService.LogInfo("DownloadFromServer: Button state updated");
                 } else {
                     logger.Warn("DownloadFromServer: cancellationTokenSource is null!");
                     logService.LogError("DownloadFromServer: cancellationTokenSource is null!");
@@ -1779,9 +1864,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info("CheckProjectState: Checking for updates on server");
                 bool hasUpdates = await CheckForUpdates();
 
-                if (hasUpdates) {
-                    logger.Info("CheckProjectState: Updates available on server - setting button to Download");
-                    logService.LogInfo("CheckProjectState: Updates available on server");
+                // Also check for missing files locally (status "On Server" means file doesn't exist)
+                bool hasMissingFiles = HasMissingFiles();
+
+                if (hasUpdates || hasMissingFiles) {
+                    string reason = hasUpdates && hasMissingFiles
+                        ? "updates available and missing files"
+                        : hasUpdates ? "updates available on server" : "missing files locally";
+                    logger.Info($"CheckProjectState: {reason} - setting button to Download");
+                    logService.LogInfo($"CheckProjectState: {reason}");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
                     logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
@@ -1793,6 +1884,235 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logService.LogError($"Error checking project state: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
+        }
+
+        /// <summary>
+        /// Re-scans all assets to check if local files exist and updates their status.
+        /// Call this before HasMissingFiles() to detect deleted files.
+        /// </summary>
+        private void RescanFileStatuses() {
+            int updatedCount = 0;
+            int checkedCount = 0;
+            int missingFilesCount = 0;
+
+            // Statuses that indicate file was previously downloaded/exists locally
+            HashSet<string> localStatuses = new(StringComparer.OrdinalIgnoreCase) {
+                "Downloaded", "Converted", "Size Mismatch", "Hash ERROR", "Empty File"
+            };
+
+            logger.Info($"RescanFileStatuses: Starting scan, {viewModel.Textures.Count} textures, {viewModel.Models.Count} models");
+
+            foreach (var texture in viewModel.Textures) {
+                if (texture is ORMTextureResource) continue;
+                if (string.IsNullOrEmpty(texture.Path)) continue;
+
+                checkedCount++;
+                string? currentStatus = texture.Status;
+                bool fileExists = File.Exists(texture.Path);
+                bool isLocalStatus = localStatuses.Contains(currentStatus ?? "");
+
+                if (!fileExists) {
+                    missingFilesCount++;
+                    logger.Info($"  Missing file: '{texture.Name}', status='{currentStatus}', isLocalStatus={isLocalStatus}, path={texture.Path}");
+                }
+
+                // If status indicates file should exist locally but it doesn't, update to "On Server"
+                if (isLocalStatus && !fileExists) {
+                    logger.Info($"  -> Updating '{texture.Name}' from '{currentStatus}' to 'On Server'");
+                    texture.Status = "On Server";
+                    texture.CompressedSize = 0;
+                    texture.CompressionFormat = null;
+                    texture.MipmapCount = 0;
+                    updatedCount++;
+                }
+            }
+
+            foreach (var model in viewModel.Models) {
+                if (string.IsNullOrEmpty(model.Path)) continue;
+
+                checkedCount++;
+                string? currentStatus = model.Status;
+                bool fileExists = File.Exists(model.Path);
+                bool isLocalStatus = localStatuses.Contains(currentStatus ?? "");
+
+                if (!fileExists) {
+                    missingFilesCount++;
+                    logger.Info($"  Missing model: '{model.Name}', status='{currentStatus}', isLocalStatus={isLocalStatus}, path={model.Path}");
+                }
+
+                if (isLocalStatus && !fileExists) {
+                    logger.Info($"  -> Updating '{model.Name}' from '{currentStatus}' to 'On Server'");
+                    model.Status = "On Server";
+                    updatedCount++;
+                }
+            }
+
+            logger.Info($"RescanFileStatuses: Checked {checkedCount} assets, {missingFilesCount} missing files, updated {updatedCount} to 'On Server'");
+            if (updatedCount > 0) {
+                logService.LogInfo($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
+            }
+            // Always refresh UI to ensure statuses are displayed correctly
+            TexturesDataGrid?.Items.Refresh();
+            ModelsDataGrid?.Items.Refresh();
+        }
+
+        /// <summary>
+        /// Starts watching the project folder for file deletions.
+        /// Call when project is loaded/connected.
+        /// </summary>
+        private void StartFileWatcher() {
+            StopFileWatcher(); // Stop existing watcher if any
+
+            if (string.IsNullOrEmpty(ProjectFolderPath) || !Directory.Exists(ProjectFolderPath)) {
+                return;
+            }
+
+            try {
+                projectFileWatcher = new FileSystemWatcher(ProjectFolderPath) {
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.FileName,
+                    EnableRaisingEvents = true
+                };
+
+                projectFileWatcher.Deleted += OnProjectFileDeleted;
+                projectFileWatcher.Renamed += OnProjectFileRenamed;
+
+                logger.Info($"FileWatcher started for: {ProjectFolderPath}");
+            } catch (Exception ex) {
+                logger.Error(ex, "Failed to start FileSystemWatcher");
+            }
+        }
+
+        /// <summary>
+        /// Stops the file watcher. Call when project is unloaded or window closes.
+        /// </summary>
+        private void StopFileWatcher() {
+            if (projectFileWatcher != null) {
+                projectFileWatcher.EnableRaisingEvents = false;
+                projectFileWatcher.Deleted -= OnProjectFileDeleted;
+                projectFileWatcher.Renamed -= OnProjectFileRenamed;
+                projectFileWatcher.Dispose();
+                projectFileWatcher = null;
+                logger.Info("FileWatcher stopped");
+            }
+        }
+
+        /// <summary>
+        /// Handles file deletion events from FileSystemWatcher.
+        /// Queues the path and schedules a debounced refresh.
+        /// </summary>
+        private void OnProjectFileDeleted(object sender, FileSystemEventArgs e) {
+            pendingDeletedPaths.Enqueue(e.FullPath);
+            ScheduleFileWatcherRefresh();
+        }
+
+        /// <summary>
+        /// Handles file rename events (moving to trash also triggers this).
+        /// </summary>
+        private void OnProjectFileRenamed(object sender, RenamedEventArgs e) {
+            pendingDeletedPaths.Enqueue(e.OldFullPath);
+            ScheduleFileWatcherRefresh();
+        }
+
+        /// <summary>
+        /// Schedules a debounced refresh after file system changes.
+        /// Only one refresh will occur even if many files are deleted.
+        /// </summary>
+        private void ScheduleFileWatcherRefresh() {
+            // Use Interlocked to ensure only one refresh is scheduled
+            if (Interlocked.CompareExchange(ref fileWatcherRefreshPending, 1, 0) == 0) {
+                // Schedule refresh after 500ms delay
+                Task.Delay(500).ContinueWith(_ => {
+                    Dispatcher.InvokeAsync(() => {
+                        ProcessPendingDeletedFiles();
+                    });
+                });
+            }
+        }
+
+        /// <summary>
+        /// Processes all pending deleted files and updates asset statuses.
+        /// Called once after debounce delay.
+        /// </summary>
+        private void ProcessPendingDeletedFiles() {
+            // Reset the pending flag
+            Interlocked.Exchange(ref fileWatcherRefreshPending, 0);
+
+            int updatedCount = 0;
+            HashSet<string> processedPaths = new(StringComparer.OrdinalIgnoreCase);
+
+            // Drain the queue
+            while (pendingDeletedPaths.TryDequeue(out string? deletedPath)) {
+                if (deletedPath == null || processedPaths.Contains(deletedPath)) continue;
+                processedPaths.Add(deletedPath);
+
+                // Check textures
+                foreach (var texture in viewModel.Textures) {
+                    if (texture is ORMTextureResource) continue;
+                    if (string.Equals(texture.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
+                        texture.Status = "On Server";
+                        texture.CompressedSize = 0;
+                        texture.CompressionFormat = null;
+                        texture.MipmapCount = 0;
+                        updatedCount++;
+                        break;
+                    }
+                }
+
+                // Check models
+                foreach (var model in viewModel.Models) {
+                    if (string.Equals(model.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
+                        model.Status = "On Server";
+                        updatedCount++;
+                        break;
+                    }
+                }
+            }
+
+            if (updatedCount > 0) {
+                logger.Info($"FileWatcher: Updated {updatedCount} assets to 'On Server'");
+
+                // Single refresh after all updates
+                TexturesDataGrid?.Items.Refresh();
+                ModelsDataGrid?.Items.Refresh();
+
+                // Update connection button state
+                if (HasMissingFiles()) {
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if any assets have status indicating they need to be downloaded.
+        /// This catches cases where files were deleted locally but assets_list.json hasn't changed.
+        /// </summary>
+        private bool HasMissingFiles() {
+            // Statuses that indicate file needs downloading
+            HashSet<string> downloadableStatuses = new(StringComparer.OrdinalIgnoreCase) {
+                "On Server", "Error", "Size Mismatch", "Corrupted", "Empty File", "Hash ERROR"
+            };
+
+            int missingCount = 0;
+
+            foreach (var texture in viewModel.Textures) {
+                if (texture is not ORMTextureResource && downloadableStatuses.Contains(texture.Status ?? "")) {
+                    missingCount++;
+                }
+            }
+
+            foreach (var model in viewModel.Models) {
+                if (downloadableStatuses.Contains(model.Status ?? "")) {
+                    missingCount++;
+                }
+            }
+
+            if (missingCount > 0) {
+                logger.Info($"HasMissingFiles: Found {missingCount} assets needing download");
+                logService.LogInfo($"HasMissingFiles: Found {missingCount} assets needing download");
+            }
+
+            return missingCount > 0;
         }
 
         private async Task<bool> CheckForUpdates() {
@@ -1864,6 +2184,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             try {
+                // Stop file watcher
+                StopFileWatcher();
+
                 // ������������� billboard ����������
                 StopBillboardUpdate();
 
@@ -2140,7 +2463,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 var compression = ConversionSettingsPanel.GetCompressionSettings();
                 var mipProfile = ConversionSettingsPanel.GetMipProfileSettings();
 
-                texture.CompressionFormat = compression.CompressionFormat.ToString();
+                // Don't update CompressionFormat here - it shows actual compression from KTX2 file,
+                // not the intended settings from the UI panel
                 texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
 
                 logService.LogInfo($"Updated conversion settings for {texture.Name}");
@@ -2204,7 +2528,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
 
                 ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
-                texture.CompressionFormat = compression.CompressionFormat.ToString();
+                // Don't override CompressionFormat if already set from KTX2 scan
+                // CompressionFormat shows actual compression, not intended settings
             }
         }
 
@@ -2217,7 +2542,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MapTextureTypeToCore(textureType));
             var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
 
-            texture.CompressionFormat = compression.CompressionFormat.ToString();
+            // CompressionFormat is only set when texture is actually compressed
+            // (from KTX2 metadata or after compression process)
 
             // Auto-detect preset by filename if not already set
             // ���������� ������������ PresetManager ��� ��������� �������� ������ ��� ������ �������������
@@ -2252,12 +2578,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                         try {
                                             using var stream = File.OpenRead(ktx2Path);
                                             using var reader = new BinaryReader(stream);
-                                            // KTX2 header: levelCount at offset 40, supercompressionScheme at offset 44
+                                            // KTX2 header structure:
+                                            // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
+                                            // Bytes 40-43: levelCount (uint32)
+                                            // Bytes 44-47: supercompressionScheme (uint32)
+                                            reader.BaseStream.Seek(12, SeekOrigin.Begin);
+                                            uint vkFormat = reader.ReadUInt32();
+
                                             reader.BaseStream.Seek(40, SeekOrigin.Begin);
                                             mipLevels = (int)reader.ReadUInt32();
                                             uint supercompression = reader.ReadUInt32();
-                                            // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
-                                            compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+
+                                            // Only set compression format for Basis Universal textures (vkFormat = 0)
+                                            if (vkFormat == 0) {
+                                                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                                compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                                            }
+                                            // vkFormat != 0 means raw texture format, no Basis compression
                                         } catch {
                                             // Ignore header read errors
                                         }
@@ -2822,7 +3159,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // KTX2 header structure:
                 // Bytes 0-11: identifier (12 bytes) - skip
-                // Bytes 12-15: vkFormat (uint32) - skip
+                // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
                 // Bytes 16-19: typeSize (uint32) - skip
                 // Bytes 20-23: pixelWidth (uint32)
                 // Bytes 24-27: pixelHeight (uint32)
@@ -2832,6 +3169,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Bytes 40-43: levelCount (uint32)
                 // Bytes 44-47: supercompressionScheme (uint32)
 
+                reader.BaseStream.Seek(12, SeekOrigin.Begin);
+                uint vkFormat = reader.ReadUInt32();
+
                 reader.BaseStream.Seek(20, SeekOrigin.Begin);
                 int width = (int)reader.ReadUInt32();
                 int height = (int)reader.ReadUInt32();
@@ -2839,8 +3179,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 reader.BaseStream.Seek(40, SeekOrigin.Begin);
                 int mipLevels = (int)reader.ReadUInt32();
                 uint supercompression = reader.ReadUInt32();
-                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
-                string compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+
+                // Only set compression format for Basis Universal textures (vkFormat = 0)
+                string compressionFormat = "";
+                if (vkFormat == 0) {
+                    // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                    compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                }
+                // vkFormat != 0 means raw texture format, no Basis compression
 
                 return (width, height, mipLevels, compressionFormat);
             });
@@ -2879,19 +3225,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void OpenFileLocation_Click(object sender, RoutedEventArgs e) {
             if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
-                try {
-                    var directory = System.IO.Path.GetDirectoryName(texture.Path);
-                    if (!string.IsNullOrEmpty(directory) && System.IO.Directory.Exists(directory)) {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
-                            FileName = directory,
-                            UseShellExecute = true
-                        });
+                OpenFileInExplorer(texture.Path);
+            }
+        }
+
+        /// <summary>
+        /// Opens Windows Explorer and selects the specified file.
+        /// </summary>
+        private void OpenFileInExplorer(string filePath) {
+            try {
+                if (File.Exists(filePath)) {
+                    // Use /select to highlight the file in Explorer
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                } else {
+                    // File doesn't exist, try to open the directory
+                    var directory = Path.GetDirectoryName(filePath);
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
+                        System.Diagnostics.Process.Start("explorer.exe", $"\"{directory}\"");
                     } else {
-                        MessageBox.Show("Directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show("File and directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
-                } catch (Exception ex) {
-                    MessageBox.Show($"Failed to open file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            } catch (Exception ex) {
+                MessageBox.Show($"Failed to open file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2990,15 +3346,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OpenModelFileLocation_Click(object sender, RoutedEventArgs e) {
-            if (ModelsDataGrid.SelectedItem is ModelResource model) {
-                if (!string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
-                    var directory = Path.GetDirectoryName(model.Path);
-                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
-                        System.Diagnostics.Process.Start("explorer.exe", directory);
-                    }
-                } else {
-                    MessageBox.Show("Model file path is invalid or file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            if (ModelsDataGrid.SelectedItem is ModelResource model && !string.IsNullOrEmpty(model.Path)) {
+                OpenFileInExplorer(model.Path);
             }
         }
 

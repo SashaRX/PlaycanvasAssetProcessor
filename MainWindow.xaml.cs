@@ -80,6 +80,8 @@ namespace AssetProcessor {
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
         private FileSystemWatcher? projectFileWatcher; // Monitors project folder for file deletions
+        private readonly ConcurrentQueue<string> pendingDeletedPaths = new(); // Queue of paths to process
+        private int fileWatcherRefreshPending; // 0 = no refresh pending, 1 = refresh scheduled
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -1994,65 +1996,80 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         /// <summary>
         /// Handles file deletion events from FileSystemWatcher.
-        /// Updates texture/model status to "On Server" when file is deleted.
+        /// Queues the path and schedules a debounced refresh.
         /// </summary>
         private void OnProjectFileDeleted(object sender, FileSystemEventArgs e) {
-            string deletedPath = e.FullPath;
-            logger.Info($"FileWatcher: File deleted: {deletedPath}");
-
-            // Run on UI thread
-            Dispatcher.InvokeAsync(() => {
-                UpdateAssetStatusForDeletedFile(deletedPath);
-            });
+            pendingDeletedPaths.Enqueue(e.FullPath);
+            ScheduleFileWatcherRefresh();
         }
 
         /// <summary>
         /// Handles file rename events (moving to trash also triggers this).
         /// </summary>
         private void OnProjectFileRenamed(object sender, RenamedEventArgs e) {
-            // If file was moved/renamed away, treat old path as deleted
-            string oldPath = e.OldFullPath;
-            logger.Info($"FileWatcher: File renamed from: {oldPath} to: {e.FullPath}");
-
-            Dispatcher.InvokeAsync(() => {
-                UpdateAssetStatusForDeletedFile(oldPath);
-            });
+            pendingDeletedPaths.Enqueue(e.OldFullPath);
+            ScheduleFileWatcherRefresh();
         }
 
         /// <summary>
-        /// Updates asset status when its file is deleted.
+        /// Schedules a debounced refresh after file system changes.
+        /// Only one refresh will occur even if many files are deleted.
         /// </summary>
-        private void UpdateAssetStatusForDeletedFile(string deletedPath) {
-            bool updated = false;
-
-            // Check textures
-            foreach (var texture in viewModel.Textures) {
-                if (texture is ORMTextureResource) continue;
-                if (string.Equals(texture.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
-                    logger.Info($"FileWatcher: Updating texture '{texture.Name}' to 'On Server'");
-                    texture.Status = "On Server";
-                    texture.CompressedSize = 0;
-                    texture.CompressionFormat = null;
-                    texture.MipmapCount = 0;
-                    updated = true;
-                    break;
-                }
+        private void ScheduleFileWatcherRefresh() {
+            // Use Interlocked to ensure only one refresh is scheduled
+            if (Interlocked.CompareExchange(ref fileWatcherRefreshPending, 1, 0) == 0) {
+                // Schedule refresh after 500ms delay
+                Task.Delay(500).ContinueWith(_ => {
+                    Dispatcher.InvokeAsync(() => {
+                        ProcessPendingDeletedFiles();
+                    });
+                });
             }
+        }
 
-            // Check models
-            if (!updated) {
+        /// <summary>
+        /// Processes all pending deleted files and updates asset statuses.
+        /// Called once after debounce delay.
+        /// </summary>
+        private void ProcessPendingDeletedFiles() {
+            // Reset the pending flag
+            Interlocked.Exchange(ref fileWatcherRefreshPending, 0);
+
+            int updatedCount = 0;
+            HashSet<string> processedPaths = new(StringComparer.OrdinalIgnoreCase);
+
+            // Drain the queue
+            while (pendingDeletedPaths.TryDequeue(out string? deletedPath)) {
+                if (deletedPath == null || processedPaths.Contains(deletedPath)) continue;
+                processedPaths.Add(deletedPath);
+
+                // Check textures
+                foreach (var texture in viewModel.Textures) {
+                    if (texture is ORMTextureResource) continue;
+                    if (string.Equals(texture.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
+                        texture.Status = "On Server";
+                        texture.CompressedSize = 0;
+                        texture.CompressionFormat = null;
+                        texture.MipmapCount = 0;
+                        updatedCount++;
+                        break;
+                    }
+                }
+
+                // Check models
                 foreach (var model in viewModel.Models) {
                     if (string.Equals(model.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
-                        logger.Info($"FileWatcher: Updating model '{model.Name}' to 'On Server'");
                         model.Status = "On Server";
-                        updated = true;
+                        updatedCount++;
                         break;
                     }
                 }
             }
 
-            if (updated) {
-                // Refresh DataGrid to show updated status
+            if (updatedCount > 0) {
+                logger.Info($"FileWatcher: Updated {updatedCount} assets to 'On Server'");
+
+                // Single refresh after all updates
                 TexturesDataGrid?.Items.Refresh();
                 ModelsDataGrid?.Items.Refresh();
 

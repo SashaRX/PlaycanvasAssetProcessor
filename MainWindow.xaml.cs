@@ -1625,7 +1625,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// ��������� ������ ������� � ������� + ��������� ��� ����� (Download button)
+        /// Downloads missing files (Download button)
+        /// Only syncs from server if there are actual server updates (hash changed)
         /// </summary>
         private async Task DownloadFromServer() {
             try {
@@ -1635,27 +1636,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
-                    // ��������� ������ ������� (assets_list.json) � �������
-                    logger.Info("DownloadFromServer: Loading assets list from server");
-                    logService.LogInfo("DownloadFromServer: Loading assets list from server");
-                    await TryConnect(cancellationTokenSource.Token);
+                    // Check if there are actual server updates (not just missing local files)
+                    bool hasServerUpdates = await CheckForUpdates();
 
-                    // ������ ��������� ����� (��������, ������, ���������)
+                    if (hasServerUpdates) {
+                        // Server has new/changed assets - need to sync the list first
+                        logger.Info("DownloadFromServer: Server has updates, syncing assets list");
+                        logService.LogInfo("DownloadFromServer: Server has updates, syncing assets list");
+                        await TryConnect(cancellationTokenSource.Token);
+                    } else {
+                        logger.Info("DownloadFromServer: No server updates, downloading missing files only");
+                        logService.LogInfo("DownloadFromServer: No server updates, downloading missing files only");
+                    }
+
+                    // Download files (textures, models, materials)
                     logger.Info("DownloadFromServer: Starting file downloads");
                     logService.LogInfo("DownloadFromServer: Starting file downloads");
                     await Download(null, null);
                     logger.Info("DownloadFromServer: File downloads completed");
                     logService.LogInfo("DownloadFromServer: File downloads completed");
 
-                    // ����� �������� �������� ��������� ������ ������ ��� ������������ ������
-                    // �� �������� CheckProjectState(), ��� ��� �� ������������ ������ �� JSON � ������� �������
-                    // ������ ����� ������ ��������� ������� ���������� �� �������
-                    logger.Info("DownloadFromServer: Checking for updates on server after download");
-                    logService.LogInfo("DownloadFromServer: Checking for updates on server after download");
-                    bool hasUpdates = await CheckForUpdates();
-                    
-                    if (hasUpdates) {
-                        logger.Info("DownloadFromServer: Updates still available - setting button to Download");
+                    // Check final state
+                    bool stillHasUpdates = await CheckForUpdates();
+                    bool stillHasMissingFiles = HasMissingFiles();
+
+                    if (stillHasUpdates || stillHasMissingFiles) {
+                        logger.Info("DownloadFromServer: Still has updates or missing files - keeping Download button");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     } else {
                         logger.Info("DownloadFromServer: Project is up to date - setting button to Refresh");
@@ -1663,7 +1669,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     }
                     logger.Info("DownloadFromServer: Button state updated");
-                    logService.LogInfo("DownloadFromServer: Button state updated");
                 } else {
                     logger.Warn("DownloadFromServer: cancellationTokenSource is null!");
                     logService.LogError("DownloadFromServer: cancellationTokenSource is null!");

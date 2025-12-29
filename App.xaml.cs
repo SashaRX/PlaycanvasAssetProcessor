@@ -12,13 +12,16 @@ using System.Windows;
 namespace AssetProcessor {
     public partial class App : Application {
         public static IServiceProvider Services { get; private set; } = null!;
+        private ServiceProvider? serviceProvider;
+
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
 
             var serviceCollection = new ServiceCollection();
             ConfigureServices(serviceCollection);
 
-            Services = serviceCollection.BuildServiceProvider();
+            serviceProvider = serviceCollection.BuildServiceProvider();
+            Services = serviceProvider;
 
             // Initialize ImageHelper with HttpClientFactory
             var httpClientFactory = Services.GetRequiredService<IHttpClientFactory>();
@@ -26,6 +29,18 @@ namespace AssetProcessor {
 
             var mainWindow = Services.GetRequiredService<MainWindow>();
             mainWindow.Show();
+        }
+
+        protected override void OnExit(ExitEventArgs e) {
+            // Dispose LogService to flush pending writes
+            if (Services.GetService<ILogService>() is IDisposable disposableLog) {
+                disposableLog.Dispose();
+            }
+
+            // Dispose the service provider
+            serviceProvider?.Dispose();
+
+            base.OnExit(e);
         }
 
         private static void ConfigureServices(IServiceCollection services) {

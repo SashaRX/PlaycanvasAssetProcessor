@@ -1927,6 +1927,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logger.Info($"RescanFileStatuses: Checked {checkedCount} assets, updated {updatedCount} to 'On Server'");
             if (updatedCount > 0) {
                 logService.LogInfo($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
+                // Force UI refresh to show updated statuses
+                TexturesDataGrid?.Items.Refresh();
+                ModelsDataGrid?.Items.Refresh();
             }
         }
 

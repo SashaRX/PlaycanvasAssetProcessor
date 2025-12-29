@@ -3222,19 +3222,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void OpenFileLocation_Click(object sender, RoutedEventArgs e) {
             if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
-                try {
-                    var directory = System.IO.Path.GetDirectoryName(texture.Path);
-                    if (!string.IsNullOrEmpty(directory) && System.IO.Directory.Exists(directory)) {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
-                            FileName = directory,
-                            UseShellExecute = true
-                        });
+                OpenFileInExplorer(texture.Path);
+            }
+        }
+
+        /// <summary>
+        /// Opens Windows Explorer and selects the specified file.
+        /// </summary>
+        private void OpenFileInExplorer(string filePath) {
+            try {
+                if (File.Exists(filePath)) {
+                    // Use /select to highlight the file in Explorer
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                } else {
+                    // File doesn't exist, try to open the directory
+                    var directory = Path.GetDirectoryName(filePath);
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
+                        System.Diagnostics.Process.Start("explorer.exe", $"\"{directory}\"");
                     } else {
-                        MessageBox.Show("Directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show("File and directory not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
-                } catch (Exception ex) {
-                    MessageBox.Show($"Failed to open file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            } catch (Exception ex) {
+                MessageBox.Show($"Failed to open file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -3333,15 +3343,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OpenModelFileLocation_Click(object sender, RoutedEventArgs e) {
-            if (ModelsDataGrid.SelectedItem is ModelResource model) {
-                if (!string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
-                    var directory = Path.GetDirectoryName(model.Path);
-                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
-                        System.Diagnostics.Process.Start("explorer.exe", directory);
-                    }
-                } else {
-                    MessageBox.Show("Model file path is invalid or file does not exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            if (ModelsDataGrid.SelectedItem is ModelResource model && !string.IsNullOrEmpty(model.Path)) {
+                OpenFileInExplorer(model.Path);
             }
         }
 

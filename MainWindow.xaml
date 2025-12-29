@@ -324,7 +324,7 @@
                                 VirtualizingPanel.CacheLength="20,20"
                                 VirtualizingPanel.CacheLengthUnit="Item"
                                 EnableRowVirtualization="True"
-                                EnableColumnVirtualization="True"
+                                EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True"
                                 ScrollViewer.IsDeferredScrollingEnabled="True">
                             <DataGrid.LayoutTransform>
@@ -478,7 +478,7 @@
                               VirtualizingPanel.CacheLength="20,20"
                               VirtualizingPanel.CacheLengthUnit="Item"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="True"
+                              EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True"
                               ScrollViewer.IsDeferredScrollingEnabled="True">
                             <DataGrid.LayoutTransform>
@@ -572,7 +572,7 @@
                               VirtualizingPanel.CacheLength="20,20"
                               VirtualizingPanel.CacheLengthUnit="Item"
                               EnableRowVirtualization="True"
-                              EnableColumnVirtualization="True"
+                              EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True"
                               ScrollViewer.IsDeferredScrollingEnabled="True">
                         <DataGrid.LayoutTransform>

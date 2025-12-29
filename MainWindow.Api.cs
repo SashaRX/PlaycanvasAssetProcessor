@@ -259,6 +259,9 @@ namespace AssetProcessor {
             RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
             DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
 
+            // Сканируем KTX2 файлы для получения информации о компрессии
+            ScanKtx2InfoForAllTextures();
+
             // Детектируем и загружаем локальные ORM текстуры
             await DetectAndLoadORMTextures();
         }

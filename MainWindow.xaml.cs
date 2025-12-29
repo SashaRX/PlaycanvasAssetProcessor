@@ -1482,6 +1482,79 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }, DispatcherPriority.Loaded);
         }
 
+        /// <summary>
+        /// Scans all textures for existing KTX2 files and populates CompressionFormat, MipmapCount, and CompressedSize.
+        /// Runs in background to avoid blocking UI.
+        /// </summary>
+        private void ScanKtx2InfoForAllTextures() {
+            // Take a snapshot of textures to process
+            var texturesToScan = viewModel.Textures.Where(t =>
+                !string.IsNullOrEmpty(t.Path) &&
+                t.CompressedSize == 0 &&
+                !(t is ORMTextureResource)).ToList();
+
+            if (texturesToScan.Count == 0) {
+                return;
+            }
+
+            logger.Info($"ScanKtx2InfoForAllTextures: Scanning {texturesToScan.Count} textures for KTX2 info");
+
+            Task.Run(() => {
+                int foundCount = 0;
+
+                foreach (var texture in texturesToScan) {
+                    try {
+                        if (string.IsNullOrEmpty(texture.Path)) continue;
+
+                        var sourceDir = Path.GetDirectoryName(texture.Path);
+                        var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
+
+                        if (string.IsNullOrEmpty(sourceDir) || string.IsNullOrEmpty(sourceFileName)) continue;
+
+                        // Check for .ktx2 file
+                        var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
+                        if (File.Exists(ktx2Path)) {
+                            var fileInfo = new FileInfo(ktx2Path);
+                            int mipLevels = 0;
+                            string? compressionFormat = null;
+
+                            try {
+                                using var stream = File.OpenRead(ktx2Path);
+                                using var reader = new BinaryReader(stream);
+                                // KTX2 header: levelCount at offset 40, supercompressionScheme at offset 44
+                                reader.BaseStream.Seek(40, SeekOrigin.Begin);
+                                mipLevels = (int)reader.ReadUInt32();
+                                uint supercompression = reader.ReadUInt32();
+                                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                            } catch {
+                                // Ignore header read errors
+                            }
+
+                            // Update texture on UI thread
+                            Dispatcher.InvokeAsync(() => {
+                                texture.CompressedSize = fileInfo.Length;
+                                if (mipLevels > 0) {
+                                    texture.MipmapCount = mipLevels;
+                                }
+                                if (compressionFormat != null) {
+                                    texture.CompressionFormat = compressionFormat;
+                                }
+                            });
+
+                            foundCount++;
+                        }
+                    } catch {
+                        // Ignore errors for individual textures
+                    }
+                }
+
+                if (foundCount > 0) {
+                    logger.Info($"ScanKtx2InfoForAllTextures: Found KTX2 info for {foundCount} textures");
+                }
+            });
+        }
+
         private bool IsSupportedTextureFormat(string extension) {
             return supportedFormats.Contains(extension) && !excludedFormats.Contains(extension);
         }

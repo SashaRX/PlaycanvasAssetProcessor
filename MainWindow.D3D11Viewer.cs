@@ -170,22 +170,28 @@ namespace AssetProcessor {
                 int stride = width * 4; // RGBA8
                 byte[] pixels = new byte[stride * height];
 
-                // Freeze bitmap for safe access from another thread
-                if (!bitmap.IsFrozen) {
-                    bitmap.Freeze();
+                // Convert bitmap format on UI thread to avoid WPF dispatcher deadlocks
+                // FormatConvertedBitmap internally uses Dispatcher and can deadlock if created on background thread
+                logger.Info("Converting bitmap to BGRA32 format on UI thread...");
+                FormatConvertedBitmap convertedBitmap;
+                if (bitmap.Format == PixelFormats.Bgra32) {
+                    // Already in correct format, use directly
+                    convertedBitmap = new FormatConvertedBitmap();
+                    convertedBitmap.BeginInit();
+                    convertedBitmap.Source = bitmap;
+                    convertedBitmap.EndInit();
+                } else {
+                    convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
                 }
+                convertedBitmap.Freeze(); // Freeze for safe access from background thread
 
-                // Convert and copy pixels in background thread
-                logger.Info("Starting pixel conversion in background thread...");
+                // Copy pixels in background thread (safe operation on frozen bitmap)
+                logger.Info("Starting pixel copy in background thread...");
                 await Task.Run(() => {
                     cancellationToken.ThrowIfCancellationRequested();
-                    logger.Info("Converting bitmap to BGRA32 format...");
-                    // Convert to BGRA32 (which is actually RGBA in memory)
-                    var convertedBitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
-                    convertedBitmap.Freeze(); // Freeze for safe access
                     logger.Info("Copying pixels from bitmap...");
                     convertedBitmap.CopyPixels(pixels, stride, 0);
-                    logger.Info("Pixel conversion completed");
+                    logger.Info("Pixel copy completed");
                 }, cancellationToken);
 
                 logger.Info("Pixel conversion task completed, checking cancellation...");

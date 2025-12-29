@@ -335,20 +335,25 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            // Yield immediately to let UI respond (context menu, etc.)
-            await Task.Yield();
+            // Cancel any pending texture load immediately
+            textureLoadCancellation?.Cancel();
+            textureLoadCancellation = new CancellationTokenSource();
+            CancellationToken cancellationToken = textureLoadCancellation.Token;
 
-            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
-
-            // Update selection count in central control box
+            // Update selection count and command state (lightweight, no delay needed)
             UpdateSelectedTexturesCount();
             viewModel.SelectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
             viewModel.ProcessTexturesCommand.NotifyCanExecuteChanged();
 
-            // �������� ���������� ��������, ���� ��� ��� �����������
-            textureLoadCancellation?.Cancel();
-            textureLoadCancellation = new CancellationTokenSource();
-            CancellationToken cancellationToken = textureLoadCancellation.Token;
+            // Debounce: wait before starting heavy texture loading
+            // This prevents loading textures during rapid scrolling
+            try {
+                await Task.Delay(150, cancellationToken);
+            } catch (OperationCanceledException) {
+                return; // Another selection happened, abort this one
+            }
+
+            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Processing after debounce");
 
             // Check if selected item is an ORM texture (virtual texture for packing)
             if (TexturesDataGrid.SelectedItem is ORMTextureResource ormTexture) {
@@ -384,9 +389,6 @@ namespace AssetProcessor {
 
                     // Load the packed KTX2 file for preview and histogram
                     try {
-                        // Debounce
-                        await Task.Delay(50, cancellationToken);
-
                         bool ktxLoaded = false;
 
                         if (texturePreviewService.IsUsingD3D11Renderer) {
@@ -474,11 +476,7 @@ namespace AssetProcessor {
                         // Format will be updated when texture is loaded
                         TextureFormatTextBlock.Text = "Format: Loading...";
 
-                        // Debounce: wait a bit to see if user is still scrolling
-                        await Task.Delay(50, cancellationToken);
-                        logService.LogInfo($"[TextureSelection] Debounce completed for: {selectedTexture.Name}");
-
-                        // Load conversion settings for this texture
+                        // Load conversion settings for this texture (lightweight)
                         logService.LogInfo($"[TextureSelection] Loading conversion settings for: {selectedTexture.Name}");
                         LoadTextureConversionSettings(selectedTexture);
                         logService.LogInfo($"[TextureSelection] Conversion settings loaded for: {selectedTexture.Name}");
@@ -2751,8 +2749,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     $"MetalnessMapId={material.MetalnessMapId?.ToString() ?? "null"}, SpecularMapId={material.SpecularMapId?.ToString() ?? "null"}, UseMetalness={material.UseMetalness}");
 
                 // Find viewModel.Textures by map IDs
-                TextureResource? aoTexture = FindTextureById(material.AOMapId);
-                TextureResource? glossTexture = FindTextureById(material.GlossMapId);
+                TextureResource? aoTexture = ormTextureService.FindTextureById(material.AOMapId, viewModel.Textures);
+                TextureResource? glossTexture = ormTextureService.FindTextureById(material.GlossMapId, viewModel.Textures);
                 TextureResource? metalnessTexture = null;
 
                 // Debug: Log found textures
@@ -2763,8 +2761,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 string mapType = ""; // Track which map type we're actually using
 
                 // First try to find Metalness texture (modern PBR workflow)
-                TextureResource? metalnessCandidate = FindTextureById(material.MetalnessMapId);
-                TextureResource? specularCandidate = FindTextureById(material.SpecularMapId);
+                TextureResource? metalnessCandidate = ormTextureService.FindTextureById(material.MetalnessMapId, viewModel.Textures);
+                TextureResource? specularCandidate = ormTextureService.FindTextureById(material.SpecularMapId, viewModel.Textures);
 
                 logService.LogInfo($"Texture candidates: Metalness={metalnessCandidate?.Name ?? "null"}, Specular={specularCandidate?.Name ?? "null"}");
 
@@ -2788,7 +2786,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 // Auto-detect packing mode
-                ChannelPackingMode mode = DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
+                ChannelPackingMode mode = ormTextureService.DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
 
                 // If only one texture or none - don't create ORM
                 if (mode == ChannelPackingMode.None) {
@@ -2874,13 +2872,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 foreach (var material in viewModel.Materials) {
                     try {
                         // Find textures
-                        TextureResource? aoTexture = FindTextureById(material.AOMapId);
-                        TextureResource? glossTexture = FindTextureById(material.GlossMapId);
+                        TextureResource? aoTexture = ormTextureService.FindTextureById(material.AOMapId, viewModel.Textures);
+                        TextureResource? glossTexture = ormTextureService.FindTextureById(material.GlossMapId, viewModel.Textures);
                         TextureResource? metalnessTexture = null;
 
                         // Smart workflow detection: prefer actual texture presence over UseMetalness flag
-                        TextureResource? metalnessCandidate = FindTextureById(material.MetalnessMapId);
-                        TextureResource? specularCandidate = FindTextureById(material.SpecularMapId);
+                        TextureResource? metalnessCandidate = ormTextureService.FindTextureById(material.MetalnessMapId, viewModel.Textures);
+                        TextureResource? specularCandidate = ormTextureService.FindTextureById(material.SpecularMapId, viewModel.Textures);
 
                         if (metalnessCandidate != null) {
                             metalnessTexture = metalnessCandidate;
@@ -2889,7 +2887,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         }
 
                         // Auto-detect mode
-                        ChannelPackingMode mode = DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
+                        ChannelPackingMode mode = ormTextureService.DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
 
                         if (mode == ChannelPackingMode.None) {
                             skipped++;
@@ -3008,12 +3006,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
-        // Helper methods for ORM creation
-        // Finds texture by material map ID
-        private TextureResource? FindTextureById(int? mapId) {
-            return ormTextureService.FindTextureById(mapId, viewModel.Textures);
-        }
-
         // Reads KTX2 file header to extract metadata (width, height, mip levels)
         private async Task<(int Width, int Height, int MipLevels, string CompressionFormat)> GetKtx2InfoAsync(string ktx2Path) {
             return await Task.Run(() => {
@@ -3053,10 +3045,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 return (width, height, mipLevels, compressionFormat);
             });
-        }
-
-        private ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {
-            return ormTextureService.DetectPackingMode(ao, gloss, metallic);
         }
 
         // Context menu handlers for texture rows

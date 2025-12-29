@@ -1,0 +1,76 @@
+<UserControl x:Class="AssetProcessor.Controls.ConnectionPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:viewModels="clr-namespace:AssetProcessor.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}"
+             d:DesignHeight="85" d:DesignWidth="340">
+
+    <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2">
+        <StackPanel Orientation="Vertical" Margin="4,2,4,2">
+            <!-- Dynamic Action Button -->
+            <Button x:Name="DynamicConnectionButton"
+                    Content="{Binding ConnectionButtonText}"
+                    Click="DynamicConnectionButton_Click"
+                    Margin="0,2,0,4"
+                    Height="24"
+                    FontWeight="Bold"
+                    ToolTip="{Binding ConnectionButtonTooltip}"/>
+
+            <!-- Project and Branch Selection -->
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="ProjectsComboBox"
+                          ItemsSource="{Binding Projects}"
+                          DisplayMemberPath="Value"
+                          SelectedValuePath="Key"
+                          SelectedValue="{Binding SelectedProjectId, Mode=TwoWay}"
+                          Margin="0,0,4,0"
+                          Width="160"
+                          Height="20"
+                          VerticalContentAlignment="Center"
+                          Padding="4,0,4,0"
+                          FontSize="13">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="SelectionChanged">
+                            <i:InvokeCommandAction Command="{Binding ProjectSelectionChangedCommand}"
+                                                   CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </ComboBox>
+
+                <ComboBox x:Name="BranchesComboBox"
+                          ItemsSource="{Binding Branches}"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding SelectedBranchId, Mode=TwoWay}"
+                          Width="160"
+                          Height="20"
+                          VerticalContentAlignment="Center"
+                          Padding="4,0,4,0"
+                          FontSize="13">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="SelectionChanged">
+                            <i:InvokeCommandAction Command="{Binding BranchSelectionChangedCommand}"
+                                                   CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </ComboBox>
+            </StackPanel>
+        </StackPanel>
+    </GroupBox>
+</UserControl>

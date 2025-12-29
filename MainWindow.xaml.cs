@@ -324,6 +324,9 @@ namespace AssetProcessor {
         }
 
         private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Yield immediately to let UI respond (context menu, etc.)
+            await Task.Yield();
+
             logService.LogInfo($"[TexturesDataGrid_SelectionChanged] EVENT FIRED");
 
             // Update selection count in central control box

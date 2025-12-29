@@ -24,6 +24,7 @@ namespace AssetProcessor.ViewModels {
     /// </summary>
     public partial class MainViewModel : ObservableObject {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private const int ProgressUpdateIntervalMs = 100; // Throttle UI updates to every 100ms
         private readonly IPlayCanvasService playCanvasService;
         private readonly ITextureProcessingService textureProcessingService;
         private readonly ILocalCacheService localCacheService;
@@ -31,6 +32,9 @@ namespace AssetProcessor.ViewModels {
         private readonly IAssetDownloadCoordinator assetDownloadCoordinator;
         private readonly SynchronizationContext? synchronizationContext;
         private readonly IProjectSelectionService projectSelectionService;
+        private long lastProgressUpdateTicks;
+        private AssetDownloadProgress? pendingProgress;
+        private BaseResource? pendingResource;
 
         public event EventHandler<TextureProcessingCompletedEventArgs>? TextureProcessingCompleted;
 
@@ -129,23 +133,92 @@ namespace AssetProcessor.ViewModels {
             logger.Info("MainViewModel initialized");
         }
 
-        private void UpdateResourceStatusMessage(BaseResource resource) {
+        /// <summary>
+        /// Throttled callback for resource status updates. Stores latest value and only posts to UI if interval elapsed.
+        /// </summary>
+        private void UpdateResourceStatusMessageThrottled(BaseResource resource) {
             if (resource == null) {
                 return;
             }
 
-            void UpdateStatus() => StatusMessage = $"{resource.Name}: {resource.Status ?? "Pending"}";
-            PostToUi(UpdateStatus);
+            pendingResource = resource;
+
+            if (!ShouldUpdateUi()) {
+                return;
+            }
+
+            PostPendingResourceStatus();
         }
 
-        private void UpdateProgress(AssetDownloadProgress progress) {
-            void UpdateValues() {
+        /// <summary>
+        /// Throttled callback for progress updates. Stores latest value and only posts to UI if interval elapsed.
+        /// </summary>
+        private void UpdateProgressThrottled(AssetDownloadProgress progress) {
+            pendingProgress = progress;
+
+            if (!ShouldUpdateUi()) {
+                return;
+            }
+
+            PostPendingProgress();
+        }
+
+        /// <summary>
+        /// Checks if enough time has passed since last UI update.
+        /// </summary>
+        private bool ShouldUpdateUi() {
+            long now = DateTime.UtcNow.Ticks;
+            long last = Interlocked.Read(ref lastProgressUpdateTicks);
+            long intervalTicks = TimeSpan.FromMilliseconds(ProgressUpdateIntervalMs).Ticks;
+
+            if (now - last < intervalTicks) {
+                return false;
+            }
+
+            // Try to update the last update time (atomic compare-and-swap)
+            if (Interlocked.CompareExchange(ref lastProgressUpdateTicks, now, last) != last) {
+                return false; // Another thread updated it
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Posts pending progress to UI thread.
+        /// </summary>
+        private void PostPendingProgress() {
+            AssetDownloadProgress? progress = pendingProgress;
+            if (progress == null) {
+                return;
+            }
+
+            PostToUi(() => {
                 ProgressMaximum = progress.Total;
                 ProgressValue = progress.Completed;
                 ProgressText = progress.Total > 0 ? $"{progress.Completed}/{progress.Total}" : null;
+            });
+        }
+
+        /// <summary>
+        /// Posts pending resource status to UI thread.
+        /// </summary>
+        private void PostPendingResourceStatus() {
+            BaseResource? resource = pendingResource;
+            if (resource == null) {
+                return;
             }
 
-            PostToUi(UpdateValues);
+            PostToUi(() => StatusMessage = $"{resource.Name}: {resource.Status ?? "Pending"}");
+        }
+
+        /// <summary>
+        /// Flushes any pending UI updates. Call after downloads complete.
+        /// </summary>
+        private void FlushPendingUpdates() {
+            PostPendingProgress();
+            PostPendingResourceStatus();
+            pendingProgress = null;
+            pendingResource = null;
         }
 
         private void PostToUi(Action updateAction) {
@@ -389,13 +462,19 @@ namespace AssetProcessor.ViewModels {
                     FolderPaths);
 
                 ResetProgress();
+                // Reset throttle timer so first update shows immediately
+                Interlocked.Exchange(ref lastProgressUpdateTicks, 0);
                 StatusMessage = "Preparing downloads...";
 
+                // Use throttled callbacks to prevent UI freeze during rapid updates
                 AssetDownloadOptions downloadOptions = new(
-                    progress => UpdateProgress(progress),
-                    resource => UpdateResourceStatusMessage(resource));
+                    progress => UpdateProgressThrottled(progress),
+                    resource => UpdateResourceStatusMessageThrottled(resource));
 
                 AssetDownloadResult result = await assetDownloadCoordinator.DownloadAssetsAsync(context, downloadOptions, cancellationToken);
+
+                // Flush any pending UI updates to show final state
+                FlushPendingUpdates();
 
                 ApplyBatchResultProgress(result.BatchResult);
 
@@ -406,10 +485,12 @@ namespace AssetProcessor.ViewModels {
                     logger.Warn(result.Message);
                 }
             } catch (OperationCanceledException) {
+                FlushPendingUpdates();
                 StatusMessage = "Download cancelled";
                 logger.Warn("Download operation cancelled by user");
                 ResetProgress(); // Reset progress on cancellation
             } catch (Exception ex) {
+                FlushPendingUpdates();
                 // Handle any other exceptions to prevent unhandled exceptions and UI inconsistency
                 StatusMessage = $"Download error: {ex.Message}";
                 logger.Error(ex, "Error during download operation");

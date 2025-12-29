@@ -917,26 +917,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Custom sorting needed
             e.Handled = true;
 
-            // Toggle direction
-            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
+            // Determine new direction BEFORE any changes
+            var currentDir = e.Column.SortDirection;
+            var newDir = currentDir == ListSortDirection.Ascending
                 ? ListSortDirection.Descending
                 : ListSortDirection.Ascending;
 
-            // Clear other columns' arrows
-            foreach (var col in dataGrid.Columns) {
-                if (col != e.Column)
-                    col.SortDirection = null;
-            }
-
-            // Set this column's arrow
-            e.Column.SortDirection = newDir;
-
-            // Use SortDescriptions - faster and works correctly with WPF
+            // Apply sort first
             var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
             if (view != null) {
                 view.SortDescriptions.Clear();
                 view.SortDescriptions.Add(new SortDescription(sortPath, newDir));
             }
+
+            // Set arrows AFTER sort (SortDescriptions.Clear may reset them)
+            foreach (var col in dataGrid.Columns)
+                col.SortDirection = null;
+            e.Column.SortDirection = newDir;
         }
 
 #endregion

@@ -901,7 +901,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             e.Handled = true;
 
-            // Get sort property: SortMemberPath > Binding.Path > Header
+            // Get sort property
             string sortPath = e.Column.SortMemberPath;
             if (string.IsNullOrEmpty(sortPath)) {
                 if (e.Column is DataGridBoundColumn boundCol && boundCol.Binding is Binding binding) {
@@ -913,26 +913,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
             if (string.IsNullOrEmpty(sortPath)) return;
 
-            // Toggle: null->Asc, Asc->Desc, Desc->Asc
-            ListSortDirection newDir;
-            if (e.Column.SortDirection == ListSortDirection.Ascending) {
-                newDir = ListSortDirection.Descending;
-            } else {
-                newDir = ListSortDirection.Ascending;
-            }
+            // Read current state
+            var currentDir = e.Column.SortDirection;
 
-            // Clear other columns
+            // Toggle
+            var newDir = (currentDir == ListSortDirection.Ascending)
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+
+            // Clear all arrows first
             foreach (var col in dataGrid.Columns) {
-                if (col != e.Column)
-                    col.SortDirection = null;
+                col.SortDirection = null;
             }
 
-            // Apply sort
-            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
-                listView.CustomSort = new ResourceComparer(sortPath, newDir);
+            // Apply sort with SortDescriptions (not CustomSort)
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            if (view != null) {
+                using (view.DeferRefresh()) {
+                    view.SortDescriptions.Clear();
+                    view.SortDescriptions.Add(new SortDescription(sortPath, newDir));
+                }
             }
 
-            // Show arrow
+            // Set arrow AFTER sort applied
             e.Column.SortDirection = newDir;
         }
 

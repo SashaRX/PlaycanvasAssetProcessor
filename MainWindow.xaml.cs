@@ -908,16 +908,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
             if (string.IsNullOrEmpty(sortPath)) return;
 
-            // Toggle direction: first click = Ascending, then toggle
-            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
-                ? ListSortDirection.Descending
-                : ListSortDirection.Ascending;
+            // Clear all columns' sort direction first
+            foreach (var col in dataGrid.Columns) {
+                if (col != e.Column)
+                    col.SortDirection = null;
+            }
 
-            // Clear all columns' sort direction
-            foreach (var col in dataGrid.Columns)
-                col.SortDirection = null;
+            // Toggle based on current state (WPF may have pre-toggled)
+            ListSortDirection newDir;
+            if (e.Column.SortDirection == ListSortDirection.Ascending) {
+                newDir = ListSortDirection.Descending;
+            } else if (e.Column.SortDirection == ListSortDirection.Descending) {
+                newDir = ListSortDirection.Ascending;
+            } else {
+                // First click - start with Ascending
+                newDir = ListSortDirection.Ascending;
+            }
 
-            // Set this column's direction
             e.Column.SortDirection = newDir;
 
             // Apply custom sort - CustomSort triggers immediate re-sort

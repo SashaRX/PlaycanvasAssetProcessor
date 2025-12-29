@@ -227,6 +227,8 @@ public sealed class AssetResourceService : IAssetResourceService {
                     (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path, logService);
                     if (localResolution.HasValue) {
                         texture.Resolution = new[] { localResolution.Value.width, localResolution.Value.height };
+                    } else {
+                        logService.LogError($"Failed to read resolution for {texture.Name} at {texture.Path}");
                     }
                     break;
                 case "On Server":

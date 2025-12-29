@@ -928,10 +928,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     col.SortDirection = null;
             }
 
-            // Apply sort
-            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-            view?.SortDescriptions.Clear();
-            view?.SortDescriptions.Add(new SortDescription(sortPath, newDir));
+            // Apply CustomSort (SortDescriptions doesn't work with our types)
+            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
+                listView.CustomSort = new ResourceComparer(sortPath, newDir);
+            }
 
             // Set arrow via Dispatcher to ensure it happens after WPF processing
             Dispatcher.BeginInvoke(new Action(() => {

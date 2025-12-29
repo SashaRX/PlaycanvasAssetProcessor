@@ -1686,6 +1686,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 DynamicConnectionButton.IsEnabled = false;
 
+                // Re-scan file statuses to detect deleted files
+                RescanFileStatuses();
+
                 bool hasUpdates = await CheckForUpdates();
                 bool hasMissingFiles = HasMissingFiles();
 
@@ -1874,6 +1877,42 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Error(ex, "Error in CheckProjectState");
                 logService.LogError($"Error checking project state: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
+            }
+        }
+
+        /// <summary>
+        /// Re-scans all assets to check if local files exist and updates their status.
+        /// Call this before HasMissingFiles() to detect deleted files.
+        /// </summary>
+        private void RescanFileStatuses() {
+            int updatedCount = 0;
+
+            foreach (var texture in viewModel.Textures) {
+                if (texture is ORMTextureResource) continue;
+                if (string.IsNullOrEmpty(texture.Path)) continue;
+
+                // If status is "Downloaded" but file doesn't exist, update to "On Server"
+                if (texture.Status == "Downloaded" && !File.Exists(texture.Path)) {
+                    texture.Status = "On Server";
+                    texture.CompressedSize = 0;
+                    texture.CompressionFormat = null;
+                    texture.MipmapCount = 0;
+                    updatedCount++;
+                }
+            }
+
+            foreach (var model in viewModel.Models) {
+                if (string.IsNullOrEmpty(model.Path)) continue;
+
+                if (model.Status == "Downloaded" && !File.Exists(model.Path)) {
+                    model.Status = "On Server";
+                    updatedCount++;
+                }
+            }
+
+            if (updatedCount > 0) {
+                logger.Info($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
+                logService.LogInfo($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
             }
         }
 

@@ -4,6 +4,7 @@ using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using Assimp;
 using Newtonsoft.Json.Linq;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,6 +16,7 @@ using System.Threading.Tasks;
 namespace AssetProcessor.Services;
 
 public sealed class AssetResourceService : IAssetResourceService {
+    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
     private static readonly HashSet<string> SupportedTextureFormats = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
     private static readonly HashSet<string> ExcludedTextureFormats = new(StringComparer.OrdinalIgnoreCase) { ".hdr", ".avif" };
     private static readonly HashSet<string> SupportedModelFormats = new(StringComparer.OrdinalIgnoreCase) { ".fbx", ".obj" };
@@ -197,14 +199,14 @@ public sealed class AssetResourceService : IAssetResourceService {
                     if (width.HasValue && height.HasValue) {
                         resolution[0] = width.Value;
                         resolution[1] = height.Value;
-                        logService.LogInfo($"Resolution from JSON variant '{variantName}': {width}x{height} for {textureName}");
+                        logger.Info($"Resolution from JSON variant '{variantName}': {width}x{height} for {textureName}");
                         break;
                     }
                 }
             }
         }
         if (resolution[0] == 0 && resolution[1] == 0) {
-            logService.LogInfo($"No resolution in JSON variants for {textureName}");
+            logger.Warn($"No resolution in JSON variants for {textureName}");
         }
 
         TextureResource texture = new() {
@@ -232,9 +234,9 @@ public sealed class AssetResourceService : IAssetResourceService {
                     (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path, logService);
                     if (localResolution.HasValue) {
                         texture.Resolution = new[] { localResolution.Value.width, localResolution.Value.height };
-                        logService.LogInfo($"Resolution from local file: {localResolution.Value.width}x{localResolution.Value.height} for {texture.Name}");
+                        logger.Info($"Resolution from local file: {localResolution.Value.width}x{localResolution.Value.height} for {texture.Name}");
                     } else {
-                        logService.LogInfo($"Failed to read local file resolution for {texture.Name}, keeping JSON resolution: {texture.Resolution[0]}x{texture.Resolution[1]}");
+                        logger.Warn($"Failed to read local file resolution for {texture.Name} at {texture.Path}, keeping JSON resolution: {texture.Resolution[0]}x{texture.Resolution[1]}");
                     }
                     break;
                 case "On Server":

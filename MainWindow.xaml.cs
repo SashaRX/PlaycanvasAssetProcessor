@@ -929,6 +929,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             // Apply CustomSort (SortDescriptions doesn't work with our types)
+            System.Diagnostics.Debug.WriteLine($"SORT: sortPath={sortPath}, dir={newDir}");
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
             }

@@ -35,7 +35,7 @@ namespace AssetProcessor.Helpers {
                 "Extension" => CompareString(GetExtension(x), GetExtension(y)),
 
                 // TextureResource properties
-                "ResolutionArea" => CompareInt(GetResolutionArea(x), GetResolutionArea(y)),
+                "ResolutionArea" => DebugCompareResolution(x, y),
                 "ResizeResolutionArea" => CompareInt(GetResizeResolutionArea(x), GetResizeResolutionArea(y)),
                 "CompressedSize" => CompareLong(GetCompressedSize(x), GetCompressedSize(y)),
                 "CompressionFormat" => CompareString(GetCompressionFormat(x), GetCompressionFormat(y)),
@@ -74,6 +74,13 @@ namespace AssetProcessor.Helpers {
         private static string? GetExtension(object obj) => obj is BaseResource r ? r.Extension : null;
 
         private static int GetResolutionArea(object obj) => obj is TextureResource t ? t.ResolutionArea : 0;
+
+        private int DebugCompareResolution(object x, object y) {
+            var areaX = GetResolutionArea(x);
+            var areaY = GetResolutionArea(y);
+            System.Diagnostics.Debug.WriteLine($"COMPARE: {(x as TextureResource)?.Name} area={areaX} vs {(y as TextureResource)?.Name} area={areaY}");
+            return CompareInt(areaX, areaY);
+        }
         private static int GetResizeResolutionArea(object obj) => obj is TextureResource t ? t.ResizeResolutionArea : 0;
         private static long GetCompressedSize(object obj) => obj is TextureResource t ? t.CompressedSize : 0;
         private static string? GetCompressionFormat(object obj) {

@@ -226,8 +226,7 @@ public sealed class AssetResourceService : IAssetResourceService {
                 case "Downloaded":
                     (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path, logService);
                     if (localResolution.HasValue) {
-                        texture.Resolution[0] = localResolution.Value.width;
-                        texture.Resolution[1] = localResolution.Value.height;
+                        texture.Resolution = new[] { localResolution.Value.width, localResolution.Value.height };
                     }
                     break;
                 case "On Server":

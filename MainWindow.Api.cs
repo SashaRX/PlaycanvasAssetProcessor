@@ -264,6 +264,9 @@ namespace AssetProcessor {
 
             // Детектируем и загружаем локальные ORM текстуры
             await DetectAndLoadORMTextures();
+
+            // Start watching project folder for file deletions
+            StartFileWatcher();
         }
 
         /// <summary>

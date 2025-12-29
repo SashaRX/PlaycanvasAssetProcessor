@@ -79,6 +79,7 @@ namespace AssetProcessor {
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для ускорения загрузки данных
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
+        private FileSystemWatcher? projectFileWatcher; // Monitors project folder for file deletions
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -1951,6 +1952,118 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
+        /// Starts watching the project folder for file deletions.
+        /// Call when project is loaded/connected.
+        /// </summary>
+        private void StartFileWatcher() {
+            StopFileWatcher(); // Stop existing watcher if any
+
+            if (string.IsNullOrEmpty(ProjectFolderPath) || !Directory.Exists(ProjectFolderPath)) {
+                return;
+            }
+
+            try {
+                projectFileWatcher = new FileSystemWatcher(ProjectFolderPath) {
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.FileName,
+                    EnableRaisingEvents = true
+                };
+
+                projectFileWatcher.Deleted += OnProjectFileDeleted;
+                projectFileWatcher.Renamed += OnProjectFileRenamed;
+
+                logger.Info($"FileWatcher started for: {ProjectFolderPath}");
+            } catch (Exception ex) {
+                logger.Error(ex, "Failed to start FileSystemWatcher");
+            }
+        }
+
+        /// <summary>
+        /// Stops the file watcher. Call when project is unloaded or window closes.
+        /// </summary>
+        private void StopFileWatcher() {
+            if (projectFileWatcher != null) {
+                projectFileWatcher.EnableRaisingEvents = false;
+                projectFileWatcher.Deleted -= OnProjectFileDeleted;
+                projectFileWatcher.Renamed -= OnProjectFileRenamed;
+                projectFileWatcher.Dispose();
+                projectFileWatcher = null;
+                logger.Info("FileWatcher stopped");
+            }
+        }
+
+        /// <summary>
+        /// Handles file deletion events from FileSystemWatcher.
+        /// Updates texture/model status to "On Server" when file is deleted.
+        /// </summary>
+        private void OnProjectFileDeleted(object sender, FileSystemEventArgs e) {
+            string deletedPath = e.FullPath;
+            logger.Info($"FileWatcher: File deleted: {deletedPath}");
+
+            // Run on UI thread
+            Dispatcher.InvokeAsync(() => {
+                UpdateAssetStatusForDeletedFile(deletedPath);
+            });
+        }
+
+        /// <summary>
+        /// Handles file rename events (moving to trash also triggers this).
+        /// </summary>
+        private void OnProjectFileRenamed(object sender, RenamedEventArgs e) {
+            // If file was moved/renamed away, treat old path as deleted
+            string oldPath = e.OldFullPath;
+            logger.Info($"FileWatcher: File renamed from: {oldPath} to: {e.FullPath}");
+
+            Dispatcher.InvokeAsync(() => {
+                UpdateAssetStatusForDeletedFile(oldPath);
+            });
+        }
+
+        /// <summary>
+        /// Updates asset status when its file is deleted.
+        /// </summary>
+        private void UpdateAssetStatusForDeletedFile(string deletedPath) {
+            bool updated = false;
+
+            // Check textures
+            foreach (var texture in viewModel.Textures) {
+                if (texture is ORMTextureResource) continue;
+                if (string.Equals(texture.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
+                    logger.Info($"FileWatcher: Updating texture '{texture.Name}' to 'On Server'");
+                    texture.Status = "On Server";
+                    texture.CompressedSize = 0;
+                    texture.CompressionFormat = null;
+                    texture.MipmapCount = 0;
+                    updated = true;
+                    break;
+                }
+            }
+
+            // Check models
+            if (!updated) {
+                foreach (var model in viewModel.Models) {
+                    if (string.Equals(model.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
+                        logger.Info($"FileWatcher: Updating model '{model.Name}' to 'On Server'");
+                        model.Status = "On Server";
+                        updated = true;
+                        break;
+                    }
+                }
+            }
+
+            if (updated) {
+                // Refresh DataGrid to show updated status
+                TexturesDataGrid?.Items.Refresh();
+                ModelsDataGrid?.Items.Refresh();
+
+                // Update connection button state
+                if (HasMissingFiles()) {
+                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                }
+            }
+        }
+
+        /// <summary>
         /// Checks if any assets have status indicating they need to be downloaded.
         /// This catches cases where files were deleted locally but assets_list.json hasn't changed.
         /// </summary>
@@ -2051,6 +2164,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             try {
+                // Stop file watcher
+                StopFileWatcher();
+
                 // ������������� billboard ����������
                 StopBillboardUpdate();
 

@@ -897,24 +897,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Only intercept columns that need custom sorting (SortMemberPath differs from binding)
             if (e.Column == null) return;
 
             string? sortPath = e.Column.SortMemberPath;
+
+            // No SortMemberPath - let WPF handle normally
             if (string.IsNullOrEmpty(sortPath)) {
-                // No SortMemberPath - let WPF handle normally
                 return;
             }
 
-            // Check if SortMemberPath equals binding path - if so, let WPF handle
+            // If DataGridBoundColumn AND SortMemberPath == binding path, WPF can handle it
             if (e.Column is DataGridBoundColumn boundColumn) {
                 var bindingPath = (boundColumn.Binding as System.Windows.Data.Binding)?.Path.Path;
                 if (sortPath == bindingPath) {
-                    return; // WPF can handle this
+                    return; // WPF handles this
                 }
             }
+            // DataGridTemplateColumn with SortMemberPath OR SortMemberPath != binding → custom sort
 
-            // Custom sorting needed (SortMemberPath differs from display binding)
             e.Handled = true;
 
             // Toggle direction

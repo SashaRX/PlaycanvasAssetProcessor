@@ -1887,11 +1887,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void RescanFileStatuses() {
             int updatedCount = 0;
             int checkedCount = 0;
+            int missingFilesCount = 0;
 
             // Statuses that indicate file was previously downloaded/exists locally
             HashSet<string> localStatuses = new(StringComparer.OrdinalIgnoreCase) {
                 "Downloaded", "Converted", "Size Mismatch", "Hash ERROR", "Empty File"
             };
+
+            logger.Info($"RescanFileStatuses: Starting scan, {viewModel.Textures.Count} textures, {viewModel.Models.Count} models");
 
             foreach (var texture in viewModel.Textures) {
                 if (texture is ORMTextureResource) continue;
@@ -1899,10 +1902,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 checkedCount++;
                 string? currentStatus = texture.Status;
+                bool fileExists = File.Exists(texture.Path);
+                bool isLocalStatus = localStatuses.Contains(currentStatus ?? "");
+
+                if (!fileExists) {
+                    missingFilesCount++;
+                    logger.Info($"  Missing file: '{texture.Name}', status='{currentStatus}', isLocalStatus={isLocalStatus}, path={texture.Path}");
+                }
 
                 // If status indicates file should exist locally but it doesn't, update to "On Server"
-                if (localStatuses.Contains(currentStatus ?? "") && !File.Exists(texture.Path)) {
-                    logger.Info($"RescanFileStatuses: '{texture.Name}' file deleted, status '{currentStatus}' -> 'On Server', path: {texture.Path}");
+                if (isLocalStatus && !fileExists) {
+                    logger.Info($"  -> Updating '{texture.Name}' from '{currentStatus}' to 'On Server'");
                     texture.Status = "On Server";
                     texture.CompressedSize = 0;
                     texture.CompressionFormat = null;
@@ -1916,21 +1926,28 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 checkedCount++;
                 string? currentStatus = model.Status;
+                bool fileExists = File.Exists(model.Path);
+                bool isLocalStatus = localStatuses.Contains(currentStatus ?? "");
 
-                if (localStatuses.Contains(currentStatus ?? "") && !File.Exists(model.Path)) {
-                    logger.Info($"RescanFileStatuses: '{model.Name}' file deleted, status '{currentStatus}' -> 'On Server', path: {model.Path}");
+                if (!fileExists) {
+                    missingFilesCount++;
+                    logger.Info($"  Missing model: '{model.Name}', status='{currentStatus}', isLocalStatus={isLocalStatus}, path={model.Path}");
+                }
+
+                if (isLocalStatus && !fileExists) {
+                    logger.Info($"  -> Updating '{model.Name}' from '{currentStatus}' to 'On Server'");
                     model.Status = "On Server";
                     updatedCount++;
                 }
             }
 
-            logger.Info($"RescanFileStatuses: Checked {checkedCount} assets, updated {updatedCount} to 'On Server'");
+            logger.Info($"RescanFileStatuses: Checked {checkedCount} assets, {missingFilesCount} missing files, updated {updatedCount} to 'On Server'");
             if (updatedCount > 0) {
                 logService.LogInfo($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
-                // Force UI refresh to show updated statuses
-                TexturesDataGrid?.Items.Refresh();
-                ModelsDataGrid?.Items.Refresh();
             }
+            // Always refresh UI to ensure statuses are displayed correctly
+            TexturesDataGrid?.Items.Refresh();
+            ModelsDataGrid?.Items.Refresh();
         }
 
         /// <summary>

@@ -1603,13 +1603,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 DynamicConnectionButton.IsEnabled = false;
 
                 bool hasUpdates = await CheckForUpdates();
+                bool hasMissingFiles = HasMissingFiles();
 
-                if (hasUpdates) {
-                    // ���� ���������� - ����������� �� ������ Download
+                if (hasUpdates || hasMissingFiles) {
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    MessageBox.Show("Updates available! Click Download to get them.", "Updates Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                    string message = hasUpdates && hasMissingFiles
+                        ? "Updates available and missing files found! Click Download to get them."
+                        : hasUpdates
+                            ? "Updates available! Click Download to get them."
+                            : $"Missing files found! Click Download to get them.";
+                    MessageBox.Show(message, "Download Required", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
-                    // ���������� ���
                     MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             } catch (Exception ex) {
@@ -1762,9 +1766,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info("CheckProjectState: Checking for updates on server");
                 bool hasUpdates = await CheckForUpdates();
 
-                if (hasUpdates) {
-                    logger.Info("CheckProjectState: Updates available on server - setting button to Download");
-                    logService.LogInfo("CheckProjectState: Updates available on server");
+                // Also check for missing files locally (status "On Server" means file doesn't exist)
+                bool hasMissingFiles = HasMissingFiles();
+
+                if (hasUpdates || hasMissingFiles) {
+                    string reason = hasUpdates && hasMissingFiles
+                        ? "updates available and missing files"
+                        : hasUpdates ? "updates available on server" : "missing files locally";
+                    logger.Info($"CheckProjectState: {reason} - setting button to Download");
+                    logService.LogInfo($"CheckProjectState: {reason}");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
                     logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
@@ -1776,6 +1786,38 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logService.LogError($"Error checking project state: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
+        }
+
+        /// <summary>
+        /// Checks if any assets have status indicating they need to be downloaded.
+        /// This catches cases where files were deleted locally but assets_list.json hasn't changed.
+        /// </summary>
+        private bool HasMissingFiles() {
+            // Statuses that indicate file needs downloading
+            HashSet<string> downloadableStatuses = new(StringComparer.OrdinalIgnoreCase) {
+                "On Server", "Error", "Size Mismatch", "Corrupted", "Empty File", "Hash ERROR"
+            };
+
+            int missingCount = 0;
+
+            foreach (var texture in viewModel.Textures) {
+                if (texture is not ORMTextureResource && downloadableStatuses.Contains(texture.Status ?? "")) {
+                    missingCount++;
+                }
+            }
+
+            foreach (var model in viewModel.Models) {
+                if (downloadableStatuses.Contains(model.Status ?? "")) {
+                    missingCount++;
+                }
+            }
+
+            if (missingCount > 0) {
+                logger.Info($"HasMissingFiles: Found {missingCount} assets needing download");
+                logService.LogInfo($"HasMissingFiles: Found {missingCount} assets needing download");
+            }
+
+            return missingCount > 0;
         }
 
         private async Task<bool> CheckForUpdates() {

@@ -2254,7 +2254,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 var compression = ConversionSettingsPanel.GetCompressionSettings();
                 var mipProfile = ConversionSettingsPanel.GetMipProfileSettings();
 
-                texture.CompressionFormat = compression.CompressionFormat.ToString();
+                // Don't update CompressionFormat here - it shows actual compression from KTX2 file,
+                // not the intended settings from the UI panel
                 texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
 
                 logService.LogInfo($"Updated conversion settings for {texture.Name}");
@@ -2318,7 +2319,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
 
                 ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
-                texture.CompressionFormat = compression.CompressionFormat.ToString();
+                // Don't override CompressionFormat if already set from KTX2 scan
+                // CompressionFormat shows actual compression, not intended settings
             }
         }
 

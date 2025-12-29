@@ -900,43 +900,43 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (e.Column == null) return;
 
             e.Handled = true;
+            var column = e.Column;
 
             // Get sort property
-            string sortPath = e.Column.SortMemberPath;
+            string sortPath = column.SortMemberPath;
             if (string.IsNullOrEmpty(sortPath)) {
-                if (e.Column is DataGridBoundColumn boundCol && boundCol.Binding is Binding binding) {
+                if (column is DataGridBoundColumn boundCol && boundCol.Binding is Binding binding) {
                     sortPath = binding.Path.Path;
                 }
             }
             if (string.IsNullOrEmpty(sortPath)) {
-                sortPath = e.Column.Header?.ToString() ?? "";
+                sortPath = column.Header?.ToString() ?? "";
             }
             if (string.IsNullOrEmpty(sortPath)) return;
 
             // Read current state
-            var currentDir = e.Column.SortDirection;
+            var currentDir = column.SortDirection;
 
             // Toggle
             var newDir = (currentDir == ListSortDirection.Ascending)
                 ? ListSortDirection.Descending
                 : ListSortDirection.Ascending;
 
-            // Clear all arrows first
+            // Clear other columns
             foreach (var col in dataGrid.Columns) {
-                col.SortDirection = null;
+                if (col != column)
+                    col.SortDirection = null;
             }
 
-            // Apply sort with SortDescriptions (not CustomSort)
+            // Apply sort
             var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-            if (view != null) {
-                using (view.DeferRefresh()) {
-                    view.SortDescriptions.Clear();
-                    view.SortDescriptions.Add(new SortDescription(sortPath, newDir));
-                }
-            }
+            view?.SortDescriptions.Clear();
+            view?.SortDescriptions.Add(new SortDescription(sortPath, newDir));
 
-            // Set arrow AFTER sort applied
-            e.Column.SortDirection = newDir;
+            // Set arrow via Dispatcher to ensure it happens after WPF processing
+            Dispatcher.BeginInvoke(new Action(() => {
+                column.SortDirection = newDir;
+            }), System.Windows.Threading.DispatcherPriority.Render);
         }
 
 #endregion

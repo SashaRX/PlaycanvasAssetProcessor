@@ -157,13 +157,16 @@ namespace AssetProcessor {
             switch (result.ResultType) {
                 case AssetProcessingResultType.Texture when result.Resource is TextureResource texture:
                     viewModel.Textures.Add(texture);
+                    viewModel.Assets.Add(texture);
                     UpdateTextureProgress();
                     break;
                 case AssetProcessingResultType.Model when result.Resource is ModelResource model:
                     viewModel.Models.Add(model);
+                    viewModel.Assets.Add(model);
                     break;
                 case AssetProcessingResultType.Material when result.Resource is MaterialResource material:
                     viewModel.Materials.Add(material);
+                    viewModel.Assets.Add(material);
                     break;
             }
         }
@@ -216,6 +219,7 @@ namespace AssetProcessor {
             viewModel.Textures.Clear();
             viewModel.Models.Clear();
             viewModel.Materials.Clear();
+            viewModel.Assets.Clear();
 
             List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
             int assetCount = supportedAssets.Count;

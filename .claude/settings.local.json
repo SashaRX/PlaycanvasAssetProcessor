@@ -56,7 +56,9 @@
       "Bash(python -c:*)",
       "Bash(cat:*)",
       "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" --help)",
-      "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" -h)"
+      "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" -h)",
+      "Bash(done)",
+      "Bash(Select-String -Pattern \"error|warning CS|Build succeeded|Build FAILED\" -Context 0,2)"
     ],
     "deny": [],
     "ask": []

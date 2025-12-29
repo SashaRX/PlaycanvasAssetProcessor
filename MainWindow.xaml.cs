@@ -64,11 +64,14 @@ namespace AssetProcessor {
         private readonly IProjectAssetService projectAssetService;
         private readonly IPreviewRendererCoordinator previewRendererCoordinator;
         private readonly IAssetResourceService assetResourceService;
+        private readonly IConnectionStateService connectionStateService;
+        private readonly IAssetJsonParserService assetJsonParserService;
+        private readonly IORMTextureService ormTextureService;
+        private readonly IFileStatusScannerService fileStatusScannerService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
         private ConversionSettingsManager? conversionSettingsManager; // �������� ���������� �����������
-        private ConnectionState currentConnectionState = ConnectionState.Disconnected; // ������� ��������� �����������
         private const int MaxPreviewSize = 2048; // ������������ ������ ����������� ��� ������ (������� �������� ��� ���������� ���������)
         private const int ThumbnailSize = 512; // ������ ��� �������� ������ (��������� ��� ������ ����������)
         private const double MinPreviewColumnWidth = 256.0;
@@ -118,6 +121,10 @@ namespace AssetProcessor {
             IProjectAssetService projectAssetService,
             IPreviewRendererCoordinator previewRendererCoordinator,
             IAssetResourceService assetResourceService,
+            IConnectionStateService connectionStateService,
+            IAssetJsonParserService assetJsonParserService,
+            IORMTextureService ormTextureService,
+            IFileStatusScannerService fileStatusScannerService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -129,6 +136,10 @@ namespace AssetProcessor {
             this.projectAssetService = projectAssetService ?? throw new ArgumentNullException(nameof(projectAssetService));
             this.previewRendererCoordinator = previewRendererCoordinator ?? throw new ArgumentNullException(nameof(previewRendererCoordinator));
             this.assetResourceService = assetResourceService ?? throw new ArgumentNullException(nameof(assetResourceService));
+            this.connectionStateService = connectionStateService ?? throw new ArgumentNullException(nameof(connectionStateService));
+            this.assetJsonParserService = assetJsonParserService ?? throw new ArgumentNullException(nameof(assetJsonParserService));
+            this.ormTextureService = ormTextureService ?? throw new ArgumentNullException(nameof(ormTextureService));
+            this.fileStatusScannerService = fileStatusScannerService ?? throw new ArgumentNullException(nameof(fileStatusScannerService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 
@@ -306,7 +317,7 @@ namespace AssetProcessor {
 
             SaveCurrentSettings();
 
-            if (currentConnectionState != ConnectionState.Disconnected) {
+            if (connectionStateService.CurrentState != ConnectionState.Disconnected) {
                 await CheckProjectState();
             }
         }
@@ -318,7 +329,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            if (currentConnectionState != ConnectionState.Disconnected) {
+            if (connectionStateService.CurrentState != ConnectionState.Disconnected) {
                 await CheckProjectState();
             }
         }
@@ -1593,79 +1604,57 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// ��������� ����� � ��������� ������������ ������ �����������
+        /// Обновляет кнопку и состояние подключения через сервис
         /// </summary>
         private void UpdateConnectionButton(ConnectionState newState) {
-            logger.Info($"UpdateConnectionButton: Changing state from {currentConnectionState} to {newState}");
-            logService.LogInfo($"UpdateConnectionButton: Changing state to {newState}");
-            currentConnectionState = newState;
+            connectionStateService.SetState(newState);
+            ApplyConnectionButtonState();
+        }
 
+        /// <summary>
+        /// Применяет визуальное состояние кнопки на основе данных из сервиса
+        /// </summary>
+        private void ApplyConnectionButtonState() {
             Dispatcher.Invoke(() => {
                 bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
-                logger.Info($"UpdateConnectionButton: hasSelection={hasSelection}, DynamicConnectionButton is null: {DynamicConnectionButton == null}");
 
                 if (DynamicConnectionButton == null) {
-                    logger.Warn("UpdateConnectionButton: DynamicConnectionButton is null!");
+                    logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
                     return;
                 }
 
-                switch (currentConnectionState) {
-                    case ConnectionState.Disconnected:
-                        DynamicConnectionButton.Content = "Connect";
-                        DynamicConnectionButton.ToolTip = "Connect to PlayCanvas and load projects";
-                        DynamicConnectionButton.IsEnabled = true;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)); // Grey
-                        logger.Info("UpdateConnectionButton: Set to Connect");
-                        break;
+                var buttonInfo = connectionStateService.GetButtonInfo(hasSelection);
+                DynamicConnectionButton.Content = buttonInfo.Content;
+                DynamicConnectionButton.ToolTip = buttonInfo.ToolTip;
+                DynamicConnectionButton.IsEnabled = buttonInfo.IsEnabled;
+                DynamicConnectionButton.Background = new SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(buttonInfo.ColorR, buttonInfo.ColorG, buttonInfo.ColorB));
 
-                    case ConnectionState.UpToDate:
-                        DynamicConnectionButton.Content = "Refresh";
-                        DynamicConnectionButton.ToolTip = "Check for updates from PlayCanvas server";
-                        DynamicConnectionButton.IsEnabled = hasSelection;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(173, 216, 230)); // Light blue
-                        logger.Info($"UpdateConnectionButton: Set to Refresh (enabled={hasSelection})");
-                        logService.LogInfo($"UpdateConnectionButton: Button set to Refresh, enabled={hasSelection}");
-                        break;
-
-                    case ConnectionState.NeedsDownload:
-                        DynamicConnectionButton.Content = "Download";
-                        DynamicConnectionButton.ToolTip = "Download assets from PlayCanvas (list + files)";
-                        DynamicConnectionButton.IsEnabled = hasSelection;
-                        DynamicConnectionButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(144, 238, 144)); // Light green
-                        logger.Info($"UpdateConnectionButton: Set to Download (enabled={hasSelection})");
-                        logService.LogInfo($"UpdateConnectionButton: Button set to Download, enabled={hasSelection}");
-                        break;
-                }
+                logger.Info($"ApplyConnectionButtonState: Set to {buttonInfo.Content} (enabled={buttonInfo.IsEnabled})");
             });
         }
 
         /// <summary>
-        /// ���������� ����� �� ������������ ������ �����������
+        /// Обработчик клика по динамической кнопке подключения
         /// </summary>
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
-            logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
-            logService.LogInfo($"DynamicConnectionButton_Click: Button clicked, current state: {currentConnectionState}");
-            
+            var currentState = connectionStateService.CurrentState;
+            logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentState}");
+
             try {
-                switch (currentConnectionState) {
+                switch (currentState) {
                     case ConnectionState.Disconnected:
-                        // ������������ � PlayCanvas � ��������� ������ ��������
                         logger.Info("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
-                        logService.LogInfo("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
                         ConnectToPlayCanvas();
                         break;
 
                     case ConnectionState.UpToDate:
-                        // ��������� ������� ���������� �� �������
                         logger.Info("DynamicConnectionButton_Click: Calling RefreshFromServer");
-                        logService.LogInfo("DynamicConnectionButton_Click: Calling RefreshFromServer");
                         await RefreshFromServer();
                         break;
 
                     case ConnectionState.NeedsDownload:
-                        // ��������� ������ ������� + �����
                         logger.Info("DynamicConnectionButton_Click: Calling DownloadFromServer");
-                        logService.LogInfo("DynamicConnectionButton_Click: Calling DownloadFromServer");
                         await DownloadFromServer();
                         break;
                 }
@@ -1891,69 +1880,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// Call this before HasMissingFiles() to detect deleted files.
         /// </summary>
         private void RescanFileStatuses() {
-            int updatedCount = 0;
-            int checkedCount = 0;
-            int missingFilesCount = 0;
+            var result = fileStatusScannerService.ScanAll(viewModel.Textures, viewModel.Models);
 
-            // Statuses that indicate file was previously downloaded/exists locally
-            HashSet<string> localStatuses = new(StringComparer.OrdinalIgnoreCase) {
-                "Downloaded", "Converted", "Size Mismatch", "Hash ERROR", "Empty File"
-            };
-
-            logger.Info($"RescanFileStatuses: Starting scan, {viewModel.Textures.Count} textures, {viewModel.Models.Count} models");
-
-            foreach (var texture in viewModel.Textures) {
-                if (texture is ORMTextureResource) continue;
-                if (string.IsNullOrEmpty(texture.Path)) continue;
-
-                checkedCount++;
-                string? currentStatus = texture.Status;
-                bool fileExists = File.Exists(texture.Path);
-                bool isLocalStatus = localStatuses.Contains(currentStatus ?? "");
-
-                if (!fileExists) {
-                    missingFilesCount++;
-                    logger.Info($"  Missing file: '{texture.Name}', status='{currentStatus}', isLocalStatus={isLocalStatus}, path={texture.Path}");
-                }
-
-                // If status indicates file should exist locally but it doesn't, update to "On Server"
-                if (isLocalStatus && !fileExists) {
-                    logger.Info($"  -> Updating '{texture.Name}' from '{currentStatus}' to 'On Server'");
-                    texture.Status = "On Server";
-                    texture.CompressedSize = 0;
-                    texture.CompressionFormat = null;
-                    texture.MipmapCount = 0;
-                    updatedCount++;
-                }
+            // Refresh UI to ensure statuses are displayed correctly
+            if (result.UpdatedCount > 0) {
+                TexturesDataGrid?.Items.Refresh();
+                ModelsDataGrid?.Items.Refresh();
             }
-
-            foreach (var model in viewModel.Models) {
-                if (string.IsNullOrEmpty(model.Path)) continue;
-
-                checkedCount++;
-                string? currentStatus = model.Status;
-                bool fileExists = File.Exists(model.Path);
-                bool isLocalStatus = localStatuses.Contains(currentStatus ?? "");
-
-                if (!fileExists) {
-                    missingFilesCount++;
-                    logger.Info($"  Missing model: '{model.Name}', status='{currentStatus}', isLocalStatus={isLocalStatus}, path={model.Path}");
-                }
-
-                if (isLocalStatus && !fileExists) {
-                    logger.Info($"  -> Updating '{model.Name}' from '{currentStatus}' to 'On Server'");
-                    model.Status = "On Server";
-                    updatedCount++;
-                }
-            }
-
-            logger.Info($"RescanFileStatuses: Checked {checkedCount} assets, {missingFilesCount} missing files, updated {updatedCount} to 'On Server'");
-            if (updatedCount > 0) {
-                logService.LogInfo($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
-            }
-            // Always refresh UI to ensure statuses are displayed correctly
-            TexturesDataGrid?.Items.Refresh();
-            ModelsDataGrid?.Items.Refresh();
         }
 
         /// <summary>
@@ -2038,40 +1971,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Reset the pending flag
             Interlocked.Exchange(ref fileWatcherRefreshPending, 0);
 
-            int updatedCount = 0;
-            HashSet<string> processedPaths = new(StringComparer.OrdinalIgnoreCase);
-
             // Drain the queue
+            var deletedPaths = new List<string>();
             while (pendingDeletedPaths.TryDequeue(out string? deletedPath)) {
-                if (deletedPath == null || processedPaths.Contains(deletedPath)) continue;
-                processedPaths.Add(deletedPath);
-
-                // Check textures
-                foreach (var texture in viewModel.Textures) {
-                    if (texture is ORMTextureResource) continue;
-                    if (string.Equals(texture.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
-                        texture.Status = "On Server";
-                        texture.CompressedSize = 0;
-                        texture.CompressionFormat = null;
-                        texture.MipmapCount = 0;
-                        updatedCount++;
-                        break;
-                    }
-                }
-
-                // Check models
-                foreach (var model in viewModel.Models) {
-                    if (string.Equals(model.Path, deletedPath, StringComparison.OrdinalIgnoreCase)) {
-                        model.Status = "On Server";
-                        updatedCount++;
-                        break;
-                    }
+                if (!string.IsNullOrEmpty(deletedPath)) {
+                    deletedPaths.Add(deletedPath);
                 }
             }
 
-            if (updatedCount > 0) {
-                logger.Info($"FileWatcher: Updated {updatedCount} assets to 'On Server'");
+            int updatedCount = fileStatusScannerService.ProcessDeletedPaths(
+                deletedPaths, viewModel.Textures, viewModel.Models);
 
+            if (updatedCount > 0) {
                 // Single refresh after all updates
                 TexturesDataGrid?.Items.Refresh();
                 ModelsDataGrid?.Items.Refresh();
@@ -2088,53 +1999,27 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// This catches cases where files were deleted locally but assets_list.json hasn't changed.
         /// </summary>
         private bool HasMissingFiles() {
-            // Statuses that indicate file needs downloading
-            HashSet<string> downloadableStatuses = new(StringComparer.OrdinalIgnoreCase) {
-                "On Server", "Error", "Size Mismatch", "Corrupted", "Empty File", "Hash ERROR"
-            };
-
-            int missingCount = 0;
-
-            foreach (var texture in viewModel.Textures) {
-                if (texture is not ORMTextureResource && downloadableStatuses.Contains(texture.Status ?? "")) {
-                    missingCount++;
-                }
-            }
-
-            foreach (var model in viewModel.Models) {
-                if (downloadableStatuses.Contains(model.Status ?? "")) {
-                    missingCount++;
-                }
-            }
-
-            if (missingCount > 0) {
-                logger.Info($"HasMissingFiles: Found {missingCount} assets needing download");
-                logService.LogInfo($"HasMissingFiles: Found {missingCount} assets needing download");
-            }
-
-            return missingCount > 0;
+            // Исключаем ORM текстуры - они виртуальные и не требуют загрузки
+            var regularTextures = viewModel.Textures.Where(t => t is not ORMTextureResource);
+            return connectionStateService.HasMissingFiles(regularTextures, viewModel.Models, viewModel.Materials);
         }
 
         private async Task<bool> CheckForUpdates() {
-            try {
-                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null || string.IsNullOrEmpty(ProjectFolderPath)) {
-                    return false;
-                }
-
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-                string? apiKey = GetDecryptedApiKey();
-                if (string.IsNullOrEmpty(apiKey)) {
-                    logService.LogError("API key is missing while checking for updates");
-                    return false;
-                }
-
-                ProjectUpdateContext context = new(ProjectFolderPath!, selectedProjectId, selectedBranchId, apiKey);
-                return await projectAssetService.HasUpdatesAsync(context, CancellationToken.None);
-            } catch (Exception ex) {
-                logService.LogError($"Error checking for updates: {ex.Message}");
+            if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null || string.IsNullOrEmpty(ProjectFolderPath)) {
                 return false;
             }
+
+            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+            string? apiKey = GetDecryptedApiKey();
+
+            if (string.IsNullOrEmpty(apiKey)) {
+                logService.LogError("API key is missing while checking for updates");
+                return false;
+            }
+
+            return await connectionStateService.CheckForUpdatesAsync(
+                ProjectFolderPath!, selectedProjectId, selectedBranchId, apiKey, CancellationToken.None);
         }
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
@@ -2831,21 +2716,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
             try {
-                // Count existing ORM textures to generate unique name
-                int ormCount = viewModel.Textures.Count(t => t is ORMTextureResource) + 1;
-
-                // Create virtual ORM texture
-                var ormTexture = new ORMTextureResource {
-                    Name = $"[ORM Texture {ormCount}]",
-                    TextureType = "ORM (Virtual)",
-                    PackingMode = ChannelPackingMode.OGM, // Default to standard OGM mode
-                    Status = "Ready to configure"
-                };
-
-                // Add to viewModel.Textures collection
+                var ormTexture = ormTextureService.CreateEmptyORM(viewModel.Textures);
                 viewModel.Textures.Add(ormTexture);
 
-                // Select the newly created ORM texture
                 TexturesDataGrid.SelectedItem = ormTexture;
                 TexturesDataGrid.ScrollIntoView(ormTexture);
 
@@ -3138,17 +3011,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         // Helper methods for ORM creation
         // Finds texture by material map ID
         private TextureResource? FindTextureById(int? mapId) {
-            if (mapId == null) return null;
-
-            // Debug: Log search
-            var found = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
-            if (found == null) {
-                logService.LogWarn($"Texture with ID {mapId.Value} not found. Total textures in collection: {viewModel.Textures.Count}");
-                // Log first few texture IDs for debugging
-                var sampleIds = viewModel.Textures.Take(5).Select(t => $"{t.ID}({t.Name}");
-                logService.LogInfo($"Sample texture IDs: {sampleIds}");
-            }
-            return found;
+            return ormTextureService.FindTextureById(mapId, viewModel.Textures);
         }
 
         // Reads KTX2 file header to extract metadata (width, height, mip levels)
@@ -3193,23 +3056,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {
-            int count = 0;
-            if (ao != null) count++;
-            if (gloss != null) count++;
-            if (metallic != null) count++;
-
-            // Need at least 2 textures
-            if (count < 2) return ChannelPackingMode.None;
-
-            // Determine mode
-            if (ao != null && gloss != null && metallic != null) {
-                return ChannelPackingMode.OGM; // R=AO, G=Gloss, B=Metallic
-            } else if (ao != null && gloss != null) {
-                return ChannelPackingMode.OG;  // RGB=AO, A=Gloss
-            } else {
-                // Other combinations - default to OGM with missing channels
-                return ChannelPackingMode.OGM;
-            }
+            return ormTextureService.DetectPackingMode(ao, gloss, metallic);
         }
 
         // Context menu handlers for texture rows

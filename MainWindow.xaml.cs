@@ -2190,7 +2190,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MapTextureTypeToCore(textureType));
             var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
 
-            texture.CompressionFormat = compression.CompressionFormat.ToString();
+            // CompressionFormat is only set when texture is actually compressed
+            // (from KTX2 metadata or after compression process)
 
             // Auto-detect preset by filename if not already set
             // ���������� ������������ PresetManager ��� ��������� �������� ������ ��� ������ �������������

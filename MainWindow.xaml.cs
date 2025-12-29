@@ -920,12 +920,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Set this column's direction
             e.Column.SortDirection = newDir;
 
-            // Apply custom sort
-            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
-                // Clear any existing sort
-                listView.SortDescriptions.Clear();
+            // Apply custom sort - CustomSort triggers immediate re-sort
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            if (view is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
-                listView.Refresh();
+            } else if (view != null) {
+                // Fallback for non-ListCollectionView
+                view.SortDescriptions.Clear();
+                view.SortDescriptions.Add(new SortDescription(sortPath, newDir));
             }
         }
 

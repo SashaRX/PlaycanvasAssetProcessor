@@ -906,22 +906,27 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             e.Handled = true;
             string sortPath = e.Column.SortMemberPath;
 
-            // Toggle direction based on current column state
-            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
+            // Get current direction BEFORE any changes
+            var currentDir = e.Column.SortDirection;
+
+            // Toggle direction
+            var newDir = currentDir == ListSortDirection.Ascending
                 ? ListSortDirection.Descending
                 : ListSortDirection.Ascending;
 
-            // Clear other columns BEFORE sorting
-            foreach (var col in dataGrid.Columns)
-                col.SortDirection = null;
+            // Clear OTHER columns only (not current)
+            foreach (var col in dataGrid.Columns) {
+                if (col != e.Column)
+                    col.SortDirection = null;
+            }
 
-            // Set direction BEFORE CustomSort
-            e.Column.SortDirection = newDir;
-
-            // Use CustomSort with ResourceComparer (handles nulls)
+            // Apply CustomSort
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
             }
+
+            // Set direction AFTER CustomSort
+            e.Column.SortDirection = newDir;
         }
 
 #endregion

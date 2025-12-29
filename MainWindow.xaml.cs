@@ -897,32 +897,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Only handle columns with SortMemberPath
-            if (e.Column == null || string.IsNullOrEmpty(e.Column.SortMemberPath)) {
-                return; // Let WPF handle it
-            }
-
-            e.Handled = true;
-
-            // Toggle direction
-            var newDir = e.Column.SortDirection == ListSortDirection.Ascending
-                ? ListSortDirection.Descending
-                : ListSortDirection.Ascending;
-
-            // Clear other columns
-            foreach (var col in dataGrid.Columns)
-                col.SortDirection = null;
-
-            // Use SortDescriptions with DeferRefresh
-            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
-            if (view != null) {
-                using (view.DeferRefresh()) {
-                    view.SortDescriptions.Clear();
-                    view.SortDescriptions.Add(new SortDescription(e.Column.SortMemberPath, newDir));
-                }
-            }
-
-            e.Column.SortDirection = newDir;
+            // Let WPF handle ALL sorting natively
+            // Do nothing - WPF will use SortMemberPath automatically
         }
 
 #endregion

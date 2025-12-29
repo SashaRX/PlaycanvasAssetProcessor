@@ -1886,13 +1886,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// </summary>
         private void RescanFileStatuses() {
             int updatedCount = 0;
+            int checkedCount = 0;
+
+            // Statuses that indicate file was previously downloaded/exists locally
+            HashSet<string> localStatuses = new(StringComparer.OrdinalIgnoreCase) {
+                "Downloaded", "Converted", "Size Mismatch", "Hash ERROR", "Empty File"
+            };
 
             foreach (var texture in viewModel.Textures) {
                 if (texture is ORMTextureResource) continue;
                 if (string.IsNullOrEmpty(texture.Path)) continue;
 
-                // If status is "Downloaded" but file doesn't exist, update to "On Server"
-                if (texture.Status == "Downloaded" && !File.Exists(texture.Path)) {
+                checkedCount++;
+                string? currentStatus = texture.Status;
+
+                // If status indicates file should exist locally but it doesn't, update to "On Server"
+                if (localStatuses.Contains(currentStatus ?? "") && !File.Exists(texture.Path)) {
+                    logger.Info($"RescanFileStatuses: '{texture.Name}' file deleted, status '{currentStatus}' -> 'On Server', path: {texture.Path}");
                     texture.Status = "On Server";
                     texture.CompressedSize = 0;
                     texture.CompressionFormat = null;
@@ -1904,14 +1914,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             foreach (var model in viewModel.Models) {
                 if (string.IsNullOrEmpty(model.Path)) continue;
 
-                if (model.Status == "Downloaded" && !File.Exists(model.Path)) {
+                checkedCount++;
+                string? currentStatus = model.Status;
+
+                if (localStatuses.Contains(currentStatus ?? "") && !File.Exists(model.Path)) {
+                    logger.Info($"RescanFileStatuses: '{model.Name}' file deleted, status '{currentStatus}' -> 'On Server', path: {model.Path}");
                     model.Status = "On Server";
                     updatedCount++;
                 }
             }
 
+            logger.Info($"RescanFileStatuses: Checked {checkedCount} assets, updated {updatedCount} to 'On Server'");
             if (updatedCount > 0) {
-                logger.Info($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
                 logService.LogInfo($"RescanFileStatuses: Updated {updatedCount} assets to 'On Server' (files deleted)");
             }
         }

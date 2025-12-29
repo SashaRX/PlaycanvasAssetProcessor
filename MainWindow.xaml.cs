@@ -913,8 +913,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return; // WPF handles this
                 }
             }
-            // DataGridTemplateColumn with SortMemberPath OR SortMemberPath != binding → custom sort
 
+            // Custom sorting needed
             e.Handled = true;
 
             // Toggle direction
@@ -922,18 +922,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ? ListSortDirection.Descending
                 : ListSortDirection.Ascending;
 
-            // Clear other columns
+            // Clear other columns' arrows
             foreach (var col in dataGrid.Columns) {
                 if (col != e.Column)
                     col.SortDirection = null;
             }
 
-            // Set direction
+            // Set this column's arrow
             e.Column.SortDirection = newDir;
 
-            // Apply custom sort
-            if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
-                listView.CustomSort = new ResourceComparer(sortPath, newDir);
+            // Use SortDescriptions - faster and works correctly with WPF
+            var view = CollectionViewSource.GetDefaultView(dataGrid.ItemsSource);
+            if (view != null) {
+                view.SortDescriptions.Clear();
+                view.SortDescriptions.Add(new SortDescription(sortPath, newDir));
             }
         }
 

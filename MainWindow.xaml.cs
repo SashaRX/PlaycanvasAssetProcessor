@@ -1521,12 +1521,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                             try {
                                 using var stream = File.OpenRead(ktx2Path);
                                 using var reader = new BinaryReader(stream);
-                                // KTX2 header: levelCount at offset 40, supercompressionScheme at offset 44
+                                // KTX2 header structure:
+                                // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
+                                // Bytes 40-43: levelCount (uint32)
+                                // Bytes 44-47: supercompressionScheme (uint32)
+                                reader.BaseStream.Seek(12, SeekOrigin.Begin);
+                                uint vkFormat = reader.ReadUInt32();
+
                                 reader.BaseStream.Seek(40, SeekOrigin.Begin);
                                 mipLevels = (int)reader.ReadUInt32();
                                 uint supercompression = reader.ReadUInt32();
-                                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
-                                compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+
+                                // Only set compression format for Basis Universal textures (vkFormat = 0)
+                                if (vkFormat == 0) {
+                                    // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                    compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                                }
+                                // vkFormat != 0 means raw texture format, no Basis compression
                             } catch {
                                 // Ignore header read errors
                             }
@@ -2356,12 +2367,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                         try {
                                             using var stream = File.OpenRead(ktx2Path);
                                             using var reader = new BinaryReader(stream);
-                                            // KTX2 header: levelCount at offset 40, supercompressionScheme at offset 44
+                                            // KTX2 header structure:
+                                            // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
+                                            // Bytes 40-43: levelCount (uint32)
+                                            // Bytes 44-47: supercompressionScheme (uint32)
+                                            reader.BaseStream.Seek(12, SeekOrigin.Begin);
+                                            uint vkFormat = reader.ReadUInt32();
+
                                             reader.BaseStream.Seek(40, SeekOrigin.Begin);
                                             mipLevels = (int)reader.ReadUInt32();
                                             uint supercompression = reader.ReadUInt32();
-                                            // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
-                                            compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+
+                                            // Only set compression format for Basis Universal textures (vkFormat = 0)
+                                            if (vkFormat == 0) {
+                                                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                                                compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                                            }
+                                            // vkFormat != 0 means raw texture format, no Basis compression
                                         } catch {
                                             // Ignore header read errors
                                         }
@@ -2926,7 +2948,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // KTX2 header structure:
                 // Bytes 0-11: identifier (12 bytes) - skip
-                // Bytes 12-15: vkFormat (uint32) - skip
+                // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
                 // Bytes 16-19: typeSize (uint32) - skip
                 // Bytes 20-23: pixelWidth (uint32)
                 // Bytes 24-27: pixelHeight (uint32)
@@ -2936,6 +2958,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Bytes 40-43: levelCount (uint32)
                 // Bytes 44-47: supercompressionScheme (uint32)
 
+                reader.BaseStream.Seek(12, SeekOrigin.Begin);
+                uint vkFormat = reader.ReadUInt32();
+
                 reader.BaseStream.Seek(20, SeekOrigin.Begin);
                 int width = (int)reader.ReadUInt32();
                 int height = (int)reader.ReadUInt32();
@@ -2943,8 +2968,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 reader.BaseStream.Seek(40, SeekOrigin.Begin);
                 int mipLevels = (int)reader.ReadUInt32();
                 uint supercompression = reader.ReadUInt32();
-                // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
-                string compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+
+                // Only set compression format for Basis Universal textures (vkFormat = 0)
+                string compressionFormat = "";
+                if (vkFormat == 0) {
+                    // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
+                    compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+                }
+                // vkFormat != 0 means raw texture format, no Basis compression
 
                 return (width, height, mipLevels, compressionFormat);
             });

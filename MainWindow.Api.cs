@@ -336,15 +336,18 @@ namespace AssetProcessor {
                             if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
                                 ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
                                 ormTexture.MipmapCount = ktxInfo.MipLevels;
-                                // Set compression format from KTX2 header
-                                ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
-                                    ? TextureConversion.Core.CompressionFormat.UASTC
-                                    : TextureConversion.Core.CompressionFormat.ETC1S;
-                                logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, {ktxInfo.CompressionFormat}");
+                                // Set compression format from KTX2 header only if it's Basis Universal
+                                if (!string.IsNullOrEmpty(ktxInfo.CompressionFormat)) {
+                                    ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
+                                        ? TextureConversion.Core.CompressionFormat.UASTC
+                                        : TextureConversion.Core.CompressionFormat.ETC1S;
+                                    logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, {ktxInfo.CompressionFormat}");
+                                } else {
+                                    logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, (no Basis compression)");
+                                }
                             }
                         } catch (Exception ex) {
                             logService.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
-                            ormTexture.CompressionFormat = TextureConversion.Core.CompressionFormat.ETC1S; // Default fallback
                         }
                     }
 

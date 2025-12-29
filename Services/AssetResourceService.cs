@@ -197,10 +197,14 @@ public sealed class AssetResourceService : IAssetResourceService {
                     if (width.HasValue && height.HasValue) {
                         resolution[0] = width.Value;
                         resolution[1] = height.Value;
+                        logService.LogInfo($"Resolution from JSON variant '{variantName}': {width}x{height} for {textureName}");
                         break;
                     }
                 }
             }
+        }
+        if (resolution[0] == 0 && resolution[1] == 0) {
+            logService.LogInfo($"No resolution in JSON variants for {textureName}");
         }
 
         TextureResource texture = new() {
@@ -224,11 +228,13 @@ public sealed class AssetResourceService : IAssetResourceService {
         await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {
             switch (texture.Status) {
                 case "Downloaded":
+                    // Try to read resolution from local file
                     (int width, int height)? localResolution = MainWindowHelpers.GetLocalImageResolution(texture.Path, logService);
                     if (localResolution.HasValue) {
                         texture.Resolution = new[] { localResolution.Value.width, localResolution.Value.height };
+                        logService.LogInfo($"Resolution from local file: {localResolution.Value.width}x{localResolution.Value.height} for {texture.Name}");
                     } else {
-                        logService.LogError($"Failed to read resolution for {texture.Name} at {texture.Path}");
+                        logService.LogInfo($"Failed to read local file resolution for {texture.Name}, keeping JSON resolution: {texture.Resolution[0]}x{texture.Resolution[1]}");
                     }
                     break;
                 case "On Server":

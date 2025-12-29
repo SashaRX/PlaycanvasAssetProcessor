@@ -19,6 +19,9 @@ namespace AssetProcessor.Controls {
         private List<TextureResource> availableTextures = new();
         private MainWindow? mainWindow;
 
+        // Flag to prevent recursive UpdateStatus calls during ComboBox initialization
+        private bool _isSettingComboBoxes = false;
+
         public ORMPackingPanel() {
             InitializeComponent();
         }
@@ -154,56 +157,44 @@ namespace AssetProcessor.Controls {
             // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
             // Variables were captured at the TOP of this method to avoid SaveORMSettings overwriting them
             Dispatcher.BeginInvoke(new Action(() => {
-                Logger.Info("=== Dispatcher.BeginInvoke: Setting ComboBox selections ===");
-
-                // Sources - find by ID and set
-                if (aoSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == aoSource.ID);
-                    Logger.Info($"  AO: Looking for ID={aoSource.ID}, found={found?.Name ?? "null"}");
-                    if (found != null) {
-                        AOSourceComboBox.SelectedItem = found;
-                        Logger.Info($"  AO: Set SelectedItem to {found.Name}, result={(AOSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
+                // Set flag to prevent recursive UpdateStatus calls during ComboBox initialization
+                _isSettingComboBoxes = true;
+                try {
+                    // Sources - find by ID and set
+                    if (aoSource != null) {
+                        var found = availableTextures.FirstOrDefault(t => t.ID == aoSource.ID);
+                        if (found != null) AOSourceComboBox.SelectedItem = found;
                     }
-                }
 
-                if (glossSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == glossSource.ID);
-                    Logger.Info($"  Gloss: Looking for ID={glossSource.ID}, found={found?.Name ?? "null"}");
-                    if (found != null) {
-                        GlossSourceComboBox.SelectedItem = found;
-                        Logger.Info($"  Gloss: Set SelectedItem to {found.Name}, result={(GlossSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
+                    if (glossSource != null) {
+                        var found = availableTextures.FirstOrDefault(t => t.ID == glossSource.ID);
+                        if (found != null) GlossSourceComboBox.SelectedItem = found;
                     }
-                }
 
-                if (metallicSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == metallicSource.ID);
-                    Logger.Info($"  Metallic: Looking for ID={metallicSource.ID}, found={found?.Name ?? "null"}");
-                    if (found != null) {
-                        MetallicSourceComboBox.SelectedItem = found;
-                        Logger.Info($"  Metallic: Set SelectedItem to {found.Name}, result={(MetallicSourceComboBox.SelectedItem as TextureResource)?.Name ?? "null"}");
+                    if (metallicSource != null) {
+                        var found = availableTextures.FirstOrDefault(t => t.ID == metallicSource.ID);
+                        if (found != null) MetallicSourceComboBox.SelectedItem = found;
                     }
+
+                    if (heightSource != null) {
+                        var found = availableTextures.FirstOrDefault(t => t.ID == heightSource.ID);
+                        if (found != null) HeightSourceComboBox.SelectedItem = found;
+                    }
+
+                    // Compression settings
+                    CompressionFormatComboBox.SelectedItem = compressionFormat;
+
+                    // Toksvig calculation mode
+                    ToksvigCalculationModeComboBox.SelectedItem = toksvigCalculationMode;
+
+                    // Filter types for each channel
+                    AOFilterTypeComboBox.SelectedItem = aoFilterType;
+                    GlossFilterTypeComboBox.SelectedItem = glossFilterType;
+                    MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
+                } finally {
+                    _isSettingComboBoxes = false;
                 }
-
-                if (heightSource != null) {
-                    var found = availableTextures.FirstOrDefault(t => t.ID == heightSource.ID);
-                    if (found != null) HeightSourceComboBox.SelectedItem = found;
-                }
-
-                // Compression settings
-                CompressionFormatComboBox.SelectedItem = compressionFormat;
-                Logger.Info($"  CompressionFormat: Set to {compressionFormat}");
-
-                // Toksvig calculation mode
-                ToksvigCalculationModeComboBox.SelectedItem = toksvigCalculationMode;
-                Logger.Info($"  ToksvigCalculationMode: Set to {toksvigCalculationMode}");
-
-                // Filter types for each channel
-                AOFilterTypeComboBox.SelectedItem = aoFilterType;
-                GlossFilterTypeComboBox.SelectedItem = glossFilterType;
-                MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
-
-                Logger.Info("=== Dispatcher.BeginInvoke: DONE ===");
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
+            }), System.Windows.Threading.DispatcherPriority.Background);
 
             UpdateStatus();
         }
@@ -346,6 +337,8 @@ namespace AssetProcessor.Controls {
         }
 
         private void SourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Skip UpdateStatus during initial ComboBox setup to avoid recursive calls and UI freezing
+            if (_isSettingComboBoxes) return;
             UpdateStatus();
         }
 

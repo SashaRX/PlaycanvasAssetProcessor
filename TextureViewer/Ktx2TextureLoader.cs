@@ -13,43 +13,55 @@ namespace AssetProcessor.TextureViewer;
 public static class Ktx2TextureLoader {
     private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
+    // Lock object for libktx calls - libktx may not be fully thread-safe
+    private static readonly object _libktxLock = new object();
+
     /// <summary>
     /// Load a KTX2 texture from a file path.
     /// </summary>
     public static TextureData LoadFromFile(string filePath) {
-        logger.Info($"Loading KTX2 texture from: {filePath}");
+        logger.Info($"Loading KTX2: {filePath}");
+
+        // Read entire file into memory first to avoid file locking issues
+        byte[] fileData = File.ReadAllBytes(filePath);
+
+        // Parse metadata from memory buffer (no libktx involved, no logging to avoid deadlock)
+        var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadataFromMemory(fileData);
 
         // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
         if (!LibKtxNative.LoadKtxDll()) {
-            logger.Error("Failed to load ktx.dll. Cannot load KTX2 files.");
-            throw new DllNotFoundException("Unable to load ktx.dll. Please ensure KTX-Software is installed and ktx.dll is available.");
+            logger.Error("Failed to load ktx.dll");
+            throw new DllNotFoundException("Unable to load ktx.dll");
         }
 
-        // Create texture from file with Key-Value Data support
-        uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
-                          (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
-        var result = LibKtxNative.ktxTexture2_CreateFromNamedFile(
-            filePath,
-            createFlags,
-            out IntPtr textureHandle);
+        // Lock all libktx operations - the library may not be thread-safe
+        lock (_libktxLock) {
+            IntPtr dataPtr = Marshal.AllocHGlobal(fileData.Length);
+            try {
+                Marshal.Copy(fileData, 0, dataPtr, fileData.Length);
 
-        if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
-            throw new Exception($"Failed to load KTX2 file: {LibKtxNative.GetErrorString(result)}");
-        }
+                uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
+                                  (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
+                var result = LibKtxNative.ktxTexture2_CreateFromMemory(
+                    dataPtr,
+                    new UIntPtr((uint)fileData.Length),
+                    createFlags,
+                    out IntPtr textureHandle);
 
-        try {
-            // Read ALL metadata directly from file (histogram + normal layout)
-            var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadata(filePath);
-            if (histogramMetadata != null) {
-                logger.Debug($"Histogram metadata loaded: {histogramMetadata.Scale.Length} channel(s)");
+                if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
+                    throw new Exception($"Failed to load KTX2: {LibKtxNative.GetErrorString(result)}");
+                }
+
+                try {
+                    var textureData = LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
+                    logger.Info($"KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+                    return textureData;
+                } finally {
+                    LibKtxNative.ktxTexture2_Destroy(textureHandle);
+                }
+            } finally {
+                Marshal.FreeHGlobal(dataPtr);
             }
-            if (normalLayoutMetadata != null) {
-                logger.Info($"Normal map layout detected: {normalLayoutMetadata.GetDescription()}");
-            }
-
-            return LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
-        } finally {
-            LibKtxNative.ktxTexture2_Destroy(textureHandle);
         }
     }
 

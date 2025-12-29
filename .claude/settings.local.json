@@ -60,7 +60,8 @@
       "Bash(done)",
       "Bash(Select-String -Pattern \"error|warning CS|Build succeeded|Build FAILED\" -Context 0,2)",
       "Bash(cmd.exe /c \"taskkill /F /PID 2500\")",
-      "Bash(cmd.exe /c \"taskkill /F /PID 13716\")"
+      "Bash(cmd.exe /c \"taskkill /F /PID 13716\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 39048\")"
     ],
     "deny": [],
     "ask": []

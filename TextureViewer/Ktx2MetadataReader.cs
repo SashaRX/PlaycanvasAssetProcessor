@@ -77,6 +77,54 @@ public static class Ktx2MetadataReader {
     }
 
     /// <summary>
+    /// Reads all metadata from in-memory KTX2 data.
+    /// Returns a tuple (histogram, normalLayout) where either can be null.
+    /// </summary>
+    public static (HistogramMetadata? histogram, NormalLayoutMetadata? normalLayout) ReadAllMetadataFromMemory(byte[] fileData) {
+        try {
+            if (fileData == null || fileData.Length < 80) {
+                logger.Warn("Invalid or too small KTX2 data");
+                return (null, null);
+            }
+
+            using var memStream = new MemoryStream(fileData);
+            using var reader = new BinaryReader(memStream);
+
+            // Read and verify KTX2 identifier
+            byte[] identifier = reader.ReadBytes(12);
+            if (!identifier.SequenceEqual(KTX2_IDENTIFIER)) {
+                logger.Warn("Not a valid KTX2 data (identifier mismatch)");
+                return (null, null);
+            }
+
+            // Skip to KVD section (offset 56)
+            memStream.Seek(56, SeekOrigin.Begin);
+            uint kvdByteOffset = reader.ReadUInt32();
+            uint kvdByteLength = reader.ReadUInt32();
+
+            if (kvdByteLength == 0) {
+                return (null, null);
+            }
+
+            // Read KVD section
+            memStream.Seek(kvdByteOffset, SeekOrigin.Begin);
+            byte[] kvdData = reader.ReadBytes((int)kvdByteLength);
+
+            // Parse both metadata types
+            var (histogram, normalLayout) = ParseKeyValueDataComplete(kvdData);
+
+            if (histogram != null && histogram.Scale[0] > 1.0f) {
+                histogram = null;
+            }
+
+            return (histogram, normalLayout);
+        } catch (Exception ex) {
+            logger.Error(ex, "Failed to read metadata from KTX2 memory");
+            return (null, null);
+        }
+    }
+
+    /// <summary>
     /// Reads histogram metadata directly from KTX2 file.
     /// This is the SAFE approach that doesn't rely on broken structure marshaling.
     /// Returns null if no histogram metadata found.
@@ -252,11 +300,8 @@ public static class Ktx2MetadataReader {
             int valueStart = offset + keyLength;
             int valueLength = (int)keyAndValueByteSize - keyLength;
 
-            logger.Info($"[Ktx2MetadataReader] KVD entry: key=\"{key}\", valueLength={valueLength}");
-
             // Check if this is "pc.meta"
             if (key == "pc.meta") {
-                logger.Info($"[Ktx2MetadataReader] Found pc.meta key with {valueLength} bytes of TLV data");
                 byte[] tlvData = new byte[valueLength];
                 Array.Copy(kvdData, valueStart, tlvData, 0, valueLength);
                 return ParseTLVAllData(tlvData);
@@ -268,7 +313,6 @@ public static class Ktx2MetadataReader {
             offset += padding;
         }
 
-        logger.Info("[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data");
         return (null, null);
     }
 

@@ -690,7 +690,8 @@ namespace AssetProcessor {
                     _ = Task.Run(async () => {
                         try {
                             await LoadKtx2ToD3D11ViewerAsync(texturePreviewService.CurrentLoadedKtx2Path);
-                            await Dispatcher.InvokeAsync(() => {
+                            // Use BeginInvoke to avoid deadlock
+                            Dispatcher.BeginInvoke(new Action(() => {
                                 if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
                                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                                     logger.Info($"Reloaded KTX2 to D3D11 when switching to KTX2 mode - {D3D11TextureViewer.Renderer.MipCount} mip levels");
@@ -705,7 +706,7 @@ namespace AssetProcessor {
                                         logger.Info($"Skipping mask restore - Normal mode was auto-enabled for normal map");
                                     }
                                 }
-                            });
+                            }));
                         } catch (Exception ex) {
                             logger.Error(ex, "Failed to reload KTX2 when switching to KTX2 mode");
                         }
@@ -820,8 +821,8 @@ namespace AssetProcessor {
             var mip = texturePreviewService.CurrentKtxMipmaps[clampedLevel];
             texturePreviewService.OriginalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение
-            Dispatcher.Invoke(() => {
+            // Обновляем изображение - use BeginInvoke to avoid deadlock
+            Dispatcher.BeginInvoke(new Action(() => {
                 UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
 
                 // Update WPF Image if in WPF preview mode
@@ -831,7 +832,7 @@ namespace AssetProcessor {
                 }
 
                 UpdateHistogram(texturePreviewService.OriginalBitmapSource);
-            });
+            }));
 
             ScheduleFitZoomUpdate(false);
             UpdateMipmapInfo(mip, texturePreviewService.CurrentKtxMipmaps.Count);
@@ -841,8 +842,8 @@ namespace AssetProcessor {
             // Save current active mask
             texturePreviewService.CurrentActiveChannelMask = channel;
 
-            // Sync GUI buttons
-            Dispatcher.Invoke(() => UpdateChannelButtonsState());
+            // Sync GUI buttons - use BeginInvoke to avoid deadlock
+            Dispatcher.BeginInvoke(new Action(() => UpdateChannelButtonsState()));
 
             // Apply channel filter to D3D11 renderer if active
             if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
@@ -866,16 +867,17 @@ namespace AssetProcessor {
                 // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
                 if (texturePreviewService.OriginalBitmapSource != null) {
                     if (channel == "Normal") {
-                        // For normal map mode, show RGB histogram (no grayscale)
-                        Dispatcher.Invoke(() => {
+                        // For normal map mode, show RGB histogram (no grayscale) - use BeginInvoke
+                        Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(texturePreviewService.OriginalBitmapSource, false);
-                        });
+                        }));
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
                         BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
-                        Dispatcher.Invoke(() => {
+                        // Use BeginInvoke to avoid deadlock
+                        Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
-                        });
+                        }));
                     }
                 }
 
@@ -886,8 +888,8 @@ namespace AssetProcessor {
             if (texturePreviewService.OriginalBitmapSource != null) {
                 BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
 
-                // Обновляем UI в основном потоке
-                Dispatcher.Invoke(() => {
+                // Обновляем UI в основном потоке - use BeginInvoke to avoid deadlock
+                Dispatcher.BeginInvoke(new Action(() => {
                     UpdatePreviewImage(filteredBitmap, setReference: false, preserveViewport: true);
 
                     // Update WPF Image if in WPF preview mode
@@ -899,7 +901,7 @@ namespace AssetProcessor {
                     }
 
                     UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
-                });
+                }));
             }
         }
 
@@ -932,7 +934,7 @@ namespace AssetProcessor {
             }
         }
 
-        private async void ShowOriginalImage(bool recalculateFitZoom = false, bool preserveMask = false) {
+        private void ShowOriginalImage(bool recalculateFitZoom = false, bool preserveMask = false) {
             // Only clear mask if explicitly requested (NOT when switching Source<->KTX)
             if (!preserveMask) {
                 texturePreviewService.CurrentActiveChannelMask = null;
@@ -953,7 +955,8 @@ namespace AssetProcessor {
             }
 
             if (texturePreviewService.OriginalBitmapSource != null) {
-                await Dispatcher.InvokeAsync(() => {
+                // Use BeginInvoke to avoid deadlock when called from background thread
+                Dispatcher.BeginInvoke(new Action(() => {
                     UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: true, preserveViewport: !recalculateFitZoom);
 
                     // Update WPF Image if in WPF preview mode
@@ -975,7 +978,7 @@ namespace AssetProcessor {
                         UpdateChannelButtonsState(); // Sync button UI
                         logger.Info("Auto-enabled Normal reconstruction mode for normal map texture (PNG)");
                     }
-                });
+                }));
             }
         }
 
@@ -984,7 +987,8 @@ namespace AssetProcessor {
 
             HistogramComputationResult result = histogramCoordinator.BuildHistogram(bitmapSource, isGray);
 
-            Dispatcher.Invoke(() => ApplyHistogramResult(result));
+            // Use BeginInvoke to avoid deadlock when called from background thread
+            Dispatcher.BeginInvoke(new Action(() => ApplyHistogramResult(result)));
         }
 
         private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
@@ -992,7 +996,8 @@ namespace AssetProcessor {
 
             HistogramComputationResult result = await histogramCoordinator.BuildHistogramAsync(bitmapSource, isGray);
 
-            Dispatcher.Invoke(() => ApplyHistogramResult(result));
+            // Use BeginInvoke to avoid deadlock when called from background thread
+            Dispatcher.BeginInvoke(new Action(() => ApplyHistogramResult(result)));
         }
 
         private void ApplyHistogramResult(HistogramComputationResult result) {

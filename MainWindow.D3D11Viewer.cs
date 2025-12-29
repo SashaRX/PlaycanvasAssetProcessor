@@ -150,17 +150,18 @@ namespace AssetProcessor {
             bool renderLoopDisabled = false;
 
             try {
-                logger.Info("Waiting for D3D11 texture preview semaphore...");
-                // Use short timeout to avoid deadlock when UI thread is busy
-                // If we can't get semaphore quickly, the previous load is still running - skip this load
-                // The cancellation token will also cancel the wait if a new texture is selected
-                bool acquired = await d3dTextureLoadSemaphore.WaitAsync(500, cancellationToken);
+                // Try to acquire semaphore immediately without waiting
+                // If semaphore is busy, another load is in progress - skip this one
+                // Using Wait(0) is non-blocking and won't cause deadlock
+                logger.Info("Trying to acquire D3D11 texture preview semaphore...");
+                bool acquired = d3dTextureLoadSemaphore.Wait(0);
                 if (!acquired) {
-                    logger.Warn("Timeout waiting for D3D11 texture preview semaphore - skipping this load");
+                    logger.Info("Semaphore busy - another texture load in progress, skipping this load");
                     CompleteD3DPreviewLoad(loadCts);
                     return;
                 }
                 semaphoreEntered = true;
+                logger.Info("Semaphore acquired");
 
                 logger.Info("D3D11TextureViewer and Renderer are not null, proceeding...");
 
@@ -228,45 +229,33 @@ namespace AssetProcessor {
 
                 logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
 
-                // Allow UI thread to process other messages before heavy operation
-                logger.Info("Yielding to UI thread...");
-                await Task.Yield();
-
-                logger.Info("Checking cancellation before Dispatcher.InvokeAsync...");
+                // Check cancellation before UI work
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // LoadTexture must be called in UI thread (requires D3D11 context)
-                // Use Normal priority instead of Background to avoid hanging when UI thread is busy
-                // Background priority can be delayed indefinitely if UI thread is processing higher priority messages
-                logger.Info("Invoking LoadTexture on UI thread with Normal priority...");
-                await Dispatcher.InvokeAsync(() => {
-                    logger.Info("Inside Dispatcher.InvokeAsync, checking cancellation...");
-                    cancellationToken.ThrowIfCancellationRequested();
+                // Check if texture is still valid (user might have switched textures)
+                if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
+                    logger.Info($"Texture was switched during loading (from {texturePathAtStart} to {texturePreviewService.CurrentSelectedTexture?.Path}), ignoring result");
+                    return;
+                }
 
-                    // Check if texture is still valid (user might have switched textures)
-                    if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
-                        logger.Info($"Texture was switched during loading (from {texturePathAtStart} to {texturePreviewService.CurrentSelectedTexture?.Path}), ignoring result");
-                        return;
-                    }
+                if (D3D11TextureViewer?.Renderer == null) {
+                    logger.Error("D3D11TextureViewer.Renderer is null!");
+                    return;
+                }
 
-                    if (D3D11TextureViewer?.Renderer == null) {
-                        logger.Error("D3D11TextureViewer.Renderer is null!");
-                        return;
-                    }
+                // LoadTexture - we're already on UI thread (called via Dispatcher.InvokeAsync)
+                logger.Info("Calling LoadTexture on renderer...");
+                D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
 
-                    logger.Info("Calling LoadTexture on renderer...");
-                    D3D11TextureViewer.Renderer.LoadTexture(textureData);
-                    logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
+                // Update format info in UI
+                if (TextureFormatTextBlock != null) {
+                    string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                    TextureFormatTextBlock.Text = $"Format: {formatInfo}";
+                }
 
-                    // Update format info in UI
-                    if (TextureFormatTextBlock != null) {
-                        string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
-                        TextureFormatTextBlock.Text = $"Format: {formatInfo}";
-                    }
-
-                    // Update histogram correction button state (PNG has no metadata)
-                    UpdateHistogramCorrectionButtonState();
-                }, System.Windows.Threading.DispatcherPriority.Normal);
+                // Update histogram correction button state (PNG has no metadata)
+                UpdateHistogramCorrectionButtonState();
 
                 // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
             } catch (OperationCanceledException) {
@@ -277,6 +266,7 @@ namespace AssetProcessor {
             } finally {
                 if (semaphoreEntered) {
                     d3dTextureLoadSemaphore.Release();
+                    logger.Info("Semaphore released");
                 }
 
                 if (renderLoopDisabled) {
@@ -287,10 +277,8 @@ namespace AssetProcessor {
                 // Force immediate render to update viewport with current zoom/pan (only if not cancelled and texture is still valid)
                 if (!cancellationToken.IsCancellationRequested &&
                     (texturePathAtStart == null || texturePreviewService.CurrentSelectedTexture?.Path == texturePathAtStart)) {
-                    await Dispatcher.InvokeAsync(() => {
-                        D3D11TextureViewer?.Renderer?.Render();
-                        logger.Info("Forced render to apply current zoom/pan");
-                    }, System.Windows.Threading.DispatcherPriority.Normal);
+                    D3D11TextureViewer?.Renderer?.Render();
+                    logger.Info("Forced render to apply current zoom/pan");
                 } else if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
                     logger.Info("Skipping render - texture was switched during loading");
                 }
@@ -366,92 +354,70 @@ namespace AssetProcessor {
                 return false;
             }
 
-            // Atomic check and set flag to prevent duplicate loading
-            // Use CompareExchange for atomic check and set to avoid TOCTOU
-            // Try to set flag to 1 if it was 0 (atomic operation)
-            int wasLoadingBefore = Interlocked.CompareExchange(ref _isLoadingKtx2, 1, 0);
-            
-            // Flag indicating if we actually started loading
-            // This is needed for proper flag reset in finally block
-            bool loadStarted = false;
-            
-            if (wasLoadingBefore != 0) {
-                // Already loading - check path for more informative message
-                string? currentPath = Volatile.Read(ref _currentLoadingKtx2Path);
-                if (currentPath != null && string.Equals(currentPath, ktxPath, StringComparison.OrdinalIgnoreCase)) {
-                    logger.Warn($"KTX2 file already loading: {ktxPath}, skipping duplicate load");
-                } else {
-                    logger.Warn($"Another KTX2 file is loading: {currentPath}, skipping load of: {ktxPath}");
-                }
-                // Important: do not reset flag, as another thread set it and should reset it
-                return false;
-            }
-
-            // Successfully set loading flag atomically - set path and loading start flag
-            // Path setting doesn't require atomicity, as flag already protects from concurrent access
-            Interlocked.Exchange(ref _currentLoadingKtx2Path, ktxPath);
-            loadStarted = true;
+            // Skip duplicate loading check - just load the texture
+            // The old flag-based approach was causing deadlocks
 
             try {
                 // Use Ktx2TextureLoader to load the KTX2 file
                 logger.Info($"Loading KTX2 file to D3D11 viewer: {ktxPath}");
-                var textureData = await Task.Run(() => Ktx2TextureLoader.LoadFromFile(ktxPath));
 
-                await Dispatcher.InvokeAsync(() => {
-                    D3D11TextureViewer.Renderer.LoadTexture(textureData);
-                    logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+                // Load texture data in background thread, but use ConfigureAwait(false)
+                // to avoid capturing SynchronizationContext and prevent deadlock
+                var textureData = await Task.Run(() => Ktx2TextureLoader.LoadFromFile(ktxPath)).ConfigureAwait(false);
 
-                    // Update histogram correction button state
-                    UpdateHistogramCorrectionButtonState();
+                // Now we're on a thread pool thread, use BeginInvoke to update UI
+                Dispatcher.BeginInvoke(new Action(() => {
+                    try {
+                        if (D3D11TextureViewer?.Renderer == null) return;
+                        D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                        logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
-                    // Update format info in UI
-                    bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-                    if (TextureFormatTextBlock != null) {
-                        string compressionFormat = textureData.CompressionFormat ?? "Unknown";
-                        string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
-                        string histInfo = hasHistogram ? " + Histogram" : "";
-                        TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
-                    }
+                        // Update histogram correction button state
+                        UpdateHistogramCorrectionButtonState();
 
-                    // Trigger immediate render to show the updated texture with preserved zoom/pan
-                    D3D11TextureViewer.Renderer.Render();
-                    logger.Info("Forced render to apply current zoom/pan after KTX2 load");
+                        // Update format info in UI
+                        bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
+                        if (TextureFormatTextBlock != null) {
+                            string compressionFormat = textureData.CompressionFormat ?? "Unknown";
+                            string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
+                            string histInfo = hasHistogram ? " + Histogram" : "";
+                            TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
+                        }
 
-                    // AUTO-ENABLE Normal reconstruction for normal maps
-                    // Priority 1: Check NormalLayout metadata (for new KTX2 files with metadata)
-                    // Priority 2: Check TextureType (for older KTX2 files without metadata)
-                    bool shouldAutoEnableNormal = false;
-                    string autoEnableReason = "";
-
-                    if (textureData.NormalLayoutMetadata != null) {
-                        shouldAutoEnableNormal = true;
-                        autoEnableReason = $"KTX2 normal map with metadata (layout: {textureData.NormalLayoutMetadata.Layout})";
-                    } else if (texturePreviewService.CurrentSelectedTexture?.TextureType?.ToLower() == "normal") {
-                        shouldAutoEnableNormal = true;
-                        autoEnableReason = "KTX2 normal map detected by TextureType (no metadata)";
-                    }
-
-                    if (shouldAutoEnableNormal && D3D11TextureViewer?.Renderer != null) {
-                        texturePreviewService.CurrentActiveChannelMask = "Normal";
-                        D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                        // Trigger immediate render to show the updated texture with preserved zoom/pan
                         D3D11TextureViewer.Renderer.Render();
-                        UpdateChannelButtonsState(); // Sync button UI
-                        logger.Info($"Auto-enabled Normal reconstruction mode for {autoEnableReason}");
+                        logger.Info("Forced render to apply current zoom/pan after KTX2 load");
+
+                        // AUTO-ENABLE Normal reconstruction for normal maps
+                        // Priority 1: Check NormalLayout metadata (for new KTX2 files with metadata)
+                        // Priority 2: Check TextureType (for older KTX2 files without metadata)
+                        bool shouldAutoEnableNormal = false;
+                        string autoEnableReason = "";
+
+                        if (textureData.NormalLayoutMetadata != null) {
+                            shouldAutoEnableNormal = true;
+                            autoEnableReason = $"KTX2 normal map with metadata (layout: {textureData.NormalLayoutMetadata.Layout})";
+                        } else if (texturePreviewService.CurrentSelectedTexture?.TextureType?.ToLower() == "normal") {
+                            shouldAutoEnableNormal = true;
+                            autoEnableReason = "KTX2 normal map detected by TextureType (no metadata)";
+                        }
+
+                        if (shouldAutoEnableNormal && D3D11TextureViewer?.Renderer != null) {
+                            texturePreviewService.CurrentActiveChannelMask = "Normal";
+                            D3D11TextureViewer.Renderer.SetChannelMask(0x20); // Normal reconstruction bit
+                            D3D11TextureViewer.Renderer.Render();
+                            UpdateChannelButtonsState(); // Sync button UI
+                            logger.Info($"Auto-enabled Normal reconstruction mode for {autoEnableReason}");
+                        }
+                    } catch (Exception ex) {
+                        logger.Error(ex, "Error in KTX2 UI update");
                     }
-                });
+                }));
 
                 return true;
             } catch (Exception ex) {
                 logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");
                 return false;
-            } finally {
-                // Atomically reset flag only if we actually started loading
-                // If we returned earlier due to race condition detection, flags are already restored
-                // and should not be reset here, otherwise it will allow other threads to bypass protection
-                if (loadStarted) {
-                    Interlocked.Exchange(ref _isLoadingKtx2, 0);
-                    Interlocked.Exchange(ref _currentLoadingKtx2Path, null);
-                }
             }
         }
 

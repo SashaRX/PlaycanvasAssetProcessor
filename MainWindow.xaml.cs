@@ -409,7 +409,8 @@ namespace AssetProcessor {
                         }
 
                         if (!ktxLoaded) {
-                            await Dispatcher.InvokeAsync(() => {
+                            // Use BeginInvoke to avoid deadlock
+                            Dispatcher.BeginInvoke(new Action(() => {
                                 if (cancellationToken.IsCancellationRequested) return;
 
                                 texturePreviewService.IsKtxPreviewAvailable = false;
@@ -417,7 +418,7 @@ namespace AssetProcessor {
 
                                 // Show error message
                                 logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
-                            });
+                            }));
                         }
                     } catch (OperationCanceledException) {
                         logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Cancelled for ORM: {ormTexture.Name}");
@@ -516,7 +517,8 @@ namespace AssetProcessor {
                         }
 
                         if (!ktxLoaded) {
-                            await Dispatcher.InvokeAsync(() => {
+                            // Use BeginInvoke to avoid deadlock
+                            Dispatcher.BeginInvoke(new Action(() => {
                                 if (cancellationToken.IsCancellationRequested) {
                                     return;
                                 }
@@ -528,7 +530,7 @@ namespace AssetProcessor {
                                 } else {
                                     UpdatePreviewSourceControls();
                                 }
-                            });
+                            }));
                         }
                     } catch (OperationCanceledException) {
                         logService.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
@@ -602,7 +604,8 @@ namespace AssetProcessor {
 
                 logger.Info($"Loaded KTX2 directly to D3D11 viewer: {ktxPath}");
 
-                await Dispatcher.InvokeAsync(() => {
+                // Use BeginInvoke (fire-and-forget) to avoid deadlock when UI thread is busy
+                Dispatcher.BeginInvoke(new Action(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
@@ -625,7 +628,7 @@ namespace AssetProcessor {
                     } else {
                         UpdatePreviewSourceControls();
                     }
-                });
+                }));
 
                 return true;
             } catch (OperationCanceledException) {
@@ -661,7 +664,8 @@ namespace AssetProcessor {
 
                 logger.Info($"Extracted {mipmaps.Count} mipmaps from KTX2");
 
-                await Dispatcher.InvokeAsync(() => {
+                // Use BeginInvoke to avoid deadlock
+                Dispatcher.BeginInvoke(new Action(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
@@ -678,7 +682,7 @@ namespace AssetProcessor {
                     } else {
                         UpdatePreviewSourceControls();
                     }
-                });
+                }));
 
                 return true;
             } catch (OperationCanceledException) {
@@ -695,14 +699,15 @@ namespace AssetProcessor {
             // BUT: Don't reset if Normal mode was auto-enabled for normal maps
             if (texturePreviewService.CurrentActiveChannelMask != "Normal") {
                 texturePreviewService.CurrentActiveChannelMask = null;
-                Dispatcher.Invoke(() => {
+                // Use BeginInvoke to avoid deadlock when called from background thread
+                Dispatcher.BeginInvoke(new Action(() => {
                     UpdateChannelButtonsState();
                     // Reset D3D11 renderer mask
                     if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
                         D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
                         D3D11TextureViewer.Renderer.RestoreOriginalGamma();
                     }
-                });
+                }));
             } else {
                 logger.Info("LoadSourcePreviewAsync: Skipping mask reset - Normal mode is active for normal map");
             }
@@ -716,7 +721,8 @@ namespace AssetProcessor {
             }
 
             if (texturePreviewService.GetCachedImage(texturePath) is BitmapImage cachedImage) {
-                await Dispatcher.InvokeAsync(() => {
+                // Use BeginInvoke to avoid deadlock
+                Dispatcher.BeginInvoke(new Action(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
@@ -738,7 +744,7 @@ namespace AssetProcessor {
                     _ = UpdateHistogramAsync(cachedImage);
 
                     UpdatePreviewSourceControls();
-                });
+                }));
 
                 return;
             }
@@ -749,7 +755,8 @@ namespace AssetProcessor {
                 return;
             }
 
-            await Dispatcher.InvokeAsync(() => {
+            // Use BeginInvoke to avoid deadlock
+            Dispatcher.BeginInvoke(new Action(() => {
                 if (cancellationToken.IsCancellationRequested) {
                     return;
                 }
@@ -771,7 +778,7 @@ namespace AssetProcessor {
                 _ = UpdateHistogramAsync(thumbnailImage);
 
                 UpdatePreviewSourceControls();
-            });
+            }));
 
             if (cancellationToken.IsCancellationRequested) {
                 return;
@@ -789,7 +796,8 @@ namespace AssetProcessor {
                         return;
                     }
 
-                    Dispatcher.Invoke(() => {
+                    // Use BeginInvoke to avoid deadlock when called from background thread
+                    Dispatcher.BeginInvoke(new Action(() => {
                         if (cancellationToken.IsCancellationRequested) {
                             return;
                         }
@@ -803,7 +811,6 @@ namespace AssetProcessor {
                         if (loadToViewer && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source) {
                             texturePreviewService.OriginalBitmapSource = bitmapImage;
                             ShowOriginalImage();
-                            // �� ��������� fitZoom ��� full resolution - ��� ���������� ����, ��� ��� ����������
                         }
 
                         // Always update histogram when full-resolution image is loaded (even if showing KTX2)
@@ -811,7 +818,7 @@ namespace AssetProcessor {
                         _ = UpdateHistogramAsync(bitmapImage);
 
                         UpdatePreviewSourceControls();
-                    });
+                    }));
                 }, cancellationToken);
             } catch (OperationCanceledException) {
                 // ���������� �������� ��������� ��� ����� ������

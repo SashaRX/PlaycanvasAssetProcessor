@@ -105,15 +105,51 @@ public class FileStatusScannerService : IFileStatusScannerService {
         };
     }
 
-    public ScanResult ScanAll(IEnumerable<TextureResource> textures, IEnumerable<ModelResource> models) {
+    public ScanResult ScanMaterials(IEnumerable<MaterialResource> materials) {
+        int updatedCount = 0;
+        int checkedCount = 0;
+        int missingFilesCount = 0;
+        var updatedNames = new List<string>();
+
+        foreach (var material in materials) {
+            if (string.IsNullOrEmpty(material.MaterialJsonPath)) continue;
+
+            checkedCount++;
+            string? currentStatus = material.Status;
+            bool fileExists = File.Exists(material.MaterialJsonPath);
+            bool isLocalStatus = IsLocalStatus(currentStatus);
+
+            if (!fileExists) {
+                missingFilesCount++;
+                logger.Debug($"Missing material: '{material.Name}', path='{material.MaterialJsonPath}', status='{currentStatus}'");
+            }
+
+            if (isLocalStatus && !fileExists) {
+                logger.Info($"Updating material '{material.Name}' from '{currentStatus}' to 'On Server'");
+                material.Status = "On Server";
+                updatedCount++;
+                updatedNames.Add(material.Name ?? "Unknown");
+            }
+        }
+
+        return new ScanResult {
+            CheckedCount = checkedCount,
+            MissingFilesCount = missingFilesCount,
+            UpdatedCount = updatedCount,
+            UpdatedAssetNames = updatedNames
+        };
+    }
+
+    public ScanResult ScanAll(IEnumerable<TextureResource> textures, IEnumerable<ModelResource> models, IEnumerable<MaterialResource> materials) {
         logger.Info($"ScanAll: Starting scan");
 
         var textureResult = ScanTextures(textures);
         var modelResult = ScanModels(models);
+        var materialResult = ScanMaterials(materials);
 
-        int totalChecked = textureResult.CheckedCount + modelResult.CheckedCount;
-        int totalMissing = textureResult.MissingFilesCount + modelResult.MissingFilesCount;
-        int totalUpdated = textureResult.UpdatedCount + modelResult.UpdatedCount;
+        int totalChecked = textureResult.CheckedCount + modelResult.CheckedCount + materialResult.CheckedCount;
+        int totalMissing = textureResult.MissingFilesCount + modelResult.MissingFilesCount + materialResult.MissingFilesCount;
+        int totalUpdated = textureResult.UpdatedCount + modelResult.UpdatedCount + materialResult.UpdatedCount;
 
         logger.Info($"ScanAll: Checked {totalChecked} assets, {totalMissing} missing, updated {totalUpdated}");
 
@@ -125,14 +161,18 @@ public class FileStatusScannerService : IFileStatusScannerService {
             CheckedCount = totalChecked,
             MissingFilesCount = totalMissing,
             UpdatedCount = totalUpdated,
-            UpdatedAssetNames = textureResult.UpdatedAssetNames.Concat(modelResult.UpdatedAssetNames).ToList()
+            UpdatedAssetNames = textureResult.UpdatedAssetNames
+                .Concat(modelResult.UpdatedAssetNames)
+                .Concat(materialResult.UpdatedAssetNames)
+                .ToList()
         };
     }
 
     public int ProcessDeletedPaths(
         IEnumerable<string> deletedPaths,
         IEnumerable<TextureResource> textures,
-        IEnumerable<ModelResource> models) {
+        IEnumerable<ModelResource> models,
+        IEnumerable<MaterialResource> materials) {
         var deletedPathsSet = new HashSet<string>(deletedPaths, StringComparer.OrdinalIgnoreCase);
         int updatedCount = 0;
 
@@ -164,6 +204,17 @@ public class FileStatusScannerService : IFileStatusScannerService {
             if (deletedPathsSet.Contains(model.Path) && IsLocalStatus(model.Status)) {
                 logger.Info($"File deleted: '{model.Name}' -> 'On Server'");
                 model.Status = "On Server";
+                updatedCount++;
+            }
+        }
+
+        // Обновляем материалы
+        foreach (var material in materials) {
+            if (string.IsNullOrEmpty(material.MaterialJsonPath)) continue;
+
+            if (deletedPathsSet.Contains(material.MaterialJsonPath) && IsLocalStatus(material.Status)) {
+                logger.Info($"Material file deleted: '{material.Name}' -> 'On Server'");
+                material.Status = "On Server";
                 updatedCount++;
             }
         }

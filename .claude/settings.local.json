@@ -58,7 +58,9 @@
       "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" --help)",
       "Bash(\"C:\\Users\\Sasha\\Downloads\\gltfpack-windows\\gltfpack.exe\" -h)",
       "Bash(done)",
-      "Bash(Select-String -Pattern \"error|warning CS|Build succeeded|Build FAILED\" -Context 0,2)"
+      "Bash(Select-String -Pattern \"error|warning CS|Build succeeded|Build FAILED\" -Context 0,2)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 2500\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 13716\")"
     ],
     "deny": [],
     "ask": []

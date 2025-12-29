@@ -1878,12 +1878,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// Call this before HasMissingFiles() to detect deleted files.
         /// </summary>
         private void RescanFileStatuses() {
-            var result = fileStatusScannerService.ScanAll(viewModel.Textures, viewModel.Models);
+            var result = fileStatusScannerService.ScanAll(viewModel.Textures, viewModel.Models, viewModel.Materials);
 
             // Refresh UI to ensure statuses are displayed correctly
             if (result.UpdatedCount > 0) {
                 TexturesDataGrid?.Items.Refresh();
                 ModelsDataGrid?.Items.Refresh();
+                MaterialsDataGrid?.Items.Refresh();
             }
         }
 
@@ -1901,7 +1902,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 projectFileWatcher = new FileSystemWatcher(ProjectFolderPath) {
                     IncludeSubdirectories = true,
-                    NotifyFilter = NotifyFilters.FileName,
+                    // Monitor both file and directory names
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
                     EnableRaisingEvents = true
                 };
 
@@ -1929,12 +1931,43 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Handles file deletion events from FileSystemWatcher.
-        /// Queues the path and schedules a debounced refresh.
+        /// Handles file/directory deletion events from FileSystemWatcher.
+        /// For directories, triggers a full rescan. For files, queues the path.
         /// </summary>
         private void OnProjectFileDeleted(object sender, FileSystemEventArgs e) {
-            pendingDeletedPaths.Enqueue(e.FullPath);
-            ScheduleFileWatcherRefresh();
+            // Check if this might be a directory deletion
+            // FileSystemWatcher doesn't distinguish file vs directory in the event
+            // If the path has no extension, it's likely a directory
+            bool isLikelyDirectory = string.IsNullOrEmpty(Path.GetExtension(e.FullPath));
+
+            if (isLikelyDirectory) {
+                logger.Info($"Directory likely deleted: {e.FullPath}, scheduling full rescan");
+                ScheduleFullRescan();
+            } else {
+                pendingDeletedPaths.Enqueue(e.FullPath);
+                ScheduleFileWatcherRefresh();
+            }
+        }
+
+        private int fullRescanPending;
+
+        /// <summary>
+        /// Schedules a full rescan of all asset statuses (for directory deletions).
+        /// </summary>
+        private void ScheduleFullRescan() {
+            if (Interlocked.CompareExchange(ref fullRescanPending, 1, 0) == 0) {
+                Task.Delay(500).ContinueWith(_ => {
+                    Dispatcher.InvokeAsync(() => {
+                        Interlocked.Exchange(ref fullRescanPending, 0);
+                        logger.Info("Performing full rescan due to directory deletion");
+                        RescanFileStatuses();
+
+                        if (HasMissingFiles()) {
+                            UpdateConnectionButton(ConnectionState.NeedsDownload);
+                        }
+                    });
+                });
+            }
         }
 
         /// <summary>
@@ -1978,12 +2011,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             int updatedCount = fileStatusScannerService.ProcessDeletedPaths(
-                deletedPaths, viewModel.Textures, viewModel.Models);
+                deletedPaths, viewModel.Textures, viewModel.Models, viewModel.Materials);
 
             if (updatedCount > 0) {
                 // Single refresh after all updates
                 TexturesDataGrid?.Items.Refresh();
                 ModelsDataGrid?.Items.Refresh();
+                MaterialsDataGrid?.Items.Refresh();
 
                 // Update connection button state
                 if (HasMissingFiles()) {

@@ -151,7 +151,15 @@ namespace AssetProcessor {
 
             try {
                 logger.Info("Waiting for D3D11 texture preview semaphore...");
-                await d3dTextureLoadSemaphore.WaitAsync(cancellationToken);
+                // Use short timeout to avoid deadlock when UI thread is busy
+                // If we can't get semaphore quickly, the previous load is still running - skip this load
+                // The cancellation token will also cancel the wait if a new texture is selected
+                bool acquired = await d3dTextureLoadSemaphore.WaitAsync(500, cancellationToken);
+                if (!acquired) {
+                    logger.Warn("Timeout waiting for D3D11 texture preview semaphore - skipping this load");
+                    CompleteD3DPreviewLoad(loadCts);
+                    return;
+                }
                 semaphoreEntered = true;
 
                 logger.Info("D3D11TextureViewer and Renderer are not null, proceeding...");

@@ -897,35 +897,42 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OptimizeDataGridSorting(DataGrid dataGrid, DataGridSortingEventArgs e) {
-            // Only handle columns with SortMemberPath (Resolution, Size, etc.)
-            // Let WPF handle all other columns natively
-            if (e.Column == null || string.IsNullOrEmpty(e.Column.SortMemberPath)) {
-                return; // Let WPF handle it
-            }
+            if (e.Column == null) return;
 
             e.Handled = true;
+
+            // Get sort property: SortMemberPath > Binding.Path > Header
             string sortPath = e.Column.SortMemberPath;
+            if (string.IsNullOrEmpty(sortPath)) {
+                if (e.Column is DataGridBoundColumn boundCol && boundCol.Binding is Binding binding) {
+                    sortPath = binding.Path.Path;
+                }
+            }
+            if (string.IsNullOrEmpty(sortPath)) {
+                sortPath = e.Column.Header?.ToString() ?? "";
+            }
+            if (string.IsNullOrEmpty(sortPath)) return;
 
-            // Get current direction BEFORE any changes
-            var currentDir = e.Column.SortDirection;
+            // Toggle: null->Asc, Asc->Desc, Desc->Asc
+            ListSortDirection newDir;
+            if (e.Column.SortDirection == ListSortDirection.Ascending) {
+                newDir = ListSortDirection.Descending;
+            } else {
+                newDir = ListSortDirection.Ascending;
+            }
 
-            // Toggle direction
-            var newDir = currentDir == ListSortDirection.Ascending
-                ? ListSortDirection.Descending
-                : ListSortDirection.Ascending;
-
-            // Clear OTHER columns only (not current)
+            // Clear other columns
             foreach (var col in dataGrid.Columns) {
                 if (col != e.Column)
                     col.SortDirection = null;
             }
 
-            // Apply CustomSort
+            // Apply sort
             if (CollectionViewSource.GetDefaultView(dataGrid.ItemsSource) is ListCollectionView listView) {
                 listView.CustomSort = new ResourceComparer(sortPath, newDir);
             }
 
-            // Set direction AFTER CustomSort
+            // Show arrow
             e.Column.SortDirection = newDir;
         }
 

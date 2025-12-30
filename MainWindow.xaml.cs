@@ -900,11 +900,13 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         // Track current header state per column to avoid unnecessary updates
         private readonly bool[] _columnUsingShortHeader = new bool[12];
 
-        private double[]? _previousColumnWidths;
+        private readonly Dictionary<DataGrid, double[]> _previousColumnWidths = new();
         private bool _isAdjustingColumns = false;
 
         private void TexturesDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
             if (sender is not DataGrid grid) return;
+            InitializeGridColumnsIfNeeded(grid);
+            SubscribeDataGridColumnResizing(grid);
             UpdateColumnHeadersBasedOnWidth(grid);
             FillRemainingSpace(grid);
         }
@@ -912,28 +914,34 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private void TexturesDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
             // After column reorder - recalculate, fill space, and save order
             _ = Dispatcher.BeginInvoke(new Action(() => {
-                SubscribeToColumnWidthChanges();
+                SubscribeToColumnWidthChanges(TexturesDataGrid);
+                SubscribeDataGridColumnResizing(TexturesDataGrid);
                 FillRemainingSpace(TexturesDataGrid);
                 SaveColumnOrder(TexturesDataGrid);
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
-        private void SubscribeToColumnWidthChanges() {
-            if (TexturesDataGrid.Columns.Count == 0) return;
+        private void SubscribeToColumnWidthChanges() => SubscribeToColumnWidthChanges(TexturesDataGrid);
 
-            _previousColumnWidths = new double[TexturesDataGrid.Columns.Count];
-            for (int i = 0; i < TexturesDataGrid.Columns.Count; i++) {
-                _previousColumnWidths[i] = TexturesDataGrid.Columns[i].ActualWidth;
+        private void SubscribeToColumnWidthChanges(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            var widths = new double[grid.Columns.Count];
+            for (int i = 0; i < grid.Columns.Count; i++) {
+                widths[i] = grid.Columns[i].ActualWidth;
 
                 var descriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
                     DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
-                descriptor?.RemoveValueChanged(TexturesDataGrid.Columns[i], OnColumnWidthChanged);
-                descriptor?.AddValueChanged(TexturesDataGrid.Columns[i], OnColumnWidthChanged);
+                descriptor?.RemoveValueChanged(grid.Columns[i], OnColumnWidthChanged);
+                descriptor?.AddValueChanged(grid.Columns[i], OnColumnWidthChanged);
             }
+            _previousColumnWidths[grid] = widths;
 
             // Subscribe to left gripper thumb events after visual tree is ready
             Dispatcher.BeginInvoke(() => SubscribeToLeftGripperThumbs(), DispatcherPriority.Loaded);
         }
+
+        private readonly HashSet<DataGrid> _leftGripperSubscribedGrids = new();
 
         private void SubscribeToLeftGripperThumbs() {
             // Subscribe to all DataGrids
@@ -948,23 +956,33 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             // Subscribe to column headers for left edge mouse handling
             var columnHeaders = FindVisualChildren<DataGridColumnHeader>(grid).ToList();
 
+            // Skip if no headers found yet (grid not visible) or already fully subscribed
+            if (columnHeaders.Count == 0) return;
+
+            // Check if we need to subscribe (new headers may appear)
+            bool hasNewHeaders = false;
             foreach (var header in columnHeaders) {
                 if (header.Column == null) continue;
-
-                // Subscribe to mouse down on each header to detect left edge clicks
+                // Check if this header already has our handler
+                hasNewHeaders = true;
                 header.PreviewMouseLeftButtonDown -= OnHeaderMouseDown;
                 header.PreviewMouseLeftButtonDown += OnHeaderMouseDown;
                 header.PreviewMouseMove -= OnHeaderMouseMoveForCursor;
                 header.PreviewMouseMove += OnHeaderMouseMoveForCursor;
             }
 
-            // Subscribe to move/up events on DataGrid level for dragging
-            grid.PreviewMouseMove -= OnDataGridMouseMove;
-            grid.PreviewMouseMove += OnDataGridMouseMove;
-            grid.PreviewMouseLeftButtonUp -= OnDataGridMouseUp;
-            grid.PreviewMouseLeftButtonUp += OnDataGridMouseUp;
-            grid.LostMouseCapture -= OnDataGridLostCapture;
-            grid.LostMouseCapture += OnDataGridLostCapture;
+            if (!hasNewHeaders) return;
+
+            // Subscribe to move/up events on DataGrid level for dragging (only once per grid)
+            if (!_leftGripperSubscribedGrids.Contains(grid)) {
+                grid.PreviewMouseMove -= OnDataGridMouseMove;
+                grid.PreviewMouseMove += OnDataGridMouseMove;
+                grid.PreviewMouseLeftButtonUp -= OnDataGridMouseUp;
+                grid.PreviewMouseLeftButtonUp += OnDataGridMouseUp;
+                grid.LostMouseCapture -= OnDataGridLostCapture;
+                grid.LostMouseCapture += OnDataGridLostCapture;
+                _leftGripperSubscribedGrids.Add(grid);
+            }
         }
 
         private bool _isLeftGripperDragging;
@@ -1105,6 +1123,7 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             try {
                 if (delta < 0) {
                     // Dragging LEFT - shrink columns to the left, expand current
+                    // Balance is maintained: shrink left = expand current (total width unchanged)
                     double remainingShrink = -delta;
 
                     double totalShrinkable = 0;
@@ -1175,8 +1194,8 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     }
                 }
 
+                UpdateStoredWidths(_currentResizingDataGrid);
                 if (_currentResizingDataGrid == TexturesDataGrid) {
-                    UpdateStoredWidths();
                     UpdateColumnHeadersBasedOnWidth(TexturesDataGrid);
                 }
             } finally {
@@ -1238,15 +1257,26 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
         private void OnColumnWidthChanged(object? sender, EventArgs e) {
             if (_isAdjustingColumns || sender is not DataGridColumn changedColumn) return;
-            if (_previousColumnWidths == null || TexturesDataGrid.Columns.Count == 0) return;
             if (changedColumn.Visibility != Visibility.Visible) return;
+
+            // Find which DataGrid owns this column
+            DataGrid? grid = null;
+            foreach (var g in new[] { TexturesDataGrid, ModelsDataGrid, MaterialsDataGrid }) {
+                if (g.Columns.Contains(changedColumn)) {
+                    grid = g;
+                    break;
+                }
+            }
+            if (grid == null) return;
+
+            if (!_previousColumnWidths.TryGetValue(grid, out var prevWidths) || prevWidths.Length == 0) return;
 
             _isAdjustingColumns = true;
             try {
-                int changedIndex = TexturesDataGrid.Columns.IndexOf(changedColumn);
-                if (changedIndex < 0 || changedIndex >= _previousColumnWidths.Length) return;
+                int changedIndex = grid.Columns.IndexOf(changedColumn);
+                if (changedIndex < 0 || changedIndex >= prevWidths.Length) return;
 
-                double oldWidth = _previousColumnWidths[changedIndex];
+                double oldWidth = prevWidths[changedIndex];
                 double newWidth = changedColumn.ActualWidth;
                 double delta = newWidth - oldWidth;
 
@@ -1255,23 +1285,32 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 double remainingDelta = delta;
 
                 if (delta > 0) {
-                    // Column is EXPANDING - shrink columns to the RIGHT first (standard right gripper behavior)
-                    var columnsToRight = GetVisibleColumnsAfter(changedIndex);
+                    // Column is EXPANDING - shrink columns to the RIGHT first
+                    var columnsToRight = GetVisibleColumnsAfter(grid, changedIndex);
                     remainingDelta = ShrinkColumns(columnsToRight, remainingDelta);
 
                     // If still have remaining, try shrinking columns to the LEFT
                     if (Math.Abs(remainingDelta) >= 1) {
-                        var columnsToLeft = GetVisibleColumnsBefore(changedIndex);
+                        var columnsToLeft = GetVisibleColumnsBefore(grid, changedIndex);
                         remainingDelta = ShrinkColumns(columnsToLeft, remainingDelta);
                     }
                 } else {
-                    // Column is SHRINKING - expand the nearest column to the RIGHT
-                    var columnsToRight = GetVisibleColumnsAfter(changedIndex);
+                    // Column is SHRINKING - expand the nearest neighbor to fill space
+                    var columnsToRight = GetVisibleColumnsAfter(grid, changedIndex);
                     if (columnsToRight.Count > 0) {
                         var rightNeighbor = columnsToRight[0];
                         double expandBy = -delta;
                         rightNeighbor.Width = new DataGridLength(rightNeighbor.ActualWidth + expandBy);
                         remainingDelta = 0;
+                    } else {
+                        // No columns to the right - expand nearest column to the LEFT
+                        var columnsToLeft = GetVisibleColumnsBefore(grid, changedIndex);
+                        if (columnsToLeft.Count > 0) {
+                            var leftNeighbor = columnsToLeft[0];
+                            double expandBy = -delta;
+                            leftNeighbor.Width = new DataGridLength(leftNeighbor.ActualWidth + expandBy);
+                            remainingDelta = 0;
+                        }
                     }
                 }
 
@@ -1280,9 +1319,11 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     changedColumn.Width = new DataGridLength(oldWidth + (delta - remainingDelta));
                 }
 
-                UpdateStoredWidths();
-                UpdateColumnHeadersBasedOnWidth(TexturesDataGrid);
-                SaveColumnWidthsDebounced();
+                UpdateStoredWidths(grid);
+                if (grid == TexturesDataGrid) {
+                    UpdateColumnHeadersBasedOnWidth(grid);
+                }
+                SaveColumnWidthsDebounced(grid);
             } finally {
                 _isAdjustingColumns = false;
             }
@@ -1366,7 +1407,7 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 double delta = availableWidth - totalWidth;
 
                 if (Math.Abs(delta) < 1) {
-                    UpdateStoredWidths();
+                    UpdateStoredWidths(grid);
                     return;
                 }
 
@@ -1391,16 +1432,18 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     }
                 }
 
-                UpdateStoredWidths();
+                UpdateStoredWidths(grid);
             } finally {
                 _isAdjustingColumns = false;
             }
         }
 
-        private void UpdateStoredWidths() {
-            if (_previousColumnWidths == null) return;
-            for (int i = 0; i < TexturesDataGrid.Columns.Count && i < _previousColumnWidths.Length; i++) {
-                _previousColumnWidths[i] = TexturesDataGrid.Columns[i].ActualWidth;
+        private void UpdateStoredWidths() => UpdateStoredWidths(TexturesDataGrid);
+
+        private void UpdateStoredWidths(DataGrid grid) {
+            if (grid == null || !_previousColumnWidths.TryGetValue(grid, out var prevWidths)) return;
+            for (int i = 0; i < grid.Columns.Count && i < prevWidths.Length; i++) {
+                prevWidths[i] = grid.Columns[i].ActualWidth;
             }
         }
 
@@ -1527,9 +1570,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             return nameof(AppSettings.TexturesColumnOrder);
         }
 
-        private void LoadTexturesColumnWidths() {
-            LoadColumnWidths(TexturesDataGrid);
-        }
 
 
 
@@ -1779,25 +1819,45 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         // Generic handlers for Models and Materials DataGrids
         private void ModelsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
-            if (sender is DataGrid grid) FillRemainingSpaceForGrid(grid);
+            if (sender is not DataGrid grid) return;
+            InitializeGridColumnsIfNeeded(grid);
+            SubscribeDataGridColumnResizing(grid); // Subscribe to left gripper when grid becomes visible
+            FillRemainingSpaceForGrid(grid);
         }
 
         private void ModelsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
             _ = Dispatcher.BeginInvoke(new Action(() => {
+                SubscribeToColumnWidthChanges(ModelsDataGrid);
+                SubscribeDataGridColumnResizing(ModelsDataGrid);
                 FillRemainingSpaceForGrid(ModelsDataGrid);
                 SaveColumnOrder(ModelsDataGrid);
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void MaterialsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
-            if (sender is DataGrid grid) FillRemainingSpaceForGrid(grid);
+            if (sender is not DataGrid grid) return;
+            InitializeGridColumnsIfNeeded(grid);
+            SubscribeDataGridColumnResizing(grid); // Subscribe to left gripper when grid becomes visible
+            FillRemainingSpaceForGrid(grid);
         }
 
         private void MaterialsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
             _ = Dispatcher.BeginInvoke(new Action(() => {
+                SubscribeToColumnWidthChanges(MaterialsDataGrid);
+                SubscribeDataGridColumnResizing(MaterialsDataGrid);
                 FillRemainingSpaceForGrid(MaterialsDataGrid);
                 SaveColumnOrder(MaterialsDataGrid);
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private void InitializeGridColumnsIfNeeded(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+            if (_columnWidthsLoadedGrids.Contains(grid)) return;
+
+            // Load saved widths and order
+            LoadColumnWidths(grid);
+            LoadColumnOrder(grid);
+            SubscribeToColumnWidthChanges(grid);
         }
 
         private void FillRemainingSpaceForGrid(DataGrid grid) {

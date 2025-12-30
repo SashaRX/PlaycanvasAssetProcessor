@@ -65,7 +65,9 @@
       "Bash(cmd.exe /c \"taskkill /F /PID 18364\")",
       "Bash(cmd.exe /c \"taskkill /F /PID 22784\")",
       "Bash(cmd.exe /c \"taskkill /F /PID 43400\")",
-      "Bash(cmd.exe /c \"taskkill /F /PID 18236\")"
+      "Bash(cmd.exe /c \"taskkill /F /PID 18236\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 50456\")",
+      "Bash(cmd.exe /c \"taskkill /F /IM AssetProcessor.exe 2>nul\")"
     ],
     "deny": [],
     "ask": []

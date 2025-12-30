@@ -52,11 +52,40 @@ namespace AssetProcessor {
             _ = ApplyRendererPreferenceAsync(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
 
-            // Load saved column widths for TexturesDataGrid
-            LoadTexturesColumnWidths();
+            // Load saved column order for all DataGrids
+            LoadColumnOrder(TexturesDataGrid);
+            LoadColumnOrder(ModelsDataGrid);
+            LoadColumnOrder(MaterialsDataGrid);
+
+            // Load saved column widths for all DataGrids
+            LoadColumnWidths(TexturesDataGrid);
+            LoadColumnWidths(ModelsDataGrid);
+            LoadColumnWidths(MaterialsDataGrid);
+
+            // Load saved column visibility for all DataGrids
+            LoadAllColumnVisibility();
 
             // Subscribe to column width changes for neighbor-based resizing
             SubscribeToColumnWidthChanges();
+        }
+
+        private void LoadAllColumnVisibility() {
+            // Load visibility for Textures
+            LoadColumnVisibility(TexturesDataGrid, nameof(AppSettings.TexturesColumnVisibility),
+                (ContextMenu)FindResource("TextureColumnHeaderContextMenu"));
+
+            // Load visibility for Models
+            LoadColumnVisibility(ModelsDataGrid, nameof(AppSettings.ModelsColumnVisibility),
+                (ContextMenu)FindResource("ModelColumnHeaderContextMenu"));
+
+            // Load visibility for Materials
+            LoadColumnVisibility(MaterialsDataGrid, nameof(AppSettings.MaterialsColumnVisibility),
+                (ContextMenu)FindResource("MaterialColumnHeaderContextMenu"));
+
+            // Fill remaining space after loading visibility
+            FillRemainingSpaceForGrid(TexturesDataGrid);
+            FillRemainingSpaceForGrid(ModelsDataGrid);
+            FillRemainingSpaceForGrid(MaterialsDataGrid);
         }
 
         private void OnD3D11Rendering(object? sender, EventArgs e) {

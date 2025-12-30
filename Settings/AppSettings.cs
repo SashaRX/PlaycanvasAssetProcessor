@@ -182,6 +182,94 @@ namespace AssetProcessor.Settings {
             set => this[nameof(TexturesColumnWidths)] = value;
         }
 
+        /// <summary>
+        /// Видимость столбцов таблицы текстур в формате "1,1,1,0,1,..." (1=visible, 0=hidden)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string TexturesColumnVisibility {
+            get => (string)this[nameof(TexturesColumnVisibility)];
+            set => this[nameof(TexturesColumnVisibility)] = value;
+        }
+
+        /// <summary>
+        /// Видимость столбцов таблицы моделей
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string ModelsColumnVisibility {
+            get => (string)this[nameof(ModelsColumnVisibility)];
+            set => this[nameof(ModelsColumnVisibility)] = value;
+        }
+
+        /// <summary>
+        /// Видимость столбцов таблицы материалов
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string MaterialsColumnVisibility {
+            get => (string)this[nameof(MaterialsColumnVisibility)];
+            set => this[nameof(MaterialsColumnVisibility)] = value;
+        }
+
+        /// <summary>
+        /// Ширины столбцов таблицы моделей в формате "width1,width2,width3,..."
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string ModelsColumnWidths {
+            get => (string)this[nameof(ModelsColumnWidths)];
+            set => this[nameof(ModelsColumnWidths)] = value;
+        }
+
+        /// <summary>
+        /// Ширины столбцов таблицы материалов в формате "width1,width2,width3,..."
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string MaterialsColumnWidths {
+            get => (string)this[nameof(MaterialsColumnWidths)];
+            set => this[nameof(MaterialsColumnWidths)] = value;
+        }
+
+        /// <summary>
+        /// Порядок столбцов таблицы текстур в формате "displayIndex1,displayIndex2,..."
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string TexturesColumnOrder {
+            get => (string)this[nameof(TexturesColumnOrder)];
+            set => this[nameof(TexturesColumnOrder)] = value;
+        }
+
+        /// <summary>
+        /// Порядок столбцов таблицы моделей в формате "displayIndex1,displayIndex2,..."
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string ModelsColumnOrder {
+            get => (string)this[nameof(ModelsColumnOrder)];
+            set => this[nameof(ModelsColumnOrder)] = value;
+        }
+
+        /// <summary>
+        /// Порядок столбцов таблицы материалов в формате "displayIndex1,displayIndex2,..."
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string MaterialsColumnOrder {
+            get => (string)this[nameof(MaterialsColumnOrder)];
+            set => this[nameof(MaterialsColumnOrder)] = value;
+        }
+
         public bool TryGetDecryptedPlaycanvasApiKey(out string? apiKey) {
             bool success = SecureStorageHelper.TryUnprotect(
                 (string)this[nameof(PlaycanvasApiKey)],

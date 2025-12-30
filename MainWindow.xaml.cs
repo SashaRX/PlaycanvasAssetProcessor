@@ -910,10 +910,11 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         }
 
         private void TexturesDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
-            // After column reorder - recalculate and fill space
+            // After column reorder - recalculate, fill space, and save order
             _ = Dispatcher.BeginInvoke(new Action(() => {
                 SubscribeToColumnWidthChanges();
                 FillRemainingSpace(TexturesDataGrid);
+                SaveColumnOrder(TexturesDataGrid);
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
@@ -929,6 +930,345 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 descriptor?.RemoveValueChanged(TexturesDataGrid.Columns[i], OnColumnWidthChanged);
                 descriptor?.AddValueChanged(TexturesDataGrid.Columns[i], OnColumnWidthChanged);
             }
+
+            // Subscribe to left gripper thumb events after visual tree is ready
+            Dispatcher.BeginInvoke(() => SubscribeToLeftGripperThumbs(), DispatcherPriority.Loaded);
+        }
+
+        private void SubscribeToLeftGripperThumbs() {
+            // Subscribe to all DataGrids
+            SubscribeDataGridColumnResizing(TexturesDataGrid);
+            SubscribeDataGridColumnResizing(ModelsDataGrid);
+            SubscribeDataGridColumnResizing(MaterialsDataGrid);
+        }
+
+        private void SubscribeDataGridColumnResizing(DataGrid grid) {
+            if (grid == null) return;
+
+            // Subscribe to column headers for left edge mouse handling
+            var columnHeaders = FindVisualChildren<DataGridColumnHeader>(grid).ToList();
+
+            foreach (var header in columnHeaders) {
+                if (header.Column == null) continue;
+
+                // Subscribe to mouse down on each header to detect left edge clicks
+                header.PreviewMouseLeftButtonDown -= OnHeaderMouseDown;
+                header.PreviewMouseLeftButtonDown += OnHeaderMouseDown;
+                header.PreviewMouseMove -= OnHeaderMouseMoveForCursor;
+                header.PreviewMouseMove += OnHeaderMouseMoveForCursor;
+            }
+
+            // Subscribe to move/up events on DataGrid level for dragging
+            grid.PreviewMouseMove -= OnDataGridMouseMove;
+            grid.PreviewMouseMove += OnDataGridMouseMove;
+            grid.PreviewMouseLeftButtonUp -= OnDataGridMouseUp;
+            grid.PreviewMouseLeftButtonUp += OnDataGridMouseUp;
+            grid.LostMouseCapture -= OnDataGridLostCapture;
+            grid.LostMouseCapture += OnDataGridLostCapture;
+        }
+
+        private bool _isLeftGripperDragging;
+        private Point _leftGripperStartPoint;
+        private DataGridColumn? _leftGripperColumn;
+        private List<DataGridColumn>? _leftGripperLeftColumns;
+        private List<DataGridColumn>? _leftGripperRightColumns;
+        private Dictionary<DataGridColumn, double>? _leftGripperColumnWidths;
+        private double _leftGripperColumnWidth;
+        private DataGrid? _currentResizingDataGrid; // Track which DataGrid is being resized
+        private const double LeftGripperZoneWidth = 10; // pixels from left edge
+
+        private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e) {
+            if (sender is not DataGridColumnHeader header || header.Column == null) {
+                return;
+            }
+
+            // Find the parent DataGrid
+            var dataGrid = FindParentDataGrid(header);
+            if (dataGrid == null) return;
+
+            Point pos = e.GetPosition(header);
+            double headerWidth = header.ActualWidth;
+            int currentIndex = dataGrid.Columns.IndexOf(header.Column);
+
+            // Check if click is on LEFT edge (resize with left neighbor)
+            if (pos.X <= LeftGripperZoneWidth) {
+                var columnsToLeft = GetVisibleColumnsBefore(dataGrid, currentIndex);
+                if (columnsToLeft.Count == 0) return;
+
+                StartLeftGripperDrag(dataGrid, header.Column, columnsToLeft, e);
+                return;
+            }
+
+            // Check if click is on RIGHT edge (resize with right neighbor, but we control current + left)
+            if (pos.X >= headerWidth - LeftGripperZoneWidth) {
+                var columnsToRight = GetVisibleColumnsAfter(dataGrid, currentIndex);
+                if (columnsToRight.Count == 0) return;
+
+                // When dragging right edge, the "current" column is the one to the right
+                // and "left columns" include this column
+                var rightNeighbor = columnsToRight[0];
+                var leftColumnsForRight = GetVisibleColumnsBefore(dataGrid, dataGrid.Columns.IndexOf(rightNeighbor));
+
+                StartLeftGripperDrag(dataGrid, rightNeighbor, leftColumnsForRight, e);
+                return;
+            }
+        }
+
+        private DataGrid? FindParentDataGrid(DependencyObject element) {
+            while (element != null) {
+                if (element is DataGrid dg) return dg;
+                element = VisualTreeHelper.GetParent(element);
+            }
+            return null;
+        }
+
+        private void StartLeftGripperDrag(DataGrid dataGrid, DataGridColumn currentColumn, List<DataGridColumn> columnsToLeft, MouseButtonEventArgs e) {
+            _isLeftGripperDragging = true;
+            _currentResizingDataGrid = dataGrid;
+            _leftGripperStartPoint = e.GetPosition(dataGrid);
+            _leftGripperColumn = currentColumn;
+            _leftGripperLeftColumns = columnsToLeft;
+            _leftGripperColumnWidth = currentColumn.ActualWidth;
+
+            // Get columns to the right for cascade shrinking
+            int currentIndex = dataGrid.Columns.IndexOf(currentColumn);
+            _leftGripperRightColumns = GetVisibleColumnsAfter(dataGrid, currentIndex);
+
+            // Store widths of all columns and convert star-sized to pixel
+            _leftGripperColumnWidths = new Dictionary<DataGridColumn, double>();
+            foreach (var col in _leftGripperLeftColumns) {
+                _leftGripperColumnWidths[col] = col.ActualWidth;
+                if (col.Width.IsStar) {
+                    col.Width = new DataGridLength(col.ActualWidth);
+                }
+            }
+            foreach (var col in _leftGripperRightColumns) {
+                _leftGripperColumnWidths[col] = col.ActualWidth;
+                if (col.Width.IsStar) {
+                    col.Width = new DataGridLength(col.ActualWidth);
+                }
+            }
+            if (_leftGripperColumn.Width.IsStar) {
+                _leftGripperColumn.Width = new DataGridLength(_leftGripperColumnWidth);
+            }
+
+            // Capture mouse on DataGrid so we get all move events
+            dataGrid.CaptureMouse();
+            dataGrid.Cursor = Cursors.SizeWE;
+            e.Handled = true;
+        }
+
+        private void OnHeaderMouseMoveForCursor(object sender, MouseEventArgs e) {
+            if (sender is not DataGridColumnHeader header || header.Column == null) return;
+            if (_isLeftGripperDragging) return; // Don't change cursor during drag
+
+            var dataGrid = FindParentDataGrid(header);
+            if (dataGrid == null) return;
+
+            Point pos = e.GetPosition(header);
+            double headerWidth = header.ActualWidth;
+            int colIndex = dataGrid.Columns.IndexOf(header.Column);
+
+            // Show resize cursor on left edge (if there are columns to the left)
+            if (pos.X <= LeftGripperZoneWidth) {
+                var leftCols = GetVisibleColumnsBefore(dataGrid, colIndex);
+                if (leftCols.Count > 0) {
+                    header.Cursor = Cursors.SizeWE;
+                    return;
+                }
+            }
+
+            // Show resize cursor on right edge (if there are columns to the right)
+            if (pos.X >= headerWidth - LeftGripperZoneWidth) {
+                var rightCols = GetVisibleColumnsAfter(dataGrid, colIndex);
+                if (rightCols.Count > 0) {
+                    header.Cursor = Cursors.SizeWE;
+                    return;
+                }
+            }
+
+            header.Cursor = null;
+        }
+
+        private void OnDataGridMouseMove(object sender, MouseEventArgs e) {
+            if (!_isLeftGripperDragging || _currentResizingDataGrid == null) return;
+            if (_leftGripperColumn == null || _leftGripperLeftColumns == null || _leftGripperColumnWidths == null) {
+                logger.Warn("OnDataGridMouseMove: null refs");
+                return;
+            }
+
+            if (e.LeftButton != MouseButtonState.Pressed) {
+                logger.Info("OnDataGridMouseMove: button released");
+                StopLeftGripperDrag();
+                return;
+            }
+
+            Point currentPoint = e.GetPosition(_currentResizingDataGrid);
+            double delta = currentPoint.X - _leftGripperStartPoint.X;
+            _leftGripperStartPoint = currentPoint;
+
+            if (Math.Abs(delta) < 1) return;
+
+            logger.Info($"OnDataGridMouseMove: delta={delta:F1}, leftCols={_leftGripperLeftColumns.Count}");
+
+            double currentMin = _leftGripperColumn.MinWidth > 0 ? _leftGripperColumn.MinWidth : 30;
+
+            _isAdjustingColumns = true;
+            try {
+                if (delta < 0) {
+                    // Dragging LEFT - shrink columns to the left, expand current
+                    double remainingShrink = -delta;
+
+                    // Calculate total shrinkable amount from all left columns
+                    double totalShrinkable = 0;
+                    foreach (var col in _leftGripperLeftColumns) {
+                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                        totalShrinkable += _leftGripperColumnWidths[col] - colMin;
+                    }
+                    remainingShrink = Math.Min(remainingShrink, Math.Max(0, totalShrinkable));
+
+                    // Try to shrink columns from nearest to farthest
+                    for (int i = 0; i < _leftGripperLeftColumns.Count && remainingShrink > 0; i++) {
+                        var col = _leftGripperLeftColumns[i];
+                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                        double colWidth = _leftGripperColumnWidths[col];
+                        double available = colWidth - colMin;
+
+                        if (available > 0) {
+                            double shrink = Math.Min(remainingShrink, available);
+                            _leftGripperColumnWidths[col] = colWidth - shrink;
+                            col.Width = new DataGridLength(_leftGripperColumnWidths[col]);
+                            _leftGripperColumnWidth += shrink;
+                            remainingShrink -= shrink;
+                        }
+                    }
+                    _leftGripperColumn.Width = new DataGridLength(_leftGripperColumnWidth);
+                } else if (delta > 0 && _leftGripperRightColumns != null) {
+                    // Dragging RIGHT - shrink current and columns to the right, expand left
+                    // But limit to available shrinkable space to prevent columns going off screen
+
+                    // Calculate total shrinkable from current + right columns
+                    double totalShrinkable = Math.Max(0, _leftGripperColumnWidth - currentMin);
+                    foreach (var col in _leftGripperRightColumns) {
+                        if (!_leftGripperColumnWidths.ContainsKey(col)) continue;
+                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                        totalShrinkable += Math.Max(0, _leftGripperColumnWidths[col] - colMin);
+                    }
+
+                    double remainingShrink = Math.Min(delta, totalShrinkable);
+                    double originalRemaining = remainingShrink;
+
+                    // First try to shrink current column
+                    double currentAvailable = _leftGripperColumnWidth - currentMin;
+                    double shrinkFromCurrent = Math.Min(remainingShrink, Math.Max(0, currentAvailable));
+                    if (shrinkFromCurrent > 0) {
+                        _leftGripperColumnWidth -= shrinkFromCurrent;
+                        remainingShrink -= shrinkFromCurrent;
+                    }
+
+                    // Then cascade to columns on the right
+                    for (int i = 0; i < _leftGripperRightColumns.Count && remainingShrink > 0; i++) {
+                        var col = _leftGripperRightColumns[i];
+                        if (!_leftGripperColumnWidths.ContainsKey(col)) continue;
+                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                        double colWidth = _leftGripperColumnWidths[col];
+                        double available = colWidth - colMin;
+
+                        if (available > 0) {
+                            double shrink = Math.Min(remainingShrink, available);
+                            _leftGripperColumnWidths[col] = colWidth - shrink;
+                            col.Width = new DataGridLength(_leftGripperColumnWidths[col]);
+                            remainingShrink -= shrink;
+                        }
+                    }
+
+                    // Calculate total shrunk
+                    double totalShrunk = originalRemaining - remainingShrink;
+                    if (totalShrunk > 0 && _leftGripperLeftColumns.Count > 0) {
+                        _leftGripperColumn.Width = new DataGridLength(_leftGripperColumnWidth);
+
+                        // Expand the nearest left column
+                        var leftNeighbor = _leftGripperLeftColumns[0];
+                        if (_leftGripperColumnWidths.ContainsKey(leftNeighbor)) {
+                            _leftGripperColumnWidths[leftNeighbor] += totalShrunk;
+                            leftNeighbor.Width = new DataGridLength(_leftGripperColumnWidths[leftNeighbor]);
+                        }
+                    }
+                }
+
+                // Update stored widths and headers for the current grid
+                if (_currentResizingDataGrid == TexturesDataGrid) {
+                    UpdateStoredWidths();
+                    UpdateColumnHeadersBasedOnWidth(TexturesDataGrid);
+                }
+            } finally {
+                _isAdjustingColumns = false;
+            }
+
+            e.Handled = true;
+        }
+
+        private void StopLeftGripperDrag() {
+            if (_isLeftGripperDragging && _currentResizingDataGrid != null) {
+                var gridToSave = _currentResizingDataGrid;
+                _isLeftGripperDragging = false;
+                _leftGripperColumn = null;
+                _leftGripperLeftColumns = null;
+                _leftGripperRightColumns = null;
+                _leftGripperColumnWidths = null;
+                _currentResizingDataGrid.ReleaseMouseCapture();
+                _currentResizingDataGrid.Cursor = null;
+                _currentResizingDataGrid = null;
+                SaveColumnWidthsDebounced(gridToSave);
+            }
+        }
+
+        private void OnDataGridMouseUp(object sender, MouseButtonEventArgs e) {
+            if (_isLeftGripperDragging) {
+                StopLeftGripperDrag();
+                e.Handled = true;
+            }
+        }
+
+        private void OnDataGridLostCapture(object sender, MouseEventArgs e) {
+            _isLeftGripperDragging = false;
+            _leftGripperColumn = null;
+            _leftGripperLeftColumns = null;
+            _leftGripperRightColumns = null;
+            _leftGripperColumnWidths = null;
+            if (_currentResizingDataGrid != null) {
+                _currentResizingDataGrid.Cursor = null;
+                _currentResizingDataGrid = null;
+            }
+        }
+
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject {
+            if (parent == null) yield break;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++) {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild) {
+                    yield return typedChild;
+                }
+                foreach (var descendant in FindVisualChildren<T>(child)) {
+                    yield return descendant;
+                }
+            }
+        }
+
+        private static T? FindChildByName<T>(DependencyObject parent, string name) where T : FrameworkElement {
+            foreach (var child in FindVisualChildren<T>(parent)) {
+                if (child.Name == name) return child;
+            }
+            return null;
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject {
+            while (child != null) {
+                if (child is T parent) return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
 
         private void OnColumnWidthChanged(object? sender, EventArgs e) {
@@ -947,42 +1287,31 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
                 if (Math.Abs(delta) < 1) return;
 
-                // Distribute delta to columns on the right
                 double remainingDelta = delta;
-                var visibleColumnsToRight = GetVisibleColumnsAfter(changedIndex);
 
-                foreach (var col in visibleColumnsToRight) {
-                    if (Math.Abs(remainingDelta) < 1) break;
+                if (delta > 0) {
+                    // Column is EXPANDING - shrink columns to the RIGHT first (standard right gripper behavior)
+                    var columnsToRight = GetVisibleColumnsAfter(changedIndex);
+                    remainingDelta = ShrinkColumns(columnsToRight, remainingDelta);
 
-                    double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
-                    double colCurrent = col.ActualWidth;
-                    double available = colCurrent - colMin;
-
-                    if (remainingDelta > 0) {
-                        // Expanding changed column - shrink this column
-                        double shrinkBy = Math.Min(remainingDelta, available);
-                        if (shrinkBy > 0) {
-                            col.Width = new DataGridLength(colCurrent - shrinkBy);
-                            remainingDelta -= shrinkBy;
-                        }
-                    } else {
-                        // Shrinking changed column - expand this column
-                        double expandBy = -remainingDelta; // remainingDelta is negative, so make it positive
-                        double colMax = col.MaxWidth > 0 ? col.MaxWidth : double.PositiveInfinity;
-                        double maxExpand = colMax - colCurrent;
-                        double actualExpand = Math.Min(expandBy, maxExpand);
-                        
-                        if (actualExpand > 0) {
-                            col.Width = new DataGridLength(colCurrent + actualExpand);
-                            remainingDelta += actualExpand; // remainingDelta is negative, so add positive value
-                        }
+                    // If still have remaining, try shrinking columns to the LEFT
+                    if (Math.Abs(remainingDelta) >= 1) {
+                        var columnsToLeft = GetVisibleColumnsBefore(changedIndex);
+                        remainingDelta = ShrinkColumns(columnsToLeft, remainingDelta);
+                    }
+                } else {
+                    // Column is SHRINKING - expand the nearest column to the RIGHT
+                    var columnsToRight = GetVisibleColumnsAfter(changedIndex);
+                    if (columnsToRight.Count > 0) {
+                        var rightNeighbor = columnsToRight[0];
+                        double expandBy = -delta;
+                        rightNeighbor.Width = new DataGridLength(rightNeighbor.ActualWidth + expandBy);
+                        remainingDelta = 0;
                     }
                 }
 
-                // If couldn't distribute all delta, revert the change
-                // Works for both expansion (delta > 0) and shrinking (delta < 0)
-                // Formula: oldWidth + (delta - remainingDelta) gives the width with only the absorbed delta
-                if (Math.Abs(remainingDelta) >= 1) {
+                // If couldn't distribute all delta, limit the change
+                if (Math.Abs(remainingDelta) >= 1 && delta > 0) {
                     changedColumn.Width = new DataGridLength(oldWidth + (delta - remainingDelta));
                 }
 
@@ -994,15 +1323,47 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             }
         }
 
-        private List<DataGridColumn> GetVisibleColumnsAfter(int index) {
+        private double ShrinkColumns(List<DataGridColumn> columns, double deltaToDistribute) {
+            double remaining = deltaToDistribute;
+            foreach (var col in columns) {
+                if (remaining < 1) break;
+
+                double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                double colCurrent = col.ActualWidth;
+                double available = colCurrent - colMin;
+
+                if (available > 0) {
+                    double shrinkBy = Math.Min(remaining, available);
+                    col.Width = new DataGridLength(colCurrent - shrinkBy);
+                    remaining -= shrinkBy;
+                }
+            }
+            return remaining;
+        }
+
+        private List<DataGridColumn> GetVisibleColumnsBefore(int index) => GetVisibleColumnsBefore(TexturesDataGrid, index);
+
+        private List<DataGridColumn> GetVisibleColumnsBefore(DataGrid grid, int index) {
+            var changedColumn = grid.Columns[index];
+            int changedDisplayIndex = changedColumn.DisplayIndex;
+
+            // Get visible columns to the left, ordered from nearest to farthest
+            return grid.Columns
+                .Where(c => c.Visibility == Visibility.Visible && c.DisplayIndex < changedDisplayIndex)
+                .OrderByDescending(c => c.DisplayIndex) // Nearest first (highest DisplayIndex that's still < changed)
+                .ToList();
+        }
+
+        private List<DataGridColumn> GetVisibleColumnsAfter(int index) => GetVisibleColumnsAfter(TexturesDataGrid, index);
+
+        private List<DataGridColumn> GetVisibleColumnsAfter(DataGrid grid, int index) {
             var result = new List<DataGridColumn>();
-            // Get columns sorted by DisplayIndex
-            var sortedColumns = TexturesDataGrid.Columns
+            var sortedColumns = grid.Columns
                 .Where(c => c.Visibility == Visibility.Visible)
                 .OrderBy(c => c.DisplayIndex)
                 .ToList();
 
-            var changedColumn = TexturesDataGrid.Columns[index];
+            var changedColumn = grid.Columns[index];
             int changedDisplayIndex = changedColumn.DisplayIndex;
 
             foreach (var col in sortedColumns) {
@@ -1028,21 +1389,41 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
                 if (availableWidth <= 0) return;
 
-                var lastVisible = GetLastVisibleColumn(grid);
-                if (lastVisible == null) return;
+                // Get visible columns ordered by DisplayIndex (rightmost first for shrinking)
+                var visibleColumns = grid.Columns
+                    .Where(c => c.Visibility == Visibility.Visible)
+                    .OrderByDescending(c => c.DisplayIndex)
+                    .ToList();
 
-                // Sum widths of all visible columns except last
-                double usedWidth = grid.Columns
-                    .Where(c => c.Visibility == Visibility.Visible && c != lastVisible)
-                    .Sum(c => c.ActualWidth);
+                if (visibleColumns.Count == 0) return;
 
-                double targetWidth = availableWidth - usedWidth;
-                double minWidth = lastVisible.MinWidth > 0 ? lastVisible.MinWidth : 80;
+                double totalWidth = visibleColumns.Sum(c => c.ActualWidth);
+                double delta = availableWidth - totalWidth;
 
-                if (targetWidth < minWidth) targetWidth = minWidth;
+                if (Math.Abs(delta) < 1) {
+                    UpdateStoredWidths();
+                    return;
+                }
 
-                if (Math.Abs(lastVisible.ActualWidth - targetWidth) > 1) {
-                    lastVisible.Width = new DataGridLength(targetWidth);
+                if (delta > 0) {
+                    // Table expanded - add space to last visible column
+                    var lastVisible = visibleColumns[0]; // Already sorted, first is rightmost
+                    lastVisible.Width = new DataGridLength(lastVisible.ActualWidth + delta);
+                } else {
+                    // Table shrank - cascade shrink from right to left
+                    double remainingShrink = -delta;
+
+                    for (int i = 0; i < visibleColumns.Count && remainingShrink > 0; i++) {
+                        var col = visibleColumns[i];
+                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                        double available = col.ActualWidth - colMin;
+
+                        if (available > 0) {
+                            double shrink = Math.Min(remainingShrink, available);
+                            col.Width = new DataGridLength(col.ActualWidth - shrink);
+                            remainingShrink -= shrink;
+                        }
+                    }
                 }
 
                 UpdateStoredWidths();
@@ -1082,56 +1463,107 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             }
         }
 
-        // Debounce timer for saving column widths
-        private DispatcherTimer? _saveColumnWidthsTimer;
-        private bool _columnWidthsLoaded = false;
+        // Debounce timers for saving column widths per DataGrid
+        private readonly Dictionary<DataGrid, DispatcherTimer> _saveColumnWidthsTimers = new();
+        private readonly HashSet<DataGrid> _columnWidthsLoadedGrids = new();
 
-        private void SaveColumnWidthsDebounced() {
-            if (!_columnWidthsLoaded) return; // Don't save during initial load
+        private void SaveColumnWidthsDebounced() => SaveColumnWidthsDebounced(TexturesDataGrid);
 
-            _saveColumnWidthsTimer?.Stop();
-            _saveColumnWidthsTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-            _saveColumnWidthsTimer.Tick -= SaveColumnWidthsTimer_Tick;
-            _saveColumnWidthsTimer.Tick += SaveColumnWidthsTimer_Tick;
-            _saveColumnWidthsTimer.Start();
+        private void SaveColumnWidthsDebounced(DataGrid grid) {
+            if (!_columnWidthsLoadedGrids.Contains(grid)) return; // Don't save during initial load
+
+            if (!_saveColumnWidthsTimers.TryGetValue(grid, out var timer)) {
+                timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                _saveColumnWidthsTimers[grid] = timer;
+            }
+
+            timer.Stop();
+            timer.Tick -= (s, e) => SaveColumnWidthsTimer_Tick(grid);
+            timer.Tick += (s, e) => SaveColumnWidthsTimer_Tick(grid);
+            timer.Start();
         }
 
-        private void SaveColumnWidthsTimer_Tick(object? sender, EventArgs e) {
-            _saveColumnWidthsTimer?.Stop();
-            SaveTexturesColumnWidths();
+        private void SaveColumnWidthsTimer_Tick(DataGrid grid) {
+            if (_saveColumnWidthsTimers.TryGetValue(grid, out var timer)) {
+                timer.Stop();
+            }
+            SaveColumnWidths(grid);
         }
 
-        private void SaveTexturesColumnWidths() {
-            if (TexturesDataGrid == null || TexturesDataGrid.Columns.Count == 0) return;
+        private void SaveColumnWidths(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
 
             var widths = new List<string>();
-            foreach (var column in TexturesDataGrid.Columns) {
+            foreach (var column in grid.Columns) {
                 widths.Add(column.ActualWidth.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
             }
 
             string widthsStr = string.Join(",", widths);
-            if (AppSettings.Default.TexturesColumnWidths != widthsStr) {
-                AppSettings.Default.TexturesColumnWidths = widthsStr;
+            string settingName = GetColumnWidthsSettingName(grid);
+
+            var currentValue = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
+            if (currentValue != widthsStr) {
+                typeof(AppSettings).GetProperty(settingName)?.SetValue(AppSettings.Default, widthsStr);
                 AppSettings.Default.Save();
             }
         }
 
-        private void LoadTexturesColumnWidths() {
-            string widthsStr = AppSettings.Default.TexturesColumnWidths;
-            if (string.IsNullOrEmpty(widthsStr)) {
-                _columnWidthsLoaded = true;
-                return;
-            }
+        private void LoadColumnWidths(DataGrid grid) {
+            string settingName = GetColumnWidthsSettingName(grid);
+            string? widthsStr = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
 
-            string[] parts = widthsStr.Split(',');
-            for (int i = 0; i < parts.Length && i < TexturesDataGrid.Columns.Count; i++) {
-                if (double.TryParse(parts[i], System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out double width) && width > 0) {
-                    TexturesDataGrid.Columns[i].Width = new DataGridLength(width);
+            if (!string.IsNullOrEmpty(widthsStr)) {
+                string[] parts = widthsStr.Split(',');
+                for (int i = 0; i < parts.Length && i < grid.Columns.Count; i++) {
+                    if (double.TryParse(parts[i], System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out double width) && width > 0) {
+                        grid.Columns[i].Width = new DataGridLength(width);
+                    }
                 }
             }
 
-            _columnWidthsLoaded = true;
+            _columnWidthsLoadedGrids.Add(grid);
+        }
+
+        private void SaveColumnOrder(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            var order = string.Join(",", grid.Columns.Select(c => c.DisplayIndex));
+            string settingName = GetColumnOrderSettingName(grid);
+            typeof(AppSettings).GetProperty(settingName)?.SetValue(AppSettings.Default, order);
+            AppSettings.Default.Save();
+        }
+
+        private void LoadColumnOrder(DataGrid grid) {
+            string settingName = GetColumnOrderSettingName(grid);
+            string? orderStr = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
+
+            if (string.IsNullOrEmpty(orderStr)) return;
+
+            string[] parts = orderStr.Split(',');
+            for (int i = 0; i < parts.Length && i < grid.Columns.Count; i++) {
+                if (int.TryParse(parts[i], out int displayIndex) && displayIndex >= 0 && displayIndex < grid.Columns.Count) {
+                    grid.Columns[i].DisplayIndex = displayIndex;
+                }
+            }
+        }
+
+        private string GetColumnWidthsSettingName(DataGrid grid) {
+            if (grid == TexturesDataGrid) return nameof(AppSettings.TexturesColumnWidths);
+            if (grid == ModelsDataGrid) return nameof(AppSettings.ModelsColumnWidths);
+            if (grid == MaterialsDataGrid) return nameof(AppSettings.MaterialsColumnWidths);
+            return nameof(AppSettings.TexturesColumnWidths);
+        }
+
+        private string GetColumnOrderSettingName(DataGrid grid) {
+            if (grid == TexturesDataGrid) return nameof(AppSettings.TexturesColumnOrder);
+            if (grid == ModelsDataGrid) return nameof(AppSettings.ModelsColumnOrder);
+            if (grid == MaterialsDataGrid) return nameof(AppSettings.MaterialsColumnOrder);
+            return nameof(AppSettings.TexturesColumnOrder);
+        }
+
+        private void LoadTexturesColumnWidths() {
+            LoadColumnWidths(TexturesDataGrid);
         }
 
 
@@ -1279,17 +1711,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (columnIndex >= 0 && columnIndex < TexturesDataGrid.Columns.Count) {
                     TexturesDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
-
-                    // Re-subscribe to column changes after visibility change
                     SubscribeToColumnWidthChanges();
                     AdjustLastColumnToFill(TexturesDataGrid);
+                    SaveColumnVisibility(TexturesDataGrid, nameof(AppSettings.TexturesColumnVisibility));
                 }
             }
         }
 
         private void MaterialColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
-                // Column indices: 0=№, 1=ID, 2=Name, 3=Status
                 int columnIndex = columnTag switch {
                     "ID" => 1,
                     "Name" => 2,
@@ -1300,13 +1730,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 if (columnIndex >= 0 && columnIndex < MaterialsDataGrid.Columns.Count) {
                     MaterialsDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
                     FillRemainingSpaceForGrid(MaterialsDataGrid);
+                    SaveColumnVisibility(MaterialsDataGrid, nameof(AppSettings.MaterialsColumnVisibility));
                 }
             }
         }
 
         private void ModelColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
-                // Column indices: 0=№, 1=ID, 2=Name, 3=Size, 4=UVChannels, 5=Extension, 6=Status
                 int columnIndex = columnTag switch {
                     "ID" => 1,
                     "Name" => 2,
@@ -1320,8 +1750,66 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 if (columnIndex >= 0 && columnIndex < ModelsDataGrid.Columns.Count) {
                     ModelsDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
                     FillRemainingSpaceForGrid(ModelsDataGrid);
+                    SaveColumnVisibility(ModelsDataGrid, nameof(AppSettings.ModelsColumnVisibility));
                 }
             }
+        }
+
+        // Save/Load column visibility
+        private void SaveColumnVisibility(DataGrid grid, string settingName) {
+            var visibility = string.Join(",", grid.Columns.Select(c => c.Visibility == Visibility.Visible ? "1" : "0"));
+            typeof(AppSettings).GetProperty(settingName)?.SetValue(AppSettings.Default, visibility);
+            AppSettings.Default.Save();
+        }
+
+        private void LoadColumnVisibility(DataGrid grid, string settingName, ContextMenu? headerContextMenu = null) {
+            var visibility = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
+            if (string.IsNullOrEmpty(visibility)) return;
+
+            var parts = visibility.Split(',');
+            for (int i = 0; i < parts.Length && i < grid.Columns.Count; i++) {
+                grid.Columns[i].Visibility = parts[i] == "1" ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            // Update context menu checkboxes
+            if (headerContextMenu != null) {
+                UpdateColumnVisibilityMenuItems(grid, headerContextMenu);
+            }
+        }
+
+        private void UpdateColumnVisibilityMenuItems(DataGrid grid, ContextMenu contextMenu) {
+            if (contextMenu.Items[0] is MenuItem columnsMenu && columnsMenu.Header?.ToString() == "Columns Visibility") {
+                foreach (MenuItem item in columnsMenu.Items) {
+                    if (item.Tag is string tag) {
+                        int colIndex = GetColumnIndexByTag(grid, tag);
+                        if (colIndex >= 0 && colIndex < grid.Columns.Count) {
+                            item.IsChecked = grid.Columns[colIndex].Visibility == Visibility.Visible;
+                        }
+                    }
+                }
+            }
+        }
+
+        private int GetColumnIndexByTag(DataGrid grid, string tag) {
+            if (grid == TexturesDataGrid) {
+                return tag switch {
+                    "ID" => 1, "TextureName" => 2, "Extension" => 3, "Size" => 4,
+                    "Compressed" => 5, "Resolution" => 6, "ResizeResolution" => 7,
+                    "Compression" => 8, "Mipmaps" => 9, "Preset" => 10, "Status" => 11,
+                    _ => -1
+                };
+            } else if (grid == ModelsDataGrid) {
+                return tag switch {
+                    "ID" => 1, "Name" => 2, "Size" => 3, "UVChannels" => 4, "Extension" => 5, "Status" => 6,
+                    _ => -1
+                };
+            } else if (grid == MaterialsDataGrid) {
+                return tag switch {
+                    "ID" => 1, "Name" => 2, "Status" => 3,
+                    _ => -1
+                };
+            }
+            return -1;
         }
 
         // Generic handlers for Models and Materials DataGrids
@@ -1330,8 +1818,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void ModelsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
-            _ = Dispatcher.BeginInvoke(new Action(() => FillRemainingSpaceForGrid(ModelsDataGrid)),
-                System.Windows.Threading.DispatcherPriority.Background);
+            _ = Dispatcher.BeginInvoke(new Action(() => {
+                FillRemainingSpaceForGrid(ModelsDataGrid);
+                SaveColumnOrder(ModelsDataGrid);
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void MaterialsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
@@ -1339,33 +1829,57 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void MaterialsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
-            _ = Dispatcher.BeginInvoke(new Action(() => FillRemainingSpaceForGrid(MaterialsDataGrid)),
-                System.Windows.Threading.DispatcherPriority.Background);
+            _ = Dispatcher.BeginInvoke(new Action(() => {
+                FillRemainingSpaceForGrid(MaterialsDataGrid);
+                SaveColumnOrder(MaterialsDataGrid);
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void FillRemainingSpaceForGrid(DataGrid grid) {
-            if (grid == null || grid.Columns.Count == 0) return;
+            if (grid == null || grid.Columns.Count == 0 || _isAdjustingColumns) return;
 
-            double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
-            if (availableWidth <= 0) return;
+            _isAdjustingColumns = true;
+            try {
+                double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
+                if (availableWidth <= 0) return;
 
-            var lastVisible = grid.Columns
-                .Where(c => c.Visibility == Visibility.Visible)
-                .OrderByDescending(c => c.DisplayIndex)
-                .FirstOrDefault();
-            if (lastVisible == null) return;
+                // Get visible columns ordered by DisplayIndex (rightmost first for shrinking)
+                var visibleColumns = grid.Columns
+                    .Where(c => c.Visibility == Visibility.Visible)
+                    .OrderByDescending(c => c.DisplayIndex)
+                    .ToList();
 
-            double usedWidth = grid.Columns
-                .Where(c => c.Visibility == Visibility.Visible && c != lastVisible)
-                .Sum(c => c.ActualWidth);
+                if (visibleColumns.Count == 0) return;
 
-            double targetWidth = availableWidth - usedWidth;
-            double minWidth = lastVisible.MinWidth > 0 ? lastVisible.MinWidth : 80;
+                double totalWidth = visibleColumns.Sum(c => c.ActualWidth);
+                double delta = availableWidth - totalWidth;
 
-            if (targetWidth < minWidth) targetWidth = minWidth;
+                if (Math.Abs(delta) < 1) return;
 
-            if (Math.Abs(lastVisible.ActualWidth - targetWidth) > 1) {
-                lastVisible.Width = new DataGridLength(targetWidth);
+                if (delta > 0) {
+                    // Table expanded - add space to last visible column
+                    var lastVisible = visibleColumns[0]; // Already sorted, first is rightmost
+                    lastVisible.Width = new DataGridLength(lastVisible.ActualWidth + delta);
+                } else {
+                    // Table shrank - cascade shrink from right to left
+                    double remainingShrink = -delta;
+
+                    for (int i = 0; i < visibleColumns.Count && remainingShrink > 0; i++) {
+                        var col = visibleColumns[i];
+                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                        double available = col.ActualWidth - colMin;
+
+                        if (available > 0) {
+                            double shrink = Math.Min(remainingShrink, available);
+                            col.Width = new DataGridLength(col.ActualWidth - shrink);
+                            remainingShrink -= shrink;
+                        }
+                    }
+                }
+
+                SaveColumnWidthsDebounced(grid);
+            } finally {
+                _isAdjustingColumns = false;
             }
         }
 

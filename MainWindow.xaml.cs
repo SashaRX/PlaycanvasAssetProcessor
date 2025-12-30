@@ -410,7 +410,7 @@ namespace AssetProcessor {
 
                         if (!ktxLoaded) {
                             // Use BeginInvoke to avoid deadlock
-                            Dispatcher.BeginInvoke(new Action(() => {
+                            _ = Dispatcher.BeginInvoke(new Action(() => {
                                 if (cancellationToken.IsCancellationRequested) return;
 
                                 texturePreviewService.IsKtxPreviewAvailable = false;
@@ -518,7 +518,7 @@ namespace AssetProcessor {
 
                         if (!ktxLoaded) {
                             // Use BeginInvoke to avoid deadlock
-                            Dispatcher.BeginInvoke(new Action(() => {
+                            _ = Dispatcher.BeginInvoke(new Action(() => {
                                 if (cancellationToken.IsCancellationRequested) {
                                     return;
                                 }
@@ -605,7 +605,7 @@ namespace AssetProcessor {
                 logger.Info($"Loaded KTX2 directly to D3D11 viewer: {ktxPath}");
 
                 // Use BeginInvoke (fire-and-forget) to avoid deadlock when UI thread is busy
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
@@ -665,7 +665,7 @@ namespace AssetProcessor {
                 logger.Info($"Extracted {mipmaps.Count} mipmaps from KTX2");
 
                 // Use BeginInvoke to avoid deadlock
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
@@ -700,7 +700,7 @@ namespace AssetProcessor {
             if (texturePreviewService.CurrentActiveChannelMask != "Normal") {
                 texturePreviewService.CurrentActiveChannelMask = null;
                 // Use BeginInvoke to avoid deadlock when called from background thread
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     UpdateChannelButtonsState();
                     // Reset D3D11 renderer mask
                     if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
@@ -722,7 +722,7 @@ namespace AssetProcessor {
 
             if (texturePreviewService.GetCachedImage(texturePath) is BitmapImage cachedImage) {
                 // Use BeginInvoke to avoid deadlock
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     if (cancellationToken.IsCancellationRequested) {
                         return;
                     }
@@ -756,7 +756,7 @@ namespace AssetProcessor {
             }
 
             // Use BeginInvoke to avoid deadlock
-            Dispatcher.BeginInvoke(new Action(() => {
+            _ = Dispatcher.BeginInvoke(new Action(() => {
                 if (cancellationToken.IsCancellationRequested) {
                     return;
                 }
@@ -797,7 +797,7 @@ namespace AssetProcessor {
                     }
 
                     // Use BeginInvoke to avoid deadlock when called from background thread
-                    Dispatcher.BeginInvoke(new Action(() => {
+                    _ = Dispatcher.BeginInvoke(new Action(() => {
                         if (cancellationToken.IsCancellationRequested) {
                             return;
                         }
@@ -880,7 +880,252 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             }
         }
 
-        
+        // Column header definitions: (Full name, Short name, MinWidthForFull)
+        // MinWidthForFull = minimum column width needed to show full name
+        private static readonly (string Full, string Short, double MinWidthForFull)[] TextureColumnHeaders = [
+            ("№", "№", 30),                      // 0 - Index
+            ("ID", "ID", 30),                    // 1 - ID
+            ("Texture Name", "Name", 100),       // 2 - Name
+            ("Extension", "Ext", 65),            // 3 - Extension
+            ("Size", "Size", 40),                // 4 - Size
+            ("Compressed", "Comp", 85),          // 5 - Compressed Size
+            ("Resolution", "Res", 80),           // 6 - Resolution
+            ("Resize", "Rsz", 55),               // 7 - Resize Resolution
+            ("Format", "Fmt", 55),               // 8 - Compression Format
+            ("Mipmaps", "Mip", 60),              // 9 - Mipmaps
+            ("Preset", "Prs", 55),               // 10 - Preset
+            ("Status", "St", 55)                 // 11 - Status/Progress
+        ];
+
+        // Track current header state per column to avoid unnecessary updates
+        private readonly bool[] _columnUsingShortHeader = new bool[12];
+
+        private double[]? _previousColumnWidths;
+        private bool _isAdjustingColumns = false;
+
+        private void TexturesDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (sender is not DataGrid grid) return;
+            UpdateColumnHeadersBasedOnWidth(grid);
+            FillRemainingSpace(grid);
+        }
+
+        private void TexturesDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
+            // After column reorder - recalculate and fill space
+            _ = Dispatcher.BeginInvoke(new Action(() => {
+                SubscribeToColumnWidthChanges();
+                FillRemainingSpace(TexturesDataGrid);
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private void SubscribeToColumnWidthChanges() {
+            if (TexturesDataGrid.Columns.Count == 0) return;
+
+            _previousColumnWidths = new double[TexturesDataGrid.Columns.Count];
+            for (int i = 0; i < TexturesDataGrid.Columns.Count; i++) {
+                _previousColumnWidths[i] = TexturesDataGrid.Columns[i].ActualWidth;
+
+                var descriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
+                    DataGridColumn.ActualWidthProperty, typeof(DataGridColumn));
+                descriptor?.RemoveValueChanged(TexturesDataGrid.Columns[i], OnColumnWidthChanged);
+                descriptor?.AddValueChanged(TexturesDataGrid.Columns[i], OnColumnWidthChanged);
+            }
+        }
+
+        private void OnColumnWidthChanged(object? sender, EventArgs e) {
+            if (_isAdjustingColumns || sender is not DataGridColumn changedColumn) return;
+            if (_previousColumnWidths == null || TexturesDataGrid.Columns.Count == 0) return;
+            if (changedColumn.Visibility != Visibility.Visible) return;
+
+            _isAdjustingColumns = true;
+            try {
+                int changedIndex = TexturesDataGrid.Columns.IndexOf(changedColumn);
+                if (changedIndex < 0 || changedIndex >= _previousColumnWidths.Length) return;
+
+                double oldWidth = _previousColumnWidths[changedIndex];
+                double newWidth = changedColumn.ActualWidth;
+                double delta = newWidth - oldWidth;
+
+                if (Math.Abs(delta) < 1) return;
+
+                // Distribute delta to columns on the right
+                double remainingDelta = delta;
+                var visibleColumnsToRight = GetVisibleColumnsAfter(changedIndex);
+
+                foreach (var col in visibleColumnsToRight) {
+                    if (Math.Abs(remainingDelta) < 1) break;
+
+                    double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                    double colCurrent = col.ActualWidth;
+                    double available = colCurrent - colMin;
+
+                    if (remainingDelta > 0) {
+                        // Expanding changed column - shrink this column
+                        double shrinkBy = Math.Min(remainingDelta, available);
+                        if (shrinkBy > 0) {
+                            col.Width = new DataGridLength(colCurrent - shrinkBy);
+                            remainingDelta -= shrinkBy;
+                        }
+                    } else {
+                        // Shrinking changed column - expand this column
+                        col.Width = new DataGridLength(colCurrent - remainingDelta);
+                        remainingDelta = 0;
+                    }
+                }
+
+                // If couldn't distribute all delta, revert the change
+                if (Math.Abs(remainingDelta) >= 1 && delta > 0) {
+                    changedColumn.Width = new DataGridLength(oldWidth + (delta - remainingDelta));
+                }
+
+                UpdateStoredWidths();
+                UpdateColumnHeadersBasedOnWidth(TexturesDataGrid);
+                SaveColumnWidthsDebounced();
+            } finally {
+                _isAdjustingColumns = false;
+            }
+        }
+
+        private List<DataGridColumn> GetVisibleColumnsAfter(int index) {
+            var result = new List<DataGridColumn>();
+            // Get columns sorted by DisplayIndex
+            var sortedColumns = TexturesDataGrid.Columns
+                .Where(c => c.Visibility == Visibility.Visible)
+                .OrderBy(c => c.DisplayIndex)
+                .ToList();
+
+            var changedColumn = TexturesDataGrid.Columns[index];
+            int changedDisplayIndex = changedColumn.DisplayIndex;
+
+            foreach (var col in sortedColumns) {
+                if (col.DisplayIndex > changedDisplayIndex) {
+                    result.Add(col);
+                }
+            }
+            return result;
+        }
+
+        private DataGridColumn? GetLastVisibleColumn(DataGrid grid) {
+            return grid.Columns
+                .Where(c => c.Visibility == Visibility.Visible)
+                .OrderByDescending(c => c.DisplayIndex)
+                .FirstOrDefault();
+        }
+
+        private void FillRemainingSpace(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0 || _isAdjustingColumns) return;
+
+            _isAdjustingColumns = true;
+            try {
+                double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
+                if (availableWidth <= 0) return;
+
+                var lastVisible = GetLastVisibleColumn(grid);
+                if (lastVisible == null) return;
+
+                // Sum widths of all visible columns except last
+                double usedWidth = grid.Columns
+                    .Where(c => c.Visibility == Visibility.Visible && c != lastVisible)
+                    .Sum(c => c.ActualWidth);
+
+                double targetWidth = availableWidth - usedWidth;
+                double minWidth = lastVisible.MinWidth > 0 ? lastVisible.MinWidth : 80;
+
+                if (targetWidth < minWidth) targetWidth = minWidth;
+
+                if (Math.Abs(lastVisible.ActualWidth - targetWidth) > 1) {
+                    lastVisible.Width = new DataGridLength(targetWidth);
+                }
+
+                UpdateStoredWidths();
+            } finally {
+                _isAdjustingColumns = false;
+            }
+        }
+
+        private void UpdateStoredWidths() {
+            if (_previousColumnWidths == null) return;
+            for (int i = 0; i < TexturesDataGrid.Columns.Count && i < _previousColumnWidths.Length; i++) {
+                _previousColumnWidths[i] = TexturesDataGrid.Columns[i].ActualWidth;
+            }
+        }
+
+        // Legacy method name for compatibility
+        private void AdjustLastColumnToFill(DataGrid grid) => FillRemainingSpace(grid);
+
+        private void UpdateColumnHeadersBasedOnWidth(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            for (int i = 0; i < grid.Columns.Count && i < TextureColumnHeaders.Length; i++) {
+                var column = grid.Columns[i];
+                double actualWidth = column.ActualWidth;
+
+                // Skip if width not yet calculated
+                if (actualWidth <= 0) continue;
+
+                // Check if column width is less than minimum needed for full name
+                bool needShort = actualWidth < TextureColumnHeaders[i].MinWidthForFull;
+
+                // Only update if state changed
+                if (needShort != _columnUsingShortHeader[i]) {
+                    _columnUsingShortHeader[i] = needShort;
+                    column.Header = needShort ? TextureColumnHeaders[i].Short : TextureColumnHeaders[i].Full;
+                }
+            }
+        }
+
+        // Debounce timer for saving column widths
+        private DispatcherTimer? _saveColumnWidthsTimer;
+        private bool _columnWidthsLoaded = false;
+
+        private void SaveColumnWidthsDebounced() {
+            if (!_columnWidthsLoaded) return; // Don't save during initial load
+
+            _saveColumnWidthsTimer?.Stop();
+            _saveColumnWidthsTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _saveColumnWidthsTimer.Tick -= SaveColumnWidthsTimer_Tick;
+            _saveColumnWidthsTimer.Tick += SaveColumnWidthsTimer_Tick;
+            _saveColumnWidthsTimer.Start();
+        }
+
+        private void SaveColumnWidthsTimer_Tick(object? sender, EventArgs e) {
+            _saveColumnWidthsTimer?.Stop();
+            SaveTexturesColumnWidths();
+        }
+
+        private void SaveTexturesColumnWidths() {
+            if (TexturesDataGrid == null || TexturesDataGrid.Columns.Count == 0) return;
+
+            var widths = new List<string>();
+            foreach (var column in TexturesDataGrid.Columns) {
+                widths.Add(column.ActualWidth.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            string widthsStr = string.Join(",", widths);
+            if (AppSettings.Default.TexturesColumnWidths != widthsStr) {
+                AppSettings.Default.TexturesColumnWidths = widthsStr;
+                AppSettings.Default.Save();
+            }
+        }
+
+        private void LoadTexturesColumnWidths() {
+            string widthsStr = AppSettings.Default.TexturesColumnWidths;
+            if (string.IsNullOrEmpty(widthsStr)) {
+                _columnWidthsLoaded = true;
+                return;
+            }
+
+            string[] parts = widthsStr.Split(',');
+            for (int i = 0; i < parts.Length && i < TexturesDataGrid.Columns.Count; i++) {
+                if (double.TryParse(parts[i], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double width) && width > 0) {
+                    TexturesDataGrid.Columns[i].Width = new DataGridLength(width);
+                }
+            }
+
+            _columnWidthsLoaded = true;
+        }
+
+
 
 
 private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
@@ -956,7 +1201,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             // Set arrow via Dispatcher to ensure it happens after WPF processing
-            Dispatcher.BeginInvoke(new Action(() => {
+            _ = Dispatcher.BeginInvoke(new Action(() => {
                 column.SortDirection = newDir;
             }), System.Windows.Threading.DispatcherPriority.Render);
         }
@@ -1006,25 +1251,36 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=№, 1=ID, 2=TextureName, 3=Extension, 4=Size, 5=Compressed,
+                // 6=Resolution, 7=ResizeResolution, 8=Compression(Format), 9=Mipmaps, 10=Preset, 11=Status
                 int columnIndex = columnTag switch {
                     "ID" => 1,
                     "TextureName" => 2,
                     "Extension" => 3,
                     "Size" => 4,
-                    "Resolution" => 5,
-                    "ResizeResolution" => 6,
-                    "Status" => 7,
+                    "Compressed" => 5,
+                    "Resolution" => 6,
+                    "ResizeResolution" => 7,
+                    "Compression" => 8,
+                    "Mipmaps" => 9,
+                    "Preset" => 10,
+                    "Status" => 11,
                     _ => -1
                 };
 
                 if (columnIndex >= 0 && columnIndex < TexturesDataGrid.Columns.Count) {
                     TexturesDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+
+                    // Re-subscribe to column changes after visibility change
+                    SubscribeToColumnWidthChanges();
+                    AdjustLastColumnToFill(TexturesDataGrid);
                 }
             }
         }
 
         private void MaterialColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=№, 1=ID, 2=Name, 3=Status
                 int columnIndex = columnTag switch {
                     "ID" => 1,
                     "Name" => 2,
@@ -1034,7 +1290,73 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (columnIndex >= 0 && columnIndex < MaterialsDataGrid.Columns.Count) {
                     MaterialsDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                    FillRemainingSpaceForGrid(MaterialsDataGrid);
                 }
+            }
+        }
+
+        private void ModelColumnVisibility_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=№, 1=ID, 2=Name, 3=Size, 4=UVChannels, 5=Extension, 6=Status
+                int columnIndex = columnTag switch {
+                    "ID" => 1,
+                    "Name" => 2,
+                    "Size" => 3,
+                    "UVChannels" => 4,
+                    "Extension" => 5,
+                    "Status" => 6,
+                    _ => -1
+                };
+
+                if (columnIndex >= 0 && columnIndex < ModelsDataGrid.Columns.Count) {
+                    ModelsDataGrid.Columns[columnIndex].Visibility = menuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                    FillRemainingSpaceForGrid(ModelsDataGrid);
+                }
+            }
+        }
+
+        // Generic handlers for Models and Materials DataGrids
+        private void ModelsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (sender is DataGrid grid) FillRemainingSpaceForGrid(grid);
+        }
+
+        private void ModelsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
+            _ = Dispatcher.BeginInvoke(new Action(() => FillRemainingSpaceForGrid(ModelsDataGrid)),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private void MaterialsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (sender is DataGrid grid) FillRemainingSpaceForGrid(grid);
+        }
+
+        private void MaterialsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
+            _ = Dispatcher.BeginInvoke(new Action(() => FillRemainingSpaceForGrid(MaterialsDataGrid)),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private void FillRemainingSpaceForGrid(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
+            if (availableWidth <= 0) return;
+
+            var lastVisible = grid.Columns
+                .Where(c => c.Visibility == Visibility.Visible)
+                .OrderByDescending(c => c.DisplayIndex)
+                .FirstOrDefault();
+            if (lastVisible == null) return;
+
+            double usedWidth = grid.Columns
+                .Where(c => c.Visibility == Visibility.Visible && c != lastVisible)
+                .Sum(c => c.ActualWidth);
+
+            double targetWidth = availableWidth - usedWidth;
+            double minWidth = lastVisible.MinWidth > 0 ? lastVisible.MinWidth : 80;
+
+            if (targetWidth < minWidth) targetWidth = minWidth;
+
+            if (Math.Abs(lastVisible.ActualWidth - targetWidth) > 1) {
+                lastVisible.Width = new DataGridLength(targetWidth);
             }
         }
 
@@ -1203,7 +1525,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         material.Name,
                         material.ID);
 
-            Dispatcher.BeginInvoke(new Action(() => {
+            _ = Dispatcher.BeginInvoke(new Action(() => {
                 if (TexturesTabItem != null) {
                     tabControl.SelectedItem = TexturesTabItem;
                     logger.Debug("������� ������� ������������ ����� TabControl.");
@@ -1282,7 +1604,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logger.Info("���� �� ������ �������� {TextureType} � ID {TextureId} �� ��������� {MaterialName} ({MaterialId}).",
                 textureType, textureId.Value, material.Name, material.ID);
 
-            Dispatcher.BeginInvoke(new Action(() => {
+            _ = Dispatcher.BeginInvoke(new Action(() => {
                 if (TexturesTabItem != null) {
                     tabControl.SelectedItem = TexturesTabItem;
                     logger.Debug("������� ������� ������������ ����� TabControl.");
@@ -1360,7 +1682,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             // ���� ������� ��������� ��������, �������� �
             if (textureToSelect != null) {
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                     view?.MoveCurrentTo(textureToSelect);
 
@@ -3277,15 +3599,3 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         #endregion
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

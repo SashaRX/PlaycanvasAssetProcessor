@@ -1,4 +1,4 @@
-﻿using AssetProcessor.Helpers;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -51,6 +51,12 @@ namespace AssetProcessor {
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
             _ = ApplyRendererPreferenceAsync(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
+
+            // Load saved column widths for TexturesDataGrid
+            LoadTexturesColumnWidths();
+
+            // Subscribe to column width changes for neighbor-based resizing
+            SubscribeToColumnWidthChanges();
         }
 
         private void OnD3D11Rendering(object? sender, EventArgs e) {
@@ -366,7 +372,7 @@ namespace AssetProcessor {
                 var textureData = await Task.Run(() => Ktx2TextureLoader.LoadFromFile(ktxPath)).ConfigureAwait(false);
 
                 // Now we're on a thread pool thread, use BeginInvoke to update UI
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     try {
                         if (D3D11TextureViewer?.Renderer == null) return;
                         D3D11TextureViewer.Renderer.LoadTexture(textureData);

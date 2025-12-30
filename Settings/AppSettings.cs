@@ -171,6 +171,17 @@ namespace AssetProcessor.Settings {
             set => this[nameof(ModelPreviewRowHeight)] = value;
         }
 
+        /// <summary>
+        /// Ширины столбцов таблицы текстур в формате "width1,width2,width3,..."
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string TexturesColumnWidths {
+            get => (string)this[nameof(TexturesColumnWidths)];
+            set => this[nameof(TexturesColumnWidths)] = value;
+        }
+
         public bool TryGetDecryptedPlaycanvasApiKey(out string? apiKey) {
             bool success = SecureStorageHelper.TryUnprotect(
                 (string)this[nameof(PlaycanvasApiKey)],

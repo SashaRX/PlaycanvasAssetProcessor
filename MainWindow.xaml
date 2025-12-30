@@ -80,9 +80,10 @@
                 <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
                 <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
                 <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
+                <MenuItem Header="Compressed" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compressed"/>
                 <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
                 <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
-                <MenuItem Header="Compression" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
+                <MenuItem Header="Format" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
                 <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
                 <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
                 <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
@@ -113,12 +114,33 @@
             <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
         </ContextMenu>
 
+        <!-- ContextMenu для заголовков колонок моделей -->
+        <ContextMenu x:Key="ModelColumnHeaderContextMenu">
+            <MenuItem Header="Columns Visibility">
+                <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="ID"/>
+                <MenuItem Header="Model Name" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Name"/>
+                <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Size"/>
+                <MenuItem Header="UV Channels" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="UVChannels"/>
+                <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Extension"/>
+                <MenuItem Header="Status" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Status"/>
+            </MenuItem>
+        </ContextMenu>
+
         <!-- ContextMenu для строк материалов -->
         <ContextMenu x:Key="MaterialRowContextMenu">
             <MenuItem Header="Create ORM Texture" Click="CreateORMFromMaterial_Click" FontWeight="Bold"/>
             <MenuItem Header="Create ORM for All Materials" Click="CreateORMForAllMaterials_Click"/>
             <Separator/>
             <MenuItem Header="Delete ORM Texture" Click="DeleteORMTexture_Click"/>
+        </ContextMenu>
+
+        <!-- ContextMenu для заголовков колонок материалов -->
+        <ContextMenu x:Key="MaterialColumnHeaderContextMenu">
+            <MenuItem Header="Columns Visibility">
+                <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
+                <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
+                <MenuItem Header="Status" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
+            </MenuItem>
         </ContextMenu>
 
     </Window.Resources>
@@ -310,6 +332,8 @@
                                 SelectionChanged="TexturesDataGrid_SelectionChanged"
                                 LoadingRow="TexturesDataGrid_LoadingRow"
                                 Sorting="TexturesDataGrid_Sorting"
+                                SizeChanged="TexturesDataGrid_SizeChanged"
+                                ColumnDisplayIndexChanged="TexturesDataGrid_ColumnDisplayIndexChanged"
                                 IsReadOnly="True"
                                 CanUserAddRows="False"
                                 CanUserDeleteRows="False"
@@ -326,7 +350,8 @@
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True"
-                                ScrollViewer.IsDeferredScrollingEnabled="False">
+                                ScrollViewer.IsDeferredScrollingEnabled="False"
+                                HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
@@ -363,9 +388,9 @@
                                 </Style>
                             </DataGrid.CellStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
-                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
-                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="200" MinWidth="30">
+                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="35" MinWidth="30" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="60" MinWidth="40" />
+                                <DataGridTextColumn Header="Texture Name" Binding="{Binding Name}" IsReadOnly="True" Width="2*" MinWidth="60">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -373,14 +398,14 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="70" MinWidth="50"/>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="80" MinWidth="60" SortMemberPath="Size"/>
-                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="90" MinWidth="70" SortMemberPath="CompressedSize"/>
-                                <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="100" MinWidth="80" SortMemberPath="ResolutionArea"/>
-                                <DataGridTextColumn Header="Resize Resolution" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="120" MinWidth="100" SortMemberPath="ResizeResolutionArea"/>
-                                <DataGridTextColumn Header="Compression" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="100" MinWidth="80"/>
-                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="70" MinWidth="60"/>
-                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="120" MinWidth="30">
+                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" IsReadOnly="True" Width="65" MinWidth="35"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="55" MinWidth="45" SortMemberPath="Size"/>
+                                <DataGridTextColumn Header="Compressed" Binding="{Binding CompressedSize, Converter={StaticResource SizeConverter}}" IsReadOnly="True" Width="85" MinWidth="45" SortMemberPath="CompressedSize"/>
+                                <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="80" MinWidth="55" SortMemberPath="ResolutionArea"/>
+                                <DataGridTextColumn Header="Resize" Binding="{Binding ResizeResolution, Converter={StaticResource ResolutionConverter}}" IsReadOnly="True" Width="70" MinWidth="55" SortMemberPath="ResizeResolutionArea"/>
+                                <DataGridTextColumn Header="Format" Binding="{Binding CompressionFormat}" IsReadOnly="True" Width="60" MinWidth="45"/>
+                                <DataGridTextColumn Header="Mipmaps" Binding="{Binding MipmapCount}" IsReadOnly="True" Width="65" MinWidth="30"/>
+                                <DataGridTextColumn Header="Preset" Binding="{Binding PresetName}" IsReadOnly="True" Width="1*" MinWidth="50">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -388,7 +413,7 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
+                                <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -459,6 +484,8 @@
                               ItemsSource="{Binding Models}"
                               SelectionChanged="ModelsDataGrid_SelectionChanged"
                               Sorting="ModelsDataGrid_Sorting"
+                              SizeChanged="ModelsDataGrid_SizeChanged"
+                              ColumnDisplayIndexChanged="ModelsDataGrid_ColumnDisplayIndexChanged"
                               IsReadOnly="True"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
@@ -475,28 +502,33 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.IsDeferredScrollingEnabled="False">
+                              ScrollViewer.IsDeferredScrollingEnabled="False"
+                              HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
                                                 ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
                             </DataGrid.LayoutTransform>
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="ContextMenu" Value="{StaticResource ModelColumnHeaderContextMenu}"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
+                                    <Setter Property="Background" Value="Transparent"/>
                                     <Style.Triggers>
-                                        <!-- Стандартное выделение (синий фон) -->
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                                        <Trigger Property="IsSelected" Value="True">
                                             <Setter Property="Background" Value="#3399FF"/>
-                                        </DataTrigger>
+                                        </Trigger>
                                     </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.CellStyle>
                                 <Style TargetType="DataGridCell">
-                                    <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="Background" Value="Transparent"/>
                                     <Style.Triggers>
-                                        <!-- Синее выделение при выборе -->
                                         <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
                                             <Setter Property="Background" Value="#3399FF"/>
                                             <Setter Property="Foreground" Value="White"/>
@@ -505,9 +537,9 @@
                                 </Style>
                             </DataGrid.CellStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40" />
-                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="80" MinWidth="60" />
-                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="250" MinWidth="30">
+                                <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="35" MinWidth="30" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="60" MinWidth="40" />
+                                <DataGridTextColumn Header="Model Name" Binding="{Binding Name}" Width="2*" MinWidth="60">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -515,14 +547,14 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="80" MinWidth="60" SortMemberPath="Size"/>
-                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="100" MinWidth="80"/>
-                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="80" MinWidth="60"/>
-                                <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="55" MinWidth="45" SortMemberPath="Size"/>
+                                <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="80" MinWidth="50"/>
+                                <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="65" MinWidth="40"/>
+                                <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
-                                                <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                                <ProgressBar MinWidth="80" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
                                                 <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                             </Grid>
                                         </DataTemplate>
@@ -553,6 +585,8 @@
                               ItemsSource="{Binding Materials}"
                               SelectionChanged="MaterialsDataGrid_SelectionChanged"
                               Sorting="MaterialsDataGrid_Sorting"
+                              SizeChanged="MaterialsDataGrid_SizeChanged"
+                              ColumnDisplayIndexChanged="MaterialsDataGrid_ColumnDisplayIndexChanged"
                               IsReadOnly="True"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
@@ -569,28 +603,33 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="False"
                               ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.IsDeferredScrollingEnabled="False">
+                              ScrollViewer.IsDeferredScrollingEnabled="False"
+                              HorizontalScrollBarVisibility="Disabled">
                         <DataGrid.LayoutTransform>
                             <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
                                             ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
                         </DataGrid.LayoutTransform>
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ContextMenu" Value="{StaticResource MaterialColumnHeaderContextMenu}"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>
+                                <Setter Property="Background" Value="Transparent"/>
                                 <Style.Triggers>
-                                    <!-- Стандартное выделение (синий фон) -->
-                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
+                                    <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="#3399FF"/>
-                                    </DataTrigger>
+                                    </Trigger>
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.CellStyle>
                             <Style TargetType="DataGridCell">
-                                <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Setter Property="Background" Value="Transparent"/>
                                 <Style.Triggers>
-                                    <!-- Синее выделение при выборе -->
                                     <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
                                         <Setter Property="Background" Value="#3399FF"/>
                                         <Setter Property="Foreground" Value="White"/>
@@ -598,19 +637,10 @@
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.CellStyle>
-                        <DataGrid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Columns Visibility">
-                                    <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
-                                    <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
-                                    <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
-                                </MenuItem>
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="50" MinWidth="40"/>
-                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="80" MinWidth="60" />
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="300" MinWidth="30">
+                            <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="35" MinWidth="30"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ID}" IsReadOnly="True" Width="60" MinWidth="40" />
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="2*" MinWidth="60">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -618,11 +648,11 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTemplateColumn Header="Status/Progress" Width="*" MinWidth="150" SortMemberPath="Status">
+                            <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>
-                                            <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                            <ProgressBar MinWidth="80" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
                                             <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                                         </Grid>
                                     </DataTemplate>

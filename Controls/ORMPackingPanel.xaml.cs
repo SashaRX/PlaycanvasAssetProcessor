@@ -156,7 +156,7 @@ namespace AssetProcessor.Controls {
 
             // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
             // Variables were captured at the TOP of this method to avoid SaveORMSettings overwriting them
-            Dispatcher.BeginInvoke(new Action(() => {
+            _ = Dispatcher.BeginInvoke(new Action(() => {
                 // Set flag to prevent recursive UpdateStatus calls during ComboBox initialization
                 _isSettingComboBoxes = true;
                 try {

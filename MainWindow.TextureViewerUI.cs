@@ -1,4 +1,4 @@
-ï»¿using AssetProcessor.Helpers;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -26,7 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs Ð´Ð»Ñ GridSplitter
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs äëÿ GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -52,7 +52,7 @@ namespace AssetProcessor {
             if (sender is ToggleButton button) {
                 string? channel = button.Tag.ToString();
                 if (button.IsChecked == true) {
-                    // Ð¡Ð±Ñ€Ð¾Ñ Ð²ÑÐµÑ… Ð¾ÑÑ‚Ð°Ð»ÑŒÐ½Ñ‹Ñ… ÐºÐ½Ð¾Ð¿Ð¾Ðº (including NormalButton)
+                    // Ñáðîñ âñåõ îñòàëüíûõ êíîïîê (including NormalButton)
                     isUpdatingChannelButtons = true;
                     try {
                         RChannelButton.IsChecked = button == RChannelButton;
@@ -64,12 +64,12 @@ namespace AssetProcessor {
                         isUpdatingChannelButtons = false;
                     }
 
-                    // ÐŸÑ€Ð¸Ð¼ÐµÐ½ÑÐµÐ¼ Ñ„Ð¸Ð»ÑŒÑ‚Ñ€
+                    // Ïðèìåíÿåì ôèëüòð
                     if (!string.IsNullOrEmpty(channel)) {
                         await FilterChannelAsync(channel);
                     }
                 } else {
-                    // Ð¡Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÐ¼ Ñ„Ð¸Ð»ÑŒÑ‚Ñ€, ÐµÑÐ»Ð¸ ÐºÐ½Ð¾Ð¿ÐºÐ° Ð±Ñ‹Ð»Ð° Ð¾Ñ‚Ð¶Ð°Ñ‚Ð°
+                    // Ñáðàñûâàåì ôèëüòð, åñëè êíîïêà áûëà îòæàòà
                     HandleChannelMaskCleared();
                 }
             }
@@ -669,18 +669,18 @@ namespace AssetProcessor {
                     }
                 } else if (texturePreviewService.IsUsingD3D11Renderer && !string.IsNullOrEmpty(texturePreviewService.CurrentLoadedKtx2Path)) {
                     // New method: Reload KTX2 natively to D3D11 (only if not already loaded or loading)
-                    // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼, Ð½Ðµ Ð·Ð°Ð³Ñ€ÑƒÐ¶Ð°ÐµÑ‚ÑÑ Ð»Ð¸ ÑƒÐ¶Ðµ ÑÑ‚Ð¾Ñ‚ Ñ„Ð°Ð¹Ð» Ñ‡ÐµÑ€ÐµÐ· LoadKtx2ToD3D11ViewerAsync
+                    // Ïðîâåðÿåì, íå çàãðóæàåòñÿ ëè óæå ýòîò ôàéë ÷åðåç LoadKtx2ToD3D11ViewerAsync
                     if (IsKtx2Loading(texturePreviewService.CurrentLoadedKtx2Path)) {
                         logger.Info($"KTX2 file already loading via LoadKtx2ToD3D11ViewerAsync, skipping reload in SetPreviewSourceMode: {texturePreviewService.CurrentLoadedKtx2Path}");
-                        return; // Ð’Ñ‹Ñ…Ð¾Ð´Ð¸Ð¼, Ð½Ðµ Ð²Ñ‹Ð·Ñ‹Ð²Ð°Ñ LoadKtx2ToD3D11ViewerAsync
+                        return; // Âûõîäèì, íå âûçûâàÿ LoadKtx2ToD3D11ViewerAsync
                     }
 
-                    // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼, Ð½Ðµ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð° Ð»Ð¸ ÑƒÐ¶Ðµ Ñ‚ÐµÐºÑÑ‚ÑƒÑ€Ð° Ð² renderer (Ð²ÐºÐ»ÑŽÑ‡Ð°Ñ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÑƒ Ñ‡ÐµÑ€ÐµÐ· ViewModel_TexturePreviewLoaded)
+                    // Ïðîâåðÿåì, íå çàãðóæåíà ëè óæå òåêñòóðà â renderer (âêëþ÷àÿ çàãðóçêó ÷åðåç ViewModel_TexturePreviewLoaded)
                     if (D3D11TextureViewer?.Renderer != null) {
                         string? currentTexturePath = D3D11TextureViewer.Renderer.GetCurrentTexturePath();
                         if (currentTexturePath != null && string.Equals(currentTexturePath, texturePreviewService.CurrentLoadedKtx2Path, StringComparison.OrdinalIgnoreCase)) {
                             logger.Info($"KTX2 already loaded in D3D11 renderer, skipping reload in SetPreviewSourceMode: {texturePreviewService.CurrentLoadedKtx2Path}");
-                            // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ UI, Ð½Ð¾ Ð½Ðµ Ð¿ÐµÑ€ÐµÐ·Ð°Ð³Ñ€ÑƒÐ¶Ð°ÐµÐ¼ Ñ‚ÐµÐºÑÑ‚ÑƒÑ€Ñƒ
+                            // Îáíîâëÿåì UI, íî íå ïåðåçàãðóæàåì òåêñòóðó
                             UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                             UpdateHistogramCorrectionButtonState();
                             return;
@@ -691,7 +691,7 @@ namespace AssetProcessor {
                         try {
                             await LoadKtx2ToD3D11ViewerAsync(texturePreviewService.CurrentLoadedKtx2Path);
                             // Use BeginInvoke to avoid deadlock
-                            Dispatcher.BeginInvoke(new Action(() => {
+                            _ = Dispatcher.BeginInvoke(new Action(() => {
                                 if (D3D11TextureViewer?.Renderer != null && D3D11TextureViewer.Renderer.MipCount > 0) {
                                     UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                                     logger.Info($"Reloaded KTX2 to D3D11 when switching to KTX2 mode - {D3D11TextureViewer.Renderer.MipCount} mip levels");
@@ -761,8 +761,8 @@ namespace AssetProcessor {
                 MipmapLevelSlider.Value = 0;
                 MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
                 MipmapInfoTextBlock.Text = mipmaps.Count > 0
-                    ? $"ÐœÐ¸Ð¿-ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ 0 Ð¸Ð· {Math.Max(0, mipmaps.Count - 1)} â€” {mipmaps[0].Width}Ã—{mipmaps[0].Height}"
-                    : "ÐœÐ¸Ð¿-ÑƒÑ€Ð¾Ð²Ð½Ð¸ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ñ‹";
+                    ? $"Ìèï-óðîâåíü 0 èç {Math.Max(0, mipmaps.Count - 1)} — {mipmaps[0].Width}?{mipmaps[0].Height}"
+                    : "Ìèï-óðîâíè íåäîñòóïíû";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -791,7 +791,7 @@ namespace AssetProcessor {
 
                 int width = D3D11TextureViewer.Renderer.TextureWidth;
                 int height = D3D11TextureViewer.Renderer.TextureHeight;
-                MipmapInfoTextBlock.Text = $"ÐœÐ¸Ð¿-ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ 0 Ð¸Ð· {Math.Max(0, mipCount - 1)} â€” {width}Ã—{height} (D3D11)";
+                MipmapInfoTextBlock.Text = $"Ìèï-óðîâåíü 0 èç {Math.Max(0, mipCount - 1)} — {width}?{height} (D3D11)";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -800,7 +800,7 @@ namespace AssetProcessor {
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
                 int maxLevel = Math.Max(0, totalLevels - 1);
-                MipmapInfoTextBlock.Text = $"ÐœÐ¸Ð¿-ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ {mipLevel.Level} Ð¸Ð· {maxLevel} â€” {mipLevel.Width}Ã—{mipLevel.Height}";
+                MipmapInfoTextBlock.Text = $"Ìèï-óðîâåíü {mipLevel.Level} èç {maxLevel} — {mipLevel.Width}?{mipLevel.Height}";
             }
         }
 
@@ -821,8 +821,8 @@ namespace AssetProcessor {
             var mip = texturePreviewService.CurrentKtxMipmaps[clampedLevel];
             texturePreviewService.OriginalBitmapSource = mip.Bitmap.Clone();
 
-            // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ Ð¸Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ - use BeginInvoke to avoid deadlock
-            Dispatcher.BeginInvoke(new Action(() => {
+            // Îáíîâëÿåì èçîáðàæåíèå - use BeginInvoke to avoid deadlock
+            _ = Dispatcher.BeginInvoke(new Action(() => {
                 UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
 
                 // Update WPF Image if in WPF preview mode
@@ -843,7 +843,7 @@ namespace AssetProcessor {
             texturePreviewService.CurrentActiveChannelMask = channel;
 
             // Sync GUI buttons - use BeginInvoke to avoid deadlock
-            Dispatcher.BeginInvoke(new Action(() => UpdateChannelButtonsState()));
+            _ = Dispatcher.BeginInvoke(new Action(() => UpdateChannelButtonsState()));
 
             // Apply channel filter to D3D11 renderer if active
             if (texturePreviewService.IsUsingD3D11Renderer && D3D11TextureViewer?.Renderer != null) {
@@ -868,14 +868,14 @@ namespace AssetProcessor {
                 if (texturePreviewService.OriginalBitmapSource != null) {
                     if (channel == "Normal") {
                         // For normal map mode, show RGB histogram (no grayscale) - use BeginInvoke
-                        Dispatcher.BeginInvoke(new Action(() => {
+                        _ = Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(texturePreviewService.OriginalBitmapSource, false);
                         }));
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
                         BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
                         // Use BeginInvoke to avoid deadlock
-                        Dispatcher.BeginInvoke(new Action(() => {
+                        _ = Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
                         }));
                     }
@@ -888,8 +888,8 @@ namespace AssetProcessor {
             if (texturePreviewService.OriginalBitmapSource != null) {
                 BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
 
-                // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ UI Ð² Ð¾ÑÐ½Ð¾Ð²Ð½Ð¾Ð¼ Ð¿Ð¾Ñ‚Ð¾ÐºÐµ - use BeginInvoke to avoid deadlock
-                Dispatcher.BeginInvoke(new Action(() => {
+                // Îáíîâëÿåì UI â îñíîâíîì ïîòîêå - use BeginInvoke to avoid deadlock
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     UpdatePreviewImage(filteredBitmap, setReference: false, preserveViewport: true);
 
                     // Update WPF Image if in WPF preview mode
@@ -900,7 +900,7 @@ namespace AssetProcessor {
                         logger.Info($"Updated WPF Image in FilterChannelAsync: {channel}");
                     }
 
-                    UpdateHistogram(filteredBitmap, true);  // ÐžÐ±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸Ðµ Ð³Ð¸ÑÑ‚Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ñ‹
+                    UpdateHistogram(filteredBitmap, true);  // Îáíîâëåíèå ãèñòîãðàììû
                 }));
             }
         }
@@ -926,7 +926,7 @@ namespace AssetProcessor {
                         int mipCount = D3D11TextureViewer.Renderer.MipCount;
                         int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
                         int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
-                        MipmapInfoTextBlock.Text = $"ÐœÐ¸Ð¿-ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ {newLevel} Ð¸Ð· {Math.Max(0, mipCount - 1)} â€” {width}Ã—{height} (D3D11)";
+                        MipmapInfoTextBlock.Text = $"Ìèï-óðîâåíü {newLevel} èç {Math.Max(0, mipCount - 1)} — {width}?{height} (D3D11)";
                     }
 
                     logger.Info($"D3D11 mip level changed to {newLevel}");
@@ -956,7 +956,7 @@ namespace AssetProcessor {
 
             if (texturePreviewService.OriginalBitmapSource != null) {
                 // Use BeginInvoke to avoid deadlock when called from background thread
-                Dispatcher.BeginInvoke(new Action(() => {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
                     UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: true, preserveViewport: !recalculateFitZoom);
 
                     // Update WPF Image if in WPF preview mode
@@ -988,7 +988,7 @@ namespace AssetProcessor {
             HistogramComputationResult result = histogramCoordinator.BuildHistogram(bitmapSource, isGray);
 
             // Use BeginInvoke to avoid deadlock when called from background thread
-            Dispatcher.BeginInvoke(new Action(() => ApplyHistogramResult(result)));
+            _ = Dispatcher.BeginInvoke(new Action(() => ApplyHistogramResult(result)));
         }
 
         private async Task UpdateHistogramAsync(BitmapSource bitmapSource, bool isGray = false) {
@@ -997,7 +997,7 @@ namespace AssetProcessor {
             HistogramComputationResult result = await histogramCoordinator.BuildHistogramAsync(bitmapSource, isGray);
 
             // Use BeginInvoke to avoid deadlock when called from background thread
-            Dispatcher.BeginInvoke(new Action(() => ApplyHistogramResult(result)));
+            _ = Dispatcher.BeginInvoke(new Action(() => ApplyHistogramResult(result)));
         }
 
         private void ApplyHistogramResult(HistogramComputationResult result) {

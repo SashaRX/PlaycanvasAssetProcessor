@@ -514,7 +514,7 @@ namespace AssetProcessor.Controls {
                     settings.NormalMapPath = normalMapPath;
 
                     // Обновляем UI с найденным путем (серым цветом)
-                    Dispatcher.BeginInvoke(() => {
+                    _ = Dispatcher.BeginInvoke(() => {
                         NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {System.IO.Path.GetFileName(normalMapPath)}";
                         NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
                     });

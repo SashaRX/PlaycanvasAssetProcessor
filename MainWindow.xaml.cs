@@ -1411,28 +1411,45 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     return;
                 }
 
+                // Check if this grid has user-saved widths loaded
+                bool hasSavedWidths = _hasSavedWidthsFromSettings.Contains(grid);
+                var lastVisible = visibleColumns[0]; // Already sorted, first is rightmost
+
                 if (delta > 0) {
                     // Table expanded - add space to last visible column
-                    var lastVisible = visibleColumns[0]; // Already sorted, first is rightmost
                     lastVisible.Width = new DataGridLength(lastVisible.ActualWidth + delta);
                 } else {
-                    // Table shrank - cascade shrink from right to left
-                    double remainingShrink = -delta;
-
-                    for (int i = 0; i < visibleColumns.Count && remainingShrink > 0; i++) {
-                        var col = visibleColumns[i];
-                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
-                        double available = col.ActualWidth - colMin;
-
+                    if (hasSavedWidths) {
+                        // Grid has saved widths - only shrink the last column to preserve user settings
+                        double colMin = lastVisible.MinWidth > 0 ? lastVisible.MinWidth : 30;
+                        double available = lastVisible.ActualWidth - colMin;
                         if (available > 0) {
-                            double shrink = Math.Min(remainingShrink, available);
-                            col.Width = new DataGridLength(col.ActualWidth - shrink);
-                            remainingShrink -= shrink;
+                            double shrink = Math.Min(-delta, available);
+                            lastVisible.Width = new DataGridLength(lastVisible.ActualWidth - shrink);
+                        }
+                    } else {
+                        // No saved widths - cascade shrink from right to left
+                        double remainingShrink = -delta;
+
+                        for (int i = 0; i < visibleColumns.Count && remainingShrink > 0; i++) {
+                            var col = visibleColumns[i];
+                            double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                            double available = col.ActualWidth - colMin;
+
+                            if (available > 0) {
+                                double shrink = Math.Min(remainingShrink, available);
+                                col.Width = new DataGridLength(col.ActualWidth - shrink);
+                                remainingShrink -= shrink;
+                            }
                         }
                     }
                 }
 
                 UpdateStoredWidths(grid);
+                // Only save if not auto-adjusting after loading saved widths
+                if (!hasSavedWidths) {
+                    SaveColumnWidthsDebounced(grid);
+                }
             } finally {
                 _isAdjustingColumns = false;
             }
@@ -1473,29 +1490,42 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
         // Debounce timers for saving column widths per DataGrid
         private readonly Dictionary<DataGrid, DispatcherTimer> _saveColumnWidthsTimers = new();
+        private readonly Dictionary<DataGrid, EventHandler> _saveColumnWidthsHandlers = new();
         private readonly HashSet<DataGrid> _columnWidthsLoadedGrids = new();
+        private readonly Dictionary<DataGrid, DateTime> _columnWidthsLoadedTime = new();
+        private readonly HashSet<DataGrid> _hasSavedWidthsFromSettings = new(); // Grids with user-saved widths
 
         private void SaveColumnWidthsDebounced() => SaveColumnWidthsDebounced(TexturesDataGrid);
 
         private void SaveColumnWidthsDebounced(DataGrid grid) {
-            if (!_columnWidthsLoadedGrids.Contains(grid)) return; // Don't save during initial load
+            if (!_columnWidthsLoadedGrids.Contains(grid)) {
+                logger.Info($"[SaveColumnWidthsDebounced] {grid.Name}: SKIPPED (not in loaded set)");
+                return; // Don't save during initial load
+            }
 
+            // Don't save within 2 seconds after loading (prevents immediate overwrite from FillRemainingSpace)
+            if (_columnWidthsLoadedTime.TryGetValue(grid, out var loadedTime) &&
+                (DateTime.Now - loadedTime).TotalSeconds < 2) {
+                logger.Info($"[SaveColumnWidthsDebounced] {grid.Name}: SKIPPED (too soon after load)");
+                return;
+            }
+
+            logger.Info($"[SaveColumnWidthsDebounced] {grid.Name}: starting timer");
             if (!_saveColumnWidthsTimers.TryGetValue(grid, out var timer)) {
                 timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
                 _saveColumnWidthsTimers[grid] = timer;
+
+                // Create and store handler to allow proper unsubscription
+                EventHandler handler = (s, e) => {
+                    timer.Stop();
+                    SaveColumnWidths(grid);
+                };
+                _saveColumnWidthsHandlers[grid] = handler;
+                timer.Tick += handler;
             }
 
             timer.Stop();
-            timer.Tick -= (s, e) => SaveColumnWidthsTimer_Tick(grid);
-            timer.Tick += (s, e) => SaveColumnWidthsTimer_Tick(grid);
             timer.Start();
-        }
-
-        private void SaveColumnWidthsTimer_Tick(DataGrid grid) {
-            if (_saveColumnWidthsTimers.TryGetValue(grid, out var timer)) {
-                timer.Stop();
-            }
-            SaveColumnWidths(grid);
         }
 
         private void SaveColumnWidths(DataGrid grid) {
@@ -1510,15 +1540,18 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             string settingName = GetColumnWidthsSettingName(grid);
 
             var currentValue = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
+            logger.Info($"[SaveColumnWidths] {grid.Name}: current='{currentValue}' new='{widthsStr}'");
             if (currentValue != widthsStr) {
                 typeof(AppSettings).GetProperty(settingName)?.SetValue(AppSettings.Default, widthsStr);
                 AppSettings.Default.Save();
+                logger.Info($"[SaveColumnWidths] {grid.Name}: SAVED");
             }
         }
 
         private void LoadColumnWidths(DataGrid grid) {
             string settingName = GetColumnWidthsSettingName(grid);
             string? widthsStr = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
+            logger.Info($"[LoadColumnWidths] {grid.Name}: loaded='{widthsStr}'");
 
             if (!string.IsNullOrEmpty(widthsStr)) {
                 string[] parts = widthsStr.Split(',');
@@ -1526,11 +1559,14 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     if (double.TryParse(parts[i], System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out double width) && width > 0) {
                         grid.Columns[i].Width = new DataGridLength(width);
+                        logger.Info($"[LoadColumnWidths] {grid.Name} col[{i}] = {width}");
                     }
                 }
+                _hasSavedWidthsFromSettings.Add(grid); // Mark that this grid has user-saved widths
             }
 
             _columnWidthsLoadedGrids.Add(grid);
+            _columnWidthsLoadedTime[grid] = DateTime.Now;
         }
 
         private void SaveColumnOrder(DataGrid grid) {
@@ -1854,10 +1890,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (grid == null || grid.Columns.Count == 0) return;
             if (_columnWidthsLoadedGrids.Contains(grid)) return;
 
-            // Load saved widths and order
+            // Load saved visibility, widths, and order
+            LoadColumnVisibility(grid, GetColumnVisibilitySettingName(grid));
             LoadColumnWidths(grid);
             LoadColumnOrder(grid);
             SubscribeToColumnWidthChanges(grid);
+        }
+
+        private string GetColumnVisibilitySettingName(DataGrid grid) {
+            if (grid == TexturesDataGrid) return nameof(AppSettings.TexturesColumnVisibility);
+            if (grid == ModelsDataGrid) return nameof(AppSettings.ModelsColumnVisibility);
+            if (grid == MaterialsDataGrid) return nameof(AppSettings.MaterialsColumnVisibility);
+            return nameof(AppSettings.TexturesColumnVisibility);
         }
 
         private void FillRemainingSpaceForGrid(DataGrid grid) {
@@ -1881,28 +1925,44 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (Math.Abs(delta) < 1) return;
 
+                // Check if this grid has user-saved widths loaded
+                bool hasSavedWidths = _hasSavedWidthsFromSettings.Contains(grid);
+                var lastVisible = visibleColumns[0]; // Already sorted, first is rightmost
+
                 if (delta > 0) {
                     // Table expanded - add space to last visible column
-                    var lastVisible = visibleColumns[0]; // Already sorted, first is rightmost
                     lastVisible.Width = new DataGridLength(lastVisible.ActualWidth + delta);
                 } else {
-                    // Table shrank - cascade shrink from right to left
-                    double remainingShrink = -delta;
-
-                    for (int i = 0; i < visibleColumns.Count && remainingShrink > 0; i++) {
-                        var col = visibleColumns[i];
-                        double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
-                        double available = col.ActualWidth - colMin;
-
+                    if (hasSavedWidths) {
+                        // Grid has saved widths - only shrink the last column to preserve user settings
+                        double colMin = lastVisible.MinWidth > 0 ? lastVisible.MinWidth : 30;
+                        double available = lastVisible.ActualWidth - colMin;
                         if (available > 0) {
-                            double shrink = Math.Min(remainingShrink, available);
-                            col.Width = new DataGridLength(col.ActualWidth - shrink);
-                            remainingShrink -= shrink;
+                            double shrink = Math.Min(-delta, available);
+                            lastVisible.Width = new DataGridLength(lastVisible.ActualWidth - shrink);
+                        }
+                    } else {
+                        // No saved widths - cascade shrink from right to left
+                        double remainingShrink = -delta;
+
+                        for (int i = 0; i < visibleColumns.Count && remainingShrink > 0; i++) {
+                            var col = visibleColumns[i];
+                            double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
+                            double available = col.ActualWidth - colMin;
+
+                            if (available > 0) {
+                                double shrink = Math.Min(remainingShrink, available);
+                                col.Width = new DataGridLength(col.ActualWidth - shrink);
+                                remainingShrink -= shrink;
+                            }
                         }
                     }
                 }
 
-                SaveColumnWidthsDebounced(grid);
+                // Only save if not auto-adjusting after loading saved widths
+                if (!hasSavedWidths) {
+                    SaveColumnWidthsDebounced(grid);
+                }
             } finally {
                 _isAdjustingColumns = false;
             }

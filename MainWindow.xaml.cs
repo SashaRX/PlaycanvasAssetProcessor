@@ -974,15 +974,14 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private List<DataGridColumn>? _leftGripperRightColumns;
         private Dictionary<DataGridColumn, double>? _leftGripperColumnWidths;
         private double _leftGripperColumnWidth;
-        private DataGrid? _currentResizingDataGrid; // Track which DataGrid is being resized
-        private const double LeftGripperZoneWidth = 10; // pixels from left edge
+        private DataGrid? _currentResizingDataGrid;
+        private const double LeftGripperZoneWidth = 10;
 
         private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e) {
             if (sender is not DataGridColumnHeader header || header.Column == null) {
                 return;
             }
 
-            // Find the parent DataGrid
             var dataGrid = FindParentDataGrid(header);
             if (dataGrid == null) return;
 
@@ -999,13 +998,11 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 return;
             }
 
-            // Check if click is on RIGHT edge (resize with right neighbor, but we control current + left)
+            // Check if click is on RIGHT edge (resize with right neighbor)
             if (pos.X >= headerWidth - LeftGripperZoneWidth) {
                 var columnsToRight = GetVisibleColumnsAfter(dataGrid, currentIndex);
                 if (columnsToRight.Count == 0) return;
 
-                // When dragging right edge, the "current" column is the one to the right
-                // and "left columns" include this column
                 var rightNeighbor = columnsToRight[0];
                 var leftColumnsForRight = GetVisibleColumnsBefore(dataGrid, dataGrid.Columns.IndexOf(rightNeighbor));
 
@@ -1030,11 +1027,9 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             _leftGripperLeftColumns = columnsToLeft;
             _leftGripperColumnWidth = currentColumn.ActualWidth;
 
-            // Get columns to the right for cascade shrinking
             int currentIndex = dataGrid.Columns.IndexOf(currentColumn);
             _leftGripperRightColumns = GetVisibleColumnsAfter(dataGrid, currentIndex);
 
-            // Store widths of all columns and convert star-sized to pixel
             _leftGripperColumnWidths = new Dictionary<DataGridColumn, double>();
             foreach (var col in _leftGripperLeftColumns) {
                 _leftGripperColumnWidths[col] = col.ActualWidth;
@@ -1052,7 +1047,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 _leftGripperColumn.Width = new DataGridLength(_leftGripperColumnWidth);
             }
 
-            // Capture mouse on DataGrid so we get all move events
             dataGrid.CaptureMouse();
             dataGrid.Cursor = Cursors.SizeWE;
             e.Handled = true;
@@ -1060,7 +1054,7 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
         private void OnHeaderMouseMoveForCursor(object sender, MouseEventArgs e) {
             if (sender is not DataGridColumnHeader header || header.Column == null) return;
-            if (_isLeftGripperDragging) return; // Don't change cursor during drag
+            if (_isLeftGripperDragging) return;
 
             var dataGrid = FindParentDataGrid(header);
             if (dataGrid == null) return;
@@ -1069,7 +1063,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             double headerWidth = header.ActualWidth;
             int colIndex = dataGrid.Columns.IndexOf(header.Column);
 
-            // Show resize cursor on left edge (if there are columns to the left)
             if (pos.X <= LeftGripperZoneWidth) {
                 var leftCols = GetVisibleColumnsBefore(dataGrid, colIndex);
                 if (leftCols.Count > 0) {
@@ -1078,7 +1071,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 }
             }
 
-            // Show resize cursor on right edge (if there are columns to the right)
             if (pos.X >= headerWidth - LeftGripperZoneWidth) {
                 var rightCols = GetVisibleColumnsAfter(dataGrid, colIndex);
                 if (rightCols.Count > 0) {
@@ -1093,12 +1085,10 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private void OnDataGridMouseMove(object sender, MouseEventArgs e) {
             if (!_isLeftGripperDragging || _currentResizingDataGrid == null) return;
             if (_leftGripperColumn == null || _leftGripperLeftColumns == null || _leftGripperColumnWidths == null) {
-                logger.Warn("OnDataGridMouseMove: null refs");
                 return;
             }
 
             if (e.LeftButton != MouseButtonState.Pressed) {
-                logger.Info("OnDataGridMouseMove: button released");
                 StopLeftGripperDrag();
                 return;
             }
@@ -1109,8 +1099,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
             if (Math.Abs(delta) < 1) return;
 
-            logger.Info($"OnDataGridMouseMove: delta={delta:F1}, leftCols={_leftGripperLeftColumns.Count}");
-
             double currentMin = _leftGripperColumn.MinWidth > 0 ? _leftGripperColumn.MinWidth : 30;
 
             _isAdjustingColumns = true;
@@ -1119,7 +1107,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     // Dragging LEFT - shrink columns to the left, expand current
                     double remainingShrink = -delta;
 
-                    // Calculate total shrinkable amount from all left columns
                     double totalShrinkable = 0;
                     foreach (var col in _leftGripperLeftColumns) {
                         double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
@@ -1127,7 +1114,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     }
                     remainingShrink = Math.Min(remainingShrink, Math.Max(0, totalShrinkable));
 
-                    // Try to shrink columns from nearest to farthest
                     for (int i = 0; i < _leftGripperLeftColumns.Count && remainingShrink > 0; i++) {
                         var col = _leftGripperLeftColumns[i];
                         double colMin = col.MinWidth > 0 ? col.MinWidth : 30;
@@ -1145,9 +1131,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     _leftGripperColumn.Width = new DataGridLength(_leftGripperColumnWidth);
                 } else if (delta > 0 && _leftGripperRightColumns != null) {
                     // Dragging RIGHT - shrink current and columns to the right, expand left
-                    // But limit to available shrinkable space to prevent columns going off screen
-
-                    // Calculate total shrinkable from current + right columns
                     double totalShrinkable = Math.Max(0, _leftGripperColumnWidth - currentMin);
                     foreach (var col in _leftGripperRightColumns) {
                         if (!_leftGripperColumnWidths.ContainsKey(col)) continue;
@@ -1158,7 +1141,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     double remainingShrink = Math.Min(delta, totalShrinkable);
                     double originalRemaining = remainingShrink;
 
-                    // First try to shrink current column
                     double currentAvailable = _leftGripperColumnWidth - currentMin;
                     double shrinkFromCurrent = Math.Min(remainingShrink, Math.Max(0, currentAvailable));
                     if (shrinkFromCurrent > 0) {
@@ -1166,7 +1148,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                         remainingShrink -= shrinkFromCurrent;
                     }
 
-                    // Then cascade to columns on the right
                     for (int i = 0; i < _leftGripperRightColumns.Count && remainingShrink > 0; i++) {
                         var col = _leftGripperRightColumns[i];
                         if (!_leftGripperColumnWidths.ContainsKey(col)) continue;
@@ -1182,12 +1163,10 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                         }
                     }
 
-                    // Calculate total shrunk
                     double totalShrunk = originalRemaining - remainingShrink;
                     if (totalShrunk > 0 && _leftGripperLeftColumns.Count > 0) {
                         _leftGripperColumn.Width = new DataGridLength(_leftGripperColumnWidth);
 
-                        // Expand the nearest left column
                         var leftNeighbor = _leftGripperLeftColumns[0];
                         if (_leftGripperColumnWidths.ContainsKey(leftNeighbor)) {
                             _leftGripperColumnWidths[leftNeighbor] += totalShrunk;
@@ -1196,7 +1175,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     }
                 }
 
-                // Update stored widths and headers for the current grid
                 if (_currentResizingDataGrid == TexturesDataGrid) {
                     UpdateStoredWidths();
                     UpdateColumnHeadersBasedOnWidth(TexturesDataGrid);
@@ -1216,9 +1194,11 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                 _leftGripperLeftColumns = null;
                 _leftGripperRightColumns = null;
                 _leftGripperColumnWidths = null;
-                _currentResizingDataGrid.ReleaseMouseCapture();
-                _currentResizingDataGrid.Cursor = null;
+                // Save reference before ReleaseMouseCapture triggers LostMouseCapture
+                var grid = _currentResizingDataGrid;
                 _currentResizingDataGrid = null;
+                grid.ReleaseMouseCapture();
+                grid.Cursor = null;
                 SaveColumnWidthsDebounced(gridToSave);
             }
         }
@@ -1254,21 +1234,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     yield return descendant;
                 }
             }
-        }
-
-        private static T? FindChildByName<T>(DependencyObject parent, string name) where T : FrameworkElement {
-            foreach (var child in FindVisualChildren<T>(parent)) {
-                if (child.Name == name) return child;
-            }
-            return null;
-        }
-
-        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject {
-            while (child != null) {
-                if (child is T parent) return parent;
-                child = VisualTreeHelper.GetParent(child);
-            }
-            return null;
         }
 
         private void OnColumnWidthChanged(object? sender, EventArgs e) {

@@ -1499,18 +1499,15 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
         private void SaveColumnWidthsDebounced(DataGrid grid) {
             if (!_columnWidthsLoadedGrids.Contains(grid)) {
-                logger.Info($"[SaveColumnWidthsDebounced] {grid.Name}: SKIPPED (not in loaded set)");
                 return; // Don't save during initial load
             }
 
             // Don't save within 2 seconds after loading (prevents immediate overwrite from FillRemainingSpace)
             if (_columnWidthsLoadedTime.TryGetValue(grid, out var loadedTime) &&
                 (DateTime.Now - loadedTime).TotalSeconds < 2) {
-                logger.Info($"[SaveColumnWidthsDebounced] {grid.Name}: SKIPPED (too soon after load)");
                 return;
             }
 
-            logger.Info($"[SaveColumnWidthsDebounced] {grid.Name}: starting timer");
             if (!_saveColumnWidthsTimers.TryGetValue(grid, out var timer)) {
                 timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
                 _saveColumnWidthsTimers[grid] = timer;
@@ -1540,18 +1537,15 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             string settingName = GetColumnWidthsSettingName(grid);
 
             var currentValue = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
-            logger.Info($"[SaveColumnWidths] {grid.Name}: current='{currentValue}' new='{widthsStr}'");
             if (currentValue != widthsStr) {
                 typeof(AppSettings).GetProperty(settingName)?.SetValue(AppSettings.Default, widthsStr);
                 AppSettings.Default.Save();
-                logger.Info($"[SaveColumnWidths] {grid.Name}: SAVED");
             }
         }
 
         private void LoadColumnWidths(DataGrid grid) {
             string settingName = GetColumnWidthsSettingName(grid);
             string? widthsStr = (string?)typeof(AppSettings).GetProperty(settingName)?.GetValue(AppSettings.Default);
-            logger.Info($"[LoadColumnWidths] {grid.Name}: loaded='{widthsStr}'");
 
             if (!string.IsNullOrEmpty(widthsStr)) {
                 string[] parts = widthsStr.Split(',');
@@ -1559,7 +1553,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                     if (double.TryParse(parts[i], System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out double width) && width > 0) {
                         grid.Columns[i].Width = new DataGridLength(width);
-                        logger.Info($"[LoadColumnWidths] {grid.Name} col[{i}] = {width}");
                     }
                 }
                 _hasSavedWidthsFromSettings.Add(grid); // Mark that this grid has user-saved widths
@@ -4144,11 +4137,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MessageBox.Show($"Error processing model: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 ProgressTextBlock.Text = "Ready";
             }
-        }
-
-        private void UploadModel_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement model upload
-            MessageBox.Show("Model upload not yet implemented.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void OpenModelFileLocation_Click(object sender, RoutedEventArgs e) {

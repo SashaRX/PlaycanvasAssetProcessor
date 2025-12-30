@@ -129,10 +129,6 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <TrimmerRootDescriptor Include="Trimming/TrimmerRoots.xml" />
-  </ItemGroup>
-
   <!-- Оставляем только английские и русские ресурсы после публикации -->
   <ItemGroup Condition="'$(PublishDir)' != ''">
     <SatelliteDirectoriesToDelete Include="$(PublishDir)??\" Exclude="$(PublishDir)en\;$(PublishDir)ru\" />

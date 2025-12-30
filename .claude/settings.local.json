@@ -70,7 +70,10 @@
       "Bash(cmd.exe /c \"taskkill /F /IM AssetProcessor.exe 2>nul\")",
       "Bash(Select-Object -Last 10)",
       "Bash(cmd.exe /c \"taskkill /F /PID 34088\")",
-      "Bash(cmd.exe /c \"taskkill /F /PID 45772\")"
+      "Bash(cmd.exe /c \"taskkill /F /PID 45772\")",
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

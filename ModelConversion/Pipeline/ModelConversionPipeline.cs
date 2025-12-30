@@ -79,9 +79,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     // Используем входной файл напрямую
                     baseGltfPath = inputPath;
                     result.BaseGlbPath = inputPath;
-
-                    // DEBUG: Проверяем UV
-                    InspectGlbUV(inputPath, $"INPUT {inputExtension.ToUpper()} (direct)");
                 } else {
                     // ШАГ A: FBX → базовый GLB (без сжатия)
                     Logger.Info("=== STEP A: FBX → BASE GLB ===");
@@ -96,9 +93,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     Logger.Info($"Base GLB created: {fbxResult.OutputFilePath} ({fbxResult.OutputFileSize} bytes)");
                     baseGltfPath = fbxResult.OutputFilePath!;
                     result.BaseGlbPath = baseGltfPath;
-
-                    // DEBUG: Проверяем UV после FBX2glTF
-                    InspectGlbUV(baseGltfPath, "BASE GLB (after FBX2glTF)");
                 }
 
                 // ШАГ B & C: Генерация LOD цепочки
@@ -134,9 +128,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         }
 
                         Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
-
-                        // DEBUG: Проверяем UV после gltfpack
-                        InspectGlbUV(lodOutputPath, $"{lodName} (after gltfpack)");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 

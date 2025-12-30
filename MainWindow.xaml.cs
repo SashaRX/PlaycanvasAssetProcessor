@@ -967,13 +967,22 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
                         }
                     } else {
                         // Shrinking changed column - expand this column
-                        col.Width = new DataGridLength(colCurrent - remainingDelta);
-                        remainingDelta = 0;
+                        double expandBy = -remainingDelta; // remainingDelta is negative, so make it positive
+                        double colMax = col.MaxWidth > 0 ? col.MaxWidth : double.PositiveInfinity;
+                        double maxExpand = colMax - colCurrent;
+                        double actualExpand = Math.Min(expandBy, maxExpand);
+                        
+                        if (actualExpand > 0) {
+                            col.Width = new DataGridLength(colCurrent + actualExpand);
+                            remainingDelta += actualExpand; // remainingDelta is negative, so add positive value
+                        }
                     }
                 }
 
                 // If couldn't distribute all delta, revert the change
-                if (Math.Abs(remainingDelta) >= 1 && delta > 0) {
+                // Works for both expansion (delta > 0) and shrinking (delta < 0)
+                // Formula: oldWidth + (delta - remainingDelta) gives the width with only the absorbed delta
+                if (Math.Abs(remainingDelta) >= 1) {
                     changedColumn.Width = new DataGridLength(oldWidth + (delta - remainingDelta));
                 }
 

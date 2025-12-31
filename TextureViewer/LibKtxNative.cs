@@ -137,6 +137,9 @@ internal static class LibKtxNative {
 
                     using var process = System.Diagnostics.Process.Start(psi);
                     if (process != null) {
+                        // Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                        process.StandardOutput.ReadToEnd();
+                        process.StandardError.ReadToEnd();
                         process.WaitForExit();
                         if (process.ExitCode == 0 || process.ExitCode == 1) {
                             return path;

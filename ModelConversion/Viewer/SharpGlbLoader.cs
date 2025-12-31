@@ -422,10 +422,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     return null;
                 }
 
-                process.WaitForExit(30000); // 30 sec timeout
-
+                // КРИТИЧНО: Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                // Если буфер переполнится, процесс зависнет в ожидании чтения
                 var stdout = process.StandardOutput.ReadToEnd();
                 var stderr = process.StandardError.ReadToEnd();
+
+                process.WaitForExit(30000); // 30 sec timeout
 
                 if (!string.IsNullOrEmpty(stdout)) {
                     Logger.Info($"[SharpGLTF] gltfpack stdout: {stdout}");

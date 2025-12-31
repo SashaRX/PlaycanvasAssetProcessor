@@ -94,6 +94,9 @@ public static class Ktx2TextureLoader {
 
                     using var process = System.Diagnostics.Process.Start(psi);
                     if (process != null) {
+                        // Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                        process.StandardOutput.ReadToEnd();
+                        process.StandardError.ReadToEnd();
                         process.WaitForExit();
                         if (process.ExitCode == 0 || process.ExitCode == 1) { // Some versions return 1 for --version
                             logger.Debug($"Found ktx via PATH: {path}");
@@ -622,6 +625,9 @@ public static class Ktx2TextureLoader {
 
                 using var process = System.Diagnostics.Process.Start(psi);
                 if (process != null) {
+                    // Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                    process.StandardOutput.ReadToEnd();
+                    process.StandardError.ReadToEnd();
                     process.WaitForExit();
                     if (process.ExitCode == 0 || process.ExitCode == 1) {
                         logger.Debug($"Found basisu: {path}");

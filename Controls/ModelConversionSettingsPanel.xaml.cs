@@ -40,7 +40,6 @@ namespace AssetProcessor.Controls {
             LodHysteresisSlider.Value = 0.02;
 
             // Simplification Settings
-            UseGltfTransformCheckBox.IsChecked = false;
             SimplificationErrorSlider.Value = 0.01;
             PermissiveSimplificationCheckBox.IsChecked = false;
             LockBorderVerticesCheckBox.IsChecked = false; // Отключено для нормальной симплификации
@@ -172,8 +171,7 @@ namespace AssetProcessor.Controls {
                 CleanupIntermediateFiles = CleanupIntermediateFilesCheckBox.IsChecked ?? true,
                 ExcludeTextures = ExcludeTexturesCheckBox.IsChecked ?? true,
                 GenerateManifest = GenerateManifestCheckBox.IsChecked ?? true,
-                GenerateQAReport = GenerateQAReportCheckBox.IsChecked ?? true,
-                UseGltfTransformForSimplification = UseGltfTransformCheckBox.IsChecked ?? false
+                GenerateQAReport = GenerateQAReportCheckBox.IsChecked ?? true
             };
         }
 
@@ -200,9 +198,6 @@ namespace AssetProcessor.Controls {
                 NormalBitsSlider.Value = settings.Quantization.NormalBits;
                 ColorBitsSlider.Value = settings.Quantization.ColorBits;
             }
-
-            // Simplification tool
-            UseGltfTransformCheckBox.IsChecked = settings.UseGltfTransformForSimplification;
 
             // Advanced Settings
             if (settings.AdvancedSettings != null) {

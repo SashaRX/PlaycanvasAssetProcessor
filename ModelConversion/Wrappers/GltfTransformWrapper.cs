@@ -298,7 +298,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
         public static GltfTransformSimplifySettings FromLodRatio(float simplificationRatio) {
             return new GltfTransformSimplifySettings {
                 Ratio = simplificationRatio,
-                Error = 0.001f, // 0.1% error threshold
+                Error = 0.01f, // 1% error threshold - достаточно для симплификации
                 LockBorder = true
             };
         }

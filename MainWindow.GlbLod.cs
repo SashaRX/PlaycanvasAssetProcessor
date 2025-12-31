@@ -183,24 +183,14 @@ namespace AssetProcessor {
         /// </summary>
         private async Task TryLoadGlbLodAsync(string fbxPath) {
             try {
-                LodLogger.Info($"[TryLoadGlbLod] START: {fbxPath}");
-                LogManager.Flush();
+                LodLogger.Info($"Loading GLB LOD files for: {fbxPath}");
+                _currentFbxPath = fbxPath;
 
-                _currentFbxPath = fbxPath;  // Сохраняем для переключения Source Type
-
-                // Загружаем albedo текстуру из таблицы материалов (независимо от наличия GLB)
-                LodLogger.Info("[TryLoadGlbLod] Loading albedo texture...");
-                LogManager.Flush();
+                // Загружаем albedo текстуру из таблицы материалов
                 _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
-                LodLogger.Info("[TryLoadGlbLod] Albedo texture loaded");
-                LogManager.Flush();
 
                 // Ищем GLB LOD файлы
-                LodLogger.Info("[TryLoadGlbLod] Searching for GLB LOD files...");
-                LogManager.Flush();
                 _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
-                LodLogger.Info($"[TryLoadGlbLod] FindGlbLodFiles returned {_currentLodInfos.Count} files");
-                LogManager.Flush();
 
                 if (_currentLodInfos.Count == 0) {
                     LodLogger.Info("No GLB LOD files found, using FBX viewer");
@@ -208,100 +198,58 @@ namespace AssetProcessor {
                     return;
                 }
 
-                LodLogger.Info($"[TryLoadGlbLod] Found {_currentLodInfos.Count} GLB LOD files");
-                LogManager.Flush();
+                LodLogger.Info($"Found {_currentLodInfos.Count} GLB LOD files");
 
                 // Показываем LOD UI
                 ShowGlbLodUI();
-
-                // Заполняем DataGrid
                 PopulateLodDataGrid();
 
                 // Создаём SharpGlbLoader если его еще нет
-                LodLogger.Info("[TryLoadGlbLod] Checking SharpGlbLoader...");
-                LogManager.Flush();
                 if (_sharpGlbLoader == null) {
-                    // Загружаем путь к gltfpack из настроек
                     var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
                     var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
                         ? "gltfpack.exe"
                         : modelConversionSettings.GltfPackExecutablePath;
-
-                    LodLogger.Info($"[TryLoadGlbLod] Creating SharpGlbLoader with gltfpack: {gltfPackPath}");
-                    LogManager.Flush();
                     _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
                 } else {
-                    // Очищаем кэш декодированных файлов - они могли устареть после перегенерации
-                    LodLogger.Info("[TryLoadGlbLod] Clearing SharpGlbLoader decode cache");
-                    LogManager.Flush();
                     _sharpGlbLoader.ClearCache();
                 }
 
                 // Загружаем все LOD данные через SharpGLTF
                 _lodGlbData.Clear();
                 _lodQuantizationInfos.Clear();
-                LodLogger.Info("[TryLoadGlbLod] Getting LOD file paths...");
-                LogManager.Flush();
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
-                LodLogger.Info($"[TryLoadGlbLod] Found {lodFilePaths.Count} LOD file paths, starting Task.Run...");
-                LogManager.Flush();
 
-                // Обёртываем CPU-интенсивные операции в Task.Run для неблокирующего выполнения
+                // Обёртываем CPU-интенсивные операции в Task.Run
                 await Task.Run(() => {
-                    LodLogger.Info($"[TryLoadGlbLod] Task.Run started, loading {lodFilePaths.Count} LOD files");
-                    LogManager.Flush();
                     foreach (var kvp in lodFilePaths) {
                         var lodLevel = kvp.Key;
                         var glbPath = kvp.Value;
 
-                        LodLogger.Info($"[TryLoadGlbLod]   Loading {lodLevel}: {glbPath}");
-                        LogManager.Flush();
-
-                        // Анализируем квантование (для информационных целей)
                         var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
                         _lodQuantizationInfos[lodLevel] = quantInfo;
 
-                        // Загружаем через SharpGLTF (автоматически декодирует KHR_mesh_quantization)
-                        LodLogger.Info($"[TryLoadGlbLod]   Calling SharpGlbLoader.LoadGlb for {lodLevel}...");
-                        LogManager.Flush();
                         var glbData = _sharpGlbLoader!.LoadGlb(glbPath);
                         if (glbData.Success) {
                             _lodGlbData[lodLevel] = glbData;
-                            LodLogger.Info($"[TryLoadGlbLod]   {lodLevel} loaded: {glbData.Meshes.Count} meshes");
+                            LodLogger.Info($"{lodLevel} loaded: {glbData.Meshes.Count} meshes");
                         } else {
-                            LodLogger.Error($"[TryLoadGlbLod] Failed to load {lodLevel}: {glbData.Error}");
+                            LodLogger.Error($"Failed to load {lodLevel}: {glbData.Error}");
                         }
-                        LogManager.Flush();
                     }
-                    LodLogger.Info("[TryLoadGlbLod] Task.Run completed");
-                    LogManager.Flush();
                 });
 
-                LodLogger.Info($"[TryLoadGlbLod] Loaded {_lodGlbData.Count} LOD meshes, updating UI...");
-                LogManager.Flush();
+                LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes");
 
-                // КРИТИЧНО: После await Task.Run код может выполняться не на UI потоке
-                // Все UI операции должны быть обёрнуты в Dispatcher.InvokeAsync
-                LodLogger.Info("[TryLoadGlbLod] Entering Dispatcher.InvokeAsync...");
-                LogManager.Flush();
-
+                // UI операции в Dispatcher
                 await Dispatcher.InvokeAsync(() => {
-                    LodLogger.Info("[TryLoadGlbLod] Inside Dispatcher.InvokeAsync");
-                    LogManager.Flush();
-
-                    // Если ни один GLB не загрузился - fallback на FBX
                     if (_lodGlbData.Count == 0) {
-                        LodLogger.Warn("[TryLoadGlbLod] All GLB failed, falling back to FBX");
-                        LogManager.Flush();
+                        LodLogger.Warn("All GLB failed to load, falling back to FBX");
                         HideGlbLodUI();
                         LoadFbxModelDirectly(fbxPath);
                         return;
                     }
 
-                    LodLogger.Info("[TryLoadGlbLod] Loading to viewport...");
-                    LogManager.Flush();
-
-                    // Отображаем LOD0 в существующем viewport
                     if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {
                         LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
                     } else if (_lodGlbData.Count > 0) {
@@ -310,21 +258,12 @@ namespace AssetProcessor {
                     }
 
                     _isGlbViewerActive = true;
-
-                    // Выбираем LOD0 по умолчанию
                     SelectLod(LodLevel.LOD0);
-
-                    LodLogger.Info("[TryLoadGlbLod] GLB LOD preview loaded successfully");
-                    LogManager.Flush();
+                    LodLogger.Info("GLB LOD preview loaded successfully");
                 });
 
-                LodLogger.Info("[TryLoadGlbLod] COMPLETE");
-                LogManager.Flush();
-
             } catch (Exception ex) {
-                LodLogger.Error(ex, "[TryLoadGlbLod] EXCEPTION: Failed to load GLB LOD files");
-                LogManager.Flush();
-                // Безопасный вызов UI операции из любого потока (синхронный для гарантии выполнения)
+                LodLogger.Error(ex, "Failed to load GLB LOD files");
                 Dispatcher.Invoke(() => {
                     HideGlbLodUI();
                 });

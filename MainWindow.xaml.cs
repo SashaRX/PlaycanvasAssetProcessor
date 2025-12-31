@@ -4121,20 +4121,31 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
 
-                // ДИАГНОСТИКА: NLog для отладки зависания
+                // ДИАГНОСТИКА: Принудительный flush для немедленной записи
+                Debug.WriteLine($"[ProcessModel] ConvertAsync completed: Success={result.Success}");
                 logger.Info($"[ProcessModel] ConvertAsync completed: Success={result.Success}");
+                LogManager.Flush();
 
                 if (result.Success) {
+                    Debug.WriteLine($"[ProcessModel] LODs={result.LodFiles.Count}, calling TryLoadGlbLodAsync...");
                     logger.Info($"[ProcessModel] Model processed: LODs={result.LodFiles.Count}");
+                    LogManager.Flush();
+
                     logService.LogInfo($"? Model processed successfully");
                     logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
                     logService.LogInfo($"  Manifest: {result.ManifestPath}");
 
                     // Автоматически обновляем viewport с новыми GLB LOD файлами
+                    Debug.WriteLine("[ProcessModel] About to call TryLoadGlbLodAsync...");
                     logger.Info("[ProcessModel] About to call TryLoadGlbLodAsync...");
+                    LogManager.Flush();
+
                     logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
                     await TryLoadGlbLodAsync(selectedModel.Path);
+
+                    Debug.WriteLine("[ProcessModel] TryLoadGlbLodAsync completed");
                     logger.Info("[ProcessModel] TryLoadGlbLodAsync completed");
+                    LogManager.Flush();
 
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);

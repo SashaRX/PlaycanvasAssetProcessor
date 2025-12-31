@@ -129,7 +129,17 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await process.WaitForExitAsync();
+                // Таймаут 10 минут (FBX конвертация может быть долгой для больших файлов)
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                try {
+                    await process.WaitForExitAsync(cts.Token);
+                } catch (OperationCanceledException) {
+                    Logger.Error("FBX2glTF process timed out after 10 minutes, killing...");
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    result.Success = false;
+                    result.Error = "FBX2glTF process timed out after 10 minutes";
+                    return result;
+                }
 
                 result.Output = outputBuilder.ToString();
                 result.Error = errorBuilder.ToString();

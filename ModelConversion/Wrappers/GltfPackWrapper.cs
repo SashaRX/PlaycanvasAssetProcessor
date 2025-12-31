@@ -143,7 +143,15 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await process.WaitForExitAsync();
+                // Таймаут 5 минут чтобы не висло вечно
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                try {
+                    await process.WaitForExitAsync(cts.Token);
+                } catch (OperationCanceledException) {
+                    Logger.Error("gltfpack process timed out after 5 minutes, killing...");
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    throw new Exception("gltfpack process timed out after 5 minutes");
+                }
 
                 result.Output = outputBuilder.ToString();
                 result.StdErr = errorBuilder.ToString();

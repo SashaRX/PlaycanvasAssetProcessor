@@ -161,11 +161,14 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     return null;
                 }
 
+                // Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                var stderrTask = process.StandardError.ReadToEndAsync();
+
                 await process.WaitForExitAsync();
 
-                // Читаем вывод gltfpack для диагностики
-                var stdout = await process.StandardOutput.ReadToEndAsync();
-                var stderr = await process.StandardError.ReadToEndAsync();
+                var stdout = await stdoutTask;
+                var stderr = await stderrTask;
 
                 if (!string.IsNullOrEmpty(stdout)) {
                     Logger.Info($"gltfpack stdout: {stdout}");
@@ -325,7 +328,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     return null;
                 }
 
+                // Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                var stderrTask = process.StandardError.ReadToEndAsync();
+
                 await process.WaitForExitAsync();
+                await Task.WhenAll(stdoutTask, stderrTask);
 
                 if (process.ExitCode == 0 && File.Exists(outputPath)) {
                     Logger.Info($"Successfully decompressed GLB: {outputPath}");

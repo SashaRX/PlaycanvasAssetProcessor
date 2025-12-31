@@ -142,9 +142,23 @@ public static class Ktx2TextureLoader {
                 throw new Exception("Failed to start ktx process");
             }
 
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
+            // КРИТИЧНО: Читаем оба потока ПАРАЛЛЕЛЬНО чтобы избежать deadlock
+            var stdoutBuilder = new System.Text.StringBuilder();
+            var stderrBuilder = new System.Text.StringBuilder();
+
+            process.OutputDataReceived += (sender, e) => {
+                if (e.Data != null) stdoutBuilder.AppendLine(e.Data);
+            };
+            process.ErrorDataReceived += (sender, e) => {
+                if (e.Data != null) stderrBuilder.AppendLine(e.Data);
+            };
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
             process.WaitForExit();
+
+            string stdout = stdoutBuilder.ToString();
+            string stderr = stderrBuilder.ToString();
 
             if (process.ExitCode != 0) {
                 logger.Error($"ktx extract failed with exit code {process.ExitCode}");
@@ -504,9 +518,23 @@ public static class Ktx2TextureLoader {
                 throw new Exception("Failed to start basisu process");
             }
 
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
+            // КРИТИЧНО: Читаем оба потока ПАРАЛЛЕЛЬНО чтобы избежать deadlock
+            var stdoutBuilder = new System.Text.StringBuilder();
+            var stderrBuilder = new System.Text.StringBuilder();
+
+            process.OutputDataReceived += (sender, e) => {
+                if (e.Data != null) stdoutBuilder.AppendLine(e.Data);
+            };
+            process.ErrorDataReceived += (sender, e) => {
+                if (e.Data != null) stderrBuilder.AppendLine(e.Data);
+            };
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
             process.WaitForExit();
+
+            string stdout = stdoutBuilder.ToString();
+            string stderr = stderrBuilder.ToString();
 
             if (process.ExitCode != 0) {
                 logger.Error($"basisu failed with exit code {process.ExitCode}");

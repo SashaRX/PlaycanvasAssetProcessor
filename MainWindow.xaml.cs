@@ -4121,14 +4121,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
 
+                // ДИАГНОСТИКА: NLog для отладки зависания
+                logger.Info($"[ProcessModel] ConvertAsync completed: Success={result.Success}");
+
                 if (result.Success) {
+                    logger.Info($"[ProcessModel] Model processed: LODs={result.LodFiles.Count}");
                     logService.LogInfo($"? Model processed successfully");
                     logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
                     logService.LogInfo($"  Manifest: {result.ManifestPath}");
 
-                    // ������������� ��������� viewport � ������ GLB LOD �������
+                    // Автоматически обновляем viewport с новыми GLB LOD файлами
+                    logger.Info("[ProcessModel] About to call TryLoadGlbLodAsync...");
                     logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
                     await TryLoadGlbLodAsync(selectedModel.Path);
+                    logger.Info("[ProcessModel] TryLoadGlbLodAsync completed");
 
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);

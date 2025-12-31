@@ -379,6 +379,8 @@ namespace AssetProcessor.ModelConversion.Viewer {
         /// </summary>
         private string? DecodeGlbWithGltfpack(string inputPath) {
             try {
+                Logger.Info($"[SharpGLTF] DecodeGlbWithGltfpack START: {inputPath}");
+
                 // Проверяем кэш
                 if (_decodeCache.TryGetValue(inputPath, out var cachedPath)) {
                     if (File.Exists(cachedPath)) {
@@ -422,13 +424,38 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     return null;
                 }
 
-                // КРИТИЧНО: Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
-                // Если буфер переполнится, процесс зависнет в ожидании чтения
-                var stdout = process.StandardOutput.ReadToEnd();
-                var stderr = process.StandardError.ReadToEnd();
+                Logger.Info("[SharpGLTF] gltfpack process started, reading output...");
 
-                process.WaitForExit(30000); // 30 sec timeout
+                // КРИТИЧНО: Читаем оба потока ПАРАЛЛЕЛЬНО чтобы избежать deadlock
+                // Если читать последовательно, может произойти deadlock если один из буферов переполнится
+                var stdoutBuilder = new StringBuilder();
+                var stderrBuilder = new StringBuilder();
 
+                process.OutputDataReceived += (sender, e) => {
+                    if (e.Data != null) stdoutBuilder.AppendLine(e.Data);
+                };
+                process.ErrorDataReceived += (sender, e) => {
+                    if (e.Data != null) stderrBuilder.AppendLine(e.Data);
+                };
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                // Ждём завершения с таймаутом
+                var completed = process.WaitForExit(30000); // 30 sec timeout
+                if (!completed) {
+                    Logger.Error("[SharpGLTF] gltfpack process timed out after 30 seconds");
+                    try { process.Kill(); } catch { }
+                    return null;
+                }
+
+                // Дополнительный WaitForExit без таймаута для гарантии завершения async читалок
+                process.WaitForExit();
+
+                var stdout = stdoutBuilder.ToString();
+                var stderr = stderrBuilder.ToString();
+
+                Logger.Info($"[SharpGLTF] gltfpack completed with exit code {process.ExitCode}");
                 if (!string.IsNullOrEmpty(stdout)) {
                     Logger.Info($"[SharpGLTF] gltfpack stdout: {stdout}");
                 }

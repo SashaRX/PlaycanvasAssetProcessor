@@ -36,7 +36,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     return false;
                 }
 
-                // Пробуем запустить с --help (gltfpack может не принимать -h)
+                // Пробуем запустить с --help
                 var startInfo = new ProcessStartInfo {
                     FileName = _executablePath,
                     Arguments = "--help",
@@ -52,10 +52,16 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     return false;
                 }
 
+                // КРИТИЧНО: Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                // Если буфер переполнится - процесс зависнет в ожидании чтения
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
                 await process.WaitForExitAsync();
 
-                // gltfpack может возвращать non-zero exit code даже для --help
-                // Главное - что файл существует и процесс запускается
+                // Дожидаемся завершения чтения
+                await Task.WhenAll(outputTask, errorTask);
+
                 Logger.Info($"gltfpack is available (exit code: {process.ExitCode})");
                 return true;
             } catch (Exception ex) {

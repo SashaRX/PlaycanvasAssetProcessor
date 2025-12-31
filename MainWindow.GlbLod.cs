@@ -183,14 +183,19 @@ namespace AssetProcessor {
         /// </summary>
         private async Task TryLoadGlbLodAsync(string fbxPath) {
             try {
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: TryLoadGlbLodAsync START\n");
                 LodLogger.Info($"Loading GLB LOD files for: {fbxPath}");
                 _currentFbxPath = fbxPath;
 
                 // Загружаем albedo текстуру из таблицы материалов
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Loading albedo texture\n");
                 _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Albedo texture done\n");
 
                 // Ищем GLB LOD файлы
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Finding GLB LOD files\n");
                 _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Found {_currentLodInfos.Count} files\n");
 
                 if (_currentLodInfos.Count == 0) {
                     LodLogger.Info("No GLB LOD files found, using FBX viewer");
@@ -201,8 +206,10 @@ namespace AssetProcessor {
                 LodLogger.Info($"Found {_currentLodInfos.Count} GLB LOD files");
 
                 // Показываем LOD UI
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Showing LOD UI\n");
                 ShowGlbLodUI();
                 PopulateLodDataGrid();
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: LOD UI shown\n");
 
                 // Создаём SharpGlbLoader если его еще нет
                 if (_sharpGlbLoader == null) {
@@ -220,16 +227,22 @@ namespace AssetProcessor {
                 _lodQuantizationInfos.Clear();
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
 
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Starting Task.Run for {lodFilePaths.Count} LODs\n");
+
                 // Обёртываем CPU-интенсивные операции в Task.Run
                 await Task.Run(() => {
                     foreach (var kvp in lodFilePaths) {
                         var lodLevel = kvp.Key;
                         var glbPath = kvp.Value;
 
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Loading {lodLevel}\n");
+
                         var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
                         _lodQuantizationInfos[lodLevel] = quantInfo;
 
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Calling LoadGlb for {lodLevel}\n");
                         var glbData = _sharpGlbLoader!.LoadGlb(glbPath);
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: LoadGlb done for {lodLevel}, Success={glbData.Success}\n");
                         if (glbData.Success) {
                             _lodGlbData[lodLevel] = glbData;
                             LodLogger.Info($"{lodLevel} loaded: {glbData.Meshes.Count} meshes");
@@ -237,12 +250,16 @@ namespace AssetProcessor {
                             LodLogger.Error($"Failed to load {lodLevel}: {glbData.Error}");
                         }
                     }
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Task.Run loop complete\n");
                 });
 
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Task.Run await complete\n");
                 LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes");
 
                 // UI операции в Dispatcher
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Entering Dispatcher.InvokeAsync\n");
                 await Dispatcher.InvokeAsync(() => {
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Inside Dispatcher.InvokeAsync\n");
                     if (_lodGlbData.Count == 0) {
                         LodLogger.Warn("All GLB failed to load, falling back to FBX");
                         HideGlbLodUI();
@@ -250,19 +267,23 @@ namespace AssetProcessor {
                         return;
                     }
 
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Loading to viewport\n");
                     if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {
                         LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
                     } else if (_lodGlbData.Count > 0) {
                         var firstLod = _lodGlbData.Keys.First();
                         LoadGlbModelToViewport(firstLod, zoomToFit: true);
                     }
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Viewport loaded\n");
 
                     _isGlbViewerActive = true;
                     SelectLod(LodLevel.LOD0);
                     LodLogger.Info("GLB LOD preview loaded successfully");
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: TryLoadGlbLodAsync COMPLETE\n");
                 });
 
             } catch (Exception ex) {
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: EXCEPTION: {ex.Message}\n");
                 LodLogger.Error(ex, "Failed to load GLB LOD files");
                 Dispatcher.Invoke(() => {
                     HideGlbLodUI();

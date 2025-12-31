@@ -43,7 +43,7 @@ namespace AssetProcessor.Controls {
             UseGltfTransformCheckBox.IsChecked = false;
             SimplificationErrorSlider.Value = 0.01;
             PermissiveSimplificationCheckBox.IsChecked = false;
-            LockBorderVerticesCheckBox.IsChecked = true; // По умолчанию включено для защиты UV seams
+            LockBorderVerticesCheckBox.IsChecked = false; // Отключено для нормальной симплификации
 
             // Vertex Attributes
             PositionFormatComboBox.SelectedItem = VertexPositionFormat.Integer;

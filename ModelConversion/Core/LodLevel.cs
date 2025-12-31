@@ -65,19 +65,19 @@ namespace AssetProcessor.ModelConversion.Core {
                 LodLevel.LOD1 => new LodSettings {
                     Level = LodLevel.LOD1,
                     SimplificationRatio = 0.6f,
-                    AggressiveSimplification = true,
+                    AggressiveSimplification = false, // Отключено для сохранения UV seams
                     SwitchThreshold = 0.10f
                 },
                 LodLevel.LOD2 => new LodSettings {
                     Level = LodLevel.LOD2,
                     SimplificationRatio = 0.3f,
-                    AggressiveSimplification = true,
+                    AggressiveSimplification = false, // Отключено для сохранения UV seams
                     SwitchThreshold = 0.04f
                 },
                 LodLevel.LOD3 => new LodSettings {
                     Level = LodLevel.LOD3,
                     SimplificationRatio = 0.12f,
-                    AggressiveSimplification = true,
+                    AggressiveSimplification = false, // Отключено для сохранения UV seams
                     SwitchThreshold = 0.02f
                 },
                 _ => throw new ArgumentOutOfRangeException(nameof(level))

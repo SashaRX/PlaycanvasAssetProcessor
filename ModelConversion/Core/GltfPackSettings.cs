@@ -178,6 +178,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 FloatTexCoords = false,
                 FloatNormals = false,
                 KeepVertexAttributes = true,
+                LockBorderVertices = true, // Защита UV seams при симплификации
                 AnimationTranslationBits = 16,
                 AnimationRotationBits = 12,
                 AnimationScaleBits = 16,
@@ -194,6 +195,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 FloatTexCoords = true,  // Нет квантования UV
                 FloatNormals = true,    // Нет квантования нормалей
                 KeepVertexAttributes = true,
+                LockBorderVertices = true, // Защита UV seams при симплификации
                 AnimationTranslationBits = 24,
                 AnimationRotationBits = 16,
                 AnimationScaleBits = 24,

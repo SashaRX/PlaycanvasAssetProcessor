@@ -222,24 +222,30 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 result.Duration = DateTime.Now - startTime;
 
                 Logger.Info($"=== MODEL CONVERSION COMPLETE ===");
+                // ДИАГНОСТИКА: Пишем напрямую в файл, минуя NLog
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: MODEL CONVERSION COMPLETE\n");
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: About to flush #1\n");
                 LogManager.Flush();
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: Flush #1 done\n");
                 Logger.Info($"Success: {result.Success}");
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: Success: {result.Success}\n");
                 LogManager.Flush();
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: Flush #2 done\n");
                 Logger.Info($"Duration: {result.Duration.TotalSeconds:F2}s");
-                LogManager.Flush();
                 Logger.Info($"LOD files: {result.LodFiles.Count}");
                 LogManager.Flush();
-                Logger.Info("[Pipeline] Try block done, exiting...");
-                LogManager.Flush();
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: All done in try block\n");
 
             } catch (Exception ex) {
                 Logger.Error(ex, "Model conversion failed");
+                File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: EXCEPTION: {ex.Message}\n");
                 LogManager.Flush();
                 result.Success = false;
                 result.Errors.Add(ex.Message);
                 result.Duration = DateTime.Now - startTime;
             }
 
+            File.AppendAllText("pipeline_debug.txt", $"{DateTime.Now}: Returning result\n");
             Logger.Info("[Pipeline] Returning result...");
             LogManager.Flush();
             return result;

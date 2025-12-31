@@ -13,14 +13,17 @@ namespace AssetProcessor.ModelConversion.Pipeline {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly FBX2glTFWrapper _fbx2glTFWrapper;
         private readonly GltfPackWrapper _gltfPackWrapper;
+        private readonly GltfTransformWrapper _gltfTransformWrapper;
         private readonly LodManifestGenerator _manifestGenerator;
 
         public ModelConversionPipeline(
             string? fbx2glTFPath = null,
-            string? gltfPackPath = null) {
+            string? gltfPackPath = null,
+            string? npxPath = null) {
             Logger.Info($"Initializing ModelConversionPipeline with FBX2glTF: {fbx2glTFPath ?? "default"}, gltfpack: {gltfPackPath ?? "default"}");
             _fbx2glTFWrapper = new FBX2glTFWrapper(fbx2glTFPath);
             _gltfPackWrapper = new GltfPackWrapper(gltfPackPath);
+            _gltfTransformWrapper = new GltfTransformWrapper(npxPath);
             _manifestGenerator = new LodManifestGenerator();
         }
 
@@ -104,6 +107,16 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
                     Logger.Info("=== STEP B & C: LOD GENERATION ===");
+                    Logger.Info($"Using simplification tool: {(settings.UseGltfTransformForSimplification ? "glTF-Transform" : "gltfpack")}");
+
+                    // Проверяем доступность glTF-Transform если выбран
+                    if (settings.UseGltfTransformForSimplification) {
+                        if (!await _gltfTransformWrapper.IsAvailableAsync()) {
+                            Logger.Warn("glTF-Transform not available, falling back to gltfpack");
+                            result.Warnings.Add("glTF-Transform not available (requires Node.js/npx), using gltfpack");
+                            settings.UseGltfTransformForSimplification = false;
+                        }
+                    }
 
                     // Сохраняем LOD файлы напрямую в outputDirectory
                     var lodFiles = new Dictionary<LodLevel, string>();
@@ -116,35 +129,70 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
                         Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
 
-                        var gltfResult = await _gltfPackWrapper.OptimizeAsync(
-                            baseGltfPath,
-                            lodOutputPath,
-                            lodSettings,
-                            settings.CompressionMode,
-                            settings.Quantization,
-                            settings.AdvancedSettings,
-                            generateReport: settings.GenerateQAReport,
-                            excludeTextures: settings.ExcludeTextures
-                        );
+                        bool lodSuccess;
+                        long lodFileSize = 0;
+                        int lodTriangles = 0;
+                        int lodVertices = 0;
+                        string? lodError = null;
 
-                        if (!gltfResult.Success) {
-                            Logger.Error($"Failed to generate {lodName}: {gltfResult.Error}");
-                            result.Errors.Add($"{lodName} generation failed: {gltfResult.Error}");
+                        if (settings.UseGltfTransformForSimplification && lodSettings.SimplificationRatio < 1.0f) {
+                            // Используем glTF-Transform для симплификации (сохраняет UV seams)
+                            var simplifySettings = GltfTransformSimplifySettings.FromLodRatio(lodSettings.SimplificationRatio);
+                            var transformResult = await _gltfTransformWrapper.SimplifyAsync(
+                                baseGltfPath,
+                                lodOutputPath,
+                                simplifySettings
+                            );
+
+                            lodSuccess = transformResult.Success;
+                            lodFileSize = transformResult.OutputFileSize;
+                            lodError = transformResult.Error;
+
+                            // glTF-Transform не возвращает метрики напрямую, нужно парсить файл
+                            if (lodSuccess) {
+                                // TODO: Парсить GLB для получения метрик
+                                Logger.Info($"  {lodName} created with glTF-Transform: {lodFileSize} bytes");
+                            }
+                        } else {
+                            // Используем gltfpack (оригинальный путь)
+                            var gltfResult = await _gltfPackWrapper.OptimizeAsync(
+                                baseGltfPath,
+                                lodOutputPath,
+                                lodSettings,
+                                settings.CompressionMode,
+                                settings.Quantization,
+                                settings.AdvancedSettings,
+                                generateReport: settings.GenerateQAReport,
+                                excludeTextures: settings.ExcludeTextures
+                            );
+
+                            lodSuccess = gltfResult.Success;
+                            lodFileSize = gltfResult.OutputFileSize;
+                            lodTriangles = gltfResult.TriangleCount;
+                            lodVertices = gltfResult.VertexCount;
+                            lodError = gltfResult.Error;
+
+                            if (lodSuccess) {
+                                Logger.Info($"  {lodName} created: {lodFileSize} bytes, {lodTriangles} tris, {lodVertices} verts");
+                            }
+                        }
+
+                        if (!lodSuccess) {
+                            Logger.Error($"Failed to generate {lodName}: {lodError}");
+                            result.Errors.Add($"{lodName} generation failed: {lodError}");
                             continue;
                         }
 
-                        Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
-
-                        // DEBUG: Проверяем UV после gltfpack
-                        InspectGlbUV(lodOutputPath, $"{lodName} (after gltfpack)");
+                        // DEBUG: Проверяем UV после обработки
+                        InspectGlbUV(lodOutputPath, $"{lodName} (after {(settings.UseGltfTransformForSimplification ? "glTF-Transform" : "gltfpack")})");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 
                         // Собираем метрики
                         lodMetrics[lodName] = new MeshMetrics {
-                            TriangleCount = gltfResult.TriangleCount,
-                            VertexCount = gltfResult.VertexCount,
-                            FileSize = gltfResult.OutputFileSize,
+                            TriangleCount = lodTriangles,
+                            VertexCount = lodVertices,
+                            FileSize = lodFileSize,
                             SimplificationRatio = lodSettings.SimplificationRatio,
                             CompressionMode = settings.CompressionMode.ToString()
                         };
@@ -331,6 +379,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
             try {
                 availability.FBX2glTFAvailable = await _fbx2glTFWrapper.IsAvailableAsync();
                 availability.GltfPackAvailable = await _gltfPackWrapper.IsAvailableAsync();
+                availability.GltfTransformAvailable = await _gltfTransformWrapper.IsAvailableAsync();
             } catch (Exception ex) {
                 Logger.Error(ex, "Failed to check tools availability");
             }
@@ -363,6 +412,11 @@ namespace AssetProcessor.ModelConversion.Pipeline {
     public class ToolsAvailability {
         public bool FBX2glTFAvailable { get; set; }
         public bool GltfPackAvailable { get; set; }
+        /// <summary>
+        /// glTF-Transform доступен (требует Node.js и npx)
+        /// Используется для симплификации с сохранением UV seams
+        /// </summary>
+        public bool GltfTransformAvailable { get; set; }
         public bool AllAvailable => FBX2glTFAvailable && GltfPackAvailable;
     }
 }

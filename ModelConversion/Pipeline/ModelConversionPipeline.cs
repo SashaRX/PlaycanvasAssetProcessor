@@ -222,10 +222,15 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 result.Duration = DateTime.Now - startTime;
 
                 Logger.Info($"=== MODEL CONVERSION COMPLETE ===");
+                LogManager.Flush();
                 Logger.Info($"Success: {result.Success}");
+                LogManager.Flush();
                 Logger.Info($"Duration: {result.Duration.TotalSeconds:F2}s");
+                LogManager.Flush();
                 Logger.Info($"LOD files: {result.LodFiles.Count}");
-                LogManager.Flush(); // Принудительный flush
+                LogManager.Flush();
+                Logger.Info("[Pipeline] Try block done, exiting...");
+                LogManager.Flush();
 
             } catch (Exception ex) {
                 Logger.Error(ex, "Model conversion failed");

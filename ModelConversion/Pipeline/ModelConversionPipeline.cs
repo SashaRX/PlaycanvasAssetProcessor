@@ -225,14 +225,18 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 Logger.Info($"Success: {result.Success}");
                 Logger.Info($"Duration: {result.Duration.TotalSeconds:F2}s");
                 Logger.Info($"LOD files: {result.LodFiles.Count}");
+                LogManager.Flush(); // Принудительный flush
 
             } catch (Exception ex) {
                 Logger.Error(ex, "Model conversion failed");
+                LogManager.Flush();
                 result.Success = false;
                 result.Errors.Add(ex.Message);
                 result.Duration = DateTime.Now - startTime;
             }
 
+            Logger.Info("[Pipeline] Returning result...");
+            LogManager.Flush();
             return result;
         }
 

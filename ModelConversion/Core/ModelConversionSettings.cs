@@ -136,7 +136,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 SourceType = ModelSourceType.FBX,
                 GenerateLods = true,
                 LodChain = LodSettings.CreateFullChain(),
-                CompressionMode = CompressionMode.MeshOptAggressive,
+                CompressionMode = CompressionMode.MeshOpt,
                 Quantization = QuantizationSettings.CreateMinSize(),
                 AdvancedSettings = GltfPackSettings.CreateMinSize(),
                 LodHysteresis = 0.02f,

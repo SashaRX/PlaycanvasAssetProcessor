@@ -292,31 +292,16 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 // Режим сжатия
                 switch (compressionMode) {
                     case CompressionMode.Quantization:
-                        // KHR_mesh_quantization (совместимо с редакторами)
-                        // Примечание: -kn и -km НЕ относятся к квантованию!
-                        // Они означают "keep named nodes" и "keep named materials"
-                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
+                        // KHR_mesh_quantization - только квантование
                         break;
 
                     case CompressionMode.MeshOpt:
                         // EXT_meshopt_compression
-                        if (settings.CompressedWithFallback) {
-                            args.Add("-cf"); // compressed with fallback
-                        } else {
-                            args.Add("-c");
-                        }
-                        // Примечание: -kn и -km НЕ относятся к сжатию!
-                        // Они означают "keep named nodes" и "keep named materials"
-                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
-                        break;
-
-                    case CompressionMode.MeshOptAggressive:
-                        // EXT_meshopt_compression с дополнительным сжатием
-                        args.Add("-cc");
+                        args.Add("-c");
                         break;
 
                     case CompressionMode.None:
-                        // Без сжатия
+                        // Без сжатия - уже добавили -noq выше
                         break;
                 }
 

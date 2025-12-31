@@ -146,12 +146,6 @@ namespace AssetProcessor.ModelConversion.Core {
         // ============================================
 
         /// <summary>
-        /// Создать сжатый файл с fallback для загрузчиков без поддержки сжатия
-        /// Флаг: -cf
-        /// </summary>
-        public bool CompressedWithFallback { get; set; }
-
-        /// <summary>
         /// Отключить квантование полностью
         /// Флаг: -noq
         /// Создает большие файлы без extensions

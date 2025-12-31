@@ -216,7 +216,6 @@ namespace AssetProcessor.ModelConversion.Settings {
         public bool UseGpuInstancing { get; set; }
 
         // Misc
-        public bool CompressedWithFallback { get; set; }
         public bool DisableQuantization { get; set; }
         public bool FlipUVs { get; set; }
 
@@ -240,7 +239,6 @@ namespace AssetProcessor.ModelConversion.Settings {
                 KeepExtras = KeepExtras,
                 MergeMeshInstances = MergeMeshInstances,
                 UseGpuInstancing = UseGpuInstancing,
-                CompressedWithFallback = CompressedWithFallback,
                 DisableQuantization = DisableQuantization,
                 FlipUVs = FlipUVs
             };
@@ -266,7 +264,6 @@ namespace AssetProcessor.ModelConversion.Settings {
                 KeepExtras = settings.KeepExtras,
                 MergeMeshInstances = settings.MergeMeshInstances,
                 UseGpuInstancing = settings.UseGpuInstancing,
-                CompressedWithFallback = settings.CompressedWithFallback,
                 DisableQuantization = settings.DisableQuantization,
                 FlipUVs = settings.FlipUVs
             };

@@ -65,7 +65,6 @@ namespace AssetProcessor.Controls {
             KeepExtrasCheckBox.IsChecked = false;
             MergeMeshInstancesCheckBox.IsChecked = false;
             UseGpuInstancingCheckBox.IsChecked = false;
-            CompressedWithFallbackCheckBox.IsChecked = false;
             DisableQuantizationCheckBox.IsChecked = false;
 
             _isLoading = false;
@@ -115,7 +114,6 @@ namespace AssetProcessor.Controls {
                 UseGpuInstancing = UseGpuInstancingCheckBox.IsChecked ?? false,
 
                 // Misc
-                CompressedWithFallback = CompressedWithFallbackCheckBox.IsChecked ?? false,
                 DisableQuantization = DisableQuantizationCheckBox.IsChecked ?? false
             };
 
@@ -231,7 +229,6 @@ namespace AssetProcessor.Controls {
                 UseGpuInstancingCheckBox.IsChecked = adv.UseGpuInstancing;
 
                 // Misc
-                CompressedWithFallbackCheckBox.IsChecked = adv.CompressedWithFallback;
                 DisableQuantizationCheckBox.IsChecked = adv.DisableQuantization;
             }
 

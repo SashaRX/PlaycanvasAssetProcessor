@@ -4,45 +4,25 @@ namespace AssetProcessor.ModelConversion.Core {
     /// </summary>
     public enum CompressionMode {
         /// <summary>
-        /// Без сжатия (только упрощение геометрии)
+        /// Без сжатия и квантования
+        /// Максимальное качество, большой размер файла
         /// </summary>
         None,
 
         /// <summary>
-        /// Квантование (KHR_mesh_quantization)
-        /// Уменьшает размер без потери совместимости
-        /// Флаги: -kn -km
+        /// KHR_mesh_quantization
+        /// Квантование вершин для уменьшения размера
+        /// Совместимо со всеми редакторами и движками
         /// </summary>
         Quantization,
 
         /// <summary>
         /// EXT_meshopt_compression
         /// Максимальное сжатие для web runtime
+        /// Требует meshoptimizer decoder в браузере
         /// Флаг: -c
         /// </summary>
-        MeshOpt,
-
-        /// <summary>
-        /// EXT_meshopt_compression с дополнительным сжатием
-        /// Флаг: -cc
-        /// </summary>
-        MeshOptAggressive,
-
-        /// <summary>
-        /// KHR_meshopt_compression (meshoptimizer 1.0+)
-        /// Лучшее сжатие чем EXT, но требует кастомный WASM декодер
-        /// Флаг: -cz (эквивалентно -ce khr -cc)
-        /// ВАЖНО: Ограниченная поддержка в движках, требуется собственный декодер
-        /// </summary>
-        MeshOptKHR,
-
-        /// <summary>
-        /// KHR_meshopt_compression с fallback буфером
-        /// Создаёт два буфера: сжатый (KHR) + несжатый fallback
-        /// Флаги: -cz -cf
-        /// Для совместимости со старыми браузерами/движками
-        /// </summary>
-        MeshOptKHRWithFallback
+        MeshOpt
     }
 
     /// <summary>

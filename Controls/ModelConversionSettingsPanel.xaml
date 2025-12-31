@@ -406,9 +406,6 @@
                     <CheckBox x:Name="UseGpuInstancingCheckBox" Content="GPU Instancing (-mi)" Margin="0,0,0,2"
                               ToolTip="Use EXT_mesh_gpu_instancing for multiple instances"/>
 
-                    <CheckBox x:Name="CompressedWithFallbackCheckBox" Content="Compressed with Fallback (-cf)" Margin="0,0,0,2"
-                              ToolTip="Produce compressed file with fallback for loaders without compression support"/>
-
                     <CheckBox x:Name="DisableQuantizationCheckBox" Content="Disable Quantization (-noq)" Margin="0,0,0,2"
                               ToolTip="Disable all quantization (produces larger files without extensions)"/>
                 </StackPanel>

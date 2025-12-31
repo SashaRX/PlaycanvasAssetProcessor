@@ -187,10 +187,14 @@ namespace AssetProcessor {
                 _currentFbxPath = fbxPath;  // Сохраняем для переключения Source Type
 
                 // Загружаем albedo текстуру из таблицы материалов (независимо от наличия GLB)
+                LodLogger.Info("Loading albedo texture...");
                 _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
+                LodLogger.Info("Albedo texture loaded");
 
                 // Ищем GLB LOD файлы
+                LodLogger.Info("Searching for GLB LOD files...");
                 _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
+                LodLogger.Info($"FindGlbLodFiles returned {_currentLodInfos.Count} files");
 
                 if (_currentLodInfos.Count == 0) {
                     LodLogger.Info("No GLB LOD files found, using FBX viewer");
@@ -207,6 +211,7 @@ namespace AssetProcessor {
                 PopulateLodDataGrid();
 
                 // Создаём SharpGlbLoader если его еще нет
+                LodLogger.Info("Checking SharpGlbLoader...");
                 if (_sharpGlbLoader == null) {
                     // Загружаем путь к gltfpack из настроек
                     var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
@@ -217,15 +222,23 @@ namespace AssetProcessor {
                     LodLogger.Info($"Creating SharpGlbLoader with gltfpack: {gltfPackPath}");
                     LodLogger.Info("SharpGLTF handles KHR_mesh_quantization, gltfpack decodes EXT_meshopt_compression");
                     _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
+                } else {
+                    // Очищаем кэш декодированных файлов - они могли устареть после перегенерации
+                    LodLogger.Info("Clearing SharpGlbLoader decode cache (files may have been regenerated)");
+                    _sharpGlbLoader.ClearCache();
                 }
 
                 // Загружаем все LOD данные через SharpGLTF
                 _lodGlbData.Clear();
                 _lodQuantizationInfos.Clear();
+                LodLogger.Info("Getting LOD file paths...");
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
+                LodLogger.Info($"Found {lodFilePaths.Count} LOD file paths");
 
                 // Обёртываем CPU-интенсивные операции в Task.Run для неблокирующего выполнения
+                LodLogger.Info("Starting Task.Run for LOD loading...");
                 await Task.Run(() => {
+                    LodLogger.Info($"Task.Run started, loading {lodFilePaths.Count} LOD files");
                     foreach (var kvp in lodFilePaths) {
                         var lodLevel = kvp.Key;
                         var glbPath = kvp.Value;
@@ -233,17 +246,22 @@ namespace AssetProcessor {
                         LodLogger.Info($"  Loading {lodLevel}: {glbPath}");
 
                         // Анализируем квантование (для информационных целей)
+                        LodLogger.Info($"  Analyzing quantization for {lodLevel}...");
                         var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
                         _lodQuantizationInfos[lodLevel] = quantInfo;
+                        LodLogger.Info($"  Quantization analysis complete for {lodLevel}");
 
                         // Загружаем через SharpGLTF (автоматически декодирует KHR_mesh_quantization)
+                        LodLogger.Info($"  Loading GLB via SharpGLTF for {lodLevel}...");
                         var glbData = _sharpGlbLoader!.LoadGlb(glbPath);
                         if (glbData.Success) {
                             _lodGlbData[lodLevel] = glbData;
+                            LodLogger.Info($"  {lodLevel} loaded successfully: {glbData.Meshes.Count} meshes");
                         } else {
                             LodLogger.Error($"Failed to load {lodLevel}: {glbData.Error}");
                         }
                     }
+                    LodLogger.Info("Task.Run completed");
                 });
 
                 LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes via SharpGLTF");

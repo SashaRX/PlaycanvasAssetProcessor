@@ -65,7 +65,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 LodLevel.LOD1 => new LodSettings {
                     Level = LodLevel.LOD1,
                     SimplificationRatio = 0.6f,
-                    AggressiveSimplification = true,
+                    AggressiveSimplification = false, // Отключено для сохранения UV seams
                     SwitchThreshold = 0.10f
                 },
                 LodLevel.LOD2 => new LodSettings {

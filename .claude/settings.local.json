@@ -73,7 +73,17 @@
       "Bash(cmd.exe /c \"taskkill /F /PID 45772\")",
       "Bash(tree:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(D:sourceProjectreposPlaycanvasAssetProcessorbinReleasenet9.0-windows10.0.26100.0win-x64gltfpack.exe --version)",
+      "Bash(gltfpack --version:*)",
+      "Bash(curl:*)",
+      "Bash(\"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\Release\\\\net9.0-windows10.0.26100.0\\\\win-x64\\\\gltfpack.exe\":*)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 8956\")",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 44008\")",
+      "Bash(cmd.exe /c \"type %AppData%\\\\TexTool\\\\ModelConversionSettings.json\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 33004\")"
     ],
     "deny": [],
     "ask": []

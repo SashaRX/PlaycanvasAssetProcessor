@@ -26,7 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs пїЅпїЅпїЅ GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -46,34 +46,51 @@ namespace AssetProcessor {
         private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
-                    if (selectedModel.Status == "Downloaded") { // Если модель уже загружена
-                        // Сначала пытаемся загрузить GLB LOD файлы
+                    if (selectedModel.Status == "Downloaded") { // пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ GLB LOD пїЅпїЅпїЅпїЅпїЅ
                         await TryLoadGlbLodAsync(selectedModel.Path);
 
-                        // Если GLB LOD не найдены, загружаем FBX модель в обычный вьюпорт
+                        // Р•СЃР»Рё GLB LOD РЅРµ РЅР°Р№РґРµРЅС‹, Р·Р°РіСЂСѓР¶Р°РµРј FBX РјРѕРґРµР»СЊ РІ РѕР±С‹С‡РЅРѕРј СЂРµР¶РёРјРµ
                         if (!_isGlbViewerActive) {
-                            // Загружаем модель во вьюпорт (3D просмотрщик)
-                            LoadModel(selectedModel.Path);
+                            var modelPath = selectedModel.Path;
+                            var modelName = selectedModel.Name;
 
-                            // Обновляем информацию о модели из FBX
-                            AssimpContext context = new();
-                            Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                            Mesh? mesh = scene.Meshes.FirstOrDefault();
+                            // Run model loading on background thread to avoid UI freeze
+                            var modelData = await Task.Run(() => {
+                                try {
+                                    AssimpContext context = new();
+                                    Scene scene = context.ImportFile(modelPath, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                                    Mesh? mesh = scene.Meshes.FirstOrDefault();
 
-                            if (mesh != null) {
-                                string? modelName = selectedModel.Name;
-                                int triangles = mesh.FaceCount;
-                                int vertices = mesh.VertexCount;
-                                int uvChannels = mesh.TextureCoordinateChannelCount;
+                                    if (mesh != null) {
+                                        return new {
+                                            Mesh = mesh,
+                                            Triangles = mesh.FaceCount,
+                                            Vertices = mesh.VertexCount,
+                                            UVChannels = mesh.TextureCoordinateChannelCount,
+                                            HasUV = mesh.HasTextureCoords(0)
+                                        };
+                                    }
+                                    return null;
+                                } catch {
+                                    return null;
+                                }
+                            });
+
+                            // Update UI on main thread
+                            if (modelData != null) {
+                                LoadModel(modelPath);
 
                                 if (!String.IsNullOrEmpty(modelName)) {
-                                    UpdateModelInfo(modelName, triangles, vertices, uvChannels);
+                                    UpdateModelInfo(modelName, modelData.Triangles, modelData.Vertices, modelData.UVChannels);
                                 }
 
-                                UpdateUVImage(mesh);
+                                if (modelData.HasUV) {
+                                    UpdateUVImage(modelData.Mesh);
+                                }
                             }
                         }
-                        // Если GLB viewer активен, информация уже обновлена в TryLoadGlbLodAsync
+                        // пїЅпїЅпїЅпїЅ GLB viewer пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ TryLoadGlbLodAsync
                     }
                 }
             }
@@ -89,10 +106,10 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Обновляет UV preview изображения
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UV preview пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
-        /// <param name="mesh">Assimp mesh с UV координатами</param>
-        /// <param name="flipV">True для FBX (загружен с FlipUVs), False для GLB (естественный top-left origin)</param>
+        /// <param name="mesh">Assimp mesh пїЅ UV пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ</param>
+        /// <param name="flipV">True пїЅпїЅпїЅ FBX (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ FlipUVs), False пїЅпїЅпїЅ GLB (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ top-left origin)</param>
         private void UpdateUVImage(Mesh mesh, bool flipV = true) {
             const int width = 512;
             const int height = 512;
@@ -107,9 +124,9 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Создаёт bitmap с UV развёрткой
+        /// пїЅпїЅпїЅпїЅпїЅпїЅ bitmap пїЅ UV пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         /// </summary>
-        /// <param name="flipV">True для FBX (отменяет FlipUVs для показа оригинальной развёртки), False для GLB</param>
+        /// <param name="flipV">True пїЅпїЅпїЅ FBX (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ FlipUVs пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ), False пїЅпїЅпїЅ GLB</param>
         private static BitmapSource CreateUvBitmapSource(Mesh mesh, int channelIndex, int width, int height, bool flipV = true) {
             DrawingVisual visual = new();
 
@@ -146,8 +163,8 @@ namespace AssetProcessor {
                                 }
 
                                 Assimp.Vector3D uv = textureCoordinates[vertexIndex];
-                                // flipV: для FBX (после FlipUVs) нужно отменить flip чтобы показать оригинальную развёртку
-                                // для GLB (без FlipUVs) показываем как есть (top-left origin)
+                                // flipV: пїЅпїЅпїЅ FBX (пїЅпїЅпїЅпїЅпїЅ FlipUVs) пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ flip пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                                // пїЅпїЅпїЅ GLB (пїЅпїЅпїЅ FlipUVs) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ (top-left origin)
                                 float displayV = flipV ? (1 - uv.Y) : uv.Y;
                                 points[i] = new Point(uv.X * width, displayV * height);
                             }
@@ -181,7 +198,7 @@ namespace AssetProcessor {
             try {
                 viewPort3d.RotateGesture = new MouseGesture(MouseAction.LeftClick);
 
-                // Очищаем только модели, оставляя освещение
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
                 foreach (ModelVisual3D? model in modelsToRemove) {
                     viewPort3d.Children.Remove(model);
@@ -221,7 +238,7 @@ namespace AssetProcessor {
                         builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                         builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 
-                        // Добавляем текстурные координаты, если они есть
+                        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
                         if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
                             builder.TextureCoordinates.Add(new System.Windows.Point(mesh.TextureCoordinateChannels[0][i].X, mesh.TextureCoordinateChannels[0][i].Y));
                         }
@@ -245,7 +262,7 @@ namespace AssetProcessor {
                     }
 
                     MeshGeometry3D geometry = builder.ToMesh(true);
-                    // Используем albedo текстуру из материалов если она загружена
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ albedo пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     DiffuseMaterial material = (_cachedAlbedoBrush != null && geometry.TextureCoordinates.Count > 0)
                         ? new DiffuseMaterial(_cachedAlbedoBrush)
                         : new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
@@ -266,7 +283,7 @@ namespace AssetProcessor {
                 ModelVisual3D visual3d = new() { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
-                // Применяем настройки viewer (wireframe, pivot, up vector)
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ viewer (wireframe, pivot, up vector)
                 ApplyViewerSettingsToModel();
 
                 viewPort3d.ZoomExtents();
@@ -282,7 +299,7 @@ namespace AssetProcessor {
         }
 
         private void ResetViewport() {
-            // Очищаем только модели, оставляя освещение
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
             foreach (ModelVisual3D model in modelsToRemove) {
                 viewPort3d.Children.Remove(model);

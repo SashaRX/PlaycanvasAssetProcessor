@@ -9,7 +9,7 @@ ModelConversion - это комплексный пайплайн для обра
 1. **Конвертация FBX/glTF → GLB**: Конвертация исходных FBX или прямой glTF/GLB вход в оптимизированный формат
 2. **Генерация LOD цепочки**: Автоматическое создание 4 уровней детализации (LOD0-LOD3)
 3. **Оптимизация геометрии**: Упрощение сетки с сохранением визуального качества
-4. **Сжатие**: Квантование, EXT_meshopt_compression или KHR_meshopt_compression (meshoptimizer 1.0+)
+4. **Сжатие**: Квантование или EXT_meshopt_compression
 5. **QA отчёты**: Автоматическая валидация результатов по критериям приёмки
 
 ## Архитектура
@@ -147,115 +147,19 @@ var result = await pipeline.ConvertAsync("model.gltf", outputDir, settings);
 - Файл передаётся напрямую в gltfpack для оптимизации и LOD генерации
 - Поддерживаются оба формата: `.gltf` (JSON + bin) и `.glb` (binary)
 
-## KHR_meshopt_compression (meshoptimizer 1.0+)
-
-### Описание
-
-`KHR_meshopt_compression` — новое расширение Khronos (draft), обеспечивающее лучшее сжатие чем `EXT_meshopt_compression`. Доступно начиная с meshoptimizer 1.0.
-
-**Преимущества:**
-- Лучший коэффициент сжатия (~10-20% меньше чем EXT)
-- Стандартизированный формат Khronos
-
-**Ограничения:**
-- Ограниченная поддержка в движках (на декабрь 2024)
-- Требует кастомный WASM декодер (см. раздел ниже)
-- PlayCanvas/Three.js пока не поддерживают нативно
-
-### Режимы сжатия
+## Режимы сжатия
 
 | Режим | Флаги gltfpack | Описание |
 |-------|----------------|----------|
-| `Quantization` | `-kn -km` | Только квантование (KHR_mesh_quantization) |
-| `MeshOpt` | `-c` | EXT_meshopt_compression |
+| `None` | - | Без сжатия (только упрощение геометрии) |
+| `Quantization` | `-kn -km` | KHR_mesh_quantization (совместимо с редакторами) |
+| `MeshOpt` | `-c` | EXT_meshopt_compression (рекомендуется для web) |
 | `MeshOptAggressive` | `-cc` | EXT_meshopt_compression + дополнительное сжатие |
-| `MeshOptKHR` | `-cz` | **KHR_meshopt_compression** (лучшее сжатие) |
-| `MeshOptKHRWithFallback` | `-cz -cf` | KHR + несжатый fallback буфер |
 
-### Когда использовать KHR
-
-**Используйте `MeshOptKHR` когда:**
-- Контролируете рантайм и можете встроить кастомный декодер
-- Максимальное сжатие критично
-- Готовы собрать и поддерживать WASM декодер
-
-**Используйте `MeshOptKHRWithFallback` когда:**
-- Нужна совместимость со старыми браузерами/движками
-- Готовы к увеличению размера файла (два буфера)
-
-**Используйте `MeshOptAggressive` (EXT) когда:**
-- Нужна широкая совместимость
-- Используете стандартные движки (PlayCanvas, Three.js, Babylon.js)
-
-## Сборка WASM декодера для KHR_meshopt_compression
-
-### Требования
-
-- [Emscripten SDK](https://emscripten.org/) (emsdk 3.1.50+)
-- meshoptimizer 1.0 исходники
-- Make или CMake
-
-### Пошаговая сборка
-
-```bash
-# 1. Клонируем meshoptimizer
-git clone https://github.com/zeux/meshoptimizer.git
-cd meshoptimizer
-git checkout v1.0
-
-# 2. Активируем Emscripten
-source /path/to/emsdk/emsdk_env.sh
-
-# 3. Собираем WASM декодер
-cd js
-make decoder
-
-# Результат: meshopt_decoder.js + meshopt_decoder.wasm
-```
-
-### Структура выходных файлов
-
-```
-js/
-├── meshopt_decoder.js      # ES module loader
-├── meshopt_decoder.wasm    # WASM binary
-└── meshopt_decoder.cjs     # CommonJS вариант (для Node.js)
-```
-
-### Интеграция в PlayCanvas
-
-```javascript
-// 1. Импортируем декодер (ES modules, meshoptimizer 1.0+)
-import { MeshoptDecoder } from './meshopt_decoder.js';
-
-// 2. Инициализируем
-await MeshoptDecoder.ready;
-
-// 3. Регистрируем в PlayCanvas
-app.loader.getHandler('container').decoders = {
-    'meshopt': MeshoptDecoder  // Работает для EXT и KHR
-};
-
-// 4. Загружаем модель
-const asset = new pc.Asset('model', 'container', {
-    url: 'model_lod0.glb'
-});
-app.assets.add(asset);
-app.assets.load(asset);
-```
-
-### Важные изменения в meshoptimizer 1.0
-
-1. **ES Modules по умолчанию** — JavaScript bindings теперь используют ES modules вместо CommonJS
-2. **Vertex encoding v1** — новый формат по умолчанию, требует декодер 0.23+
-3. **KHR extension** — поддерживается только декодером 1.0+
-
-### Размер WASM
-
-| Вариант | Размер (gzip) |
-|---------|---------------|
-| meshopt_decoder.wasm | ~15 KB |
-| meshopt_decoder.js | ~3 KB |
+**Рекомендации:**
+- **Quantization** — универсальная совместимость, подходит для редакторов
+- **MeshOpt** — рекомендуется для PlayCanvas, Three.js, Babylon.js
+- **MeshOptAggressive** — минимальный размер, чуть медленнее декодирование
 
 ## Использование GUI
 
@@ -328,20 +232,11 @@ app.assets.load(asset);
    - Уменьшает размер без потери совместимости
 3. **MeshOpt**: EXT_meshopt_compression
    - Флаг gltfpack: `-c`
-   - Максимальное сжатие для web runtime
+   - Рекомендуется для web runtime (PlayCanvas, Three.js, Babylon.js)
    - Требует meshopt декодер в браузере
 4. **MeshOptAggressive**: EXT_meshopt_compression с дополнительным сжатием
    - Флаг gltfpack: `-cc`
-   - Ещё меньший размер, чуть медленнее декодирование
-5. **MeshOptKHR**: KHR_meshopt_compression (meshoptimizer 1.0+)
-   - Флаг gltfpack: `-cz`
-   - Лучшее сжатие (~10-20% меньше чем EXT)
-   - Требует кастомный WASM декодер 1.0+
-   - Ограниченная поддержка в движках
-6. **MeshOptKHRWithFallback**: KHR_meshopt_compression + fallback
-   - Флаги gltfpack: `-cz -cf`
-   - Два буфера: сжатый (KHR) + несжатый fallback
-   - Для совместимости со старыми браузерами/движками
+   - Минимальный размер, чуть медленнее декодирование
 
 ### Квантование вершин
 

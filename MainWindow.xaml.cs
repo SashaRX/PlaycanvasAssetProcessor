@@ -2870,6 +2870,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // If the path has no extension, it's likely a directory
             bool isLikelyDirectory = string.IsNullOrEmpty(Path.GetExtension(e.FullPath));
 
+            // Ignore build directories (created/deleted during model conversion)
+            if (e.FullPath.Contains("\\build\\") || e.FullPath.EndsWith("\\build")) {
+                return;
+            }
+
             if (isLikelyDirectory) {
                 logger.Info($"Directory likely deleted: {e.FullPath}, scheduling full rescan");
                 ScheduleFullRescan();
@@ -4108,11 +4113,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logService.LogInfo($"  FBX2glTF: {fbx2glTFPath}");
                 logService.LogInfo($"  gltfpack: {gltfPackPath}");
 
-                var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
-
                 ProgressTextBlock.Text = $"Processing {selectedModel.Name}...";
 
-                var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
+                // Run conversion on background thread to avoid UI freeze
+                var modelPath = selectedModel.Path;
+                var result = await Task.Run(async () => {
+                    var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
+                    return await pipeline.ConvertAsync(modelPath, outputDir, settings);
+                });
 
                 if (result.Success) {
                     logService.LogInfo($"? Model processed successfully");

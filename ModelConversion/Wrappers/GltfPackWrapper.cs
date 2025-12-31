@@ -251,8 +251,9 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 args.Add($"-si {simplificationStr}");
                 Logger.Debug($"Simplification argument: -si {simplificationStr}");
 
-                // Simplification error limit
-                if (settings.SimplificationError.HasValue) {
+                // Simplification error limit - только если значение большое (> 0.5)
+                // Маленькие значения слишком ограничивают симплификацию
+                if (settings.SimplificationError.HasValue && settings.SimplificationError.Value > 0.5f) {
                     var errorStr = settings.SimplificationError.Value.ToString("F3", CultureInfo.InvariantCulture);
                     args.Add($"-se {errorStr}");
                 }

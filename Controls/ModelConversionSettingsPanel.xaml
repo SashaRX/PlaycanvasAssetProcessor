@@ -283,8 +283,8 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Slider x:Name="SimplificationErrorSlider" Grid.Column="0"
-                                Minimum="0.001" Maximum="0.1" Value="0.01"
-                                TickFrequency="0.001" IsSnapToTickEnabled="False"
+                                Minimum="0.001" Maximum="1.0" Value="0.01"
+                                TickFrequency="0.01" IsSnapToTickEnabled="False"
                                 Margin="0,0,2,0"/>
                         <TextBlock Grid.Column="1" Text="{Binding ElementName=SimplificationErrorSlider, Path=Value, StringFormat={}{0:F3}}"
                                    Width="35" TextAlignment="Right"/>

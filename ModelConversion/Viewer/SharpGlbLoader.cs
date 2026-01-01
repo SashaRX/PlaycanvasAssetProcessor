@@ -486,12 +486,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     if (File.Exists(cachedFile)) {
                         File.Delete(cachedFile);
                     }
-                } catch (Exception ex) {
-                    Logger.Warn(ex, $"[SharpGLTF] Failed to delete cached file: {cachedFile}");
+                } catch (Exception) {
+                    // Logger.Warn(ex, $"[SharpGLTF] Failed to delete cached file: {cachedFile}"); // NLog блокирует UI
                 }
             }
             _decodeCache.Clear();
-            Logger.Info("[SharpGLTF] Cleared decode cache");
+            // Logger.Info("[SharpGLTF] Cleared decode cache"); // NLog блокирует UI
         }
 
         public void Dispose() {

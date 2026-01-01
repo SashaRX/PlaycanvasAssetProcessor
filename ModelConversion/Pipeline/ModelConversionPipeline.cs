@@ -67,11 +67,13 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] gltfpack OK\n");
 
                 // Создаём директории
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Creating directories\n");
                 Directory.CreateDirectory(outputDirectory);
                 var buildDir = Path.Combine(outputDirectory, "build");
                 Directory.CreateDirectory(buildDir);
 
                 var modelName = Path.GetFileNameWithoutExtension(inputPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Model name: {modelName}, isGltfInput: {isGltfInput}\n");
 
                 string baseGltfPath;
 
@@ -88,10 +90,12 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     InspectGlbUV(inputPath, $"INPUT {inputExtension.ToUpper()} (direct)");
                 } else {
                     // ШАГ A: FBX → базовый GLB (без сжатия)
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Starting FBX2glTF conversion\n");
                     Logger.Info("=== STEP A: FBX → BASE GLB ===");
                     Logger.Info($"Exclude textures: {settings.ExcludeTextures} (textures will be processed separately)");
                     var baseGlbPathNoExt = Path.Combine(buildDir, modelName);
                     var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputPath, baseGlbPathNoExt, settings.ExcludeTextures);
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] FBX2glTF done, Success: {fbxResult.Success}\n");
 
                     if (!fbxResult.Success) {
                         throw new Exception($"FBX2glTF conversion failed: {fbxResult.Error}");

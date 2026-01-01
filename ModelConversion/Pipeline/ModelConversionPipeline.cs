@@ -106,11 +106,14 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     result.BaseGlbPath = baseGltfPath;
 
                     // DEBUG: Проверяем UV после FBX2glTF
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Calling InspectGlbUV\n");
                     InspectGlbUV(baseGltfPath, "BASE GLB (after FBX2glTF)");
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] InspectGlbUV done\n");
                 }
 
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Starting LOD generation\n");
                     Logger.Info("=== STEP B & C: LOD GENERATION ===");
 
                     // Сохраняем LOD файлы напрямую в outputDirectory
@@ -122,6 +125,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         var lodFileName = $"{modelName}_lod{(int)lodSettings.Level}.glb";
                         var lodOutputPath = Path.Combine(outputDirectory, lodFileName);
 
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Generating {lodName}\n");
                         Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
 
                         // Используем gltfpack для симплификации
@@ -135,6 +139,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                             generateReport: settings.GenerateQAReport,
                             excludeTextures: settings.ExcludeTextures
                         );
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] {lodName} done, Success: {gltfResult.Success}\n");
 
                         if (!gltfResult.Success) {
                             Logger.Error($"Failed to generate {lodName}: {gltfResult.Error}");

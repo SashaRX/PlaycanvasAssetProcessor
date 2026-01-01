@@ -280,8 +280,10 @@ namespace AssetProcessor {
                     _isGlbViewerActive = true;
                     SelectLod(LodLevel.LOD0);
                     LodLogger.Info("GLB LOD preview loaded successfully");
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: TryLoadGlbLodAsync COMPLETE\n");
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Dispatcher.InvokeAsync DONE\n");
                 });
+
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync\n");
 
             } catch (Exception ex) {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: EXCEPTION: {ex.Message}\n");
@@ -942,26 +944,24 @@ namespace AssetProcessor {
                 // Загружаем модель LOD в viewport
                 LoadGlbModelToViewport(lodLevel);
 
-                // Обновляем UI
-                Dispatcher.Invoke(() => {
-                    // Обновляем текст Current LOD
-                    ModelCurrentLodTextBlock.Text = $"Current LOD: {lodLevel} (GLB)";
+                // Обновляем UI напрямую (этот метод вызывается уже из UI потока)
+                // Обновляем текст Current LOD
+                ModelCurrentLodTextBlock.Text = $"Current LOD: {lodLevel} (GLB)";
 
-                    // Обновляем информацию о модели
-                    if (_currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
-                        ModelTrianglesTextBlock.Text = $"Triangles: {lodInfo.TriangleCount:N0}";
-                        ModelVerticesTextBlock.Text = $"Vertices: {lodInfo.VertexCount:N0}";
-                    }
+                // Обновляем информацию о модели
+                if (_currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
+                    ModelTrianglesTextBlock.Text = $"Triangles: {lodInfo.TriangleCount:N0}";
+                    ModelVerticesTextBlock.Text = $"Vertices: {lodInfo.VertexCount:N0}";
+                }
 
-                    // Обновляем кнопки (подсвечиваем активную)
-                    UpdateLodButtonStates(lodLevel);
+                // Обновляем кнопки (подсвечиваем активную)
+                UpdateLodButtonStates(lodLevel);
 
-                    // Обновляем выделение в DataGrid
-                    var selectedItem = _lodDisplayItems.FirstOrDefault(x => x.Level == lodLevel);
-                    if (selectedItem != null) {
-                        LodInformationGrid.SelectedItem = selectedItem;
-                    }
-                });
+                // Обновляем выделение в DataGrid
+                var selectedItem = _lodDisplayItems.FirstOrDefault(x => x.Level == lodLevel);
+                if (selectedItem != null) {
+                    LodInformationGrid.SelectedItem = selectedItem;
+                }
 
                 LodLogger.Info($"LOD {lodLevel} selected successfully");
 

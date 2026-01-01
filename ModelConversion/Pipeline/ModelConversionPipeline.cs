@@ -150,7 +150,9 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
 
                         // DEBUG: Проверяем UV после обработки
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Calling InspectGlbUV for {lodName}\n");
                         InspectGlbUV(lodOutputPath, $"{lodName} (after gltfpack)");
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] InspectGlbUV for {lodName} done\n");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 
@@ -164,12 +166,14 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         };
                     }
 
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] LOD loop complete\n");
                     // Сохраняем LOD файлы и метрики в результат
                     result.LodFiles = lodFiles;
                     result.LodMetrics = lodMetrics;
 
                     // ШАГ D: Генерация манифеста
                     if (settings.GenerateManifest && lodFiles.Count > 0) {
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Generating manifest\n");
                         Logger.Info($"=== STEP D: MANIFEST GENERATION ===");
 
                         var manifestPath = _manifestGenerator.GenerateManifest(
@@ -181,10 +185,12 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
                         Logger.Info($"Manifest created: {manifestPath}");
                         result.ManifestPath = manifestPath;
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Manifest done\n");
                     }
 
                     // ШАГ E: QA отчёт
                     if (settings.GenerateQAReport && lodMetrics.Count > 0) {
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Generating QA report\n");
                         Logger.Info($"=== STEP E: QA REPORT ===");
 
                         var qaReport = new QualityReport {
@@ -208,10 +214,12 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         // Добавляем warnings/errors из отчёта
                         result.Warnings.AddRange(qaReport.Warnings);
                         result.Errors.AddRange(qaReport.Errors);
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] QA report done\n");
                     }
                 }
 
                 // Cleanup промежуточных файлов
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Cleanup phase\n");
                 if (settings.CleanupIntermediateFiles) {
                     Logger.Info("=== CLEANUP INTERMEDIATE FILES ===");
                     try {
@@ -234,6 +242,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 result.Success = result.Errors.Count == 0;
                 result.Duration = DateTime.Now - startTime;
 
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] ConvertAsync COMPLETE, Success: {result.Success}\n");
                 Logger.Info($"=== MODEL CONVERSION COMPLETE ===");
                 Logger.Info($"Success: {result.Success}");
                 Logger.Info($"Duration: {result.Duration.TotalSeconds:F2}s");

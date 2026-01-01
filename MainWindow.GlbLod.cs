@@ -185,7 +185,8 @@ namespace AssetProcessor {
         private async Task TryLoadGlbLodAsync(string fbxPath) {
             try {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: TryLoadGlbLodAsync START\n");
-                LodLogger.Info($"Loading GLB LOD files for: {fbxPath}");
+                // LodLogger.Info блокирует UI - закомментирован
+                // LodLogger.Info($"Loading GLB LOD files for: {fbxPath}");
                 _currentFbxPath = fbxPath;
 
                 // Загружаем albedo текстуру из таблицы материалов
@@ -199,12 +200,12 @@ namespace AssetProcessor {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Found {_currentLodInfos.Count} files\n");
 
                 if (_currentLodInfos.Count == 0) {
-                    LodLogger.Info("No GLB LOD files found, using FBX viewer");
+                    // LodLogger.Info("No GLB LOD files found, using FBX viewer"); // NLog может блокировать
                     HideGlbLodUI();
                     return;
                 }
 
-                LodLogger.Info($"Found {_currentLodInfos.Count} GLB LOD files");
+                // LodLogger.Info($"Found {_currentLodInfos.Count} GLB LOD files"); // NLog может блокировать
 
                 // Показываем LOD UI
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Showing LOD UI\n");
@@ -255,14 +256,14 @@ namespace AssetProcessor {
                 });
 
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Task.Run await complete\n");
-                LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes");
+                // LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes"); // NLog может блокировать
 
                 // UI операции в Dispatcher
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Entering Dispatcher.InvokeAsync\n");
                 await Dispatcher.InvokeAsync(() => {
                     File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Inside Dispatcher.InvokeAsync\n");
                     if (_lodGlbData.Count == 0) {
-                        LodLogger.Warn("All GLB failed to load, falling back to FBX");
+                        // LodLogger.Warn("All GLB failed to load, falling back to FBX"); // NLog может блокировать
                         HideGlbLodUI();
                         LoadFbxModelDirectly(fbxPath);
                         return;
@@ -279,7 +280,7 @@ namespace AssetProcessor {
 
                     _isGlbViewerActive = true;
                     SelectLod(LodLevel.LOD0);
-                    LodLogger.Info("GLB LOD preview loaded successfully");
+                    // LodLogger.Info("GLB LOD preview loaded successfully"); // NLog может блокировать
                     File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Dispatcher.InvokeAsync DONE\n");
                 });
 
@@ -287,7 +288,7 @@ namespace AssetProcessor {
 
             } catch (Exception ex) {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: EXCEPTION: {ex.Message}\n");
-                LodLogger.Error(ex, "Failed to load GLB LOD files");
+                // LodLogger.Error(ex, "Failed to load GLB LOD files"); // NLog может блокировать
                 Dispatcher.Invoke(() => {
                     HideGlbLodUI();
                 });

@@ -214,6 +214,7 @@ namespace AssetProcessor {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: LOD UI shown\n");
 
                 // Создаём SharpGlbLoader если его еще нет
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Creating/checking SharpGlbLoader\n");
                 if (_sharpGlbLoader == null) {
                     var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
                     var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
@@ -223,11 +224,14 @@ namespace AssetProcessor {
                 } else {
                     _sharpGlbLoader.ClearCache();
                 }
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: SharpGlbLoader ready\n");
 
                 // Загружаем все LOD данные через SharpGLTF
                 _lodGlbData.Clear();
                 _lodQuantizationInfos.Clear();
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Getting LOD file paths\n");
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Got {lodFilePaths.Count} LOD paths\n");
 
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Starting Task.Run for {lodFilePaths.Count} LODs\n");
 

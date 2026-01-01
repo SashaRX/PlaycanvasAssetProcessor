@@ -243,10 +243,10 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 result.Duration = DateTime.Now - startTime;
 
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] ConvertAsync COMPLETE, Success: {result.Success}\n");
-                Logger.Info($"=== MODEL CONVERSION COMPLETE ===");
-                Logger.Info($"Success: {result.Success}");
-                Logger.Info($"Duration: {result.Duration.TotalSeconds:F2}s");
-                Logger.Info($"LOD files: {result.LodFiles.Count}");
+
+                // NOTE: Logger.Info здесь закомментирован - NLog может блокировать UI поток
+                // Логирование перемещено в файл для диагностики
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Duration: {result.Duration.TotalSeconds:F2}s, LOD files: {result.LodFiles.Count}\n");
 
             } catch (Exception ex) {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] EXCEPTION: {ex.Message}\n");

@@ -221,21 +221,22 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 // Cleanup промежуточных файлов
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Cleanup phase\n");
                 if (settings.CleanupIntermediateFiles) {
-                    Logger.Info("=== CLEANUP INTERMEDIATE FILES ===");
+                    // Logger.Info("=== CLEANUP INTERMEDIATE FILES ==="); // NLog блокирует UI
                     try {
                         // КРИТИЧНО: Удаляем только buildDir, который содержит все промежуточные файлы
                         // НЕ удаляем файлы из input directory - это может удалить пользовательские текстуры!
                         // FBX2glTF создаёт текстуры в buildDir или его поддиректориях, которые удаляются вместе с buildDir
                         if (Directory.Exists(buildDir)) {
                             Directory.Delete(buildDir, recursive: true);
-                            Logger.Info($"Deleted build directory: {buildDir}");
+                            // Logger.Info($"Deleted build directory: {buildDir}"); // NLog блокирует UI
                         }
 
                         // ПРИМЕЧАНИЕ: Удалён опасный код, который искал текстуры в input directory
                         // Старый код мог удалить пользовательские файлы с именами типа "model_basecolor.png"
                         // Все промежуточные текстуры уже удаляются вместе с buildDir (рекурсивное удаление)
                     } catch (Exception ex) {
-                        Logger.Warn($"Failed to cleanup build directory: {ex.Message}");
+                        // Logger.Warn($"Failed to cleanup build directory: {ex.Message}"); // NLog блокирует UI
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Cleanup warning: {ex.Message}\n");
                     }
                 }
 
@@ -250,7 +251,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
             } catch (Exception ex) {
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] EXCEPTION: {ex.Message}\n");
-                Logger.Error(ex, "Model conversion failed");
+                // Logger.Error(ex, "Model conversion failed"); // NLog блокирует UI
                 result.Success = false;
                 result.Errors.Add(ex.Message);
                 result.Duration = DateTime.Now - startTime;

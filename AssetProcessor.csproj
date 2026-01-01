@@ -127,10 +127,9 @@
     <None Include="TextureViewer\TextureViewerShader.hlsl">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <TrimmerRootDescriptor Include="Trimming/TrimmerRoots.xml" />
+    <None Include="Tools\gltfpack.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!-- Оставляем только английские и русские ресурсы после публикации -->

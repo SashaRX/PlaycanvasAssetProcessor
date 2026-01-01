@@ -106,7 +106,6 @@
         <!-- ContextMenu для строк моделей -->
         <ContextMenu x:Key="ModelRowContextMenu">
             <MenuItem Header="Process Model" Click="ProcessSelectedModel_Click"/>
-            <MenuItem Header="Upload to PlayCanvas" Click="UploadModel_Click"/>
             <Separator/>
             <MenuItem Header="Open File Location" Click="OpenModelFileLocation_Click"/>
             <MenuItem Header="Copy Path" Click="CopyModelPath_Click"/>

@@ -68,7 +68,7 @@ namespace AssetProcessor {
         private ImageBrush? FindAndLoadAlbedoTexture(string fbxPath) {
             try {
                 var modelName = System.IO.Path.GetFileNameWithoutExtension(fbxPath);
-                LodLogger.Info($"[Texture] Looking for albedo texture for model: {modelName}");
+                // LodLogger.Info($"[Texture] Looking for albedo texture for model: {modelName}"); // NLog блокирует
 
                 // Ищем материал по имени модели (модель "chair" -> материал "chair_mat" или "chair")
                 var materialNames = new[] {
@@ -83,41 +83,41 @@ namespace AssetProcessor {
                     material = viewModel.Materials.FirstOrDefault(m =>
                         string.Equals(m.Name, matName, StringComparison.OrdinalIgnoreCase));
                     if (material != null) {
-                        LodLogger.Info($"[Texture] Found material: {material.Name} (ID: {material.ID})");
+                        // LodLogger.Info($"[Texture] Found material: {material.Name} (ID: {material.ID})"); // NLog блокирует
                         break;
                     }
                 }
 
                 if (material == null) {
-                    LodLogger.Info($"[Texture] No material found for model: {modelName}");
+                    // LodLogger.Info($"[Texture] No material found for model: {modelName}"); // NLog блокирует
                     return null;
                 }
 
                 // Получаем ID текстуры из материала
                 var diffuseMapId = material.DiffuseMapId;
                 if (!diffuseMapId.HasValue) {
-                    LodLogger.Info($"[Texture] Material {material.Name} has no DiffuseMapId");
+                    // LodLogger.Info($"[Texture] Material {material.Name} has no DiffuseMapId"); // NLog блокирует
                     return null;
                 }
 
                 // Ищем текстуру по ID в таблице текстур
                 var texture = viewModel.Textures.FirstOrDefault(t => t.ID == diffuseMapId.Value);
                 if (texture == null) {
-                    LodLogger.Info($"[Texture] Texture with ID {diffuseMapId.Value} not found in textures table");
+                    // LodLogger.Info($"[Texture] Texture with ID {diffuseMapId.Value} not found in textures table"); // NLog блокирует
                     return null;
                 }
 
                 // Загружаем текстуру по пути
                 if (string.IsNullOrEmpty(texture.Path) || !System.IO.File.Exists(texture.Path)) {
-                    LodLogger.Info($"[Texture] Texture file not found: {texture.Path}");
+                    // LodLogger.Info($"[Texture] Texture file not found: {texture.Path}"); // NLog блокирует
                     return null;
                 }
 
-                LodLogger.Info($"[Texture] Found albedo from material table: {texture.Name} (ID: {texture.ID}) -> {texture.Path}");
+                // LodLogger.Info($"[Texture] Found albedo from material table: {texture.Name} (ID: {texture.ID}) -> {texture.Path}"); // NLog блокирует
                 return LoadTextureAsBrush(texture.Path);
 
             } catch (Exception ex) {
-                LodLogger.Warn(ex, "Failed to find albedo texture from materials table");
+                // LodLogger.Warn(ex, "Failed to find albedo texture from materials table"); // NLog блокирует
                 return null;
             }
         }
@@ -141,11 +141,11 @@ namespace AssetProcessor {
                     ViewboxUnits = BrushMappingMode.RelativeToBoundingBox
                 };
 
-                LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})");
+                // LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})"); // NLog блокирует
                 return brush;
 
             } catch (Exception ex) {
-                LodLogger.Warn(ex, $"Failed to load texture: {texturePath}");
+                // LodLogger.Warn(ex, $"Failed to load texture: {texturePath}"); // NLog блокирует
                 return null;
             }
         }

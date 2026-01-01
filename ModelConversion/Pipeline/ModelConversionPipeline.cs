@@ -249,12 +249,14 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 Logger.Info($"LOD files: {result.LodFiles.Count}");
 
             } catch (Exception ex) {
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] EXCEPTION: {ex.Message}\n");
                 Logger.Error(ex, "Model conversion failed");
                 result.Success = false;
                 result.Errors.Add(ex.Message);
                 result.Duration = DateTime.Now - startTime;
             }
 
+            File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] About to return result\n");
             return result;
         }
 

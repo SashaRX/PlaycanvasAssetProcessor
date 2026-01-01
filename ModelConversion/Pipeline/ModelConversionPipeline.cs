@@ -44,6 +44,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
             var startTime = DateTime.Now;
 
             try {
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] ConvertAsync START\n");
                 Logger.Info($"=== MODEL CONVERSION PIPELINE START ===");
                 Logger.Info($"Input: {inputPath}");
                 Logger.Info($"Output: {outputDirectory}");
@@ -54,13 +55,16 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 var isGltfInput = inputExtension is ".gltf" or ".glb";
 
                 // Проверяем доступность инструментов
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Checking FBX2glTF availability\n");
                 if (!isGltfInput && !await _fbx2glTFWrapper.IsAvailableAsync()) {
                     throw new Exception("FBX2glTF not available. Please install it or specify path.");
                 }
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] FBX2glTF OK, checking gltfpack\n");
 
                 if (!await _gltfPackWrapper.IsAvailableAsync()) {
                     throw new Exception("gltfpack not available. Please install meshoptimizer or specify path.");
                 }
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] gltfpack OK\n");
 
                 // Создаём директории
                 Directory.CreateDirectory(outputDirectory);

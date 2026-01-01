@@ -240,7 +240,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="Lod2RatioSlider" Grid.Column="0"
-                                    Minimum="5" Maximum="100" Value="30"
+                                    Minimum="5" Maximum="100" Value="40"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Margin="0,0,2,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod2RatioSlider, Path=Value, StringFormat={}{0:F0}%}"
@@ -259,7 +259,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="Lod3RatioSlider" Grid.Column="0"
-                                    Minimum="1" Maximum="100" Value="12"
+                                    Minimum="1" Maximum="100" Value="20"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Margin="0,0,2,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod3RatioSlider, Path=Value, StringFormat={}{0:F0}%}"
@@ -272,9 +272,6 @@
             <!-- 4. SIMPLIFICATION SETTINGS -->
             <Expander Header="Simplification Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
-                    <CheckBox x:Name="UseGltfTransformCheckBox" Content="Use glTF-Transform (preserves UV)" Margin="0,0,0,2"
-                              ToolTip="Use glTF-Transform for simplification instead of gltfpack. Better preserves UV seams. Requires Node.js/npx."/>
-
                     <TextBlock Text="Error Limit (0-1):" Style="{StaticResource LabelStyle}"
                                ToolTip="Maximum simplification error (-se). Default 0.01 = 1% deviation"/>
                     <Grid Margin="0,0,0,2">
@@ -283,8 +280,8 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Slider x:Name="SimplificationErrorSlider" Grid.Column="0"
-                                Minimum="0.001" Maximum="0.1" Value="0.01"
-                                TickFrequency="0.001" IsSnapToTickEnabled="False"
+                                Minimum="0.001" Maximum="1.0" Value="0.01"
+                                TickFrequency="0.01" IsSnapToTickEnabled="False"
                                 Margin="0,0,2,0"/>
                         <TextBlock Grid.Column="1" Text="{Binding ElementName=SimplificationErrorSlider, Path=Value, StringFormat={}{0:F3}}"
                                    Width="35" TextAlignment="Right"/>
@@ -408,9 +405,6 @@
 
                     <CheckBox x:Name="UseGpuInstancingCheckBox" Content="GPU Instancing (-mi)" Margin="0,0,0,2"
                               ToolTip="Use EXT_mesh_gpu_instancing for multiple instances"/>
-
-                    <CheckBox x:Name="CompressedWithFallbackCheckBox" Content="Compressed with Fallback (-cf)" Margin="0,0,0,2"
-                              ToolTip="Produce compressed file with fallback for loaders without compression support"/>
 
                     <CheckBox x:Name="DisableQuantizationCheckBox" Content="Disable Quantization (-noq)" Margin="0,0,0,2"
                               ToolTip="Disable all quantization (produces larger files without extensions)"/>

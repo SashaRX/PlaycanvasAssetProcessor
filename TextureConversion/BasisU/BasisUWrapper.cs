@@ -45,7 +45,14 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 };
 
                 process.Start();
+
+                // Читаем stdout/stderr чтобы избежать deadlock
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
                 await process.WaitForExitAsync();
+                await Task.WhenAll(outputTask, errorTask);
+
                 return process.ExitCode == 0;
             } catch {
                 return false;

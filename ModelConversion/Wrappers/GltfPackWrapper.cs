@@ -36,7 +36,7 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     return false;
                 }
 
-                // Пробуем запустить с --help (gltfpack может не принимать -h)
+                // Пробуем запустить с --help
                 var startInfo = new ProcessStartInfo {
                     FileName = _executablePath,
                     Arguments = "--help",
@@ -52,10 +52,16 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     return false;
                 }
 
+                // КРИТИЧНО: Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                // Если буфер переполнится - процесс зависнет в ожидании чтения
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
                 await process.WaitForExitAsync();
 
-                // gltfpack может возвращать non-zero exit code даже для --help
-                // Главное - что файл существует и процесс запускается
+                // Дожидаемся завершения чтения
+                await Task.WhenAll(outputTask, errorTask);
+
                 Logger.Info($"gltfpack is available (exit code: {process.ExitCode})");
                 return true;
             } catch (Exception ex) {
@@ -251,8 +257,9 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 args.Add($"-si {simplificationStr}");
                 Logger.Debug($"Simplification argument: -si {simplificationStr}");
 
-                // Simplification error limit
-                if (settings.SimplificationError.HasValue) {
+                // Simplification error limit - только если значение большое (> 0.5)
+                // Маленькие значения слишком ограничивают симплификацию
+                if (settings.SimplificationError.HasValue && settings.SimplificationError.Value > 0.5f) {
                     var errorStr = settings.SimplificationError.Value.ToString("F3", CultureInfo.InvariantCulture);
                     args.Add($"-se {errorStr}");
                 }
@@ -285,31 +292,16 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                 // Режим сжатия
                 switch (compressionMode) {
                     case CompressionMode.Quantization:
-                        // KHR_mesh_quantization (совместимо с редакторами)
-                        // Примечание: -kn и -km НЕ относятся к квантованию!
-                        // Они означают "keep named nodes" и "keep named materials"
-                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
+                        // KHR_mesh_quantization - только квантование
                         break;
 
                     case CompressionMode.MeshOpt:
                         // EXT_meshopt_compression
-                        if (settings.CompressedWithFallback) {
-                            args.Add("-cf"); // compressed with fallback
-                        } else {
-                            args.Add("-c");
-                        }
-                        // Примечание: -kn и -km НЕ относятся к сжатию!
-                        // Они означают "keep named nodes" и "keep named materials"
-                        // Эти флаги добавляются в секции SCENE OPTIONS ниже
-                        break;
-
-                    case CompressionMode.MeshOptAggressive:
-                        // EXT_meshopt_compression с дополнительным сжатием
-                        args.Add("-cc");
+                        args.Add("-c");
                         break;
 
                     case CompressionMode.None:
-                        // Без сжатия
+                        // Без сжатия - уже добавили -noq выше
                         break;
                 }
 

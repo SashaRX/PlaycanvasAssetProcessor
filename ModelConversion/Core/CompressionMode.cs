@@ -4,29 +4,25 @@ namespace AssetProcessor.ModelConversion.Core {
     /// </summary>
     public enum CompressionMode {
         /// <summary>
-        /// Без сжатия (только упрощение геометрии)
+        /// Без сжатия и квантования
+        /// Максимальное качество, большой размер файла
         /// </summary>
         None,
 
         /// <summary>
-        /// Квантование (KHR_mesh_quantization)
-        /// Уменьшает размер без потери совместимости
-        /// Флаги: -kn -km
+        /// KHR_mesh_quantization
+        /// Квантование вершин для уменьшения размера
+        /// Совместимо со всеми редакторами и движками
         /// </summary>
         Quantization,
 
         /// <summary>
         /// EXT_meshopt_compression
         /// Максимальное сжатие для web runtime
+        /// Требует meshoptimizer decoder в браузере
         /// Флаг: -c
         /// </summary>
-        MeshOpt,
-
-        /// <summary>
-        /// EXT_meshopt_compression с дополнительным сжатием
-        /// Флаг: -cc
-        /// </summary>
-        MeshOptAggressive
+        MeshOpt
     }
 
     /// <summary>

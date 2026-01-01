@@ -14,12 +14,12 @@ namespace AssetProcessor.ModelConversion.Core {
         LOD1 = 1,
 
         /// <summary>
-        /// LOD2 - средняя детализация (30%)
+        /// LOD2 - средняя детализация (40%)
         /// </summary>
         LOD2 = 2,
 
         /// <summary>
-        /// LOD3 - низкая детализация (12%)
+        /// LOD3 - низкая детализация (20%)
         /// </summary>
         LOD3 = 3
     }
@@ -70,14 +70,14 @@ namespace AssetProcessor.ModelConversion.Core {
                 },
                 LodLevel.LOD2 => new LodSettings {
                     Level = LodLevel.LOD2,
-                    SimplificationRatio = 0.3f,
-                    AggressiveSimplification = false, // Отключено для сохранения UV seams
+                    SimplificationRatio = 0.4f,
+                    AggressiveSimplification = false, // Отключено - UV seams важны для текстур
                     SwitchThreshold = 0.04f
                 },
                 LodLevel.LOD3 => new LodSettings {
                     Level = LodLevel.LOD3,
-                    SimplificationRatio = 0.12f,
-                    AggressiveSimplification = false, // Отключено для сохранения UV seams
+                    SimplificationRatio = 0.2f,
+                    AggressiveSimplification = false, // Отключено - UV seams важны для текстур
                     SwitchThreshold = 0.02f
                 },
                 _ => throw new ArgumentOutOfRangeException(nameof(level))

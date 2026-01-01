@@ -40,10 +40,9 @@ namespace AssetProcessor.Controls {
             LodHysteresisSlider.Value = 0.02;
 
             // Simplification Settings
-            UseGltfTransformCheckBox.IsChecked = false;
             SimplificationErrorSlider.Value = 0.01;
             PermissiveSimplificationCheckBox.IsChecked = false;
-            LockBorderVerticesCheckBox.IsChecked = true; // По умолчанию включено для защиты UV seams
+            LockBorderVerticesCheckBox.IsChecked = false; // Отключено для нормальной симплификации
 
             // Vertex Attributes
             PositionFormatComboBox.SelectedItem = VertexPositionFormat.Integer;
@@ -66,7 +65,6 @@ namespace AssetProcessor.Controls {
             KeepExtrasCheckBox.IsChecked = false;
             MergeMeshInstancesCheckBox.IsChecked = false;
             UseGpuInstancingCheckBox.IsChecked = false;
-            CompressedWithFallbackCheckBox.IsChecked = false;
             DisableQuantizationCheckBox.IsChecked = false;
 
             _isLoading = false;
@@ -116,7 +114,6 @@ namespace AssetProcessor.Controls {
                 UseGpuInstancing = UseGpuInstancingCheckBox.IsChecked ?? false,
 
                 // Misc
-                CompressedWithFallback = CompressedWithFallbackCheckBox.IsChecked ?? false,
                 DisableQuantization = DisableQuantizationCheckBox.IsChecked ?? false
             };
 
@@ -172,8 +169,7 @@ namespace AssetProcessor.Controls {
                 CleanupIntermediateFiles = CleanupIntermediateFilesCheckBox.IsChecked ?? true,
                 ExcludeTextures = ExcludeTexturesCheckBox.IsChecked ?? true,
                 GenerateManifest = GenerateManifestCheckBox.IsChecked ?? true,
-                GenerateQAReport = GenerateQAReportCheckBox.IsChecked ?? true,
-                UseGltfTransformForSimplification = UseGltfTransformCheckBox.IsChecked ?? false
+                GenerateQAReport = GenerateQAReportCheckBox.IsChecked ?? true
             };
         }
 
@@ -200,9 +196,6 @@ namespace AssetProcessor.Controls {
                 NormalBitsSlider.Value = settings.Quantization.NormalBits;
                 ColorBitsSlider.Value = settings.Quantization.ColorBits;
             }
-
-            // Simplification tool
-            UseGltfTransformCheckBox.IsChecked = settings.UseGltfTransformForSimplification;
 
             // Advanced Settings
             if (settings.AdvancedSettings != null) {
@@ -236,7 +229,6 @@ namespace AssetProcessor.Controls {
                 UseGpuInstancingCheckBox.IsChecked = adv.UseGpuInstancing;
 
                 // Misc
-                CompressedWithFallbackCheckBox.IsChecked = adv.CompressedWithFallback;
                 DisableQuantizationCheckBox.IsChecked = adv.DisableQuantization;
             }
 

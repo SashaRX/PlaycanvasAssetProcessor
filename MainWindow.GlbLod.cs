@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.IO;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.Windows;
@@ -67,7 +68,7 @@ namespace AssetProcessor {
         private ImageBrush? FindAndLoadAlbedoTexture(string fbxPath) {
             try {
                 var modelName = System.IO.Path.GetFileNameWithoutExtension(fbxPath);
-                LodLogger.Info($"[Texture] Looking for albedo texture for model: {modelName}");
+                // LodLogger.Info($"[Texture] Looking for albedo texture for model: {modelName}"); // NLog блокирует
 
                 // Ищем материал по имени модели (модель "chair" -> материал "chair_mat" или "chair")
                 var materialNames = new[] {
@@ -82,41 +83,41 @@ namespace AssetProcessor {
                     material = viewModel.Materials.FirstOrDefault(m =>
                         string.Equals(m.Name, matName, StringComparison.OrdinalIgnoreCase));
                     if (material != null) {
-                        LodLogger.Info($"[Texture] Found material: {material.Name} (ID: {material.ID})");
+                        // LodLogger.Info($"[Texture] Found material: {material.Name} (ID: {material.ID})"); // NLog блокирует
                         break;
                     }
                 }
 
                 if (material == null) {
-                    LodLogger.Info($"[Texture] No material found for model: {modelName}");
+                    // LodLogger.Info($"[Texture] No material found for model: {modelName}"); // NLog блокирует
                     return null;
                 }
 
                 // Получаем ID текстуры из материала
                 var diffuseMapId = material.DiffuseMapId;
                 if (!diffuseMapId.HasValue) {
-                    LodLogger.Info($"[Texture] Material {material.Name} has no DiffuseMapId");
+                    // LodLogger.Info($"[Texture] Material {material.Name} has no DiffuseMapId"); // NLog блокирует
                     return null;
                 }
 
                 // Ищем текстуру по ID в таблице текстур
                 var texture = viewModel.Textures.FirstOrDefault(t => t.ID == diffuseMapId.Value);
                 if (texture == null) {
-                    LodLogger.Info($"[Texture] Texture with ID {diffuseMapId.Value} not found in textures table");
+                    // LodLogger.Info($"[Texture] Texture with ID {diffuseMapId.Value} not found in textures table"); // NLog блокирует
                     return null;
                 }
 
                 // Загружаем текстуру по пути
                 if (string.IsNullOrEmpty(texture.Path) || !System.IO.File.Exists(texture.Path)) {
-                    LodLogger.Info($"[Texture] Texture file not found: {texture.Path}");
+                    // LodLogger.Info($"[Texture] Texture file not found: {texture.Path}"); // NLog блокирует
                     return null;
                 }
 
-                LodLogger.Info($"[Texture] Found albedo from material table: {texture.Name} (ID: {texture.ID}) -> {texture.Path}");
+                // LodLogger.Info($"[Texture] Found albedo from material table: {texture.Name} (ID: {texture.ID}) -> {texture.Path}"); // NLog блокирует
                 return LoadTextureAsBrush(texture.Path);
 
             } catch (Exception ex) {
-                LodLogger.Warn(ex, "Failed to find albedo texture from materials table");
+                // LodLogger.Warn(ex, "Failed to find albedo texture from materials table"); // NLog блокирует
                 return null;
             }
         }
@@ -140,11 +141,11 @@ namespace AssetProcessor {
                     ViewboxUnits = BrushMappingMode.RelativeToBoundingBox
                 };
 
-                LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})");
+                // LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})"); // NLog блокирует
                 return brush;
 
             } catch (Exception ex) {
-                LodLogger.Warn(ex, $"Failed to load texture: {texturePath}");
+                // LodLogger.Warn(ex, $"Failed to load texture: {texturePath}"); // NLog блокирует
                 return null;
             }
         }
@@ -183,103 +184,115 @@ namespace AssetProcessor {
         /// </summary>
         private async Task TryLoadGlbLodAsync(string fbxPath) {
             try {
-                LodLogger.Info($"Checking for GLB LOD files: {fbxPath}");
-                _currentFbxPath = fbxPath;  // Сохраняем для переключения Source Type
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: TryLoadGlbLodAsync START\n");
+                // LodLogger.Info блокирует UI - закомментирован
+                // LodLogger.Info($"Loading GLB LOD files for: {fbxPath}");
+                _currentFbxPath = fbxPath;
 
-                // Загружаем albedo текстуру из таблицы материалов (независимо от наличия GLB)
+                // Загружаем albedo текстуру из таблицы материалов
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Loading albedo texture\n");
                 _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Albedo texture done\n");
 
                 // Ищем GLB LOD файлы
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Finding GLB LOD files\n");
                 _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Found {_currentLodInfos.Count} files\n");
 
                 if (_currentLodInfos.Count == 0) {
-                    LodLogger.Info("No GLB LOD files found, using FBX viewer");
+                    // LodLogger.Info("No GLB LOD files found, using FBX viewer"); // NLog может блокировать
                     HideGlbLodUI();
                     return;
                 }
 
-                LodLogger.Info($"Found {_currentLodInfos.Count} GLB LOD files");
+                // LodLogger.Info($"Found {_currentLodInfos.Count} GLB LOD files"); // NLog может блокировать
 
                 // Показываем LOD UI
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Showing LOD UI\n");
                 ShowGlbLodUI();
-
-                // Заполняем DataGrid
                 PopulateLodDataGrid();
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: LOD UI shown\n");
 
                 // Создаём SharpGlbLoader если его еще нет
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Creating/checking SharpGlbLoader\n");
                 if (_sharpGlbLoader == null) {
-                    // Загружаем путь к gltfpack из настроек
                     var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
                     var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
                         ? "gltfpack.exe"
                         : modelConversionSettings.GltfPackExecutablePath;
-
-                    LodLogger.Info($"Creating SharpGlbLoader with gltfpack: {gltfPackPath}");
-                    LodLogger.Info("SharpGLTF handles KHR_mesh_quantization, gltfpack decodes EXT_meshopt_compression");
                     _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
+                } else {
+                    _sharpGlbLoader.ClearCache();
                 }
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: SharpGlbLoader ready\n");
 
                 // Загружаем все LOD данные через SharpGLTF
                 _lodGlbData.Clear();
                 _lodQuantizationInfos.Clear();
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Getting LOD file paths\n");
                 var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Got {lodFilePaths.Count} LOD paths\n");
 
-                // Обёртываем CPU-интенсивные операции в Task.Run для неблокирующего выполнения
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Starting Task.Run for {lodFilePaths.Count} LODs\n");
+
+                // Обёртываем CPU-интенсивные операции в Task.Run
                 await Task.Run(() => {
                     foreach (var kvp in lodFilePaths) {
                         var lodLevel = kvp.Key;
                         var glbPath = kvp.Value;
 
-                        LodLogger.Info($"  Loading {lodLevel}: {glbPath}");
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Loading {lodLevel}\n");
 
-                        // Анализируем квантование (для информационных целей)
                         var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
                         _lodQuantizationInfos[lodLevel] = quantInfo;
 
-                        // Загружаем через SharpGLTF (автоматически декодирует KHR_mesh_quantization)
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Calling LoadGlb for {lodLevel}\n");
                         var glbData = _sharpGlbLoader!.LoadGlb(glbPath);
+                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: LoadGlb done for {lodLevel}, Success={glbData.Success}\n");
                         if (glbData.Success) {
                             _lodGlbData[lodLevel] = glbData;
+                            LodLogger.Info($"{lodLevel} loaded: {glbData.Meshes.Count} meshes");
                         } else {
                             LodLogger.Error($"Failed to load {lodLevel}: {glbData.Error}");
                         }
                     }
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Task.Run loop complete\n");
                 });
 
-                LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes via SharpGLTF");
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Task.Run await complete\n");
+                // LodLogger.Info($"Loaded {_lodGlbData.Count} LOD meshes"); // NLog может блокировать
 
-                // КРИТИЧНО: После await Task.Run код может выполняться не на UI потоке
-                // Все UI операции должны быть обёрнуты в Dispatcher.InvokeAsync
+                // UI операции в Dispatcher
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Entering Dispatcher.InvokeAsync\n");
                 await Dispatcher.InvokeAsync(() => {
-                    // Если ни один GLB не загрузился - fallback на FBX
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Inside Dispatcher.InvokeAsync\n");
                     if (_lodGlbData.Count == 0) {
-                        LodLogger.Warn("All GLB files failed to load, falling back to FBX viewer");
+                        // LodLogger.Warn("All GLB failed to load, falling back to FBX"); // NLog может блокировать
                         HideGlbLodUI();
-                        // Загружаем FBX напрямую
                         LoadFbxModelDirectly(fbxPath);
                         return;
                     }
 
-                    // Отображаем LOD0 в существующем viewport
-                    // zoomToFit=true только при первой загрузке модели
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Loading to viewport\n");
                     if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {
                         LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
                     } else if (_lodGlbData.Count > 0) {
                         var firstLod = _lodGlbData.Keys.First();
                         LoadGlbModelToViewport(firstLod, zoomToFit: true);
                     }
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Viewport loaded\n");
 
                     _isGlbViewerActive = true;
-
-                    // Выбираем LOD0 по умолчанию
                     SelectLod(LodLevel.LOD0);
-
-                    LodLogger.Info("GLB LOD preview loaded successfully");
+                    // LodLogger.Info("GLB LOD preview loaded successfully"); // NLog может блокировать
+                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Dispatcher.InvokeAsync DONE\n");
                 });
 
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync\n");
+
             } catch (Exception ex) {
-                LodLogger.Error(ex, "Failed to load GLB LOD files");
-                // Безопасный вызов UI операции из любого потока (синхронный для гарантии выполнения)
+                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: EXCEPTION: {ex.Message}\n");
+                // LodLogger.Error(ex, "Failed to load GLB LOD files"); // NLog может блокировать
                 Dispatcher.Invoke(() => {
                     HideGlbLodUI();
                 });
@@ -936,26 +949,24 @@ namespace AssetProcessor {
                 // Загружаем модель LOD в viewport
                 LoadGlbModelToViewport(lodLevel);
 
-                // Обновляем UI
-                Dispatcher.Invoke(() => {
-                    // Обновляем текст Current LOD
-                    ModelCurrentLodTextBlock.Text = $"Current LOD: {lodLevel} (GLB)";
+                // Обновляем UI напрямую (этот метод вызывается уже из UI потока)
+                // Обновляем текст Current LOD
+                ModelCurrentLodTextBlock.Text = $"Current LOD: {lodLevel} (GLB)";
 
-                    // Обновляем информацию о модели
-                    if (_currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
-                        ModelTrianglesTextBlock.Text = $"Triangles: {lodInfo.TriangleCount:N0}";
-                        ModelVerticesTextBlock.Text = $"Vertices: {lodInfo.VertexCount:N0}";
-                    }
+                // Обновляем информацию о модели
+                if (_currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
+                    ModelTrianglesTextBlock.Text = $"Triangles: {lodInfo.TriangleCount:N0}";
+                    ModelVerticesTextBlock.Text = $"Vertices: {lodInfo.VertexCount:N0}";
+                }
 
-                    // Обновляем кнопки (подсвечиваем активную)
-                    UpdateLodButtonStates(lodLevel);
+                // Обновляем кнопки (подсвечиваем активную)
+                UpdateLodButtonStates(lodLevel);
 
-                    // Обновляем выделение в DataGrid
-                    var selectedItem = _lodDisplayItems.FirstOrDefault(x => x.Level == lodLevel);
-                    if (selectedItem != null) {
-                        LodInformationGrid.SelectedItem = selectedItem;
-                    }
-                });
+                // Обновляем выделение в DataGrid
+                var selectedItem = _lodDisplayItems.FirstOrDefault(x => x.Level == lodLevel);
+                if (selectedItem != null) {
+                    LodInformationGrid.SelectedItem = selectedItem;
+                }
 
                 LodLogger.Info($"LOD {lodLevel} selected successfully");
 

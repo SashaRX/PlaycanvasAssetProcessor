@@ -46,36 +46,22 @@ namespace AssetProcessor {
         private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
-                    if (selectedModel.Status == "Downloaded") { // ���� ������ ��� ���������
-                        // ������� �������� ��������� GLB LOD �����
+                    if (selectedModel.Status == "Downloaded") { // если модель уже скачана
+                        // Сначала пробуем загрузить GLB LOD файлы
+                        System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] Before TryLoadGlbLodAsync\n");
                         await TryLoadGlbLodAsync(selectedModel.Path);
+                        System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive={_isGlbViewerActive}\n");
 
-                        // Если GLB LOD не найдены, загружаем FBX модель в обычном режиме
+                        // Если GLB LOD не найдены, загружаем FBX модель и другую информацию
                         if (!_isGlbViewerActive) {
-                            var modelPath = selectedModel.Path;
-                            var modelName = selectedModel.Name;
+                            System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] Loading FBX model\n");
+                            // Загружаем модель во вьюпорт (3D просмотрщик)
+                            LoadModel(selectedModel.Path);
 
-                            // Run model loading on background thread to avoid UI freeze
-                            var modelData = await Task.Run(() => {
-                                try {
-                                    AssimpContext context = new();
-                                    Scene scene = context.ImportFile(modelPath, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                                    Mesh? mesh = scene.Meshes.FirstOrDefault();
-
-                                    if (mesh != null) {
-                                        return new {
-                                            Mesh = mesh,
-                                            Triangles = mesh.FaceCount,
-                                            Vertices = mesh.VertexCount,
-                                            UVChannels = mesh.TextureCoordinateChannelCount,
-                                            HasUV = mesh.HasTextureCoords(0)
-                                        };
-                                    }
-                                    return null;
-                                } catch {
-                                    return null;
-                                }
-                            });
+                            // Загружаем информацию о модели из FBX
+                            AssimpContext context = new();
+                            Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                            Mesh? mesh = scene.Meshes.FirstOrDefault();
 
                             // Update UI on main thread
                             if (modelData != null) {
@@ -89,8 +75,10 @@ namespace AssetProcessor {
                                     UpdateUVImage(modelData.Mesh);
                                 }
                             }
+                            System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] FBX loaded\n");
                         }
-                        // ���� GLB viewer �������, ���������� ��� ��������� � TryLoadGlbLodAsync
+                        System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] COMPLETE\n");
+                        // Если GLB viewer активен, информация уже установлена в TryLoadGlbLodAsync
                     }
                 }
             }

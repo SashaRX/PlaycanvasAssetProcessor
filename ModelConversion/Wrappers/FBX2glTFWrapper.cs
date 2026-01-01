@@ -46,7 +46,12 @@ namespace AssetProcessor.ModelConversion.Wrappers {
                     return false;
                 }
 
+                // КРИТИЧНО: Читаем stdout/stderr ПЕРЕД WaitForExit чтобы избежать deadlock
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
                 await process.WaitForExitAsync();
+                await Task.WhenAll(outputTask, errorTask);
 
                 if (process.ExitCode == 0) {
                     Logger.Info("FBX2glTF is available and working");

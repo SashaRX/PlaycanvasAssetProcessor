@@ -48,11 +48,11 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 var modelName = Path.GetFileNameWithoutExtension(fbxPath);
 
                 if (string.IsNullOrEmpty(directory)) {
-                    Logger.Warn($"Cannot determine directory for FBX: {fbxPath}");
+                    // Logger.Warn($"Cannot determine directory for FBX: {fbxPath}"); // NLog блокирует UI
                     return result;
                 }
 
-                Logger.Info($"Searching for GLB LOD files for: {modelName}");
+                // Logger.Info($"Searching for GLB LOD files for: {modelName}"); // NLog блокирует UI
 
                 // Список директорий для поиска:
                 // 1. Поддиректория glb/ (основной путь для конвертированных моделей)
@@ -66,7 +66,7 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 foreach (var dir in searchDirectories) {
                     var manifestPath = Path.Combine(dir, $"{modelName}_manifest.json");
                     if (File.Exists(manifestPath)) {
-                        Logger.Info($"Found manifest: {manifestPath}");
+                        // Logger.Info($"Found manifest: {manifestPath}"); // NLog блокирует UI
                         var manifestResult = LoadFromManifest(manifestPath, dir);
                         if (manifestResult.Count > 0) {
                             return manifestResult;
@@ -80,19 +80,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                         continue;
                     }
 
-                    bool foundInThisDir = false;
-
                     foreach (var lodLevel in Enum.GetValues<LodLevel>()) {
                         var lodFileName = $"{modelName}_lod{(int)lodLevel}.glb";
                         var lodFilePath = Path.Combine(dir, lodFileName);
 
                         if (File.Exists(lodFilePath)) {
-                            if (!foundInThisDir) {
-                                Logger.Info($"Searching in directory: {dir}");
-                                foundInThisDir = true;
-                            }
-
-                            Logger.Info($"  Found LOD{(int)lodLevel}: {lodFileName}");
+                            // Logger.Info($"  Found LOD{(int)lodLevel}: {lodFileName}"); // NLog блокирует UI
 
                             var lodInfo = new LodInfo {
                                 Level = lodLevel,
@@ -115,9 +108,9 @@ namespace AssetProcessor.ModelConversion.Viewer {
                     }
                 }
 
-                Logger.Info($"Found {result.Count} GLB LOD files for {modelName}");
+                // Logger.Info($"Found {result.Count} GLB LOD files for {modelName}"); // NLog блокирует UI
             } catch (Exception ex) {
-                Logger.Error(ex, $"Failed to find GLB LOD files for: {fbxPath}");
+                // Logger.Error(ex, $"Failed to find GLB LOD files for: {fbxPath}"); // NLog блокирует UI
             }
 
             return result;
@@ -132,11 +125,11 @@ namespace AssetProcessor.ModelConversion.Viewer {
             try {
                 var manifest = LodManifestGenerator.LoadManifest(manifestPath);
                 if (manifest == null) {
-                    Logger.Warn($"Failed to parse manifest: {manifestPath}");
+                    // Logger.Warn($"Failed to parse manifest: {manifestPath}"); // NLog блокирует UI
                     return result;
                 }
 
-                Logger.Info($"Loaded manifest for model: {manifest.Name}");
+                // Logger.Info($"Loaded manifest for model: {manifest.Name}"); // NLog блокирует UI
 
                 for (int i = 0; i < manifest.Lods.Count; i++) {
                     var lodEntry = manifest.Lods[i];
@@ -158,13 +151,12 @@ namespace AssetProcessor.ModelConversion.Viewer {
                         lodInfo.VertexCount = metrics.VertexCount;
 
                         result[lodLevel] = lodInfo;
-                        Logger.Info($"  LOD{(int)lodLevel}: {metrics.TriangleCount} tris, {metrics.VertexCount} verts, {lodInfo.FileSizeFormatted}");
-                    } else {
-                        Logger.Warn($"GLB file not found: {lodFilePath}");
+                        // Logger.Info($"  LOD{(int)lodLevel}: {metrics.TriangleCount} tris, {metrics.VertexCount} verts, {lodInfo.FileSizeFormatted}"); // NLog блокирует UI
                     }
+                    // else: GLB file not found - skip silently
                 }
-            } catch (Exception ex) {
-                Logger.Error(ex, $"Failed to load LOD info from manifest: {manifestPath}");
+            } catch (Exception) {
+                // Logger.Error(ex, $"Failed to load LOD info from manifest: {manifestPath}"); // NLog блокирует UI
             }
 
             return result;

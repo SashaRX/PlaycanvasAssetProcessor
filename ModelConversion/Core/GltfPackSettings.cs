@@ -146,12 +146,6 @@ namespace AssetProcessor.ModelConversion.Core {
         // ============================================
 
         /// <summary>
-        /// Создать сжатый файл с fallback для загрузчиков без поддержки сжатия
-        /// Флаг: -cf
-        /// </summary>
-        public bool CompressedWithFallback { get; set; }
-
-        /// <summary>
         /// Отключить квантование полностью
         /// Флаг: -noq
         /// Создает большие файлы без extensions
@@ -178,7 +172,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 FloatTexCoords = false,
                 FloatNormals = false,
                 KeepVertexAttributes = true,
-                LockBorderVertices = true, // Защита UV seams при симплификации
+                LockBorderVertices = false, // Отключено для лучшей симплификации
                 AnimationTranslationBits = 16,
                 AnimationRotationBits = 12,
                 AnimationScaleBits = 16,
@@ -195,7 +189,7 @@ namespace AssetProcessor.ModelConversion.Core {
                 FloatTexCoords = true,  // Нет квантования UV
                 FloatNormals = true,    // Нет квантования нормалей
                 KeepVertexAttributes = true,
-                LockBorderVertices = true, // Защита UV seams при симплификации
+                LockBorderVertices = false, // Отключено для лучшей симплификации
                 AnimationTranslationBits = 24,
                 AnimationRotationBits = 16,
                 AnimationScaleBits = 24,

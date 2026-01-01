@@ -240,7 +240,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="Lod2RatioSlider" Grid.Column="0"
-                                    Minimum="5" Maximum="100" Value="30"
+                                    Minimum="5" Maximum="100" Value="40"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Margin="0,0,2,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod2RatioSlider, Path=Value, StringFormat={}{0:F0}%}"
@@ -259,7 +259,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="Lod3RatioSlider" Grid.Column="0"
-                                    Minimum="1" Maximum="100" Value="12"
+                                    Minimum="1" Maximum="100" Value="20"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     Margin="0,0,2,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ElementName=Lod3RatioSlider, Path=Value, StringFormat={}{0:F0}%}"

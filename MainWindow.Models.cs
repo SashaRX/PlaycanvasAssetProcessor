@@ -63,16 +63,17 @@ namespace AssetProcessor {
                             Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
                             Mesh? mesh = scene.Meshes.FirstOrDefault();
 
-                            // Update UI on main thread
-                            if (modelData != null) {
-                                LoadModel(modelPath);
-
-                                if (!String.IsNullOrEmpty(modelName)) {
-                                    UpdateModelInfo(modelName, modelData.Triangles, modelData.Vertices, modelData.UVChannels);
+                            // Update UI on main thread using loaded mesh data
+                            if (mesh != null) {
+                                if (!string.IsNullOrEmpty(selectedModel.Name)) {
+                                    int triangles = mesh.FaceCount;
+                                    int vertices = mesh.VertexCount;
+                                    int uvChannels = mesh.TextureCoordinateChannelCount;
+                                    UpdateModelInfo(selectedModel.Name, triangles, vertices, uvChannels);
                                 }
 
-                                if (modelData.HasUV) {
-                                    UpdateUVImage(modelData.Mesh);
+                                if (mesh.HasTextureCoords(0)) {
+                                    UpdateUVImage(mesh);
                                 }
                             }
                             System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] FBX loaded\n");

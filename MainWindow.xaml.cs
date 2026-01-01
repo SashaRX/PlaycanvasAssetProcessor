@@ -4118,6 +4118,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 ProgressTextBlock.Text = $"Processing {selectedModel.Name}...";
 
+                // Create the model conversion pipeline
+                var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
+
                 System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Calling ConvertAsync\n");
                 var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
                 System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] ConvertAsync returned, Success={result.Success}\n");

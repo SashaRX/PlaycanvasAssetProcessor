@@ -4128,10 +4128,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     // Автоматически обновляем viewport с новыми GLB LOD файлами
                     logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
+                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Before TryLoadGlbLodAsync call\n");
                     await TryLoadGlbLodAsync(selectedModel.Path);
+                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: After TryLoadGlbLodAsync returned\n");
 
+                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: About to show MessageBox\n");
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: MessageBox closed\n");
                 } else {
                     var errors = string.Join("\n", result.Errors);
                     logService.LogError($"? Model processing failed:\n{errors}");

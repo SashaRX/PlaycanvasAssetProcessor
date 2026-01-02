@@ -107,10 +107,8 @@ public class ModelExportPipeline {
                 Logger.Info($"  Texture [{tex.ID}] {tex.Name}: Path={tex.Path ?? "null"}, Exists={hasFile}");
             }
 
-            // 4. Создаём директории
-            var materialsDir = Path.Combine(exportPath, "materials");
+            // 4. Создаём директории (только textures, без materials)
             var texturesDir = Path.Combine(exportPath, "textures");
-            Directory.CreateDirectory(materialsDir);
             Directory.CreateDirectory(texturesDir);
 
             // 5. Генерируем ORM packed текстуры
@@ -135,27 +133,44 @@ public class ModelExportPipeline {
                 result.ConvertedTextures.AddRange(texturePathMap.Values);
             }
 
-            // 7. Генерируем material instance JSON
-            ReportProgress("Generating material instances...", 70);
+            // 7. Генерируем единый конфиг JSON для модели
+            ReportProgress("Generating model config...", 70);
+            var modelFileName = GetSafeFileName(model.Name ?? $"model_{model.ID}");
+            var materialsArray = new List<object>();
+
             foreach (var material in modelMaterials) {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var materialJson = GenerateMaterialInstanceJson(
                     material, texturePathMap, ormResults, options);
 
-                var materialFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
-                var materialPath = Path.Combine(materialsDir, materialFileName);
-
-                var json = JsonSerializer.Serialize(materialJson, new JsonSerializerOptions {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                materialsArray.Add(new {
+                    name = material.Name,
+                    master = materialJson.Master,
+                    @params = materialJson.Params,
+                    textures = materialJson.Textures
                 });
-                await File.WriteAllTextAsync(materialPath, json, cancellationToken);
-
-                result.GeneratedMaterialJsons.Add(materialPath);
-                Logger.Info($"Generated material JSON: {materialPath}");
             }
+
+            // Формируем единый конфиг
+            var modelConfig = new {
+                model = $"{modelFileName}_lod0.glb",
+                lods = options.GenerateLODs
+                    ? new[] { $"{modelFileName}_lod1.glb", $"{modelFileName}_lod2.glb" }
+                    : Array.Empty<string>(),
+                materials = materialsArray
+            };
+
+            var configPath = Path.Combine(exportPath, $"{modelFileName}.json");
+            var configJson = JsonSerializer.Serialize(modelConfig, new JsonSerializerOptions {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+            await File.WriteAllTextAsync(configPath, configJson, cancellationToken);
+
+            result.GeneratedMaterialJsons.Add(configPath);
+            Logger.Info($"Generated model config: {configPath}");
 
             // 8. Конвертируем модель в GLB + LOD
             if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
@@ -535,7 +550,9 @@ public class ModelExportPipeline {
                 GenerateLods = options.GenerateLODs,
                 ExcludeTextures = true, // Текстуры обрабатываем отдельно
                 CompressionMode = CompressionMode.MeshOpt,
-                CleanupIntermediateFiles = true
+                CleanupIntermediateFiles = true,
+                GenerateManifest = false, // Не генерируем отдельный манифест
+                GenerateQAReport = false  // Не генерируем отчёты для каждого LOD
             };
 
             if (options.GenerateLODs) {

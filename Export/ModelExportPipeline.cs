@@ -161,6 +161,16 @@ public class ModelExportPipeline {
             if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
                 ReportProgress("Converting model to GLB...", 85);
                 var glbResult = await ConvertModelToGLBAsync(model, exportPath, options, cancellationToken);
+
+                if (string.IsNullOrEmpty(glbResult.MainModelPath)) {
+                    result.Success = false;
+                    result.ErrorMessage = !string.IsNullOrEmpty(glbResult.ErrorMessage)
+                        ? $"Model conversion failed: {glbResult.ErrorMessage}"
+                        : "Model conversion failed - no GLB file produced. Check FBX2glTF and gltfpack paths in Settings.";
+                    Logger.Error($"Model conversion produced no output for {model.Name}: {glbResult.ErrorMessage}");
+                    return result;
+                }
+
                 result.ConvertedModelPath = glbResult.MainModelPath;
                 result.LODPaths.AddRange(glbResult.LODPaths);
             }
@@ -548,10 +558,12 @@ public class ModelExportPipeline {
                 }
                 Logger.Info($"Model converted: {model.Name}");
             } else {
-                Logger.Error($"Model conversion failed: {string.Join(", ", conversionResult.Errors)}");
+                result.ErrorMessage = string.Join("; ", conversionResult.Errors);
+                Logger.Error($"Model conversion failed: {result.ErrorMessage}");
             }
 
         } catch (Exception ex) {
+            result.ErrorMessage = ex.Message;
             Logger.Error(ex, $"Failed to convert model {model.Name}");
         }
 
@@ -709,6 +721,7 @@ public class ModelExportResult {
 public class GLBConversionResult {
     public string? MainModelPath { get; set; }
     public List<string> LODPaths { get; set; } = new();
+    public string? ErrorMessage { get; set; }
 }
 
 public class ORMExportResult {

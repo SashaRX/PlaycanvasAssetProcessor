@@ -2,6 +2,7 @@
 using AssetProcessor.TextureConversion.BasisU;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.ModelConversion.Settings;
+using AssetProcessor.Upload;
 using Microsoft.Win32;
 using Ookii.Dialogs.Wpf;
 using System.ComponentModel;
@@ -19,6 +20,11 @@ namespace AssetProcessor {
         private string? _playcanvasApiKey;
         private bool _isApiKeyVisible;
         private bool _suppressApiKeyUpdates;
+
+        // B2 settings
+        private string? _b2ApplicationKey;
+        private bool _isB2KeyVisible;
+        private bool _suppressB2KeyUpdates;
 
         // Event for preview renderer changes
         public event Action<bool>? OnPreviewRendererChanged;
@@ -143,6 +149,26 @@ namespace AssetProcessor {
 
             UseD3D11PreviewCheckBox.Checked += D3D11PreviewCheckBox_Changed;
             UseD3D11PreviewCheckBox.Unchecked += D3D11PreviewCheckBox_Changed;
+
+            // Load B2/CDN settings
+            LoadB2Settings();
+        }
+
+        private void LoadB2Settings() {
+            B2KeyIdTextBox.Text = AppSettings.Default.B2KeyId;
+            B2BucketNameTextBox.Text = AppSettings.Default.B2BucketName;
+            B2BucketIdTextBox.Text = AppSettings.Default.B2BucketId;
+            CdnBaseUrlTextBox.Text = AppSettings.Default.CdnBaseUrl;
+            B2PathPrefixTextBox.Text = AppSettings.Default.B2PathPrefix;
+            B2MaxConcurrentUploadsSlider.Value = AppSettings.Default.B2MaxConcurrentUploads;
+            B2MaxConcurrentUploadsText.Text = AppSettings.Default.B2MaxConcurrentUploads.ToString();
+            B2AutoUploadMappingCheckBox.IsChecked = AppSettings.Default.B2AutoUploadMapping;
+
+            if (!AppSettings.Default.TryGetDecryptedB2ApplicationKey(out _b2ApplicationKey)) {
+                _b2ApplicationKey = null;
+            }
+
+            UpdateB2KeyControls();
         }
 
         private void CheckAndRemoveWatermarks() {
@@ -279,7 +305,25 @@ namespace AssetProcessor {
             _modelSettings.GltfPackExecutablePath = GltfPackExecutableBox.Text;
             ModelConversionSettingsManager.SaveSettings(_modelSettings);
 
+            // Save B2/CDN settings
+            SaveB2Settings();
+
             this.Close();
+        }
+
+        private void SaveB2Settings() {
+            AppSettings.Default.B2KeyId = B2KeyIdTextBox.Text;
+            try {
+                AppSettings.Default.B2ApplicationKey = _b2ApplicationKey ?? string.Empty;
+            } catch (InvalidOperationException ex) {
+                MessageBox.Show(ex.Message, "Error saving B2 key", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            AppSettings.Default.B2BucketName = B2BucketNameTextBox.Text;
+            AppSettings.Default.B2BucketId = B2BucketIdTextBox.Text;
+            AppSettings.Default.CdnBaseUrl = CdnBaseUrlTextBox.Text;
+            AppSettings.Default.B2PathPrefix = B2PathPrefixTextBox.Text;
+            AppSettings.Default.B2MaxConcurrentUploads = (int)B2MaxConcurrentUploadsSlider.Value;
+            AppSettings.Default.B2AutoUploadMapping = B2AutoUploadMappingCheckBox.IsChecked ?? false;
         }
 
         private void SelectKtxExecutable(object sender, RoutedEventArgs e) {
@@ -508,5 +552,131 @@ namespace AssetProcessor {
         private void Cancel_Click(object sender, RoutedEventArgs e) {
             this.Close();
         }
+
+        #region B2/CDN Settings Event Handlers
+
+        private void B2ApplicationKeyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e) {
+            if (_suppressB2KeyUpdates || _isB2KeyVisible) {
+                return;
+            }
+            _b2ApplicationKey = B2ApplicationKeyPasswordBox.Password;
+            SyncB2KeyControls();
+        }
+
+        private void B2ApplicationKeyRevealTextBox_TextChanged(object sender, TextChangedEventArgs e) {
+            if (_suppressB2KeyUpdates || !_isB2KeyVisible) {
+                return;
+            }
+            _b2ApplicationKey = B2ApplicationKeyRevealTextBox.Text;
+            SyncB2KeyControls();
+        }
+
+        private void ToggleB2KeyVisibilityButton_Click(object sender, RoutedEventArgs e) {
+            if (!_isB2KeyVisible) {
+                MessageBoxResult result = MessageBox.Show(
+                    "Show Application Key in plain text?",
+                    "Confirm",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result != MessageBoxResult.Yes) {
+                    return;
+                }
+                _isB2KeyVisible = true;
+            } else {
+                _isB2KeyVisible = false;
+            }
+
+            UpdateB2KeyControls();
+        }
+
+        private void UpdateB2KeyControls() {
+            _suppressB2KeyUpdates = true;
+
+            string currentValue = _b2ApplicationKey ?? string.Empty;
+            B2ApplicationKeyPasswordBox.Password = currentValue;
+            B2ApplicationKeyRevealTextBox.Text = currentValue;
+
+            B2ApplicationKeyPasswordBox.Visibility = _isB2KeyVisible ? Visibility.Collapsed : Visibility.Visible;
+            B2ApplicationKeyRevealTextBox.Visibility = _isB2KeyVisible ? Visibility.Visible : Visibility.Collapsed;
+            ToggleB2KeyVisibilityButton.Content = _isB2KeyVisible ? "Hide" : "Show";
+
+            _suppressB2KeyUpdates = false;
+        }
+
+        private void SyncB2KeyControls() {
+            _suppressB2KeyUpdates = true;
+            string currentValue = _b2ApplicationKey ?? string.Empty;
+            if (_isB2KeyVisible) {
+                B2ApplicationKeyRevealTextBox.Text = currentValue;
+            } else {
+                B2ApplicationKeyPasswordBox.Password = currentValue;
+            }
+            _suppressB2KeyUpdates = false;
+        }
+
+        private void B2MaxConcurrentUploadsSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (B2MaxConcurrentUploadsText != null) {
+                B2MaxConcurrentUploadsText.Text = ((int)B2MaxConcurrentUploadsSlider.Value).ToString();
+            }
+        }
+
+        private async void TestB2Connection_Click(object sender, RoutedEventArgs e) {
+            if (B2ConnectionStatusText != null) {
+                B2ConnectionStatusText.Text = "Testing connection...";
+                B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+            }
+
+            TestB2ConnectionButton.IsEnabled = false;
+
+            try {
+                var keyId = B2KeyIdTextBox.Text;
+                var applicationKey = _b2ApplicationKey;
+                var bucketName = B2BucketNameTextBox.Text;
+
+                if (string.IsNullOrWhiteSpace(keyId) || string.IsNullOrWhiteSpace(applicationKey) || string.IsNullOrWhiteSpace(bucketName)) {
+                    if (B2ConnectionStatusText != null) {
+                        B2ConnectionStatusText.Text = "✗ Please fill in Key ID, Application Key, and Bucket Name";
+                        B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                    return;
+                }
+
+                var settings = new B2UploadSettings {
+                    KeyId = keyId,
+                    ApplicationKey = applicationKey,
+                    BucketName = bucketName,
+                    BucketId = B2BucketIdTextBox.Text
+                };
+
+                using var uploadService = new B2UploadService();
+                bool success = await uploadService.AuthorizeAsync(settings);
+
+                if (B2ConnectionStatusText != null) {
+                    if (success) {
+                        // Update bucket ID if it was auto-detected
+                        if (!string.IsNullOrEmpty(settings.BucketId) && string.IsNullOrEmpty(B2BucketIdTextBox.Text)) {
+                            B2BucketIdTextBox.Text = settings.BucketId;
+                        }
+
+                        B2ConnectionStatusText.Text = $"✓ Connected to bucket: {bucketName}";
+                        B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Green);
+                    } else {
+                        B2ConnectionStatusText.Text = "✗ Connection failed. Check credentials.";
+                        B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                    }
+                }
+
+            } catch (Exception ex) {
+                if (B2ConnectionStatusText != null) {
+                    B2ConnectionStatusText.Text = $"✗ Error: {ex.Message}";
+                    B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                }
+            } finally {
+                TestB2ConnectionButton.IsEnabled = true;
+            }
+        }
+
+        #endregion
     }
 }

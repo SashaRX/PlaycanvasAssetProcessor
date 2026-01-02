@@ -280,6 +280,131 @@
 
             <TabItem Header="TinyPng">
             </TabItem>
+
+            <TabItem Header="CDN/Upload" Background="#FF2196F3">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Margin="0,0,0,6" TextAlignment="Center">
+                            <Hyperlink NavigateUri="https://www.backblaze.com/docs/cloud-storage-s3-compatible-api" RequestNavigate="Hyperlink_RequestNavigate">
+                                Backblaze B2 Documentation
+                            </Hyperlink>
+                        </TextBlock>
+
+                        <GroupBox Header="Backblaze B2 Credentials" Background="#7F2196F3" BorderBrush="#FF2196F3" Margin="0,0,0,6">
+                            <StackPanel Margin="4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Key ID:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <TextBox x:Name="B2KeyIdTextBox" Grid.Row="0" Grid.Column="1"
+                                             Background="#FFBBDEFB" Margin="0,4" Height="24" VerticalContentAlignment="Center"
+                                             ToolTip="Application Key ID from B2 Console"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Application Key:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <Grid Grid.Row="1" Grid.Column="1" Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <PasswordBox x:Name="B2ApplicationKeyPasswordBox" Grid.Column="0"
+                                                     Background="#FFBBDEFB" Height="24"
+                                                     PasswordChanged="B2ApplicationKeyPasswordBox_PasswordChanged"/>
+                                        <TextBox x:Name="B2ApplicationKeyRevealTextBox" Grid.Column="0"
+                                                 Background="#FFBBDEFB" Height="24" VerticalContentAlignment="Center"
+                                                 Visibility="Collapsed"
+                                                 TextChanged="B2ApplicationKeyRevealTextBox_TextChanged"/>
+                                        <Button x:Name="ToggleB2KeyVisibilityButton" Grid.Column="1"
+                                                Content="Show" Margin="4,0,0,0" Padding="8,2"
+                                                Click="ToggleB2KeyVisibilityButton_Click"/>
+                                    </Grid>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Bucket Name:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <TextBox x:Name="B2BucketNameTextBox" Grid.Row="2" Grid.Column="1"
+                                             Background="#FFBBDEFB" Margin="0,4" Height="24" VerticalContentAlignment="Center"
+                                             ToolTip="Name of your B2 bucket"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Bucket ID (optional):" VerticalAlignment="Center" Margin="0,4"/>
+                                    <TextBox x:Name="B2BucketIdTextBox" Grid.Row="3" Grid.Column="1"
+                                             Background="#FFBBDEFB" Margin="0,4" Height="24" VerticalContentAlignment="Center"
+                                             ToolTip="Optional. Will be auto-detected if empty"/>
+                                </Grid>
+
+                                <Button x:Name="TestB2ConnectionButton" Content="Test Connection"
+                                        HorizontalAlignment="Left" Margin="0,8,0,4" Padding="12,4"
+                                        Click="TestB2Connection_Click"/>
+                                <TextBlock x:Name="B2ConnectionStatusText" FontSize="10" Foreground="Gray" Margin="0,0,0,4"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="CDN Settings" Margin="0,0,0,6">
+                            <StackPanel Margin="4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="CDN Base URL:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <TextBox x:Name="CdnBaseUrlTextBox" Grid.Row="0" Grid.Column="1"
+                                             Margin="0,4" Height="24" VerticalContentAlignment="Center"
+                                             ToolTip="Public URL for accessing files (e.g., https://cdn.example.com)"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Path Prefix:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <TextBox x:Name="B2PathPrefixTextBox" Grid.Row="1" Grid.Column="1"
+                                             Margin="0,4" Height="24" VerticalContentAlignment="Center"
+                                             ToolTip="Path prefix in bucket (e.g., projects/my-game)"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Upload Settings" Margin="0,0,0,6">
+                            <StackPanel Margin="4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Max Concurrent Uploads:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                                        <Slider x:Name="B2MaxConcurrentUploadsSlider"
+                                                Minimum="1" Maximum="16" Value="4"
+                                                Width="150" VerticalAlignment="Center"
+                                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                                ValueChanged="B2MaxConcurrentUploadsSlider_ValueChanged"/>
+                                        <TextBlock x:Name="B2MaxConcurrentUploadsText" Text="4"
+                                                   Margin="8,0,0,0" VerticalAlignment="Center" Width="20"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Auto-upload mapping.json:" VerticalAlignment="Center" Margin="0,4"/>
+                                    <CheckBox x:Name="B2AutoUploadMappingCheckBox" Grid.Row="1" Grid.Column="1"
+                                              VerticalAlignment="Center" Margin="0,4"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <TextBlock Text="Note: Application Key is stored encrypted using Windows DPAPI"
+                                   FontSize="9" Foreground="Gray" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
         <DockPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Height="32" VerticalAlignment="Bottom" Margin="4,4,4,4">

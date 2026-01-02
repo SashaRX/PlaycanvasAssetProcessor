@@ -133,7 +133,7 @@
                                             Height="22"
                                             FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
+                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray" TextWrapping="Wrap"/>
 
                                 <!-- Installation info -->
                                 <TextBlock Text="Install:" Margin="0,2,0,0" FontWeight="SemiBold" FontSize="10"/>
@@ -251,7 +251,7 @@
                                             Height="22"
                                             FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="FBX2glTFStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
+                                <TextBlock x:Name="FBX2glTFStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray" TextWrapping="Wrap"/>
 
                                 <!-- gltfpack -->
                                 <TextBlock Text="gltfpack:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
@@ -284,7 +284,7 @@
                                             Height="22"
                                             FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="GltfPackStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray"/>
+                                <TextBlock x:Name="GltfPackStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray" TextWrapping="Wrap"/>
 
                                 <!-- Installation info -->
                                 <TextBlock Text="Install:" Margin="0,2,0,0" FontWeight="SemiBold" FontSize="10"/>

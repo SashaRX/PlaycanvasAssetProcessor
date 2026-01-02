@@ -328,13 +328,20 @@ namespace AssetProcessor {
             var projectName = ProjectName ?? "UnknownProject";
             var outputPath = AppSettings.Default.ProjectsFolderPath;
 
+            // Загружаем настройки для получения путей к инструментам
+            var textureSettings = TextureConversion.Settings.TextureConversionSettingsManager.LoadSettings();
+            var ktxPath = string.IsNullOrWhiteSpace(textureSettings.KtxExecutablePath)
+                ? "ktx"
+                : textureSettings.KtxExecutablePath;
+
             try {
                 ExportModelsButton.IsEnabled = false;
                 ExportModelsButton.Content = "Exporting...";
 
                 var pipeline = new Export.ModelExportPipeline(
                     projectName,
-                    outputPath
+                    outputPath,
+                    ktxPath: ktxPath
                 );
 
                 var options = new Export.ExportOptions {

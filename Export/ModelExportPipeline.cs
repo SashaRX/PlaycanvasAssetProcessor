@@ -373,7 +373,8 @@ public class ModelExportPipeline {
                 ChannelType = ChannelType.Gloss,
                 SourcePath = glossTexture.Path,
                 DefaultValue = 0.5f,
-                ApplyToksvig = options.ApplyToksvig
+                ApplyToksvig = options.ApplyToksvig,
+                AOProcessingMode = AOProcessingMode.None // Gloss не поддерживает AO processing
             };
         }
 

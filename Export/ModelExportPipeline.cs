@@ -8,6 +8,8 @@ using AssetProcessor.Resources;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Pipeline;
 using NLog;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace AssetProcessor.Export;
 

@@ -176,7 +176,7 @@
         </Grid>
 
         <!-- Панель управления внизу -->
-        <Grid DockPanel.Dock="Bottom" Margin="2,4,2,4" Height="90">
+        <Grid DockPanel.Dock="Bottom" Margin="2,4,2,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>

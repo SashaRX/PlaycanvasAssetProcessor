@@ -334,6 +334,10 @@ namespace AssetProcessor {
                 ? "ktx"
                 : textureSettings.KtxExecutablePath;
 
+            // Получаем значения из чекбоксов
+            bool generateORM = GenerateORMCheckBox.IsChecked ?? true;
+            bool generateLODs = GenerateLODsCheckBox.IsChecked ?? true;
+
             try {
                 ExportModelsButton.IsEnabled = false;
                 ExportModelsButton.Content = "Exporting...";
@@ -347,9 +351,9 @@ namespace AssetProcessor {
                 var options = new Export.ExportOptions {
                     ConvertModel = true,
                     ConvertTextures = true,
-                    GenerateORMTextures = true,
-                    UsePackedTextures = true,
-                    GenerateLODs = true,
+                    GenerateORMTextures = generateORM,
+                    UsePackedTextures = generateORM,
+                    GenerateLODs = generateLODs,
                     TextureQuality = 128,
                     ApplyToksvig = true
                 };
@@ -393,8 +397,158 @@ namespace AssetProcessor {
                 MessageBox.Show($"Export failed: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
                 ExportModelsButton.IsEnabled = true;
-                ExportModelsButton.Content = "Export Selected";
+                ExportModelsButton.Content = "Export";
             }
+        }
+
+        /// <summary>
+        /// Помечает связанные материалы и текстуры для экспорта
+        /// </summary>
+        private void MarkRelatedButton_Click(object sender, RoutedEventArgs e) {
+            var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
+
+            if (!modelsToExport.Any()) {
+                MessageBox.Show(
+                    "Сначала отметьте модели для экспорта",
+                    "Mark Related",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // Находим связанные материалы и текстуры
+            var (relatedMaterials, relatedTextures) = FindRelatedAssets(modelsToExport);
+
+            // Помечаем их для экспорта
+            foreach (var material in relatedMaterials) {
+                material.ExportToServer = true;
+            }
+
+            foreach (var texture in relatedTextures) {
+                texture.ExportToServer = true;
+            }
+
+            UpdateModelExportCounts();
+
+            MessageBox.Show(
+                $"Отмечено для экспорта:\n\n{relatedMaterials.Count} материалов\n{relatedTextures.Count} текстур",
+                "Mark Related",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Очищает все отметки экспорта
+        /// </summary>
+        private void ClearExportMarksButton_Click(object sender, RoutedEventArgs e) {
+            foreach (var model in viewModel.Models) {
+                model.ExportToServer = false;
+            }
+
+            foreach (var material in viewModel.Materials) {
+                material.ExportToServer = false;
+            }
+
+            foreach (var texture in viewModel.Textures) {
+                texture.ExportToServer = false;
+            }
+
+            UpdateModelExportCounts();
+        }
+
+        /// <summary>
+        /// Обновляет счётчики в панели экспорта
+        /// </summary>
+        private void UpdateModelExportCounts() {
+            var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
+            SelectedModelsCountText.Text = $"{modelsToExport.Count} models";
+
+            if (modelsToExport.Any()) {
+                var (relatedMaterials, relatedTextures) = FindRelatedAssets(modelsToExport);
+                RelatedAssetsCountText.Text = $"{relatedMaterials.Count} materials, {relatedTextures.Count} textures";
+            } else {
+                RelatedAssetsCountText.Text = "0 materials, 0 textures";
+            }
+        }
+
+        /// <summary>
+        /// Находит материалы и текстуры, связанные с моделями
+        /// </summary>
+        private (List<MaterialResource>, List<TextureResource>) FindRelatedAssets(List<ModelResource> models) {
+            var relatedMaterials = new List<MaterialResource>();
+            var relatedTextures = new HashSet<TextureResource>();
+
+            foreach (var model in models) {
+                // Получаем путь папки модели
+                string? modelFolderPath = null;
+                if (model.Parent.HasValue && model.Parent.Value != 0) {
+                    folderPaths.TryGetValue(model.Parent.Value, out modelFolderPath);
+                }
+
+                var modelBaseName = ExtractBaseName(model.Name);
+
+                foreach (var material in viewModel.Materials) {
+                    bool isRelated = false;
+
+                    // По Parent ID - материалы в той же папке
+                    if (model.Parent.HasValue && material.Parent == model.Parent) {
+                        isRelated = true;
+                    }
+                    // По пути папки
+                    else if (!string.IsNullOrEmpty(modelFolderPath) && material.Parent.HasValue) {
+                        if (folderPaths.TryGetValue(material.Parent.Value, out var materialFolderPath)) {
+                            if (materialFolderPath.StartsWith(modelFolderPath, StringComparison.OrdinalIgnoreCase)) {
+                                isRelated = true;
+                            }
+                        }
+                    }
+                    // По имени
+                    else if (!string.IsNullOrEmpty(modelBaseName) && !string.IsNullOrEmpty(material.Name)) {
+                        var materialBaseName = ExtractBaseName(material.Name);
+                        if (materialBaseName.StartsWith(modelBaseName, StringComparison.OrdinalIgnoreCase) ||
+                            modelBaseName.StartsWith(materialBaseName, StringComparison.OrdinalIgnoreCase)) {
+                            isRelated = true;
+                        }
+                    }
+
+                    if (isRelated && !relatedMaterials.Contains(material)) {
+                        relatedMaterials.Add(material);
+
+                        // Добавляем все текстуры материала
+                        var textureIds = new List<int?> {
+                            material.DiffuseMapId,
+                            material.NormalMapId,
+                            material.SpecularMapId,
+                            material.GlossMapId,
+                            material.MetalnessMapId,
+                            material.AOMapId,
+                            material.EmissiveMapId,
+                            material.OpacityMapId
+                        };
+
+                        foreach (var id in textureIds.Where(id => id.HasValue)) {
+                            var texture = viewModel.Textures.FirstOrDefault(t => t.ID == id.Value);
+                            if (texture != null) {
+                                relatedTextures.Add(texture);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return (relatedMaterials, relatedTextures.ToList());
+        }
+
+        private string ExtractBaseName(string? name) {
+            if (string.IsNullOrEmpty(name)) return string.Empty;
+            var baseName = Path.GetFileNameWithoutExtension(name);
+            var suffixes = new[] { "_mat", "_material", "_mtl" };
+            foreach (var suffix in suffixes) {
+                if (baseName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
+                    return baseName.Substring(0, baseName.Length - suffix.Length);
+                }
+            }
+            return baseName;
         }
     }
 }

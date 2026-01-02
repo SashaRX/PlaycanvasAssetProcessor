@@ -115,19 +115,23 @@ public class ModelExportPipeline {
 
             // 5. Генерируем ORM packed текстуры
             var ormResults = new Dictionary<int, ORMExportResult>(); // MaterialId -> ORM result
+            var packedTextureIds = new HashSet<int>(); // Текстуры, включённые в ORM
             if (options.GenerateORMTextures) {
                 ReportProgress("Generating ORM packed textures...", 30);
-                ormResults = await GenerateORMTexturesAsync(
+                (ormResults, packedTextureIds) = await GenerateORMTexturesAsync(
                     modelMaterials, modelTextures, texturesDir, options, cancellationToken);
                 result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
+                Logger.Info($"ORM packed {packedTextureIds.Count} textures into {ormResults.Count} ORM files");
             }
 
-            // 6. Конвертируем обычные текстуры в KTX2
+            // 6. Конвертируем обычные текстуры в KTX2 (пропускаем те, что уже в ORM)
             var texturePathMap = new Dictionary<int, string>(); // TextureId -> relative path
             if (options.ConvertTextures) {
                 ReportProgress("Converting textures to KTX2...", 50);
+                var texturesToConvert = modelTextures.Where(t => !packedTextureIds.Contains(t.ID)).ToList();
+                Logger.Info($"Converting {texturesToConvert.Count} textures (skipping {packedTextureIds.Count} packed in ORM)");
                 texturePathMap = await ConvertTexturesToKTX2Async(
-                    modelTextures, texturesDir, exportPath, options, cancellationToken);
+                    texturesToConvert, texturesDir, exportPath, options, cancellationToken);
                 result.ConvertedTextures.AddRange(texturePathMap.Values);
             }
 
@@ -259,7 +263,7 @@ public class ModelExportPipeline {
         return ids;
     }
 
-    private async Task<Dictionary<int, ORMExportResult>> GenerateORMTexturesAsync(
+    private async Task<(Dictionary<int, ORMExportResult>, HashSet<int>)> GenerateORMTexturesAsync(
         List<MaterialResource> materials,
         List<TextureResource> textures,
         string outputDir,
@@ -267,6 +271,7 @@ public class ModelExportPipeline {
         CancellationToken cancellationToken) {
 
         var results = new Dictionary<int, ORMExportResult>();
+        var packedTextureIds = new HashSet<int>(); // Текстуры, которые были упакованы
         var textureDict = textures.ToDictionary(t => t.ID);
 
         foreach (var material in materials) {
@@ -340,6 +345,12 @@ public class ModelExportPipeline {
                         OutputPath = outputPath,
                         RelativePath = $"textures/{ormFileName}{suffix}.ktx2"
                     };
+
+                    // Добавляем ID текстур, которые были упакованы в ORM
+                    if (aoTexture != null) packedTextureIds.Add(aoTexture.ID);
+                    if (glossTexture != null) packedTextureIds.Add(glossTexture.ID);
+                    if (metallicTexture != null) packedTextureIds.Add(metallicTexture.ID);
+
                     Logger.Info($"Generated ORM texture: {outputPath}");
                 }
 
@@ -348,7 +359,7 @@ public class ModelExportPipeline {
             }
         }
 
-        return results;
+        return (results, packedTextureIds);
     }
 
     private ChannelPackingSettings CreatePackingSettings(

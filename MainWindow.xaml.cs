@@ -286,14 +286,18 @@ namespace AssetProcessor {
                     case "Textures":
                         ShowTextureViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Visible;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
                     case "Models":
                         ShowModelViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Visible;
+                        UpdateModelExportCounts();
                         break;
                     case "Materials":
                         ShowMaterialViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
                 }
             }

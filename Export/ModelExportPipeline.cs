@@ -85,14 +85,27 @@ public class ModelExportPipeline {
             ReportProgress("Finding materials...", 10);
             var modelMaterials = FindMaterialsForModel(model, allMaterials, folderPaths);
             result.MaterialCount = modelMaterials.Count;
-            Logger.Info($"Found {modelMaterials.Count} materials for model");
+            Logger.Info($"Found {modelMaterials.Count} materials for model {model.Name} (Parent={model.Parent})");
+
+            // Логируем найденные материалы
+            foreach (var mat in modelMaterials) {
+                Logger.Info($"  Material [{mat.ID}] {mat.Name}: Diffuse={mat.DiffuseMapId}, Normal={mat.NormalMapId}, AO={mat.AOMapId}, Gloss={mat.GlossMapId}, Metal={mat.MetalnessMapId}");
+            }
 
             // 3. Собираем все текстуры из материалов
             ReportProgress("Collecting textures...", 20);
             var textureIds = CollectTextureIds(modelMaterials);
+            Logger.Info($"Texture IDs from materials: [{string.Join(", ", textureIds)}]");
+
             var modelTextures = allTextures.Where(t => textureIds.Contains(t.ID)).ToList();
             result.TextureCount = modelTextures.Count;
-            Logger.Info($"Found {modelTextures.Count} textures");
+            Logger.Info($"Found {modelTextures.Count} textures matching IDs");
+
+            // Логируем статус текстур
+            foreach (var tex in modelTextures) {
+                var hasFile = !string.IsNullOrEmpty(tex.Path) && File.Exists(tex.Path);
+                Logger.Info($"  Texture [{tex.ID}] {tex.Name}: Path={tex.Path ?? "null"}, Exists={hasFile}");
+            }
 
             // 4. Создаём директории
             var materialsDir = Path.Combine(exportPath, "materials");
@@ -170,7 +183,14 @@ public class ModelExportPipeline {
         // Строим путь из иерархии папок PlayCanvas
         if (resource.Parent.HasValue && resource.Parent.Value != 0) {
             if (folderPaths.TryGetValue(resource.Parent.Value, out var path)) {
-                return SanitizePath(path);
+                var sanitized = SanitizePath(path);
+                // Убираем префикс content/ если он есть (уже добавлен в GetContentBasePath)
+                if (sanitized.StartsWith("content/", StringComparison.OrdinalIgnoreCase)) {
+                    sanitized = sanitized.Substring(8);
+                } else if (sanitized.StartsWith("content\\", StringComparison.OrdinalIgnoreCase)) {
+                    sanitized = sanitized.Substring(8);
+                }
+                return sanitized;
             }
         }
 

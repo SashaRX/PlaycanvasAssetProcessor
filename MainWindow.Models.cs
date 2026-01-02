@@ -299,6 +299,96 @@ namespace AssetProcessor {
             }
             viewPort3d.ZoomExtents();
         }
+
+        /// <summary>
+        /// Экспорт выбранных моделей со всеми связанными ресурсами
+        /// </summary>
+        private async void ExportModelsButton_Click(object sender, RoutedEventArgs e) {
+            var modelsToExport = Models.Where(m => m.ExportToServer).ToList();
+
+            if (!modelsToExport.Any()) {
+                MessageBox.Show(
+                    "Выберите модели для экспорта (отметьте чекбокс в колонке Export)",
+                    "Export",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // Проверяем что проект загружен
+            if (string.IsNullOrEmpty(AppSettings.Default.ProjectsFolderPath)) {
+                MessageBox.Show(
+                    "Не указана папка проектов. Откройте настройки и укажите Projects Folder Path.",
+                    "Export Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var projectName = CurrentProject?.Name ?? "UnknownProject";
+            var outputPath = AppSettings.Default.ProjectsFolderPath;
+
+            try {
+                ExportModelsButton.IsEnabled = false;
+                ExportModelsButton.Content = "Exporting...";
+
+                var pipeline = new Export.ModelExportPipeline(
+                    projectName,
+                    outputPath
+                );
+
+                var options = new Export.ExportOptions {
+                    ConvertModel = true,
+                    ConvertTextures = true,
+                    GenerateORMTextures = true,
+                    UsePackedTextures = true,
+                    GenerateLODs = true,
+                    TextureQuality = 128,
+                    ApplyToksvig = true
+                };
+
+                int successCount = 0;
+                int failCount = 0;
+
+                foreach (var model in modelsToExport) {
+                    try {
+                        logger.Info($"Exporting model: {model.Name}");
+
+                        var result = await pipeline.ExportModelAsync(
+                            model,
+                            Materials,
+                            Textures,
+                            _folderPaths,
+                            options
+                        );
+
+                        if (result.Success) {
+                            successCount++;
+                            logger.Info($"Export OK: {model.Name} -> {result.ExportPath}");
+                        } else {
+                            failCount++;
+                            logger.Error($"Export FAILED: {model.Name} - {result.ErrorMessage}");
+                        }
+                    } catch (Exception ex) {
+                        failCount++;
+                        logger.Error(ex, $"Export exception for {model.Name}");
+                    }
+                }
+
+                MessageBox.Show(
+                    $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}",
+                    "Export Result",
+                    MessageBoxButton.OK,
+                    successCount > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+            } catch (Exception ex) {
+                logger.Error(ex, "Export failed");
+                MessageBox.Show($"Export failed: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } finally {
+                ExportModelsButton.IsEnabled = true;
+                ExportModelsButton.Content = "Export Selected";
+            }
+        }
     }
 }
 

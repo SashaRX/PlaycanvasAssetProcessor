@@ -280,9 +280,9 @@
                 </StackPanel>
             </GroupBox>
 
-            <StackPanel Width="150" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
-                <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False" Padding="8,2"/>
-                <Button Content="Settings" Margin="8,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center" Background="#FFFBD8C3" Click="Setting" Padding="8,2"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,4,0">
+                <Button Content="Settings" VerticalAlignment="Center" Background="#FFFBD8C3" Click="Setting" Padding="10,4" MinWidth="70"/>
+                <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False" Padding="10,4" MinWidth="60" Margin="6,0,0,0"/>
             </StackPanel>
         </StackPanel>
 

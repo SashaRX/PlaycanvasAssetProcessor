@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text.Json;
 using AssetProcessor.Mapping.Models;
 using NLog;

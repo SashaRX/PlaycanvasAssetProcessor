@@ -40,6 +40,7 @@ using System.Linq;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using AssetProcessor.ModelConversion.Settings;
 
 namespace AssetProcessor {
     public partial class MainWindow {
@@ -334,6 +335,15 @@ namespace AssetProcessor {
                 ? "ktx"
                 : textureSettings.KtxExecutablePath;
 
+            // Загружаем настройки конвертации моделей для FBX2glTF и gltfpack
+            var modelSettings = ModelConversionSettingsManager.LoadSettings();
+            var fbx2glTFPath = string.IsNullOrWhiteSpace(modelSettings.FBX2glTFExecutablePath)
+                ? "FBX2glTF-windows-x64.exe"
+                : modelSettings.FBX2glTFExecutablePath;
+            var gltfPackPath = string.IsNullOrWhiteSpace(modelSettings.GltfPackExecutablePath)
+                ? "gltfpack.exe"
+                : modelSettings.GltfPackExecutablePath;
+
             // Получаем значения из чекбоксов
             bool generateORM = GenerateORMCheckBox.IsChecked ?? true;
             bool generateLODs = GenerateLODsCheckBox.IsChecked ?? true;
@@ -345,6 +355,8 @@ namespace AssetProcessor {
                 var pipeline = new Export.ModelExportPipeline(
                     projectName,
                     outputPath,
+                    fbx2glTFPath: fbx2glTFPath,
+                    gltfPackPath: gltfPackPath,
                     ktxPath: ktxPath
                 );
 

@@ -304,7 +304,7 @@ namespace AssetProcessor {
         /// Экспорт выбранных моделей со всеми связанными ресурсами
         /// </summary>
         private async void ExportModelsButton_Click(object sender, RoutedEventArgs e) {
-            var modelsToExport = Models.Where(m => m.ExportToServer).ToList();
+            var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
 
             if (!modelsToExport.Any()) {
                 MessageBox.Show(
@@ -325,7 +325,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            var projectName = CurrentProject?.Name ?? "UnknownProject";
+            var projectName = ProjectName ?? "UnknownProject";
             var outputPath = AppSettings.Default.ProjectsFolderPath;
 
             try {
@@ -356,9 +356,9 @@ namespace AssetProcessor {
 
                         var result = await pipeline.ExportModelAsync(
                             model,
-                            Materials,
-                            Textures,
-                            _folderPaths,
+                            viewModel.Materials,
+                            viewModel.Textures,
+                            folderPaths,
                             options
                         );
 

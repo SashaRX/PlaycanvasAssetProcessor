@@ -2,8 +2,11 @@ using System.IO;
 using System.Text.Json;
 using AssetProcessor.Mapping;
 using AssetProcessor.Mapping.Models;
+using AssetProcessor.ModelConversion.Core;
+using AssetProcessor.ModelConversion.Pipeline;
 using AssetProcessor.Resources;
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.TextureConversion.Pipeline;
 using NLog;
 
 namespace AssetProcessor.Export;
@@ -15,18 +18,30 @@ namespace AssetProcessor.Export;
 public class ModelExportPipeline {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    private readonly MaterialJsonGenerator _materialJsonGenerator;
     private readonly string _projectName;
     private readonly string _outputBasePath;
+    private readonly ModelConversionPipeline _modelConversionPipeline;
+    private readonly TextureConversionPipeline _textureConversionPipeline;
+    private readonly ChannelPackingPipeline _channelPackingPipeline;
+    private readonly MaterialJsonGenerator _materialJsonGenerator;
 
     /// <summary>
     /// Событие прогресса экспорта
     /// </summary>
     public event Action<ExportProgress>? ProgressChanged;
 
-    public ModelExportPipeline(string projectName, string outputBasePath) {
+    public ModelExportPipeline(
+        string projectName,
+        string outputBasePath,
+        string? fbx2glTFPath = null,
+        string? gltfPackPath = null,
+        string? ktxPath = null) {
+
         _projectName = projectName;
         _outputBasePath = outputBasePath;
+        _modelConversionPipeline = new ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
+        _textureConversionPipeline = new TextureConversionPipeline(ktxPath);
+        _channelPackingPipeline = new ChannelPackingPipeline();
         _materialJsonGenerator = new MaterialJsonGenerator();
     }
 
@@ -62,54 +77,52 @@ public class ModelExportPipeline {
             result.ExportPath = exportPath;
 
             Directory.CreateDirectory(exportPath);
+            Logger.Info($"Export path: {exportPath}");
 
             // 2. Находим материалы, принадлежащие этой модели
             ReportProgress("Finding materials...", 10);
-            var modelMaterials = FindMaterialsForModel(model, allMaterials);
+            var modelMaterials = FindMaterialsForModel(model, allMaterials, folderPaths);
             result.MaterialCount = modelMaterials.Count;
+            Logger.Info($"Found {modelMaterials.Count} materials for model");
 
             // 3. Собираем все текстуры из материалов
             ReportProgress("Collecting textures...", 20);
             var textureIds = CollectTextureIds(modelMaterials);
             var modelTextures = allTextures.Where(t => textureIds.Contains(t.ID)).ToList();
             result.TextureCount = modelTextures.Count;
+            Logger.Info($"Found {modelTextures.Count} textures");
 
-            // 4. Группируем текстуры для создания ORM packed
-            ReportProgress("Analyzing textures for ORM packing...", 30);
-            var textureGroups = GroupTexturesForORM(modelTextures, modelMaterials);
-
-            // 5. Создаём директории
+            // 4. Создаём директории
             var materialsDir = Path.Combine(exportPath, "materials");
             var texturesDir = Path.Combine(exportPath, "textures");
             Directory.CreateDirectory(materialsDir);
             Directory.CreateDirectory(texturesDir);
 
-            // 6. Генерируем ORM packed текстуры (если есть что паковать)
-            if (options.GenerateORMTextures && textureGroups.Any()) {
-                ReportProgress("Generating ORM packed textures...", 40);
-                var ormResults = await GenerateORMTexturesAsync(
-                    textureGroups, texturesDir, options, cancellationToken);
-                result.GeneratedORMTextures.AddRange(ormResults);
+            // 5. Генерируем ORM packed текстуры
+            var ormResults = new Dictionary<int, ORMExportResult>(); // MaterialId -> ORM result
+            if (options.GenerateORMTextures) {
+                ReportProgress("Generating ORM packed textures...", 30);
+                ormResults = await GenerateORMTexturesAsync(
+                    modelMaterials, modelTextures, texturesDir, options, cancellationToken);
+                result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
             }
 
-            // 7. Конвертируем обычные текстуры в KTX2
+            // 6. Конвертируем обычные текстуры в KTX2
+            var texturePathMap = new Dictionary<int, string>(); // TextureId -> relative path
             if (options.ConvertTextures) {
                 ReportProgress("Converting textures to KTX2...", 50);
-                var ktxResults = await ConvertTexturesToKTX2Async(
-                    modelTextures, texturesDir, options, cancellationToken);
-                result.ConvertedTextures.AddRange(ktxResults);
+                texturePathMap = await ConvertTexturesToKTX2Async(
+                    modelTextures, texturesDir, exportPath, options, cancellationToken);
+                result.ConvertedTextures.AddRange(texturePathMap.Values);
             }
 
-            // 8. Генерируем material instance JSON
+            // 7. Генерируем material instance JSON
             ReportProgress("Generating material instances...", 70);
             foreach (var material in modelMaterials) {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var materialJson = _materialJsonGenerator.GenerateMaterialJson(
-                    material, null, new MaterialJsonOptions { UsePackedTextures = options.UsePackedTextures });
-
-                // Заменяем texture IDs на относительные пути
-                UpdateTextureReferences(materialJson, modelTextures, result.GeneratedORMTextures);
+                var materialJson = GenerateMaterialInstanceJson(
+                    material, texturePathMap, ormResults, options);
 
                 var materialFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
                 var materialPath = Path.Combine(materialsDir, materialFileName);
@@ -122,10 +135,11 @@ public class ModelExportPipeline {
                 await File.WriteAllTextAsync(materialPath, json, cancellationToken);
 
                 result.GeneratedMaterialJsons.Add(materialPath);
+                Logger.Info($"Generated material JSON: {materialPath}");
             }
 
-            // 9. Конвертируем модель в GLB + LOD (если включено)
-            if (options.ConvertModel) {
+            // 8. Конвертируем модель в GLB + LOD
+            if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
                 ReportProgress("Converting model to GLB...", 85);
                 var glbResult = await ConvertModelToGLBAsync(model, exportPath, options, cancellationToken);
                 result.ConvertedModelPath = glbResult.MainModelPath;
@@ -158,35 +172,52 @@ public class ModelExportPipeline {
             }
         }
 
-        // Если нет parent, используем имя ресурса
-        return SanitizePath(resource.Name ?? $"unknown_{resource.ID}");
+        // Если нет parent, используем имя ресурса как папку
+        return Path.Combine("models", SanitizePath(resource.Name ?? $"unknown_{resource.ID}"));
     }
 
     private List<MaterialResource> FindMaterialsForModel(
-        ModelResource model, IEnumerable<MaterialResource> allMaterials) {
+        ModelResource model,
+        IEnumerable<MaterialResource> allMaterials,
+        IReadOnlyDictionary<int, string> folderPaths) {
 
-        // Находим материалы по Parent ID (материалы в той же папке что и модель)
-        // или материалы с таким же базовым именем
         var materials = new List<MaterialResource>();
         var modelBaseName = ExtractBaseName(model.Name);
 
+        // Получаем путь папки модели
+        string? modelFolderPath = null;
+        if (model.Parent.HasValue && model.Parent.Value != 0) {
+            folderPaths.TryGetValue(model.Parent.Value, out modelFolderPath);
+        }
+
         foreach (var material in allMaterials) {
-            // По Parent ID
+            // По Parent ID - материалы в той же папке
             if (model.Parent.HasValue && material.Parent == model.Parent) {
                 materials.Add(material);
                 continue;
             }
 
+            // По пути папки
+            if (!string.IsNullOrEmpty(modelFolderPath) && material.Parent.HasValue) {
+                if (folderPaths.TryGetValue(material.Parent.Value, out var materialFolderPath)) {
+                    if (materialFolderPath.StartsWith(modelFolderPath, StringComparison.OrdinalIgnoreCase)) {
+                        materials.Add(material);
+                        continue;
+                    }
+                }
+            }
+
             // По имени (например, model "chair" -> material "chair_mat")
             if (!string.IsNullOrEmpty(modelBaseName) && !string.IsNullOrEmpty(material.Name)) {
                 var materialBaseName = ExtractBaseName(material.Name);
-                if (materialBaseName.StartsWith(modelBaseName, StringComparison.OrdinalIgnoreCase)) {
+                if (materialBaseName.StartsWith(modelBaseName, StringComparison.OrdinalIgnoreCase) ||
+                    modelBaseName.StartsWith(materialBaseName, StringComparison.OrdinalIgnoreCase)) {
                     materials.Add(material);
                 }
             }
         }
 
-        return materials;
+        return materials.Distinct().ToList();
     }
 
     private HashSet<int> CollectTextureIds(IEnumerable<MaterialResource> materials) {
@@ -206,71 +237,37 @@ public class ModelExportPipeline {
         return ids;
     }
 
-    private List<ORMTextureGroup> GroupTexturesForORM(
-        IEnumerable<TextureResource> textures, IEnumerable<MaterialResource> materials) {
-
-        var groups = new List<ORMTextureGroup>();
-        var textureDict = textures.ToDictionary(t => t.ID);
-
-        foreach (var material in materials) {
-            var group = new ORMTextureGroup {
-                MaterialId = material.ID,
-                MaterialName = material.Name
-            };
-
-            // AO
-            if (material.AOMapId.HasValue && textureDict.TryGetValue(material.AOMapId.Value, out var aoTex)) {
-                group.AOTexture = aoTex;
-            }
-
-            // Gloss
-            if (material.GlossMapId.HasValue && textureDict.TryGetValue(material.GlossMapId.Value, out var glossTex)) {
-                group.GlossTexture = glossTex;
-            }
-
-            // Metalness
-            if (material.MetalnessMapId.HasValue && textureDict.TryGetValue(material.MetalnessMapId.Value, out var metalTex)) {
-                group.MetalnessTexture = metalTex;
-            }
-
-            // Определяем режим пакинга
-            group.PackingMode = DeterminePackingMode(group);
-
-            if (group.PackingMode != ChannelPackingMode.None) {
-                groups.Add(group);
-            }
-        }
-
-        return groups;
-    }
-
-    private ChannelPackingMode DeterminePackingMode(ORMTextureGroup group) {
-        bool hasAO = group.AOTexture != null;
-        bool hasGloss = group.GlossTexture != null;
-        bool hasMetalness = group.MetalnessTexture != null;
-
-        if (hasAO && hasGloss && hasMetalness) return ChannelPackingMode.OGM;
-        if (hasAO && hasGloss) return ChannelPackingMode.OG;
-        // Можно добавить OGMH если будет height map
-
-        return ChannelPackingMode.None;
-    }
-
-    private async Task<List<string>> GenerateORMTexturesAsync(
-        List<ORMTextureGroup> groups,
+    private async Task<Dictionary<int, ORMExportResult>> GenerateORMTexturesAsync(
+        List<MaterialResource> materials,
+        List<TextureResource> textures,
         string outputDir,
         ExportOptions options,
         CancellationToken cancellationToken) {
 
-        var results = new List<string>();
+        var results = new Dictionary<int, ORMExportResult>();
+        var textureDict = textures.ToDictionary(t => t.ID);
 
-        foreach (var group in groups) {
+        foreach (var material in materials) {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // TODO: Интеграция с существующим ORM генератором
-            // Пока создаём placeholder
-            var ormFileName = GetSafeFileName(group.MaterialName ?? $"mat_{group.MaterialId}");
-            var suffix = group.PackingMode switch {
+            // Проверяем какие текстуры есть для ORM
+            TextureResource? aoTexture = null;
+            TextureResource? glossTexture = null;
+            TextureResource? metallicTexture = null;
+
+            if (material.AOMapId.HasValue && textureDict.TryGetValue(material.AOMapId.Value, out var ao))
+                aoTexture = ao;
+            if (material.GlossMapId.HasValue && textureDict.TryGetValue(material.GlossMapId.Value, out var gloss))
+                glossTexture = gloss;
+            if (material.MetalnessMapId.HasValue && textureDict.TryGetValue(material.MetalnessMapId.Value, out var metal))
+                metallicTexture = metal;
+
+            // Определяем режим пакинга
+            var packingMode = DeterminePackingMode(aoTexture, glossTexture, metallicTexture);
+            if (packingMode == ChannelPackingMode.None) continue;
+
+            var ormFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}");
+            var suffix = packingMode switch {
                 ChannelPackingMode.OG => "_og",
                 ChannelPackingMode.OGM => "_ogm",
                 ChannelPackingMode.OGMH => "_ogmh",
@@ -278,39 +275,195 @@ public class ModelExportPipeline {
             };
 
             var outputPath = Path.Combine(outputDir, $"{ormFileName}{suffix}.ktx2");
-            results.Add(outputPath);
 
-            Logger.Debug($"ORM texture will be generated: {outputPath}");
+            // Создаём настройки для ChannelPackingPipeline
+            var packingSettings = CreatePackingSettings(
+                packingMode, aoTexture, glossTexture, metallicTexture, options);
+
+            try {
+                // Генерируем packed текстуру
+                var packedMipmaps = await _channelPackingPipeline.PackChannelsAsync(packingSettings);
+
+                // Сохраняем временные PNG для ktx create
+                var tempDir = Path.Combine(Path.GetTempPath(), $"orm_export_{Guid.NewGuid():N}");
+                Directory.CreateDirectory(tempDir);
+
+                var mipPaths = new List<string>();
+                for (int i = 0; i < packedMipmaps.Count; i++) {
+                    var mipPath = Path.Combine(tempDir, $"mip{i}.png");
+                    await packedMipmaps[i].SaveAsPngAsync(mipPath);
+                    mipPaths.Add(mipPath);
+                }
+
+                // Конвертируем в KTX2
+                var ktxResult = await _textureConversionPipeline.ConvertTextureAsync(
+                    mipPaths[0], // Используем первый мипмап как источник
+                    outputPath,
+                    MipGenerationProfile.CreateDefault(TextureType.Generic),
+                    new CompressionSettings {
+                        CompressionFormat = CompressionFormat.ETC1S,
+                        QualityLevel = options.TextureQuality,
+                        GenerateMipmaps = true,
+                        UseCustomMipmaps = false
+                    });
+
+                // Очищаем временные файлы
+                foreach (var mip in packedMipmaps) mip.Dispose();
+                try { Directory.Delete(tempDir, true); } catch { }
+
+                if (ktxResult.Success) {
+                    results[material.ID] = new ORMExportResult {
+                        MaterialId = material.ID,
+                        PackingMode = packingMode,
+                        OutputPath = outputPath,
+                        RelativePath = $"textures/{ormFileName}{suffix}.ktx2"
+                    };
+                    Logger.Info($"Generated ORM texture: {outputPath}");
+                }
+
+            } catch (Exception ex) {
+                Logger.Error(ex, $"Failed to generate ORM for material {material.Name}");
+            }
         }
 
         return results;
     }
 
-    private async Task<List<string>> ConvertTexturesToKTX2Async(
+    private ChannelPackingSettings CreatePackingSettings(
+        ChannelPackingMode mode,
+        TextureResource? aoTexture,
+        TextureResource? glossTexture,
+        TextureResource? metallicTexture,
+        ExportOptions options) {
+
+        var settings = new ChannelPackingSettings { Mode = mode };
+
+        if (aoTexture?.Path != null) {
+            settings.RedChannel = new ChannelSourceSettings {
+                ChannelType = ChannelType.AmbientOcclusion,
+                SourcePath = aoTexture.Path,
+                DefaultValue = 1.0f
+            };
+        }
+
+        if (glossTexture?.Path != null) {
+            settings.GreenChannel = new ChannelSourceSettings {
+                ChannelType = ChannelType.Gloss,
+                SourcePath = glossTexture.Path,
+                DefaultValue = 0.5f,
+                ApplyToksvig = options.ApplyToksvig
+            };
+        }
+
+        if (metallicTexture?.Path != null) {
+            settings.BlueChannel = new ChannelSourceSettings {
+                ChannelType = ChannelType.Metallic,
+                SourcePath = metallicTexture.Path,
+                DefaultValue = 0.0f
+            };
+        }
+
+        return settings;
+    }
+
+    private ChannelPackingMode DeterminePackingMode(
+        TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {
+
+        bool hasAO = ao?.Path != null && File.Exists(ao.Path);
+        bool hasGloss = gloss?.Path != null && File.Exists(gloss.Path);
+        bool hasMetallic = metallic?.Path != null && File.Exists(metallic.Path);
+
+        if (hasAO && hasGloss && hasMetallic) return ChannelPackingMode.OGM;
+        if (hasAO && hasGloss) return ChannelPackingMode.OG;
+
+        return ChannelPackingMode.None;
+    }
+
+    private async Task<Dictionary<int, string>> ConvertTexturesToKTX2Async(
         List<TextureResource> textures,
-        string outputDir,
+        string texturesDir,
+        string exportPath,
         ExportOptions options,
         CancellationToken cancellationToken) {
 
-        var results = new List<string>();
+        var results = new Dictionary<int, string>();
 
         foreach (var texture in textures) {
             cancellationToken.ThrowIfCancellationRequested();
 
             if (string.IsNullOrEmpty(texture.Path) || !File.Exists(texture.Path)) {
-                Logger.Warn($"Texture file not found: {texture.Name}");
+                Logger.Warn($"Texture file not found: {texture.Name} ({texture.Path})");
                 continue;
             }
 
-            // TODO: Интеграция с существующим TextureConversionPipeline
             var outputFileName = GetSafeFileName(texture.Name ?? $"tex_{texture.ID}") + ".ktx2";
-            var outputPath = Path.Combine(outputDir, outputFileName);
-            results.Add(outputPath);
+            var outputPath = Path.Combine(texturesDir, outputFileName);
 
-            Logger.Debug($"Texture will be converted: {texture.Path} -> {outputPath}");
+            try {
+                // Определяем тип текстуры для выбора профиля
+                var textureType = DetermineTextureType(texture);
+                var profile = MipGenerationProfile.CreateDefault(textureType);
+                var compressionSettings = CreateCompressionSettings(textureType, options);
+
+                var ktxResult = await _textureConversionPipeline.ConvertTextureAsync(
+                    texture.Path,
+                    outputPath,
+                    profile,
+                    compressionSettings);
+
+                if (ktxResult.Success) {
+                    // Сохраняем относительный путь
+                    var relativePath = Path.GetRelativePath(exportPath, outputPath).Replace('\\', '/');
+                    results[texture.ID] = relativePath;
+                    Logger.Info($"Converted texture: {texture.Name} -> {outputPath}");
+                } else {
+                    Logger.Error($"Failed to convert texture {texture.Name}: {ktxResult.Error}");
+                }
+
+            } catch (Exception ex) {
+                Logger.Error(ex, $"Failed to convert texture {texture.Name}");
+            }
         }
 
         return results;
+    }
+
+    private TextureType DetermineTextureType(TextureResource texture) {
+        var type = texture.TextureType?.ToLowerInvariant() ?? "";
+        var name = texture.Name?.ToLowerInvariant() ?? "";
+
+        if (type == "normal" || name.Contains("normal") || name.Contains("_n."))
+            return TextureType.Normal;
+        if (type == "albedo" || name.Contains("albedo") || name.Contains("diffuse") || name.Contains("_d."))
+            return TextureType.Albedo;
+        if (type == "gloss" || name.Contains("gloss") || name.Contains("roughness"))
+            return TextureType.Gloss;
+        if (type == "metallic" || name.Contains("metallic") || name.Contains("metal"))
+            return TextureType.Metallic;
+        if (type == "ao" || name.Contains("_ao") || name.Contains("occlusion"))
+            return TextureType.AmbientOcclusion;
+        if (name.Contains("emissive") || name.Contains("emission"))
+            return TextureType.Emissive;
+
+        return TextureType.Generic;
+    }
+
+    private CompressionSettings CreateCompressionSettings(TextureType textureType, ExportOptions options) {
+        var settings = new CompressionSettings {
+            QualityLevel = options.TextureQuality,
+            GenerateMipmaps = true
+        };
+
+        // Normal maps используют UASTC для лучшего качества
+        if (textureType == TextureType.Normal) {
+            settings.CompressionFormat = CompressionFormat.UASTC;
+            settings.UseCustomMipmaps = false; // Для --normal-mode
+        } else {
+            settings.CompressionFormat = CompressionFormat.ETC1S;
+            settings.UseCustomMipmaps = true;
+        }
+
+        return settings;
     }
 
     private async Task<GLBConversionResult> ConvertModelToGLBAsync(
@@ -320,45 +473,134 @@ public class ModelExportPipeline {
         CancellationToken cancellationToken) {
 
         var result = new GLBConversionResult();
-
-        // TODO: Интеграция с FBX2glTF и gltfpack
         var modelFileName = GetSafeFileName(model.Name ?? $"model_{model.ID}");
-        result.MainModelPath = Path.Combine(outputDir, $"{modelFileName}.glb");
 
-        if (options.GenerateLODs) {
-            for (int i = 1; i <= options.LODLevels; i++) {
-                result.LODPaths.Add(Path.Combine(outputDir, $"{modelFileName}_lod{i}.glb"));
+        try {
+            var conversionSettings = new ModelConversionSettings {
+                GenerateLods = options.GenerateLODs,
+                ExcludeTextures = true, // Текстуры обрабатываем отдельно
+                CompressionMode = GlbCompressionMode.Draco,
+                CleanupIntermediateFiles = true
+            };
+
+            if (options.GenerateLODs) {
+                conversionSettings.LodChain = new List<LodSettings> {
+                    new LodSettings { Level = LodLevel.LOD0, SimplificationRatio = 1.0f },
+                    new LodSettings { Level = LodLevel.LOD1, SimplificationRatio = 0.5f },
+                    new LodSettings { Level = LodLevel.LOD2, SimplificationRatio = 0.25f }
+                };
             }
-        }
 
-        Logger.Debug($"Model will be converted: {model.Path} -> {result.MainModelPath}");
+            var conversionResult = await _modelConversionPipeline.ConvertAsync(
+                model.Path!, outputDir, conversionSettings);
+
+            if (conversionResult.Success) {
+                result.MainModelPath = Path.Combine(outputDir, $"{modelFileName}_lod0.glb");
+                foreach (var (level, path) in conversionResult.LodFiles) {
+                    if (level != LodLevel.LOD0) {
+                        result.LODPaths.Add(path);
+                    }
+                }
+                Logger.Info($"Model converted: {model.Name}");
+            } else {
+                Logger.Error($"Model conversion failed: {string.Join(", ", conversionResult.Errors)}");
+            }
+
+        } catch (Exception ex) {
+            Logger.Error(ex, $"Failed to convert model {model.Name}");
+        }
 
         return result;
     }
 
-    private void UpdateTextureReferences(
-        MaterialInstanceJson materialJson,
-        List<TextureResource> textures,
-        List<string> ormTextures) {
+    private MaterialInstanceJson GenerateMaterialInstanceJson(
+        MaterialResource material,
+        Dictionary<int, string> texturePathMap,
+        Dictionary<int, ORMExportResult> ormResults,
+        ExportOptions options) {
 
-        // TODO: Обновить ссылки на текстуры с ID на относительные пути
-        // Это будет сделано когда определимся с финальным форматом
+        // Определяем master материал по blendType
+        var masterName = material.BlendType switch {
+            "0" or "NONE" => "pbr_opaque",
+            "1" or "NORMAL" => "pbr_alpha",
+            "2" or "ADDITIVE" => "pbr_additive",
+            "3" or "PREMULTIPLIED" => "pbr_premul",
+            _ => "pbr_opaque"
+        };
+
+        var instance = new MaterialInstanceJson {
+            Master = masterName,
+            Params = new MaterialParams {
+                Diffuse = NormalizeColor(material.Diffuse),
+                Metalness = material.UseMetalness ? material.Metalness : null,
+                Gloss = material.Glossiness ?? material.Shininess,
+                Emissive = NormalizeColor(material.Emissive),
+                EmissiveIntensity = material.EmissiveIntensity,
+                Opacity = material.Opacity,
+                AlphaTest = material.AlphaTest,
+                Bumpiness = material.BumpMapFactor,
+                UseMetalness = material.UseMetalness ? true : null
+            },
+            Textures = new MaterialTextures()
+        };
+
+        // Заполняем текстуры с относительными путями
+        if (material.DiffuseMapId.HasValue && texturePathMap.TryGetValue(material.DiffuseMapId.Value, out var diffusePath))
+            instance.Textures.DiffuseMapPath = diffusePath;
+
+        if (material.NormalMapId.HasValue && texturePathMap.TryGetValue(material.NormalMapId.Value, out var normalPath))
+            instance.Textures.NormalMapPath = normalPath;
+
+        if (material.EmissiveMapId.HasValue && texturePathMap.TryGetValue(material.EmissiveMapId.Value, out var emissivePath))
+            instance.Textures.EmissiveMapPath = emissivePath;
+
+        if (material.OpacityMapId.HasValue && texturePathMap.TryGetValue(material.OpacityMapId.Value, out var opacityPath))
+            instance.Textures.OpacityMapPath = opacityPath;
+
+        // ORM packed текстуры
+        if (options.UsePackedTextures && ormResults.TryGetValue(material.ID, out var ormResult)) {
+            switch (ormResult.PackingMode) {
+                case ChannelPackingMode.OG:
+                    instance.Textures.OgMapPath = ormResult.RelativePath;
+                    break;
+                case ChannelPackingMode.OGM:
+                    instance.Textures.OgmMapPath = ormResult.RelativePath;
+                    break;
+                case ChannelPackingMode.OGMH:
+                    instance.Textures.OgmhMapPath = ormResult.RelativePath;
+                    break;
+            }
+        } else {
+            // Отдельные текстуры
+            if (material.AOMapId.HasValue && texturePathMap.TryGetValue(material.AOMapId.Value, out var aoPath))
+                instance.Textures.AoMapPath = aoPath;
+            if (material.GlossMapId.HasValue && texturePathMap.TryGetValue(material.GlossMapId.Value, out var glossPath))
+                instance.Textures.GlossMapPath = glossPath;
+            if (material.MetalnessMapId.HasValue && texturePathMap.TryGetValue(material.MetalnessMapId.Value, out var metalPath))
+                instance.Textures.MetalnessMapPath = metalPath;
+        }
+
+        return instance;
+    }
+
+    private float[]? NormalizeColor(List<float>? color) {
+        if (color == null || color.Count == 0) return null;
+        var result = new float[3];
+        for (int i = 0; i < Math.Min(3, color.Count); i++) {
+            result[i] = color[i];
+        }
+        return result;
     }
 
     private string ExtractBaseName(string? name) {
         if (string.IsNullOrEmpty(name)) return string.Empty;
-
-        // Убираем расширение
         var baseName = Path.GetFileNameWithoutExtension(name);
-
-        // Убираем суффиксы типа _mat, _material
         var suffixes = new[] { "_mat", "_material", "_mtl" };
         foreach (var suffix in suffixes) {
             if (baseName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
                 return baseName.Substring(0, baseName.Length - suffix.Length);
             }
         }
-
         return baseName;
     }
 
@@ -369,10 +611,12 @@ public class ModelExportPipeline {
 
     private string SanitizePath(string path) {
         var invalid = Path.GetInvalidPathChars();
-        return string.Join("_", path.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        var sanitized = string.Join("_", path.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        return sanitized.Replace('\\', '/');
     }
 
     private void ReportProgress(string message, int percentage) {
+        Logger.Info($"[{percentage}%] {message}");
         ProgressChanged?.Invoke(new ExportProgress {
             Message = message,
             Percentage = percentage
@@ -391,6 +635,8 @@ public class ExportOptions {
     public bool UsePackedTextures { get; set; } = true;
     public bool GenerateLODs { get; set; } = true;
     public int LODLevels { get; set; } = 2;
+    public int TextureQuality { get; set; } = 128;
+    public bool ApplyToksvig { get; set; } = true;
 }
 
 public class ExportProgress {
@@ -420,14 +666,11 @@ public class GLBConversionResult {
     public List<string> LODPaths { get; set; } = new();
 }
 
-public class ORMTextureGroup {
+public class ORMExportResult {
     public int MaterialId { get; set; }
-    public string? MaterialName { get; set; }
-    public TextureResource? AOTexture { get; set; }
-    public TextureResource? GlossTexture { get; set; }
-    public TextureResource? MetalnessTexture { get; set; }
-    public TextureResource? HeightTexture { get; set; }
     public ChannelPackingMode PackingMode { get; set; }
+    public string OutputPath { get; set; } = "";
+    public string RelativePath { get; set; } = "";
 }
 
 #endregion

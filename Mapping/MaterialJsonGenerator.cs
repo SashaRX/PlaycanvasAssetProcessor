@@ -162,46 +162,57 @@ public class MaterialJsonGenerator {
         IEnumerable<ORMTextureResource>? ormTextures,
         MaterialJsonOptions options) {
 
-        var textures = new MaterialTextures {
-            DiffuseMap = material.DiffuseMapId,
-            NormalMap = material.NormalMapId,
-            SpecularMap = material.SpecularMapId,
-            EmissiveMap = material.EmissiveMapId,
-            OpacityMap = material.OpacityMapId
-        };
+        var textures = new MaterialTextures();
 
-        // Проверяем, есть ли packed ORM текстура для этого материала
-        if (ormTextures != null && options.UsePackedTextures) {
-            var packedTexture = FindPackedTexture(material, ormTextures);
-            if (packedTexture != null) {
-                // Используем packed текстуру вместо отдельных
-                switch (packedTexture.PackingMode) {
-                    case ChannelPackingMode.OG:
-                        textures.OgMap = new TextureReference { Asset = packedTexture.ID };
-                        // Не устанавливаем отдельные AO и Gloss
-                        break;
+        // Базовые текстуры - используем texturePathMap если доступен
+        if (options.TexturePathMap != null) {
+            // Режим с относительными путями (для экспорта)
+            if (material.DiffuseMapId.HasValue && options.TexturePathMap.TryGetValue(material.DiffuseMapId.Value, out var diffusePath))
+                textures.DiffuseMapPath = diffusePath;
+            if (material.NormalMapId.HasValue && options.TexturePathMap.TryGetValue(material.NormalMapId.Value, out var normalPath))
+                textures.NormalMapPath = normalPath;
+            if (material.SpecularMapId.HasValue && options.TexturePathMap.TryGetValue(material.SpecularMapId.Value, out var specPath))
+                textures.SpecularMapPath = specPath;
+            if (material.EmissiveMapId.HasValue && options.TexturePathMap.TryGetValue(material.EmissiveMapId.Value, out var emissivePath))
+                textures.EmissiveMapPath = emissivePath;
+            if (material.OpacityMapId.HasValue && options.TexturePathMap.TryGetValue(material.OpacityMapId.Value, out var opacityPath))
+                textures.OpacityMapPath = opacityPath;
 
-                    case ChannelPackingMode.OGM:
-                        textures.OgmMap = new TextureReference { Asset = packedTexture.ID };
-                        // Не устанавливаем отдельные AO, Gloss, Metalness
-                        break;
-
-                    case ChannelPackingMode.OGMH:
-                        textures.OgmhMap = new TextureReference { Asset = packedTexture.ID };
-                        // Не устанавливаем отдельные AO, Gloss, Metalness (Height обычно нет)
-                        break;
+            // Проверяем, есть ли packed ORM текстура для этого материала
+            if (ormTextures != null && options.UsePackedTextures) {
+                var packedTexture = FindPackedTexture(material, ormTextures);
+                if (packedTexture != null) {
+                    // Используем packed текстуру вместо отдельных
+                    var ormPath = options.TexturePathMap.TryGetValue(packedTexture.ID, out var path) ? path : null;
+                    switch (packedTexture.PackingMode) {
+                        case ChannelPackingMode.OG:
+                            textures.OgMapPath = ormPath;
+                            break;
+                        case ChannelPackingMode.OGM:
+                            textures.OgmMapPath = ormPath;
+                            break;
+                        case ChannelPackingMode.OGMH:
+                            textures.OgmhMapPath = ormPath;
+                            break;
+                    }
+                } else {
+                    // Используем отдельные текстуры
+                    if (material.GlossMapId.HasValue && options.TexturePathMap.TryGetValue(material.GlossMapId.Value, out var glossPath))
+                        textures.GlossMapPath = glossPath;
+                    if (material.MetalnessMapId.HasValue && options.TexturePathMap.TryGetValue(material.MetalnessMapId.Value, out var metalPath))
+                        textures.MetalnessMapPath = metalPath;
+                    if (material.AOMapId.HasValue && options.TexturePathMap.TryGetValue(material.AOMapId.Value, out var aoPath))
+                        textures.AoMapPath = aoPath;
                 }
             } else {
                 // Используем отдельные текстуры
-                textures.GlossMap = material.GlossMapId;
-                textures.MetalnessMap = material.MetalnessMapId;
-                textures.AoMap = material.AOMapId;
+                if (material.GlossMapId.HasValue && options.TexturePathMap.TryGetValue(material.GlossMapId.Value, out var glossPath))
+                    textures.GlossMapPath = glossPath;
+                if (material.MetalnessMapId.HasValue && options.TexturePathMap.TryGetValue(material.MetalnessMapId.Value, out var metalPath))
+                    textures.MetalnessMapPath = metalPath;
+                if (material.AOMapId.HasValue && options.TexturePathMap.TryGetValue(material.AOMapId.Value, out var aoPath))
+                    textures.AoMapPath = aoPath;
             }
-        } else {
-            // Используем отдельные текстуры
-            textures.GlossMap = material.GlossMapId;
-            textures.MetalnessMap = material.MetalnessMapId;
-            textures.AoMap = material.AOMapId;
         }
 
         return textures;
@@ -308,4 +319,10 @@ public class MaterialJsonOptions {
     /// Включать дефолтные значения параметров (null если не установлены)
     /// </summary>
     public bool IncludeDefaults { get; set; } = false;
+
+    /// <summary>
+    /// Маппинг ID текстур → относительные пути для CDN
+    /// Если null, текстуры не включаются в JSON
+    /// </summary>
+    public IReadOnlyDictionary<int, string>? TexturePathMap { get; set; }
 }

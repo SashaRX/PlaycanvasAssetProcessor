@@ -122,104 +122,83 @@ public class MaterialParams {
 
 /// <summary>
 /// Ссылки на текстуры материала
-/// Значение может быть:
-/// - int (asset ID) для простой ссылки
-/// - TextureReference для расширенной ссылки с каналом
+/// Использует относительные пути для CDN (например: "textures/albedo.ktx2")
 /// </summary>
 public class MaterialTextures {
     /// <summary>
-    /// Diffuse/Albedo текстура
+    /// Diffuse/Albedo текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("diffuseMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? DiffuseMap { get; set; }
+    public string? DiffuseMapPath { get; set; }
 
     /// <summary>
-    /// Normal map текстура
+    /// Normal map текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("normalMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? NormalMap { get; set; }
+    public string? NormalMapPath { get; set; }
 
     /// <summary>
-    /// Specular текстура
+    /// Specular текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("specularMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? SpecularMap { get; set; }
+    public string? SpecularMapPath { get; set; }
 
     /// <summary>
-    /// Gloss/Roughness текстура
+    /// Gloss/Roughness текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("glossMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? GlossMap { get; set; }
+    public string? GlossMapPath { get; set; }
 
     /// <summary>
-    /// Metalness текстура
+    /// Metalness текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("metalnessMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? MetalnessMap { get; set; }
+    public string? MetalnessMapPath { get; set; }
 
     /// <summary>
-    /// Ambient Occlusion текстура
+    /// Ambient Occlusion текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("aoMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? AoMap { get; set; }
+    public string? AoMapPath { get; set; }
 
     /// <summary>
-    /// Emissive текстура
+    /// Emissive текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("emissiveMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? EmissiveMap { get; set; }
+    public string? EmissiveMapPath { get; set; }
 
     /// <summary>
-    /// Opacity текстура
+    /// Opacity текстура (относительный путь)
     /// </summary>
     [JsonPropertyName("opacityMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? OpacityMap { get; set; }
+    public string? OpacityMapPath { get; set; }
 
     /// <summary>
-    /// Packed OG текстура (Occlusion + Gloss, 2 канала)
+    /// Packed OG текстура (Occlusion + Gloss) - относительный путь
     /// </summary>
     [JsonPropertyName("ogMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public TextureReference? OgMap { get; set; }
+    public string? OgMapPath { get; set; }
 
     /// <summary>
-    /// Packed OGM текстура (Occlusion + Gloss + Metalness, 3 канала)
+    /// Packed OGM текстура (Occlusion + Gloss + Metalness) - относительный путь
     /// </summary>
     [JsonPropertyName("ogmMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public TextureReference? OgmMap { get; set; }
+    public string? OgmMapPath { get; set; }
 
     /// <summary>
-    /// Packed OGMH текстура (Occlusion + Gloss + Metalness + Height, 4 канала)
+    /// Packed OGMH текстура (Occlusion + Gloss + Metalness + Height) - относительный путь
     /// </summary>
     [JsonPropertyName("ogmhMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public TextureReference? OgmhMap { get; set; }
-}
-
-/// <summary>
-/// Расширенная ссылка на текстуру с указанием канала
-/// </summary>
-public class TextureReference {
-    /// <summary>
-    /// Asset ID текстуры
-    /// </summary>
-    [JsonPropertyName("asset")]
-    public int Asset { get; set; }
-
-    /// <summary>
-    /// Канал текстуры (опционально)
-    /// "r", "g", "b", "a" или "1", "2", "3", "4"
-    /// </summary>
-    [JsonPropertyName("channel")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Channel { get; set; }
+    public string? OgmhMapPath { get; set; }
 }

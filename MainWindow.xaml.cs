@@ -2029,7 +2029,88 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialMetalnessColorChannelComboBox.SelectedItem = parameters.MetalnessColorChannel?.ToString();
                 MaterialGlossinessColorChannelComboBox.SelectedItem = parameters.GlossinessColorChannel?.ToString();
                 MaterialAOColorChannelComboBox.SelectedItem = parameters.AOChannel?.ToString();
+
+                // Load ORM Settings
+                LoadORMSettingsToUI(parameters.ORMSettings);
             });
+        }
+
+        private bool _isLoadingORMSettings = false;
+
+        private void LoadORMSettingsToUI(Resources.MaterialORMSettings settings) {
+            _isLoadingORMSettings = true;
+            try {
+                ORMEnabledCheckBox.IsChecked = settings.Enabled;
+                ORMApplyToksvigCheckBox.IsChecked = settings.ApplyToksvig;
+                ORMAOBiasSlider.Value = settings.AOBias;
+                ORMAODefaultSlider.Value = settings.AODefault;
+                ORMGlossDefaultSlider.Value = settings.GlossDefault;
+                ORMMetalnessDefaultSlider.Value = settings.MetalnessDefault;
+
+                // Packing Mode
+                ORMPackingModeComboBox.SelectedIndex = settings.PackingMode switch {
+                    TextureConversion.Core.ChannelPackingMode.Auto => 0,
+                    TextureConversion.Core.ChannelPackingMode.None => 1,
+                    TextureConversion.Core.ChannelPackingMode.OG => 2,
+                    TextureConversion.Core.ChannelPackingMode.OGM => 3,
+                    TextureConversion.Core.ChannelPackingMode.OGMH => 4,
+                    _ => 0
+                };
+
+                // AO Processing Mode
+                ORMAOProcessingComboBox.SelectedIndex = settings.AOProcessingMode switch {
+                    TextureConversion.Core.AOProcessingMode.None => 0,
+                    TextureConversion.Core.AOProcessingMode.BiasedDarkening => 1,
+                    TextureConversion.Core.AOProcessingMode.Percentile => 2,
+                    _ => 1
+                };
+            } finally {
+                _isLoadingORMSettings = false;
+            }
+        }
+
+        private void ORMSettings_Changed(object sender, RoutedEventArgs e) {
+            if (_isLoadingORMSettings) return;
+            SaveORMSettingsFromUI();
+        }
+
+        private void ORMSettings_Changed(object sender, SelectionChangedEventArgs e) {
+            if (_isLoadingORMSettings) return;
+            SaveORMSettingsFromUI();
+        }
+
+        private void ORMSettings_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (_isLoadingORMSettings) return;
+            SaveORMSettingsFromUI();
+        }
+
+        private void SaveORMSettingsFromUI() {
+            if (MaterialsDataGrid.SelectedItem is not MaterialResource selectedMaterial) return;
+
+            selectedMaterial.ORMSettings.Enabled = ORMEnabledCheckBox.IsChecked ?? true;
+            selectedMaterial.ORMSettings.ApplyToksvig = ORMApplyToksvigCheckBox.IsChecked ?? true;
+            selectedMaterial.ORMSettings.AOBias = (float)ORMAOBiasSlider.Value;
+            selectedMaterial.ORMSettings.AODefault = (float)ORMAODefaultSlider.Value;
+            selectedMaterial.ORMSettings.GlossDefault = (float)ORMGlossDefaultSlider.Value;
+            selectedMaterial.ORMSettings.MetalnessDefault = (float)ORMMetalnessDefaultSlider.Value;
+
+            // Packing Mode
+            selectedMaterial.ORMSettings.PackingMode = ORMPackingModeComboBox.SelectedIndex switch {
+                0 => TextureConversion.Core.ChannelPackingMode.Auto,
+                1 => TextureConversion.Core.ChannelPackingMode.None,
+                2 => TextureConversion.Core.ChannelPackingMode.OG,
+                3 => TextureConversion.Core.ChannelPackingMode.OGM,
+                4 => TextureConversion.Core.ChannelPackingMode.OGMH,
+                _ => TextureConversion.Core.ChannelPackingMode.Auto
+            };
+
+            // AO Processing Mode
+            selectedMaterial.ORMSettings.AOProcessingMode = ORMAOProcessingComboBox.SelectedIndex switch {
+                0 => TextureConversion.Core.AOProcessingMode.None,
+                1 => TextureConversion.Core.AOProcessingMode.BiasedDarkening,
+                2 => TextureConversion.Core.AOProcessingMode.Percentile,
+                _ => TextureConversion.Core.AOProcessingMode.BiasedDarkening
+            };
         }
 
         private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {

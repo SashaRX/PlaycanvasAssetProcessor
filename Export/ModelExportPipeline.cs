@@ -303,9 +303,9 @@ public class ModelExportPipeline {
 
             var outputPath = Path.Combine(outputDir, $"{ormFileName}{suffix}.ktx2");
 
-            // Создаём настройки для ChannelPackingPipeline
+            // Создаём настройки для ChannelPackingPipeline (используем настройки материала если есть)
             var packingSettings = CreatePackingSettings(
-                packingMode, aoTexture, glossTexture, metallicTexture, options);
+                packingMode, aoTexture, glossTexture, metallicTexture, options, material);
 
             try {
                 // Генерируем packed текстуру
@@ -367,8 +367,19 @@ public class ModelExportPipeline {
         TextureResource? aoTexture,
         TextureResource? glossTexture,
         TextureResource? metallicTexture,
-        ExportOptions options) {
+        ExportOptions options,
+        MaterialResource? material = null) {
 
+        // Если у материала есть ORM настройки, используем их
+        if (material?.ORMSettings != null && material.ORMSettings.Enabled) {
+            return material.ORMSettings.ToChannelPackingSettings(
+                aoTexture?.Path,
+                glossTexture?.Path,
+                metallicTexture?.Path
+            );
+        }
+
+        // Иначе используем настройки по умолчанию
         var settings = new ChannelPackingSettings { Mode = mode };
 
         if (aoTexture?.Path != null) {

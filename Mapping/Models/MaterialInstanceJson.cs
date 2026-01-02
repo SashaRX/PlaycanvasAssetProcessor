@@ -122,9 +122,82 @@ public class MaterialParams {
 
 /// <summary>
 /// Ссылки на текстуры материала
-/// Использует относительные пути для CDN (например: "textures/albedo.ktx2")
+/// Поддерживает два режима:
+/// - ID режим: для PlayCanvas маппинга (DiffuseMap, NormalMap, etc.)
+/// - Path режим: для CDN экспорта (DiffuseMapPath, NormalMapPath, etc.)
+/// При сериализации используются пути если они заданы, иначе ID
 /// </summary>
 public class MaterialTextures {
+    // ===== ID-based properties (для PlayCanvas маппинга) =====
+
+    /// <summary>
+    /// Diffuse/Albedo текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? DiffuseMap { get; set; }
+
+    /// <summary>
+    /// Normal map текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? NormalMap { get; set; }
+
+    /// <summary>
+    /// Specular текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? SpecularMap { get; set; }
+
+    /// <summary>
+    /// Gloss/Roughness текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? GlossMap { get; set; }
+
+    /// <summary>
+    /// Metalness текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? MetalnessMap { get; set; }
+
+    /// <summary>
+    /// Ambient Occlusion текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? AoMap { get; set; }
+
+    /// <summary>
+    /// Emissive текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? EmissiveMap { get; set; }
+
+    /// <summary>
+    /// Opacity текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public int? OpacityMap { get; set; }
+
+    /// <summary>
+    /// Packed OG текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public TextureReference? OgMap { get; set; }
+
+    /// <summary>
+    /// Packed OGM текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public TextureReference? OgmMap { get; set; }
+
+    /// <summary>
+    /// Packed OGMH текстура (PlayCanvas asset ID)
+    /// </summary>
+    [JsonIgnore]
+    public TextureReference? OgmhMap { get; set; }
+
+    // ===== Path-based properties (для CDN экспорта) =====
+
     /// <summary>
     /// Diffuse/Albedo текстура (относительный путь)
     /// </summary>
@@ -201,4 +274,11 @@ public class MaterialTextures {
     [JsonPropertyName("ogmhMap")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OgmhMapPath { get; set; }
+}
+
+/// <summary>
+/// Ссылка на текстуру по ID (для PlayCanvas маппинга)
+/// </summary>
+public class TextureReference {
+    public int Asset { get; set; }
 }

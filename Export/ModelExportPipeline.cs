@@ -291,7 +291,7 @@ public class ModelExportPipeline {
                 var mipPaths = new List<string>();
                 for (int i = 0; i < packedMipmaps.Count; i++) {
                     var mipPath = Path.Combine(tempDir, $"mip{i}.png");
-                    await packedMipmaps[i].SaveAsPngAsync(mipPath);
+                    packedMipmaps[i].SaveAsPng(mipPath);
                     mipPaths.Add(mipPath);
                 }
 
@@ -479,7 +479,7 @@ public class ModelExportPipeline {
             var conversionSettings = new ModelConversionSettings {
                 GenerateLods = options.GenerateLODs,
                 ExcludeTextures = true, // Текстуры обрабатываем отдельно
-                CompressionMode = GlbCompressionMode.Draco,
+                CompressionMode = CompressionMode.MeshOpt,
                 CleanupIntermediateFiles = true
             };
 

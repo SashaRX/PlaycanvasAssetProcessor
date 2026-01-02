@@ -291,7 +291,7 @@ public class ModelExportPipeline {
                 var mipPaths = new List<string>();
                 for (int i = 0; i < packedMipmaps.Count; i++) {
                     var mipPath = Path.Combine(tempDir, $"mip{i}.png");
-                    packedMipmaps[i].SaveAsPng(mipPath);
+                    await packedMipmaps[i].SaveAsPngAsync(mipPath);
                     mipPaths.Add(mipPath);
                 }
 

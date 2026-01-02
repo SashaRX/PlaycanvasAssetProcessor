@@ -176,9 +176,15 @@
         </Grid>
 
         <!-- Панель управления внизу -->
-        <StackPanel DockPanel.Dock="Bottom" Margin="2,4,2,4" Orientation="Horizontal" Width="922" Height="90" VerticalAlignment="Top">
+        <Grid DockPanel.Dock="Bottom" Margin="2,4,2,4" Height="90">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
             <!-- Playcanvas Project Connect (Left Side) -->
-            <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="340">
+            <GroupBox Grid.Column="0" Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2" Width="340">
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <!-- Dynamic Action Button -->
                     <Button x:Name="DynamicConnectionButton"
@@ -244,7 +250,7 @@
             </GroupBox>
 
             <!-- Texture Operations (Right Side) - Only visible for Textures tab -->
-            <GroupBox x:Name="TextureOperationsGroupBox" Header="Texture Operations" VerticalAlignment="Top" Margin="2,2,2,2" Width="460" Visibility="Collapsed">
+            <GroupBox Grid.Column="1" x:Name="TextureOperationsGroupBox" Header="Texture Operations" VerticalAlignment="Top" Margin="2,2,2,2" Width="460" Visibility="Collapsed">
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
@@ -280,11 +286,11 @@
                 </StackPanel>
             </GroupBox>
 
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,4,0">
-                <Button Content="Settings" VerticalAlignment="Center" Background="#FFFBD8C3" Click="Setting" Padding="10,4" MinWidth="70"/>
-                <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False" Padding="10,4" MinWidth="60" Margin="6,0,0,0"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="4,0,8,0">
+                <Button Content="Settings" VerticalAlignment="Center" Background="#FFFBD8C3" Click="Setting" Padding="12,6" MinWidth="75"/>
+                <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False" Padding="12,6" MinWidth="70" Margin="8,0,0,0"/>
             </StackPanel>
-        </StackPanel>
+        </Grid>
 
         <Grid DockPanel.Dock="Top" VerticalAlignment="Top">
             <Menu x:Name="menu" VerticalAlignment="Top" Margin="0,0,2,0">

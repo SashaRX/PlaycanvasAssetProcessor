@@ -116,7 +116,8 @@ namespace AssetProcessor {
                 // LodLogger.Info($"[Texture] Found albedo from material table: {texture.Name} (ID: {texture.ID}) -> {texture.Path}"); // NLog блокирует
                 return LoadTextureAsBrush(texture.Path);
 
-            } catch (Exception ex) {
+            } catch (Exception)
+            {
                 // LodLogger.Warn(ex, "Failed to find albedo texture from materials table"); // NLog блокирует
                 return null;
             }
@@ -144,7 +145,7 @@ namespace AssetProcessor {
                 // LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})"); // NLog блокирует
                 return brush;
 
-            } catch (Exception ex) {
+            } catch (Exception){
                 // LodLogger.Warn(ex, $"Failed to load texture: {texturePath}"); // NLog блокирует
                 return null;
             }

@@ -1284,119 +1284,147 @@
                             <StackPanel Margin="4,4,4,4">
                                 <!-- Enable ORM -->
                                 <CheckBox x:Name="ORMEnabledCheckBox" Content="Enable ORM Packing"
-                                          IsChecked="True" Margin="0,0,0,8"
+                                          IsChecked="True" Margin="0,0,0,4"
                                           Checked="ORMSettings_Changed" Unchecked="ORMSettings_Changed"
                                           ToolTip="Enable ORM texture generation for this material during export"/>
 
-                                <!-- Packing Mode -->
-                                <Grid Margin="0,2,0,2">
+                                <!-- Preset Selection -->
+                                <Grid Margin="0,2,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Packing Mode" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <ComboBox x:Name="ORMPackingModeComboBox" Grid.Column="1"
+                                    <TextBlock Text="Preset" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <ComboBox x:Name="ORMPresetComboBox" Grid.Column="1"
                                               HorizontalAlignment="Stretch" Height="22"
-                                              SelectionChanged="ORMSettings_Changed"
-                                              ToolTip="Channel packing mode for ORM texture">
-                                        <ComboBoxItem Content="Auto (detect from textures)"/>
-                                        <ComboBoxItem Content="None"/>
-                                        <ComboBoxItem Content="OG (AO+Gloss)"/>
-                                        <ComboBoxItem Content="OGM (AO+Gloss+Metal)"/>
-                                        <ComboBoxItem Content="OGMH (AO+Gloss+Metal+Height)"/>
-                                    </ComboBox>
+                                              SelectionChanged="ORMPreset_Changed"
+                                              ToolTip="Select ORM preset or customize settings"/>
+                                    <Button x:Name="ORMEditPresetButton" Grid.Column="2" Content="Edit"
+                                            Width="40" Height="22" Margin="4,0,0,0"
+                                            Click="ORMEditPreset_Click"
+                                            ToolTip="Edit or create presets"/>
                                 </Grid>
 
-                                <!-- Toksvig -->
-                                <CheckBox x:Name="ORMApplyToksvigCheckBox" Content="Apply Toksvig to Gloss"
-                                          IsChecked="True" Margin="0,4,0,4"
-                                          Checked="ORMSettings_Changed" Unchecked="ORMSettings_Changed"
-                                          ToolTip="Apply Toksvig anti-aliasing correction to gloss channel"/>
+                                <!-- Preset Description -->
+                                <TextBlock x:Name="ORMPresetDescriptionText" Text="" FontSize="9"
+                                           Foreground="Gray" TextWrapping="Wrap" Margin="0,0,0,4"/>
 
-                                <!-- AO Processing -->
-                                <Grid Margin="0,2,0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="AO Mip Mode" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <ComboBox x:Name="ORMAOProcessingComboBox" Grid.Column="1"
-                                              HorizontalAlignment="Stretch" Height="22"
-                                              SelectionChanged="ORMSettings_Changed"
-                                              ToolTip="How to handle AO when generating mipmaps">
-                                        <ComboBoxItem Content="None"/>
-                                        <ComboBoxItem Content="Biased Darkening" IsSelected="True"/>
-                                        <ComboBoxItem Content="Percentile"/>
-                                    </ComboBox>
-                                </Grid>
+                                <!-- Advanced Settings (collapsed by default) -->
+                                <Expander x:Name="ORMAdvancedExpander" Header="Advanced Settings"
+                                          FontSize="9" FontWeight="Normal" IsExpanded="False" Margin="0,4,0,0">
+                                    <StackPanel Margin="0,4,0,0">
+                                        <!-- Packing Mode -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Packing Mode" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="ORMPackingModeComboBox" Grid.Column="1"
+                                                      HorizontalAlignment="Stretch" Height="22"
+                                                      SelectionChanged="ORMSettings_Changed"
+                                                      ToolTip="Channel packing mode for ORM texture">
+                                                <ComboBoxItem Content="Auto (detect from textures)"/>
+                                                <ComboBoxItem Content="None"/>
+                                                <ComboBoxItem Content="OG (AO+Gloss)"/>
+                                                <ComboBoxItem Content="OGM (AO+Gloss+Metal)"/>
+                                                <ComboBoxItem Content="OGMH (AO+Gloss+Metal+Height)"/>
+                                            </ComboBox>
+                                        </Grid>
 
-                                <!-- AO Bias Slider -->
-                                <Grid Margin="0,2,0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="AO Bias" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <Slider x:Name="ORMAOBiasSlider" Grid.Column="1"
-                                            Minimum="0" Maximum="1" Value="0.5"
-                                            TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                            ValueChanged="ORMSettings_Changed"/>
-                                    <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                               Text="{Binding ElementName=ORMAOBiasSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                </Grid>
+                                        <!-- Toksvig -->
+                                        <CheckBox x:Name="ORMApplyToksvigCheckBox" Content="Apply Toksvig to Gloss"
+                                                  IsChecked="True" Margin="0,4,0,4"
+                                                  Checked="ORMSettings_Changed" Unchecked="ORMSettings_Changed"
+                                                  ToolTip="Apply Toksvig anti-aliasing correction to gloss channel"/>
 
-                                <!-- Default Values Header -->
-                                <TextBlock Text="Default Values (if texture missing)" FontWeight="SemiBold"
-                                           Margin="0,8,0,4" FontSize="9"/>
+                                        <!-- AO Processing -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="AO Mip Mode" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="ORMAOProcessingComboBox" Grid.Column="1"
+                                                      HorizontalAlignment="Stretch" Height="22"
+                                                      SelectionChanged="ORMSettings_Changed"
+                                                      ToolTip="How to handle AO when generating mipmaps">
+                                                <ComboBoxItem Content="None"/>
+                                                <ComboBoxItem Content="Biased Darkening" IsSelected="True"/>
+                                                <ComboBoxItem Content="Percentile"/>
+                                            </ComboBox>
+                                        </Grid>
 
-                                <!-- AO Default -->
-                                <Grid Margin="0,2,0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="AO Default" VerticalAlignment="Center"/>
-                                    <Slider x:Name="ORMAODefaultSlider" Grid.Column="1"
-                                            Minimum="0" Maximum="1" Value="1"
-                                            TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                            ValueChanged="ORMSettings_Changed"/>
-                                    <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                               Text="{Binding ElementName=ORMAODefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                </Grid>
+                                        <!-- AO Bias Slider -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="AO Bias" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <Slider x:Name="ORMAOBiasSlider" Grid.Column="1"
+                                                    Minimum="0" Maximum="1" Value="0.5"
+                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                    ValueChanged="ORMSettings_Changed"/>
+                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
+                                                       Text="{Binding ElementName=ORMAOBiasSlider, Path=Value, StringFormat={}{0:F1}}"/>
+                                        </Grid>
 
-                                <!-- Gloss Default -->
-                                <Grid Margin="0,2,0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Gloss Default" VerticalAlignment="Center"/>
-                                    <Slider x:Name="ORMGlossDefaultSlider" Grid.Column="1"
-                                            Minimum="0" Maximum="1" Value="0.5"
-                                            TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                            ValueChanged="ORMSettings_Changed"/>
-                                    <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                               Text="{Binding ElementName=ORMGlossDefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                </Grid>
+                                        <!-- Default Values Header -->
+                                        <TextBlock Text="Default Values (if texture missing)" FontWeight="SemiBold"
+                                                   Margin="0,8,0,4" FontSize="9"/>
 
-                                <!-- Metalness Default -->
-                                <Grid Margin="0,2,0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Metal Default" VerticalAlignment="Center"/>
-                                    <Slider x:Name="ORMMetalnessDefaultSlider" Grid.Column="1"
-                                            Minimum="0" Maximum="1" Value="0"
-                                            TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                            ValueChanged="ORMSettings_Changed"/>
-                                    <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                               Text="{Binding ElementName=ORMMetalnessDefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                </Grid>
+                                        <!-- AO Default -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="AO Default" VerticalAlignment="Center"/>
+                                            <Slider x:Name="ORMAODefaultSlider" Grid.Column="1"
+                                                    Minimum="0" Maximum="1" Value="1"
+                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                    ValueChanged="ORMSettings_Changed"/>
+                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
+                                                       Text="{Binding ElementName=ORMAODefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
+                                        </Grid>
+
+                                        <!-- Gloss Default -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Gloss Default" VerticalAlignment="Center"/>
+                                            <Slider x:Name="ORMGlossDefaultSlider" Grid.Column="1"
+                                                    Minimum="0" Maximum="1" Value="0.5"
+                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                    ValueChanged="ORMSettings_Changed"/>
+                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
+                                                       Text="{Binding ElementName=ORMGlossDefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
+                                        </Grid>
+
+                                        <!-- Metalness Default -->
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Metal Default" VerticalAlignment="Center"/>
+                                            <Slider x:Name="ORMMetalnessDefaultSlider" Grid.Column="1"
+                                                    Minimum="0" Maximum="1" Value="0"
+                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                    ValueChanged="ORMSettings_Changed"/>
+                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
+                                                       Text="{Binding ElementName=ORMMetalnessDefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Expander>
                             </StackPanel>
                         </Expander>
 

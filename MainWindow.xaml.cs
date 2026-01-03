@@ -2040,15 +2040,31 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void LoadORMSettingsToUI(Resources.MaterialORMSettings settings) {
             _isLoadingORMSettings = true;
             try {
+                // Load preset list
+                RefreshORMPresetComboBox();
+
+                // Select current preset
+                var presetName = settings.PresetName ?? "Standard";
+                for (int i = 0; i < ORMPresetComboBox.Items.Count; i++) {
+                    if (ORMPresetComboBox.Items[i] is TextureConversion.Core.ORMSettings preset &&
+                        preset.Name == presetName) {
+                        ORMPresetComboBox.SelectedIndex = i;
+                        break;
+                    }
+                }
+
+                // Load values from effective settings
+                var effectiveSettings = settings.GetEffectiveSettings();
+
                 ORMEnabledCheckBox.IsChecked = settings.Enabled;
-                ORMApplyToksvigCheckBox.IsChecked = settings.ApplyToksvig;
-                ORMAOBiasSlider.Value = settings.AOBias;
-                ORMAODefaultSlider.Value = settings.AODefault;
-                ORMGlossDefaultSlider.Value = settings.GlossDefault;
-                ORMMetalnessDefaultSlider.Value = settings.MetalnessDefault;
+                ORMApplyToksvigCheckBox.IsChecked = effectiveSettings.ToksvigEnabled;
+                ORMAOBiasSlider.Value = effectiveSettings.AOBias;
+                ORMAODefaultSlider.Value = effectiveSettings.AODefault;
+                ORMGlossDefaultSlider.Value = effectiveSettings.GlossDefault;
+                ORMMetalnessDefaultSlider.Value = effectiveSettings.MetallicDefault;
 
                 // Packing Mode
-                ORMPackingModeComboBox.SelectedIndex = settings.PackingMode switch {
+                ORMPackingModeComboBox.SelectedIndex = effectiveSettings.PackingMode switch {
                     TextureConversion.Core.ChannelPackingMode.Auto => 0,
                     TextureConversion.Core.ChannelPackingMode.None => 1,
                     TextureConversion.Core.ChannelPackingMode.OG => 2,
@@ -2058,15 +2074,91 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 };
 
                 // AO Processing Mode
-                ORMAOProcessingComboBox.SelectedIndex = settings.AOProcessingMode switch {
+                ORMAOProcessingComboBox.SelectedIndex = effectiveSettings.AOProcessing switch {
                     TextureConversion.Core.AOProcessingMode.None => 0,
                     TextureConversion.Core.AOProcessingMode.BiasedDarkening => 1,
                     TextureConversion.Core.AOProcessingMode.Percentile => 2,
                     _ => 1
                 };
+
+                // Update preset description
+                UpdateORMPresetDescription(effectiveSettings);
             } finally {
                 _isLoadingORMSettings = false;
             }
+        }
+
+        private void RefreshORMPresetComboBox() {
+            var currentSelection = ORMPresetComboBox.SelectedItem as TextureConversion.Core.ORMSettings;
+            ORMPresetComboBox.Items.Clear();
+
+            var presets = TextureConversion.Settings.ORMPresetManager.Instance.GetAllPresets();
+            foreach (var preset in presets) {
+                ORMPresetComboBox.Items.Add(preset);
+            }
+
+            ORMPresetComboBox.DisplayMemberPath = "Name";
+
+            // Restore selection
+            if (currentSelection != null) {
+                for (int i = 0; i < ORMPresetComboBox.Items.Count; i++) {
+                    if (ORMPresetComboBox.Items[i] is TextureConversion.Core.ORMSettings preset &&
+                        preset.Name == currentSelection.Name) {
+                        ORMPresetComboBox.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void UpdateORMPresetDescription(TextureConversion.Core.ORMSettings settings) {
+            ORMPresetDescriptionText.Text = settings.Description;
+        }
+
+        private void ORMPreset_Changed(object sender, SelectionChangedEventArgs e) {
+            if (_isLoadingORMSettings) return;
+            if (ORMPresetComboBox.SelectedItem is not TextureConversion.Core.ORMSettings selectedPreset) return;
+            if (MaterialsDataGrid.SelectedItem is not MaterialResource selectedMaterial) return;
+
+            _isLoadingORMSettings = true;
+            try {
+                // Apply preset
+                selectedMaterial.ORMSettings.ApplyPreset(selectedPreset.Name);
+
+                // Update UI
+                var settings = selectedMaterial.ORMSettings.GetEffectiveSettings();
+                ORMApplyToksvigCheckBox.IsChecked = settings.ToksvigEnabled;
+                ORMAOBiasSlider.Value = settings.AOBias;
+                ORMAODefaultSlider.Value = settings.AODefault;
+                ORMGlossDefaultSlider.Value = settings.GlossDefault;
+                ORMMetalnessDefaultSlider.Value = settings.MetallicDefault;
+
+                ORMPackingModeComboBox.SelectedIndex = settings.PackingMode switch {
+                    TextureConversion.Core.ChannelPackingMode.Auto => 0,
+                    TextureConversion.Core.ChannelPackingMode.None => 1,
+                    TextureConversion.Core.ChannelPackingMode.OG => 2,
+                    TextureConversion.Core.ChannelPackingMode.OGM => 3,
+                    TextureConversion.Core.ChannelPackingMode.OGMH => 4,
+                    _ => 0
+                };
+
+                ORMAOProcessingComboBox.SelectedIndex = settings.AOProcessing switch {
+                    TextureConversion.Core.AOProcessingMode.None => 0,
+                    TextureConversion.Core.AOProcessingMode.BiasedDarkening => 1,
+                    TextureConversion.Core.AOProcessingMode.Percentile => 2,
+                    _ => 1
+                };
+
+                UpdateORMPresetDescription(settings);
+            } finally {
+                _isLoadingORMSettings = false;
+            }
+        }
+
+        private void ORMEditPreset_Click(object sender, RoutedEventArgs e) {
+            // TODO: Open ORM Preset Editor window
+            MessageBox.Show("ORM Preset Editor coming soon!\n\nPresets are stored in:\n%AppData%/TexTool/orm_presets.json",
+                "ORM Presets", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ORMSettings_Changed(object sender, RoutedEventArgs e) {
@@ -2076,6 +2168,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void ORMSettings_Changed(object sender, SelectionChangedEventArgs e) {
             if (_isLoadingORMSettings) return;
+            // Skip if this is the preset combo box
+            if (sender == ORMPresetComboBox) return;
             SaveORMSettingsFromUI();
         }
 
@@ -2088,14 +2182,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (MaterialsDataGrid.SelectedItem is not MaterialResource selectedMaterial) return;
 
             selectedMaterial.ORMSettings.Enabled = ORMEnabledCheckBox.IsChecked ?? true;
-            selectedMaterial.ORMSettings.ApplyToksvig = ORMApplyToksvigCheckBox.IsChecked ?? true;
-            selectedMaterial.ORMSettings.AOBias = (float)ORMAOBiasSlider.Value;
-            selectedMaterial.ORMSettings.AODefault = (float)ORMAODefaultSlider.Value;
-            selectedMaterial.ORMSettings.GlossDefault = (float)ORMGlossDefaultSlider.Value;
-            selectedMaterial.ORMSettings.MetalnessDefault = (float)ORMMetalnessDefaultSlider.Value;
+            selectedMaterial.ORMSettings.Settings.ToksvigEnabled = ORMApplyToksvigCheckBox.IsChecked ?? true;
+            selectedMaterial.ORMSettings.Settings.AOBias = (float)ORMAOBiasSlider.Value;
+            selectedMaterial.ORMSettings.Settings.AODefault = (float)ORMAODefaultSlider.Value;
+            selectedMaterial.ORMSettings.Settings.GlossDefault = (float)ORMGlossDefaultSlider.Value;
+            selectedMaterial.ORMSettings.Settings.MetallicDefault = (float)ORMMetalnessDefaultSlider.Value;
 
             // Packing Mode
-            selectedMaterial.ORMSettings.PackingMode = ORMPackingModeComboBox.SelectedIndex switch {
+            selectedMaterial.ORMSettings.Settings.PackingMode = ORMPackingModeComboBox.SelectedIndex switch {
                 0 => TextureConversion.Core.ChannelPackingMode.Auto,
                 1 => TextureConversion.Core.ChannelPackingMode.None,
                 2 => TextureConversion.Core.ChannelPackingMode.OG,
@@ -2105,12 +2199,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             };
 
             // AO Processing Mode
-            selectedMaterial.ORMSettings.AOProcessingMode = ORMAOProcessingComboBox.SelectedIndex switch {
+            selectedMaterial.ORMSettings.Settings.AOProcessing = ORMAOProcessingComboBox.SelectedIndex switch {
                 0 => TextureConversion.Core.AOProcessingMode.None,
                 1 => TextureConversion.Core.AOProcessingMode.BiasedDarkening,
                 2 => TextureConversion.Core.AOProcessingMode.Percentile,
                 _ => TextureConversion.Core.AOProcessingMode.BiasedDarkening
             };
+
+            // Mark as custom (modified from preset)
+            selectedMaterial.ORMSettings.PresetName = null;
         }
 
         private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {

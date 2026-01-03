@@ -1641,17 +1641,36 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
 private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
             if (isViewerVisible == true) {
-                ToggleViewButton.Content = ">";
+                // Save current width before hiding
+                if (PreviewColumn.Width.Value > 0) {
+                    AppSettings.Default.RightPanelPreviousWidth = PreviewColumn.Width.Value;
+                }
+                AppSettings.Default.RightPanelWidth = 0; // Mark as hidden
+                ToggleViewButton.Content = "►";
                 PreviewColumn.Width = new GridLength(0);
+                PreviewColumn.MinWidth = 0;
             } else {
-                ToggleViewButton.Content = "<";
-                PreviewColumn.Width = new GridLength(300); // ������� �������� ������
+                // Restore saved width
+                double restoreWidth = AppSettings.Default.RightPanelPreviousWidth;
+                if (restoreWidth < 256) restoreWidth = 300; // Use default if too small
+                ToggleViewButton.Content = "◄";
+                PreviewColumn.MinWidth = 256;
+                PreviewColumn.Width = new GridLength(restoreWidth);
+                AppSettings.Default.RightPanelWidth = restoreWidth;
             }
             isViewerVisible = !isViewerVisible;
         }
 
+        private void RightPanelSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+            // Save the new width when user finishes dragging the splitter
+            if (PreviewColumn.Width.Value > 0) {
+                AppSettings.Default.RightPanelWidth = PreviewColumn.Width.Value;
+                AppSettings.Default.RightPanelPreviousWidth = PreviewColumn.Width.Value;
+            }
+        }
+
         /// <summary>
-        /// ���������������� ���������� ���������� ��� TexturesDataGrid
+        /// Оптимизированная сортировка коллекции для TexturesDataGrid
         /// </summary>
         
 

@@ -302,6 +302,28 @@ namespace AssetProcessor.Settings {
 
         public bool HasStoredPlaycanvasApiKey => !string.IsNullOrEmpty((string)this[nameof(PlaycanvasApiKey)]);
 
+        /// <summary>
+        /// Ширина правой панели (Preview/Settings)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("350")]
+        public double RightPanelWidth {
+            get => (double)this[nameof(RightPanelWidth)];
+            set => this[nameof(RightPanelWidth)] = value;
+        }
+
+        /// <summary>
+        /// Предыдущая ширина правой панели (для восстановления после скрытия)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("350")]
+        public double RightPanelPreviousWidth {
+            get => (double)this[nameof(RightPanelPreviousWidth)];
+            set => this[nameof(RightPanelPreviousWidth)] = value;
+        }
+
         #region B2/CDN Upload Settings
 
         /// <summary>

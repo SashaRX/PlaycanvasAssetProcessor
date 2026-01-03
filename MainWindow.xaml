@@ -441,10 +441,18 @@
                             <DataGrid.Columns>
                                 <DataGridCheckBoxColumn Header="Export" Binding="{Binding ExportToServer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="50" MinWidth="40">
                                     <DataGridCheckBoxColumn.ElementStyle>
-                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}"/>
+                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+                                        </Style>
                                     </DataGridCheckBoxColumn.ElementStyle>
                                     <DataGridCheckBoxColumn.EditingElementStyle>
-                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}"/>
+                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+                                        </Style>
                                     </DataGridCheckBoxColumn.EditingElementStyle>
                                 </DataGridCheckBoxColumn>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="35" MinWidth="30" />
@@ -598,10 +606,18 @@
                             <DataGrid.Columns>
                                 <DataGridCheckBoxColumn Header="Export" Binding="{Binding ExportToServer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="50" MinWidth="40">
                                     <DataGridCheckBoxColumn.ElementStyle>
-                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}"/>
+                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+                                        </Style>
                                     </DataGridCheckBoxColumn.ElementStyle>
                                     <DataGridCheckBoxColumn.EditingElementStyle>
-                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}"/>
+                                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+                                        </Style>
                                     </DataGridCheckBoxColumn.EditingElementStyle>
                                 </DataGridCheckBoxColumn>
                                 <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="35" MinWidth="30" />
@@ -707,10 +723,18 @@
                         <DataGrid.Columns>
                             <DataGridCheckBoxColumn Header="Export" Binding="{Binding ExportToServer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="50" MinWidth="40">
                                 <DataGridCheckBoxColumn.ElementStyle>
-                                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}"/>
+                                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+                                    </Style>
                                 </DataGridCheckBoxColumn.ElementStyle>
                                 <DataGridCheckBoxColumn.EditingElementStyle>
-                                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}"/>
+                                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+                                    </Style>
                                 </DataGridCheckBoxColumn.EditingElementStyle>
                             </DataGridCheckBoxColumn>
                             <DataGridTextColumn Header="№" Binding="{Binding Index}" IsReadOnly="True" Width="35" MinWidth="30"/>

@@ -173,7 +173,7 @@
             <TextBlock x:Name="ProgressTextBlock"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
-                       Foreground="Black"
+                       Foreground="{DynamicResource ThemeForeground}"
                        FontWeight="Bold"
                        Text="{Binding ProgressText}"/>
         </Grid>

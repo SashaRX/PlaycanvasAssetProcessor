@@ -2126,9 +2126,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ORMEnabledCheckBox.IsChecked = settings.Enabled;
                 ORMApplyToksvigCheckBox.IsChecked = effectiveSettings.ToksvigEnabled;
                 ORMAOBiasSlider.Value = effectiveSettings.AOBias;
-                ORMAODefaultSlider.Value = effectiveSettings.AODefault;
-                ORMGlossDefaultSlider.Value = effectiveSettings.GlossDefault;
-                ORMMetalnessDefaultSlider.Value = effectiveSettings.MetallicDefault;
 
                 // Packing Mode
                 ORMPackingModeComboBox.SelectedIndex = effectiveSettings.PackingMode switch {
@@ -2196,9 +2193,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 var settings = selectedMaterial.ORMSettings.GetEffectiveSettings();
                 ORMApplyToksvigCheckBox.IsChecked = settings.ToksvigEnabled;
                 ORMAOBiasSlider.Value = settings.AOBias;
-                ORMAODefaultSlider.Value = settings.AODefault;
-                ORMGlossDefaultSlider.Value = settings.GlossDefault;
-                ORMMetalnessDefaultSlider.Value = settings.MetallicDefault;
 
                 ORMPackingModeComboBox.SelectedIndex = settings.PackingMode switch {
                     TextureConversion.Core.ChannelPackingMode.Auto => 0,
@@ -2274,9 +2268,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             selectedMaterial.ORMSettings.Enabled = ORMEnabledCheckBox.IsChecked ?? true;
             selectedMaterial.ORMSettings.Settings.ToksvigEnabled = ORMApplyToksvigCheckBox.IsChecked ?? true;
             selectedMaterial.ORMSettings.Settings.AOBias = (float)ORMAOBiasSlider.Value;
-            selectedMaterial.ORMSettings.Settings.AODefault = (float)ORMAODefaultSlider.Value;
-            selectedMaterial.ORMSettings.Settings.GlossDefault = (float)ORMGlossDefaultSlider.Value;
-            selectedMaterial.ORMSettings.Settings.MetallicDefault = (float)ORMMetalnessDefaultSlider.Value;
 
             // Packing Mode
             selectedMaterial.ORMSettings.Settings.PackingMode = ORMPackingModeComboBox.SelectedIndex switch {
@@ -4029,15 +4020,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Auto-detect packing mode
                 ChannelPackingMode mode = ormTextureService.DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
 
-                // If only one texture or none - don't create ORM
+                // If insufficient textures for ORM - don't create
                 if (mode == ChannelPackingMode.None) {
                     // mapType is already set by workflow detection above
-                    MessageBox.Show($"Material ... textures for ORM packing.\n\n" +
+                    var aoStatus = aoTexture != null ? $"Found: {aoTexture.Name}" : "Missing";
+                    var glossStatus = glossTexture != null ? $"Found: {glossTexture.Name}" : "Missing";
+                    var metallicStatus = metalnessTexture != null ? $"Found: {metalnessTexture.Name}" : "Missing";
+
+                    MessageBox.Show($"Cannot create ORM texture - insufficient textures.\n\n" +
                                   $"{workflowInfo}\n\n" +
-                                  $"AO: {(aoTexture != null ? "?" : "?")}\n" +
-                                  $"Gloss: {(glossTexture != null ? "?" : "?")}\n" +
-                                  $"{mapType}: {(metalnessTexture != null ? "?" : "?")}\n\n" +
-                                  $"At least 2 textures are required.",
+                                  $"AO: {aoStatus}\n" +
+                                  $"Gloss: {glossStatus}\n" +
+                                  $"{mapType}: {metallicStatus}\n\n" +
+                                  $"Required combinations:\n" +
+                                  $"  - OGM: AO + Gloss + Metallic\n" +
+                                  $"  - OG: AO + Gloss",
                         "Insufficient Textures", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }

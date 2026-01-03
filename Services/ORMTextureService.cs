@@ -19,20 +19,19 @@ public class ORMTextureService : IORMTextureService {
     }
 
     public ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {
-        int count = 0;
-        if (ao != null) count++;
-        if (gloss != null) count++;
-        if (metallic != null) count++;
-
-        if (count < 2) return ChannelPackingMode.None;
-
+        // OGM требует все три текстуры: AO, Gloss и Metallic
         if (ao != null && gloss != null && metallic != null) {
             return ChannelPackingMode.OGM;
-        } else if (ao != null && gloss != null) {
-            return ChannelPackingMode.OG;
-        } else {
-            return ChannelPackingMode.OGM;
         }
+
+        // OG требует AO и Gloss (без Metallic)
+        if (ao != null && gloss != null) {
+            return ChannelPackingMode.OG;
+        }
+
+        // Для остальных комбинаций (AO+Metallic, Gloss+Metallic, только 1 текстура)
+        // нет подходящего режима упаковки — возвращаем None
+        return ChannelPackingMode.None;
     }
 
     public TextureResource? FindTextureById(int? mapId, IEnumerable<TextureResource> textures) {

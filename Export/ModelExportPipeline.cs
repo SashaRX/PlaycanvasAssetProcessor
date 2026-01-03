@@ -324,9 +324,19 @@ public class ModelExportPipeline {
             if (material.MetalnessMapId.HasValue && textureDict.TryGetValue(material.MetalnessMapId.Value, out var metal))
                 metallicTexture = metal;
 
+            // Логируем найденные текстуры для ORM
+            Logger.Info($"ORM check for material [{material.ID}] {material.Name}:");
+            Logger.Info($"  AOMapId={material.AOMapId}, Found={aoTexture != null}, Path={aoTexture?.Path ?? "null"}, Exists={aoTexture?.Path != null && File.Exists(aoTexture.Path)}");
+            Logger.Info($"  GlossMapId={material.GlossMapId}, Found={glossTexture != null}, Path={glossTexture?.Path ?? "null"}, Exists={glossTexture?.Path != null && File.Exists(glossTexture.Path)}");
+            Logger.Info($"  MetalnessMapId={material.MetalnessMapId}, Found={metallicTexture != null}, Path={metallicTexture?.Path ?? "null"}, Exists={metallicTexture?.Path != null && File.Exists(metallicTexture.Path)}");
+
             // Определяем режим пакинга
             var packingMode = DeterminePackingMode(aoTexture, glossTexture, metallicTexture);
-            if (packingMode == ChannelPackingMode.None) continue;
+            Logger.Info($"  -> PackingMode = {packingMode}");
+            if (packingMode == ChannelPackingMode.None) {
+                Logger.Warn($"  -> SKIPPING ORM: insufficient textures with valid files");
+                continue;
+            }
 
             var ormFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}");
             var suffix = packingMode switch {

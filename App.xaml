@@ -481,7 +481,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}"
-                                TextElement.Foreground="{DynamicResource ThemeForeground}">
+                                TextElement.Foreground="{TemplateBinding Foreground}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -489,13 +489,13 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="HeaderText" Grid.Column="0"
                                            Text="{TemplateBinding Content}"
-                                           Foreground="{DynamicResource ThemeForeground}"
+                                           Foreground="{TemplateBinding Foreground}"
                                            VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis"/>
                                 <Path x:Name="SortArrow" Grid.Column="1"
                                       Visibility="Collapsed"
                                       Data="M 0 4 L 4 0 L 8 4 Z"
-                                      Fill="{DynamicResource ThemeForeground}"
+                                      Fill="{TemplateBinding Foreground}"
                                       Margin="4,0,0,0"
                                       VerticalAlignment="Center"/>
                                 <Thumb x:Name="PART_LeftHeaderGripper" HorizontalAlignment="Left" Style="{x:Null}" Cursor="SizeWE" Width="3" Background="Transparent" Margin="-3,0,0,0"/>

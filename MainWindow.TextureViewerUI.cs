@@ -26,7 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
+using System.Windows.Controls.Primitives; // DragDeltaEventArgs пїЅпїЅпїЅ GridSplitter
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -52,7 +52,7 @@ namespace AssetProcessor {
             if (sender is ToggleButton button) {
                 string? channel = button.Tag.ToString();
                 if (button.IsChecked == true) {
-                    // Сброс всех остальных кнопок (including NormalButton)
+                    // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ (including NormalButton)
                     isUpdatingChannelButtons = true;
                     try {
                         RChannelButton.IsChecked = button == RChannelButton;
@@ -64,12 +64,12 @@ namespace AssetProcessor {
                         isUpdatingChannelButtons = false;
                     }
 
-                    // Применяем фильтр
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
                     if (!string.IsNullOrEmpty(channel)) {
                         await FilterChannelAsync(channel);
                     }
                 } else {
-                    // Сбрасываем фильтр, если кнопка была отжата
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
                     HandleChannelMaskCleared();
                 }
             }
@@ -210,6 +210,26 @@ namespace AssetProcessor {
             ClearPreviewReferenceSize();
             HideMipmapControls();
             UpdatePreviewSourceControls();
+            ClearHistogram();
+        }
+
+        private void ClearHistogram() {
+            // Create empty dark PlotModel for histogram
+            var emptyModel = new PlotModel {
+                Background = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
+                PlotAreaBackground = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
+                PlotAreaBorderColor = OxyColor.FromRgb(0x3F, 0x3F, 0x46),
+                PlotAreaBorderThickness = new OxyThickness(0)
+            };
+            HistogramPlotView.Model = emptyModel;
+
+            // Reset statistics
+            HistogramMinTextBlock.Text = "0";
+            HistogramMaxTextBlock.Text = "255";
+            HistogramMeanTextBlock.Text = "127.5";
+            HistogramMedianTextBlock.Text = "128";
+            HistogramStdDevTextBlock.Text = "45.2";
+            HistogramPixelsTextBlock.Text = "0";
         }
 
         private void ClearPreviewReferenceSize() {
@@ -669,18 +689,18 @@ namespace AssetProcessor {
                     }
                 } else if (texturePreviewService.IsUsingD3D11Renderer && !string.IsNullOrEmpty(texturePreviewService.CurrentLoadedKtx2Path)) {
                     // New method: Reload KTX2 natively to D3D11 (only if not already loaded or loading)
-                    // Проверяем, не загружается ли уже этот файл через LoadKtx2ToD3D11ViewerAsync
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ LoadKtx2ToD3D11ViewerAsync
                     if (IsKtx2Loading(texturePreviewService.CurrentLoadedKtx2Path)) {
                         logger.Info($"KTX2 file already loading via LoadKtx2ToD3D11ViewerAsync, skipping reload in SetPreviewSourceMode: {texturePreviewService.CurrentLoadedKtx2Path}");
-                        return; // Выходим, не вызывая LoadKtx2ToD3D11ViewerAsync
+                        return; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ LoadKtx2ToD3D11ViewerAsync
                     }
 
-                    // Проверяем, не загружена ли уже текстура в renderer (включая загрузку через ViewModel_TexturePreviewLoaded)
+                    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ renderer (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ ViewModel_TexturePreviewLoaded)
                     if (D3D11TextureViewer?.Renderer != null) {
                         string? currentTexturePath = D3D11TextureViewer.Renderer.GetCurrentTexturePath();
                         if (currentTexturePath != null && string.Equals(currentTexturePath, texturePreviewService.CurrentLoadedKtx2Path, StringComparison.OrdinalIgnoreCase)) {
                             logger.Info($"KTX2 already loaded in D3D11 renderer, skipping reload in SetPreviewSourceMode: {texturePreviewService.CurrentLoadedKtx2Path}");
-                            // Обновляем UI, но не перезагружаем текстуру
+                            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI, пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                             UpdateD3D11MipmapControls(D3D11TextureViewer.Renderer.MipCount);
                             UpdateHistogramCorrectionButtonState();
                             return;
@@ -761,8 +781,8 @@ namespace AssetProcessor {
                 MipmapLevelSlider.Value = 0;
                 MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
                 MipmapInfoTextBlock.Text = mipmaps.Count > 0
-                    ? $"Мип-уровень 0 из {Math.Max(0, mipmaps.Count - 1)} — {mipmaps[0].Width}?{mipmaps[0].Height}"
-                    : "Мип-уровни недоступны";
+                    ? $"пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ 0 пїЅпїЅ {Math.Max(0, mipmaps.Count - 1)} пїЅ {mipmaps[0].Width}?{mipmaps[0].Height}"
+                    : "пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -791,7 +811,7 @@ namespace AssetProcessor {
 
                 int width = D3D11TextureViewer.Renderer.TextureWidth;
                 int height = D3D11TextureViewer.Renderer.TextureHeight;
-                MipmapInfoTextBlock.Text = $"Мип-уровень 0 из {Math.Max(0, mipCount - 1)} — {width}?{height} (D3D11)";
+                MipmapInfoTextBlock.Text = $"пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ 0 пїЅпїЅ {Math.Max(0, mipCount - 1)} пїЅ {width}?{height} (D3D11)";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -800,7 +820,7 @@ namespace AssetProcessor {
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
                 int maxLevel = Math.Max(0, totalLevels - 1);
-                MipmapInfoTextBlock.Text = $"Мип-уровень {mipLevel.Level} из {maxLevel} — {mipLevel.Width}?{mipLevel.Height}";
+                MipmapInfoTextBlock.Text = $"пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ {mipLevel.Level} пїЅпїЅ {maxLevel} пїЅ {mipLevel.Width}?{mipLevel.Height}";
             }
         }
 
@@ -821,7 +841,7 @@ namespace AssetProcessor {
             var mip = texturePreviewService.CurrentKtxMipmaps[clampedLevel];
             texturePreviewService.OriginalBitmapSource = mip.Bitmap.Clone();
 
-            // Обновляем изображение - use BeginInvoke to avoid deadlock
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - use BeginInvoke to avoid deadlock
             _ = Dispatcher.BeginInvoke(new Action(() => {
                 UpdatePreviewImage(texturePreviewService.OriginalBitmapSource, setReference: clampedLevel == 0, preserveViewport: false);
 
@@ -888,7 +908,7 @@ namespace AssetProcessor {
             if (texturePreviewService.OriginalBitmapSource != null) {
                 BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
 
-                // Обновляем UI в основном потоке - use BeginInvoke to avoid deadlock
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ - use BeginInvoke to avoid deadlock
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     UpdatePreviewImage(filteredBitmap, setReference: false, preserveViewport: true);
 
@@ -900,7 +920,7 @@ namespace AssetProcessor {
                         logger.Info($"Updated WPF Image in FilterChannelAsync: {channel}");
                     }
 
-                    UpdateHistogram(filteredBitmap, true);  // Обновление гистограммы
+                    UpdateHistogram(filteredBitmap, true);  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 }));
             }
         }
@@ -926,7 +946,7 @@ namespace AssetProcessor {
                         int mipCount = D3D11TextureViewer.Renderer.MipCount;
                         int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
                         int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
-                        MipmapInfoTextBlock.Text = $"Мип-уровень {newLevel} из {Math.Max(0, mipCount - 1)} — {width}?{height} (D3D11)";
+                        MipmapInfoTextBlock.Text = $"пїЅпїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ {newLevel} пїЅпїЅ {Math.Max(0, mipCount - 1)} пїЅ {width}?{height} (D3D11)";
                     }
 
                     logger.Info($"D3D11 mip level changed to {newLevel}");

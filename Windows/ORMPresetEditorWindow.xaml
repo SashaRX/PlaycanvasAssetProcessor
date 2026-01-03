@@ -1,0 +1,358 @@
+<Window x:Class="AssetProcessor.Windows.ORMPresetEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
+        mc:Ignorable="d"
+        Title="ORM Preset Editor" Height="700" Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+
+    <Window.Resources>
+        <ObjectDataProvider x:Key="ChannelPackingModeValues" MethodName="GetValues" ObjectType="{x:Type core:ChannelPackingMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ChannelPackingMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="FilterTypeValues" MethodName="GetValues" ObjectType="{x:Type core:FilterType}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:FilterType"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="AOProcessingModeValues" MethodName="GetValues" ObjectType="{x:Type core:AOProcessingMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:AOProcessingMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="ToksvigCalculationModeValues" MethodName="GetValues" ObjectType="{x:Type core:ToksvigCalculationMode}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:ToksvigCalculationMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="CompressionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionFormat}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="core:CompressionFormat"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="15">
+            <!-- Preset Info -->
+            <GroupBox Header="Preset Info" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="Name:" Margin="0,0,0,3"/>
+                    <TextBox x:Name="NameTextBox" Margin="0,0,0,10"/>
+                    <TextBlock Text="Description:" Margin="0,0,0,3"/>
+                    <TextBox x:Name="DescriptionTextBox" Height="50" TextWrapping="Wrap" AcceptsReturn="True"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Packing Mode -->
+            <GroupBox Header="Channel Packing" Margin="0,0,0,10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Packing Mode:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="PackingModeComboBox"
+                                  ItemsSource="{Binding Source={StaticResource ChannelPackingModeValues}}"
+                                  ToolTip="Auto: detect from available textures. OG: AO+Gloss. OGM: AO+Gloss+Metallic. OGMH: +Height"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- AO Channel Settings -->
+            <GroupBox Header="AO Channel (Red)" Margin="0,0,0,10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="AOFilterComboBox"
+                                  ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Processing:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="AOProcessingComboBox"
+                                  ItemsSource="{Binding Source={StaticResource AOProcessingModeValues}}"
+                                  ToolTip="BiasedDarkening: preserves dark details in mipmaps"/>
+                    </Grid>
+
+                    <TextBlock Text="AO Bias (0.0-1.0):" Margin="0,0,0,3"
+                               ToolTip="Bias towards minimum value for dark detail preservation"/>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="AOBiasSlider" Grid.Column="0"
+                                Minimum="0" Maximum="1" Value="0.5"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AOBiasSlider, Path=Value, StringFormat={}{0:F2}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="Default Value (when no AO texture):" Margin="0,0,0,3"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="AODefaultSlider" Grid.Column="0"
+                                Minimum="0" Maximum="1" Value="1.0"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AODefaultSlider, Path=Value, StringFormat={}{0:F2}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Gloss Channel Settings -->
+            <GroupBox Header="Gloss Channel (Green/Alpha)" Margin="0,0,0,10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="GlossFilterComboBox"
+                                  ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"/>
+                    </Grid>
+
+                    <!-- Toksvig -->
+                    <CheckBox x:Name="ToksvigEnabledCheckBox" Content="Enable Toksvig Correction" Margin="0,5,0,5"
+                              Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"
+                              ToolTip="Apply Toksvig variance-based gloss adjustment for specular anti-aliasing"/>
+
+                    <StackPanel x:Name="ToksvigSettingsPanel" Margin="20,0,0,0">
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Mode:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="1" x:Name="ToksvigModeComboBox"
+                                      ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"/>
+                        </Grid>
+
+                        <TextBlock Text="Power (0.5-8.0):" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigPowerSlider" Grid.Column="0"
+                                    Minimum="0.5" Maximum="8" Value="4.0"
+                                    TickFrequency="0.5" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigPowerSlider, Path=Value, StringFormat={}{0:F1}}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Min Mip Level:" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ToksvigMinMipSlider" Grid.Column="0"
+                                    Minimum="0" Maximum="10" Value="0"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ToksvigMinMipSlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="ToksvigEnergyPreservingCheckBox" Content="Energy Preserving" IsChecked="True" Margin="0,0,0,3"/>
+                        <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance" IsChecked="True"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Default Value (when no Gloss texture):" Margin="0,10,0,3"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="GlossDefaultSlider" Grid.Column="0"
+                                Minimum="0" Maximum="1" Value="0.5"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=GlossDefaultSlider, Path=Value, StringFormat={}{0:F2}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Metallic Channel Settings -->
+            <GroupBox Header="Metallic Channel (Blue)" Margin="0,0,0,10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Filter:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="MetallicFilterComboBox"
+                                  ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
+                                  ToolTip="Box filter recommended for metallic (binary values)"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Processing:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="MetallicProcessingComboBox"
+                                  ItemsSource="{Binding Source={StaticResource AOProcessingModeValues}}"/>
+                    </Grid>
+
+                    <TextBlock Text="Default Value (when no Metallic texture):" Margin="0,0,0,3"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="MetallicDefaultSlider" Grid.Column="0"
+                                Minimum="0" Maximum="1" Value="0.0"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=MetallicDefaultSlider, Path=Value, StringFormat={}{0:F2}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Height Channel Settings -->
+            <GroupBox Header="Height Channel (Alpha for OGMH)" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="Default Value (when no Height texture):" Margin="0,0,0,3"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="HeightDefaultSlider" Grid.Column="0"
+                                Minimum="0" Maximum="1" Value="0.5"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ElementName=HeightDefaultSlider, Path=Value, StringFormat={}{0:F2}}"
+                                   Width="40" TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Compression Settings -->
+            <GroupBox Header="Compression" Margin="0,0,0,10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Format:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="CompressionFormatComboBox"
+                                  ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
+                                  SelectionChanged="CompressionFormatComboBox_SelectionChanged"/>
+                    </Grid>
+
+                    <!-- ETC1S Options -->
+                    <StackPanel x:Name="ETC1SPanel" Margin="0,5,0,0">
+                        <TextBlock Text="Compression Level (0-5):" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ETC1SCompressLevelSlider" Grid.Column="0"
+                                    Minimum="0" Maximum="5" Value="1"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SCompressLevelSlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <TextBlock Text="Quality (1-255):" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ETC1SQualitySlider" Grid.Column="0"
+                                    Minimum="1" Maximum="255" Value="128"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=ETC1SQualitySlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="ETC1SPerceptualCheckBox" Content="Perceptual Mode" Margin="0,0,0,3"/>
+                    </StackPanel>
+
+                    <!-- UASTC Options -->
+                    <StackPanel x:Name="UASTCPanel" Visibility="Collapsed" Margin="0,5,0,0">
+                        <TextBlock Text="Quality (0-4):" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="UASTCQualitySlider" Grid.Column="0"
+                                    Minimum="0" Maximum="4" Value="2"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCQualitySlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="UASTCRDOCheckBox" Content="Enable RDO" Margin="0,0,0,3"/>
+
+                        <TextBlock Text="RDO Lambda (0.1-10.0):" Margin="0,0,0,3"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="UASTCRDOLambdaSlider" Grid.Column="0"
+                                    Minimum="0.1" Maximum="10" Value="1.0"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,10,0"
+                                    IsEnabled="{Binding ElementName=UASTCRDOCheckBox, Path=IsChecked}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCRDOLambdaSlider, Path=Value, StringFormat={}{0:F1}}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+
+                        <CheckBox x:Name="UASTCZstdCheckBox" Content="Enable Zstd Supercompression" IsChecked="True" Margin="0,0,0,3"/>
+
+                        <TextBlock Text="Zstd Level (1-22):" Margin="0,0,0,3"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="UASTCZstdLevelSlider" Grid.Column="0"
+                                    Minimum="1" Maximum="22" Value="3"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,10,0"
+                                    IsEnabled="{Binding ElementName=UASTCZstdCheckBox, Path=IsChecked}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ElementName=UASTCZstdLevelSlider, Path=Value}"
+                                       Width="40" TextAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button Content="Save" Width="80" Margin="0,0,10,0" Click="Save_Click" IsDefault="True"/>
+                <Button Content="Cancel" Width="80" Click="Cancel_Click" IsCancel="True"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
              mc:Ignorable="d"
-             d:DesignHeight="800" d:DesignWidth="350">
+             d:DesignHeight="800" d:DesignWidth="350"
+             Background="{DynamicResource ThemeBackground}">
 
     <UserControl.Resources>
         <ObjectDataProvider x:Key="CompressionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionFormat}">

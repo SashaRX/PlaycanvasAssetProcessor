@@ -6,7 +6,8 @@
         mc:Ignorable="d"
         Title="Preset Management" Height="650" Width="550"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+        Background="{DynamicResource ThemeBackground}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
@@ -45,17 +46,17 @@
                             <DataTemplate>
                                 <StackPanel Margin="5">
                                     <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"/>
-                                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="Gray"
+                                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"
                                                Margin="0,2,0,0" TextWrapping="Wrap"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                        <TextBlock FontSize="9" Foreground="DarkGray">
+                                        <TextBlock FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}">
                                             <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
                                             <Run Text=", "/>
                                             <Run Text="{Binding OutputFormat, Mode=OneWay}"/>
                                             <Run Text=", Q:"/>
                                             <Run Text="{Binding QualityLevel, Mode=OneWay}"/>
                                         </TextBlock>
-                                        <TextBlock Text=" (Built-in)" FontSize="9" FontStyle="Italic" Foreground="DarkGray"
+                                        <TextBlock Text=" (Built-in)" FontSize="9" FontStyle="Italic" Foreground="{DynamicResource ThemeForegroundDim}"
                                                    Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -93,17 +94,17 @@
                             <DataTemplate>
                                 <StackPanel Margin="5">
                                     <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"/>
-                                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="Gray"
+                                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"
                                                Margin="0,2,0,0" TextWrapping="Wrap"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                        <TextBlock FontSize="9" Foreground="DarkGray">
+                                        <TextBlock FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}">
                                             <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
                                             <Run Text=", Toksvig: "/>
                                             <Run Text="{Binding ToksvigEnabled, Mode=OneWay}"/>
                                             <Run Text=", Mode: "/>
                                             <Run Text="{Binding PackingMode, Mode=OneWay}"/>
                                         </TextBlock>
-                                        <TextBlock Text=" (Built-in)" FontSize="9" FontStyle="Italic" Foreground="DarkGray"
+                                        <TextBlock Text=" (Built-in)" FontSize="9" FontStyle="Italic" Foreground="{DynamicResource ThemeForegroundDim}"
                                                    Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                     </StackPanel>
                                 </StackPanel>

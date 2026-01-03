@@ -7,7 +7,8 @@
         mc:Ignorable="d"
         Title="ORM Preset Editor" Height="700" Width="500"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+        Background="{DynamicResource ThemeBackground}">
 
     <Window.Resources>
         <ObjectDataProvider x:Key="ChannelPackingModeValues" MethodName="GetValues" ObjectType="{x:Type core:ChannelPackingMode}">

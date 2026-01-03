@@ -61,7 +61,7 @@
                             <TextBlock x:Name="ApiKeyVisibilityWarningText"
                                        Margin="0,4,0,0"
                                        FontSize="10"
-                                       Foreground="Gray"
+                                       Foreground="{DynamicResource ThemeForegroundDim}"
                                        Text="Значение ключа скрыто. Нажмите «Показать» для временного просмотра."/>
 
                             <Label Content="User Name:" />
@@ -101,7 +101,7 @@
                     <StackPanel Margin="10">
                         <GroupBox Header="KTX-Software Tool" Margin="0,0,0,6">
                             <StackPanel Margin="2">
-                                <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+                                <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
 
                                 <!-- ktx -->
                                 <TextBlock Text="ktx:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
@@ -134,7 +134,7 @@
                                             Height="22"
                                             FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="KtxStatusText" Margin="0,0,0,4" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}" TextWrapping="Wrap"/>
 
                                 <!-- Installation info -->
                                 <TextBlock Text="Install:" Margin="0,2,0,0" FontWeight="SemiBold" FontSize="10"/>
@@ -150,7 +150,7 @@
 
                         <GroupBox Header="Performance (Global)" Margin="0,0,0,6">
                             <StackPanel Margin="2">
-                                <TextBlock Text="Apply to all conversions" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+                                <TextBlock Text="Apply to all conversions" Margin="0,0,0,4" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -204,7 +204,7 @@
                                                    Margin="3,0,0,0"
                                                    VerticalAlignment="Center"
                                                    FontSize="9"
-                                                   Foreground="Gray"/>
+                                                   Foreground="{DynamicResource ThemeForegroundDim}"/>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
@@ -219,7 +219,7 @@
                     <StackPanel Margin="10">
                         <GroupBox Header="Model Conversion Tools" Margin="0,0,0,6">
                             <StackPanel Margin="2">
-                                <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="Gray"/>
+                                <TextBlock Text="Leave empty to use from PATH" Margin="0,0,0,4" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
 
                                 <!-- FBX2glTF -->
                                 <TextBlock Text="FBX2glTF:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
@@ -252,7 +252,7 @@
                                             Height="22"
                                             FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="FBX2glTFStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="FBX2glTFStatusText" Margin="0,0,0,4" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}" TextWrapping="Wrap"/>
 
                                 <!-- gltfpack -->
                                 <TextBlock Text="gltfpack:" Margin="0,0,0,2" FontWeight="SemiBold" FontSize="10"/>
@@ -285,7 +285,7 @@
                                             Height="22"
                                             FontSize="10"/>
                                 </Grid>
-                                <TextBlock x:Name="GltfPackStatusText" Margin="0,0,0,4" FontSize="9" Foreground="Gray" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="GltfPackStatusText" Margin="0,0,0,4" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}" TextWrapping="Wrap"/>
 
                                 <!-- Installation info -->
                                 <TextBlock Text="Install:" Margin="0,2,0,0" FontWeight="SemiBold" FontSize="10"/>
@@ -369,7 +369,7 @@
                                 <Button x:Name="TestB2ConnectionButton" Content="Test Connection"
                                         HorizontalAlignment="Left" Margin="0,8,0,4" Padding="12,4"
                                         Click="TestB2Connection_Click"/>
-                                <TextBlock x:Name="B2ConnectionStatusText" FontSize="10" Foreground="Gray" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="B2ConnectionStatusText" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,4"/>
                             </StackPanel>
                         </GroupBox>
 
@@ -429,7 +429,7 @@
                         </GroupBox>
 
                         <TextBlock Text="Note: Application Key is stored encrypted using Windows DPAPI"
-                                   FontSize="9" Foreground="Gray" Margin="0,4,0,0"/>
+                                   FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

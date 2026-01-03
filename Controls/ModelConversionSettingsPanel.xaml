@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:core="clr-namespace:AssetProcessor.ModelConversion.Core"
              mc:Ignorable="d"
-             d:DesignHeight="900" d:DesignWidth="280">
+             d:DesignHeight="900" d:DesignWidth="280"
+             Background="{DynamicResource ThemeBackground}">
 
     <UserControl.Resources>
         <!-- Enum Data Providers -->

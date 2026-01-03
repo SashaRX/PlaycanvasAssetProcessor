@@ -9,11 +9,12 @@ namespace AssetProcessor.Resources {
         public virtual bool IsORMTexture => false;
 
         // Cached brushes for row background (performance optimization - avoid DataTriggers)
-        private static readonly Brush OrmBrush = new SolidColorBrush(Color.FromRgb(0xC9, 0x63, 0x91));
-        private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0xFF));
-        private static readonly Brush AlbedoBrush = new SolidColorBrush(Color.FromRgb(0x9C, 0x7F, 0x25));
-        private static readonly Brush GlossBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
-        private static readonly Brush AoBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+        // Using darker colors for dark theme compatibility
+        private static readonly Brush OrmBrush = new SolidColorBrush(Color.FromRgb(0x8B, 0x45, 0x65));      // Dark pink/magenta
+        private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0x50, 0x50, 0xA0));   // Dark blue
+        private static readonly Brush AlbedoBrush = new SolidColorBrush(Color.FromRgb(0x6B, 0x5A, 0x1A));   // Dark gold/brown
+        private static readonly Brush GlossBrush = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));    // Dark gray
+        private static readonly Brush AoBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x4A, 0x4A));       // Dark gray for AO
 
         // Theme-aware default brush (from Application resources)
         private static Brush DefaultRowBrush =>

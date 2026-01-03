@@ -220,6 +220,14 @@
             </Setter>
         </Style>
 
+        <!-- DataGrid CheckBox Style (explicit for ElementStyle) -->
+        <Style x:Key="DataGridCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+        </Style>
+
         <!-- ============================================ -->
         <!-- SCROLLBAR TEMPLATES -->
         <!-- ============================================ -->

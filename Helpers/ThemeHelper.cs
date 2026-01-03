@@ -126,5 +126,23 @@ namespace AssetProcessor.Helpers {
             app.Resources["ThemeHyperlink"] = new SolidColorBrush(
                 isDark ? Color.FromRgb(0xee, 0x90, 0x00) : Color.FromRgb(0, 102, 204));
         }
+
+        /// <summary>
+        /// Gets histogram background color as RGB bytes for OxyPlot
+        /// </summary>
+        public static (byte R, byte G, byte B) GetHistogramBackgroundColor() {
+            return IsDarkTheme
+                ? ((byte)0x25, (byte)0x25, (byte)0x26) // Dark: #252526 (darker than main bg)
+                : ((byte)0xF5, (byte)0xF5, (byte)0xF5); // Light: #F5F5F5 (light gray)
+        }
+
+        /// <summary>
+        /// Gets histogram border color as RGB bytes for OxyPlot
+        /// </summary>
+        public static (byte R, byte G, byte B) GetHistogramBorderColor() {
+            return IsDarkTheme
+                ? ((byte)0x3F, (byte)0x3F, (byte)0x46) // Dark: #3F3F46
+                : ((byte)0xD0, (byte)0xD0, (byte)0xD0); // Light: #D0D0D0
+        }
     }
 }

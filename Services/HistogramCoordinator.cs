@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Services.Models;
 using OxyPlot;
 using OxyPlot.Axes;
@@ -19,11 +20,15 @@ public class HistogramCoordinator : IHistogramCoordinator {
     public HistogramComputationResult BuildHistogram(BitmapSource bitmapSource, bool isGray = false) {
         ArgumentNullException.ThrowIfNull(bitmapSource);
 
+        // Get theme-aware colors
+        var bgColor = ThemeHelper.GetHistogramBackgroundColor();
+        var borderColor = ThemeHelper.GetHistogramBorderColor();
+
         PlotModel histogramModel = new() {
-            // Dark theme background
-            Background = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
-            PlotAreaBackground = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
-            PlotAreaBorderColor = OxyColor.FromRgb(0x3F, 0x3F, 0x46),
+            // Theme-aware background
+            Background = OxyColor.FromRgb(bgColor.R, bgColor.G, bgColor.B),
+            PlotAreaBackground = OxyColor.FromRgb(bgColor.R, bgColor.G, bgColor.B),
+            PlotAreaBorderColor = OxyColor.FromRgb(borderColor.R, borderColor.G, borderColor.B),
             PlotAreaBorderThickness = new OxyThickness(0)
         };
         int[] redHistogram = new int[256];
@@ -44,7 +49,8 @@ public class HistogramCoordinator : IHistogramCoordinator {
             histogramService.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
             histogramService.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
         } else {
-            histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Black);
+            // Use gray color visible on both themes
+            histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColor.FromRgb(128, 128, 128));
         }
 
         histogramModel.Axes.Add(new LinearAxis {

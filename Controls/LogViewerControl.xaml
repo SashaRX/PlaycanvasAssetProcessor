@@ -9,8 +9,8 @@
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource ThemeBackground}">
     <UserControl.Resources>
-        <!-- Style for log level filter buttons -->
-        <Style x:Key="FilterButtonStyle" TargetType="ToggleButton">
+        <!-- Style for log level filter buttons (theme-aware) -->
+        <Style x:Key="FilterButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Padding" Value="10,3"/>
             <Setter Property="FontSize" Value="11"/>
@@ -19,13 +19,14 @@
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
-        <!-- Style for log items based on level -->
-        <Style x:Key="LogItemStyle" TargetType="ListViewItem">
+        <!-- Style for log items based on level (theme-aware) -->
+        <Style x:Key="LogItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
             <Setter Property="Padding" Value="5,2"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
             <Setter Property="FontFamily" Value="Consolas, Courier New"/>
             <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
         </Style>
     </UserControl.Resources>
 
@@ -51,23 +52,19 @@
 
                     <ToggleButton x:Name="FilterDebugBtn" Content="DEBUG" IsChecked="False"
                                   Style="{StaticResource FilterButtonStyle}"
-                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
-                                  Foreground="#606060" Background="#E8E8E8"/>
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"/>
 
                     <ToggleButton x:Name="FilterInfoBtn" Content="INFO" IsChecked="True"
                                   Style="{StaticResource FilterButtonStyle}"
-                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
-                                  Foreground="#1976D2" Background="#E3F2FD"/>
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"/>
 
                     <ToggleButton x:Name="FilterWarnBtn" Content="WARN" IsChecked="True"
                                   Style="{StaticResource FilterButtonStyle}"
-                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
-                                  Foreground="#F57C00" Background="#FFF3E0"/>
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"/>
 
                     <ToggleButton x:Name="FilterErrorBtn" Content="ERROR" IsChecked="True"
                                   Style="{StaticResource FilterButtonStyle}"
-                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"
-                                  Foreground="#D32F2F" Background="#FFEBEE"/>
+                                  Checked="FilterButton_Changed" Unchecked="FilterButton_Changed"/>
                 </StackPanel>
 
                 <!-- Search Box -->

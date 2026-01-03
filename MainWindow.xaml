@@ -789,7 +789,7 @@
                                 </Border>
 
                                 <!-- Texture Viewport -->
-                                <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
+                                <Border Grid.Row="1" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
                                     <Grid x:Name="TexturePreviewViewport"
                                           Background="#FF333333"
                                           ClipToBounds="True"
@@ -846,11 +846,11 @@
                                                 <TranslateTransform/>
                                             </TransformGroup>
                                         </StackPanel.RenderTransform>
-                                        <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="Black"/>
-                                        <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="Black"/>
-                                        <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="Black"/>
-                                        <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black"/>
-                                        <ToggleButton x:Name="NormalButton" Content="Nrm" Tag="Normal" Width="35" Height="20" Background="#FF4488FF" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black" Margin="2,0,0,0"/>
+                                        <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton x:Name="NormalButton" Content="Nrm" Tag="Normal" Width="35" Height="20" Background="#FF4488FF" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Margin="2,0,0,0"/>
 
                                         <!-- Fit/Reset button -->
                                         <Button x:Name="FitResetButton" Content="Fit" Width="35" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Click="FitResetButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="10" Padding="2"/>
@@ -862,7 +862,7 @@
                                         <ToggleButton x:Name="TileToggleButton" Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="False" Click="TileToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
 
                                         <!-- Histogram correction toggle button -->
-                                        <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="Black" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>
+                                        <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>
                                     </StackPanel>
                                     <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
                                         <StackPanel Orientation="Vertical">
@@ -886,7 +886,7 @@
                         <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
                             <StackPanel Orientation="Vertical">
                                 <!-- Histogram Plot -->
-                                <Border BorderBrush="Black" BorderThickness="1" Margin="0,0,0,4" Height="128">
+                                <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,0,0,4" Height="128">
                                     <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
                                 </Border>
 
@@ -1050,7 +1050,7 @@
                                 </Border>
 
                                 <!-- 3D Viewport -->
-                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
+                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
                                     <helix:HelixViewport3D x:Name="viewPort3d"
                                                           ZoomExtentsWhenLoaded="true"
                                                           ShowCoordinateSystem="false"
@@ -1089,7 +1089,7 @@
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
-                                               BorderBrush="Black"
+                                               BorderBrush="{DynamicResource ThemeBorder}"
                                                ToolTip="Show original FBX model" />
                                         <Button x:Name="SourceGlbButton"
                                                Content="GLB"
@@ -1101,7 +1101,7 @@
                                                FontSize="9"
                                                FontWeight="Bold"
                                                Padding="2"
-                                               BorderBrush="Black"
+                                               BorderBrush="{DynamicResource ThemeBorder}"
                                                ToolTip="Show converted GLB model" />
 
                                         <Separator Width="10" Background="Transparent" />
@@ -1120,7 +1120,7 @@
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
-                                               BorderBrush="Black" />
+                                               BorderBrush="{DynamicResource ThemeBorder}" />
                                         <Button x:Name="LodButton1"
                                                Content="LOD1"
                                                Click="LodButton_Click"
@@ -1130,7 +1130,7 @@
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
-                                               BorderBrush="Black" />
+                                               BorderBrush="{DynamicResource ThemeBorder}" />
                                         <Button x:Name="LodButton2"
                                                Content="LOD2"
                                                Click="LodButton_Click"
@@ -1140,7 +1140,7 @@
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
-                                               BorderBrush="Black" />
+                                               BorderBrush="{DynamicResource ThemeBorder}" />
                                         <Button x:Name="LodButton3"
                                                Content="LOD3"
                                                Click="LodButton_Click"
@@ -1150,7 +1150,7 @@
                                                Margin="2,0"
                                                FontSize="9"
                                                Padding="2"
-                                               BorderBrush="Black" />
+                                               BorderBrush="{DynamicResource ThemeBorder}" />
                                     </StackPanel>
 
                                     <!-- LOD Information DataGrid -->
@@ -1223,7 +1223,7 @@
 
                         <!-- UV Maps Section -->
                         <Expander Grid.Row="0" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
-                            <Border BorderBrush="Black" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="137" MaxHeight="300">
+                            <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="137" MaxHeight="300">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -1289,7 +1289,7 @@
                         <!-- ORM Export Settings -->
                         <Expander x:Name="ORMSettingsExpander" Header="ORM Export Settings"
                                   VerticalAlignment="Top" FontSize="10" FontWeight="Bold"
-                                  Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black"
+                                  Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}"
                                   Background="#FFE8F5E9" IsExpanded="False" Margin="2,2,2,3">
                             <StackPanel Margin="4,4,4,4">
                                 <!-- Enable ORM -->
@@ -1438,9 +1438,9 @@
                             </StackPanel>
                         </Expander>
 
-                        <Expander x:Name="AOExpander" Header="Ambient Occlusion" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="White" IsExpanded="True" Margin="2,2,2,3">
+                        <Expander x:Name="AOExpander" Header="Ambient Occlusion" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Background="{DynamicResource ThemeBackground}" IsExpanded="True" Margin="2,2,2,3">
                             <StackPanel>
-                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Padding="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Padding="2,2,2,2">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -1451,7 +1451,7 @@
                                         No AO Map
                                     </Hyperlink>
                                         </TextBlock>
-                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="64" Grid.Column="1">
                                             <Image x:Name="TextureAOPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="AO" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
@@ -1516,7 +1516,7 @@
                                 </Grid>
 
                                 <!-- AO Tint -->
-                                <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" CornerRadius="2,2,2,2">
                                     <StackPanel Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Top">
                                         <CheckBox x:Name="MaterialAOTintCheckBox" Content="AO Tint" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
                                         <Grid Margin="0,2,0,2">
@@ -1526,7 +1526,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="AO Tint Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                            <TextBox x:Name="MaterialAOTintColorRect" BorderBrush="Black" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <TextBox x:Name="MaterialAOTintColorRect" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
                                             <xctk:ColorPicker x:Name="AOTintColorPicker" SelectedColorChanged="AOTintColorPicker_SelectedColorChanged" Width="20" Height="20" AvailableColorsSortingMode="HueSaturationBrightness" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" RenderTransformOrigin="0.5,0.5" FontSize="10" HorizontalAlignment="Left" VerticalAlignment="Top" ColorMode="ColorCanvas" BorderThickness="0,0,0,0" ShowRecentColors="True" Panel.ZIndex="1" Grid.Column="2"/>
                                         </Grid>
                                         <CheckBox x:Name="MaterialAOVertexColorCheckBox" Content="AO Vertex Color" Margin="4,0,4,0" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
@@ -1535,9 +1535,9 @@
                             </StackPanel>
                         </Expander>
 
-                        <Expander x:Name="DiffuseExpander" Header="Diffuse" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFB1B1B1" IsExpanded="True" MinWidth="220" Margin="2,2,2,2">
+                        <Expander x:Name="DiffuseExpander" Header="Diffuse" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Background="#FFB1B1B1" IsExpanded="True" MinWidth="220" Margin="2,2,2,2">
                             <StackPanel>
-                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Padding="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Padding="2,2,2,2">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -1548,7 +1548,7 @@
                                         No Diffuse Map
                                     </Hyperlink>
                                         </TextBlock>
-                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="64" Grid.Column="1">
                                             <Image x:Name="TextureDiffusePreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Diffuse" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
@@ -1561,7 +1561,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Diffuse Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                    <ComboBox x:Name="MaterialDiffuseColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="Black">
+                                    <ComboBox x:Name="MaterialDiffuseColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -1593,10 +1593,10 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Diffuse UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                    <ComboBox x:Name="MaterialDiffuseUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" Height="20" BorderBrush="Black" Background="{x:Null}"/>
+                                    <ComboBox x:Name="MaterialDiffuseUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" Height="20" BorderBrush="{DynamicResource ThemeBorder}" Background="{x:Null}"/>
                                 </Grid>
 
-                                <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" CornerRadius="2,2,2,2">
                                     <StackPanel Margin="4,2,4,2">
                                         <CheckBox x:Name="MaterialDiffuseTintCheckBox" Content="Diffuse Tint" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
                                         <Grid Margin="0,2,0,2">
@@ -1606,7 +1606,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="Diffuse Tint Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                            <TextBox x:Name="MaterialTintColorRect" BorderBrush="Black" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <TextBox x:Name="MaterialTintColorRect" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
                                             <xctk:ColorPicker x:Name="TintColorPicker" SelectedColorChanged="TintColorPicker_SelectedColorChanged" Width="20" Height="20" AvailableColorsSortingMode="HueSaturationBrightness" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" RenderTransformOrigin="0.5,0.5" FontSize="10" VerticalAlignment="Top" ColorMode="ColorCanvas" BorderThickness="0,0,0,0" ShowRecentColors="True" Panel.ZIndex="1" Grid.Column="2" HorizontalAlignment="Right"/>
                                         </Grid>
                                         <CheckBox x:Name="MaterialDiffuseVertexColorCheckBox" Content="Diffuse Vertex Color" Margin="4,0,4,0" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" FlowDirection="RightToLeft"/>
@@ -1615,9 +1615,9 @@
                             </StackPanel>
                         </Expander>
 
-                        <Expander x:Name="NormalExpander" Header="Normal Map" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FF8E9AFF" IsExpanded="True" MinWidth="220" Margin="2,2,2,2">
+                        <Expander x:Name="NormalExpander" Header="Normal Map" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Background="#FF8E9AFF" IsExpanded="True" MinWidth="220" Margin="2,2,2,2">
                             <StackPanel>
-                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Padding="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Padding="2,2,2,2">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -1628,7 +1628,7 @@
                                         No Normal Map
                                     </Hyperlink>
                                         </TextBlock>
-                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="64" Grid.Column="1">
                                             <Image x:Name="TextureNormalPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Normal" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
@@ -1640,7 +1640,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Normal UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                    <ComboBox x:Name="MaterialNormalUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" BorderBrush="Black" Background="{x:Null}" Height="20"/>
+                                    <ComboBox x:Name="MaterialNormalUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" BorderBrush="{DynamicResource ThemeBorder}" Background="{x:Null}" Height="20"/>
                                 </Grid>
 
                                 <Grid Margin="0,2,0,2">
@@ -1650,16 +1650,16 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Bumpiness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                    <TextBox x:Name="MaterialBumpinessTextBox" Width="50" Height="19" Margin="4,2,4,2" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1" HorizontalAlignment="Right"/>
+                                    <TextBox x:Name="MaterialBumpinessTextBox" Width="50" Height="19" Margin="4,2,4,2" Background="{DynamicResource ThemeBackground}" BorderThickness="1,1,1,1" Text="0" Foreground="{DynamicResource ThemeForeground}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1" HorizontalAlignment="Right"/>
                                     <Slider x:Name="MaterialBumpinessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="143" SmallChange="0.01" VerticalAlignment="Center" Grid.Column="2" HorizontalAlignment="Right"/>
                                 </Grid>
 
                             </StackPanel>
                         </Expander>
 
-                        <Expander x:Name="SpecularExpander" Header="Specular" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FFFFC68C" IsExpanded="True" MinWidth="220" Margin="2,2,2,2">
+                        <Expander x:Name="SpecularExpander" Header="Specular" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Background="#FFFFC68C" IsExpanded="True" MinWidth="220" Margin="2,2,2,2">
                             <StackPanel>
-                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Padding="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Padding="2,2,2,2">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -1670,7 +1670,7 @@
                                             No Specular Map
                                         </Hyperlink>
                                         </TextBlock>
-                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="64" Grid.Column="1">
                                             <Image x:Name="TextureSpecularPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Specular" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
@@ -1685,7 +1685,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Specular Tint Color" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                    <TextBox x:Name="MaterialSpecularTintColorRect" BorderBrush="Black" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                    <TextBox x:Name="MaterialSpecularTintColorRect" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="19" Margin="2,1,0,1" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FF678ADE" BorderThickness="1,1,1,1" Text="#ffffff00" Foreground="#E5000000" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
                                     <xctk:ColorPicker x:Name="TintSpecularColorPicker" SelectedColorChanged="TintSpecularColorPicker_SelectedColorChanged" Width="20" Height="20" AvailableColorsSortingMode="HueSaturationBrightness" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" RenderTransformOrigin="0.5,0.5" FontSize="10" HorizontalAlignment="Left" VerticalAlignment="Top" ColorMode="ColorCanvas" BorderThickness="0,0,0,0" ShowRecentColors="True" Panel.ZIndex="1" Grid.Column="2"/>
                                 </Grid>
 
@@ -1696,7 +1696,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Specular Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                    <ComboBox x:Name="MaterialSpecularColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" BorderThickness="1,1,1,1" Height="20" BorderBrush="Black">
+                                    <ComboBox x:Name="MaterialSpecularColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" BorderThickness="1,1,1,1" Height="20" BorderBrush="{DynamicResource ThemeBorder}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -1722,7 +1722,7 @@
 
                                 </Grid>
 
-                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Padding="2,2,2,2" Margin="0,2,0,2">
+                                <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Padding="2,2,2,2" Margin="0,2,0,2">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -1733,16 +1733,16 @@
                                         No Metalness Map
                                     </Hyperlink>
                                         </TextBlock>
-                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="64" Grid.Column="1">
                                             <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Metalness" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                         </Border>
                                     </Grid>
                                 </Border>
 
-                                <Border BorderThickness="1,1,1,1" BorderBrush="Black" CornerRadius="2,2,2,2" Padding="2,2,2,2">
+                                <Border BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" CornerRadius="2,2,2,2" Padding="2,2,2,2">
                                     <StackPanel VerticalAlignment="Top">
 
-                                        <GroupBox BorderBrush="Black" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Header="Metalness">
+                                        <GroupBox BorderBrush="{DynamicResource ThemeBorder}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Header="Metalness">
                                             <StackPanel AutomationProperties.Name="Metalness">
                                                 <CheckBox x:Name="MaterialUseMetalnessCheckBox" Content="Use Metalness" Margin="4,2,4,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="4,1,0,0" HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" FlowDirection="RightToLeft" Grid.IsSharedSizeScope="True"/>
 
@@ -1755,7 +1755,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="Metalness Color Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
 
-                                                    <ComboBox x:Name="MaterialMetalnessColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="Black">
+                                                    <ComboBox x:Name="MaterialMetalnessColorChannelComboBox" SelectedIndex="0" Grid.Column="1" HorizontalAlignment="Right" MinWidth="50" Margin="4,0,4,0" Height="20" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Background="{Binding Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" BorderThickness="0">
@@ -1789,7 +1789,7 @@
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="Metalness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                                    <TextBox x:Name="MaterialMetalnessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                                    <TextBox x:Name="MaterialMetalnessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{DynamicResource ThemeBackground}" BorderThickness="1,1,1,1" Text="0" Foreground="{DynamicResource ThemeForeground}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
                                                     <Slider x:Name="MaterialMetalnessIntensitySlider" Minimum="0" Maximum="1" Value="1" Width="115" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Right" Margin="59,0,0,0"/>
                                                 </Grid>
 
@@ -1799,12 +1799,12 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="Metalness UV Channel" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                                    <ComboBox x:Name="MaterialSpecularUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" Height="20" BorderBrush="Black" Background="{x:Null}"/>
+                                                    <ComboBox x:Name="MaterialSpecularUVChannelComboBox" SelectedIndex="0" Width="50" Margin="4,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" Height="20" BorderBrush="{DynamicResource ThemeBorder}" Background="{x:Null}"/>
                                                 </Grid>
                                             </StackPanel>
                                         </GroupBox>
 
-                                        <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="Black" Padding="2,2,2,2">
+                                        <Border BorderThickness="1,1,1,1" CornerRadius="2,2,2,2" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Padding="2,2,2,2">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -1815,7 +1815,7 @@
                                                 No Gloss Map
                                             </Hyperlink>
                                                 </TextBlock>
-                                                <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="Black" Width="64" Height="64" Grid.Column="1">
+                                                <Border BorderThickness="1,1,1,1" CornerRadius="1,1,1,1" Panel.ZIndex="1" BorderBrush="{DynamicResource ThemeBorder}" Width="64" Height="64" Grid.Column="1">
                                             <Image x:Name="TextureGlossPreviewImage" RenderOptions.EdgeMode="Aliased" RenderOptions.BitmapScalingMode="HighQuality" MaxWidth="64" MaxHeight="64" HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" Tag="Gloss" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                                 </Border>
                                             </Grid>
@@ -1828,7 +1828,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="Glossiness" FontWeight="Bold" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0"/>
-                                            <TextBox x:Name="MaterialGlossinessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White" BorderThickness="1,1,1,1" Text="0" Foreground="#E5000000" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
+                                            <TextBox x:Name="MaterialGlossinessTextBox" Width="50" Height="19" Margin="4,2,4,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{DynamicResource ThemeBackground}" BorderThickness="1,1,1,1" Text="0" Foreground="{DynamicResource ThemeForeground}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1"/>
                                             <Slider x:Name="MaterialGlossinessIntensitySlider" Minimum="0" Maximum="100" Value="1" Width="135" SmallChange="0.01" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="1" Grid.ColumnSpan="2"/>
                                         </Grid>
 
@@ -1873,7 +1873,7 @@
                         </Expander>
 
                         <!-- Другие параметры -->
-                        <Expander x:Name="OtherExpander" Header="Other" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" Background="#FF9DC4E8" MinWidth="220" Margin="2,2,2,2">
+                        <Expander x:Name="OtherExpander" Header="Other" VerticalAlignment="Top" FontSize="10" VerticalContentAlignment="Top" FontWeight="Bold" IsExpanded="True" Padding="2,2,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Background="#FF9DC4E8" MinWidth="220" Margin="2,2,2,2">
                             <StackPanel>
                                 <TextBlock x:Name="MaterialCreatedAtTextBlock" Text="Data: " Margin="4,0,4,0" FontWeight="Normal" />
                                 <TextBlock x:Name="MaterialShaderTextBlock" Text="Shader: " Margin="4,0,4,0" FontWeight="Normal" />

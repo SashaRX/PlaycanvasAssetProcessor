@@ -83,8 +83,8 @@ namespace AssetProcessor.Controls {
         public LogViewerControl() {
             InitializeComponent();
 
-            if (LogListView != null) {
-                LogListView.ItemsSource = _filteredLogs;
+            if (LogDataGrid != null) {
+                LogDataGrid.ItemsSource = _filteredLogs;
             }
 
             UpdateAutoScrollButton();
@@ -148,7 +148,7 @@ namespace AssetProcessor.Controls {
 
                     // Auto-scroll to bottom
                     if (_autoScroll && _filteredLogs.Count > 0) {
-                        LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
+                        LogDataGrid.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
                     }
                 }
 
@@ -189,8 +189,8 @@ namespace AssetProcessor.Controls {
             }
             UpdateStatusBar();
 
-            if (_autoScroll && _filteredLogs.Count > 0 && LogListView != null) {
-                LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
+            if (_autoScroll && _filteredLogs.Count > 0 && LogDataGrid != null) {
+                LogDataGrid.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
             }
         }
 
@@ -229,8 +229,8 @@ namespace AssetProcessor.Controls {
             _autoScroll = !_autoScroll;
             UpdateAutoScrollButton();
 
-            if (_autoScroll && _filteredLogs.Count > 0) {
-                LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
+            if (_autoScroll && _filteredLogs.Count > 0 && LogDataGrid != null) {
+                LogDataGrid.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
             }
         }
 

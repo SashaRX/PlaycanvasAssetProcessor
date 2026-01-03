@@ -390,10 +390,17 @@
                                 </Style>
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                <Style TargetType="DataGridRow">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
                                     <!-- RowBackground computed in ViewModel for texture type coloring -->
                                     <Setter Property="Background" Value="{Binding RowBackground}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.CellStyle>

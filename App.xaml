@@ -474,7 +474,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="DataGridColumnHeader">
-                        <Grid>
+                        <Grid TextElement.Foreground="{DynamicResource ThemeForeground}">
                             <Border Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
@@ -484,11 +484,9 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <ContentPresenter Grid.Column="0"
-                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                                      RecognizesAccessKey="True"/>
+                                    <TextBlock Grid.Column="0" Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                               Foreground="{DynamicResource ThemeForeground}"
+                                               VerticalAlignment="Center"/>
                                     <Path x:Name="SortArrow" Grid.Column="1"
                                           Visibility="Collapsed"
                                           Data="M 0 4 L 4 0 L 8 4 Z"
@@ -730,6 +728,54 @@
             <Setter Property="Background" Value="{DynamicResource ThemeBackgroundAlt}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Grid x:Name="templateRoot" SnapsToDevicePixels="true">
+                            <Border x:Name="mainBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1,1,1,0"
+                                    Margin="0">
+                                <Border x:Name="innerBorder"
+                                        Background="{DynamicResource ThemeBackground}"
+                                        BorderBrush="{DynamicResource ThemeBorder}"
+                                        BorderThickness="0"
+                                        Margin="-1"
+                                        Opacity="0"/>
+                            </Border>
+                            <ContentPresenter x:Name="contentPresenter"
+                                              ContentSource="Header"
+                                              Focusable="False"
+                                              HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                              Margin="{TemplateBinding Padding}"
+                                              RecognizesAccessKey="True"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                              VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                              TextElement.Foreground="{DynamicResource ThemeForeground}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="true"/>
+                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="false"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="mainBorder" Property="Background" Value="{DynamicResource ThemeBackgroundHover}"/>
+                                <Setter TargetName="mainBorder" Property="BorderBrush" Value="{DynamicResource ThemeBorderHover}"/>
+                            </MultiDataTrigger>
+                            <Trigger Property="IsSelected" Value="true">
+                                <Setter TargetName="mainBorder" Property="Background" Value="{DynamicResource ThemeBackground}"/>
+                                <Setter TargetName="mainBorder" Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
+                                <Setter TargetName="mainBorder" Property="BorderThickness" Value="1,1,1,0"/>
+                                <Setter TargetName="mainBorder" Property="Margin" Value="-2,-2,-2,0"/>
+                                <Setter TargetName="innerBorder" Property="Opacity" Value="1"/>
+                                <Setter TargetName="contentPresenter" Property="TextElement.Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="ToolBar">

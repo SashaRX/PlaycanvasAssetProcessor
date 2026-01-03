@@ -15,6 +15,20 @@ namespace AssetProcessor.Resources {
         private double downloadProgress;
         private int? folder;
         private int? parent;
+        private bool exportToServer;
+
+        /// <summary>
+        /// Флаг для пометки ресурса к экспорту на сервер
+        /// </summary>
+        public bool ExportToServer {
+            get => exportToServer;
+            set {
+                if (exportToServer != value) {
+                    exportToServer = value;
+                    OnPropertyChanged(nameof(ExportToServer));
+                }
+            }
+        }
 
         public int ID {
             get { return id; }

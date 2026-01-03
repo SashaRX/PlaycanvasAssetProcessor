@@ -7,7 +7,8 @@
              xmlns:viewModels="clr-namespace:AssetProcessor.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}"
-             d:DesignHeight="85" d:DesignWidth="340">
+             d:DesignHeight="85" d:DesignWidth="340"
+             Background="{DynamicResource ThemeBackground}">
 
     <GroupBox Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Top" Margin="2,2,2,2">
         <StackPanel Orientation="Vertical" Margin="4,2,4,2">
@@ -34,7 +35,7 @@
                           Padding="4,0,4,0"
                           FontSize="13">
                     <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
+                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="VerticalContentAlignment" Value="Center"/>
                         </Style>
@@ -58,7 +59,7 @@
                           Padding="4,0,4,0"
                           FontSize="13">
                     <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
+                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="VerticalContentAlignment" Value="Center"/>
                         </Style>

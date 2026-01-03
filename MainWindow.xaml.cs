@@ -38,6 +38,7 @@ using System.Linq;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using AssetProcessor.Windows;
 using Newtonsoft.Json.Linq;
 
 namespace AssetProcessor {
@@ -286,14 +287,18 @@ namespace AssetProcessor {
                     case "Textures":
                         ShowTextureViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Visible;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
                     case "Models":
                         ShowModelViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Visible;
+                        UpdateModelExportCounts();
                         break;
                     case "Materials":
                         ShowMaterialViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
                 }
             }
@@ -844,6 +849,53 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
 
         private void ExitMenu(object? sender, RoutedEventArgs e) {
             Close();
+        }
+
+        private void ThemeAuto_Click(object sender, RoutedEventArgs e) {
+            ThemeAutoMenuItem.IsChecked = true;
+            ThemeLightMenuItem.IsChecked = false;
+            ThemeDarkMenuItem.IsChecked = false;
+            ThemeHelper.CurrentMode = Helpers.ThemeMode.Auto;
+            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
+            RefreshHistogramForTheme();
+        }
+
+        private void ThemeLight_Click(object sender, RoutedEventArgs e) {
+            ThemeAutoMenuItem.IsChecked = false;
+            ThemeLightMenuItem.IsChecked = true;
+            ThemeDarkMenuItem.IsChecked = false;
+            ThemeHelper.CurrentMode = Helpers.ThemeMode.Light;
+            DarkThemeCheckBox.IsChecked = false;
+            RefreshHistogramForTheme();
+        }
+
+        private void ThemeDark_Click(object sender, RoutedEventArgs e) {
+            ThemeAutoMenuItem.IsChecked = false;
+            ThemeLightMenuItem.IsChecked = false;
+            ThemeDarkMenuItem.IsChecked = true;
+            ThemeHelper.CurrentMode = Helpers.ThemeMode.Dark;
+            DarkThemeCheckBox.IsChecked = true;
+            RefreshHistogramForTheme();
+        }
+
+        private void DarkThemeCheckBox_Click(object sender, RoutedEventArgs e) {
+            bool isDark = DarkThemeCheckBox.IsChecked == true;
+
+            // Update menu items to match
+            ThemeAutoMenuItem.IsChecked = false;
+            ThemeLightMenuItem.IsChecked = !isDark;
+            ThemeDarkMenuItem.IsChecked = isDark;
+
+            // Apply theme
+            ThemeHelper.CurrentMode = isDark ? Helpers.ThemeMode.Dark : Helpers.ThemeMode.Light;
+            RefreshHistogramForTheme();
+        }
+
+        private void RefreshHistogramForTheme() {
+            // Rebuild histogram with new theme colors if a texture is currently displayed
+            if (texturePreviewService?.OriginalBitmapSource != null) {
+                UpdateHistogram(texturePreviewService.OriginalBitmapSource);
+            }
         }
 
         private void GridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
@@ -1605,17 +1657,36 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
 
 private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
             if (isViewerVisible == true) {
-                ToggleViewButton.Content = ">";
+                // Save current width before hiding
+                if (PreviewColumn.Width.Value > 0) {
+                    AppSettings.Default.RightPanelPreviousWidth = PreviewColumn.Width.Value;
+                }
+                AppSettings.Default.RightPanelWidth = 0; // Mark as hidden
+                ToggleViewButton.Content = "►";
                 PreviewColumn.Width = new GridLength(0);
+                PreviewColumn.MinWidth = 0;
             } else {
-                ToggleViewButton.Content = "<";
-                PreviewColumn.Width = new GridLength(300); // ������� �������� ������
+                // Restore saved width
+                double restoreWidth = AppSettings.Default.RightPanelPreviousWidth;
+                if (restoreWidth < 256) restoreWidth = 300; // Use default if too small
+                ToggleViewButton.Content = "◄";
+                PreviewColumn.MinWidth = 256;
+                PreviewColumn.Width = new GridLength(restoreWidth);
+                AppSettings.Default.RightPanelWidth = restoreWidth;
             }
             isViewerVisible = !isViewerVisible;
         }
 
+        private void RightPanelSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+            // Save the new width when user finishes dragging the splitter
+            if (PreviewColumn.Width.Value > 0) {
+                AppSettings.Default.RightPanelWidth = PreviewColumn.Width.Value;
+                AppSettings.Default.RightPanelPreviousWidth = PreviewColumn.Width.Value;
+            }
+        }
+
         /// <summary>
-        /// ���������������� ���������� ���������� ��� TexturesDataGrid
+        /// Оптимизированная сортировка коллекции для TexturesDataGrid
         /// </summary>
         
 
@@ -2025,7 +2096,208 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialMetalnessColorChannelComboBox.SelectedItem = parameters.MetalnessColorChannel?.ToString();
                 MaterialGlossinessColorChannelComboBox.SelectedItem = parameters.GlossinessColorChannel?.ToString();
                 MaterialAOColorChannelComboBox.SelectedItem = parameters.AOChannel?.ToString();
+
+                // Load ORM Settings
+                LoadORMSettingsToUI(parameters.ORMSettings);
             });
+        }
+
+        private bool _isLoadingORMSettings = false;
+
+        private void LoadORMSettingsToUI(Resources.MaterialORMSettings settings) {
+            _isLoadingORMSettings = true;
+            try {
+                // Load preset list
+                RefreshORMPresetComboBox();
+
+                // Select current preset
+                var presetName = settings.PresetName ?? "Standard";
+                for (int i = 0; i < ORMPresetComboBox.Items.Count; i++) {
+                    if (ORMPresetComboBox.Items[i] is TextureConversion.Core.ORMSettings preset &&
+                        preset.Name == presetName) {
+                        ORMPresetComboBox.SelectedIndex = i;
+                        break;
+                    }
+                }
+
+                // Load values from effective settings
+                var effectiveSettings = settings.GetEffectiveSettings();
+
+                ORMEnabledCheckBox.IsChecked = settings.Enabled;
+                ORMApplyToksvigCheckBox.IsChecked = effectiveSettings.ToksvigEnabled;
+                ORMAOBiasSlider.Value = effectiveSettings.AOBias;
+                ORMAODefaultSlider.Value = effectiveSettings.AODefault;
+                ORMGlossDefaultSlider.Value = effectiveSettings.GlossDefault;
+                ORMMetalnessDefaultSlider.Value = effectiveSettings.MetallicDefault;
+
+                // Packing Mode
+                ORMPackingModeComboBox.SelectedIndex = effectiveSettings.PackingMode switch {
+                    TextureConversion.Core.ChannelPackingMode.Auto => 0,
+                    TextureConversion.Core.ChannelPackingMode.None => 1,
+                    TextureConversion.Core.ChannelPackingMode.OG => 2,
+                    TextureConversion.Core.ChannelPackingMode.OGM => 3,
+                    TextureConversion.Core.ChannelPackingMode.OGMH => 4,
+                    _ => 0
+                };
+
+                // AO Processing Mode
+                ORMAOProcessingComboBox.SelectedIndex = effectiveSettings.AOProcessing switch {
+                    TextureConversion.Core.AOProcessingMode.None => 0,
+                    TextureConversion.Core.AOProcessingMode.BiasedDarkening => 1,
+                    TextureConversion.Core.AOProcessingMode.Percentile => 2,
+                    _ => 1
+                };
+
+                // Update preset description
+                UpdateORMPresetDescription(effectiveSettings);
+            } finally {
+                _isLoadingORMSettings = false;
+            }
+        }
+
+        private void RefreshORMPresetComboBox() {
+            var currentSelection = ORMPresetComboBox.SelectedItem as TextureConversion.Core.ORMSettings;
+            ORMPresetComboBox.Items.Clear();
+
+            var presets = TextureConversion.Settings.ORMPresetManager.Instance.GetAllPresets();
+            foreach (var preset in presets) {
+                ORMPresetComboBox.Items.Add(preset);
+            }
+
+            ORMPresetComboBox.DisplayMemberPath = "Name";
+
+            // Restore selection
+            if (currentSelection != null) {
+                for (int i = 0; i < ORMPresetComboBox.Items.Count; i++) {
+                    if (ORMPresetComboBox.Items[i] is TextureConversion.Core.ORMSettings preset &&
+                        preset.Name == currentSelection.Name) {
+                        ORMPresetComboBox.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void UpdateORMPresetDescription(TextureConversion.Core.ORMSettings settings) {
+            ORMPresetDescriptionText.Text = settings.Description;
+        }
+
+        private void ORMPreset_Changed(object sender, SelectionChangedEventArgs e) {
+            if (_isLoadingORMSettings) return;
+            if (ORMPresetComboBox.SelectedItem is not TextureConversion.Core.ORMSettings selectedPreset) return;
+            if (MaterialsDataGrid.SelectedItem is not MaterialResource selectedMaterial) return;
+
+            _isLoadingORMSettings = true;
+            try {
+                // Apply preset
+                selectedMaterial.ORMSettings.ApplyPreset(selectedPreset.Name);
+
+                // Update UI
+                var settings = selectedMaterial.ORMSettings.GetEffectiveSettings();
+                ORMApplyToksvigCheckBox.IsChecked = settings.ToksvigEnabled;
+                ORMAOBiasSlider.Value = settings.AOBias;
+                ORMAODefaultSlider.Value = settings.AODefault;
+                ORMGlossDefaultSlider.Value = settings.GlossDefault;
+                ORMMetalnessDefaultSlider.Value = settings.MetallicDefault;
+
+                ORMPackingModeComboBox.SelectedIndex = settings.PackingMode switch {
+                    TextureConversion.Core.ChannelPackingMode.Auto => 0,
+                    TextureConversion.Core.ChannelPackingMode.None => 1,
+                    TextureConversion.Core.ChannelPackingMode.OG => 2,
+                    TextureConversion.Core.ChannelPackingMode.OGM => 3,
+                    TextureConversion.Core.ChannelPackingMode.OGMH => 4,
+                    _ => 0
+                };
+
+                ORMAOProcessingComboBox.SelectedIndex = settings.AOProcessing switch {
+                    TextureConversion.Core.AOProcessingMode.None => 0,
+                    TextureConversion.Core.AOProcessingMode.BiasedDarkening => 1,
+                    TextureConversion.Core.AOProcessingMode.Percentile => 2,
+                    _ => 1
+                };
+
+                UpdateORMPresetDescription(settings);
+            } finally {
+                _isLoadingORMSettings = false;
+            }
+        }
+
+        private void ORMEditPreset_Click(object sender, RoutedEventArgs e) {
+            if (ORMPresetComboBox.SelectedItem is not ORMSettings selectedPreset) return;
+
+            // Clone preset for editing
+            var presetToEdit = selectedPreset.Clone();
+
+            var editorWindow = new ORMPresetEditorWindow(presetToEdit) {
+                Owner = this
+            };
+
+            if (editorWindow.ShowDialog() == true && editorWindow.EditedPreset != null) {
+                var editedPreset = editorWindow.EditedPreset;
+
+                if (selectedPreset.IsBuiltIn) {
+                    // Built-in presets can't be modified, save as new
+                    if (ORMPresetManager.Instance.AddPreset(editedPreset)) {
+                        RefreshORMPresetComboBox();
+                        ORMPresetComboBox.SelectedItem = ORMPresetManager.Instance.GetPreset(editedPreset.Name);
+                    }
+                } else {
+                    // Update existing preset
+                    if (ORMPresetManager.Instance.UpdatePreset(selectedPreset.Name, editedPreset)) {
+                        RefreshORMPresetComboBox();
+                        ORMPresetComboBox.SelectedItem = ORMPresetManager.Instance.GetPreset(editedPreset.Name);
+                    }
+                }
+            }
+        }
+
+        private void ORMSettings_Changed(object sender, RoutedEventArgs e) {
+            if (_isLoadingORMSettings) return;
+            SaveORMSettingsFromUI();
+        }
+
+        private void ORMSettings_Changed(object sender, SelectionChangedEventArgs e) {
+            if (_isLoadingORMSettings) return;
+            // Skip if this is the preset combo box
+            if (sender == ORMPresetComboBox) return;
+            SaveORMSettingsFromUI();
+        }
+
+        private void ORMSettings_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (_isLoadingORMSettings) return;
+            SaveORMSettingsFromUI();
+        }
+
+        private void SaveORMSettingsFromUI() {
+            if (MaterialsDataGrid.SelectedItem is not MaterialResource selectedMaterial) return;
+
+            selectedMaterial.ORMSettings.Enabled = ORMEnabledCheckBox.IsChecked ?? true;
+            selectedMaterial.ORMSettings.Settings.ToksvigEnabled = ORMApplyToksvigCheckBox.IsChecked ?? true;
+            selectedMaterial.ORMSettings.Settings.AOBias = (float)ORMAOBiasSlider.Value;
+            selectedMaterial.ORMSettings.Settings.AODefault = (float)ORMAODefaultSlider.Value;
+            selectedMaterial.ORMSettings.Settings.GlossDefault = (float)ORMGlossDefaultSlider.Value;
+            selectedMaterial.ORMSettings.Settings.MetallicDefault = (float)ORMMetalnessDefaultSlider.Value;
+
+            // Packing Mode
+            selectedMaterial.ORMSettings.Settings.PackingMode = ORMPackingModeComboBox.SelectedIndex switch {
+                0 => TextureConversion.Core.ChannelPackingMode.Auto,
+                1 => TextureConversion.Core.ChannelPackingMode.None,
+                2 => TextureConversion.Core.ChannelPackingMode.OG,
+                3 => TextureConversion.Core.ChannelPackingMode.OGM,
+                4 => TextureConversion.Core.ChannelPackingMode.OGMH,
+                _ => TextureConversion.Core.ChannelPackingMode.Auto
+            };
+
+            // AO Processing Mode
+            selectedMaterial.ORMSettings.Settings.AOProcessing = ORMAOProcessingComboBox.SelectedIndex switch {
+                0 => TextureConversion.Core.AOProcessingMode.None,
+                1 => TextureConversion.Core.AOProcessingMode.BiasedDarkening,
+                2 => TextureConversion.Core.AOProcessingMode.Percentile,
+                _ => TextureConversion.Core.AOProcessingMode.BiasedDarkening
+            };
+
+            // Mark as custom (modified from preset)
+            selectedMaterial.ORMSettings.PresetName = null;
         }
 
         private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {

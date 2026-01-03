@@ -4,6 +4,11 @@ namespace AssetProcessor.TextureConversion.Core {
     /// </summary>
     public enum ChannelPackingMode {
         /// <summary>
+        /// Автоматическое определение на основе доступных текстур
+        /// </summary>
+        Auto,
+
+        /// <summary>
         /// Без упаковки каналов (обычный режим)
         /// </summary>
         None,

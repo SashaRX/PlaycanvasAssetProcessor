@@ -7,7 +7,8 @@
         mc:Ignorable="d"
         Title="Preset Editor" Height="750" Width="500"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+        Background="{DynamicResource ThemeBackground}">
 
     <Window.Resources>
         <ObjectDataProvider x:Key="CompressionFormatValues" MethodName="GetValues" ObjectType="{x:Type core:CompressionFormat}">
@@ -90,7 +91,7 @@
             <GroupBox Header="Filename Suffixes (for auto-detection)" Margin="0,0,0,10">
                 <StackPanel>
                     <TextBlock Text="Enter filename suffixes that match this preset (e.g., _albedo, _diffuse):"
-                               TextWrapping="Wrap" Margin="0,0,0,5" FontSize="10" Foreground="Gray"/>
+                               TextWrapping="Wrap" Margin="0,0,0,5" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

@@ -1,4 +1,5 @@
-﻿using System.Windows.Media;
+﻿using System.Windows;
+using System.Windows.Media;
 
 namespace AssetProcessor.Resources {
     public class TextureResource : BaseResource {
@@ -7,35 +8,22 @@ namespace AssetProcessor.Resources {
         /// </summary>
         public virtual bool IsORMTexture => false;
 
-        // Cached brushes for row background (performance optimization - avoid DataTriggers)
-        private static readonly Brush OrmBrush = new SolidColorBrush(Color.FromRgb(0xC9, 0x63, 0x91));
-        private static readonly Brush NormalBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0xFF));
-        private static readonly Brush AlbedoBrush = new SolidColorBrush(Color.FromRgb(0x9C, 0x7F, 0x25));
-        private static readonly Brush GlossBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
-        private static readonly Brush AoBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
-        private static readonly Brush TransparentBrush = Brushes.Transparent;
-
-        static TextureResource() {
-            // Freeze brushes for better performance (cross-thread access)
-            OrmBrush.Freeze();
-            NormalBrush.Freeze();
-            AlbedoBrush.Freeze();
-            GlossBrush.Freeze();
-            AoBrush.Freeze();
-        }
+        // Theme-aware brush helpers (fetched from Application.Resources for dynamic theming)
+        private static Brush GetBrush(string resourceKey, Brush fallback) =>
+            Application.Current?.Resources[resourceKey] as Brush ?? fallback;
 
         /// <summary>
-        /// Computed row background color based on texture type (replaces DataTriggers for performance)
+        /// Computed row background color based on texture type (theme-aware)
         /// </summary>
         public Brush RowBackground {
             get {
-                if (IsORMTexture) return OrmBrush;
+                if (IsORMTexture) return GetBrush("ThemeMaterialORM", Brushes.Pink);
                 return TextureType switch {
-                    "Normal" => NormalBrush,
-                    "Albedo" => AlbedoBrush,
-                    "Gloss" => GlossBrush,
-                    "AO" => AoBrush,
-                    _ => TransparentBrush
+                    "Normal" => GetBrush("ThemeMaterialNormal", Brushes.LightBlue),
+                    "Albedo" => GetBrush("ThemeTextureAlbedo", Brushes.Khaki),
+                    "Gloss" => GetBrush("ThemeTextureGloss", Brushes.LightGray),
+                    "AO" => GetBrush("ThemeTextureAO", Brushes.Gray),
+                    _ => GetBrush("ThemeDataGridRowBackground", Brushes.Transparent)
                 };
             }
         }

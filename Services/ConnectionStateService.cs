@@ -112,36 +112,36 @@ public class ConnectionStateService : IConnectionStateService {
                 Content = "Connect",
                 ToolTip = "Connect to PlayCanvas and load projects",
                 IsEnabled = true,
-                ColorR = 240,
-                ColorG = 240,
-                ColorB = 240 // Grey
+                ColorR = 70,
+                ColorG = 70,
+                ColorB = 70 // Dark grey
             },
 
             ConnectionState.UpToDate => new ConnectionButtonInfo {
                 Content = "Refresh",
                 ToolTip = "Check for updates from PlayCanvas server",
                 IsEnabled = hasProjectSelection,
-                ColorR = 173,
-                ColorG = 216,
-                ColorB = 230 // Light blue
+                ColorR = 70,
+                ColorG = 130,
+                ColorB = 180 // Steel blue
             },
 
             ConnectionState.NeedsDownload => new ConnectionButtonInfo {
                 Content = "Download",
                 ToolTip = "Download assets from PlayCanvas (list + files)",
                 IsEnabled = hasProjectSelection,
-                ColorR = 144,
-                ColorG = 238,
-                ColorB = 144 // Light green
+                ColorR = 60,
+                ColorG = 150,
+                ColorB = 60 // Dark green
             },
 
             _ => new ConnectionButtonInfo {
                 Content = "Connect",
                 ToolTip = "Connect to PlayCanvas",
                 IsEnabled = true,
-                ColorR = 240,
-                ColorG = 240,
-                ColorB = 240
+                ColorR = 70,
+                ColorG = 70,
+                ColorB = 70
             }
         };
     }

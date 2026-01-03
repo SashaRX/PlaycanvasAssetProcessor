@@ -301,5 +301,157 @@ namespace AssetProcessor.Settings {
         }
 
         public bool HasStoredPlaycanvasApiKey => !string.IsNullOrEmpty((string)this[nameof(PlaycanvasApiKey)]);
+
+        /// <summary>
+        /// Ширина правой панели (Preview/Settings)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("350")]
+        public double RightPanelWidth {
+            get => (double)this[nameof(RightPanelWidth)];
+            set => this[nameof(RightPanelWidth)] = value;
+        }
+
+        /// <summary>
+        /// Предыдущая ширина правой панели (для восстановления после скрытия)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("350")]
+        public double RightPanelPreviousWidth {
+            get => (double)this[nameof(RightPanelPreviousWidth)];
+            set => this[nameof(RightPanelPreviousWidth)] = value;
+        }
+
+        #region B2/CDN Upload Settings
+
+        /// <summary>
+        /// Backblaze B2 Application Key ID
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string B2KeyId {
+            get => (string)this[nameof(B2KeyId)];
+            set => this[nameof(B2KeyId)] = value;
+        }
+
+        /// <summary>
+        /// Backblaze B2 Application Key (encrypted)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string B2ApplicationKey {
+            get => (string)this[nameof(B2ApplicationKey)];
+            set {
+                if (string.IsNullOrEmpty(value)) {
+                    this[nameof(B2ApplicationKey)] = string.Empty;
+                } else {
+                    this[nameof(B2ApplicationKey)] = SecureStorageHelper.Protect(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Backblaze B2 Bucket Name
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string B2BucketName {
+            get => (string)this[nameof(B2BucketName)];
+            set => this[nameof(B2BucketName)] = value;
+        }
+
+        /// <summary>
+        /// Backblaze B2 Bucket ID
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string B2BucketId {
+            get => (string)this[nameof(B2BucketId)];
+            set => this[nameof(B2BucketId)] = value;
+        }
+
+        /// <summary>
+        /// CDN Base URL для доступа к файлам (например: https://cdn.example.com/project-name)
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string CdnBaseUrl {
+            get => (string)this[nameof(CdnBaseUrl)];
+            set => this[nameof(CdnBaseUrl)] = value;
+        }
+
+        /// <summary>
+        /// Префикс пути в bucket (например: "projects/my-game")
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("")]
+        public string B2PathPrefix {
+            get => (string)this[nameof(B2PathPrefix)];
+            set => this[nameof(B2PathPrefix)] = value;
+        }
+
+        /// <summary>
+        /// Максимальное количество параллельных загрузок
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("4")]
+        public int B2MaxConcurrentUploads {
+            get => (int)this[nameof(B2MaxConcurrentUploads)];
+            set => this[nameof(B2MaxConcurrentUploads)] = value;
+        }
+
+        /// <summary>
+        /// Автоматически загружать mapping.json после генерации
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("False")]
+        public bool B2AutoUploadMapping {
+            get => (bool)this[nameof(B2AutoUploadMapping)];
+            set => this[nameof(B2AutoUploadMapping)] = value;
+        }
+
+        public bool TryGetDecryptedB2ApplicationKey(out string? applicationKey) {
+            bool success = SecureStorageHelper.TryUnprotect(
+                (string)this[nameof(B2ApplicationKey)],
+                out applicationKey,
+                out bool wasProtected);
+
+            if (success && !string.IsNullOrEmpty(applicationKey) && !wasProtected) {
+                try {
+                    this[nameof(B2ApplicationKey)] = SecureStorageHelper.Protect(applicationKey);
+                    Save();
+                } catch (InvalidOperationException) {
+                    // Master password not set - continue with plaintext
+                } catch (CryptographicException) {
+                    // Encryption failed - continue with plaintext
+                }
+            }
+
+            return success;
+        }
+
+        public string? GetDecryptedB2ApplicationKey() {
+            if (!TryGetDecryptedB2ApplicationKey(out string? applicationKey)) {
+                throw new CryptographicException("Stored B2 Application Key could not be decrypted.");
+            }
+            return applicationKey;
+        }
+
+        public bool HasStoredB2Credentials =>
+            !string.IsNullOrEmpty(B2KeyId) &&
+            !string.IsNullOrEmpty((string)this[nameof(B2ApplicationKey)]) &&
+            !string.IsNullOrEmpty(B2BucketName);
+
+        #endregion
     }
 }

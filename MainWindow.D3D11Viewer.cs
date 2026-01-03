@@ -67,6 +67,31 @@ namespace AssetProcessor {
 
             // Subscribe to column width changes for neighbor-based resizing
             SubscribeToColumnWidthChanges();
+
+            // Restore right panel width
+            RestoreRightPanelWidth();
+
+            // Initialize dark theme checkbox state
+            InitializeDarkThemeCheckBox();
+        }
+
+        private void InitializeDarkThemeCheckBox() {
+            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
+        }
+
+        private void RestoreRightPanelWidth() {
+            double savedWidth = AppSettings.Default.RightPanelWidth;
+            if (savedWidth >= 256 && savedWidth <= 512) {
+                PreviewColumn.Width = new GridLength(savedWidth);
+                isViewerVisible = true;
+                ToggleViewButton.Content = "◄";
+            } else if (savedWidth <= 0) {
+                // Panel was hidden
+                PreviewColumn.Width = new GridLength(0);
+                PreviewColumn.MinWidth = 0;
+                isViewerVisible = false;
+                ToggleViewButton.Content = "►";
+            }
         }
 
         private void LoadAllColumnVisibility() {

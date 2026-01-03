@@ -18,8 +18,8 @@ namespace AssetProcessor.Controls {
         public string Level { get; set; } = "";
         public string Logger { get; set; } = "";
         public string Message { get; set; } = "";
-        public Brush LevelColor { get; set; } = Brushes.Black;
-        public Brush MessageColor { get; set; } = Brushes.Black;
+        public Brush LevelColor { get; set; } = Brushes.Gray;
+        public Brush MessageColor { get; set; } = Brushes.Gray;
         public LogLevel LogLevel { get; set; } = LogLevel.Info;
 
         public LogEntry(LogEventInfo logEvent) {
@@ -29,34 +29,45 @@ namespace AssetProcessor.Controls {
             Message = logEvent.FormattedMessage ?? "";
             LogLevel = logEvent.Level;
 
-            // Color coding based on level
+            // Color coding based on level (theme-aware)
             LevelColor = GetLevelColor(logEvent.Level);
-            MessageColor = GetMessageColor(Message);
+            MessageColor = GetMessageColor(logEvent.Level, Message);
         }
 
-        private Brush GetLevelColor(LogLevel level) {
+        private static Brush GetLevelColor(LogLevel level) {
             if (level == LogLevel.Error || level == LogLevel.Fatal) {
-                return new SolidColorBrush(Color.FromRgb(211, 47, 47)); // Red
+                return new SolidColorBrush(Color.FromRgb(211, 47, 47)); // Red - visible on both themes
             } else if (level == LogLevel.Warn) {
-                return new SolidColorBrush(Color.FromRgb(245, 124, 0)); // Orange
+                return new SolidColorBrush(Color.FromRgb(245, 124, 0)); // Orange - visible on both themes
             } else if (level == LogLevel.Info) {
-                return new SolidColorBrush(Color.FromRgb(25, 118, 210)); // Blue
+                return new SolidColorBrush(Color.FromRgb(86, 156, 214)); // Light blue - visible on both themes
             } else if (level == LogLevel.Debug) {
-                return new SolidColorBrush(Color.FromRgb(96, 96, 96)); // Gray
+                return new SolidColorBrush(Color.FromRgb(128, 128, 128)); // Gray - visible on both themes
             }
-            return Brushes.Black;
+            // Use theme foreground as fallback
+            return GetThemeForeground();
         }
 
-        private Brush GetMessageColor(string message) {
-            // Highlight special messages
+        private static Brush GetMessageColor(LogLevel level, string message) {
+            // Highlight special messages with colors visible on both themes
             if (message.Contains("✓") || message.Contains("SUCCESS") || message.Contains("успешно")) {
-                return new SolidColorBrush(Color.FromRgb(46, 125, 50)); // Green
+                return new SolidColorBrush(Color.FromRgb(76, 175, 80)); // Green - visible on both themes
             } else if (message.Contains("✗") || message.Contains("FAIL") || message.Contains("ошибк")) {
-                return new SolidColorBrush(Color.FromRgb(198, 40, 40)); // Dark Red
+                return new SolidColorBrush(Color.FromRgb(244, 67, 54)); // Red - visible on both themes
             } else if (message.Contains("━━━") || message.Contains("📊") || message.Contains("🔧")) {
-                return new SolidColorBrush(Color.FromRgb(123, 31, 162)); // Purple (headers)
+                return new SolidColorBrush(Color.FromRgb(156, 39, 176)); // Purple - visible on both themes
             }
-            return Brushes.Black;
+            // Use theme foreground for normal messages
+            return GetThemeForeground();
+        }
+
+        private static Brush GetThemeForeground() {
+            try {
+                if (Application.Current?.Resources["ThemeForeground"] is Brush brush) {
+                    return brush;
+                }
+            } catch { }
+            return new SolidColorBrush(Color.FromRgb(200, 200, 200)); // Light gray fallback
         }
     }
 
@@ -72,8 +83,8 @@ namespace AssetProcessor.Controls {
         public LogViewerControl() {
             InitializeComponent();
 
-            if (LogListView != null) {
-                LogListView.ItemsSource = _filteredLogs;
+            if (LogDataGrid != null) {
+                LogDataGrid.ItemsSource = _filteredLogs;
             }
 
             UpdateAutoScrollButton();
@@ -137,7 +148,7 @@ namespace AssetProcessor.Controls {
 
                     // Auto-scroll to bottom
                     if (_autoScroll && _filteredLogs.Count > 0) {
-                        LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
+                        LogDataGrid.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
                     }
                 }
 
@@ -178,8 +189,8 @@ namespace AssetProcessor.Controls {
             }
             UpdateStatusBar();
 
-            if (_autoScroll && _filteredLogs.Count > 0 && LogListView != null) {
-                LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
+            if (_autoScroll && _filteredLogs.Count > 0 && LogDataGrid != null) {
+                LogDataGrid.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
             }
         }
 
@@ -218,8 +229,8 @@ namespace AssetProcessor.Controls {
             _autoScroll = !_autoScroll;
             UpdateAutoScrollButton();
 
-            if (_autoScroll && _filteredLogs.Count > 0) {
-                LogListView.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
+            if (_autoScroll && _filteredLogs.Count > 0 && LogDataGrid != null) {
+                LogDataGrid.ScrollIntoView(_filteredLogs[_filteredLogs.Count - 1]);
             }
         }
 

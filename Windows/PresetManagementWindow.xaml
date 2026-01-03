@@ -4,53 +4,119 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Preset Management" Height="600" Width="500"
+        Title="Preset Management" Height="650" Width="550"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+        Background="{DynamicResource ThemeBackground}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Toolbar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="New Preset" Width="90" Margin="0,0,5,0" Click="NewPreset_Click"/>
-            <Button Content="Edit" Width="70" Margin="0,0,5,0" Click="EditPreset_Click" x:Name="EditButton" IsEnabled="False"/>
-            <Button Content="Delete" Width="70" Margin="0,0,15,0" Click="DeletePreset_Click" x:Name="DeleteButton" IsEnabled="False"/>
-            <Button Content="Import..." Width="80" Margin="0,0,5,0" Click="ImportPresets_Click"/>
-            <Button Content="Export..." Width="80" Click="ExportPresets_Click"/>
-        </StackPanel>
+        <!-- TabControl for different preset types -->
+        <TabControl Grid.Row="0" x:Name="PresetTabControl" SelectionChanged="PresetTabControl_SelectionChanged">
 
-        <!-- Presets List -->
-        <ListBox Grid.Row="1" x:Name="PresetsListBox" SelectionChanged="PresetsListBox_SelectionChanged">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Margin="5">
-                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
-                        <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" Margin="0,2,0,0"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                            <TextBlock FontSize="10" Foreground="DarkGray">
-                                <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
-                                <Run Text=", "/>
-                                <Run Text="{Binding OutputFormat, Mode=OneWay}"/>
-                                <Run Text=", Q:"/>
-                                <Run Text="{Binding QualityLevel, Mode=OneWay}"/>
-                            </TextBlock>
-                            <TextBlock Text=" (Built-in)" FontSize="10" FontStyle="Italic" Foreground="DarkGray"
-                                       Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        </StackPanel>
+            <!-- Texture Presets Tab -->
+            <TabItem Header="Texture Presets">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="New" Width="60" Margin="0,0,5,0" Click="NewTexturePreset_Click"/>
+                        <Button Content="Edit" Width="60" Margin="0,0,5,0" Click="EditTexturePreset_Click"
+                                x:Name="EditTextureButton" IsEnabled="False"/>
+                        <Button Content="Delete" Width="60" Margin="0,0,15,0" Click="DeleteTexturePreset_Click"
+                                x:Name="DeleteTextureButton" IsEnabled="False"/>
+                        <Button Content="Import..." Width="70" Margin="0,0,5,0" Click="ImportTexturePresets_Click"/>
+                        <Button Content="Export..." Width="70" Click="ExportTexturePresets_Click"/>
                     </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+
+                    <!-- Texture Presets List -->
+                    <ListBox Grid.Row="1" x:Name="TexturePresetsListBox"
+                             SelectionChanged="TexturePresetsListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="5">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"
+                                               Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                        <TextBlock FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}">
+                                            <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
+                                            <Run Text=", "/>
+                                            <Run Text="{Binding OutputFormat, Mode=OneWay}"/>
+                                            <Run Text=", Q:"/>
+                                            <Run Text="{Binding QualityLevel, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Text=" (Built-in)" FontSize="9" FontStyle="Italic" Foreground="{DynamicResource ThemeForegroundDim}"
+                                                   Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </TabItem>
+
+            <!-- ORM Presets Tab -->
+            <TabItem Header="ORM Presets">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="New" Width="60" Margin="0,0,5,0" Click="NewORMPreset_Click"/>
+                        <Button Content="Edit" Width="60" Margin="0,0,5,0" Click="EditORMPreset_Click"
+                                x:Name="EditORMButton" IsEnabled="False"/>
+                        <Button Content="Duplicate" Width="70" Margin="0,0,5,0" Click="DuplicateORMPreset_Click"
+                                x:Name="DuplicateORMButton" IsEnabled="False"/>
+                        <Button Content="Delete" Width="60" Margin="0,0,15,0" Click="DeleteORMPreset_Click"
+                                x:Name="DeleteORMButton" IsEnabled="False"/>
+                        <Button Content="Import..." Width="70" Margin="0,0,5,0" Click="ImportORMPresets_Click"/>
+                        <Button Content="Export..." Width="70" Click="ExportORMPresets_Click"/>
+                    </StackPanel>
+
+                    <!-- ORM Presets List -->
+                    <ListBox Grid.Row="1" x:Name="ORMPresetsListBox"
+                             SelectionChanged="ORMPresetsListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="5">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"
+                                               Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                        <TextBlock FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}">
+                                            <Run Text="{Binding CompressionFormat, Mode=OneWay}"/>
+                                            <Run Text=", Toksvig: "/>
+                                            <Run Text="{Binding ToksvigEnabled, Mode=OneWay}"/>
+                                            <Run Text=", Mode: "/>
+                                            <Run Text="{Binding PackingMode, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Text=" (Built-in)" FontSize="9" FontStyle="Italic" Foreground="{DynamicResource ThemeForegroundDim}"
+                                                   Visibility="{Binding IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </TabItem>
+        </TabControl>
 
         <!-- Bottom Buttons -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="Reset to Defaults" Width="120" Margin="0,0,10,0" Click="ResetToDefaults_Click"/>
             <Button Content="Close" Width="80" Click="Close_Click" IsCancel="True"/>
         </StackPanel>

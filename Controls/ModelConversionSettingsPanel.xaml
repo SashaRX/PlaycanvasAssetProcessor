@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:core="clr-namespace:AssetProcessor.ModelConversion.Core"
              mc:Ignorable="d"
-             d:DesignHeight="900" d:DesignWidth="280">
+             d:DesignHeight="900" d:DesignWidth="280"
+             Background="{DynamicResource ThemeBackground}">
 
     <UserControl.Resources>
         <!-- Enum Data Providers -->
@@ -21,73 +22,9 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
-        <!-- Compact Expander Style -->
-        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
-            <Setter Property="Margin" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="HeaderTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="9" Margin="0,1"/>
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Compact GroupBox Style -->
-        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,1"/>
-            <Setter Property="Padding" Value="1"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <!-- ComboBox Style -->
-        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="Background" Value="#F5F5F5"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="3,1"/>
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="#FF1E1E1E"/>
-            <Setter Property="Foreground" Value="#FFE0E0E0"/>
-            <Setter Property="Padding" Value="3,1"/>
-            <Setter Property="FontSize" Value="9"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FF2D2D30"/>
-                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#FF007ACC"/>
-                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Label Style -->
-        <Style x:Key="LabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Margin" Value="0,0,0,1"/>
-        </Style>
-
-        <!-- Checkbox Style -->
-        <Style TargetType="CheckBox">
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <!-- Button Style -->
-        <Style TargetType="Button">
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Padding" Value="3,1"/>
-        </Style>
+        <!-- Panel-wide implicit styles for compact appearance -->
+        <Style TargetType="CheckBox" BasedOn="{StaticResource CompactCheckBoxStyle}"/>
+        <Style TargetType="Button" BasedOn="{StaticResource CompactButtonStyle}"/>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -99,9 +36,9 @@
                     <CheckBox x:Name="GenerateLodsCheckBox" Content="Generate LODs" IsChecked="True" Margin="0,0,0,2"
                               ToolTip="Generate LOD levels (LOD0-LOD3)"/>
 
-                    <TextBlock Text="Compression Mode:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Compression Mode:" Style="{StaticResource CompactLabelStyle}"/>
                     <ComboBox x:Name="CompressionModeComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
+                              Style="{StaticResource CompactComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource CompressionModeValues}}"
                               SelectedIndex="0"
                               Margin="0,0,0,2"
@@ -127,7 +64,7 @@
             <!-- 2. QUANTIZATION SETTINGS -->
             <Expander Header="Quantization Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
-                    <TextBlock Text="Position Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Position Bits (8-16):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -141,7 +78,7 @@
                                    Width="25" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="TexCoord Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="TexCoord Bits (8-16):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -155,7 +92,7 @@
                                    Width="25" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="Normal Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Normal Bits (8-16):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -169,7 +106,7 @@
                                    Width="25" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="Color Bits (8-16):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Color Bits (8-16):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -188,7 +125,7 @@
             <!-- 3. LOD SETTINGS -->
             <Expander Header="LOD Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
-                    <TextBlock Text="LOD Hysteresis (0.01-0.1):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="LOD Hysteresis (0.01-0.1):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -214,7 +151,7 @@
                     <CheckBox x:Name="Lod1EnabledCheckBox" Content="LOD1 (High Detail)" IsChecked="True" Margin="0,2,0,1" FontWeight="SemiBold"
                               ToolTip="Enable LOD1"/>
                     <StackPanel x:Name="Lod1SettingsPanel" Margin="16,0,0,2" IsEnabled="{Binding ElementName=Lod1EnabledCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Simplification (%):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Simplification (%):" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -233,7 +170,7 @@
                     <CheckBox x:Name="Lod2EnabledCheckBox" Content="LOD2 (Medium Detail)" IsChecked="True" Margin="0,2,0,1" FontWeight="SemiBold"
                               ToolTip="Enable LOD2"/>
                     <StackPanel x:Name="Lod2SettingsPanel" Margin="16,0,0,2" IsEnabled="{Binding ElementName=Lod2EnabledCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Simplification (%):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Simplification (%):" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -252,7 +189,7 @@
                     <CheckBox x:Name="Lod3EnabledCheckBox" Content="LOD3 (Low Detail)" IsChecked="True" Margin="0,2,0,1" FontWeight="SemiBold"
                               ToolTip="Enable LOD3"/>
                     <StackPanel x:Name="Lod3SettingsPanel" Margin="16,0,0,2" IsEnabled="{Binding ElementName=Lod3EnabledCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Simplification (%):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Simplification (%):" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -272,7 +209,7 @@
             <!-- 4. SIMPLIFICATION SETTINGS -->
             <Expander Header="Simplification Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
-                    <TextBlock Text="Error Limit (0-1):" Style="{StaticResource LabelStyle}"
+                    <TextBlock Text="Error Limit (0-1):" Style="{StaticResource CompactLabelStyle}"
                                ToolTip="Maximum simplification error (-se). Default 0.01 = 1% deviation"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
@@ -298,9 +235,9 @@
             <!-- 5. VERTEX ATTRIBUTES -->
             <Expander Header="Vertex Attributes" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
-                    <TextBlock Text="Position Format:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Position Format:" Style="{StaticResource CompactLabelStyle}"/>
                     <ComboBox x:Name="PositionFormatComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
+                              Style="{StaticResource CompactComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource VertexPositionFormatValues}}"
                               SelectedIndex="0"
                               Margin="0,0,0,2"
@@ -326,7 +263,7 @@
             <!-- 6. ANIMATION SETTINGS -->
             <Expander Header="Animation Settings" Style="{StaticResource CompactExpanderStyle}" IsExpanded="False">
                 <StackPanel Margin="2,1,0,0">
-                    <TextBlock Text="Translation Bits (1-24):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Translation Bits (1-24):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -340,7 +277,7 @@
                                    Width="25" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="Rotation Bits (4-16):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Rotation Bits (4-16):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -354,7 +291,7 @@
                                    Width="25" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="Scale Bits (1-24):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Scale Bits (1-24):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -368,7 +305,7 @@
                                    Width="25" TextAlignment="Right"/>
                     </Grid>
 
-                    <TextBlock Text="Frame Rate (Hz):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Frame Rate (Hz):" Style="{StaticResource CompactLabelStyle}"/>
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

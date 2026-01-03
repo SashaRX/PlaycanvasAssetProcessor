@@ -109,7 +109,8 @@ namespace AssetProcessor.ModelConversion.Viewer {
                 }
 
                 // Logger.Info($"Found {result.Count} GLB LOD files for {modelName}"); // NLog блокирует UI
-            } catch (Exception ex) {
+            } catch (Exception)
+            {
                 // Logger.Error(ex, $"Failed to find GLB LOD files for: {fbxPath}"); // NLog блокирует UI
             }
 

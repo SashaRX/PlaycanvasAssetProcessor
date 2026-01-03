@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:core="clr-namespace:AssetProcessor.TextureConversion.Core"
              mc:Ignorable="d"
-             d:DesignHeight="700" d:DesignWidth="280">
+             d:DesignHeight="700" d:DesignWidth="280"
+             Background="{DynamicResource ThemeBackground}">
 
     <UserControl.Resources>
         <!-- Enum Data Providers -->
@@ -72,73 +73,9 @@
 
         <!-- HistogramProcessingMode и HistogramQuantization удалены (всегда Preprocessing + Half16) -->
 
-        <!-- Compact Expander Style -->
-        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
-            <Setter Property="Margin" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="HeaderTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="9" Margin="0,1"/>
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Compact GroupBox Style -->
-        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,1"/>
-            <Setter Property="Padding" Value="1"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <!-- ComboBox Style -->
-        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="Background" Value="#F5F5F5"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="BorderBrush" Value="#BDC3C7"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="3,1"/>
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Padding" Value="3,1"/>
-            <Setter Property="FontSize" Value="9"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#E3F2FD"/>
-                    <Setter Property="Foreground" Value="#0D47A1"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#BBDEFB"/>
-                    <Setter Property="Foreground" Value="#0D47A1"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Label Style -->
-        <Style x:Key="LabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Margin" Value="0,0,0,1"/>
-        </Style>
-
-        <!-- Checkbox Style -->
-        <Style TargetType="CheckBox">
-            <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <!-- Button Style -->
-        <Style TargetType="Button">
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Padding" Value="3,1"/>
-        </Style>
+        <!-- Panel-wide implicit styles for compact appearance -->
+        <Style TargetType="CheckBox" BasedOn="{StaticResource CompactCheckBoxStyle}"/>
+        <Style TargetType="Button" BasedOn="{StaticResource CompactButtonStyle}"/>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -153,7 +90,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <ComboBox x:Name="PresetComboBox" Grid.Column="0" Margin="0,0,5,0"
-                              Style="{StaticResource ReadableComboBoxStyle}"
+                              Style="{StaticResource CompactComboBoxStyle}"
                               SelectionChanged="PresetComboBox_SelectionChanged"
                               ToolTip="Select compression preset"/>
                     <Button Content="🔍" Grid.Column="1" Width="30" Margin="0,0,2,0"
@@ -176,16 +113,16 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Compression:" Style="{StaticResource LabelStyle}"/>
+                            <TextBlock Text="Compression:" Style="{StaticResource CompactLabelStyle}"/>
                             <ComboBox x:Name="CompressionFormatComboBox"
-                                      Style="{StaticResource ReadableComboBoxStyle}"
+                                      Style="{StaticResource CompactComboBoxStyle}"
                                       ItemsSource="{Binding Source={StaticResource CompressionFormatValues}}"
                                       SelectionChanged="CompressionFormatComboBox_SelectionChanged"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="Output:" Style="{StaticResource LabelStyle}"/>
+                            <TextBlock Text="Output:" Style="{StaticResource CompactLabelStyle}"/>
                             <ComboBox x:Name="OutputFormatComboBox"
-                                      Style="{StaticResource ReadableComboBoxStyle}"
+                                      Style="{StaticResource CompactComboBoxStyle}"
                                       ItemsSource="{Binding Source={StaticResource OutputFormatValues}}"
                                       SelectionChanged="OutputFormatComboBox_SelectionChanged"
                                       ToolTip="KTX2 (recommended, GPU compressed), Basis (legacy), or PNG (uncompressed)"/>
@@ -194,7 +131,7 @@
 
                     <!-- Compression Level (ETC1S only) -->
                     <StackPanel x:Name="CompressionLevelPanel" Visibility="Collapsed">
-                        <TextBlock Text="Compression Level (0-5):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Compression Level (0-5):" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -213,7 +150,7 @@
 
                     <!-- Quality (ETC1S) -->
                     <StackPanel x:Name="ETC1SQualityPanel" Visibility="Collapsed">
-                        <TextBlock Text="Quality (1-255):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Quality (1-255):" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -234,7 +171,7 @@
 
                     <!-- Quality (UASTC) -->
                     <StackPanel x:Name="UASTCQualityPanel" Visibility="Collapsed">
-                        <TextBlock Text="UASTC Quality (0-4):" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="UASTC Quality (0-4):" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -251,7 +188,7 @@
                         <CheckBox x:Name="UseUASTCRDOCheckBox" Content="Use RDO" Margin="0,0,0,1" IsChecked="True"
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"
                                   ToolTip="Use Rate-Distortion Optimization for better quality/size ratio"/>
-                        <TextBlock Text="RDO Lambda (0.001-10):" Style="{StaticResource LabelStyle}"
+                        <TextBlock Text="RDO Lambda (0.001-10):" Style="{StaticResource CompactLabelStyle}"
                                    IsEnabled="{Binding ElementName=UseUASTCRDOCheckBox, Path=IsChecked}"
                                    ToolTip="Recommended: 0.25-10 for general textures, 0.25-0.75 for normal maps"/>
                         <Grid Margin="0,0,0,2">
@@ -274,9 +211,9 @@
                               ToolTip="Visual quality improvement (ETC1S/ASTC only)"/>
 
                     <!-- Color Space (OETF) -->
-                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="Color Space (OETF):" Style="{StaticResource CompactLabelStyle}"/>
                     <ComboBox x:Name="ColorSpaceComboBox"
-                              Style="{StaticResource ReadableComboBoxStyle}"
+                              Style="{StaticResource CompactComboBoxStyle}"
                               ItemsSource="{Binding Source={StaticResource ColorSpaceValues}}"
                               SelectionChanged="ComboBoxSettingChanged"
                               Margin="0,0,0,2"
@@ -284,15 +221,15 @@
 
                     <!-- KTX2 Supercompression -->
                     <StackPanel x:Name="KTX2SupercompressionPanel" Visibility="Collapsed">
-                        <TextBlock Text="KTX2 Supercompression:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="KTX2 Supercompression:" Style="{StaticResource CompactLabelStyle}"/>
                         <ComboBox x:Name="KTX2SupercompressionComboBox"
-                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  Style="{StaticResource CompactComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource KTX2SupercompressionValues}}"
                                   SelectionChanged="KTX2SupercompressionComboBox_SelectionChanged"
                                   Margin="0,0,0,2"
                                   ToolTip="Additional compression for KTX2: Zstandard (best), ZLIB (compatible), or None"/>
 
-                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource LabelStyle}"
+                        <TextBlock Text="Supercompression Level (1-22):" Style="{StaticResource CompactLabelStyle}"
                                    ToolTip="Zstandard compression level. Only for UASTC format. Higher = smaller files but slower. Not available for ETC1S."/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
@@ -337,9 +274,9 @@
 
                     <!-- MANUAL MIPMAPS SETTINGS (when CustomMipmapsCheckBox is checked) -->
                     <StackPanel x:Name="ManualMipmapsPanel" Visibility="Collapsed">
-                        <TextBlock Text="Manual Mip Filter:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Manual Mip Filter:" Style="{StaticResource CompactLabelStyle}"/>
                         <ComboBox x:Name="MipFilterComboBox"
-                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  Style="{StaticResource CompactComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource FilterTypeValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
                                   Margin="0,0,0,2"
@@ -364,17 +301,17 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Mip Filter:" Style="{StaticResource LabelStyle}"/>
+                                <TextBlock Text="Mip Filter:" Style="{StaticResource CompactLabelStyle}"/>
                                 <ComboBox x:Name="ToktxFilterComboBox"
-                                          Style="{StaticResource ReadableComboBoxStyle}"
+                                          Style="{StaticResource CompactComboBoxStyle}"
                                           ItemsSource="{Binding Source={StaticResource ToktxFilterTypeValues}}"
                                           SelectionChanged="ComboBoxSettingChanged"
                                           ToolTip="Filter for automatic mipmap generation by toktx (--genmipmap --filter): Kaiser (recommended), Lanczos4 (sharp), Box (fast), Mitchell (balanced)"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="Wrap Mode:" Style="{StaticResource LabelStyle}"/>
+                                <TextBlock Text="Wrap Mode:" Style="{StaticResource CompactLabelStyle}"/>
                                 <ComboBox x:Name="WrapModeComboBox"
-                                          Style="{StaticResource ReadableComboBoxStyle}"
+                                          Style="{StaticResource CompactComboBoxStyle}"
                                           ItemsSource="{Binding Source={StaticResource WrapModeValues}}"
                                           SelectionChanged="ComboBoxSettingChanged"
                                           ToolTip="Texture sampling mode at edges (--wmode): Clamp (repeat edge pixels, use for most textures) or Wrap (tile/repeat image, use for seamless tiling textures)"/>
@@ -409,15 +346,15 @@
                               Checked="ToksvigEnabledCheckBox_Changed" Unchecked="ToksvigEnabledCheckBox_Changed"/>
 
                     <StackPanel x:Name="ToksvigSettingsPanel" IsEnabled="{Binding ElementName=ToksvigEnabledCheckBox, Path=IsChecked}">
-                        <TextBlock Text="Calculation Mode:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Calculation Mode:" Style="{StaticResource CompactLabelStyle}"/>
                         <ComboBox x:Name="ToksvigCalculationModeComboBox"
-                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  Style="{StaticResource CompactComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource ToksvigCalculationModeValues}}"
                                   SelectionChanged="ToksvigCalculationModeComboBox_SelectionChanged"
                                   Margin="0,0,0,2"
                                   ToolTip="Classic (3x3 window, GaussianBlur, k^1.5 power) or Simplified (2x2 Box filter, linear k, variance threshold)"/>
 
-                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Composite Power (k) [0.5-8.0]:" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2"
                               ToolTip="Weight of variance influence on gloss/roughness adjustment. Higher values = stronger correction. Recommended: 1.0-2.0 for most cases.">
                             <Grid.ColumnDefinitions>
@@ -433,7 +370,7 @@
                                        Width="25" TextAlignment="Right"/>
                         </Grid>
 
-                        <TextBlock Text="Min Mip Level:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Min Mip Level:" Style="{StaticResource CompactLabelStyle}"/>
                         <Grid Margin="0,0,0,2"
                               ToolTip="Minimum mipmap level to start applying Toksvig. 0 = apply to base level (full detail). Higher values = apply only to smaller mipmaps.">
                             <Grid.ColumnDefinitions>
@@ -460,7 +397,7 @@
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
                         <StackPanel x:Name="ToksvigSimplifiedSettingsPanel" Visibility="Collapsed">
-                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource LabelStyle}"/>
+                            <TextBlock Text="Variance Threshold (Dead Zone):" Style="{StaticResource CompactLabelStyle}"/>
                             <Grid Margin="0,0,0,2"
                                   ToolTip="Variance below this threshold is set to 0 (dead zone). Reduces noise from low-variance areas. Only for Simplified mode. Recommended: 0.001-0.005">
                                 <Grid.ColumnDefinitions>
@@ -482,7 +419,7 @@
                                   ToolTip="Keep temporary mipmap PNG files after processing for debugging. Useful to visually inspect Toksvig effect on each mip level."
                                   Checked="CheckboxSettingChanged" Unchecked="CheckboxSettingChanged"/>
 
-                        <TextBlock Text="Normal Map Path:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Normal Map Path:" Style="{StaticResource CompactLabelStyle}"/>
                         <TextBlock x:Name="NormalMapStatusTextBlock" Text="(auto-detect from filename)"
                                    Foreground="Gray" Margin="0,0,0,1" TextWrapping="Wrap"
                                    ToolTip="Status of normal map auto-detection"/>
@@ -512,9 +449,9 @@
 
                     <StackPanel x:Name="HistogramSettingsPanel" IsEnabled="{Binding ElementName=EnableHistogramCheckBox, Path=IsChecked}">
                         <!-- ОСНОВНЫЕ НАСТРОЙКИ (ВСЕГДА ВИДИМЫ) -->
-                        <TextBlock Text="Quality Mode:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Quality Mode:" Style="{StaticResource CompactLabelStyle}"/>
                         <ComboBox x:Name="HistogramQualityComboBox"
-                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  Style="{StaticResource CompactComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource HistogramQualityValues}}"
                                   SelectionChanged="HistogramQualityComboBox_SelectionChanged"
                                   Margin="0,0,0,2">
@@ -546,9 +483,9 @@
                         <!-- Processing Mode удалён (всегда Preprocessing) -->
 
                         <!-- Channel Mode (упрощённая версия, Quantization всегда Half16) -->
-                        <TextBlock Text="Channel Mode:" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="Channel Mode:" Style="{StaticResource CompactLabelStyle}"/>
                         <ComboBox x:Name="HistogramChannelModeComboBox"
-                                  Style="{StaticResource ReadableComboBoxStyle}"
+                                  Style="{StaticResource CompactComboBoxStyle}"
                                   ItemsSource="{Binding Source={StaticResource HistogramChannelModeValues}}"
                                   SelectionChanged="ComboBoxSettingChanged"
                                   Margin="0,0,0,4"
@@ -561,7 +498,7 @@
                                            FontStyle="Italic" FontSize="8" Foreground="OrangeRed"
                                            TextWrapping="Wrap" Margin="0,0,0,4"/>
 
-                                <TextBlock Text="Percentile Low (%) [0-10]:" Style="{StaticResource LabelStyle}"/>
+                                <TextBlock Text="Percentile Low (%) [0-10]:" Style="{StaticResource CompactLabelStyle}"/>
                                 <Grid Margin="0,0,0,2"
                                       ToolTip="Lower percentile to ignore dark outliers (e.g., 0.5% = ignore darkest 0.5% pixels)">
                                     <Grid.ColumnDefinitions>
@@ -577,7 +514,7 @@
                                                Width="35" TextAlignment="Right"/>
                                 </Grid>
 
-                                <TextBlock Text="Percentile High (%) [90-100]:" Style="{StaticResource LabelStyle}"/>
+                                <TextBlock Text="Percentile High (%) [90-100]:" Style="{StaticResource CompactLabelStyle}"/>
                                 <Grid Margin="0,0,0,2"
                                       ToolTip="Upper percentile to ignore bright outliers (e.g., 99.5% = ignore brightest 0.5% pixels)">
                                     <Grid.ColumnDefinitions>
@@ -593,7 +530,7 @@
                                                Width="35" TextAlignment="Right"/>
                                 </Grid>
 
-                                <TextBlock Text="Knee Width (soft-knee) [0-0.1]:" Style="{StaticResource LabelStyle}"/>
+                                <TextBlock Text="Knee Width (soft-knee) [0-0.1]:" Style="{StaticResource CompactLabelStyle}"/>
                                 <Grid Margin="0,0,0,2"
                                       ToolTip="Width of smooth transition region for outliers (0.02 = 2% recommended). Only for PercentileWithKnee mode.">
                                     <Grid.ColumnDefinitions>
@@ -609,7 +546,7 @@
                                                Width="35" TextAlignment="Right"/>
                                 </Grid>
 
-                                <TextBlock Text="Min Range Threshold [0-0.1]:" Style="{StaticResource LabelStyle}"/>
+                                <TextBlock Text="Min Range Threshold [0-0.1]:" Style="{StaticResource CompactLabelStyle}"/>
                                 <Grid Margin="0,0,0,2"
                                       ToolTip="Skip normalization if range too narrow (prevents noise amplification on flat/constant textures)">
                                     <Grid.ColumnDefinitions>

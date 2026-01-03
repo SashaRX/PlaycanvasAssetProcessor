@@ -38,6 +38,7 @@ using System.Linq;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using AssetProcessor.Windows;
 using Newtonsoft.Json.Linq;
 
 namespace AssetProcessor {
@@ -2156,9 +2157,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void ORMEditPreset_Click(object sender, RoutedEventArgs e) {
-            // TODO: Open ORM Preset Editor window
-            MessageBox.Show("ORM Preset Editor coming soon!\n\nPresets are stored in:\n%AppData%/TexTool/orm_presets.json",
-                "ORM Presets", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (ORMPresetComboBox.SelectedItem is not ORMSettings selectedPreset) return;
+
+            // Clone preset for editing
+            var presetToEdit = selectedPreset.Clone();
+
+            var editorWindow = new ORMPresetEditorWindow(presetToEdit) {
+                Owner = this
+            };
+
+            if (editorWindow.ShowDialog() == true && editorWindow.EditedPreset != null) {
+                var editedPreset = editorWindow.EditedPreset;
+
+                if (selectedPreset.IsBuiltIn) {
+                    // Built-in presets can't be modified, save as new
+                    if (ORMPresetManager.Instance.AddPreset(editedPreset)) {
+                        RefreshORMPresetComboBox();
+                        ORMPresetComboBox.SelectedItem = ORMPresetManager.Instance.GetPreset(editedPreset.Name);
+                    }
+                } else {
+                    // Update existing preset
+                    if (ORMPresetManager.Instance.UpdatePreset(selectedPreset.Name, editedPreset)) {
+                        RefreshORMPresetComboBox();
+                        ORMPresetComboBox.SelectedItem = ORMPresetManager.Instance.GetPreset(editedPreset.Name);
+                    }
+                }
+            }
         }
 
         private void ORMSettings_Changed(object sender, RoutedEventArgs e) {

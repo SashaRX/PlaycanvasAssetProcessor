@@ -28,11 +28,14 @@
         <SolidColorBrush x:Key="ThemeSliderTrack" Color="#FFC8C8C8"/>
         <SolidColorBrush x:Key="ThemeTextBoxBackground" Color="White"/>
         <SolidColorBrush x:Key="ThemeTextBoxBorder" Color="#FFACACAC"/>
-        <SolidColorBrush x:Key="ThemeMaterialORM" Color="#FFE8F5E9"/>
-        <SolidColorBrush x:Key="ThemeMaterialDiffuse" Color="#FFB1B1B1"/>
-        <SolidColorBrush x:Key="ThemeMaterialNormal" Color="#FF8E9AFF"/>
-        <SolidColorBrush x:Key="ThemeMaterialSpecular" Color="#FFFFC68C"/>
-        <SolidColorBrush x:Key="ThemeMaterialOther" Color="#FF9DC4E8"/>
+        <SolidColorBrush x:Key="ThemeMaterialORM" Color="#FFFFC8DC"/>
+        <SolidColorBrush x:Key="ThemeMaterialDiffuse" Color="#FFC8C8C8"/>
+        <SolidColorBrush x:Key="ThemeMaterialNormal" Color="#FFB4B4F0"/>
+        <SolidColorBrush x:Key="ThemeMaterialSpecular" Color="#FFFFDCB4"/>
+        <SolidColorBrush x:Key="ThemeMaterialOther" Color="#FFB4D2F0"/>
+        <SolidColorBrush x:Key="ThemeTextureAlbedo" Color="#FFE6DC96"/>
+        <SolidColorBrush x:Key="ThemeTextureGloss" Color="#FFD2D2B4"/>
+        <SolidColorBrush x:Key="ThemeTextureAO" Color="#FFBEBEBE"/>
         <SolidColorBrush x:Key="ThemeHyperlink" Color="#FF0066CC"/>
 
         <!-- ============================================ -->

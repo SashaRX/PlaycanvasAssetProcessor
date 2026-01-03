@@ -112,15 +112,22 @@ namespace AssetProcessor.Helpers {
 
             // Material section colors (semantic coloring for texture types)
             app.Resources["ThemeMaterialORM"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(0x49, 0x6a, 0x49) : Color.FromRgb(232, 245, 233));
+                isDark ? Color.FromRgb(0x8B, 0x45, 0x65) : Color.FromRgb(255, 200, 220));  // Pink/magenta
             app.Resources["ThemeMaterialDiffuse"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(0x61, 0x61, 0x61) : Color.FromRgb(177, 177, 177));
+                isDark ? Color.FromRgb(0x61, 0x61, 0x61) : Color.FromRgb(200, 200, 200));  // Gray
             app.Resources["ThemeMaterialNormal"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(0x49, 0x54, 0x96) : Color.FromRgb(142, 154, 255));
+                isDark ? Color.FromRgb(0x50, 0x50, 0xA0) : Color.FromRgb(180, 180, 240));  // Blue/purple
             app.Resources["ThemeMaterialSpecular"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(0x8c, 0x61, 0x40) : Color.FromRgb(255, 198, 140));
+                isDark ? Color.FromRgb(0x8c, 0x61, 0x40) : Color.FromRgb(255, 220, 180));  // Orange/gold
             app.Resources["ThemeMaterialOther"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(0x50, 0x74, 0x8a) : Color.FromRgb(157, 196, 232));
+                isDark ? Color.FromRgb(0x50, 0x74, 0x8a) : Color.FromRgb(180, 210, 240));  // Blue-gray
+            // Additional texture type colors
+            app.Resources["ThemeTextureAlbedo"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(0x6B, 0x5A, 0x1A) : Color.FromRgb(230, 220, 150));  // Gold/olive
+            app.Resources["ThemeTextureGloss"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(0x55, 0x55, 0x55) : Color.FromRgb(210, 210, 180));  // Gray/yellow
+            app.Resources["ThemeTextureAO"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(0x4A, 0x4A, 0x4A) : Color.FromRgb(190, 190, 190));  // Gray
 
             // Hyperlink colors
             app.Resources["ThemeHyperlink"] = new SolidColorBrush(

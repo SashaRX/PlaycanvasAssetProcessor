@@ -3567,3 +3567,453 @@
 03.01.26 17:52:52: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
 03.01.26 17:52:52: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=True
 03.01.26 17:52:52: [SelectionChanged] COMPLETE
+03.01.26 19:22:15: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 19:22:15: TryLoadGlbLodAsync START
+03.01.26 19:22:15: Loading albedo texture
+03.01.26 19:22:15: Albedo texture done
+03.01.26 19:22:15: Finding GLB LOD files
+03.01.26 19:22:15: Found 4 files
+03.01.26 19:22:15: Showing LOD UI
+03.01.26 19:22:15: LOD UI shown
+03.01.26 19:22:15: Creating/checking SharpGlbLoader
+03.01.26 19:22:15: SharpGlbLoader ready
+03.01.26 19:22:15: Getting LOD file paths
+03.01.26 19:22:15: Got 4 LOD paths
+03.01.26 19:22:15: Starting Task.Run for 4 LODs
+03.01.26 19:22:15: Loading LOD0
+03.01.26 19:22:15: Calling LoadGlb for LOD0
+03.01.26 19:22:15: LoadGlb done for LOD0, Success=True
+03.01.26 19:22:15: Loading LOD1
+03.01.26 19:22:15: Calling LoadGlb for LOD1
+03.01.26 19:22:15: LoadGlb done for LOD1, Success=True
+03.01.26 19:22:15: Loading LOD2
+03.01.26 19:22:15: Calling LoadGlb for LOD2
+03.01.26 19:22:15: LoadGlb done for LOD2, Success=True
+03.01.26 19:22:15: Loading LOD3
+03.01.26 19:22:15: Calling LoadGlb for LOD3
+03.01.26 19:22:15: LoadGlb done for LOD3, Success=True
+03.01.26 19:22:15: Task.Run loop complete
+03.01.26 19:22:15: Task.Run await complete
+03.01.26 19:22:15: Entering Dispatcher.InvokeAsync
+03.01.26 19:22:15: Inside Dispatcher.InvokeAsync
+03.01.26 19:22:15: Loading to viewport
+03.01.26 19:22:15: Viewport loaded
+03.01.26 19:22:15: Dispatcher.InvokeAsync DONE
+03.01.26 19:22:15: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+03.01.26 19:22:15: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=True
+03.01.26 19:22:15: [SelectionChanged] COMPLETE
+03.01.26 19:24:02: [PIPELINE] ConvertAsync START
+03.01.26 19:24:02: [PIPELINE] Checking FBX2glTF availability
+03.01.26 19:24:02: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 19:24:02: [PIPELINE] gltfpack OK
+03.01.26 19:24:02: [PIPELINE] Creating directories
+03.01.26 19:24:02: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 19:24:02: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 19:24:02: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 19:24:02: [PIPELINE] Calling InspectGlbUV
+03.01.26 19:24:02: [PIPELINE] InspectGlbUV done
+03.01.26 19:24:02: [PIPELINE] Starting LOD generation
+03.01.26 19:24:02: [PIPELINE] Generating LOD0
+03.01.26 19:24:02: [PIPELINE] LOD0 done, Success: True
+03.01.26 19:24:02: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 19:24:03: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 19:24:03: [PIPELINE] Generating LOD1
+03.01.26 19:24:03: [PIPELINE] LOD1 done, Success: True
+03.01.26 19:24:03: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 19:24:03: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 19:24:03: [PIPELINE] Generating LOD2
+03.01.26 19:24:03: [PIPELINE] LOD2 done, Success: True
+03.01.26 19:24:03: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 19:24:03: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 19:24:03: [PIPELINE] LOD loop complete
+03.01.26 19:24:03: [PIPELINE] Cleanup phase
+03.01.26 19:24:03: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 19:24:03: [PIPELINE] Duration: 0,39s, LOD files: 3
+03.01.26 19:24:03: [PIPELINE] About to return result
+03.01.26 19:25:56: [PIPELINE] ConvertAsync START
+03.01.26 19:25:56: [PIPELINE] Checking FBX2glTF availability
+03.01.26 19:25:56: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 19:25:56: [PIPELINE] gltfpack OK
+03.01.26 19:25:56: [PIPELINE] Creating directories
+03.01.26 19:25:56: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 19:25:56: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 19:25:56: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 19:25:56: [PIPELINE] Calling InspectGlbUV
+03.01.26 19:25:57: [PIPELINE] InspectGlbUV done
+03.01.26 19:25:57: [PIPELINE] Starting LOD generation
+03.01.26 19:25:57: [PIPELINE] Generating LOD0
+03.01.26 19:25:57: [PIPELINE] LOD0 done, Success: True
+03.01.26 19:25:57: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 19:25:57: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 19:25:57: [PIPELINE] Generating LOD1
+03.01.26 19:25:57: [PIPELINE] LOD1 done, Success: True
+03.01.26 19:25:57: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 19:25:57: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 19:25:57: [PIPELINE] Generating LOD2
+03.01.26 19:25:57: [PIPELINE] LOD2 done, Success: True
+03.01.26 19:25:57: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 19:25:57: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 19:25:57: [PIPELINE] LOD loop complete
+03.01.26 19:25:57: [PIPELINE] Cleanup phase
+03.01.26 19:25:57: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 19:25:57: [PIPELINE] Duration: 0,34s, LOD files: 3
+03.01.26 19:25:57: [PIPELINE] About to return result
+03.01.26 19:26:12: [PIPELINE] ConvertAsync START
+03.01.26 19:26:12: [PIPELINE] Checking FBX2glTF availability
+03.01.26 19:26:12: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 19:26:12: [PIPELINE] gltfpack OK
+03.01.26 19:26:12: [PIPELINE] Creating directories
+03.01.26 19:26:12: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 19:26:12: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 19:26:12: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 19:26:12: [PIPELINE] Calling InspectGlbUV
+03.01.26 19:26:12: [PIPELINE] InspectGlbUV done
+03.01.26 19:26:12: [PIPELINE] Starting LOD generation
+03.01.26 19:26:12: [PIPELINE] Generating LOD0
+03.01.26 19:26:12: [PIPELINE] LOD0 done, Success: True
+03.01.26 19:26:12: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 19:26:12: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 19:26:12: [PIPELINE] Generating LOD1
+03.01.26 19:26:13: [PIPELINE] LOD1 done, Success: True
+03.01.26 19:26:13: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 19:26:13: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 19:26:13: [PIPELINE] Generating LOD2
+03.01.26 19:26:13: [PIPELINE] LOD2 done, Success: True
+03.01.26 19:26:13: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 19:26:13: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 19:26:13: [PIPELINE] LOD loop complete
+03.01.26 19:26:13: [PIPELINE] Cleanup phase
+03.01.26 19:26:13: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 19:26:13: [PIPELINE] Duration: 0,40s, LOD files: 3
+03.01.26 19:26:13: [PIPELINE] About to return result
+03.01.26 19:30:26: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 19:30:26: TryLoadGlbLodAsync START
+03.01.26 19:30:26: Loading albedo texture
+03.01.26 19:30:26: Albedo texture done
+03.01.26 19:30:26: Finding GLB LOD files
+03.01.26 19:30:26: Found 4 files
+03.01.26 19:30:26: Showing LOD UI
+03.01.26 19:30:26: LOD UI shown
+03.01.26 19:30:26: Creating/checking SharpGlbLoader
+03.01.26 19:30:26: SharpGlbLoader ready
+03.01.26 19:30:26: Getting LOD file paths
+03.01.26 19:30:26: Got 4 LOD paths
+03.01.26 19:30:26: Starting Task.Run for 4 LODs
+03.01.26 19:30:26: Loading LOD0
+03.01.26 19:30:26: Calling LoadGlb for LOD0
+03.01.26 19:30:26: LoadGlb done for LOD0, Success=True
+03.01.26 19:30:26: Loading LOD1
+03.01.26 19:30:26: Calling LoadGlb for LOD1
+03.01.26 19:30:26: LoadGlb done for LOD1, Success=True
+03.01.26 19:30:26: Loading LOD2
+03.01.26 19:30:26: Calling LoadGlb for LOD2
+03.01.26 19:30:26: LoadGlb done for LOD2, Success=True
+03.01.26 19:30:26: Loading LOD3
+03.01.26 19:30:26: Calling LoadGlb for LOD3
+03.01.26 19:30:26: LoadGlb done for LOD3, Success=True
+03.01.26 19:30:26: Task.Run loop complete
+03.01.26 19:30:26: Task.Run await complete
+03.01.26 19:30:26: Entering Dispatcher.InvokeAsync
+03.01.26 19:30:26: Inside Dispatcher.InvokeAsync
+03.01.26 19:30:26: Loading to viewport
+03.01.26 19:30:26: Viewport loaded
+03.01.26 19:30:26: Dispatcher.InvokeAsync DONE
+03.01.26 19:30:26: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+03.01.26 19:30:26: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=True
+03.01.26 19:30:26: [SelectionChanged] COMPLETE
+03.01.26 19:30:50: [PIPELINE] ConvertAsync START
+03.01.26 19:30:50: [PIPELINE] Checking FBX2glTF availability
+03.01.26 19:30:50: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 19:30:50: [PIPELINE] gltfpack OK
+03.01.26 19:30:50: [PIPELINE] Creating directories
+03.01.26 19:30:50: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 19:30:50: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 19:30:50: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 19:30:50: [PIPELINE] Calling InspectGlbUV
+03.01.26 19:30:51: [PIPELINE] InspectGlbUV done
+03.01.26 19:30:51: [PIPELINE] Starting LOD generation
+03.01.26 19:30:51: [PIPELINE] Generating LOD0
+03.01.26 19:30:51: [PIPELINE] LOD0 done, Success: True
+03.01.26 19:30:51: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 19:30:51: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 19:30:51: [PIPELINE] Generating LOD1
+03.01.26 19:30:51: [PIPELINE] LOD1 done, Success: True
+03.01.26 19:30:51: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 19:30:51: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 19:30:51: [PIPELINE] Generating LOD2
+03.01.26 19:30:51: [PIPELINE] LOD2 done, Success: True
+03.01.26 19:30:51: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 19:30:51: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 19:30:51: [PIPELINE] LOD loop complete
+03.01.26 19:30:51: [PIPELINE] Cleanup phase
+03.01.26 19:30:51: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 19:30:51: [PIPELINE] Duration: 0,34s, LOD files: 3
+03.01.26 19:30:51: [PIPELINE] About to return result
+03.01.26 19:31:18: [PIPELINE] ConvertAsync START
+03.01.26 19:31:18: [PIPELINE] Checking FBX2glTF availability
+03.01.26 19:31:18: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 19:31:18: [PIPELINE] gltfpack OK
+03.01.26 19:31:18: [PIPELINE] Creating directories
+03.01.26 19:31:18: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 19:31:18: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 19:31:18: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 19:31:18: [PIPELINE] Calling InspectGlbUV
+03.01.26 19:31:18: [PIPELINE] InspectGlbUV done
+03.01.26 19:31:18: [PIPELINE] Starting LOD generation
+03.01.26 19:31:18: [PIPELINE] Generating LOD0
+03.01.26 19:31:18: [PIPELINE] LOD0 done, Success: True
+03.01.26 19:31:18: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 19:31:18: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 19:31:18: [PIPELINE] Generating LOD1
+03.01.26 19:31:18: [PIPELINE] LOD1 done, Success: True
+03.01.26 19:31:18: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 19:31:18: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 19:31:18: [PIPELINE] Generating LOD2
+03.01.26 19:31:18: [PIPELINE] LOD2 done, Success: True
+03.01.26 19:31:18: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 19:31:18: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 19:31:18: [PIPELINE] LOD loop complete
+03.01.26 19:31:18: [PIPELINE] Cleanup phase
+03.01.26 19:31:18: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 19:31:18: [PIPELINE] Duration: 0,26s, LOD files: 3
+03.01.26 19:31:18: [PIPELINE] About to return result
+03.01.26 19:31:42: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 19:31:42: TryLoadGlbLodAsync START
+03.01.26 19:31:42: Loading albedo texture
+03.01.26 19:31:42: Albedo texture done
+03.01.26 19:31:42: Finding GLB LOD files
+03.01.26 19:31:42: Found 0 files
+03.01.26 19:31:42: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 19:31:42: [SelectionChanged] Loading FBX model
+03.01.26 19:31:42: [SelectionChanged] FBX loaded
+03.01.26 19:31:42: [SelectionChanged] COMPLETE
+03.01.26 19:31:46: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 19:31:46: TryLoadGlbLodAsync START
+03.01.26 19:31:46: Loading albedo texture
+03.01.26 19:31:46: Albedo texture done
+03.01.26 19:31:46: Finding GLB LOD files
+03.01.26 19:31:46: Found 0 files
+03.01.26 19:31:46: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 19:31:46: [SelectionChanged] Loading FBX model
+03.01.26 19:31:46: [SelectionChanged] FBX loaded
+03.01.26 19:31:46: [SelectionChanged] COMPLETE
+03.01.26 20:30:31: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 20:30:31: TryLoadGlbLodAsync START
+03.01.26 20:30:31: Loading albedo texture
+03.01.26 20:30:31: Albedo texture done
+03.01.26 20:30:31: Finding GLB LOD files
+03.01.26 20:30:31: Found 0 files
+03.01.26 20:30:31: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 20:30:31: [SelectionChanged] Loading FBX model
+03.01.26 20:30:31: [SelectionChanged] FBX loaded
+03.01.26 20:30:31: [SelectionChanged] COMPLETE
+03.01.26 20:30:35: [PIPELINE] ConvertAsync START
+03.01.26 20:30:35: [PIPELINE] Checking FBX2glTF availability
+03.01.26 20:30:35: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 20:30:35: [PIPELINE] gltfpack OK
+03.01.26 20:30:35: [PIPELINE] Creating directories
+03.01.26 20:30:35: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 20:30:35: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 20:30:35: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 20:30:35: [PIPELINE] Calling InspectGlbUV
+03.01.26 20:30:36: [PIPELINE] InspectGlbUV done
+03.01.26 20:30:36: [PIPELINE] Starting LOD generation
+03.01.26 20:30:36: [PIPELINE] Generating LOD0
+03.01.26 20:30:36: [PIPELINE] LOD0 done, Success: True
+03.01.26 20:30:36: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 20:30:36: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 20:30:36: [PIPELINE] Generating LOD1
+03.01.26 20:30:36: [PIPELINE] LOD1 done, Success: True
+03.01.26 20:30:36: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 20:30:36: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 20:30:36: [PIPELINE] Generating LOD2
+03.01.26 20:30:36: [PIPELINE] LOD2 done, Success: True
+03.01.26 20:30:36: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 20:30:36: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 20:30:36: [PIPELINE] LOD loop complete
+03.01.26 20:30:36: [PIPELINE] Cleanup phase
+03.01.26 20:30:36: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 20:30:36: [PIPELINE] Duration: 0,35s, LOD files: 3
+03.01.26 20:30:36: [PIPELINE] About to return result
+03.01.26 20:51:32: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 20:51:32: TryLoadGlbLodAsync START
+03.01.26 20:51:32: Loading albedo texture
+03.01.26 20:51:32: Albedo texture done
+03.01.26 20:51:32: Finding GLB LOD files
+03.01.26 20:51:32: Found 0 files
+03.01.26 20:51:32: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 20:51:32: [SelectionChanged] Loading FBX model
+03.01.26 20:51:32: [SelectionChanged] FBX loaded
+03.01.26 20:51:32: [SelectionChanged] COMPLETE
+03.01.26 20:51:38: [PIPELINE] ConvertAsync START
+03.01.26 20:51:38: [PIPELINE] Checking FBX2glTF availability
+03.01.26 20:51:38: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 20:51:38: [PIPELINE] gltfpack OK
+03.01.26 20:51:38: [PIPELINE] Creating directories
+03.01.26 20:51:38: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 20:51:38: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 20:51:38: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 20:51:38: [PIPELINE] Calling InspectGlbUV
+03.01.26 20:51:38: [PIPELINE] InspectGlbUV done
+03.01.26 20:51:38: [PIPELINE] Starting LOD generation
+03.01.26 20:51:38: [PIPELINE] Generating LOD0
+03.01.26 20:51:38: [PIPELINE] LOD0 done, Success: True
+03.01.26 20:51:38: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 20:51:38: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 20:51:38: [PIPELINE] Generating LOD1
+03.01.26 20:51:38: [PIPELINE] LOD1 done, Success: True
+03.01.26 20:51:38: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 20:51:38: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 20:51:38: [PIPELINE] Generating LOD2
+03.01.26 20:51:38: [PIPELINE] LOD2 done, Success: True
+03.01.26 20:51:38: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 20:51:38: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 20:51:38: [PIPELINE] LOD loop complete
+03.01.26 20:51:38: [PIPELINE] Cleanup phase
+03.01.26 20:51:38: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 20:51:38: [PIPELINE] Duration: 0,35s, LOD files: 3
+03.01.26 20:51:38: [PIPELINE] About to return result
+03.01.26 20:51:44: [PIPELINE] ConvertAsync START
+03.01.26 20:51:44: [PIPELINE] Checking FBX2glTF availability
+03.01.26 20:51:44: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 20:51:44: [PIPELINE] gltfpack OK
+03.01.26 20:51:44: [PIPELINE] Creating directories
+03.01.26 20:51:44: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 20:51:44: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 20:51:44: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 20:51:44: [PIPELINE] Calling InspectGlbUV
+03.01.26 20:51:44: [PIPELINE] InspectGlbUV done
+03.01.26 20:51:44: [PIPELINE] Starting LOD generation
+03.01.26 20:51:44: [PIPELINE] Generating LOD0
+03.01.26 20:51:44: [PIPELINE] LOD0 done, Success: True
+03.01.26 20:51:44: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 20:51:44: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 20:51:44: [PIPELINE] Generating LOD1
+03.01.26 20:51:44: [PIPELINE] LOD1 done, Success: True
+03.01.26 20:51:44: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 20:51:44: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 20:51:44: [PIPELINE] Generating LOD2
+03.01.26 20:51:44: [PIPELINE] LOD2 done, Success: True
+03.01.26 20:51:44: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 20:51:44: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 20:51:44: [PIPELINE] LOD loop complete
+03.01.26 20:51:44: [PIPELINE] Cleanup phase
+03.01.26 20:51:44: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 20:51:44: [PIPELINE] Duration: 0,34s, LOD files: 3
+03.01.26 20:51:44: [PIPELINE] About to return result
+03.01.26 20:51:50: [PIPELINE] ConvertAsync START
+03.01.26 20:51:50: [PIPELINE] Checking FBX2glTF availability
+03.01.26 20:51:50: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 20:51:50: [PIPELINE] gltfpack OK
+03.01.26 20:51:50: [PIPELINE] Creating directories
+03.01.26 20:51:50: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 20:51:50: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 20:51:50: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 20:51:50: [PIPELINE] Calling InspectGlbUV
+03.01.26 20:51:50: [PIPELINE] InspectGlbUV done
+03.01.26 20:51:50: [PIPELINE] Starting LOD generation
+03.01.26 20:51:50: [PIPELINE] Generating LOD0
+03.01.26 20:51:50: [PIPELINE] LOD0 done, Success: True
+03.01.26 20:51:50: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 20:51:50: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 20:51:50: [PIPELINE] Generating LOD1
+03.01.26 20:51:50: [PIPELINE] LOD1 done, Success: True
+03.01.26 20:51:50: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 20:51:50: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 20:51:50: [PIPELINE] Generating LOD2
+03.01.26 20:51:50: [PIPELINE] LOD2 done, Success: True
+03.01.26 20:51:50: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 20:51:50: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 20:51:50: [PIPELINE] LOD loop complete
+03.01.26 20:51:50: [PIPELINE] Cleanup phase
+03.01.26 20:51:50: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 20:51:50: [PIPELINE] Duration: 0,26s, LOD files: 3
+03.01.26 20:51:50: [PIPELINE] About to return result
+03.01.26 21:01:01: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 21:01:01: TryLoadGlbLodAsync START
+03.01.26 21:01:01: Loading albedo texture
+03.01.26 21:01:01: Albedo texture done
+03.01.26 21:01:01: Finding GLB LOD files
+03.01.26 21:01:01: Found 0 files
+03.01.26 21:01:01: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 21:01:01: [SelectionChanged] Loading FBX model
+03.01.26 21:01:01: [SelectionChanged] FBX loaded
+03.01.26 21:01:01: [SelectionChanged] COMPLETE
+03.01.26 21:09:13: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 21:09:13: TryLoadGlbLodAsync START
+03.01.26 21:09:13: Loading albedo texture
+03.01.26 21:09:13: Albedo texture done
+03.01.26 21:09:13: Finding GLB LOD files
+03.01.26 21:09:13: Found 0 files
+03.01.26 21:09:13: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 21:09:13: [SelectionChanged] Loading FBX model
+03.01.26 21:09:13: [SelectionChanged] FBX loaded
+03.01.26 21:09:13: [SelectionChanged] COMPLETE
+03.01.26 21:09:23: [PIPELINE] ConvertAsync START
+03.01.26 21:09:23: [PIPELINE] Checking FBX2glTF availability
+03.01.26 21:09:23: [PIPELINE] FBX2glTF OK, checking gltfpack
+03.01.26 21:09:23: [PIPELINE] gltfpack OK
+03.01.26 21:09:23: [PIPELINE] Creating directories
+03.01.26 21:09:23: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+03.01.26 21:09:23: [PIPELINE] Starting FBX2glTF conversion
+03.01.26 21:09:23: [PIPELINE] FBX2glTF done, Success: True
+03.01.26 21:09:23: [PIPELINE] Calling InspectGlbUV
+03.01.26 21:09:23: [PIPELINE] InspectGlbUV done
+03.01.26 21:09:23: [PIPELINE] Starting LOD generation
+03.01.26 21:09:23: [PIPELINE] Generating LOD0
+03.01.26 21:09:23: [PIPELINE] LOD0 done, Success: True
+03.01.26 21:09:23: [PIPELINE] Calling InspectGlbUV for LOD0
+03.01.26 21:09:23: [PIPELINE] InspectGlbUV for LOD0 done
+03.01.26 21:09:23: [PIPELINE] Generating LOD1
+03.01.26 21:09:23: [PIPELINE] LOD1 done, Success: True
+03.01.26 21:09:23: [PIPELINE] Calling InspectGlbUV for LOD1
+03.01.26 21:09:23: [PIPELINE] InspectGlbUV for LOD1 done
+03.01.26 21:09:23: [PIPELINE] Generating LOD2
+03.01.26 21:09:23: [PIPELINE] LOD2 done, Success: True
+03.01.26 21:09:23: [PIPELINE] Calling InspectGlbUV for LOD2
+03.01.26 21:09:23: [PIPELINE] InspectGlbUV for LOD2 done
+03.01.26 21:09:23: [PIPELINE] LOD loop complete
+03.01.26 21:09:23: [PIPELINE] Cleanup phase
+03.01.26 21:09:23: [PIPELINE] ConvertAsync COMPLETE, Success: True
+03.01.26 21:09:23: [PIPELINE] Duration: 0,39s, LOD files: 3
+03.01.26 21:09:23: [PIPELINE] About to return result
+03.01.26 21:21:16: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 21:21:16: TryLoadGlbLodAsync START
+03.01.26 21:21:16: Loading albedo texture
+03.01.26 21:21:16: Albedo texture done
+03.01.26 21:21:16: Finding GLB LOD files
+03.01.26 21:21:16: Found 0 files
+03.01.26 21:21:16: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 21:21:16: [SelectionChanged] Loading FBX model
+03.01.26 21:21:16: [SelectionChanged] FBX loaded
+03.01.26 21:21:16: [SelectionChanged] COMPLETE
+03.01.26 21:29:24: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 21:29:24: TryLoadGlbLodAsync START
+03.01.26 21:29:24: Loading albedo texture
+03.01.26 21:29:24: Albedo texture done
+03.01.26 21:29:24: Finding GLB LOD files
+03.01.26 21:29:24: Found 0 files
+03.01.26 21:29:24: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 21:29:24: [SelectionChanged] Loading FBX model
+03.01.26 21:29:24: [SelectionChanged] FBX loaded
+03.01.26 21:29:24: [SelectionChanged] COMPLETE
+03.01.26 21:48:18: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 21:48:18: TryLoadGlbLodAsync START
+03.01.26 21:48:18: Loading albedo texture
+03.01.26 21:48:18: Albedo texture done
+03.01.26 21:48:18: Finding GLB LOD files
+03.01.26 21:48:18: Found 0 files
+03.01.26 21:48:18: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 21:48:18: [SelectionChanged] Loading FBX model
+03.01.26 21:48:18: [SelectionChanged] FBX loaded
+03.01.26 21:48:18: [SelectionChanged] COMPLETE
+03.01.26 21:50:24: [SelectionChanged] Before TryLoadGlbLodAsync
+03.01.26 21:50:24: TryLoadGlbLodAsync START
+03.01.26 21:50:24: Loading albedo texture
+03.01.26 21:50:24: Albedo texture done
+03.01.26 21:50:24: Finding GLB LOD files
+03.01.26 21:50:24: Found 0 files
+03.01.26 21:50:24: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+03.01.26 21:50:24: [SelectionChanged] Loading FBX model
+03.01.26 21:50:24: [SelectionChanged] FBX loaded
+03.01.26 21:50:24: [SelectionChanged] COMPLETE

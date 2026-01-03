@@ -61,12 +61,6 @@ namespace AssetProcessor.Resources {
         private FilterType glossFilterType = FilterType.Kaiser;
         private FilterType metallicFilterType = FilterType.Box;  // Box for binary metallic values
 
-        // Default values for missing channels
-        private float aoDefaultValue = 1.0f;
-        private float glossDefaultValue = 0.5f;
-        private float metallicDefaultValue = 0.0f;
-        private float heightDefaultValue = 0.5f;
-
         /// <summary>
         /// Режим упаковки (OG, OGM, OGMH)
         /// </summary>
@@ -142,10 +136,10 @@ namespace AssetProcessor.Resources {
         }
 
         // Display names for UI
-        public string AOSourceName => AOSource?.Name ?? $"[Constant: {AODefaultValue:F2}]";
-        public string GlossSourceName => GlossSource?.Name ?? $"[Constant: {GlossDefaultValue:F2}]";
-        public string MetallicSourceName => MetallicSource?.Name ?? $"[Constant: {MetallicDefaultValue:F2}]";
-        public string HeightSourceName => HeightSource?.Name ?? $"[Constant: {HeightDefaultValue:F2}]";
+        public string AOSourceName => AOSource?.Name ?? "[No texture]";
+        public string GlossSourceName => GlossSource?.Name ?? "[No texture]";
+        public string MetallicSourceName => MetallicSource?.Name ?? "[No texture]";
+        public string HeightSourceName => HeightSource?.Name ?? "[No texture]";
 
         /// <summary>
         /// Режим обработки AO мипмапов
@@ -433,53 +427,15 @@ namespace AssetProcessor.Resources {
             }
         }
 
-        // Default values
-        public float AODefaultValue {
-            get => aoDefaultValue;
-            set {
-                aoDefaultValue = value;
-                OnPropertyChanged(nameof(AODefaultValue));
-                OnPropertyChanged(nameof(AOSourceName));
-            }
-        }
-
-        public float GlossDefaultValue {
-            get => glossDefaultValue;
-            set {
-                glossDefaultValue = value;
-                OnPropertyChanged(nameof(GlossDefaultValue));
-                OnPropertyChanged(nameof(GlossSourceName));
-            }
-        }
-
-        public float MetallicDefaultValue {
-            get => metallicDefaultValue;
-            set {
-                metallicDefaultValue = value;
-                OnPropertyChanged(nameof(MetallicDefaultValue));
-                OnPropertyChanged(nameof(MetallicSourceName));
-            }
-        }
-
-        public float HeightDefaultValue {
-            get => heightDefaultValue;
-            set {
-                heightDefaultValue = value;
-                OnPropertyChanged(nameof(HeightDefaultValue));
-                OnPropertyChanged(nameof(HeightSourceName));
-            }
-        }
-
         /// <summary>
-        /// Проверяет, готова ли ORM текстура к упаковке
+        /// Проверяет, готова ли ORM текстура к упаковке (минимум 2 канала)
         /// </summary>
         public bool IsReadyToPack() {
-            return PackingMode switch {
-                ChannelPackingMode.OG => AOSource != null && GlossSource != null,
-                ChannelPackingMode.OGM => AOSource != null && GlossSource != null && MetallicSource != null,
-                ChannelPackingMode.OGMH => AOSource != null && GlossSource != null && MetallicSource != null && HeightSource != null,
-                _ => false
-            };
+            int channelCount = (AOSource != null ? 1 : 0) +
+                              (GlossSource != null ? 1 : 0) +
+                              (MetallicSource != null ? 1 : 0) +
+                              (HeightSource != null ? 1 : 0);
+            return channelCount >= 2;
         }
 
         /// <summary>

@@ -59,30 +59,6 @@ public class MaterialORMSettings {
         set => Settings.AOBias = value;
     }
 
-    [JsonIgnore]
-    public float AODefault {
-        get => Settings.AODefault;
-        set => Settings.AODefault = value;
-    }
-
-    [JsonIgnore]
-    public float GlossDefault {
-        get => Settings.GlossDefault;
-        set => Settings.GlossDefault = value;
-    }
-
-    [JsonIgnore]
-    public float MetalnessDefault {
-        get => Settings.MetallicDefault;
-        set => Settings.MetallicDefault = value;
-    }
-
-    [JsonIgnore]
-    public float HeightDefault {
-        get => Settings.HeightDefault;
-        set => Settings.HeightDefault = value;
-    }
-
     /// <summary>
     /// Создает настройки по умолчанию
     /// </summary>

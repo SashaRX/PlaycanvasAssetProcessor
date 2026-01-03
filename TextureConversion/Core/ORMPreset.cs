@@ -51,9 +51,6 @@ public class ORMSettings {
     [JsonPropertyName("aoBias")]
     public float AOBias { get; set; } = 0.5f;
 
-    [JsonPropertyName("aoDefault")]
-    public float AODefault { get; set; } = 1.0f;
-
     // === Gloss Channel ===
 
     [JsonPropertyName("glossFilter")]
@@ -77,9 +74,6 @@ public class ORMSettings {
     [JsonPropertyName("toksvigSmoothVariance")]
     public bool ToksvigSmoothVariance { get; set; } = true;
 
-    [JsonPropertyName("glossDefault")]
-    public float GlossDefault { get; set; } = 0.5f;
-
     // === Metallic Channel ===
 
     [JsonPropertyName("metallicFilter")]
@@ -87,14 +81,6 @@ public class ORMSettings {
 
     [JsonPropertyName("metallicProcessing")]
     public AOProcessingMode MetallicProcessing { get; set; } = AOProcessingMode.None;
-
-    [JsonPropertyName("metallicDefault")]
-    public float MetallicDefault { get; set; } = 0.0f;
-
-    // === Height Channel ===
-
-    [JsonPropertyName("heightDefault")]
-    public float HeightDefault { get; set; } = 0.5f;
 
     // === Compression ===
 
@@ -216,7 +202,6 @@ public class ORMSettings {
             AOFilter = AOFilter,
             AOProcessing = AOProcessing,
             AOBias = AOBias,
-            AODefault = AODefault,
             GlossFilter = GlossFilter,
             ToksvigEnabled = ToksvigEnabled,
             ToksvigMode = ToksvigMode,
@@ -224,11 +209,8 @@ public class ORMSettings {
             ToksvigMinMip = ToksvigMinMip,
             ToksvigEnergyPreserving = ToksvigEnergyPreserving,
             ToksvigSmoothVariance = ToksvigSmoothVariance,
-            GlossDefault = GlossDefault,
             MetallicFilter = MetallicFilter,
             MetallicProcessing = MetallicProcessing,
-            MetallicDefault = MetallicDefault,
-            HeightDefault = HeightDefault,
             CompressionFormat = CompressionFormat,
             ETC1SCompressLevel = ETC1SCompressLevel,
             ETC1SQuality = ETC1SQuality,
@@ -265,7 +247,6 @@ public class ORMSettings {
             settings.RedChannel = new ChannelSourceSettings {
                 ChannelType = ChannelType.AmbientOcclusion,
                 SourcePath = aoPath,
-                DefaultValue = AODefault,
                 FilterType = AOFilter,
                 AOProcessingMode = AOProcessing,
                 AOBias = AOBias
@@ -282,7 +263,6 @@ public class ORMSettings {
             settings.BlueChannel = new ChannelSourceSettings {
                 ChannelType = ChannelType.Metallic,
                 SourcePath = metalPath,
-                DefaultValue = MetallicDefault,
                 FilterType = MetallicFilter,
                 AOProcessingMode = MetallicProcessing
             };
@@ -292,8 +272,7 @@ public class ORMSettings {
         if (mode is ChannelPackingMode.OGMH) {
             settings.AlphaChannel = new ChannelSourceSettings {
                 ChannelType = ChannelType.Height,
-                SourcePath = heightPath,
-                DefaultValue = HeightDefault
+                SourcePath = heightPath
             };
         }
 
@@ -304,7 +283,6 @@ public class ORMSettings {
         return new ChannelSourceSettings {
             ChannelType = ChannelType.Gloss,
             SourcePath = glossPath,
-            DefaultValue = GlossDefault,
             FilterType = GlossFilter,
             ApplyToksvig = ToksvigEnabled,
             ToksvigSettings = ToksvigEnabled ? new ToksvigSettings {

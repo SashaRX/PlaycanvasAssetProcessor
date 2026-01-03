@@ -83,7 +83,9 @@
       "Bash(findstr:*)",
       "Bash(cmd.exe /c \"taskkill /F /PID 44008\")",
       "Bash(cmd.exe /c \"type %AppData%\\\\TexTool\\\\ModelConversionSettings.json\")",
-      "Bash(cmd.exe /c \"taskkill /F /PID 33004\")"
+      "Bash(cmd.exe /c \"taskkill /F /PID 33004\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 42920\")",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,15 +9,9 @@ namespace AssetProcessor.TextureConversion.Core {
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
-        /// Путь к исходной текстуре для этого канала
-        /// Null = использовать значение по умолчанию (белый для AO, черный для остальных)
+        /// Путь к исходной текстуре для этого канала (обязателен)
         /// </summary>
         public string? SourcePath { get; set; }
-
-        /// <summary>
-        /// Значение по умолчанию если SourcePath = null (0.0-1.0)
-        /// </summary>
-        public float DefaultValue { get; set; } = 1.0f;
 
         /// <summary>
         /// Тип фильтра для генерации мипмапов
@@ -64,7 +58,6 @@ namespace AssetProcessor.TextureConversion.Core {
             return channelType switch {
                 ChannelType.AmbientOcclusion => new ChannelSourceSettings {
                     ChannelType = ChannelType.AmbientOcclusion,
-                    DefaultValue = 1.0f, // Белый = без затенения
                     AOProcessingMode = AOProcessingMode.BiasedDarkening,
                     AOBias = 0.5f,
                     MipProfile = MipGenerationProfile.CreateDefault(TextureType.AmbientOcclusion)
@@ -72,7 +65,6 @@ namespace AssetProcessor.TextureConversion.Core {
 
                 ChannelType.Gloss => new ChannelSourceSettings {
                     ChannelType = ChannelType.Gloss,
-                    DefaultValue = 0.5f, // Средний глянец
                     ApplyToksvig = true,
                     ToksvigSettings = ToksvigSettings.CreateDefault(),
                     MipProfile = MipGenerationProfile.CreateDefault(TextureType.Gloss)
@@ -80,13 +72,11 @@ namespace AssetProcessor.TextureConversion.Core {
 
                 ChannelType.Metallic => new ChannelSourceSettings {
                     ChannelType = ChannelType.Metallic,
-                    DefaultValue = 0.0f, // Не металл по умолчанию
                     MipProfile = MipGenerationProfile.CreateDefault(TextureType.Metallic)
                 },
 
                 ChannelType.Height => new ChannelSourceSettings {
                     ChannelType = ChannelType.Height,
-                    DefaultValue = 0.5f, // Средняя высота
                     MipProfile = MipGenerationProfile.CreateDefault(TextureType.Height)
                 },
 
@@ -120,8 +110,9 @@ namespace AssetProcessor.TextureConversion.Core {
                 return false;
             }
 
-            if (DefaultValue < 0.0f || DefaultValue > 1.0f) {
-                error = $"DefaultValue must be in range [0.0, 1.0], got {DefaultValue}";
+            // SourcePath обязателен
+            if (string.IsNullOrEmpty(SourcePath)) {
+                error = "SourcePath is required";
                 return false;
             }
 

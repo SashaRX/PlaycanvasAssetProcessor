@@ -51,20 +51,12 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                 foreach (var channelSettings in packingSettings.GetActiveChannels()) {
                     Logger.Info($"--- Processing {channelSettings.ChannelType} channel ---");
 
-                    List<Image<Rgba32>> mipmaps;
-
                     if (string.IsNullOrEmpty(channelSettings.SourcePath)) {
-                        // Создаем константную текстуру с DefaultValue
-                        Logger.Info($"  No source path, using default value: {channelSettings.DefaultValue:F2}");
-                        mipmaps = await CreateConstantMipmapsAsync(
-                            channelSettings.DefaultValue,
-                            outputSize ?? (1024, 1024) // Дефолтный размер если не указан
-                        );
-                    } else {
-                        // Загружаем и обрабатываем текстуру
-                        mipmaps = await ProcessChannelTextureAsync(channelSettings, outputSize);
+                        throw new ArgumentException($"SourcePath is required for {channelSettings.ChannelType} channel");
                     }
 
+                    // Загружаем и обрабатываем текстуру
+                    var mipmaps = await ProcessChannelTextureAsync(channelSettings, outputSize);
                     channelMipmaps[channelSettings.ChannelType] = mipmaps;
                     Logger.Info($"  ✓ {channelSettings.ChannelType}: {mipmaps.Count} mipmap levels generated");
                 }
@@ -248,40 +240,9 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             return correctedMipmaps;
         }
 
-        /// <summary>
-        /// Создает константные мипмапы (для каналов без исходной текстуры)
-        /// </summary>
-        private async Task<List<Image<Rgba32>>> CreateConstantMipmapsAsync(
-            float value,
-            (int width, int height) size) {
-
-            byte byteValue = (byte)(value * 255);
-            var mipmaps = new List<Image<Rgba32>>();
-
-            int width = size.width;
-            int height = size.height;
-
-            while (width >= 1 && height >= 1) {
-                var mip = new Image<Rgba32>(width, height);
-
-                // Заполняем константным значением
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width; x++) {
-                        mip[x, y] = new Rgba32(byteValue, byteValue, byteValue, 255);
-                    }
-                }
-
-                mipmaps.Add(mip);
-
-                width = Math.Max(1, width / 2);
-                height = Math.Max(1, height / 2);
-            }
-
-            return await Task.FromResult(mipmaps);
-        }
 
         /// <summary>
-        /// Упаковывает один уровень мипмапа из всех каналов в RGBA
+        /// Получает значение пикселя из мипмапа канала
         /// </summary>
         private byte GetChannelValue(
             List<Image<Rgba32>> mips,
@@ -289,8 +250,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             int x,
             int y,
             int targetWidth,
-            int targetHeight,
-            float defaultValue) {
+            int targetHeight) {
 
             // Если нет мипмапов на этом уровне, используем последний доступный
             int actualLevel = Math.Min(level, mips.Count - 1);
@@ -301,18 +261,13 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             int mipHeight = mip.Height;
 
             if (mipWidth != targetWidth || mipHeight != targetHeight) {
-                // Масштабируем координаты
                 int scaledX = (int)((float)x * mipWidth / targetWidth);
                 int scaledY = (int)((float)y * mipHeight / targetHeight);
-
-                // Проверяем границы
                 scaledX = Math.Clamp(scaledX, 0, mipWidth - 1);
                 scaledY = Math.Clamp(scaledY, 0, mipHeight - 1);
-
                 return mip[scaledX, scaledY].R;
             }
 
-            // Размер совпадает, берем напрямую
             return mip[x, y].R;
         }
 
@@ -332,39 +287,33 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                     switch (packingSettings.Mode) {
                         case ChannelPackingMode.OG:
                             // RGB = AO, A = Gloss
-                            if (packingSettings.RedChannel != null &&
-                                channelMipmaps.TryGetValue(ChannelType.AmbientOcclusion, out var aoMips)) {
-                                byte aoValue = GetChannelValue(aoMips, level, x, y, width, height, packingSettings.RedChannel.DefaultValue);
-                                r = g = b = aoValue; // RGB все заполнены AO
+                            if (channelMipmaps.TryGetValue(ChannelType.AmbientOcclusion, out var aoMips)) {
+                                byte aoValue = GetChannelValue(aoMips, level, x, y, width, height);
+                                r = g = b = aoValue;
                             }
-                            if (packingSettings.AlphaChannel != null &&
-                                channelMipmaps.TryGetValue(ChannelType.Gloss, out var glossMips)) {
-                                a = GetChannelValue(glossMips, level, x, y, width, height, packingSettings.AlphaChannel.DefaultValue);
+                            if (channelMipmaps.TryGetValue(ChannelType.Gloss, out var glossMips)) {
+                                a = GetChannelValue(glossMips, level, x, y, width, height);
                             }
                             break;
 
                         case ChannelPackingMode.OGM:
                         case ChannelPackingMode.OGMH:
                             // R = AO
-                            if (packingSettings.RedChannel != null &&
-                                channelMipmaps.TryGetValue(ChannelType.AmbientOcclusion, out var aoMips2)) {
-                                r = GetChannelValue(aoMips2, level, x, y, width, height, packingSettings.RedChannel.DefaultValue);
+                            if (channelMipmaps.TryGetValue(ChannelType.AmbientOcclusion, out var aoMips2)) {
+                                r = GetChannelValue(aoMips2, level, x, y, width, height);
                             }
                             // G = Gloss
-                            if (packingSettings.GreenChannel != null &&
-                                channelMipmaps.TryGetValue(ChannelType.Gloss, out var glossMips2)) {
-                                g = GetChannelValue(glossMips2, level, x, y, width, height, packingSettings.GreenChannel.DefaultValue);
+                            if (channelMipmaps.TryGetValue(ChannelType.Gloss, out var glossMips2)) {
+                                g = GetChannelValue(glossMips2, level, x, y, width, height);
                             }
                             // B = Metallic
-                            if (packingSettings.BlueChannel != null &&
-                                channelMipmaps.TryGetValue(ChannelType.Metallic, out var metallicMips)) {
-                                b = GetChannelValue(metallicMips, level, x, y, width, height, packingSettings.BlueChannel.DefaultValue);
+                            if (channelMipmaps.TryGetValue(ChannelType.Metallic, out var metallicMips)) {
+                                b = GetChannelValue(metallicMips, level, x, y, width, height);
                             }
                             // A = Height (только для OGMH)
                             if (packingSettings.Mode == ChannelPackingMode.OGMH &&
-                                packingSettings.AlphaChannel != null &&
                                 channelMipmaps.TryGetValue(ChannelType.Height, out var heightMips)) {
-                                a = GetChannelValue(heightMips, level, x, y, width, height, packingSettings.AlphaChannel.DefaultValue);
+                                a = GetChannelValue(heightMips, level, x, y, width, height);
                             }
                             break;
                     }

@@ -305,12 +305,20 @@ public class ModelExportPipeline {
         ExportOptions options,
         CancellationToken cancellationToken) {
 
+        Logger.Info($"=== GenerateORMTexturesAsync START ===");
+        Logger.Info($"  Materials count: {materials.Count}");
+        Logger.Info($"  Textures count: {textures.Count}");
+        Logger.Info($"  Output dir: {outputDir}");
+
         var results = new Dictionary<int, ORMExportResult>();
         var packedTextureIds = new HashSet<int>(); // Текстуры, которые были упакованы
         var textureDict = textures.ToDictionary(t => t.ID);
 
         foreach (var material in materials) {
             cancellationToken.ThrowIfCancellationRequested();
+
+            Logger.Info($"--- Processing material: {material.Name} (ID={material.ID}) ---");
+            Logger.Info($"  AOMapId: {material.AOMapId}, GlossMapId: {material.GlossMapId}, MetalnessMapId: {material.MetalnessMapId}");
 
             // Проверяем какие текстуры есть для ORM
             TextureResource? aoTexture = null;
@@ -324,9 +332,18 @@ public class ModelExportPipeline {
             if (material.MetalnessMapId.HasValue && textureDict.TryGetValue(material.MetalnessMapId.Value, out var metal))
                 metallicTexture = metal;
 
+            Logger.Info($"  Found textures - AO: {aoTexture?.Name ?? "null"}, Path: {aoTexture?.Path ?? "null"}, FileExists: {aoTexture?.Path != null && File.Exists(aoTexture.Path)}");
+            Logger.Info($"  Found textures - Gloss: {glossTexture?.Name ?? "null"}, Path: {glossTexture?.Path ?? "null"}, FileExists: {glossTexture?.Path != null && File.Exists(glossTexture.Path)}");
+            Logger.Info($"  Found textures - Metallic: {metallicTexture?.Name ?? "null"}, Path: {metallicTexture?.Path ?? "null"}, FileExists: {metallicTexture?.Path != null && File.Exists(metallicTexture.Path)}");
+
             // Определяем режим пакинга
             var packingMode = DeterminePackingMode(aoTexture, glossTexture, metallicTexture);
-            if (packingMode == ChannelPackingMode.None) continue;
+            Logger.Info($"  PackingMode: {packingMode}");
+
+            if (packingMode == ChannelPackingMode.None) {
+                Logger.Warn($"  Skipping material {material.Name} - no suitable textures for ORM packing");
+                continue;
+            }
 
             var ormFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}");
             var suffix = packingMode switch {
@@ -417,30 +434,49 @@ public class ModelExportPipeline {
         // Иначе используем настройки по умолчанию
         var settings = new ChannelPackingSettings { Mode = mode };
 
-        if (aoTexture?.Path != null) {
-            settings.RedChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.AmbientOcclusion,
-                SourcePath = aoTexture.Path,
-                DefaultValue = 1.0f
-            };
-        }
+        // Настройка каналов зависит от режима упаковки:
+        // OG:   RGB = AO, A = Gloss
+        // OGM:  R = AO, G = Gloss, B = Metallic
 
-        if (glossTexture?.Path != null) {
-            settings.GreenChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.Gloss,
-                SourcePath = glossTexture.Path,
-                DefaultValue = 0.5f,
-                ApplyToksvig = options.ApplyToksvig,
-                AOProcessingMode = AOProcessingMode.None // Gloss не поддерживает AO processing
-            };
-        }
+        if (mode == ChannelPackingMode.OG) {
+            // OG режим: RGB = AO, Alpha = Gloss
+            if (aoTexture?.Path != null) {
+                settings.RedChannel = new ChannelSourceSettings {
+                    ChannelType = ChannelType.AmbientOcclusion,
+                    SourcePath = aoTexture.Path
+                };
+            }
 
-        if (metallicTexture?.Path != null) {
-            settings.BlueChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.Metallic,
-                SourcePath = metallicTexture.Path,
-                DefaultValue = 0.0f
-            };
+            if (glossTexture?.Path != null) {
+                settings.AlphaChannel = new ChannelSourceSettings {
+                    ChannelType = ChannelType.Gloss,
+                    SourcePath = glossTexture.Path,
+                    ApplyToksvig = options.ApplyToksvig
+                };
+            }
+        } else {
+            // OGM режим: R = AO, G = Gloss, B = Metallic
+            if (aoTexture?.Path != null) {
+                settings.RedChannel = new ChannelSourceSettings {
+                    ChannelType = ChannelType.AmbientOcclusion,
+                    SourcePath = aoTexture.Path
+                };
+            }
+
+            if (glossTexture?.Path != null) {
+                settings.GreenChannel = new ChannelSourceSettings {
+                    ChannelType = ChannelType.Gloss,
+                    SourcePath = glossTexture.Path,
+                    ApplyToksvig = options.ApplyToksvig
+                };
+            }
+
+            if (metallicTexture?.Path != null) {
+                settings.BlueChannel = new ChannelSourceSettings {
+                    ChannelType = ChannelType.Metallic,
+                    SourcePath = metallicTexture.Path
+                };
+            }
         }
 
         return settings;
@@ -449,11 +485,20 @@ public class ModelExportPipeline {
     private ChannelPackingMode DeterminePackingMode(
         TextureResource? ao, TextureResource? gloss, TextureResource? metallic) {
 
+        // Проверяем наличие текстуры И существование файла на диске
         bool hasAO = ao?.Path != null && File.Exists(ao.Path);
         bool hasGloss = gloss?.Path != null && File.Exists(gloss.Path);
         bool hasMetallic = metallic?.Path != null && File.Exists(metallic.Path);
 
-        if (hasAO && hasGloss && hasMetallic) return ChannelPackingMode.OGM;
+        int channelCount = (hasAO ? 1 : 0) + (hasGloss ? 1 : 0) + (hasMetallic ? 1 : 0);
+
+        // Минимум 2 канала для упаковки, иначе оставляем отдельно
+        if (channelCount < 2) return ChannelPackingMode.None;
+
+        // OGM: есть все 3 или любые 2 включая Metallic
+        if (hasMetallic) return ChannelPackingMode.OGM;
+
+        // OG: AO + Gloss (без Metallic)
         if (hasAO && hasGloss) return ChannelPackingMode.OG;
 
         return ChannelPackingMode.None;

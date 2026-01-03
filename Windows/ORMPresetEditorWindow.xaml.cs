@@ -26,7 +26,6 @@ namespace AssetProcessor.Windows {
                 AOFilterComboBox.SelectedItem = _originalPreset.AOFilter;
                 AOProcessingComboBox.SelectedItem = _originalPreset.AOProcessing;
                 AOBiasSlider.Value = _originalPreset.AOBias;
-                AODefaultSlider.Value = _originalPreset.AODefault;
 
                 // Gloss Channel
                 GlossFilterComboBox.SelectedItem = _originalPreset.GlossFilter;
@@ -36,15 +35,10 @@ namespace AssetProcessor.Windows {
                 ToksvigMinMipSlider.Value = _originalPreset.ToksvigMinMip;
                 ToksvigEnergyPreservingCheckBox.IsChecked = _originalPreset.ToksvigEnergyPreserving;
                 ToksvigSmoothVarianceCheckBox.IsChecked = _originalPreset.ToksvigSmoothVariance;
-                GlossDefaultSlider.Value = _originalPreset.GlossDefault;
 
                 // Metallic Channel
                 MetallicFilterComboBox.SelectedItem = _originalPreset.MetallicFilter;
                 MetallicProcessingComboBox.SelectedItem = _originalPreset.MetallicProcessing;
-                MetallicDefaultSlider.Value = _originalPreset.MetallicDefault;
-
-                // Height Channel
-                HeightDefaultSlider.Value = _originalPreset.HeightDefault;
 
                 // Compression
                 CompressionFormatComboBox.SelectedItem = _originalPreset.CompressionFormat;
@@ -124,7 +118,6 @@ namespace AssetProcessor.Windows {
                 AOFilter = (FilterType)AOFilterComboBox.SelectedItem,
                 AOProcessing = (AOProcessingMode)AOProcessingComboBox.SelectedItem,
                 AOBias = (float)AOBiasSlider.Value,
-                AODefault = (float)AODefaultSlider.Value,
 
                 // Gloss Channel
                 GlossFilter = (FilterType)GlossFilterComboBox.SelectedItem,
@@ -134,15 +127,10 @@ namespace AssetProcessor.Windows {
                 ToksvigMinMip = (int)ToksvigMinMipSlider.Value,
                 ToksvigEnergyPreserving = ToksvigEnergyPreservingCheckBox.IsChecked ?? true,
                 ToksvigSmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
-                GlossDefault = (float)GlossDefaultSlider.Value,
 
                 // Metallic Channel
                 MetallicFilter = (FilterType)MetallicFilterComboBox.SelectedItem,
                 MetallicProcessing = (AOProcessingMode)MetallicProcessingComboBox.SelectedItem,
-                MetallicDefault = (float)MetallicDefaultSlider.Value,
-
-                // Height Channel
-                HeightDefault = (float)HeightDefaultSlider.Value,
 
                 // Compression
                 CompressionFormat = (CompressionFormat)CompressionFormatComboBox.SelectedItem,

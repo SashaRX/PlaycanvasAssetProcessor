@@ -132,52 +132,10 @@ namespace AssetProcessor.TextureConversion.Core {
                 }
             }
 
-            // Проверка соответствия режима и каналов
-            switch (Mode) {
-                case ChannelPackingMode.OG:
-                    if (RedChannel == null || RedChannel.ChannelType != ChannelType.AmbientOcclusion) {
-                        error = "OG mode requires RedChannel to be AmbientOcclusion";
-                        return false;
-                    }
-                    if (AlphaChannel == null || AlphaChannel.ChannelType != ChannelType.Gloss) {
-                        error = "OG mode requires AlphaChannel to be Gloss";
-                        return false;
-                    }
-                    break;
-
-                case ChannelPackingMode.OGM:
-                    if (RedChannel == null || RedChannel.ChannelType != ChannelType.AmbientOcclusion) {
-                        error = "OGM mode requires RedChannel to be AmbientOcclusion";
-                        return false;
-                    }
-                    if (GreenChannel == null || GreenChannel.ChannelType != ChannelType.Gloss) {
-                        error = "OGM mode requires GreenChannel to be Gloss";
-                        return false;
-                    }
-                    if (BlueChannel == null || BlueChannel.ChannelType != ChannelType.Metallic) {
-                        error = "OGM mode requires BlueChannel to be Metallic";
-                        return false;
-                    }
-                    break;
-
-                case ChannelPackingMode.OGMH:
-                    if (RedChannel == null || RedChannel.ChannelType != ChannelType.AmbientOcclusion) {
-                        error = "OGMH mode requires RedChannel to be AmbientOcclusion";
-                        return false;
-                    }
-                    if (GreenChannel == null || GreenChannel.ChannelType != ChannelType.Gloss) {
-                        error = "OGMH mode requires GreenChannel to be Gloss";
-                        return false;
-                    }
-                    if (BlueChannel == null || BlueChannel.ChannelType != ChannelType.Metallic) {
-                        error = "OGMH mode requires BlueChannel to be Metallic";
-                        return false;
-                    }
-                    if (AlphaChannel == null || AlphaChannel.ChannelType != ChannelType.Height) {
-                        error = "OGMH mode requires AlphaChannel to be Height";
-                        return false;
-                    }
-                    break;
+            // Минимум 2 канала для упаковки
+            if (channels.Count < 2) {
+                error = $"Channel packing requires at least 2 channels, got {channels.Count}";
+                return false;
             }
 
             error = null;

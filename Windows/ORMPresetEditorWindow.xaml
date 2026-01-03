@@ -107,19 +107,6 @@
                         <TextBlock Grid.Column="1" Text="{Binding ElementName=AOBiasSlider, Path=Value, StringFormat={}{0:F2}}"
                                    Width="40" TextAlignment="Right"/>
                     </Grid>
-
-                    <TextBlock Text="Default Value (when no AO texture):" Margin="0,0,0,3"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="AODefaultSlider" Grid.Column="0"
-                                Minimum="0" Maximum="1" Value="1.0"
-                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=AODefaultSlider, Path=Value, StringFormat={}{0:F2}}"
-                                   Width="40" TextAlignment="Right"/>
-                    </Grid>
                 </StackPanel>
             </GroupBox>
 
@@ -181,19 +168,6 @@
                         <CheckBox x:Name="ToksvigEnergyPreservingCheckBox" Content="Energy Preserving" IsChecked="True" Margin="0,0,0,3"/>
                         <CheckBox x:Name="ToksvigSmoothVarianceCheckBox" Content="Smooth Variance" IsChecked="True"/>
                     </StackPanel>
-
-                    <TextBlock Text="Default Value (when no Gloss texture):" Margin="0,10,0,3"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="GlossDefaultSlider" Grid.Column="0"
-                                Minimum="0" Maximum="1" Value="0.5"
-                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=GlossDefaultSlider, Path=Value, StringFormat={}{0:F2}}"
-                                   Width="40" TextAlignment="Right"/>
-                    </Grid>
                 </StackPanel>
             </GroupBox>
 
@@ -219,37 +193,6 @@
                         <TextBlock Grid.Column="0" Text="Processing:" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <ComboBox Grid.Column="1" x:Name="MetallicProcessingComboBox"
                                   ItemsSource="{Binding Source={StaticResource AOProcessingModeValues}}"/>
-                    </Grid>
-
-                    <TextBlock Text="Default Value (when no Metallic texture):" Margin="0,0,0,3"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="MetallicDefaultSlider" Grid.Column="0"
-                                Minimum="0" Maximum="1" Value="0.0"
-                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=MetallicDefaultSlider, Path=Value, StringFormat={}{0:F2}}"
-                                   Width="40" TextAlignment="Right"/>
-                    </Grid>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Height Channel Settings -->
-            <GroupBox Header="Height Channel (Alpha for OGMH)" Margin="0,0,0,10">
-                <StackPanel>
-                    <TextBlock Text="Default Value (when no Height texture):" Margin="0,0,0,3"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="HeightDefaultSlider" Grid.Column="0"
-                                Minimum="0" Maximum="1" Value="0.5"
-                                TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ElementName=HeightDefaultSlider, Path=Value, StringFormat={}{0:F2}}"
-                                   Width="40" TextAlignment="Right"/>
                     </Grid>
                 </StackPanel>
             </GroupBox>

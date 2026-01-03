@@ -4,8 +4,24 @@ using System.Windows;
 using System.Windows.Media;
 
 namespace AssetProcessor.Helpers {
+    public enum ThemeMode {
+        Auto,
+        Light,
+        Dark
+    }
+
     public static class ThemeHelper {
-        public static bool IsDarkTheme {
+        private static ThemeMode _currentMode = ThemeMode.Auto;
+
+        public static ThemeMode CurrentMode {
+            get => _currentMode;
+            set {
+                _currentMode = value;
+                ApplyTheme(Application.Current);
+            }
+        }
+
+        public static bool IsSystemDarkTheme {
             get {
                 try {
                     using var key = Registry.CurrentUser.OpenSubKey(
@@ -17,6 +33,12 @@ namespace AssetProcessor.Helpers {
                 }
             }
         }
+
+        public static bool IsDarkTheme => _currentMode switch {
+            ThemeMode.Light => false,
+            ThemeMode.Dark => true,
+            _ => IsSystemDarkTheme
+        };
 
         public static void ApplyTheme(Application app) {
             bool isDark = IsDarkTheme;

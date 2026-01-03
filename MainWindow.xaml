@@ -334,6 +334,13 @@
                     <MenuItem Header="Settings" Click="SettingsMenu"/>
                     <MenuItem Header="Exit" Click="ExitMenu"/>
                 </MenuItem>
+                <MenuItem Header="View">
+                    <MenuItem Header="Theme">
+                        <MenuItem x:Name="ThemeAutoMenuItem" Header="Auto (System)" IsCheckable="True" IsChecked="True" Click="ThemeAuto_Click"/>
+                        <MenuItem x:Name="ThemeLightMenuItem" Header="Light" IsCheckable="True" Click="ThemeLight_Click"/>
+                        <MenuItem x:Name="ThemeDarkMenuItem" Header="Dark" IsCheckable="True" Click="ThemeDark_Click"/>
+                    </MenuItem>
+                </MenuItem>
                 <MenuItem Header="Help">
                     <MenuItem Header="About" Click="AboutMenu"/>
                 </MenuItem>

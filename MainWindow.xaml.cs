@@ -851,6 +851,27 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             Close();
         }
 
+        private void ThemeAuto_Click(object sender, RoutedEventArgs e) {
+            ThemeAutoMenuItem.IsChecked = true;
+            ThemeLightMenuItem.IsChecked = false;
+            ThemeDarkMenuItem.IsChecked = false;
+            ThemeHelper.CurrentMode = ThemeMode.Auto;
+        }
+
+        private void ThemeLight_Click(object sender, RoutedEventArgs e) {
+            ThemeAutoMenuItem.IsChecked = false;
+            ThemeLightMenuItem.IsChecked = true;
+            ThemeDarkMenuItem.IsChecked = false;
+            ThemeHelper.CurrentMode = ThemeMode.Light;
+        }
+
+        private void ThemeDark_Click(object sender, RoutedEventArgs e) {
+            ThemeAutoMenuItem.IsChecked = false;
+            ThemeLightMenuItem.IsChecked = false;
+            ThemeDarkMenuItem.IsChecked = true;
+            ThemeHelper.CurrentMode = ThemeMode.Dark;
+        }
+
         private void GridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
             GridSplitter gridSplitter = (GridSplitter)sender;
 

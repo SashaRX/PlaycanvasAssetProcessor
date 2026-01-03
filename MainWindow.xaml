@@ -390,29 +390,15 @@
                                 </Style>
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                     <Setter Property="ContextMenu" Value="{StaticResource TextureRowContextMenu}"/>
-                                    <!-- RowBackground computed in ViewModel - single binding instead of 6 DataTriggers -->
+                                    <!-- RowBackground computed in ViewModel for texture type coloring -->
                                     <Setter Property="Background" Value="{Binding RowBackground}"/>
-                                    <Style.Triggers>
-                                        <!-- Selection override (highest priority) -->
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                                        </Trigger>
-                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.CellStyle>
-                                <Style TargetType="DataGridCell">
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                     <Setter Property="BorderBrush" Value="Transparent"/>
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Style.Triggers>
-                                        <!-- Selection: blue background + white text -->
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.CellStyle>
                             <DataGrid.Columns>
@@ -545,26 +531,13 @@
                                 </Style>
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                     <Setter Property="ContextMenu" Value="{StaticResource ModelRowContextMenu}"/>
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                                        </Trigger>
-                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.CellStyle>
-                                <Style TargetType="DataGridCell">
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                     <Setter Property="BorderBrush" Value="Transparent"/>
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.CellStyle>
                             <DataGrid.Columns>
@@ -649,26 +622,13 @@
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                 <Setter Property="ContextMenu" Value="{StaticResource MaterialRowContextMenu}"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                                    </Trigger>
-                                </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.CellStyle>
-                            <Style TargetType="DataGridCell">
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
                                 <Setter Property="BorderBrush" Value="Transparent"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
                             </Style>
                         </DataGrid.CellStyle>
                         <DataGrid.Columns>

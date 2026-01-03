@@ -173,13 +173,20 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="12" Height="12"
+                            <!-- Simple square checkbox: 12x12 Border with checkmark -->
+                            <Border Grid.Column="0"
+                                    Width="12" Height="12"
                                     Background="{DynamicResource ThemeCheckBoxBackground}"
-                                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock x:Name="check" Text="✓" FontSize="9"
-                                           Foreground="{DynamicResource ThemeForeground}"
+                                    BorderBrush="{DynamicResource ThemeCheckBoxBorder}"
+                                    BorderThickness="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    SnapsToDevicePixels="True">
+                                <TextBlock x:Name="check" Text="✓" FontSize="9" FontWeight="Bold"
+                                           Foreground="{DynamicResource ThemeCheckBoxGlyph}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           Margin="0,-2,0,0" Visibility="Collapsed"/>
+                                           Margin="0,-2,0,0"
+                                           Visibility="Collapsed"/>
                             </Border>
                             <ContentPresenter Grid.Column="1" Focusable="False"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -205,9 +212,7 @@
         <Style x:Key="DataGridCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
+            <Setter Property="Margin" Value="0"/>
         </Style>
 
         <!-- ============================================ -->

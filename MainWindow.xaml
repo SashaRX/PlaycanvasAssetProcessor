@@ -20,6 +20,7 @@
     mc:Ignorable="av"
     x:Class="AssetProcessor.MainWindow"
     Title="MainWindow" Height="684" Width="942"
+    Background="{DynamicResource ThemeBackground}"
     KeyDown="Window_KeyDown">
 
     <Window.Resources>
@@ -35,8 +36,9 @@
         <Style TargetType="Expander">
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Padding" Value="2"/>
-            <Setter Property="Background" Value="#FFB1B1B1"/>
-            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeBackgroundAlt}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -46,11 +48,12 @@
         <Style x:Key="CompactExpanderStyle" TargetType="Expander">
             <Setter Property="Margin" Value="0,0,0,2"/>
             <Setter Property="Padding" Value="2"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
         </Style>
 
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
@@ -388,7 +391,7 @@
                                 CanUserSortColumns="True"
                                 CanUserResizeColumns="True"
                                 CanUserReorderColumns="True"
-                                Background="#FFD6D6D6"
+                                Background="{DynamicResource ThemeDataGridBackground}"
                                 RowHeight="16"
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
@@ -513,7 +516,7 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="Models">
-                    <Grid Background="#FFE5E5E5">
+                    <Grid Background="{DynamicResource ThemeBackgroundAlt}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -541,7 +544,7 @@
                               CanUserSortColumns="True"
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
-                              Background="#FFD6D6D6"
+                              Background="{DynamicResource ThemeDataGridBackground}"
                               RowHeight="16"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
@@ -615,7 +618,7 @@
                     </Grid>
                 </TabItem>
                 <TabItem x:Name="MaterialsTabItem" Header="Materials">
-                    <Grid Background="#FFE5E5E5">
+                    <Grid Background="{DynamicResource ThemeBackgroundAlt}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -643,7 +646,7 @@
                               CanUserSortColumns="True"
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
-                              Background="#FFD6D6D6"
+                              Background="{DynamicResource ThemeDataGridBackground}"
                               RowHeight="16"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"

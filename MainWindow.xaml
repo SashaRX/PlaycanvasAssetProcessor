@@ -48,12 +48,12 @@
         <Style x:Key="TextureHyperlinkStyle" TargetType="Hyperlink">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FF0066CC"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeHyperlink}"/>
             <Setter Property="TextDecorations" Value="Underline"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="#FF0099FF"/>
+                    <Setter Property="Foreground" Value="#FFFFA500"/>
                 </Trigger>
             </Style.Triggers>
         </Style>

@@ -112,15 +112,19 @@ namespace AssetProcessor.Helpers {
 
             // Material section colors (semantic coloring for texture types)
             app.Resources["ThemeMaterialORM"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(45, 60, 45) : Color.FromRgb(232, 245, 233));
+                isDark ? Color.FromRgb(0x49, 0x6a, 0x49) : Color.FromRgb(232, 245, 233));
             app.Resources["ThemeMaterialDiffuse"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(55, 55, 55) : Color.FromRgb(177, 177, 177));
+                isDark ? Color.FromRgb(0x61, 0x61, 0x61) : Color.FromRgb(177, 177, 177));
             app.Resources["ThemeMaterialNormal"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(50, 50, 75) : Color.FromRgb(142, 154, 255));
+                isDark ? Color.FromRgb(0x49, 0x54, 0x96) : Color.FromRgb(142, 154, 255));
             app.Resources["ThemeMaterialSpecular"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(70, 55, 45) : Color.FromRgb(255, 198, 140));
+                isDark ? Color.FromRgb(0x8c, 0x61, 0x40) : Color.FromRgb(255, 198, 140));
             app.Resources["ThemeMaterialOther"] = new SolidColorBrush(
-                isDark ? Color.FromRgb(50, 60, 70) : Color.FromRgb(157, 196, 232));
+                isDark ? Color.FromRgb(0x50, 0x74, 0x8a) : Color.FromRgb(157, 196, 232));
+
+            // Hyperlink colors
+            app.Resources["ThemeHyperlink"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(0xee, 0x90, 0x00) : Color.FromRgb(0, 102, 204));
         }
     }
 }

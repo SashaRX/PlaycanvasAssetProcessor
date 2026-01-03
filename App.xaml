@@ -33,6 +33,7 @@
         <SolidColorBrush x:Key="ThemeMaterialNormal" Color="#FF8E9AFF"/>
         <SolidColorBrush x:Key="ThemeMaterialSpecular" Color="#FFFFC68C"/>
         <SolidColorBrush x:Key="ThemeMaterialOther" Color="#FF9DC4E8"/>
+        <SolidColorBrush x:Key="ThemeHyperlink" Color="#FF0066CC"/>
 
         <!-- ============================================ -->
         <!-- GROUPBOX TEMPLATE -->

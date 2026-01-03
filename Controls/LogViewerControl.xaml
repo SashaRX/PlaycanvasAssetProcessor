@@ -22,7 +22,7 @@
         <Style x:Key="LogItemStyle" TargetType="ListViewItem">
             <Setter Property="Padding" Value="5,2"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
             <Setter Property="FontFamily" Value="Consolas, Courier New"/>
             <Setter Property="FontSize" Value="11"/>
         </Style>
@@ -36,7 +36,7 @@
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
-        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Padding="8,5">
+        <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="0,0,0,1" Padding="8,5">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -138,7 +138,7 @@
         </ListView>
 
         <!-- Status Bar -->
-        <Border Grid.Row="2" Background="#F9F9F9" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0" Padding="8,3">
+        <Border Grid.Row="2" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="0,1,0,0" Padding="8,3">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

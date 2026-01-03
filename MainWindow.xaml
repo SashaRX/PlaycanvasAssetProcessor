@@ -326,7 +326,7 @@
             </GroupBox>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="2,0,2,0">
-                <Button Content="Settings" VerticalAlignment="Center" Background="#FFFBD8C3" Click="Setting" Padding="6,4"/>
+                <Button Content="Settings" VerticalAlignment="Center" Background="{DynamicResource ThemeBackgroundAlt}" Click="Setting" Padding="6,4"/>
                 <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False" Padding="6,4" Margin="4,0,0,0"/>
             </StackPanel>
         </Grid>
@@ -420,7 +420,7 @@
                                     <Style.Triggers>
                                         <!-- Selection override (highest priority) -->
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background" Value="#3399FF"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -432,8 +432,8 @@
                                     <Style.Triggers>
                                         <!-- Selection: blue background + white text -->
                                         <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Background" Value="#3399FF"/>
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -470,7 +470,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForeground}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -482,9 +482,9 @@
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
                                                 <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11" Margin="0,0,4,0"/>
-                                                <TextBlock Text="(" FontSize="10" Foreground="#FF666666"/>
-                                                <TextBlock Text="{Binding ItemCount}" FontSize="10" Foreground="#FF666666"/>
-                                                <TextBlock Text=")" FontSize="10" Foreground="#FF666666"/>
+                                                <TextBlock Text="(" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                                <TextBlock Text="{Binding ItemCount}" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                                <TextBlock Text=")" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </GroupStyle.HeaderTemplate>
@@ -493,7 +493,7 @@
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type GroupItem}">
-                                                        <Expander IsExpanded="True" Background="#FFE8E8E8" BorderBrush="#FFCCCCCC" BorderThickness="1" Margin="0,1,0,1" Padding="0">
+                                                        <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
                                                             <Expander.Header>
                                                                 <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
                                                             </Expander.Header>
@@ -571,7 +571,7 @@
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Style.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background" Value="#3399FF"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -582,8 +582,8 @@
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Background" Value="#3399FF"/>
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -608,7 +608,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <ProgressBar MinWidth="80" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForeground}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -673,7 +673,7 @@
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#3399FF"/>
+                                        <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -684,8 +684,8 @@
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                        <Setter Property="Background" Value="#3399FF"/>
-                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -707,7 +707,7 @@
                                     <DataTemplate>
                                         <Grid>
                                             <ProgressBar MinWidth="80" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForeground}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -721,13 +721,13 @@
                 </TabItem>
             </TabControl>
 
-            <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="Gray" FontSize="6"/>
+            <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="{DynamicResource ThemeBorder}" FontSize="6"/>
 
             <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
-                Click="ToggleViewerButton_Click" Background="White" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="#FFFF8F07"/>
+                Click="ToggleViewerButton_Click" Background="{DynamicResource ThemeBackgroundAlt}" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="{DynamicResource ThemeAccent}"/>
 
             <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged">
-                <Border x:Name="TextureViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
+                <Border x:Name="TextureViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -815,7 +815,7 @@
                                 <GridSplitter Grid.Row="2"
                                               Height="6"
                                               Margin="0,4,0,4"
-                                              Background="#FFE0E0E0"
+                                              Background="{DynamicResource ThemeBackgroundAlt}"
                                               HorizontalAlignment="Stretch"
                                               ResizeDirection="Rows"
                                               ResizeBehavior="PreviousAndNext"
@@ -853,18 +853,18 @@
                                         <ToggleButton x:Name="NormalButton" Content="Nrm" Tag="Normal" Width="35" Height="20" Background="#FF4488FF" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="Black" Margin="2,0,0,0"/>
 
                                         <!-- Fit/Reset button -->
-                                        <Button x:Name="FitResetButton" Content="Fit" Width="35" Height="20" Margin="4,0,0,0" Background="#FFE0E0E0" Click="FitResetButton_Click" BorderBrush="Black" FontSize="10" Padding="2"/>
+                                        <Button x:Name="FitResetButton" Content="Fit" Width="35" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Click="FitResetButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="10" Padding="2"/>
 
                                         <!-- Filter toggle button (Point/Trilinear) -->
-                                        <ToggleButton x:Name="FilterToggleButton" Content="Filter" Width="45" Height="20" Margin="4,0,0,0" Background="#FFE0E0E0" IsChecked="True" Click="FilterToggleButton_Click" BorderBrush="Black" FontSize="9" Padding="2"/>
+                                        <ToggleButton x:Name="FilterToggleButton" Content="Filter" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="True" Click="FilterToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
 
                                         <!-- Tile toggle button -->
-                                        <ToggleButton x:Name="TileToggleButton" Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="#FFE0E0E0" IsChecked="False" Click="TileToggleButton_Click" BorderBrush="Black" FontSize="9" Padding="2"/>
+                                        <ToggleButton x:Name="TileToggleButton" Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="False" Click="TileToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
 
                                         <!-- Histogram correction toggle button -->
                                         <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="Black" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>
                                     </StackPanel>
-                                    <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="#AAFFFFFF" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
+                                    <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
                                         <StackPanel Orientation="Vertical">
                                             <TextBlock x:Name="MipmapInfoTextBlock" Text="Уровень мипа" FontSize="10" Margin="0,0,0,4" />
                                             <Slider x:Name="MipmapLevelSlider"
@@ -891,7 +891,7 @@
                                 </Border>
 
                                 <!-- Histogram Statistics -->
-                                <Border BorderBrush="#CCCCCC" BorderThickness="1" Background="#F5F5F5" Padding="6,4">
+                                <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Background="{DynamicResource ThemeBackgroundAlt}" Padding="6,4">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -949,7 +949,7 @@
             </ScrollViewer>
 
             <ScrollViewer x:Name="ModelViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                <Border x:Name="ModelViewer" Background="#FFFFFF" BorderThickness="2,2,2,2" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
+                <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="800" />
@@ -1063,7 +1063,7 @@
                                 <GridSplitter Grid.Row="2"
                                               Height="6"
                                               Margin="0,4,0,4"
-                                              Background="#FFE0E0E0"
+                                              Background="{DynamicResource ThemeBackgroundAlt}"
                                               HorizontalAlignment="Stretch"
                                               ResizeDirection="Rows"
                                               ResizeBehavior="PreviousAndNext"
@@ -1076,7 +1076,7 @@
                                     <!-- Source Type Switch (FBX/GLB) -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="Source:"
-                                                  Foreground="#FF333333"
+                                                  Foreground="{DynamicResource ThemeForeground}"
                                                   FontSize="10"
                                                   VerticalAlignment="Center"
                                                   Margin="0,0,6,0" />
@@ -1107,7 +1107,7 @@
                                         <Separator Width="10" Background="Transparent" />
 
                                         <TextBlock Text="LOD:"
-                                                  Foreground="#FF333333"
+                                                  Foreground="{DynamicResource ThemeForeground}"
                                                   FontSize="10"
                                                   VerticalAlignment="Center"
                                                   Margin="0,0,6,0" />
@@ -1154,7 +1154,7 @@
                                     </StackPanel>
 
                                     <!-- LOD Information DataGrid -->
-                                    <Border Background="#AAFFFFFF" Padding="4" HorizontalAlignment="Left">
+                                    <Border Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" HorizontalAlignment="Left">
                                         <DataGrid x:Name="LodInformationGrid"
                                                  AutoGenerateColumns="False"
                                                  HeadersVisibility="Column"
@@ -1180,16 +1180,16 @@
                                             </DataGrid.Columns>
                                             <DataGrid.Resources>
                                                 <Style TargetType="DataGridColumnHeader">
-                                                    <Setter Property="Background" Value="#FF555555" />
-                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundAlt}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                                                     <Setter Property="FontSize" Value="9" />
                                                     <Setter Property="FontWeight" Value="SemiBold" />
                                                     <Setter Property="Padding" Value="4,2" />
-                                                    <Setter Property="BorderBrush" Value="#FF777777" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
                                                     <Setter Property="BorderThickness" Value="0,0,1,1" />
                                                 </Style>
                                                 <Style TargetType="DataGridCell">
-                                                    <Setter Property="Foreground" Value="#FF333333" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                                                     <Setter Property="BorderThickness" Value="0" />
                                                     <Setter Property="Padding" Value="4,2" />
                                                 </Style>
@@ -1205,7 +1205,7 @@
                                       Grid.Row="1"
                                       Height="6"
                                       Margin="0,4,0,4"
-                                      Background="#FFE0E0E0"
+                                      Background="{DynamicResource ThemeBackgroundAlt}"
                                       HorizontalAlignment="Stretch"
                                       VerticalAlignment="Center"
                                       ResizeDirection="Rows"
@@ -1234,7 +1234,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7F000000"/>
+                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForegroundDim}"/>
                                         <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
                                             <Image x:Name="UVImage" Stretch="Uniform" MinWidth="128" MinHeight="128" />
                                         </Viewbox>
@@ -1244,7 +1244,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="#7F000000"/>
+                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForegroundDim}"/>
                                         <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
                                             <Image x:Name="UVImage2" Stretch="Uniform" MinWidth="128" MinHeight="128" />
                                         </Viewbox>
@@ -1266,7 +1266,7 @@
 
             <!-- Просмотр параметров материала -->
             <ScrollViewer x:Name="MaterialViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                <Border x:Name="MaterialViewer" Background="#FFE1E1E1" Margin="2,2,2,2" Padding="2,2,2,2" CornerRadius="4,4,4,4" BorderThickness="1,1,1,1" BorderBrush="Black" MinWidth="256">
+                <Border x:Name="MaterialViewer" Background="{DynamicResource ThemeBackgroundAlt}" Margin="2,2,2,2" Padding="2,2,2,2" CornerRadius="4,4,4,4" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" MinWidth="256">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">

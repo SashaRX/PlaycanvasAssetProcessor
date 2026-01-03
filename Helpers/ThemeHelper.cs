@@ -83,6 +83,22 @@ namespace AssetProcessor.Helpers {
                 isDark ? Color.FromRgb(37, 37, 38) : Color.FromRgb(240, 240, 240));
             app.Resources["ThemeDataGridGridLines"] = new SolidColorBrush(
                 isDark ? Color.FromRgb(67, 67, 70) : Color.FromRgb(211, 211, 211));
+
+            // ScrollBar colors
+            app.Resources["ThemeScrollBarBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(37, 37, 38) : Color.FromRgb(240, 240, 240));
+            app.Resources["ThemeScrollBarThumb"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(104, 104, 104) : Color.FromRgb(205, 205, 205));
+            app.Resources["ThemeScrollBarThumbHover"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(158, 158, 158) : Color.FromRgb(166, 166, 166));
+
+            // CheckBox colors
+            app.Resources["ThemeCheckBoxBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(45, 45, 48) : Colors.White);
+            app.Resources["ThemeCheckBoxBorder"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(136, 136, 136) : Color.FromRgb(112, 112, 112));
+            app.Resources["ThemeCheckBoxGlyph"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(241, 241, 241) : Color.FromRgb(33, 33, 33));
         }
     }
 }

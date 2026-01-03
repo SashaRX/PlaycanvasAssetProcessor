@@ -1,4 +1,5 @@
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.TextureConversion.Settings;
 using System.Text.Json.Serialization;
 
 namespace AssetProcessor.Resources;
@@ -15,8 +16,13 @@ public class MaterialORMSettings {
     public ORMSettings Settings { get; set; } = ORMSettings.CreateStandard();
 
     /// <summary>
-    /// Использовать глобальные настройки (из панели текстур)
-    /// Если true - игнорируем локальные Settings
+    /// Имя используемого пресета (или null для кастомных настроек)
+    /// </summary>
+    [JsonPropertyName("presetName")]
+    public string? PresetName { get; set; } = "Standard";
+
+    /// <summary>
+    /// Использовать глобальные настройки (игнорировать локальные Settings)
     /// </summary>
     [JsonPropertyName("useGlobal")]
     public bool UseGlobalSettings { get; set; } = true;
@@ -27,17 +33,6 @@ public class MaterialORMSettings {
     public bool Enabled {
         get => Settings.Enabled;
         set => Settings.Enabled = value;
-    }
-
-    [JsonIgnore]
-    public ORMPresetType Preset {
-        get => Settings.Preset;
-        set {
-            Settings.Preset = value;
-            if (value != ORMPresetType.Custom) {
-                Settings = ORMSettings.FromPreset(value);
-            }
-        }
     }
 
     [JsonIgnore]
@@ -94,8 +89,38 @@ public class MaterialORMSettings {
     public static MaterialORMSettings CreateDefault() {
         return new MaterialORMSettings {
             UseGlobalSettings = true,
+            PresetName = "Standard",
             Settings = ORMSettings.CreateStandard()
         };
+    }
+
+    /// <summary>
+    /// Применяет пресет по имени
+    /// </summary>
+    public void ApplyPreset(string presetName) {
+        var preset = ORMPresetManager.Instance.GetPreset(presetName);
+        if (preset != null) {
+            Settings = preset.Clone();
+            PresetName = presetName;
+        }
+    }
+
+    /// <summary>
+    /// Получить эффективные настройки (с учётом глобальных)
+    /// </summary>
+    public ORMSettings GetEffectiveSettings() {
+        if (UseGlobalSettings) {
+            return ORMPresetManager.Instance.GetDefaultPreset();
+        }
+
+        if (!string.IsNullOrEmpty(PresetName)) {
+            var preset = ORMPresetManager.Instance.GetPreset(PresetName);
+            if (preset != null) {
+                return preset;
+            }
+        }
+
+        return Settings;
     }
 
     /// <summary>
@@ -104,13 +129,13 @@ public class MaterialORMSettings {
     public ChannelPackingSettings ToChannelPackingSettings(
         string? aoPath, string? glossPath, string? metalPath, string? heightPath = null) {
 
-        return Settings.ToChannelPackingSettings(aoPath, glossPath, metalPath, heightPath);
+        return GetEffectiveSettings().ToChannelPackingSettings(aoPath, glossPath, metalPath, heightPath);
     }
 
     /// <summary>
     /// Получить CompressionSettings для KTX конвертации
     /// </summary>
     public CompressionSettings ToCompressionSettings() {
-        return Settings.ToCompressionSettings();
+        return GetEffectiveSettings().ToCompressionSettings();
     }
 }

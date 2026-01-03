@@ -32,19 +32,7 @@
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
 
-
-        <Style TargetType="Expander">
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="2"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeBackgroundAlt}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-        </Style>
-
-        <!-- Compact style for right panel expanders -->
+        <!-- Compact style for right panel expanders - inherits from global App.xaml Expander style -->
         <Style x:Key="CompactExpanderStyle" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
             <Setter Property="Margin" Value="0,0,0,2"/>
             <Setter Property="Padding" Value="2"/>

@@ -28,6 +28,11 @@
         <SolidColorBrush x:Key="ThemeSliderTrack" Color="#FFC8C8C8"/>
         <SolidColorBrush x:Key="ThemeTextBoxBackground" Color="White"/>
         <SolidColorBrush x:Key="ThemeTextBoxBorder" Color="#FFACACAC"/>
+        <SolidColorBrush x:Key="ThemeMaterialORM" Color="#FFE8F5E9"/>
+        <SolidColorBrush x:Key="ThemeMaterialDiffuse" Color="#FFB1B1B1"/>
+        <SolidColorBrush x:Key="ThemeMaterialNormal" Color="#FF8E9AFF"/>
+        <SolidColorBrush x:Key="ThemeMaterialSpecular" Color="#FFFFC68C"/>
+        <SolidColorBrush x:Key="ThemeMaterialOther" Color="#FF9DC4E8"/>
 
         <!-- ============================================ -->
         <!-- GROUPBOX TEMPLATE -->

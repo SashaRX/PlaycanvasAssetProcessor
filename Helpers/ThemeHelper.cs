@@ -109,6 +109,18 @@ namespace AssetProcessor.Helpers {
                 isDark ? Color.FromRgb(30, 30, 30) : Colors.White);
             app.Resources["ThemeTextBoxBorder"] = new SolidColorBrush(
                 isDark ? Color.FromRgb(67, 67, 70) : Color.FromRgb(172, 172, 172));
+
+            // Material section colors (semantic coloring for texture types)
+            app.Resources["ThemeMaterialORM"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(45, 60, 45) : Color.FromRgb(232, 245, 233));
+            app.Resources["ThemeMaterialDiffuse"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(55, 55, 55) : Color.FromRgb(177, 177, 177));
+            app.Resources["ThemeMaterialNormal"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(50, 50, 75) : Color.FromRgb(142, 154, 255));
+            app.Resources["ThemeMaterialSpecular"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(70, 55, 45) : Color.FromRgb(255, 198, 140));
+            app.Resources["ThemeMaterialOther"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(50, 60, 70) : Color.FromRgb(157, 196, 232));
         }
     }
 }

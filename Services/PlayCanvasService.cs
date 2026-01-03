@@ -61,6 +61,10 @@ namespace AssetProcessor.Services {
             return retryPolicy.ExecuteAsync(ct => client.GetAsync(url, ct), cancellationToken);
         }
 
+        private Task<HttpResponseMessage> PostAsync(string url, HttpContent content, CancellationToken cancellationToken) {
+            return retryPolicy.ExecuteAsync(ct => client.PostAsync(url, content, ct), cancellationToken);
+        }
+
         private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response, string url, CancellationToken cancellationToken) {
             try {
                 await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -366,6 +370,45 @@ namespace AssetProcessor.Services {
             } catch (HttpRequestException ex) {
                 throw new NetworkException(
                     $"Network error while fetching asset with ID '{assetId}'",
+                    url,
+                    0,
+                    ex);
+            }
+        }
+
+        public async Task<Branch> CreateBranchAsync(string projectId, string branchName, string apiKey, CancellationToken cancellationToken) {
+            ArgumentException.ThrowIfNullOrEmpty(projectId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(branchName);
+
+            string url = $"https://playcanvas.com/api/projects/{projectId}/branches";
+            AddAuthorizationHeader(apiKey);
+
+            var requestBody = new Dictionary<string, string> {
+                { "name", branchName }
+            };
+
+            using var content = new FormUrlEncodedContent(requestBody);
+
+            try {
+                using HttpResponseMessage response = await PostAsync(url, content, cancellationToken);
+                if (!response.IsSuccessStatusCode) {
+                    throw new PlayCanvasApiException(
+                        $"Failed to create branch '{branchName}' for project ID '{projectId}'",
+                        url,
+                        (int)response.StatusCode);
+                }
+
+                using JsonDocument document = await ReadJsonAsync(response, url, cancellationToken);
+                if (!document.RootElement.TryGetProperty("result", out JsonElement resultElement)) {
+                    throw new PlayCanvasApiException("Result is null in API response", url);
+                }
+
+                string id = ReadIdAsString(resultElement, "id", url);
+                string name = ReadRequiredString(resultElement, "name", url);
+                return new Branch { Id = id, Name = name };
+            } catch (HttpRequestException ex) {
+                throw new NetworkException(
+                    $"Network error while creating branch '{branchName}' for project ID '{projectId}'",
                     url,
                     0,
                     ex);

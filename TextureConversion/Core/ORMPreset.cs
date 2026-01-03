@@ -242,8 +242,8 @@ public class ORMSettings {
             return settings;
         }
 
-        // AO Channel (Red)
-        if (mode is ChannelPackingMode.OG or ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
+        // AO Channel (Red) - only if path exists
+        if (!string.IsNullOrEmpty(aoPath) && mode is ChannelPackingMode.OG or ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
             settings.RedChannel = new ChannelSourceSettings {
                 ChannelType = ChannelType.AmbientOcclusion,
                 SourcePath = aoPath,
@@ -253,13 +253,17 @@ public class ORMSettings {
             };
         }
 
-        // Gloss Channel
-        if (mode is ChannelPackingMode.OG) {
-            settings.AlphaChannel = CreateGlossChannel(glossPath);
-        } else if (mode is ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
-            settings.GreenChannel = CreateGlossChannel(glossPath);
+        // Gloss Channel - only if path exists
+        if (!string.IsNullOrEmpty(glossPath)) {
+            if (mode is ChannelPackingMode.OG) {
+                settings.AlphaChannel = CreateGlossChannel(glossPath);
+            } else if (mode is ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
+                settings.GreenChannel = CreateGlossChannel(glossPath);
+            }
+        }
 
-            // Metallic Channel (Blue)
+        // Metallic Channel (Blue) - only if path exists
+        if (!string.IsNullOrEmpty(metalPath) && mode is ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
             settings.BlueChannel = new ChannelSourceSettings {
                 ChannelType = ChannelType.Metallic,
                 SourcePath = metalPath,
@@ -268,8 +272,8 @@ public class ORMSettings {
             };
         }
 
-        // Height Channel (Alpha for OGMH)
-        if (mode is ChannelPackingMode.OGMH) {
+        // Height Channel (Alpha for OGMH) - only if path exists
+        if (!string.IsNullOrEmpty(heightPath) && mode is ChannelPackingMode.OGMH) {
             settings.AlphaChannel = new ChannelSourceSettings {
                 ChannelType = ChannelType.Height,
                 SourcePath = heightPath

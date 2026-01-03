@@ -1,3 +1,4 @@
+using AssetProcessor.Exceptions;
 using AssetProcessor.Helpers;
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Resources;
@@ -3273,6 +3274,55 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error loading branches: {ex.Message}");
+            }
+        }
+
+        private async void CreateBranchButton_Click(object sender, RoutedEventArgs e) {
+            try {
+                // Проверяем, что выбран проект
+                if (ProjectsComboBox.SelectedItem == null) {
+                    MessageBox.Show("Пожалуйста, выберите проект перед созданием ветки.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string? apiKey = GetDecryptedApiKey();
+
+                if (string.IsNullOrEmpty(apiKey)) {
+                    MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Показываем диалог для ввода имени ветки
+                var inputDialog = new InputDialog("Создать новую ветку", "Введите имя новой ветки:", "");
+                if (inputDialog.ShowDialog() != true || string.IsNullOrWhiteSpace(inputDialog.ResponseText)) {
+                    return; // Пользователь отменил или не ввел имя
+                }
+
+                string branchName = inputDialog.ResponseText.Trim();
+
+                // Создаем ветку через API
+                logger.Info($"Creating branch '{branchName}' for project ID '{selectedProjectId}'");
+                Branch newBranch = await playCanvasService.CreateBranchAsync(selectedProjectId, branchName, apiKey, CancellationToken.None);
+
+                logger.Info($"Branch created successfully: {newBranch.Name} (ID: {newBranch.Id})");
+
+                // Обновляем список веток
+                await LoadBranchesAsync(selectedProjectId, CancellationToken.None, apiKey);
+
+                // Выбираем новую ветку
+                BranchesComboBox.SelectedValue = newBranch.Id;
+
+                MessageBox.Show($"Ветка '{branchName}' успешно создана.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+            } catch (PlayCanvasApiException ex) {
+                logger.Error(ex, "Failed to create branch");
+                MessageBox.Show($"Ошибка при создании ветки: {ex.Message}", "Ошибка API", MessageBoxButton.OK, MessageBoxImage.Error);
+            } catch (NetworkException ex) {
+                logger.Error(ex, "Network error while creating branch");
+                MessageBox.Show($"Сетевая ошибка при создании ветки: {ex.Message}", "Сетевая ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            } catch (Exception ex) {
+                logger.Error(ex, "Unexpected error while creating branch");
+                MessageBox.Show($"Неожиданная ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

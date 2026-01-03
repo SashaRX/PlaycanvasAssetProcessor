@@ -112,6 +112,9 @@ public class ProjectSyncServiceTests {
 
         public Task<string> GetUserIdAsync(string? username, string? apiKey, CancellationToken cancellationToken) =>
             Task.FromResult(string.Empty);
+
+        public Task<Branch> CreateBranchAsync(string projectId, string branchName, string apiKey, CancellationToken cancellationToken) =>
+            Task.FromResult(new Branch { Id = "new-branch-id", Name = branchName });
     }
 
     private sealed class StubLocalCacheService : ILocalCacheService {

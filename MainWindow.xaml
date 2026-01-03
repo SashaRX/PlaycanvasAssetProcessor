@@ -225,6 +225,17 @@
                                 </i:EventTrigger>
                             </i:Interaction.Triggers>
                         </ComboBox>
+
+                        <Button x:Name="CreateBranchButton"
+                                Content="+"
+                                Width="25"
+                                Height="20"
+                                Margin="2,0,0,0"
+                                Padding="0"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                ToolTip="Создать новую ветку"
+                                Click="CreateBranchButton_Click"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>

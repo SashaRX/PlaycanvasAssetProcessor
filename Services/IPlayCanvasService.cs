@@ -29,5 +29,10 @@ namespace AssetProcessor.Services {
         /// Gets a specific asset by ID
         /// </summary>
         Task<PlayCanvasAssetDetail> GetAssetByIdAsync(string assetId, string apiKey, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Creates a new branch for a project
+        /// </summary>
+        Task<Branch> CreateBranchAsync(string projectId, string branchName, string apiKey, CancellationToken cancellationToken);
     }
 }

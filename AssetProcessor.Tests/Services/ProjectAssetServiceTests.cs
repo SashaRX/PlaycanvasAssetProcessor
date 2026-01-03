@@ -178,6 +178,9 @@ public class ProjectAssetServiceTests {
         public Task<string> GetUserIdAsync(string? username, string? apiKey, CancellationToken cancellationToken) =>
             Task.FromResult("user");
 
+        public Task<Branch> CreateBranchAsync(string projectId, string branchName, string apiKey, CancellationToken cancellationToken) =>
+            Task.FromResult(new Branch { Id = "new-branch-id", Name = branchName });
+
         public void Dispose() {
         }
     }

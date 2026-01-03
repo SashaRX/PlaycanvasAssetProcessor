@@ -27,6 +27,23 @@
             <Setter Property="FontFamily" Value="Consolas, Courier New"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundHover}"/>
+                </Trigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="True"/>
+                        <Condition Property="IsMouseOver" Value="True"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
+                </MultiTrigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 

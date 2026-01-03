@@ -856,6 +856,7 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             ThemeLightMenuItem.IsChecked = false;
             ThemeDarkMenuItem.IsChecked = false;
             ThemeHelper.CurrentMode = Helpers.ThemeMode.Auto;
+            RefreshHistogramForTheme();
         }
 
         private void ThemeLight_Click(object sender, RoutedEventArgs e) {
@@ -863,6 +864,7 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             ThemeLightMenuItem.IsChecked = true;
             ThemeDarkMenuItem.IsChecked = false;
             ThemeHelper.CurrentMode = Helpers.ThemeMode.Light;
+            RefreshHistogramForTheme();
         }
 
         private void ThemeDark_Click(object sender, RoutedEventArgs e) {
@@ -870,6 +872,14 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             ThemeLightMenuItem.IsChecked = false;
             ThemeDarkMenuItem.IsChecked = true;
             ThemeHelper.CurrentMode = Helpers.ThemeMode.Dark;
+            RefreshHistogramForTheme();
+        }
+
+        private void RefreshHistogramForTheme() {
+            // Rebuild histogram with new theme colors if a texture is currently displayed
+            if (texturePreviewService?.OriginalBitmapSource != null) {
+                UpdateHistogram(texturePreviewService.OriginalBitmapSource);
+            }
         }
 
         private void GridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {

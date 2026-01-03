@@ -856,6 +856,7 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             ThemeLightMenuItem.IsChecked = false;
             ThemeDarkMenuItem.IsChecked = false;
             ThemeHelper.CurrentMode = Helpers.ThemeMode.Auto;
+            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
             RefreshHistogramForTheme();
         }
 
@@ -864,6 +865,7 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             ThemeLightMenuItem.IsChecked = true;
             ThemeDarkMenuItem.IsChecked = false;
             ThemeHelper.CurrentMode = Helpers.ThemeMode.Light;
+            DarkThemeCheckBox.IsChecked = false;
             RefreshHistogramForTheme();
         }
 
@@ -872,6 +874,20 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             ThemeLightMenuItem.IsChecked = false;
             ThemeDarkMenuItem.IsChecked = true;
             ThemeHelper.CurrentMode = Helpers.ThemeMode.Dark;
+            DarkThemeCheckBox.IsChecked = true;
+            RefreshHistogramForTheme();
+        }
+
+        private void DarkThemeCheckBox_Click(object sender, RoutedEventArgs e) {
+            bool isDark = DarkThemeCheckBox.IsChecked == true;
+
+            // Update menu items to match
+            ThemeAutoMenuItem.IsChecked = false;
+            ThemeLightMenuItem.IsChecked = !isDark;
+            ThemeDarkMenuItem.IsChecked = isDark;
+
+            // Apply theme
+            ThemeHelper.CurrentMode = isDark ? Helpers.ThemeMode.Dark : Helpers.ThemeMode.Light;
             RefreshHistogramForTheme();
         }
 

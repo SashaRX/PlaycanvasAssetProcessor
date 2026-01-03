@@ -70,6 +70,13 @@ namespace AssetProcessor {
 
             // Restore right panel width
             RestoreRightPanelWidth();
+
+            // Initialize dark theme checkbox state
+            InitializeDarkThemeCheckBox();
+        }
+
+        private void InitializeDarkThemeCheckBox() {
+            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
         }
 
         private void RestoreRightPanelWidth() {

@@ -166,8 +166,6 @@
         <Style TargetType="CheckBox">
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
             <Setter Property="Background" Value="{DynamicResource ThemeCheckBoxBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeCheckBoxBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
@@ -176,23 +174,16 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border x:Name="checkBoxBorder" Grid.Column="0"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Width="12" Height="12">
-                                <Grid x:Name="markGrid">
-                                    <Path x:Name="optionMark" Data="M 0,5 L 3,8 L 9,2"
-                                          Stroke="{DynamicResource ThemeCheckBoxGlyph}"
-                                          StrokeThickness="2"
-                                          Margin="1" Opacity="0" Stretch="Uniform"/>
-                                    <Rectangle x:Name="indeterminateMark"
-                                               Fill="{DynamicResource ThemeCheckBoxGlyph}"
-                                               Margin="2" Opacity="0"/>
-                                </Grid>
-                            </Border>
+                            <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Width="14" Height="14">
+                                <Rectangle x:Name="uncheckedBox"
+                                           Fill="{DynamicResource ThemeCheckBoxBackground}"
+                                           Width="14" Height="14"/>
+                                <Path x:Name="checkMark"
+                                      Data="M 2,7 L 5,10 L 12,3"
+                                      Stroke="{DynamicResource ThemeAccent}"
+                                      StrokeThickness="2"
+                                      Opacity="0"/>
+                            </Grid>
                             <ContentPresenter x:Name="contentPresenter" Grid.Column="1"
                                               Focusable="False"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -205,15 +196,8 @@
                             <Trigger Property="HasContent" Value="true">
                                 <Setter Property="Padding" Value="4,-1,0,0"/>
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter TargetName="checkBoxBorder" Property="Background" Value="{DynamicResource ThemeBackgroundHover}"/>
-                                <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="{DynamicResource ThemeBorderHover}"/>
-                            </Trigger>
                             <Trigger Property="IsChecked" Value="true">
-                                <Setter TargetName="optionMark" Property="Opacity" Value="1"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="{x:Null}">
-                                <Setter TargetName="indeterminateMark" Property="Opacity" Value="1"/>
+                                <Setter TargetName="checkMark" Property="Opacity" Value="1"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -893,7 +877,7 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
@@ -902,55 +886,39 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 SnapsToDevicePixels="true">
-                            <Grid Margin="-1">
+                            <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" MinWidth="22" SharedSizeGroup="MenuItemIconColumnGroup"/>
-                                    <ColumnDefinition Width="13"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="30"/>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="MenuItemIGTColumnGroup"/>
-                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <ContentPresenter x:Name="Icon" Grid.Column="0"
                                                   ContentSource="Icon"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
                                                   Width="16" Height="16"
-                                                  Margin="3"
+                                                  Margin="4,2"
+                                                  Visibility="Collapsed"
                                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                                <Border x:Name="GlyphPanel" Grid.Column="0"
-                                        Background="Transparent"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
-                                        ClipToBounds="False"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Margin="3"
-                                        Visibility="Hidden"
-                                        Width="22" Height="22">
-                                    <Path x:Name="Glyph" Data="M 0,5 L 3,8 L 9,2"
-                                          Stroke="{DynamicResource ThemeForeground}"
-                                          StrokeThickness="2"
-                                          FlowDirection="LeftToRight"/>
-                                </Border>
-                                <ContentPresenter x:Name="menuHeaderContainer" Grid.Column="2"
+                                <ContentPresenter x:Name="menuHeaderContainer" Grid.Column="1"
                                                   ContentSource="Header"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Center"
                                                   Margin="{TemplateBinding Padding}"
                                                   RecognizesAccessKey="True"
                                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                                <TextBlock x:Name="menuGestureText" Grid.Column="4"
+                                <TextBlock x:Name="menuGestureText" Grid.Column="2"
                                            Text="{TemplateBinding InputGestureText}"
                                            Foreground="{DynamicResource ThemeForegroundDim}"
-                                           Margin="{TemplateBinding Padding}"
-                                           VerticalAlignment="Center"/>
-                                <Path x:Name="RightArrow" Grid.Column="5"
+                                           Margin="16,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                                <Path x:Name="RightArrow" Grid.Column="2"
                                       Data="M 0,0 L 4,3.5 L 0,7 Z"
                                       Fill="{DynamicResource ThemeForeground}"
-                                      HorizontalAlignment="Left"
+                                      HorizontalAlignment="Right"
                                       VerticalAlignment="Center"
-                                      Margin="10,0,0,0"
+                                      Margin="0,0,8,0"
                                       Visibility="Collapsed"/>
                                 <Popup x:Name="PART_Popup"
                                        AllowsTransparency="true"
@@ -982,11 +950,10 @@
                                 <Setter TargetName="RightArrow" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="PART_Popup" Property="Placement" Value="Right"/>
                             </Trigger>
-                            <Trigger Property="Icon" Value="{x:Null}">
-                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                            <Trigger Property="Role" Value="SubmenuItem">
+                                <Setter TargetName="menuGestureText" Property="Visibility" Value="Visible"/>
                             </Trigger>
-                            <Trigger Property="IsChecked" Value="true">
-                                <Setter TargetName="GlyphPanel" Property="Visibility" Value="Visible"/>
+                            <Trigger Property="Icon" Value="{x:Null}">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
                             </Trigger>
                             <Trigger Property="IsHighlighted" Value="true">
@@ -994,7 +961,6 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="false">
                                 <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundDim}"/>
-                                <Setter TargetName="Glyph" Property="Stroke" Value="{DynamicResource ThemeForegroundDim}"/>
                                 <Setter TargetName="RightArrow" Property="Fill" Value="{DynamicResource ThemeForegroundDim}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>

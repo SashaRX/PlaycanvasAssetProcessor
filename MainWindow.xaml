@@ -1310,7 +1310,8 @@
 
                                 <!-- Advanced Settings (collapsed by default) -->
                                 <Expander x:Name="ORMAdvancedExpander" Header="Advanced Settings"
-                                          FontSize="9" FontWeight="Normal" IsExpanded="False" Margin="0,4,0,0">
+                                          FontSize="9" FontWeight="Normal" IsExpanded="False" Margin="0,4,0,0"
+                                          Background="Transparent">
                                     <StackPanel Margin="0,4,0,0">
                                         <!-- Packing Mode -->
                                         <Grid Margin="0,2,0,2">

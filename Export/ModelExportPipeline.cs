@@ -133,44 +133,76 @@ public class ModelExportPipeline {
                 result.ConvertedTextures.AddRange(texturePathMap.Values);
             }
 
-            // 7. Генерируем единый конфиг JSON для модели
-            ReportProgress("Generating model config...", 70);
+            // 7. Генерируем material JSON файлы и mapping.json
+            ReportProgress("Generating material files...", 70);
             var modelFileName = GetSafeFileName(model.Name ?? $"model_{model.ID}");
-            var materialsArray = new List<object>();
+            var materialIds = new List<int>();
+            var materialPaths = new Dictionary<string, string>(); // materialId -> path
+            var texturePaths = new Dictionary<string, string>(); // textureId -> path
 
+            // Собираем маппинг текстур (ID -> относительный путь)
+            foreach (var (textureId, path) in texturePathMap) {
+                texturePaths[textureId.ToString()] = path;
+            }
+
+            // Добавляем ORM текстуры в маппинг (используем отрицательные ID для сгенерированных)
+            foreach (var (materialId, ormResult) in ormResults) {
+                var ormTextureId = -materialId; // Отрицательный ID для сгенерированных ORM
+                texturePaths[ormTextureId.ToString()] = ormResult.RelativePath;
+            }
+
+            // Генерируем отдельный JSON для каждого материала
             foreach (var material in modelMaterials) {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var materialJson = GenerateMaterialInstanceJson(
-                    material, texturePathMap, ormResults, options);
+                var materialJson = GenerateMaterialJsonWithIds(material, ormResults, options);
+                var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
+                var matPath = Path.Combine(exportPath, matFileName);
 
-                materialsArray.Add(new {
-                    name = material.Name,
-                    master = materialJson.Master,
-                    @params = materialJson.Params,
-                    textures = materialJson.Textures
+                var json = JsonSerializer.Serialize(materialJson, new JsonSerializerOptions {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
                 });
+                await File.WriteAllTextAsync(matPath, json, cancellationToken);
+
+                materialIds.Add(material.ID);
+                materialPaths[material.ID.ToString()] = matFileName;
+                result.GeneratedMaterialJsons.Add(matPath);
+                Logger.Info($"Generated material JSON: {matPath}");
             }
 
-            // Формируем единый конфиг
-            var modelConfig = new {
-                model = $"{modelFileName}_lod0.glb",
-                lods = options.GenerateLODs
-                    ? new[] { $"{modelFileName}_lod1.glb", $"{modelFileName}_lod2.glb" }
-                    : Array.Empty<string>(),
-                materials = materialsArray
+            // Генерируем mapping.json
+            var lodDistances = new[] { 0, 25, 60 }; // Дистанции переключения LOD
+            var lodsArray = new List<object>();
+
+            lodsArray.Add(new { level = 0, file = $"{modelFileName}_lod0.glb", distance = lodDistances[0] });
+            if (options.GenerateLODs) {
+                lodsArray.Add(new { level = 1, file = $"{modelFileName}_lod1.glb", distance = lodDistances[1] });
+                lodsArray.Add(new { level = 2, file = $"{modelFileName}_lod2.glb", distance = lodDistances[2] });
+            }
+
+            var mapping = new {
+                version = "1.0.0",
+                models = new Dictionary<string, object> {
+                    [model.ID.ToString()] = new {
+                        name = model.Name,
+                        path = modelFolderPath,
+                        materials = materialIds,
+                        lods = lodsArray
+                    }
+                },
+                materials = materialPaths,
+                textures = texturePaths
             };
 
-            var configPath = Path.Combine(exportPath, $"{modelFileName}.json");
-            var configJson = JsonSerializer.Serialize(modelConfig, new JsonSerializerOptions {
+            var mappingPath = Path.Combine(exportPath, "mapping.json");
+            var mappingJson = JsonSerializer.Serialize(mapping, new JsonSerializerOptions {
                 WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            await File.WriteAllTextAsync(configPath, configJson, cancellationToken);
-
-            result.GeneratedMaterialJsons.Add(configPath);
-            Logger.Info($"Generated model config: {configPath}");
+            await File.WriteAllTextAsync(mappingPath, mappingJson, cancellationToken);
+            Logger.Info($"Generated mapping: {mappingPath}");
 
             // 8. Конвертируем модель в GLB + LOD
             if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
@@ -655,6 +687,77 @@ public class ModelExportPipeline {
         }
 
         return instance;
+    }
+
+    /// <summary>
+    /// Генерирует материал JSON с ID текстур (для mapping.json архитектуры)
+    /// </summary>
+    private object GenerateMaterialJsonWithIds(
+        MaterialResource material,
+        Dictionary<int, ORMExportResult> ormResults,
+        ExportOptions options) {
+
+        // Определяем master материал по blendType
+        var masterName = material.BlendType switch {
+            "0" or "NONE" => "pbr_opaque",
+            "1" or "NORMAL" => "pbr_alpha",
+            "2" or "ADDITIVE" => "pbr_additive",
+            "3" or "PREMULTIPLIED" => "pbr_premul",
+            _ => "pbr_opaque"
+        };
+
+        var textures = new Dictionary<string, object>();
+
+        // Стандартные текстуры - просто ID
+        if (material.DiffuseMapId.HasValue)
+            textures["diffuseMap"] = material.DiffuseMapId.Value;
+
+        if (material.NormalMapId.HasValue)
+            textures["normalMap"] = material.NormalMapId.Value;
+
+        if (material.EmissiveMapId.HasValue)
+            textures["emissiveMap"] = material.EmissiveMapId.Value;
+
+        if (material.OpacityMapId.HasValue)
+            textures["opacityMap"] = material.OpacityMapId.Value;
+
+        // ORM packed текстуры - формат { "asset": id }
+        if (options.UsePackedTextures && ormResults.TryGetValue(material.ID, out var ormResult)) {
+            var ormTextureId = -material.ID; // Отрицательный ID для сгенерированных ORM
+            var ormKey = ormResult.PackingMode switch {
+                ChannelPackingMode.OG => "_og",
+                ChannelPackingMode.OGM => "_ogm",
+                ChannelPackingMode.OGMH => "_ogmh",
+                _ => "_ogm"
+            };
+            textures[ormKey] = new { asset = ormTextureId };
+        } else {
+            // Отдельные текстуры - формат { "asset": id }
+            if (material.AOMapId.HasValue)
+                textures["aoMap"] = new { asset = material.AOMapId.Value };
+
+            if (material.GlossMapId.HasValue)
+                textures["glossMap"] = new { asset = material.GlossMapId.Value };
+
+            if (material.MetalnessMapId.HasValue)
+                textures["metalnessMap"] = new { asset = material.MetalnessMapId.Value };
+        }
+
+        return new {
+            master = masterName,
+            @params = new {
+                diffuse = NormalizeColor(material.Diffuse),
+                metalness = material.UseMetalness ? material.Metalness : (float?)null,
+                gloss = material.Glossiness ?? material.Shininess,
+                emissive = NormalizeColor(material.Emissive),
+                emissiveIntensity = material.EmissiveIntensity,
+                opacity = material.Opacity,
+                alphaTest = material.AlphaTest,
+                bumpiness = material.BumpMapFactor,
+                useMetalness = material.UseMetalness ? true : (bool?)null
+            },
+            textures = textures.Count > 0 ? textures : null
+        };
     }
 
     private float[]? NormalizeColor(List<float>? color) {

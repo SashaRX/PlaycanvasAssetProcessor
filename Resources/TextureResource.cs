@@ -1,4 +1,5 @@
-﻿using System.Windows.Media;
+﻿using System.Windows;
+using System.Windows.Media;
 
 namespace AssetProcessor.Resources {
     public class TextureResource : BaseResource {
@@ -13,7 +14,10 @@ namespace AssetProcessor.Resources {
         private static readonly Brush AlbedoBrush = new SolidColorBrush(Color.FromRgb(0x9C, 0x7F, 0x25));
         private static readonly Brush GlossBrush = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
         private static readonly Brush AoBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
-        private static readonly Brush TransparentBrush = Brushes.Transparent;
+
+        // Theme-aware default brush (from Application resources)
+        private static Brush DefaultRowBrush =>
+            Application.Current?.Resources["ThemeDataGridRowBackground"] as Brush ?? Brushes.Transparent;
 
         static TextureResource() {
             // Freeze brushes for better performance (cross-thread access)
@@ -35,7 +39,7 @@ namespace AssetProcessor.Resources {
                     "Albedo" => AlbedoBrush,
                     "Gloss" => GlossBrush,
                     "AO" => AoBrush,
-                    _ => TransparentBrush
+                    _ => DefaultRowBrush
                 };
             }
         }

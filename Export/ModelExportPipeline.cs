@@ -55,6 +55,20 @@ public class ModelExportPipeline {
     }
 
     /// <summary>
+    /// Получить путь к server папке: [project]/server/
+    /// </summary>
+    public string GetServerPath() {
+        return Path.Combine(_outputBasePath, _projectName, "server");
+    }
+
+    /// <summary>
+    /// Получить путь к mapping.json: [project]/server/mapping.json
+    /// </summary>
+    public string GetMappingPath() {
+        return Path.Combine(GetServerPath(), "mapping.json");
+    }
+
+    /// <summary>
     /// Экспортирует модель со всеми связанными ресурсами
     /// </summary>
     public async Task<ModelExportResult> ExportModelAsync(
@@ -133,23 +147,14 @@ public class ModelExportPipeline {
                 result.ConvertedTextures.AddRange(texturePathMap.Values);
             }
 
-            // 7. Генерируем material JSON файлы и mapping.json
+            // 7. Генерируем material JSON файлы и обновляем глобальный mapping.json
             ReportProgress("Generating material files...", 70);
             var modelFileName = GetSafeFileName(model.Name ?? $"model_{model.ID}");
             var materialIds = new List<int>();
-            var materialPaths = new Dictionary<string, string>(); // materialId -> path
-            var texturePaths = new Dictionary<string, string>(); // textureId -> path
 
-            // Собираем маппинг текстур (ID -> относительный путь)
-            foreach (var (textureId, path) in texturePathMap) {
-                texturePaths[textureId.ToString()] = path;
-            }
-
-            // Добавляем ORM текстуры в маппинг (используем отрицательные ID для сгенерированных)
-            foreach (var (materialId, ormResult) in ormResults) {
-                var ormTextureId = -materialId; // Отрицательный ID для сгенерированных ORM
-                texturePaths[ormTextureId.ToString()] = ormResult.RelativePath;
-            }
+            // Базовый путь относительно server/ для mapping.json
+            var assetsContentPath = "assets/content";
+            var modelRelativePath = $"{assetsContentPath}/{modelFolderPath}";
 
             // Генерируем отдельный JSON для каждого материала
             foreach (var material in modelMaterials) {
@@ -167,42 +172,15 @@ public class ModelExportPipeline {
                 await File.WriteAllTextAsync(matPath, json, cancellationToken);
 
                 materialIds.Add(material.ID);
-                materialPaths[material.ID.ToString()] = matFileName;
                 result.GeneratedMaterialJsons.Add(matPath);
                 Logger.Info($"Generated material JSON: {matPath}");
             }
 
-            // Генерируем mapping.json
-            var lodDistances = new[] { 0, 25, 60 }; // Дистанции переключения LOD
-            var lodsArray = new List<object>();
-
-            lodsArray.Add(new { level = 0, file = $"{modelFileName}_lod0.glb", distance = lodDistances[0] });
-            if (options.GenerateLODs) {
-                lodsArray.Add(new { level = 1, file = $"{modelFileName}_lod1.glb", distance = lodDistances[1] });
-                lodsArray.Add(new { level = 2, file = $"{modelFileName}_lod2.glb", distance = lodDistances[2] });
-            }
-
-            var mapping = new {
-                version = "1.0.0",
-                models = new Dictionary<string, object> {
-                    [model.ID.ToString()] = new {
-                        name = model.Name,
-                        path = modelFolderPath,
-                        materials = materialIds,
-                        lods = lodsArray
-                    }
-                },
-                materials = materialPaths,
-                textures = texturePaths
-            };
-
-            var mappingPath = Path.Combine(exportPath, "mapping.json");
-            var mappingJson = JsonSerializer.Serialize(mapping, new JsonSerializerOptions {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            await File.WriteAllTextAsync(mappingPath, mappingJson, cancellationToken);
-            Logger.Info($"Generated mapping: {mappingPath}");
+            // Обновляем глобальный mapping.json в папке server/
+            await UpdateGlobalMappingAsync(
+                model, modelMaterials, modelFileName, modelFolderPath,
+                texturePathMap, ormResults, options, cancellationToken);
+            Logger.Info($"Updated global mapping: {GetMappingPath()}");
 
             // 8. Конвертируем модель в GLB + LOD
             if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
@@ -792,6 +770,81 @@ public class ModelExportPipeline {
         return sanitized.Replace('\\', '/');
     }
 
+    /// <summary>
+    /// Обновляет глобальный mapping.json в папке server/
+    /// </summary>
+    private async Task UpdateGlobalMappingAsync(
+        ModelResource model,
+        List<MaterialResource> modelMaterials,
+        string modelFileName,
+        string modelFolderPath,
+        Dictionary<int, string> texturePathMap,
+        Dictionary<int, ORMExportResult> ormResults,
+        ExportOptions options,
+        CancellationToken cancellationToken) {
+
+        var mappingPath = GetMappingPath();
+        Directory.CreateDirectory(GetServerPath());
+
+        // Загружаем существующий mapping.json или создаём новый
+        var existingMapping = new MappingData();
+        if (File.Exists(mappingPath)) {
+            try {
+                var existingJson = await File.ReadAllTextAsync(mappingPath, cancellationToken);
+                existingMapping = JsonSerializer.Deserialize<MappingData>(existingJson, new JsonSerializerOptions {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                }) ?? new MappingData();
+            } catch (Exception ex) {
+                Logger.Warn($"Failed to load existing mapping.json, creating new: {ex.Message}");
+            }
+        }
+
+        // Путь относительно server/ папки
+        var contentBasePath = "assets/content";
+        var modelPath = $"{contentBasePath}/{modelFolderPath}".Replace('\\', '/');
+
+        // Добавляем модель
+        var lodDistances = new[] { 0, 25, 60 };
+        var lods = new List<LodEntry> {
+            new LodEntry { Level = 0, File = $"{modelPath}/{modelFileName}_lod0.glb", Distance = lodDistances[0] }
+        };
+        if (options.GenerateLODs) {
+            lods.Add(new LodEntry { Level = 1, File = $"{modelPath}/{modelFileName}_lod1.glb", Distance = lodDistances[1] });
+            lods.Add(new LodEntry { Level = 2, File = $"{modelPath}/{modelFileName}_lod2.glb", Distance = lodDistances[2] });
+        }
+
+        existingMapping.Models[model.ID.ToString()] = new ModelEntry {
+            Name = model.Name ?? modelFileName,
+            Path = modelPath,
+            Materials = modelMaterials.Select(m => m.ID).ToList(),
+            Lods = lods
+        };
+
+        // Добавляем материалы
+        foreach (var material in modelMaterials) {
+            var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
+            existingMapping.Materials[material.ID.ToString()] = $"{modelPath}/{matFileName}";
+        }
+
+        // Добавляем текстуры
+        foreach (var (textureId, relativePath) in texturePathMap) {
+            existingMapping.Textures[textureId.ToString()] = $"{modelPath}/{relativePath}".Replace('\\', '/');
+        }
+
+        // Добавляем ORM текстуры
+        foreach (var (materialId, ormResult) in ormResults) {
+            var ormTextureId = -materialId;
+            existingMapping.Textures[ormTextureId.ToString()] = $"{modelPath}/{ormResult.RelativePath}".Replace('\\', '/');
+        }
+
+        // Сохраняем обновлённый mapping.json
+        var mappingJson = JsonSerializer.Serialize(existingMapping, new JsonSerializerOptions {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        await File.WriteAllTextAsync(mappingPath, mappingJson, cancellationToken);
+    }
+
     private void ReportProgress(string message, int percentage) {
         Logger.Info($"[{percentage}%] {message}");
         ProgressChanged?.Invoke(new ExportProgress {
@@ -849,6 +902,29 @@ public class ORMExportResult {
     public ChannelPackingMode PackingMode { get; set; }
     public string OutputPath { get; set; } = "";
     public string RelativePath { get; set; } = "";
+}
+
+/// <summary>
+/// Структура глобального mapping.json
+/// </summary>
+public class MappingData {
+    public string Version { get; set; } = "1.0.0";
+    public Dictionary<string, ModelEntry> Models { get; set; } = new();
+    public Dictionary<string, string> Materials { get; set; } = new();
+    public Dictionary<string, string> Textures { get; set; } = new();
+}
+
+public class ModelEntry {
+    public string Name { get; set; } = "";
+    public string Path { get; set; } = "";
+    public List<int> Materials { get; set; } = new();
+    public List<LodEntry> Lods { get; set; } = new();
+}
+
+public class LodEntry {
+    public int Level { get; set; }
+    public string File { get; set; } = "";
+    public int Distance { get; set; }
 }
 
 #endregion

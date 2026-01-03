@@ -1,0 +1,66 @@
+using Microsoft.Win32;
+using System;
+using System.Windows;
+using System.Windows.Media;
+
+namespace AssetProcessor.Helpers {
+    public static class ThemeHelper {
+        public static bool IsDarkTheme {
+            get {
+                try {
+                    using var key = Registry.CurrentUser.OpenSubKey(
+                        @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                    var value = key?.GetValue("AppsUseLightTheme");
+                    return value is int intValue && intValue == 0;
+                } catch {
+                    return false;
+                }
+            }
+        }
+
+        public static void ApplyTheme(Application app) {
+            bool isDark = IsDarkTheme;
+
+            // Background colors
+            app.Resources["ThemeBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(45, 45, 48) : Colors.White);
+            app.Resources["ThemeBackgroundAlt"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(37, 37, 38) : Color.FromRgb(240, 240, 240));
+            app.Resources["ThemeBackgroundHover"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(62, 62, 64) : Color.FromRgb(190, 230, 253));
+
+            // Foreground colors
+            app.Resources["ThemeForeground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(241, 241, 241) : Colors.Black);
+            app.Resources["ThemeForegroundDim"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(160, 160, 160) : Color.FromRgb(96, 96, 96));
+
+            // Border colors
+            app.Resources["ThemeBorder"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(67, 67, 70) : Color.FromRgb(172, 172, 172));
+            app.Resources["ThemeBorderHover"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(0, 122, 204) : Color.FromRgb(126, 180, 234));
+
+            // Accent colors
+            app.Resources["ThemeAccent"] = new SolidColorBrush(
+                Color.FromRgb(0, 120, 215));
+            app.Resources["ThemeAccentForeground"] = new SolidColorBrush(Colors.White);
+
+            // Selection colors
+            app.Resources["ThemeSelection"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(51, 51, 52) : Color.FromRgb(0, 120, 215));
+            app.Resources["ThemeSelectionForeground"] = new SolidColorBrush(
+                isDark ? Colors.White : Colors.White);
+
+            // DataGrid colors
+            app.Resources["ThemeDataGridBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(37, 37, 38) : Color.FromRgb(214, 214, 214));
+            app.Resources["ThemeDataGridRowBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(45, 45, 48) : Colors.White);
+            app.Resources["ThemeDataGridRowAltBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(37, 37, 38) : Color.FromRgb(240, 240, 240));
+            app.Resources["ThemeDataGridGridLines"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(67, 67, 70) : Color.FromRgb(211, 211, 211));
+        }
+    }
+}

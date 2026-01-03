@@ -17,6 +17,9 @@ namespace AssetProcessor {
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
 
+            // Apply theme based on Windows settings
+            ThemeHelper.ApplyTheme(this);
+
             var serviceCollection = new ServiceCollection();
             ConfigureServices(serviceCollection);
 

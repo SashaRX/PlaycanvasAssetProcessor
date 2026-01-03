@@ -156,10 +156,10 @@
         </Grid>
 
         <!-- Панель управления внизу -->
-        <Grid DockPanel.Dock="Bottom" Margin="4,4,4,6">
+        <Grid DockPanel.Dock="Bottom" Margin="4,4,4,6" MinHeight="85">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="420"/>
                 <ColumnDefinition Width="*" MinWidth="120"/>
             </Grid.ColumnDefinitions>
 
@@ -230,7 +230,7 @@
             </GroupBox>
 
             <!-- Texture Operations (Right Side) - Only visible for Textures tab -->
-            <GroupBox Grid.Column="1" x:Name="TextureOperationsGroupBox" Header="Texture Operations" VerticalAlignment="Stretch" Margin="2" Width="350" Visibility="Collapsed">
+            <GroupBox Grid.Column="1" x:Name="TextureOperationsGroupBox" Header="Texture Operations" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="2" Visibility="Collapsed">
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
@@ -267,7 +267,7 @@
             </GroupBox>
 
             <!-- Model Export Operations - Only visible for Models tab -->
-            <GroupBox Grid.Column="1" x:Name="ModelExportGroupBox" Header="Model Export" VerticalAlignment="Stretch" Margin="2" Width="420" Visibility="Collapsed">
+            <GroupBox Grid.Column="1" x:Name="ModelExportGroupBox" Header="Model Export" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="2" Visibility="Collapsed">
                 <StackPanel Orientation="Vertical" Margin="4,2,4,2">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="Selected:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>

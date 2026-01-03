@@ -45,22 +45,16 @@
         </Style>
 
         <!-- Compact style for right panel expanders -->
-        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
             <Setter Property="Margin" Value="0,0,0,2"/>
             <Setter Property="Padding" Value="2"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
         </Style>
 
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{Binding ., Converter={StaticResource ChannelColorConverter}, ConverterParameter=Background}" />
-            <Setter Property="Foreground" Value="{Binding ., Converter={StaticResource ChannelColorConverter}, ConverterParameter=Foreground}" />
-        </Style>
 
         <!-- Стиль для кликабельных гиперссылок текстур в материалах -->
         <Style x:Key="TextureHyperlinkStyle" TargetType="Hyperlink">

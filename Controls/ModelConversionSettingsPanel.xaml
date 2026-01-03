@@ -23,9 +23,8 @@
         </ObjectDataProvider>
 
         <!-- Compact Expander Style -->
-        <Style x:Key="CompactExpanderStyle" TargetType="Expander">
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
             <Setter Property="Margin" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="HeaderTemplate">
@@ -38,38 +37,16 @@
         </Style>
 
         <!-- Compact GroupBox Style -->
-        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox">
+        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox" BasedOn="{StaticResource {x:Type GroupBox}}">
             <Setter Property="Margin" Value="0,0,0,1"/>
             <Setter Property="Padding" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="9"/>
         </Style>
 
         <!-- ComboBox Style -->
-        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource ThemeBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        <Style x:Key="ReadableComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Padding" Value="3,1"/>
             <Setter Property="FontSize" Value="9"/>
-        </Style>
-
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource ThemeBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-            <Setter Property="Padding" Value="3,1"/>
-            <Setter Property="FontSize" Value="9"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundHover}"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ThemeAccent}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource ThemeAccentForeground}"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
 
         <!-- Label Style -->
@@ -79,12 +56,12 @@
         </Style>
 
         <!-- Checkbox Style -->
-        <Style TargetType="CheckBox">
+        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
             <Setter Property="FontSize" Value="9"/>
         </Style>
 
         <!-- Button Style -->
-        <Style TargetType="Button">
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="FontSize" Value="9"/>
             <Setter Property="Padding" Value="3,1"/>
         </Style>

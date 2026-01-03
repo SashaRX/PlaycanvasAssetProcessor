@@ -156,7 +156,7 @@
         </Grid>
 
         <!-- Панель управления внизу -->
-        <Grid DockPanel.Dock="Bottom" Margin="4,4,4,6" MinHeight="85">
+        <Grid DockPanel.Dock="Bottom" Margin="4,4,4,6" Height="85">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="420"/>

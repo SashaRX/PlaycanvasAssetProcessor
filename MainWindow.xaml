@@ -1335,57 +1335,6 @@
                                                        Text="{Binding ElementName=ORMAOBiasSlider, Path=Value, StringFormat={}{0:F1}}"/>
                                         </Grid>
 
-                                        <!-- Default Values Header -->
-                                        <TextBlock Text="Default Values (if texture missing)" FontWeight="SemiBold"
-                                                   Margin="0,8,0,4" FontSize="9"/>
-
-                                        <!-- AO Default -->
-                                        <Grid Margin="0,2,0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="AO Default" VerticalAlignment="Center"/>
-                                            <Slider x:Name="ORMAODefaultSlider" Grid.Column="1"
-                                                    Minimum="0" Maximum="1" Value="1"
-                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                                    ValueChanged="ORMSettings_Changed"/>
-                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                                       Text="{Binding ElementName=ORMAODefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                        </Grid>
-
-                                        <!-- Gloss Default -->
-                                        <Grid Margin="0,2,0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Gloss Default" VerticalAlignment="Center"/>
-                                            <Slider x:Name="ORMGlossDefaultSlider" Grid.Column="1"
-                                                    Minimum="0" Maximum="1" Value="0.5"
-                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                                    ValueChanged="ORMSettings_Changed"/>
-                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                                       Text="{Binding ElementName=ORMGlossDefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                        </Grid>
-
-                                        <!-- Metalness Default -->
-                                        <Grid Margin="0,2,0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Metal Default" VerticalAlignment="Center"/>
-                                            <Slider x:Name="ORMMetalnessDefaultSlider" Grid.Column="1"
-                                                    Minimum="0" Maximum="1" Value="0"
-                                                    TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                                    ValueChanged="ORMSettings_Changed"/>
-                                            <TextBlock Grid.Column="2" Width="30" TextAlignment="Right"
-                                                       Text="{Binding ElementName=ORMMetalnessDefaultSlider, Path=Value, StringFormat={}{0:F1}}"/>
-                                        </Grid>
                                     </StackPanel>
                                 </Expander>
                             </StackPanel>

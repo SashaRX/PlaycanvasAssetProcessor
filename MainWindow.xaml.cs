@@ -2126,9 +2126,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ORMEnabledCheckBox.IsChecked = settings.Enabled;
                 ORMApplyToksvigCheckBox.IsChecked = effectiveSettings.ToksvigEnabled;
                 ORMAOBiasSlider.Value = effectiveSettings.AOBias;
-                ORMAODefaultSlider.Value = effectiveSettings.AODefault;
-                ORMGlossDefaultSlider.Value = effectiveSettings.GlossDefault;
-                ORMMetalnessDefaultSlider.Value = effectiveSettings.MetallicDefault;
 
                 // Packing Mode
                 ORMPackingModeComboBox.SelectedIndex = effectiveSettings.PackingMode switch {
@@ -2196,9 +2193,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 var settings = selectedMaterial.ORMSettings.GetEffectiveSettings();
                 ORMApplyToksvigCheckBox.IsChecked = settings.ToksvigEnabled;
                 ORMAOBiasSlider.Value = settings.AOBias;
-                ORMAODefaultSlider.Value = settings.AODefault;
-                ORMGlossDefaultSlider.Value = settings.GlossDefault;
-                ORMMetalnessDefaultSlider.Value = settings.MetallicDefault;
 
                 ORMPackingModeComboBox.SelectedIndex = settings.PackingMode switch {
                     TextureConversion.Core.ChannelPackingMode.Auto => 0,
@@ -2274,9 +2268,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             selectedMaterial.ORMSettings.Enabled = ORMEnabledCheckBox.IsChecked ?? true;
             selectedMaterial.ORMSettings.Settings.ToksvigEnabled = ORMApplyToksvigCheckBox.IsChecked ?? true;
             selectedMaterial.ORMSettings.Settings.AOBias = (float)ORMAOBiasSlider.Value;
-            selectedMaterial.ORMSettings.Settings.AODefault = (float)ORMAODefaultSlider.Value;
-            selectedMaterial.ORMSettings.Settings.GlossDefault = (float)ORMGlossDefaultSlider.Value;
-            selectedMaterial.ORMSettings.Settings.MetallicDefault = (float)ORMMetalnessDefaultSlider.Value;
 
             // Packing Mode
             selectedMaterial.ORMSettings.Settings.PackingMode = ORMPackingModeComboBox.SelectedIndex switch {

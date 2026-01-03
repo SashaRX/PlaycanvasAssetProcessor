@@ -20,6 +20,11 @@ namespace AssetProcessor.TextureConversion.Core {
         public float DefaultValue { get; set; } = 1.0f;
 
         /// <summary>
+        /// Тип фильтра для генерации мипмапов
+        /// </summary>
+        public FilterType FilterType { get; set; } = FilterType.Kaiser;
+
+        /// <summary>
         /// Применять ли Toksvig коррекцию (только для Gloss)
         /// </summary>
         public bool ApplyToksvig { get; set; } = false;

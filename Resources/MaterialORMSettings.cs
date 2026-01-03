@@ -5,68 +5,97 @@ namespace AssetProcessor.Resources;
 
 /// <summary>
 /// Настройки ORM упаковки для материала
-/// Используются при экспорте для генерации packed ORM текстур
+/// Обёртка над ORMSettings с привязкой к конкретному материалу
 /// </summary>
 public class MaterialORMSettings {
     /// <summary>
-    /// Режим упаковки каналов
+    /// Полные настройки ORM
     /// </summary>
-    [JsonPropertyName("packingMode")]
-    public ChannelPackingMode PackingMode { get; set; } = ChannelPackingMode.Auto;
+    [JsonPropertyName("settings")]
+    public ORMSettings Settings { get; set; } = ORMSettings.CreateStandard();
 
     /// <summary>
-    /// Применять Toksvig коррекцию к Gloss каналу
+    /// Использовать глобальные настройки (из панели текстур)
+    /// Если true - игнорируем локальные Settings
     /// </summary>
-    [JsonPropertyName("applyToksvig")]
-    public bool ApplyToksvig { get; set; } = true;
+    [JsonPropertyName("useGlobal")]
+    public bool UseGlobalSettings { get; set; } = true;
 
-    /// <summary>
-    /// Режим обработки AO при генерации мипмапов
-    /// </summary>
-    [JsonPropertyName("aoProcessingMode")]
-    public AOProcessingMode AOProcessingMode { get; set; } = AOProcessingMode.BiasedDarkening;
+    // === Прокси свойства для совместимости ===
 
-    /// <summary>
-    /// Bias для AO обработки (0.0-1.0)
-    /// </summary>
-    [JsonPropertyName("aoBias")]
-    public float AOBias { get; set; } = 0.5f;
+    [JsonIgnore]
+    public bool Enabled {
+        get => Settings.Enabled;
+        set => Settings.Enabled = value;
+    }
 
-    /// <summary>
-    /// Значение AO по умолчанию если текстура отсутствует (0.0-1.0)
-    /// </summary>
-    [JsonPropertyName("aoDefault")]
-    public float AODefault { get; set; } = 1.0f;
+    [JsonIgnore]
+    public ORMPresetType Preset {
+        get => Settings.Preset;
+        set {
+            Settings.Preset = value;
+            if (value != ORMPresetType.Custom) {
+                Settings = ORMSettings.FromPreset(value);
+            }
+        }
+    }
 
-    /// <summary>
-    /// Значение Gloss по умолчанию если текстура отсутствует (0.0-1.0)
-    /// </summary>
-    [JsonPropertyName("glossDefault")]
-    public float GlossDefault { get; set; } = 0.5f;
+    [JsonIgnore]
+    public ChannelPackingMode PackingMode {
+        get => Settings.PackingMode;
+        set => Settings.PackingMode = value;
+    }
 
-    /// <summary>
-    /// Значение Metalness по умолчанию если текстура отсутствует (0.0-1.0)
-    /// </summary>
-    [JsonPropertyName("metalnessDefault")]
-    public float MetalnessDefault { get; set; } = 0.0f;
+    [JsonIgnore]
+    public bool ApplyToksvig {
+        get => Settings.ToksvigEnabled;
+        set => Settings.ToksvigEnabled = value;
+    }
 
-    /// <summary>
-    /// Значение Height по умолчанию если текстура отсутствует (0.0-1.0)
-    /// </summary>
-    [JsonPropertyName("heightDefault")]
-    public float HeightDefault { get; set; } = 0.5f;
+    [JsonIgnore]
+    public AOProcessingMode AOProcessingMode {
+        get => Settings.AOProcessing;
+        set => Settings.AOProcessing = value;
+    }
 
-    /// <summary>
-    /// Включить экспорт ORM текстуры для этого материала
-    /// </summary>
-    [JsonPropertyName("enabled")]
-    public bool Enabled { get; set; } = true;
+    [JsonIgnore]
+    public float AOBias {
+        get => Settings.AOBias;
+        set => Settings.AOBias = value;
+    }
+
+    [JsonIgnore]
+    public float AODefault {
+        get => Settings.AODefault;
+        set => Settings.AODefault = value;
+    }
+
+    [JsonIgnore]
+    public float GlossDefault {
+        get => Settings.GlossDefault;
+        set => Settings.GlossDefault = value;
+    }
+
+    [JsonIgnore]
+    public float MetalnessDefault {
+        get => Settings.MetallicDefault;
+        set => Settings.MetallicDefault = value;
+    }
+
+    [JsonIgnore]
+    public float HeightDefault {
+        get => Settings.HeightDefault;
+        set => Settings.HeightDefault = value;
+    }
 
     /// <summary>
     /// Создает настройки по умолчанию
     /// </summary>
     public static MaterialORMSettings CreateDefault() {
-        return new MaterialORMSettings();
+        return new MaterialORMSettings {
+            UseGlobalSettings = true,
+            Settings = ORMSettings.CreateStandard()
+        };
     }
 
     /// <summary>
@@ -75,79 +104,13 @@ public class MaterialORMSettings {
     public ChannelPackingSettings ToChannelPackingSettings(
         string? aoPath, string? glossPath, string? metalPath, string? heightPath = null) {
 
-        var mode = PackingMode;
-
-        // Auto-detect mode based on available textures
-        if (mode == ChannelPackingMode.Auto) {
-            mode = DeterminePackingMode(aoPath, glossPath, metalPath, heightPath);
-        }
-
-        var settings = new ChannelPackingSettings { Mode = mode };
-
-        if (mode == ChannelPackingMode.None) {
-            return settings;
-        }
-
-        // Configure channels based on mode
-        if (mode is ChannelPackingMode.OG or ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
-            settings.RedChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.AmbientOcclusion,
-                SourcePath = aoPath,
-                DefaultValue = AODefault,
-                AOProcessingMode = AOProcessingMode,
-                AOBias = AOBias
-            };
-        }
-
-        if (mode is ChannelPackingMode.OG) {
-            settings.AlphaChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.Gloss,
-                SourcePath = glossPath,
-                DefaultValue = GlossDefault,
-                ApplyToksvig = ApplyToksvig,
-                AOProcessingMode = AOProcessingMode.None
-            };
-        } else if (mode is ChannelPackingMode.OGM or ChannelPackingMode.OGMH) {
-            settings.GreenChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.Gloss,
-                SourcePath = glossPath,
-                DefaultValue = GlossDefault,
-                ApplyToksvig = ApplyToksvig,
-                AOProcessingMode = AOProcessingMode.None
-            };
-
-            settings.BlueChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.Metallic,
-                SourcePath = metalPath,
-                DefaultValue = MetalnessDefault,
-                AOProcessingMode = AOProcessingMode.None
-            };
-        }
-
-        if (mode is ChannelPackingMode.OGMH) {
-            settings.AlphaChannel = new ChannelSourceSettings {
-                ChannelType = ChannelType.Height,
-                SourcePath = heightPath,
-                DefaultValue = HeightDefault,
-                AOProcessingMode = AOProcessingMode.None
-            };
-        }
-
-        return settings;
+        return Settings.ToChannelPackingSettings(aoPath, glossPath, metalPath, heightPath);
     }
 
-    private static ChannelPackingMode DeterminePackingMode(
-        string? aoPath, string? glossPath, string? metalPath, string? heightPath) {
-
-        bool hasAO = !string.IsNullOrEmpty(aoPath);
-        bool hasGloss = !string.IsNullOrEmpty(glossPath);
-        bool hasMetal = !string.IsNullOrEmpty(metalPath);
-        bool hasHeight = !string.IsNullOrEmpty(heightPath);
-
-        if (hasAO && hasGloss && hasMetal && hasHeight) return ChannelPackingMode.OGMH;
-        if (hasAO && hasGloss && hasMetal) return ChannelPackingMode.OGM;
-        if (hasAO && hasGloss) return ChannelPackingMode.OG;
-
-        return ChannelPackingMode.None;
+    /// <summary>
+    /// Получить CompressionSettings для KTX конвертации
+    /// </summary>
+    public CompressionSettings ToCompressionSettings() {
+        return Settings.ToCompressionSettings();
     }
 }

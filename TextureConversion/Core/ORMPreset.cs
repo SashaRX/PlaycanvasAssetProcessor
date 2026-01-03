@@ -309,9 +309,9 @@ public class ORMSettings {
             ApplyToksvig = ToksvigEnabled,
             ToksvigSettings = ToksvigEnabled ? new ToksvigSettings {
                 CalculationMode = ToksvigMode,
-                Power = ToksvigPower,
-                MinMipLevel = ToksvigMinMip,
-                EnergyPreserving = ToksvigEnergyPreserving,
+                CompositePower = ToksvigPower,
+                MinToksvigMipLevel = ToksvigMinMip,
+                UseEnergyPreserving = ToksvigEnergyPreserving,
                 SmoothVariance = ToksvigSmoothVariance
             } : null
         };
@@ -340,12 +340,12 @@ public class ORMSettings {
             CompressionFormat = CompressionFormat,
             CompressionLevel = ETC1SCompressLevel,
             QualityLevel = ETC1SQuality,
-            UsePerceptualMetrics = ETC1SPerceptual,
+            PerceptualMode = ETC1SPerceptual,
             UASTCQuality = UASTCQuality,
-            EnableRDO = UASTCRDO,
-            RDOLambda = UASTCRDOLambda,
-            EnableZstdSupercompression = UASTCZstd,
-            ZstdCompressionLevel = UASTCZstdLevel
+            UseUASTCRDO = UASTCRDO,
+            UASTCRDOQuality = UASTCRDOLambda,
+            KTX2Supercompression = UASTCZstd ? KTX2SupercompressionType.Zstandard : KTX2SupercompressionType.None,
+            KTX2ZstdLevel = UASTCZstdLevel
         };
     }
 }

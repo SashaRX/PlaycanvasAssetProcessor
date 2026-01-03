@@ -88,6 +88,17 @@ namespace AssetProcessor.TextureConversion.Core {
         /// Валидация настроек
         /// </summary>
         public bool Validate(out string? error) {
+            // КРИТИЧНО: SourcePath обязателен - нет текстуры = нет канала
+            if (string.IsNullOrEmpty(SourcePath)) {
+                error = $"SourcePath is required for {ChannelType} channel - texture file must be specified";
+                return false;
+            }
+
+            if (!System.IO.File.Exists(SourcePath)) {
+                error = $"Texture file not found for {ChannelType} channel: {SourcePath}";
+                return false;
+            }
+
             if (ApplyToksvig && ChannelType != ChannelType.Gloss) {
                 error = "Toksvig correction can only be applied to Gloss channel";
                 return false;

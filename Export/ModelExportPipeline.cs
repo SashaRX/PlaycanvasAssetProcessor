@@ -332,16 +332,17 @@ public class ModelExportPipeline {
             if (material.MetalnessMapId.HasValue && textureDict.TryGetValue(material.MetalnessMapId.Value, out var metal))
                 metallicTexture = metal;
 
-            Logger.Info($"  Found textures - AO: {aoTexture?.Name ?? "null"}, Path: {aoTexture?.Path ?? "null"}, FileExists: {aoTexture?.Path != null && File.Exists(aoTexture.Path)}");
-            Logger.Info($"  Found textures - Gloss: {glossTexture?.Name ?? "null"}, Path: {glossTexture?.Path ?? "null"}, FileExists: {glossTexture?.Path != null && File.Exists(glossTexture.Path)}");
-            Logger.Info($"  Found textures - Metallic: {metallicTexture?.Name ?? "null"}, Path: {metallicTexture?.Path ?? "null"}, FileExists: {metallicTexture?.Path != null && File.Exists(metallicTexture.Path)}");
+            // Логируем найденные текстуры для ORM
+            Logger.Info($"ORM check for material [{material.ID}] {material.Name}:");
+            Logger.Info($"  AOMapId={material.AOMapId}, Found={aoTexture != null}, Path={aoTexture?.Path ?? "null"}, Exists={aoTexture?.Path != null && File.Exists(aoTexture.Path)}");
+            Logger.Info($"  GlossMapId={material.GlossMapId}, Found={glossTexture != null}, Path={glossTexture?.Path ?? "null"}, Exists={glossTexture?.Path != null && File.Exists(glossTexture.Path)}");
+            Logger.Info($"  MetalnessMapId={material.MetalnessMapId}, Found={metallicTexture != null}, Path={metallicTexture?.Path ?? "null"}, Exists={metallicTexture?.Path != null && File.Exists(metallicTexture.Path)}");
 
             // Определяем режим пакинга
             var packingMode = DeterminePackingMode(aoTexture, glossTexture, metallicTexture);
-            Logger.Info($"  PackingMode: {packingMode}");
-
+            Logger.Info($"  -> PackingMode = {packingMode}");
             if (packingMode == ChannelPackingMode.None) {
-                Logger.Warn($"  Skipping material {material.Name} - no suitable textures for ORM packing");
+                Logger.Warn($"  -> SKIPPING ORM: insufficient textures with valid files");
                 continue;
             }
 

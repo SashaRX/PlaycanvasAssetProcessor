@@ -32,14 +32,9 @@
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
 
-        <!-- Compact style for right panel expanders - inherits from global App.xaml Expander style -->
-        <Style x:Key="CompactExpanderStyle" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
-            <Setter Property="Margin" Value="0,0,0,2"/>
-            <Setter Property="Padding" Value="2"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <!-- Right panel expanders style (larger font than panel compact style) -->
+        <Style x:Key="RightPanelExpanderStyle" TargetType="Expander" BasedOn="{StaticResource CompactExpanderStyle}">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Background" Value="Transparent"/>
         </Style>
 
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
@@ -724,7 +719,7 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <!-- Preview Section -->
-                        <Expander Grid.Row="0" Header="Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="0" Header="Preview" IsExpanded="True" Style="{StaticResource RightPanelExpanderStyle}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -871,7 +866,7 @@
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource RightPanelExpanderStyle}">
                             <StackPanel Orientation="Vertical">
                                 <!-- Histogram Plot -->
                                 <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,0,0,4" Height="128">
@@ -920,7 +915,7 @@
 
                         <!-- Conversion Settings Panel -->
                         <Expander Grid.Row="2" x:Name="ConversionSettingsExpander" Header="Conversion Settings"
-                                  Style="{StaticResource CompactExpanderStyle}" IsExpanded="True"
+                                  Style="{StaticResource RightPanelExpanderStyle}" IsExpanded="True"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
@@ -946,7 +941,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- Model Preview Section -->
-                        <Expander Grid.Row="0" Header="Model Preview" IsExpanded="True" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="0" Header="Model Preview" IsExpanded="True" Style="{StaticResource RightPanelExpanderStyle}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -1210,7 +1205,7 @@
                             </Grid.RowDefinitions>
 
                         <!-- UV Maps Section -->
-                        <Expander Grid.Row="0" Header="UV Maps" IsExpanded="False" Style="{StaticResource CompactExpanderStyle}">
+                        <Expander Grid.Row="0" Header="UV Maps" IsExpanded="False" Style="{StaticResource RightPanelExpanderStyle}">
                             <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="137" MaxHeight="300">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -1243,7 +1238,7 @@
 
                         <!-- Model Conversion Settings Panel -->
                         <Expander Grid.Row="1" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
-                                  Style="{StaticResource CompactExpanderStyle}" IsExpanded="True">
+                                  Style="{StaticResource RightPanelExpanderStyle}" IsExpanded="True">
                             <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
                                                                    ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>
                         </Expander>

@@ -220,6 +220,58 @@
         </Style>
 
         <!-- ============================================ -->
+        <!-- COMMON COMPACT STYLES (for panels) -->
+        <!-- ============================================ -->
+
+        <!-- Compact Expander for settings panels -->
+        <Style x:Key="CompactExpanderStyle" TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- Compact GroupBox for settings panels -->
+        <Style x:Key="CompactGroupBoxStyle" TargetType="GroupBox" BasedOn="{StaticResource {x:Type GroupBox}}">
+            <Setter Property="Margin" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="1"/>
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Compact ComboBox for settings panels -->
+        <Style x:Key="CompactComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Padding" Value="3,1"/>
+            <Setter Property="FontSize" Value="9"/>
+        </Style>
+
+        <!-- Compact Label style -->
+        <Style x:Key="CompactLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+        </Style>
+
+        <!-- Compact CheckBox for settings panels -->
+        <Style x:Key="CompactCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Margin" Value="0,0,0,1"/>
+        </Style>
+
+        <!-- Compact Button for settings panels -->
+        <Style x:Key="CompactButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Padding" Value="3,1"/>
+        </Style>
+
+        <!-- Compact Slider for settings panels -->
+        <Style x:Key="CompactSliderStyle" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+        </Style>
+
+        <!-- ============================================ -->
         <!-- SCROLLBAR TEMPLATES -->
         <!-- ============================================ -->
         <Style x:Key="ScrollBarThumb" TargetType="Thumb">

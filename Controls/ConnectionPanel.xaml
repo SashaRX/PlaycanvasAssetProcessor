@@ -35,7 +35,7 @@
                           Padding="4,0,4,0"
                           FontSize="13">
                     <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
+                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="VerticalContentAlignment" Value="Center"/>
                         </Style>
@@ -59,7 +59,7 @@
                           Padding="4,0,4,0"
                           FontSize="13">
                     <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
+                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="VerticalContentAlignment" Value="Center"/>
                         </Style>

@@ -25,6 +25,9 @@
         <SolidColorBrush x:Key="ThemeCheckBoxBackground" Color="White"/>
         <SolidColorBrush x:Key="ThemeCheckBoxBorder" Color="#FF707070"/>
         <SolidColorBrush x:Key="ThemeCheckBoxGlyph" Color="#FF212121"/>
+        <SolidColorBrush x:Key="ThemeSliderTrack" Color="#FFC8C8C8"/>
+        <SolidColorBrush x:Key="ThemeTextBoxBackground" Color="White"/>
+        <SolidColorBrush x:Key="ThemeTextBoxBorder" Color="#FFACACAC"/>
 
         <!-- ============================================ -->
         <!-- GROUPBOX TEMPLATE -->
@@ -87,18 +90,19 @@
                         <Border x:Name="ExpanderButtonBorder"
                                 Background="{DynamicResource ThemeBackgroundAlt}"
                                 BorderBrush="{DynamicResource ThemeBorder}"
-                                BorderThickness="1"
-                                Padding="2">
+                                BorderThickness="0,0,0,1"
+                                Padding="1">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
+                                <!-- Smaller arrow: 6x4 pointing right when collapsed, down when expanded -->
                                 <Path x:Name="Arrow" Grid.Column="0"
-                                      Data="M 0 4 L 8 4 L 4 8 Z"
-                                      Fill="{DynamicResource ThemeForeground}"
+                                      Data="M 0 0 L 5 3 L 0 6 Z"
+                                      Fill="{DynamicResource ThemeForegroundDim}"
                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Margin="4,0,4,0"/>
+                                      Margin="2,0,4,0"/>
                                 <ContentPresenter Grid.Column="1"
                                                   Content="{TemplateBinding Content}"
                                                   ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -107,11 +111,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Arrow" Property="Data" Value="M 0 8 L 8 8 L 4 4 Z"/>
+                                <!-- Arrow pointing down when expanded -->
+                                <Setter TargetName="Arrow" Property="Data" Value="M 0 0 L 6 0 L 3 5 Z"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ExpanderButtonBorder" Property="Background" Value="{DynamicResource ThemeBackgroundHover}"/>
-                                <Setter TargetName="ExpanderButtonBorder" Property="BorderBrush" Value="{DynamicResource ThemeBorderHover}"/>
+                                <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource ThemeForeground}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -378,7 +383,7 @@
                 </Grid.RowDefinitions>
                 <Border x:Name="TrackBackground" Grid.Row="1"
                         Height="4" Margin="0"
-                        Background="{DynamicResource ThemeScrollBarBackground}"
+                        Background="{DynamicResource ThemeSliderTrack}"
                         BorderBrush="{DynamicResource ThemeBorder}"
                         BorderThickness="1" CornerRadius="2"/>
                 <Track x:Name="PART_Track" Grid.Row="1">
@@ -696,17 +701,19 @@
         <!-- OTHER CONTROLS -->
         <!-- ============================================ -->
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="{DynamicResource ThemeBackground}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeTextBoxBackground}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeTextBoxBorder}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource ThemeForeground}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource ThemeAccent}"/>
         </Style>
 
         <Style TargetType="PasswordBox">
-            <Setter Property="Background" Value="{DynamicResource ThemeBackground}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeTextBoxBackground}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeTextBoxBorder}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource ThemeForeground}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource ThemeAccent}"/>
         </Style>
 
         <Style TargetType="Button">

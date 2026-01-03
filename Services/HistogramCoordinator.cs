@@ -19,7 +19,13 @@ public class HistogramCoordinator : IHistogramCoordinator {
     public HistogramComputationResult BuildHistogram(BitmapSource bitmapSource, bool isGray = false) {
         ArgumentNullException.ThrowIfNull(bitmapSource);
 
-        PlotModel histogramModel = new();
+        PlotModel histogramModel = new() {
+            // Dark theme background
+            Background = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
+            PlotAreaBackground = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
+            PlotAreaBorderColor = OxyColor.FromRgb(0x3F, 0x3F, 0x46),
+            PlotAreaBorderThickness = new OxyThickness(0)
+        };
         int[] redHistogram = new int[256];
         int[] greenHistogram = new int[256];
         int[] blueHistogram = new int[256];

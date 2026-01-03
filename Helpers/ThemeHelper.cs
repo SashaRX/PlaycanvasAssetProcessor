@@ -99,6 +99,16 @@ namespace AssetProcessor.Helpers {
                 isDark ? Color.FromRgb(136, 136, 136) : Color.FromRgb(112, 112, 112));
             app.Resources["ThemeCheckBoxGlyph"] = new SolidColorBrush(
                 isDark ? Color.FromRgb(241, 241, 241) : Color.FromRgb(33, 33, 33));
+
+            // Slider track colors
+            app.Resources["ThemeSliderTrack"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(85, 85, 85) : Color.FromRgb(200, 200, 200));
+
+            // TextBox colors (input fields)
+            app.Resources["ThemeTextBoxBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(30, 30, 30) : Colors.White);
+            app.Resources["ThemeTextBoxBorder"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(67, 67, 70) : Color.FromRgb(172, 172, 172));
         }
     }
 }

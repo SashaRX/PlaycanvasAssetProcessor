@@ -501,7 +501,7 @@
                                     <GroupStyle.HeaderTemplate>
                                         <DataTemplate>
                                             <!-- Кликабельный заголовок ORM подгруппы с выделением -->
-                                            <Border x:Name="ORMHeaderBorder" Background="Transparent" MouseLeftButtonUp="ORMSubGroupHeader_Click" Cursor="Hand" Padding="4,2">
+                                            <Border x:Name="ORMHeaderBorder" Background="Transparent" PreviewMouseLeftButtonDown="ORMSubGroupHeader_Click" Cursor="Hand" Padding="4,2">
                                                 <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
                                                     <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="10" Foreground="{DynamicResource ThemeMaterialORM}" Margin="0,0,4,0"/>
                                                     <TextBlock Text="(" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}"/>

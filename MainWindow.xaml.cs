@@ -1799,6 +1799,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// Обработчик клика на заголовок ORM подгруппы - показывает настройки ORM
         /// </summary>
         private void ORMSubGroupHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            // Останавливаем событие чтобы Expander не сворачивался
+            e.Handled = true;
+
             if (sender is FrameworkElement element && element.DataContext is CollectionViewGroup group) {
                 // Получаем имя подгруппы (это имя ORM текстуры)
                 string? subGroupName = group.Name?.ToString();
@@ -1849,9 +1852,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     // Обновляем ViewModel.SelectedTexture
                     viewModel.SelectedTexture = ormTexture;
-
-                    // Помечаем событие как обработанное
-                    e.Handled = true;
                 }
             }
         }

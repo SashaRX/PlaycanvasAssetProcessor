@@ -1521,10 +1521,12 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private void AdjustLastColumnToFill(DataGrid grid) => FillRemainingSpace(grid);
 
         private void UpdateColumnHeadersBasedOnWidth(DataGrid grid) {
-            if (grid == null || grid.Columns.Count == 0) return;
+            if (grid == null || grid.Columns.Count <= 1) return;
 
-            for (int i = 0; i < grid.Columns.Count && i < TextureColumnHeaders.Length; i++) {
-                var column = grid.Columns[i];
+            // Start from column index 1 to skip Export checkbox column
+            // TextureColumnHeaders[i] maps to grid.Columns[i + 1]
+            for (int i = 0; i < TextureColumnHeaders.Length && i + 1 < grid.Columns.Count; i++) {
+                var column = grid.Columns[i + 1];  // +1 to skip Export column
                 double actualWidth = column.ActualWidth;
 
                 // Skip if width not yet calculated

@@ -219,4 +219,27 @@ namespace AssetProcessor.Helpers {
         }
     }
 
+    /// <summary>
+    /// MultiValueConverter для сравнения двух значений на равенство
+    /// </summary>
+    public class EqualityConverter : IMultiValueConverter {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) {
+            if (values.Length < 2)
+                return false;
+
+            var value1 = values[0]?.ToString();
+            var value2 = values[1]?.ToString();
+
+            // Оба null или пустые - не равны (чтобы не выделять пустые подгруппы)
+            if (string.IsNullOrEmpty(value1) || string.IsNullOrEmpty(value2))
+                return false;
+
+            return string.Equals(value1, value2, StringComparison.Ordinal);
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
 }

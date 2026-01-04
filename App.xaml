@@ -1,8 +1,11 @@
 ﻿<Application x:Class="AssetProcessor.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:AssetProcessor">
+             xmlns:local="clr-namespace:AssetProcessor"
+             xmlns:helpers="clr-namespace:AssetProcessor.Helpers">
     <Application.Resources>
+        <!-- Converters -->
+        <helpers:EqualityConverter x:Key="EqualityConverter"/>
         <!-- Default placeholder brushes (will be replaced by ThemeHelper on startup) -->
         <SolidColorBrush x:Key="ThemeBackground" Color="White"/>
         <SolidColorBrush x:Key="ThemeBackgroundAlt" Color="#FFF0F0F0"/>

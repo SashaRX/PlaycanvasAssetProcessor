@@ -87,6 +87,7 @@ namespace AssetProcessor {
         private FileSystemWatcher? projectFileWatcher; // Monitors project folder for file deletions
         private readonly ConcurrentQueue<string> pendingDeletedPaths = new(); // Queue of paths to process
         private int fileWatcherRefreshPending; // 0 = no refresh pending, 1 = refresh scheduled
+        private string? selectedORMSubGroupName; // Имя выбранной ORM подгруппы для визуального выделения
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -222,6 +223,19 @@ namespace AssetProcessor {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        /// <summary>
+        /// Имя выбранной ORM подгруппы для визуального выделения в DataGrid
+        /// </summary>
+        public string? SelectedORMSubGroupName {
+            get => selectedORMSubGroupName;
+            set {
+                if (selectedORMSubGroupName != value) {
+                    selectedORMSubGroupName = value;
+                    OnPropertyChanged(nameof(SelectedORMSubGroupName));
+                }
+            }
+        }
+
         private void HandlePreviewRendererChanged(bool useD3D11) {
             _ = ApplyRendererPreferenceAsync(useD3D11);
         }
@@ -345,6 +359,11 @@ namespace AssetProcessor {
             textureLoadCancellation?.Cancel();
             textureLoadCancellation = new CancellationTokenSource();
             CancellationToken cancellationToken = textureLoadCancellation.Token;
+
+            // Снимаем выделение с ORM подгруппы при выборе обычной строки
+            if (TexturesDataGrid.SelectedItem != null) {
+                SelectedORMSubGroupName = null;
+            }
 
             // Update selection count and command state (lightweight, no delay needed)
             UpdateSelectedTexturesCount();
@@ -1790,6 +1809,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 if (textureInGroup?.ParentORMTexture != null) {
                     var ormTexture = textureInGroup.ParentORMTexture;
                     logService.LogInfo($"ORM subgroup clicked: {ormTexture.Name} ({ormTexture.PackingMode})");
+
+                    // Устанавливаем выбранную подгруппу для визуального выделения
+                    SelectedORMSubGroupName = subGroupName;
+
+                    // Снимаем выделение с обычных строк DataGrid
+                    TexturesDataGrid.SelectedItem = null;
 
                     // Показываем ORM панель настроек (как при выборе ORM в DataGrid)
                     if (ConversionSettingsExpander != null) {

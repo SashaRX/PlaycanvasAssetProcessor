@@ -482,7 +482,7 @@
                                                                 <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
                                                             </Expander.Header>
                                                             <Expander.Style>
-                                                                <Style TargetType="Expander">
+                                                                <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
                                                                     <Setter Property="Margin" Value="0"/>
                                                                     <Setter Property="Padding" Value="0"/>
                                                                 </Style>

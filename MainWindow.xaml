@@ -461,6 +461,7 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                             <DataGrid.GroupStyle>
+                                <!-- Первый уровень: GroupName (основная группа) -->
                                 <GroupStyle>
                                     <GroupStyle.HeaderTemplate>
                                         <DataTemplate>
@@ -489,6 +490,55 @@
                                                             </Expander.Style>
                                                             <ItemsPresenter Margin="0"/>
                                                         </Expander>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </GroupStyle.ContainerStyle>
+                                </GroupStyle>
+                                <!-- Второй уровень: SubGroupName (ORM подгруппы) с отступом -->
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="10" Foreground="{DynamicResource ThemeMaterialORM}" Margin="0,0,4,0"/>
+                                                <TextBlock Text="(" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                                <TextBlock Text="{Binding ItemCount}" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                                <TextBlock Text=")" FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                    <GroupStyle.ContainerStyle>
+                                        <Style TargetType="{x:Type GroupItem}">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type GroupItem}">
+                                                        <!-- Отступ 20px для вложенной группы, скрываем если Name пустое -->
+                                                        <Border x:Name="SubGroupBorder" Margin="20,0,0,0">
+                                                            <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
+                                                                <Expander.Header>
+                                                                    <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
+                                                                </Expander.Header>
+                                                                <Expander.Style>
+                                                                    <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
+                                                                        <Setter Property="Margin" Value="0"/>
+                                                                        <Setter Property="Padding" Value="0"/>
+                                                                    </Style>
+                                                                </Expander.Style>
+                                                                <ItemsPresenter Margin="0"/>
+                                                            </Expander>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <!-- Скрываем подгруппу если Name пустое или null -->
+                                                            <DataTrigger Binding="{Binding Name}" Value="">
+                                                                <Setter TargetName="SubGroupBorder" Property="Margin" Value="0"/>
+                                                                <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Name}" Value="{x:Null}">
+                                                                <Setter TargetName="SubGroupBorder" Property="Margin" Value="0"/>
+                                                                <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
                                                     </ControlTemplate>
                                                 </Setter.Value>
                                             </Setter>

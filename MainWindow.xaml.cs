@@ -1837,12 +1837,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
                     TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
 
-                    // Если ORM уже упакована - показываем preview
+                    // Если ORM уже упакована - загружаем preview
                     if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
                         TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
                             ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
                             : "Resolution: Unknown";
                         TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+
+                        // Загружаем preview асинхронно
+                        _ = LoadORMPreviewAsync(ormTexture);
                     } else {
                         TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
                         TextureFormatTextBlock.Text = "Format: Not packed";
@@ -1853,6 +1856,49 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     // Обновляем ViewModel.SelectedTexture
                     viewModel.SelectedTexture = ormTexture;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Загружает preview для упакованной ORM текстуры
+        /// </summary>
+        private async Task LoadORMPreviewAsync(ORMTextureResource ormTexture) {
+            // Cancel any pending texture load
+            textureLoadCancellation?.Cancel();
+            textureLoadCancellation = new CancellationTokenSource();
+            var cancellationToken = textureLoadCancellation.Token;
+
+            try {
+                bool ktxLoaded = false;
+
+                if (texturePreviewService.IsUsingD3D11Renderer) {
+                    // D3D11 MODE: Try native KTX2 loading
+                    logService.LogInfo($"[LoadORMPreviewAsync] Loading packed ORM to D3D11: {ormTexture.Name}");
+                    ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
+
+                    if (!ktxLoaded) {
+                        // Fallback: Try extracting PNG from KTX2
+                        logService.LogInfo($"[LoadORMPreviewAsync] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
+                        ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                    }
+                } else {
+                    // WPF MODE: Extract PNG from KTX2
+                    ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                }
+
+                if (!ktxLoaded && !cancellationToken.IsCancellationRequested) {
+                    await Dispatcher.InvokeAsync(() => {
+                        texturePreviewService.IsKtxPreviewAvailable = false;
+                        TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
+                        logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
+                    });
+                }
+            } catch (OperationCanceledException) {
+                logService.LogInfo($"[LoadORMPreviewAsync] Cancelled for ORM: {ormTexture.Name}");
+            } catch (Exception ex) {
+                logService.LogError($"Error loading packed ORM texture {ormTexture.Name}: {ex.Message}");
+                ResetPreviewState();
+                ClearD3D11Viewer();
             }
         }
 

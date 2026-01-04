@@ -1777,6 +1777,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
+        /// Обработчик клика на заголовок ORM подгруппы - показывает настройки ORM
+        /// </summary>
+        private void ORMSubGroupHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            if (sender is FrameworkElement element && element.DataContext is CollectionViewGroup group) {
+                // Получаем имя подгруппы (это имя ORM текстуры)
+                string? subGroupName = group.Name?.ToString();
+                if (string.IsNullOrEmpty(subGroupName)) return;
+
+                // Ищем любую текстуру из этой подгруппы чтобы получить ParentORMTexture
+                var textureInGroup = viewModel.Textures.FirstOrDefault(t => t.SubGroupName == subGroupName);
+                if (textureInGroup?.ParentORMTexture != null) {
+                    // TODO: Показать ORM настройки в правой панели
+                    // Сейчас просто логируем для отладки
+                    var orm = textureInGroup.ParentORMTexture;
+                    logService.LogInfo($"ORM subgroup clicked: {orm.Name} ({orm.PackingMode})");
+
+                    // Можно показать MessageBox для теста
+                    // MessageBox.Show($"ORM: {orm.Name}\nMode: {orm.PackingMode}\nAO: {orm.AOSourceName}\nGloss: {orm.GlossSourceName}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Scale slider changed - force star columns to recalculate
         /// </summary>
         private void TableScaleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {

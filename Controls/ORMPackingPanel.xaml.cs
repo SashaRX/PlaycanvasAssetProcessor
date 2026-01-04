@@ -108,8 +108,8 @@ namespace AssetProcessor.Controls {
             Logger.Info($"  Captured aoSource: {aoSource?.Name ?? "null"} (ID={aoSource?.ID})");
             Logger.Info($"  Captured glossSource: {glossSource?.Name ?? "null"} (ID={glossSource?.ID})");
 
-            // Packing mode
-            PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
+            // Packing mode (OG=2, OGM=3, OGMH=4 in enum, but ComboBox index is 0, 1, 2)
+            PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 2;
 
             // AO settings (None=0, BiasedDarkening=1, Percentile=2)
             AOProcessingComboBox.SelectedIndex = currentORMTexture.AOProcessingMode switch {

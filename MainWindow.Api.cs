@@ -483,11 +483,11 @@ namespace AssetProcessor {
                         TextureType = $"ORM ({packingMode})"
                     };
 
-                    // Обновляем GroupName исходных текстур чтобы они стали дочерними элементами ORM
-                    if (aoTexture != null) aoTexture.GroupName = ormName;
-                    if (glossTexture != null) glossTexture.GroupName = ormName;
-                    if (metallicTexture != null) metallicTexture.GroupName = ormName;
-                    if (heightTexture != null) heightTexture.GroupName = ormName;
+                    // Устанавливаем SubGroupName для ORM компонентов чтобы они группировались под ORM
+                    if (aoTexture != null) aoTexture.SubGroupName = ormName;
+                    if (glossTexture != null) glossTexture.SubGroupName = ormName;
+                    if (metallicTexture != null) metallicTexture.SubGroupName = ormName;
+                    if (heightTexture != null) heightTexture.SubGroupName = ormName;
 
                     viewModel.Textures.Add(ormTexture);
                     generatedCount++;

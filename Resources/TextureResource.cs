@@ -33,6 +33,7 @@ namespace AssetProcessor.Resources {
         private int resolutionArea = 0; // Кэшированное значение для быстрой сортировки
         private int resizeResolutionArea = 0; // Кэшированное значение для быстрой сортировки
         private string? groupName;
+        private string? subGroupName;  // Для вложенных групп (ORM подгруппы)
         private string? textureType;
         private string? compressionFormat;
         private int mipmapCount;
@@ -71,6 +72,17 @@ namespace AssetProcessor.Resources {
             set {
                 groupName = value;
                 OnPropertyChanged(nameof(GroupName));
+            }
+        }
+
+        /// <summary>
+        /// Вторичная группа для вложенных элементов (ORM подгруппы)
+        /// </summary>
+        public string? SubGroupName {
+            get => subGroupName;
+            set {
+                subGroupName = value;
+                OnPropertyChanged(nameof(SubGroupName));
             }
         }
 

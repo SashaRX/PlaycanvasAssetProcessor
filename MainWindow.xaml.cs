@@ -1765,6 +1765,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 if (view != null && view.CanGroup) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
+                    // Второй уровень группировки для ORM подгрупп (ao/gloss/metallic/height под og/ogm/ogmh)
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
                 }
             } else {
                 ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);

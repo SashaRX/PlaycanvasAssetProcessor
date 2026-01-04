@@ -265,6 +265,9 @@ namespace AssetProcessor {
             // Детектируем и загружаем локальные ORM текстуры
             await DetectAndLoadORMTextures();
 
+            // Генерируем виртуальные ORM текстуры для групп с AO/Gloss/Metallic/Height
+            GenerateVirtualORMTextures();
+
             // Start watching project folder for file deletions
             StartFileWatcher();
         }
@@ -388,6 +391,119 @@ namespace AssetProcessor {
                 string textureName = Path.GetFileNameWithoutExtension(t.Path);
                 return string.Equals(textureName, namePattern, StringComparison.OrdinalIgnoreCase);
             });
+        }
+
+        /// <summary>
+        /// Генерирует виртуальные ORM текстуры для групп, содержащих AO/Gloss/Metallic/Height компоненты.
+        /// Эти виртуальные текстуры отображаются в UI и могут быть обработаны для создания упакованных ORM текстур.
+        /// </summary>
+        private void GenerateVirtualORMTextures() {
+            logService.LogInfo("=== Generating virtual ORM textures ===");
+
+            try {
+                // Группируем текстуры по GroupName, исключая уже существующие ORM текстуры
+                var textureGroups = viewModel.Textures
+                    .Where(t => !t.IsORMTexture && !string.IsNullOrEmpty(t.GroupName))
+                    .GroupBy(t => t.GroupName)
+                    .ToList();
+
+                int generatedCount = 0;
+
+                foreach (var group in textureGroups) {
+                    string groupName = group.Key!;
+
+                    // Ищем компоненты ORM в группе (значения из DetermineTextureType)
+                    TextureResource? aoTexture = group.FirstOrDefault(t => t.TextureType == "AO");
+                    TextureResource? glossTexture = group.FirstOrDefault(t =>
+                        t.TextureType == "Gloss" || t.TextureType == "Roughness");
+                    TextureResource? metallicTexture = group.FirstOrDefault(t => t.TextureType == "Metallic");
+                    TextureResource? heightTexture = group.FirstOrDefault(t => t.TextureType == "Height");
+
+                    // Определяем режим упаковки на основе доступных компонентов
+                    // Минимум нужны AO и Gloss для создания ORM
+                    if (aoTexture == null && glossTexture == null) {
+                        continue; // Недостаточно компонентов для ORM
+                    }
+
+                    // Подсчитываем доступные каналы
+                    int channelCount = (aoTexture != null ? 1 : 0) +
+                                      (glossTexture != null ? 1 : 0) +
+                                      (metallicTexture != null ? 1 : 0) +
+                                      (heightTexture != null ? 1 : 0);
+
+                    if (channelCount < 2) {
+                        continue; // Нужно минимум 2 канала для ORM упаковки
+                    }
+
+                    // Определяем режим упаковки
+                    ChannelPackingMode packingMode;
+                    string suffix;
+
+                    if (heightTexture != null && metallicTexture != null) {
+                        packingMode = ChannelPackingMode.OGMH;
+                        suffix = "_ogmh";
+                    } else if (metallicTexture != null) {
+                        packingMode = ChannelPackingMode.OGM;
+                        suffix = "_ogm";
+                    } else {
+                        packingMode = ChannelPackingMode.OG;
+                        suffix = "_og";
+                    }
+
+                    // Проверяем, не существует ли уже ORM текстура с таким именем
+                    string ormName = groupName + suffix;
+                    bool alreadyExists = viewModel.Textures.Any(t =>
+                        t.IsORMTexture && string.Equals(t.Name, ormName, StringComparison.OrdinalIgnoreCase));
+
+                    if (alreadyExists) {
+                        continue; // ORM текстура уже существует
+                    }
+
+                    // Определяем разрешение из первого доступного источника
+                    var sourceForResolution = aoTexture ?? glossTexture ?? metallicTexture ?? heightTexture;
+                    int[] resolution = sourceForResolution?.Resolution ?? [0, 0];
+
+                    // Определяем путь (папку) из первого доступного источника
+                    string? sourcePath = (aoTexture ?? glossTexture ?? metallicTexture ?? heightTexture)?.Path;
+                    string? directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath) : null;
+
+                    // Создаём виртуальную ORM текстуру
+                    var ormTexture = new ORMTextureResource {
+                        Name = ormName,
+                        GroupName = groupName,
+                        Path = directory != null ? Path.Combine(directory, ormName + ".ktx2") : null,
+                        PackingMode = packingMode,
+                        AOSource = aoTexture,
+                        GlossSource = glossTexture,
+                        MetallicSource = metallicTexture,
+                        HeightSource = heightTexture,
+                        Resolution = resolution,
+                        Status = "Not Packed",
+                        Extension = ".ktx2",
+                        TextureType = $"ORM ({packingMode})"
+                    };
+
+                    viewModel.Textures.Add(ormTexture);
+                    generatedCount++;
+
+                    logService.LogInfo($"  Generated virtual ORM: {ormName} ({packingMode}) - " +
+                        $"AO:{(aoTexture != null ? "✓" : "✗")} " +
+                        $"Gloss:{(glossTexture != null ? "✓" : "✗")} " +
+                        $"Metal:{(metallicTexture != null ? "✓" : "✗")} " +
+                        $"Height:{(heightTexture != null ? "✓" : "✗")}");
+                }
+
+                if (generatedCount > 0) {
+                    logService.LogInfo($"=== Generated {generatedCount} virtual ORM textures ===");
+                    RecalculateIndices();
+                    DeferUpdateLayout();
+                } else {
+                    logService.LogInfo("  No virtual ORM textures to generate");
+                }
+
+            } catch (Exception ex) {
+                logService.LogError($"Error generating virtual ORM textures: {ex.Message}");
+            }
         }
     }
 }

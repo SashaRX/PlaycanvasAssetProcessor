@@ -6,6 +6,7 @@
     <Application.Resources>
         <!-- Converters -->
         <helpers:EqualityConverter x:Key="EqualityConverter"/>
+        <helpers:ORMTypeExtractor x:Key="ORMTypeExtractor"/>
 
         <!-- Стиль кнопки сворачивания для ORM подгрупп -->
         <Style x:Key="ExpandCollapseToggleStyle" TargetType="{x:Type ToggleButton}">

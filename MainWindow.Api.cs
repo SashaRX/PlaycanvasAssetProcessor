@@ -468,9 +468,11 @@ namespace AssetProcessor {
                     string? directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath) : null;
 
                     // Создаём виртуальную ORM текстуру
+                    // SubGroupName = ormName чтобы ORM и её компоненты были в одной подгруппе внутри основной группы
                     var ormTexture = new ORMTextureResource {
                         Name = ormName,
                         GroupName = groupName,
+                        SubGroupName = ormName,  // ORM текстура - заголовок подгруппы
                         Path = directory != null ? Path.Combine(directory, ormName + ".ktx2") : null,
                         PackingMode = packingMode,
                         AOSource = aoTexture,
@@ -483,7 +485,7 @@ namespace AssetProcessor {
                         TextureType = $"ORM ({packingMode})"
                     };
 
-                    // Устанавливаем SubGroupName для ORM компонентов чтобы они группировались под ORM
+                    // Устанавливаем SubGroupName для ORM компонентов чтобы они группировались вместе с ORM
                     if (aoTexture != null) aoTexture.SubGroupName = ormName;
                     if (glossTexture != null) glossTexture.SubGroupName = ormName;
                     if (metallicTexture != null) metallicTexture.SubGroupName = ormName;

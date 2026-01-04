@@ -467,12 +467,10 @@ namespace AssetProcessor {
                     string? sourcePath = (aoTexture ?? glossTexture ?? metallicTexture ?? heightTexture)?.Path;
                     string? directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath) : null;
 
-                    // Создаём виртуальную ORM текстуру
-                    // SubGroupName = ormName чтобы ORM и её компоненты были в одной подгруппе внутри основной группы
+                    // Создаём виртуальную ORM текстуру (НЕ добавляем в коллекцию - заголовок подгруппы и есть ORM)
                     var ormTexture = new ORMTextureResource {
                         Name = ormName,
                         GroupName = groupName,
-                        SubGroupName = ormName,  // ORM текстура - заголовок подгруппы
                         Path = directory != null ? Path.Combine(directory, ormName + ".ktx2") : null,
                         PackingMode = packingMode,
                         AOSource = aoTexture,
@@ -485,13 +483,26 @@ namespace AssetProcessor {
                         TextureType = $"ORM ({packingMode})"
                     };
 
-                    // Устанавливаем SubGroupName для ORM компонентов чтобы они группировались вместе с ORM
-                    if (aoTexture != null) aoTexture.SubGroupName = ormName;
-                    if (glossTexture != null) glossTexture.SubGroupName = ormName;
-                    if (metallicTexture != null) metallicTexture.SubGroupName = ormName;
-                    if (heightTexture != null) heightTexture.SubGroupName = ormName;
+                    // Устанавливаем SubGroupName и ParentORMTexture для ORM компонентов
+                    // Заголовок подгруппы = имя ORM текстуры
+                    if (aoTexture != null) {
+                        aoTexture.SubGroupName = ormName;
+                        aoTexture.ParentORMTexture = ormTexture;
+                    }
+                    if (glossTexture != null) {
+                        glossTexture.SubGroupName = ormName;
+                        glossTexture.ParentORMTexture = ormTexture;
+                    }
+                    if (metallicTexture != null) {
+                        metallicTexture.SubGroupName = ormName;
+                        metallicTexture.ParentORMTexture = ormTexture;
+                    }
+                    if (heightTexture != null) {
+                        heightTexture.SubGroupName = ormName;
+                        heightTexture.ParentORMTexture = ormTexture;
+                    }
 
-                    viewModel.Textures.Add(ormTexture);
+                    // ORM текстура НЕ добавляется в коллекцию - подгруппа с именем ormName представляет ORM
                     generatedCount++;
 
                     logService.LogInfo($"  Generated virtual ORM: {ormName} ({packingMode}) - " +

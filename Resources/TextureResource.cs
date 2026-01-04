@@ -86,6 +86,11 @@ namespace AssetProcessor.Resources {
             }
         }
 
+        /// <summary>
+        /// Ссылка на родительскую ORM текстуру (для ao/gloss/metallic/height компонентов)
+        /// </summary>
+        public ORMTextureResource? ParentORMTexture { get; set; }
+
         public string? TextureType {
             get => textureType;
             set {

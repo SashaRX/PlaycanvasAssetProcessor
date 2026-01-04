@@ -467,10 +467,11 @@ namespace AssetProcessor {
                     string? sourcePath = (aoTexture ?? glossTexture ?? metallicTexture ?? heightTexture)?.Path;
                     string? directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath) : null;
 
-                    // Создаём виртуальную ORM текстуру (НЕ добавляем в коллекцию - заголовок подгруппы и есть ORM)
+                    // Создаём виртуальную ORM текстуру
                     var ormTexture = new ORMTextureResource {
                         Name = ormName,
                         GroupName = groupName,
+                        SubGroupName = ormName,  // ORM в своей же подгруппе - первый элемент
                         Path = directory != null ? Path.Combine(directory, ormName + ".ktx2") : null,
                         PackingMode = packingMode,
                         AOSource = aoTexture,
@@ -484,7 +485,6 @@ namespace AssetProcessor {
                     };
 
                     // Устанавливаем SubGroupName и ParentORMTexture для ORM компонентов
-                    // Заголовок подгруппы = имя ORM текстуры
                     if (aoTexture != null) {
                         aoTexture.SubGroupName = ormName;
                         aoTexture.ParentORMTexture = ormTexture;
@@ -502,7 +502,8 @@ namespace AssetProcessor {
                         heightTexture.ParentORMTexture = ormTexture;
                     }
 
-                    // ORM текстура НЕ добавляется в коллекцию - подгруппа с именем ormName представляет ORM
+                    // Добавляем ORM текстуру в коллекцию для возможности выделения
+                    viewModel.Textures.Add(ormTexture);
                     generatedCount++;
 
                     logService.LogInfo($"  Generated virtual ORM: {ormName} ({packingMode}) - " +

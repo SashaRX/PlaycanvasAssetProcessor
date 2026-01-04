@@ -496,7 +496,7 @@
                                         </Style>
                                     </GroupStyle.ContainerStyle>
                                 </GroupStyle>
-                                <!-- Второй уровень: SubGroupName (ORM подгруппы) с отступом -->
+                                <!-- Второй уровень: SubGroupName (ORM подгруппы) без отступа -->
                                 <GroupStyle>
                                     <GroupStyle.HeaderTemplate>
                                         <DataTemplate>
@@ -514,9 +514,9 @@
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type GroupItem}">
                                                         <StackPanel>
-                                                            <!-- ORM подгруппа с Expander (показывается только если Name не пустое) -->
-                                                            <Border x:Name="SubGroupBorder" Margin="20,0,0,0">
-                                                                <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
+                                                            <!-- ORM подгруппа без отступа, с цветной линией сверху -->
+                                                            <Border x:Name="SubGroupBorder" Margin="0" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="0,2,0,0">
+                                                                <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderThickness="0" Margin="0" Padding="0">
                                                                     <Expander.Header>
                                                                         <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
                                                                     </Expander.Header>
@@ -529,11 +529,10 @@
                                                                     <ItemsPresenter Margin="0"/>
                                                                 </Expander>
                                                             </Border>
-                                                            <!-- Прямые элементы без подгруппы (показывается только если Name пустое) -->
+                                                            <!-- Прямые элементы без подгруппы -->
                                                             <ItemsPresenter x:Name="DirectItems" Visibility="Collapsed" Margin="0"/>
                                                         </StackPanel>
                                                         <ControlTemplate.Triggers>
-                                                            <!-- Если Name пустое - показываем элементы напрямую -->
                                                             <DataTrigger Binding="{Binding Name}" Value="">
                                                                 <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
                                                                 <Setter TargetName="DirectItems" Property="Visibility" Value="Visible"/>

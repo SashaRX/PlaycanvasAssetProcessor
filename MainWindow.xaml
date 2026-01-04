@@ -513,30 +513,34 @@
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type GroupItem}">
-                                                        <!-- Отступ 20px для вложенной группы, скрываем если Name пустое -->
-                                                        <Border x:Name="SubGroupBorder" Margin="20,0,0,0">
-                                                            <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
-                                                                <Expander.Header>
-                                                                    <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
-                                                                </Expander.Header>
-                                                                <Expander.Style>
-                                                                    <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
-                                                                        <Setter Property="Margin" Value="0"/>
-                                                                        <Setter Property="Padding" Value="0"/>
-                                                                    </Style>
-                                                                </Expander.Style>
-                                                                <ItemsPresenter Margin="0"/>
-                                                            </Expander>
-                                                        </Border>
+                                                        <StackPanel>
+                                                            <!-- ORM подгруппа с Expander (показывается только если Name не пустое) -->
+                                                            <Border x:Name="SubGroupBorder" Margin="20,0,0,0">
+                                                                <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
+                                                                    <Expander.Header>
+                                                                        <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
+                                                                    </Expander.Header>
+                                                                    <Expander.Style>
+                                                                        <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
+                                                                            <Setter Property="Margin" Value="0"/>
+                                                                            <Setter Property="Padding" Value="0"/>
+                                                                        </Style>
+                                                                    </Expander.Style>
+                                                                    <ItemsPresenter Margin="0"/>
+                                                                </Expander>
+                                                            </Border>
+                                                            <!-- Прямые элементы без подгруппы (показывается только если Name пустое) -->
+                                                            <ItemsPresenter x:Name="DirectItems" Visibility="Collapsed" Margin="0"/>
+                                                        </StackPanel>
                                                         <ControlTemplate.Triggers>
-                                                            <!-- Скрываем подгруппу если Name пустое или null -->
+                                                            <!-- Если Name пустое - показываем элементы напрямую -->
                                                             <DataTrigger Binding="{Binding Name}" Value="">
-                                                                <Setter TargetName="SubGroupBorder" Property="Margin" Value="0"/>
                                                                 <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
+                                                                <Setter TargetName="DirectItems" Property="Visibility" Value="Visible"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Name}" Value="{x:Null}">
-                                                                <Setter TargetName="SubGroupBorder" Property="Margin" Value="0"/>
                                                                 <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
+                                                                <Setter TargetName="DirectItems" Property="Visibility" Value="Visible"/>
                                                             </DataTrigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>

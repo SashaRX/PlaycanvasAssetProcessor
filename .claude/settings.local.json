@@ -85,7 +85,11 @@
       "Bash(cmd.exe /c \"type %AppData%\\\\TexTool\\\\ModelConversionSettings.json\")",
       "Bash(cmd.exe /c \"taskkill /F /PID 33004\")",
       "Bash(cmd.exe /c \"taskkill /F /PID 42920\")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git pull:*)",
+      "Bash(cmd.exe /c \"dir /s /b D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\*.exe 2>nul | findstr -i textool & dir /s /b D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\*.exe 2>nul | findstr -i AssetProcessor\")",
+      "Bash(dotnet clean:*)",
+      "Bash(cmd.exe /c:*)"
     ],
     "deny": [],
     "ask": []

@@ -417,7 +417,9 @@ namespace AssetProcessor {
         /// Помечает связанные материалы и текстуры для экспорта
         /// </summary>
         private void MarkRelatedButton_Click(object sender, RoutedEventArgs e) {
+            logService.LogInfo("[MarkRelatedButton_Click] Button clicked");
             var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
+            logService.LogInfo($"[MarkRelatedButton_Click] Models to export: {modelsToExport.Count}");
 
             if (!modelsToExport.Any()) {
                 MessageBox.Show(
@@ -490,6 +492,8 @@ namespace AssetProcessor {
             var relatedMaterials = new List<MaterialResource>();
             var relatedTextures = new HashSet<TextureResource>();
 
+            logService.LogInfo($"[FindRelatedAssets] Processing {models.Count} models, {viewModel.Materials.Count} materials, {viewModel.Textures.Count} textures");
+
             foreach (var model in models) {
                 // Получаем путь папки модели
                 string? modelFolderPath = null;
@@ -498,6 +502,7 @@ namespace AssetProcessor {
                 }
 
                 var modelBaseName = ExtractBaseName(model.Name);
+                logService.LogInfo($"[FindRelatedAssets] Model: {model.Name}, Parent: {model.Parent}, FolderPath: {modelFolderPath ?? "null"}, BaseName: {modelBaseName}");
 
                 foreach (var material in viewModel.Materials) {
                     bool isRelated = false;
@@ -525,6 +530,7 @@ namespace AssetProcessor {
 
                     if (isRelated && !relatedMaterials.Contains(material)) {
                         relatedMaterials.Add(material);
+                        logService.LogInfo($"[FindRelatedAssets] Found related material: {material.Name}, Parent: {material.Parent}");
 
                         // Добавляем все текстуры материала
                         var textureIds = new List<int?> {
@@ -538,10 +544,16 @@ namespace AssetProcessor {
                             material.OpacityMapId
                         };
 
+                        logService.LogInfo($"[FindRelatedAssets] Material {material.Name} texture IDs: AO={material.AOMapId}, Gloss={material.GlossMapId}, Metal={material.MetalnessMapId}, Diffuse={material.DiffuseMapId}, Normal={material.NormalMapId}");
+
                         foreach (var id in textureIds.Where(id => id.HasValue)) {
-                            var texture = viewModel.Textures.FirstOrDefault(t => t.ID == id.Value);
+                            var textureId = id!.Value;
+                            var texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId);
                             if (texture != null) {
                                 relatedTextures.Add(texture);
+                                logService.LogInfo($"[FindRelatedAssets] Found texture ID {textureId}: {texture.Name}");
+                            } else {
+                                logService.LogWarn($"[FindRelatedAssets] Texture ID {textureId} NOT FOUND in viewModel.Textures!");
                             }
                         }
                     }

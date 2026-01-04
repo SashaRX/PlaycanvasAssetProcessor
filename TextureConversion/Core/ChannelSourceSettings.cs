@@ -29,9 +29,9 @@ namespace AssetProcessor.TextureConversion.Core {
         public ToksvigSettings? ToksvigSettings { get; set; }
 
         /// <summary>
-        /// Режим обработки AO мипмапов (только для AO)
+        /// Режим обработки AO мипмапов (только для AO и Metallic)
         /// </summary>
-        public AOProcessingMode AOProcessingMode { get; set; } = AOProcessingMode.BiasedDarkening;
+        public AOProcessingMode AOProcessingMode { get; set; } = AOProcessingMode.None;
 
         /// <summary>
         /// Bias для AO обработки (0.0-1.0, обычно 0.3-0.7)

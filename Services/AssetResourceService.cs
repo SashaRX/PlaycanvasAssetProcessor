@@ -327,8 +327,27 @@ public sealed class AssetResourceService : IAssetResourceService {
         };
 
         await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {
+            string? pathToUse = null;
+
+            // Check expected path first
             if (material.Status == "Downloaded" && !string.IsNullOrEmpty(material.Path) && File.Exists(material.Path)) {
-                MaterialResource? detailedMaterial = await ParseMaterialJsonAsync(material.Path, cancellationToken).ConfigureAwait(false);
+                pathToUse = material.Path;
+            }
+            // Fallback: check assets root folder (materials sometimes get saved there incorrectly)
+            else if (!string.IsNullOrEmpty(material.Path)) {
+                string assetsRoot = Path.Combine(parameters.ProjectsRoot, parameters.ProjectName, "assets");
+                string fileName = Path.GetFileName(material.Path);
+                string fallbackPath = Path.Combine(assetsRoot, fileName);
+                if (File.Exists(fallbackPath)) {
+                    pathToUse = fallbackPath;
+                    material.Path = fallbackPath; // Update path to correct location
+                    material.Status = "Downloaded";
+                    logService.LogInfo($"Material '{name}' found at fallback path: {fallbackPath}");
+                }
+            }
+
+            if (!string.IsNullOrEmpty(pathToUse)) {
+                MaterialResource? detailedMaterial = await ParseMaterialJsonAsync(pathToUse, cancellationToken).ConfigureAwait(false);
                 if (detailedMaterial != null) {
                     material.AOMapId = detailedMaterial.AOMapId;
                     material.GlossMapId = detailedMaterial.GlossMapId;

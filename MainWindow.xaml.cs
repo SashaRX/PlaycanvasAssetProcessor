@@ -1788,13 +1788,45 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Ищем любую текстуру из этой подгруппы чтобы получить ParentORMTexture
                 var textureInGroup = viewModel.Textures.FirstOrDefault(t => t.SubGroupName == subGroupName);
                 if (textureInGroup?.ParentORMTexture != null) {
-                    // TODO: Показать ORM настройки в правой панели
-                    // Сейчас просто логируем для отладки
-                    var orm = textureInGroup.ParentORMTexture;
-                    logService.LogInfo($"ORM subgroup clicked: {orm.Name} ({orm.PackingMode})");
+                    var ormTexture = textureInGroup.ParentORMTexture;
+                    logService.LogInfo($"ORM subgroup clicked: {ormTexture.Name} ({ormTexture.PackingMode})");
 
-                    // Можно показать MessageBox для теста
-                    // MessageBox.Show($"ORM: {orm.Name}\nMode: {orm.PackingMode}\nAO: {orm.AOSourceName}\nGloss: {orm.GlossSourceName}");
+                    // Показываем ORM панель настроек (как при выборе ORM в DataGrid)
+                    if (ConversionSettingsExpander != null) {
+                        ConversionSettingsExpander.Visibility = Visibility.Collapsed;
+                    }
+
+                    if (ORMPanel != null) {
+                        ORMPanel.Visibility = Visibility.Visible;
+
+                        // Инициализируем ORM панель с доступными текстурами (исключаем ORM текстуры)
+                        var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                        ORMPanel.Initialize(this, availableTextures);
+                        ORMPanel.SetORMTexture(ormTexture);
+                    }
+
+                    // Обновляем информацию о текстуре в preview панели
+                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+
+                    // Если ORM уже упакована - показываем preview
+                    if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
+                        TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                            ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
+                            : "Resolution: Unknown";
+                        TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+                    } else {
+                        TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
+                        TextureFormatTextBlock.Text = "Format: Not packed";
+                        ResetPreviewState();
+                        ClearD3D11Viewer();
+                    }
+
+                    // Обновляем ViewModel.SelectedTexture
+                    viewModel.SelectedTexture = ormTexture;
+
+                    // Помечаем событие как обработанное
+                    e.Handled = true;
                 }
             }
         }

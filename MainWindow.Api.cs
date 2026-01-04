@@ -321,6 +321,8 @@ namespace AssetProcessor {
                     // Создаем ORMTextureResource
                     var ormTexture = new ORMTextureResource {
                         Name = fileName,
+                        GroupName = baseName,  // Важно! Устанавливаем GroupName для группировки
+                        SubGroupName = fileName,  // ORM в своей подгруппе
                         Path = ktx2Path,
                         PackingMode = packingMode.Value,
                         AOSource = aoTexture,
@@ -329,6 +331,20 @@ namespace AssetProcessor {
                         Status = "Converted", // Already packed
                         Extension = ".ktx2"
                     };
+
+                    // Устанавливаем SubGroupName для source текстур
+                    if (aoTexture != null) {
+                        aoTexture.SubGroupName = fileName;
+                        aoTexture.ParentORMTexture = ormTexture;
+                    }
+                    if (glossTexture != null) {
+                        glossTexture.SubGroupName = fileName;
+                        glossTexture.ParentORMTexture = ormTexture;
+                    }
+                    if (metallicTexture != null) {
+                        metallicTexture.SubGroupName = fileName;
+                        metallicTexture.ParentORMTexture = ormTexture;
+                    }
 
                     // Извлекаем информацию о файле и метаданные из KTX2
                     if (File.Exists(ktx2Path)) {

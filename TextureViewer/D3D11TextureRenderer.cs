@@ -308,14 +308,14 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Load texture data into GPU.
     /// </summary>
     public void LoadTexture(TextureData textureData) {
-        Console.WriteLine("[DIAG] ===== LoadTexture METHOD ENTRY =====");
-        Console.WriteLine($"[DIAG] LoadTexture: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+        logger.Info("[DIAG] ===== LoadTexture METHOD ENTRY =====");
+        logger.Info($"[DIAG] LoadTexture: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
         logger.Info($"[D3D11TextureRenderer] LoadTexture START: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
-        Console.WriteLine("[DIAG] About to acquire renderLock...");
+        logger.Info("[DIAG] About to acquire renderLock...");
         logger.Info("[D3D11TextureRenderer] About to acquire renderLock...");
 
         lock (renderLock) {
-            Console.WriteLine("[DIAG] renderLock ACQUIRED");
+            logger.Info("[DIAG] renderLock ACQUIRED");
             Debug.WriteLine("[DEBUG] renderLock ACQUIRED");
             logger.Info("[D3D11TextureRenderer] renderLock acquired");
             currentTexture = textureData;
@@ -496,7 +496,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
         // Trace render lock acquisition (will only log if there's contention)
         if (!Monitor.TryEnter(renderLock, 0)) {
-            Console.WriteLine("[DIAG] !!! Render() BLOCKED - renderLock is held by another operation !!!");
+            logger.Info("[DIAG] !!! Render() BLOCKED - renderLock is held by another operation !!!");
             logger.Warn("[Render] renderLock is held by another operation - waiting...");
         } else {
             Monitor.Exit(renderLock); // Release the test lock

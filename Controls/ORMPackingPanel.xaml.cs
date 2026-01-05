@@ -108,6 +108,10 @@ namespace AssetProcessor.Controls {
             Logger.Info($"  Captured aoSource: {aoSource?.Name ?? "null"} (ID={aoSource?.ID})");
             Logger.Info($"  Captured glossSource: {glossSource?.Name ?? "null"} (ID={glossSource?.ID})");
 
+            // CRITICAL FIX: Set flag BEFORE any UI changes to prevent SaveORMSettings from
+            // overwriting currentORMTexture with stale ComboBox values from previous selection
+            _isSettingComboBoxes = true;
+
             // Packing mode (OG=2, OGM=3, OGMH=4 in enum, but ComboBox index is 0, 1, 2)
             PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 2;
 
@@ -157,8 +161,6 @@ namespace AssetProcessor.Controls {
             // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
             // Variables were captured at the TOP of this method to avoid SaveORMSettings overwriting them
             _ = Dispatcher.BeginInvoke(new Action(() => {
-                // Set flag to prevent recursive UpdateStatus calls during ComboBox initialization
-                _isSettingComboBoxes = true;
                 try {
                     // Sources - find by ID and set
                     if (aoSource != null) {
@@ -193,16 +195,20 @@ namespace AssetProcessor.Controls {
                     MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
                 } finally {
                     _isSettingComboBoxes = false;
+                    // Now that ComboBoxes are set correctly, update status
+                    UpdateStatus();
                 }
             }), System.Windows.Threading.DispatcherPriority.Background);
-
-            UpdateStatus();
         }
 
         /// <summary>
         /// Сохраняет настройки в ORM текстуру
         /// </summary>
         private void SaveORMSettings() {
+            // CRITICAL: Skip saving during ComboBox initialization to prevent overwriting
+            // ORM settings with stale values from previous selection
+            if (_isSettingComboBoxes) return;
+
             // Early return if controls not initialized yet
             if (AOSourceComboBox == null || GlossSourceComboBox == null ||
                 MetallicSourceComboBox == null || HeightSourceComboBox == null ||

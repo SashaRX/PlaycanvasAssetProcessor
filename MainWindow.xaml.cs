@@ -433,6 +433,45 @@ namespace AssetProcessor {
                             ktxLoaded = await ktxPreviewTask;
                         }
 
+                        // Extract histogram for packed ORM textures
+                        if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
+                            string? ormPath = ormTexture.Path;
+                            string ormName = ormTexture.Name;
+                            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Starting histogram extraction for ORM: {ormName}");
+
+                            _ = Task.Run(async () => {
+                                try {
+                                    if (string.IsNullOrEmpty(ormPath)) {
+                                        logService.LogWarn($"[TexturesDataGrid_SelectionChanged] ORM path is empty for: {ormName}");
+                                        return;
+                                    }
+
+                                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Extracting mipmaps from: {ormPath}");
+
+                                    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                                    var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
+                                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Extracted {mipmaps.Count} mipmaps for ORM: {ormName}");
+
+                                    if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
+                                        var mip0Bitmap = mipmaps[0].Bitmap;
+                                        _ = Dispatcher.BeginInvoke(new Action(() => {
+                                            if (!cancellationToken.IsCancellationRequested) {
+                                                texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
+                                                UpdateHistogram(mip0Bitmap);
+                                                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Histogram updated for ORM: {ormName}");
+                                            }
+                                        }));
+                                    }
+                                } catch (OperationCanceledException) {
+                                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Histogram extraction cancelled/timeout for ORM: {ormName}");
+                                } catch (Exception ex) {
+                                    logService.LogWarn($"[TexturesDataGrid_SelectionChanged] Failed to extract bitmap for ORM histogram: {ex.Message}");
+                                }
+                            });
+                        }
+
                         if (!ktxLoaded) {
                             // Use BeginInvoke to avoid deadlock
                             _ = Dispatcher.BeginInvoke(new Action(() => {

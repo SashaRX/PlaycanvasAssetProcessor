@@ -667,7 +667,10 @@ namespace AssetProcessor {
 
             try {
                 // Load KTX2 directly to D3D11 (no PNG extraction)
+                logger.Info($"[TryLoadKtx2ToD3D11Async] Calling LoadKtx2ToD3D11ViewerAsync for: {ktxPath}");
                 bool loaded = await LoadKtx2ToD3D11ViewerAsync(ktxPath);
+                logger.Info($"[TryLoadKtx2ToD3D11Async] LoadKtx2ToD3D11ViewerAsync returned: {loaded}, cancelled: {cancellationToken.IsCancellationRequested}");
+
                 if (!loaded || cancellationToken.IsCancellationRequested) {
                     logger.Warn($"Failed to load KTX2 to D3D11 viewer: {ktxPath}");
                     return false;

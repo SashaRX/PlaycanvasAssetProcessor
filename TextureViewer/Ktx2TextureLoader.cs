@@ -21,8 +21,8 @@ public static class Ktx2TextureLoader {
     /// </summary>
     public static TextureData LoadFromFile(string filePath) {
         // Use Trace instead of NLog to avoid deadlock between UI thread and background thread
+        // NOTE: NO logger.Info calls in this method - causes deadlock with UI thread!
         System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] Loading KTX2: {filePath}");
-        logger.Info($"Loading KTX2: {filePath}");
 
         // Read entire file into memory first to avoid file locking issues
         System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Reading file bytes...");
@@ -38,7 +38,7 @@ public static class Ktx2TextureLoader {
         // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
         System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Loading ktx.dll...");
         if (!LibKtxNative.LoadKtxDll()) {
-            logger.Error("Failed to load ktx.dll");
+            System.Diagnostics.Trace.WriteLine("[KTX2LOADER] ERROR: Failed to load ktx.dll");
             throw new DllNotFoundException("Unable to load ktx.dll");
         }
         System.Diagnostics.Trace.WriteLine("[KTX2LOADER] ktx.dll loaded");
@@ -70,8 +70,7 @@ public static class Ktx2TextureLoader {
                 try {
                     System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Calling LoadFromHandle...");
                     var textureData = LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
-                    System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] LoadFromHandle completed: {textureData.Width}x{textureData.Height}");
-                    logger.Info($"KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+                    System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
                     return textureData;
                 } finally {
                     System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Destroying texture handle...");

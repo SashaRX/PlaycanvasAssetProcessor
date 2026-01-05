@@ -417,6 +417,12 @@ namespace AssetProcessor {
             // Skip duplicate loading check - just load the texture
             // The old flag-based approach was causing deadlocks
 
+            // CRITICAL: Disable render loop BEFORE any async operations to prevent deadlock
+            // The render loop and LoadTexture both use renderLock, and CompositionTarget.Rendering
+            // can fire at any time on the UI thread
+            texturePreviewService.IsD3D11RenderLoopEnabled = false;
+            logger.Info("[LoadKtx2ToD3D11ViewerAsync] Render loop disabled BEFORE Task.Run");
+
             try {
                 // Use Ktx2TextureLoader to load the KTX2 file
                 logger.Info($"Loading KTX2 file to D3D11 viewer: {ktxPath}");
@@ -427,16 +433,14 @@ namespace AssetProcessor {
 
                 // DIAGNOSTIC: Log after Task.Run completes
                 logger.Info($"[LoadKtx2ToD3D11ViewerAsync] Task.Run completed, textureData loaded: {textureData?.Width}x{textureData?.Height}");
+                System.Console.Error.WriteLine($"[STDERR] Task.Run completed: {textureData?.Width}x{textureData?.Height}");
 
                 // Now we're on a thread pool thread, use BeginInvoke to update UI
                 logger.Info("[LoadKtx2ToD3D11ViewerAsync] About to call BeginInvoke...");
+                System.Console.Error.WriteLine("[STDERR] About to call BeginInvoke...");
                 Debug.WriteLine("[DEBUG] About to call BeginInvoke for KTX2...");
                 _ = Dispatcher.BeginInvoke(new Action(() => {
-                    // Disable render loop to prevent deadlock with renderLock
-                    // (same pattern as PNG loading - see LoadTextureToD3D11ViewerAsync)
-                    texturePreviewService.IsD3D11RenderLoopEnabled = false;
-                    Debug.WriteLine("[DEBUG] Render loop disabled");
-
+                    // Render loop already disabled at method start (before Task.Run)
                     try {
                         Debug.WriteLine("[DEBUG] BeginInvoke ENTERED");
                         if (D3D11TextureViewer?.Renderer == null) {
@@ -503,6 +507,8 @@ namespace AssetProcessor {
                 return true;
             } catch (Exception ex) {
                 logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");
+                // Re-enable render loop on error (it was disabled at the start)
+                texturePreviewService.IsD3D11RenderLoopEnabled = true;
                 return false;
             }
         }

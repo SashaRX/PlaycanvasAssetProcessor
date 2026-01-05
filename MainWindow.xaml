@@ -515,6 +515,16 @@
                                                                                           Style="{StaticResource ExpandCollapseToggleStyle}" VerticalAlignment="Center"/>
                                                                             <!-- Тип ORM (OG/OGM/OGMH) -->
                                                                             <TextBlock Text="{Binding Name, Converter={StaticResource ORMTypeExtractor}}" FontWeight="Bold" FontSize="10" Foreground="{DynamicResource ThemeMaterialORM}" VerticalAlignment="Center"/>
+                                                                            <!-- Разделитель -->
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                                                            <!-- Разрешение -->
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Resolution, Converter={StaticResource ResolutionConverter}}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <!-- Размер -->
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.CompressedSize, Converter={StaticResource SizeConverter}}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <!-- Статус -->
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Status}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
                                                                         </StackPanel>
                                                                     </Border>
                                                                     <!-- Содержимое подгруппы -->

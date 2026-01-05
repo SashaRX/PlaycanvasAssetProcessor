@@ -439,17 +439,17 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
             // Create texture
             logger.Info("[D3D11TextureRenderer] Step 7: Creating D3D11 texture...");
-            LogManager.Flush();
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] D3D11: Step 7 - About to CreateTexture2D");
             texture = device!.CreateTexture2D(texDesc, subresources);
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] D3D11: Step 8 - CreateTexture2D completed");
             logger.Info("[D3D11TextureRenderer] Step 8: D3D11 texture created");
-            LogManager.Flush();
 
             // Create SRV
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] D3D11: Step 9 - About to CreateShaderResourceView");
             logger.Info("[D3D11TextureRenderer] Step 9: Creating SRV...");
-            LogManager.Flush();
             textureSRV = device!.CreateShaderResourceView(texture);
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] D3D11: Step 10 - CreateShaderResourceView completed");
             logger.Info("[D3D11TextureRenderer] Step 10: SRV created");
-            LogManager.Flush();
         } catch (Exception ex) {
             logger.Error(ex, "[D3D11TextureRenderer] EXCEPTION in texture creation!");
             throw;

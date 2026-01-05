@@ -430,10 +430,8 @@ namespace AssetProcessor {
                     try {
                         if (D3D11TextureViewer?.Renderer == null) return;
                         logger.Info("[KTX2 BeginInvoke] About to call LoadTexture...");
-                        NLog.LogManager.Flush();
                         D3D11TextureViewer.Renderer.LoadTexture(textureData);
                         logger.Info("[KTX2 BeginInvoke] LoadTexture completed");
-                        NLog.LogManager.Flush();
                         logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
                         // Update histogram correction button state
@@ -450,10 +448,8 @@ namespace AssetProcessor {
 
                         // Trigger immediate render to show the updated texture with preserved zoom/pan
                         logger.Info("[KTX2 BeginInvoke] About to call Render...");
-                        NLog.LogManager.Flush();
                         D3D11TextureViewer.Renderer.Render();
                         logger.Info("[KTX2 BeginInvoke] Render completed");
-                        NLog.LogManager.Flush();
                         logger.Info("Forced render to apply current zoom/pan after KTX2 load");
 
                         // AUTO-ENABLE Normal reconstruction for normal maps

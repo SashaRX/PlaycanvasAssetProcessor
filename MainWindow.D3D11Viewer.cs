@@ -425,7 +425,11 @@ namespace AssetProcessor {
                 // to avoid capturing SynchronizationContext and prevent deadlock
                 var textureData = await Task.Run(() => Ktx2TextureLoader.LoadFromFile(ktxPath)).ConfigureAwait(false);
 
+                // DIAGNOSTIC: Log after Task.Run completes
+                logger.Info($"[LoadKtx2ToD3D11ViewerAsync] Task.Run completed, textureData loaded: {textureData?.Width}x{textureData?.Height}");
+
                 // Now we're on a thread pool thread, use BeginInvoke to update UI
+                logger.Info("[LoadKtx2ToD3D11ViewerAsync] About to call BeginInvoke...");
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     try {
                         if (D3D11TextureViewer?.Renderer == null) return;
@@ -478,6 +482,7 @@ namespace AssetProcessor {
                     }
                 }));
 
+                logger.Info("[LoadKtx2ToD3D11ViewerAsync] BeginInvoke queued, returning true");
                 return true;
             } catch (Exception ex) {
                 logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");

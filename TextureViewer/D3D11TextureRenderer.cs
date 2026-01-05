@@ -439,20 +439,29 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
             // Create texture
             logger.Info("[D3D11TextureRenderer] Step 7: Creating D3D11 texture...");
+            LogManager.Flush();
             texture = device!.CreateTexture2D(texDesc, subresources);
             logger.Info("[D3D11TextureRenderer] Step 8: D3D11 texture created");
+            LogManager.Flush();
 
             // Create SRV
             logger.Info("[D3D11TextureRenderer] Step 9: Creating SRV...");
+            LogManager.Flush();
             textureSRV = device!.CreateShaderResourceView(texture);
             logger.Info("[D3D11TextureRenderer] Step 10: SRV created");
+            LogManager.Flush();
+        } catch (Exception ex) {
+            logger.Error(ex, "[D3D11TextureRenderer] EXCEPTION in texture creation!");
+            throw;
         } finally {
+            logger.Info("[D3D11TextureRenderer] Finally block - freeing pinned handles");
             // Free pinned handles
             foreach (var handle in pinnedHandles) {
                 if (handle.IsAllocated) {
                     handle.Free();
                 }
             }
+            logger.Info("[D3D11TextureRenderer] Finally block completed");
         }
 
             // Don't reset view state - preserve zoom/pan when switching textures

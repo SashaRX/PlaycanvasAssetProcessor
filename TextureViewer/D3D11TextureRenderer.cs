@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
@@ -324,6 +325,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 logger.Info("[D3D11TextureRenderer] No histogram metadata in texture");
                 enableHistogramCorrection = false; // No metadata, disable correction
             }
+            logger.Info("[D3D11TextureRenderer] Step 1: Histogram metadata processed");
 
             // Set gamma based on texture format and type
             // Understanding:
@@ -368,10 +370,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
                 currentGamma = 2.2f;
                 originalGamma = currentGamma; // Save for restoring after mask
             }
+            logger.Info("[D3D11TextureRenderer] Step 2: Gamma values set");
 
             // Dispose old texture
+            logger.Info("[D3D11TextureRenderer] Step 3: Disposing old textures...");
             textureSRV?.Dispose();
             texture?.Dispose();
+            logger.Info("[D3D11TextureRenderer] Step 4: Old textures disposed");
 
         // Determine format based on compression
         Format format;
@@ -392,6 +397,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
             // Gamma correction in shader will handle sRGB encoding for display
             format = Format.B8G8R8A8_UNorm;
         }
+        logger.Info($"[D3D11TextureRenderer] Step 5: Format determined: {format}");
 
         // Create texture description
         var texDesc = new Texture2DDescription {
@@ -429,12 +435,17 @@ public sealed class D3D11TextureRenderer : IDisposable {
                     SlicePitch = slicePitch
                 };
             }
+            logger.Info($"[D3D11TextureRenderer] Step 6: Subresources prepared ({textureData.MipCount} mips)");
 
             // Create texture
+            logger.Info("[D3D11TextureRenderer] Step 7: Creating D3D11 texture...");
             texture = device!.CreateTexture2D(texDesc, subresources);
+            logger.Info("[D3D11TextureRenderer] Step 8: D3D11 texture created");
 
             // Create SRV
+            logger.Info("[D3D11TextureRenderer] Step 9: Creating SRV...");
             textureSRV = device!.CreateShaderResourceView(texture);
+            logger.Info("[D3D11TextureRenderer] Step 10: SRV created");
         } finally {
             // Free pinned handles
             foreach (var handle in pinnedHandles) {
@@ -451,6 +462,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
             // zoomLevel = 1.0f;  // DON'T RESET
             // panX = 0.0f;        // DON'T RESET
             // panY = 0.0f;        // DON'T RESET
+            logger.Info("[D3D11TextureRenderer] Step 11: LoadTexture completed successfully");
         } // lock (renderLock)
     }
 
@@ -464,6 +476,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
         // Clear background to dark gray
         context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+
+        // Trace render lock acquisition (will only log if there's contention)
+        if (!Monitor.TryEnter(renderLock, 0)) {
+            logger.Warn("[Render] renderLock is held by another operation - waiting...");
+        } else {
+            Monitor.Exit(renderLock); // Release the test lock
+        }
 
         lock (renderLock) {
             // If no texture loaded, just present the cleared background

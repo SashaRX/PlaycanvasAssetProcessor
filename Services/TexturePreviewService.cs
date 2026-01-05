@@ -244,9 +244,16 @@ public class TexturePreviewService : ITexturePreviewService {
                 throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2.", ex);
             }
 
-            string stdOutput = await process.StandardOutput.ReadToEndAsync();
-            string stdError = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync(cancellationToken);
+            // Read stdout and stderr in parallel to prevent deadlock
+            // (process can block if buffer fills before parent reads)
+            var stdOutTask = process.StandardOutput.ReadToEndAsync();
+            var stdErrTask = process.StandardError.ReadToEndAsync();
+
+            await Task.WhenAll(stdOutTask, stdErrTask).ConfigureAwait(false);
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+            string stdOutput = stdOutTask.Result;
+            string stdError = stdErrTask.Result;
 
             if (process.ExitCode != 0) {
                 logService.LogWarn($"ktx exit code: {process.ExitCode}, stderr: {stdError}, stdout: {stdOutput}");

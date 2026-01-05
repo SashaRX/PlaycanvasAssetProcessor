@@ -260,10 +260,23 @@ public class TexturePreviewService : ITexturePreviewService {
                 throw new InvalidOperationException($"ktx exited with code {process.ExitCode}. Details logged.");
             }
 
+            logService.LogInfo($"ktx extract completed successfully. stdout: {stdOutput}");
+            if (!string.IsNullOrEmpty(stdError)) {
+                logService.LogInfo($"ktx extract stderr (non-fatal): {stdError}");
+            }
+
+            // List all files in temp directory to diagnose output format
+            var filesInTempDir = Directory.GetFiles(tempDirectory);
+            logService.LogInfo($"Files created in temp directory ({filesInTempDir.Length} files):");
+            foreach (var file in filesInTempDir) {
+                logService.LogInfo($"  - {Path.GetFileName(file)}");
+            }
+
             List<KtxMipLevel> mipmaps = new();
             int level = 0;
             while (true) {
                 string pngPath = $"{outputBaseName}_level{level}.png";
+                logService.LogInfo($"Checking for mipmap file: {pngPath}, exists: {File.Exists(pngPath)}");
                 if (!File.Exists(pngPath)) {
                     break;
                 }
@@ -271,6 +284,7 @@ public class TexturePreviewService : ITexturePreviewService {
                 mipmaps.Add(CreateMipLevel(pngPath, level));
                 level++;
             }
+            logService.LogInfo($"Total mipmaps found: {mipmaps.Count}");
 
             mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));
             ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {

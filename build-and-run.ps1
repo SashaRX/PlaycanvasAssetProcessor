@@ -3,11 +3,13 @@
 $ProcessName = "AssetProcessor"
 $ExePath = "bin\Release\net9.0-windows10.0.26100.0\win-x64\AssetProcessor.exe"
 
-# Step 1: Git pull
+# Step 1: Git fetch + reset (avoids merge conflicts with force-pushed branches)
 Write-Host "Updating from repository..." -ForegroundColor Cyan
-git pull
+git fetch origin
+$currentBranch = git rev-parse --abbrev-ref HEAD
+git reset --hard "origin/$currentBranch"
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Warning: git pull completed with error" -ForegroundColor Yellow
+    Write-Host "Warning: git update completed with error" -ForegroundColor Yellow
 }
 
 # Step 2: Close the program if it's running

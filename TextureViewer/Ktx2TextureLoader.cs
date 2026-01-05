@@ -20,35 +20,38 @@ public static class Ktx2TextureLoader {
     /// Load a KTX2 texture from a file path.
     /// </summary>
     public static TextureData LoadFromFile(string filePath) {
+        // Use Trace instead of NLog to avoid deadlock between UI thread and background thread
+        System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] Loading KTX2: {filePath}");
         logger.Info($"Loading KTX2: {filePath}");
 
         // Read entire file into memory first to avoid file locking issues
-        logger.Info("[DIAG] Reading file bytes...");
+        System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Reading file bytes...");
         byte[] fileData = File.ReadAllBytes(filePath);
-        logger.Info($"[DIAG] File read: {fileData.Length} bytes");
+        System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] File read: {fileData.Length} bytes");
 
-        // Parse metadata from memory buffer (no libktx involved, no logging to avoid deadlock)
-        logger.Info("[DIAG] Parsing metadata...");
+        // Parse metadata from memory buffer (no libktx involved)
+        // NOTE: No NLog calls here - causes deadlock with UI thread!
+        System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Parsing metadata...");
         var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadataFromMemory(fileData);
-        logger.Info("[DIAG] Metadata parsed");
+        System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Metadata parsed");
 
         // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
-        logger.Info("[DIAG] Loading ktx.dll...");
+        System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Loading ktx.dll...");
         if (!LibKtxNative.LoadKtxDll()) {
             logger.Error("Failed to load ktx.dll");
             throw new DllNotFoundException("Unable to load ktx.dll");
         }
-        logger.Info("[DIAG] ktx.dll loaded successfully");
+        System.Diagnostics.Trace.WriteLine("[KTX2LOADER] ktx.dll loaded");
 
         // Lock all libktx operations - the library may not be thread-safe
-        logger.Info("[DIAG] About to acquire _libktxLock...");
+        System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Acquiring _libktxLock...");
         lock (_libktxLock) {
-            logger.Info("[DIAG] _libktxLock ACQUIRED");
+            System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Lock acquired");
             IntPtr dataPtr = Marshal.AllocHGlobal(fileData.Length);
             try {
-                logger.Info("[DIAG] Copying data to unmanaged memory...");
+                System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Copying to unmanaged memory...");
                 Marshal.Copy(fileData, 0, dataPtr, fileData.Length);
-                logger.Info("[DIAG] Data copied, calling ktxTexture2_CreateFromMemory...");
+                System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Calling ktxTexture2_CreateFromMemory...");
 
                 uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
                                   (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
@@ -58,26 +61,25 @@ public static class Ktx2TextureLoader {
                     createFlags,
                     out IntPtr textureHandle);
 
-                logger.Info($"[DIAG] ktxTexture2_CreateFromMemory returned: {result}");
+                System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] CreateFromMemory returned: {result}");
 
                 if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
                     throw new Exception($"Failed to load KTX2: {LibKtxNative.GetErrorString(result)}");
                 }
 
                 try {
-                    logger.Info("[DIAG] Calling LoadFromHandle...");
+                    System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Calling LoadFromHandle...");
                     var textureData = LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
+                    System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] LoadFromHandle completed: {textureData.Width}x{textureData.Height}");
                     logger.Info($"KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
                     return textureData;
                 } finally {
-                    logger.Info("[DIAG] Destroying texture handle...");
+                    System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Destroying texture handle...");
                     LibKtxNative.ktxTexture2_Destroy(textureHandle);
-                    logger.Info("[DIAG] Texture handle destroyed");
                 }
             } finally {
-                logger.Info("[DIAG] Freeing unmanaged memory...");
+                System.Diagnostics.Trace.WriteLine("[KTX2LOADER] Freeing unmanaged memory...");
                 Marshal.FreeHGlobal(dataPtr);
-                logger.Info("[DIAG] Unmanaged memory freed");
             }
         }
     }

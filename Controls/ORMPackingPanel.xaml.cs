@@ -194,9 +194,12 @@ namespace AssetProcessor.Controls {
                     GlossFilterTypeComboBox.SelectedItem = glossFilterType;
                     MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
                 } finally {
+                    Logger.Info("[LoadORMSettings] Dispatcher callback finally block - setting _isSettingComboBoxes = false");
                     _isSettingComboBoxes = false;
                     // Now that ComboBoxes are set correctly, update status
+                    Logger.Info("[LoadORMSettings] Calling final UpdateStatus...");
                     UpdateStatus();
+                    Logger.Info("[LoadORMSettings] Final UpdateStatus completed, Dispatcher callback done");
                 }
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
@@ -302,9 +305,12 @@ namespace AssetProcessor.Controls {
             if (StatusText == null || MissingChannelsText == null || PackConvertButton == null) return;
             if (currentORMTexture == null) return;
 
+            Logger.Info("[UpdateStatus] Starting...");
             SaveORMSettings();
+            Logger.Info("[UpdateStatus] SaveORMSettings completed");
 
             var missing = currentORMTexture.GetMissingChannels();
+            Logger.Info($"[UpdateStatus] GetMissingChannels returned {missing.Count} items");
 
             if (missing.Count == 0) {
                 StatusText.Text = "✓ All required channels configured";
@@ -317,6 +323,7 @@ namespace AssetProcessor.Controls {
                 MissingChannelsText.Text = $"Missing sources: {string.Join(", ", missing)}";
                 PackConvertButton.IsEnabled = true; // Разрешаем упаковку с константами
             }
+            Logger.Info("[UpdateStatus] Completed");
         }
 
         // Event handlers
@@ -407,7 +414,9 @@ namespace AssetProcessor.Controls {
                 Logger.Info("Switched to UASTC compression format");
             }
 
+            Logger.Info("[CompressionFormat_Changed] Calling UpdateStatus...");
             UpdateStatus();
+            Logger.Info("[CompressionFormat_Changed] UpdateStatus completed");
         }
 
         private void EnableRDO_Changed(object sender, RoutedEventArgs e) {

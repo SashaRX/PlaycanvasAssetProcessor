@@ -189,7 +189,14 @@ public class TexturePreviewService : ITexturePreviewService {
         DateTime lastWriteTimeUtc = fileInfo.LastWriteTimeUtc;
 
         if (ktxPreviewCache.TryGetValue(ktxPath, out KtxPreviewCacheEntry? cacheEntry) && cacheEntry.LastWriteTimeUtc == lastWriteTimeUtc) {
-            return cacheEntry.Mipmaps;
+            // Only return cache hit if it has mipmaps (don't cache failures)
+            if (cacheEntry.Mipmaps.Count > 0) {
+                logService.LogInfo($"[LoadKtx2MipmapsAsync] Cache hit: {Path.GetFileName(ktxPath)}, {cacheEntry.Mipmaps.Count} mipmaps");
+                return cacheEntry.Mipmaps;
+            } else {
+                logService.LogInfo($"[LoadKtx2MipmapsAsync] Cache has empty result, retrying extraction: {Path.GetFileName(ktxPath)}");
+                ktxPreviewCache.Remove(ktxPath);
+            }
         }
 
         return await ExtractKtxMipmapsAsync(ktxPath, lastWriteTimeUtc, cancellationToken);

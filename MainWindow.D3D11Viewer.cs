@@ -113,9 +113,20 @@ namespace AssetProcessor {
             FillRemainingSpaceForGrid(MaterialsDataGrid);
         }
 
+        // Diagnostic counter for render loop calls
+        private static int _renderLoopCallCount = 0;
+        private static int _renderLoopSkippedCount = 0;
+
         private void OnD3D11Rendering(object? sender, EventArgs e) {
             if (texturePreviewService.IsD3D11RenderLoopEnabled) {
+                _renderLoopCallCount++;
                 D3D11TextureViewer?.RenderFrame();
+            } else {
+                _renderLoopSkippedCount++;
+                // Log every 60 skipped calls (roughly once per second at 60fps)
+                if (_renderLoopSkippedCount % 60 == 1) {
+                    Console.WriteLine($"[DIAG] Render loop SKIPPED (disabled). Total skipped: {_renderLoopSkippedCount}");
+                }
             }
         }
 
@@ -409,18 +420,29 @@ namespace AssetProcessor {
         /// Loads KTX2 texture directly into D3D11 viewer (for native KTX2 support).
         /// </summary>
         private async Task<bool> LoadKtx2ToD3D11ViewerAsync(string ktxPath) {
+            Console.WriteLine($"[DIAG] LoadKtx2ToD3D11ViewerAsync ENTRY: {ktxPath}");
+
             if (D3D11TextureViewer?.Renderer == null) {
+                Console.WriteLine("[DIAG] D3D11 viewer or renderer is null");
                 logger.Warn("D3D11 viewer or renderer is null");
                 return false;
             }
 
-            // Skip duplicate loading check - just load the texture
-            // The old flag-based approach was causing deadlocks
+            // Set loading flag to prevent concurrent loads
+            int wasLoading = Interlocked.CompareExchange(ref _isLoadingKtx2, 1, 0);
+            if (wasLoading != 0) {
+                Console.WriteLine($"[DIAG] Already loading KTX2, skipping: {ktxPath}");
+                logger.Info($"[LoadKtx2ToD3D11ViewerAsync] Already loading, skipping: {ktxPath}");
+                return false;
+            }
+            Volatile.Write(ref _currentLoadingKtx2Path, ktxPath);
+            Console.WriteLine($"[DIAG] Loading flag SET for: {ktxPath}");
 
             // CRITICAL: Disable render loop BEFORE any async operations to prevent deadlock
             // The render loop and LoadTexture both use renderLock, and CompositionTarget.Rendering
             // can fire at any time on the UI thread
             texturePreviewService.IsD3D11RenderLoopEnabled = false;
+            Console.WriteLine("[DIAG] Render loop DISABLED");
             logger.Info("[LoadKtx2ToD3D11ViewerAsync] Render loop disabled BEFORE Task.Run");
 
             try {
@@ -438,15 +460,32 @@ namespace AssetProcessor {
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     // Render loop already disabled at method start (before Task.Run)
                     try {
-                        Debug.WriteLine("[DEBUG] BeginInvoke ENTERED");
-                        if (D3D11TextureViewer?.Renderer == null) {
-                            Debug.WriteLine("[DEBUG] Renderer is null, returning");
+                        Console.WriteLine("[DIAG] BeginInvoke callback STARTED");
+                        logger.Info("[DIAG] BeginInvoke callback STARTED");
+
+                        Console.WriteLine("[DIAG] About to access D3D11TextureViewer...");
+                        var viewer = D3D11TextureViewer;
+                        Console.WriteLine($"[DIAG] D3D11TextureViewer is {(viewer == null ? "NULL" : "valid")}");
+
+                        if (viewer == null) {
+                            Console.WriteLine("[DIAG] Viewer is null, returning");
                             return;
                         }
 
-                        Debug.WriteLine("[DEBUG] Renderer is valid, about to call LoadTexture...");
+                        Console.WriteLine("[DIAG] About to access Renderer property...");
+                        var rendererRef = viewer.Renderer;
+                        Console.WriteLine($"[DIAG] Renderer is {(rendererRef == null ? "NULL" : "valid")}");
+
+                        if (rendererRef == null) {
+                            Console.WriteLine("[DIAG] Renderer is null, returning");
+                            return;
+                        }
+
+                        Console.WriteLine("[DIAG] About to call LoadTexture...");
                         logger.Info("[KTX2 BeginInvoke] About to call LoadTexture...");
-                        D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                        Console.WriteLine($"[DIAG] textureData: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+                        rendererRef.LoadTexture(textureData);
+                        Console.WriteLine("[DIAG] LoadTexture RETURNED");
                         Debug.WriteLine("[DEBUG] LoadTexture RETURNED");
                         logger.Info("[KTX2 BeginInvoke] LoadTexture completed");
                         logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
@@ -491,20 +530,31 @@ namespace AssetProcessor {
                             logger.Info($"Auto-enabled Normal reconstruction mode for {autoEnableReason}");
                         }
                     } catch (Exception ex) {
+                        Console.WriteLine($"[DIAG] ERROR in BeginInvoke: {ex.Message}");
                         logger.Error(ex, "Error in KTX2 UI update");
                     } finally {
                         // Re-enable render loop
                         texturePreviewService.IsD3D11RenderLoopEnabled = true;
-                        Debug.WriteLine("[DEBUG] Render loop re-enabled");
+                        Console.WriteLine("[DIAG] Render loop RE-ENABLED");
+                        // Clear loading flag
+                        Volatile.Write(ref _isLoadingKtx2, 0);
+                        Volatile.Write(ref _currentLoadingKtx2Path, null);
+                        Console.WriteLine("[DIAG] Loading flag CLEARED");
                     }
                 }));
 
+                Console.WriteLine("[DIAG] BeginInvoke QUEUED, returning true");
                 logger.Info("[LoadKtx2ToD3D11ViewerAsync] BeginInvoke queued, returning true");
                 return true;
             } catch (Exception ex) {
+                Console.WriteLine($"[DIAG] EXCEPTION in LoadKtx2ToD3D11ViewerAsync: {ex.Message}");
                 logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}");
                 // Re-enable render loop on error (it was disabled at the start)
                 texturePreviewService.IsD3D11RenderLoopEnabled = true;
+                // Clear loading flag on error
+                Volatile.Write(ref _isLoadingKtx2, 0);
+                Volatile.Write(ref _currentLoadingKtx2Path, null);
+                Console.WriteLine("[DIAG] Loading flag CLEARED (on error)");
                 return false;
             }
         }

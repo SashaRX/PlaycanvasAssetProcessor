@@ -316,6 +316,8 @@ namespace AssetProcessor {
                     TextureResource? aoTexture = FindTextureByPattern(directory, baseName + "_ao");
                     TextureResource? glossTexture = FindTextureByPattern(directory, baseName + "_gloss");
                     TextureResource? metallicTexture = FindTextureByPattern(directory, baseName + "_metallic")
+                                                    ?? FindTextureByPattern(directory, baseName + "_metalness")
+                                                    ?? FindTextureByPattern(directory, baseName + "_Metalness") // case variant
                                                     ?? FindTextureByPattern(directory, baseName + "_metalic"); // typo variant
 
                     // Создаем ORMTextureResource

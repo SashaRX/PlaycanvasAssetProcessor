@@ -23,22 +23,32 @@ public static class Ktx2TextureLoader {
         logger.Info($"Loading KTX2: {filePath}");
 
         // Read entire file into memory first to avoid file locking issues
+        logger.Info("[DIAG] Reading file bytes...");
         byte[] fileData = File.ReadAllBytes(filePath);
+        logger.Info($"[DIAG] File read: {fileData.Length} bytes");
 
         // Parse metadata from memory buffer (no libktx involved, no logging to avoid deadlock)
+        logger.Info("[DIAG] Parsing metadata...");
         var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadataFromMemory(fileData);
+        logger.Info("[DIAG] Metadata parsed");
 
         // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
+        logger.Info("[DIAG] Loading ktx.dll...");
         if (!LibKtxNative.LoadKtxDll()) {
             logger.Error("Failed to load ktx.dll");
             throw new DllNotFoundException("Unable to load ktx.dll");
         }
+        logger.Info("[DIAG] ktx.dll loaded successfully");
 
         // Lock all libktx operations - the library may not be thread-safe
+        logger.Info("[DIAG] About to acquire _libktxLock...");
         lock (_libktxLock) {
+            logger.Info("[DIAG] _libktxLock ACQUIRED");
             IntPtr dataPtr = Marshal.AllocHGlobal(fileData.Length);
             try {
+                logger.Info("[DIAG] Copying data to unmanaged memory...");
                 Marshal.Copy(fileData, 0, dataPtr, fileData.Length);
+                logger.Info("[DIAG] Data copied, calling ktxTexture2_CreateFromMemory...");
 
                 uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
                                   (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
@@ -48,19 +58,26 @@ public static class Ktx2TextureLoader {
                     createFlags,
                     out IntPtr textureHandle);
 
+                logger.Info($"[DIAG] ktxTexture2_CreateFromMemory returned: {result}");
+
                 if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
                     throw new Exception($"Failed to load KTX2: {LibKtxNative.GetErrorString(result)}");
                 }
 
                 try {
+                    logger.Info("[DIAG] Calling LoadFromHandle...");
                     var textureData = LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
                     logger.Info($"KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
                     return textureData;
                 } finally {
+                    logger.Info("[DIAG] Destroying texture handle...");
                     LibKtxNative.ktxTexture2_Destroy(textureHandle);
+                    logger.Info("[DIAG] Texture handle destroyed");
                 }
             } finally {
+                logger.Info("[DIAG] Freeing unmanaged memory...");
                 Marshal.FreeHGlobal(dataPtr);
+                logger.Info("[DIAG] Unmanaged memory freed");
             }
         }
     }

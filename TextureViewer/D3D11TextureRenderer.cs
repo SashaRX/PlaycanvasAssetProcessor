@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -307,10 +308,13 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Load texture data into GPU.
     /// </summary>
     public void LoadTexture(TextureData textureData) {
+        Debug.WriteLine($"[DEBUG] LoadTexture ENTERED: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
         logger.Info($"[D3D11TextureRenderer] LoadTexture START: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+        Debug.WriteLine("[DEBUG] About to acquire renderLock...");
         logger.Info("[D3D11TextureRenderer] About to acquire renderLock...");
 
         lock (renderLock) {
+            Debug.WriteLine("[DEBUG] renderLock ACQUIRED");
             logger.Info("[D3D11TextureRenderer] renderLock acquired");
             currentTexture = textureData;
             currentTexturePath = textureData.SourcePath; // Track source (KTX2 path or null for PNG)

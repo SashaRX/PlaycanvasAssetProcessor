@@ -430,11 +430,24 @@ namespace AssetProcessor {
 
                 // Now we're on a thread pool thread, use BeginInvoke to update UI
                 logger.Info("[LoadKtx2ToD3D11ViewerAsync] About to call BeginInvoke...");
+                Debug.WriteLine("[DEBUG] About to call BeginInvoke for KTX2...");
                 _ = Dispatcher.BeginInvoke(new Action(() => {
+                    // Disable render loop to prevent deadlock with renderLock
+                    // (same pattern as PNG loading - see LoadTextureToD3D11ViewerAsync)
+                    texturePreviewService.IsD3D11RenderLoopEnabled = false;
+                    Debug.WriteLine("[DEBUG] Render loop disabled");
+
                     try {
-                        if (D3D11TextureViewer?.Renderer == null) return;
+                        Debug.WriteLine("[DEBUG] BeginInvoke ENTERED");
+                        if (D3D11TextureViewer?.Renderer == null) {
+                            Debug.WriteLine("[DEBUG] Renderer is null, returning");
+                            return;
+                        }
+
+                        Debug.WriteLine("[DEBUG] Renderer is valid, about to call LoadTexture...");
                         logger.Info("[KTX2 BeginInvoke] About to call LoadTexture...");
                         D3D11TextureViewer.Renderer.LoadTexture(textureData);
+                        Debug.WriteLine("[DEBUG] LoadTexture RETURNED");
                         logger.Info("[KTX2 BeginInvoke] LoadTexture completed");
                         logger.Info($"Loaded KTX2 to D3D11 viewer: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
 
@@ -479,6 +492,10 @@ namespace AssetProcessor {
                         }
                     } catch (Exception ex) {
                         logger.Error(ex, "Error in KTX2 UI update");
+                    } finally {
+                        // Re-enable render loop
+                        texturePreviewService.IsD3D11RenderLoopEnabled = true;
+                        Debug.WriteLine("[DEBUG] Render loop re-enabled");
                     }
                 }));
 

@@ -465,13 +465,16 @@ namespace AssetProcessor {
                         suffix = "_og";
                     }
 
-                    // Проверяем, не существует ли уже ORM текстура с таким именем
+                    // Проверяем, не установлен ли уже ParentORMTexture на компонентах
+                    // (значит DetectAndLoadORMTextures уже нашла готовый KTX2)
                     string ormName = groupName + suffix;
-                    bool alreadyExists = viewModel.Textures.Any(t =>
-                        t.IsORMTexture && string.Equals(t.Name, ormName, StringComparison.OrdinalIgnoreCase));
+                    bool alreadyHasORM = (aoTexture?.ParentORMTexture != null) ||
+                                         (glossTexture?.ParentORMTexture != null) ||
+                                         (metallicTexture?.ParentORMTexture != null) ||
+                                         (heightTexture?.ParentORMTexture != null);
 
-                    if (alreadyExists) {
-                        continue; // ORM текстура уже существует
+                    if (alreadyHasORM) {
+                        continue; // ORM уже создана из существующего KTX2 файла
                     }
 
                     // Определяем разрешение из первого доступного источника

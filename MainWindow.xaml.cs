@@ -1928,8 +1928,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         string ormName = ormTexture.Name;
                         logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
 
+                        // DIAGNOSTIC: Add delay to let LoadTexture complete first
+                        // This tests if the freeze is caused by concurrent execution
                         _ = Task.Run(async () => {
                             try {
+                                // Wait for LoadTexture to complete (queued via BeginInvoke)
+                                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+
                                 if (string.IsNullOrEmpty(ormPath)) {
                                     logger.Warn($"[LoadORMPreviewAsync] ORM path is empty for: {ormName}");
                                     return;

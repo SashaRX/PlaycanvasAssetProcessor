@@ -266,24 +266,45 @@ public class TexturePreviewService : ITexturePreviewService {
             }
 
             // List all files in temp directory to diagnose output format
-            var filesInTempDir = Directory.GetFiles(tempDirectory);
-            logService.LogInfo($"Files created in temp directory ({filesInTempDir.Length} files):");
+            var filesInTempDir = Directory.GetFiles(tempDirectory, "*.png", SearchOption.AllDirectories);
+            logService.LogInfo($"PNG files created ({filesInTempDir.Length} files):");
             foreach (var file in filesInTempDir) {
-                logService.LogInfo($"  - {Path.GetFileName(file)}");
+                logService.LogInfo($"  - {file}");
             }
 
             List<KtxMipLevel> mipmaps = new();
+
+            // Try multiple naming patterns that ktx extract might use:
+            // Pattern 1: {base}_level{N}.png (multi-level with level suffix)
+            // Pattern 2: {base}.png (single-level, no suffix)
+            // Pattern 3: Check if outputBaseName is used as a directory
+
             int level = 0;
             while (true) {
                 string pngPath = $"{outputBaseName}_level{level}.png";
-                logService.LogInfo($"Checking for mipmap file: {pngPath}, exists: {File.Exists(pngPath)}");
+                if (!File.Exists(pngPath)) {
+                    // Try inside subdirectory (ktx might interpret path as directory)
+                    pngPath = Path.Combine(outputBaseName, $"mip_level{level}.png");
+                }
+
                 if (!File.Exists(pngPath)) {
                     break;
                 }
 
+                logService.LogInfo($"Found mipmap file: {pngPath}");
                 mipmaps.Add(CreateMipLevel(pngPath, level));
                 level++;
             }
+
+            // If no level-suffixed files found, try single file without suffix
+            if (mipmaps.Count == 0) {
+                string singleFilePath = $"{outputBaseName}.png";
+                if (File.Exists(singleFilePath)) {
+                    logService.LogInfo($"Found single mipmap file (no level suffix): {singleFilePath}");
+                    mipmaps.Add(CreateMipLevel(singleFilePath, 0));
+                }
+            }
+
             logService.LogInfo($"Total mipmaps found: {mipmaps.Count}");
 
             mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));

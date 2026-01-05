@@ -373,9 +373,8 @@ namespace AssetProcessor {
                         }
                     }
 
-                    Dispatcher.Invoke(() => {
-                        viewModel.Textures.Add(ormTexture);
-                    });
+                    // ORM texture is NOT added to the collection - it's accessed via ParentORMTexture
+                    // on component textures and represented by the ORM subgroup header
 
                     ormCount++;
                     logService.LogInfo($"  Loaded ORM texture: {fileName} ({packingMode.Value})");

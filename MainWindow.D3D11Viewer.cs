@@ -431,14 +431,10 @@ namespace AssetProcessor {
                 // to avoid capturing SynchronizationContext and prevent deadlock
                 var textureData = await Task.Run(() => Ktx2TextureLoader.LoadFromFile(ktxPath)).ConfigureAwait(false);
 
-                // DIAGNOSTIC: Log after Task.Run completes
-                logger.Info($"[LoadKtx2ToD3D11ViewerAsync] Task.Run completed, textureData loaded: {textureData?.Width}x{textureData?.Height}");
-                System.Console.Error.WriteLine($"[STDERR] Task.Run completed: {textureData?.Width}x{textureData?.Height}");
+                // NOTE: Removed logger.Info calls here - potential NLog deadlock when UI thread
+                // and thread pool both try to log at same time during ORM selection
 
                 // Now we're on a thread pool thread, use BeginInvoke to update UI
-                logger.Info("[LoadKtx2ToD3D11ViewerAsync] About to call BeginInvoke...");
-                System.Console.Error.WriteLine("[STDERR] About to call BeginInvoke...");
-                Debug.WriteLine("[DEBUG] About to call BeginInvoke for KTX2...");
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     // Render loop already disabled at method start (before Task.Run)
                     try {

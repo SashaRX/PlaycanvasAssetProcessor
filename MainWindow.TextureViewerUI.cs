@@ -781,8 +781,8 @@ namespace AssetProcessor {
                 MipmapLevelSlider.Value = 0;
                 MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
                 MipmapInfoTextBlock.Text = mipmaps.Count > 0
-                    ? $"���-������� 0 �� {Math.Max(0, mipmaps.Count - 1)} � {mipmaps[0].Width}?{mipmaps[0].Height}"
-                    : "���-������ ����������";
+                    ? $"Mip 0 of {Math.Max(0, mipmaps.Count - 1)} | {mipmaps[0].Width}x{mipmaps[0].Height}"
+                    : "No mipmaps";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -811,7 +811,7 @@ namespace AssetProcessor {
 
                 int width = D3D11TextureViewer.Renderer.TextureWidth;
                 int height = D3D11TextureViewer.Renderer.TextureHeight;
-                MipmapInfoTextBlock.Text = $"���-������� 0 �� {Math.Max(0, mipCount - 1)} � {width}?{height} (D3D11)";
+                MipmapInfoTextBlock.Text = $"Mip 0 of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -820,7 +820,7 @@ namespace AssetProcessor {
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
                 int maxLevel = Math.Max(0, totalLevels - 1);
-                MipmapInfoTextBlock.Text = $"���-������� {mipLevel.Level} �� {maxLevel} � {mipLevel.Width}?{mipLevel.Height}";
+                MipmapInfoTextBlock.Text = $"Mip {mipLevel.Level} of {maxLevel} | {mipLevel.Width}x{mipLevel.Height}";
             }
         }
 
@@ -946,7 +946,7 @@ namespace AssetProcessor {
                         int mipCount = D3D11TextureViewer.Renderer.MipCount;
                         int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
                         int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
-                        MipmapInfoTextBlock.Text = $"���-������� {newLevel} �� {Math.Max(0, mipCount - 1)} � {width}?{height} (D3D11)";
+                        MipmapInfoTextBlock.Text = $"Mip {newLevel} of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
                     }
 
                     logger.Info($"D3D11 mip level changed to {newLevel}");

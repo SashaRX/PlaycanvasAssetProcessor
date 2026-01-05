@@ -307,9 +307,11 @@ public sealed class D3D11TextureRenderer : IDisposable {
     /// Load texture data into GPU.
     /// </summary>
     public void LoadTexture(TextureData textureData) {
-        logger.Debug($"LoadTexture: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+        logger.Info($"[D3D11TextureRenderer] LoadTexture START: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+        logger.Info("[D3D11TextureRenderer] About to acquire renderLock...");
 
         lock (renderLock) {
+            logger.Info("[D3D11TextureRenderer] renderLock acquired");
             currentTexture = textureData;
             currentTexturePath = textureData.SourcePath; // Track source (KTX2 path or null for PNG)
 

@@ -479,7 +479,8 @@ public static class Ktx2TextureLoader {
             ? $"KTX2/BasisU -> {detectedFormat}"
             : $"KTX2 ({detectedFormat})";
 
-        logger.Info($"KTX2 loaded: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, {detectedFormat}");
+        // Use Trace instead of NLog to avoid deadlock between UI and background threads
+        System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] KTX2 loaded: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, {detectedFormat}");
 
         // Histogram metadata was already read before transcoding (passed as parameter)
 

@@ -888,9 +888,7 @@ namespace AssetProcessor {
                 // CRITICAL: For KTX2/D3D11 mode, ALWAYS use OriginalFileBitmapSource (extracted from KTX2)
                 // OriginalBitmapSource may contain stale data from previously selected texture
                 BitmapSource? histogramSource = texturePreviewService.OriginalFileBitmapSource;
-                logger.Info($"[FilterChannel] Channel={channel}, OriginalBitmapSource={texturePreviewService.OriginalBitmapSource != null}, OriginalFileBitmapSource={texturePreviewService.OriginalFileBitmapSource != null}, histogramSource={histogramSource != null}");
                 if (histogramSource != null) {
-                    logger.Info($"[FilterChannel] histogramSource size: {histogramSource.PixelWidth}x{histogramSource.PixelHeight}, format: {histogramSource.Format}");
                     if (channel == "Normal") {
                         // For normal map mode, show RGB histogram (no grayscale) - use BeginInvoke
                         _ = Dispatcher.BeginInvoke(new Action(() => {
@@ -899,14 +897,11 @@ namespace AssetProcessor {
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
                         BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(histogramSource, channel);
-                        logger.Info($"[FilterChannel] Filtered bitmap for channel {channel}: {filteredBitmap.PixelWidth}x{filteredBitmap.PixelHeight}");
                         // Use BeginInvoke to avoid deadlock
                         _ = Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
                         }));
                     }
-                } else {
-                    logger.Warn($"[FilterChannel] No histogram source available for channel {channel}");
                 }
 
                 return;
@@ -1012,10 +1007,8 @@ namespace AssetProcessor {
             }
         }
 
-        private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false, [System.Runtime.CompilerServices.CallerMemberName] string? caller = null) {
+        private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false) {
             if (bitmapSource == null) return;
-
-            logger.Info($"[UpdateHistogram] Called from {caller}, isGray={isGray}, bitmap={bitmapSource.PixelWidth}x{bitmapSource.PixelHeight}, format={bitmapSource.Format}");
 
             HistogramComputationResult result = histogramCoordinator.BuildHistogram(bitmapSource, isGray);
 

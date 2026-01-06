@@ -1012,8 +1012,10 @@ namespace AssetProcessor {
             }
         }
 
-        private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false) {
+        private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false, [System.Runtime.CompilerServices.CallerMemberName] string? caller = null) {
             if (bitmapSource == null) return;
+
+            logger.Info($"[UpdateHistogram] Called from {caller}, isGray={isGray}, bitmap={bitmapSource.PixelWidth}x{bitmapSource.PixelHeight}, format={bitmapSource.Format}");
 
             HistogramComputationResult result = histogramCoordinator.BuildHistogram(bitmapSource, isGray);
 

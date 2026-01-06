@@ -885,8 +885,9 @@ namespace AssetProcessor {
                 logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
 
                 // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
-                // Use OriginalFileBitmapSource as fallback for ORM textures where OriginalBitmapSource is not set
-                BitmapSource? histogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
+                // CRITICAL: For KTX2/D3D11 mode, ALWAYS use OriginalFileBitmapSource (extracted from KTX2)
+                // OriginalBitmapSource may contain stale data from previously selected texture
+                BitmapSource? histogramSource = texturePreviewService.OriginalFileBitmapSource;
                 logger.Info($"[FilterChannel] Channel={channel}, OriginalBitmapSource={texturePreviewService.OriginalBitmapSource != null}, OriginalFileBitmapSource={texturePreviewService.OriginalFileBitmapSource != null}, histogramSource={histogramSource != null}");
                 if (histogramSource != null) {
                     logger.Info($"[FilterChannel] histogramSource size: {histogramSource.PixelWidth}x{histogramSource.PixelHeight}, format: {histogramSource.Format}");
@@ -912,8 +913,8 @@ namespace AssetProcessor {
             }
 
             // WPF mode: use bitmap filtering
-            // Use OriginalFileBitmapSource as fallback for ORM textures
-            BitmapSource? wpfHistogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
+            // Prefer OriginalFileBitmapSource (KTX2 extracted) over OriginalBitmapSource (may be stale)
+            BitmapSource? wpfHistogramSource = texturePreviewService.OriginalFileBitmapSource ?? texturePreviewService.OriginalBitmapSource;
             if (wpfHistogramSource != null) {
                 BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(wpfHistogramSource, channel);
 

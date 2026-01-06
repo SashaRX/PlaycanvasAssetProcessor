@@ -292,47 +292,29 @@ public class TexturePreviewService : ITexturePreviewService {
 
             List<KtxMipLevel> mipmaps = new();
 
-            // Try multiple naming patterns that ktx extract might use:
-            // Pattern 1: {base}_level{N}.png (multi-level with level suffix)
-            // Pattern 2: {base}.png (single-level, no suffix)
-            // Pattern 3: Check if outputBaseName is used as a directory
+            // Parse PNG files from temp directory - ktx extract creates output_level{N}.png
+            // Match pattern: *_level{N}.png or *.png (single level)
+            var levelPattern = new System.Text.RegularExpressions.Regex(@"_level(\d+)\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-            logger.Info($"[KTX_EXTRACT] Looking for pattern: {outputBaseName}_level{{N}}.png");
+            foreach (var pngFile in filesInTempDir) {
+                string fileName = Path.GetFileName(pngFile);
+                var match = levelPattern.Match(fileName);
 
-            int level = 0;
-            while (true) {
-                string pngPath = $"{outputBaseName}_level{level}.png";
-                bool found1 = File.Exists(pngPath);
-                if (!found1) {
-                    // Try inside subdirectory (ktx might interpret path as directory)
-                    pngPath = Path.Combine(outputBaseName, $"mip_level{level}.png");
+                if (match.Success) {
+                    int level = int.Parse(match.Groups[1].Value);
+                    logger.Info($"[KTX_EXTRACT] Found mipmap: {fileName} (level {level})");
+                    logService.LogInfo($"Found mipmap file: {pngFile} (level {level})");
+                    mipmaps.Add(CreateMipLevel(pngFile, level));
                 }
-
-                bool found2 = File.Exists(pngPath);
-                if (!found1 && !found2) {
-                    if (level == 0) {
-                        logger.Info($"[KTX_EXTRACT] Pattern 1 not found: {outputBaseName}_level0.png");
-                    }
-                    break;
-                }
-
-                logger.Info($"[KTX_EXTRACT] Found mipmap: {Path.GetFileName(pngPath)}");
-                logService.LogInfo($"Found mipmap file: {pngPath}");
-                mipmaps.Add(CreateMipLevel(pngPath, level));
-                level++;
             }
 
-            // If no level-suffixed files found, try single file without suffix
-            if (mipmaps.Count == 0) {
-                string singleFilePath = $"{outputBaseName}.png";
-                logger.Info($"[KTX_EXTRACT] Trying single file: {singleFilePath}");
-                if (File.Exists(singleFilePath)) {
-                    logger.Info($"[KTX_EXTRACT] Found single file!");
-                    logService.LogInfo($"Found single mipmap file (no level suffix): {singleFilePath}");
-                    mipmaps.Add(CreateMipLevel(singleFilePath, 0));
-                } else {
-                    logger.Info($"[KTX_EXTRACT] Single file not found either");
-                }
+            // If no level-suffixed files found, try files without level suffix (single mip)
+            if (mipmaps.Count == 0 && filesInTempDir.Length > 0) {
+                // Take the first PNG file as level 0
+                string singleFile = filesInTempDir[0];
+                logger.Info($"[KTX_EXTRACT] No level pattern found, using single file: {Path.GetFileName(singleFile)}");
+                logService.LogInfo($"Found single mipmap file (no level suffix): {singleFile}");
+                mipmaps.Add(CreateMipLevel(singleFile, 0));
             }
 
             logger.Info($"[KTX_EXTRACT] Total mipmaps found: {mipmaps.Count}");

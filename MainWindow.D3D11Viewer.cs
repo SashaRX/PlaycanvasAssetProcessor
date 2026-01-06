@@ -272,6 +272,8 @@ namespace AssetProcessor {
                     logger.Info("Copying pixels from bitmap...");
                     convertedBitmap.CopyPixels(pixels, stride, 0);
                     logger.Info("Pixel copy completed");
+                    // Check cancellation immediately after copy to fail fast if user switched textures
+                    cancellationToken.ThrowIfCancellationRequested();
                 }, cancellationToken);
 
                 logger.Info("Pixel conversion task completed, checking cancellation...");
@@ -365,8 +367,8 @@ namespace AssetProcessor {
             CancellationTokenSource loadCts = CreateD3DPreviewCts();
 
             // Start async load without waiting to avoid blocking calling thread
-            // Use Dispatcher.InvokeAsync instead of Task.Run to avoid deadlocks when UI thread is busy
-            // This ensures the async operation is scheduled on the UI thread's message queue
+            // Use Dispatcher.InvokeAsync with Normal priority to prevent starvation
+            // when user rapidly switches textures (Background priority was getting starved)
             _ = Dispatcher.InvokeAsync(async () => {
                 try {
                     await LoadTextureToD3D11ViewerAsync(bitmap, isSRGB, loadCts);
@@ -375,7 +377,7 @@ namespace AssetProcessor {
                 } catch (Exception ex) {
                     logger.Error(ex, "Error in async LoadTextureToD3D11Viewer");
                 }
-            }, System.Windows.Threading.DispatcherPriority.Background);
+            }, System.Windows.Threading.DispatcherPriority.Normal);
         }
 
         private int _isLoadingKtx2 = 0; // 0 = false, 1 = true (use int for Interlocked)

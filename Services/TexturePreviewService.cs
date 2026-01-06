@@ -4,6 +4,7 @@ using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,6 +19,7 @@ using System.Windows.Media.Imaging;
 namespace AssetProcessor.Services;
 
 public class TexturePreviewService : ITexturePreviewService {
+    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
     private readonly List<KtxMipLevel> currentKtxMipmaps = new();
     private readonly Dictionary<string, BitmapImage> imageCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, KtxPreviewCacheEntry> ktxPreviewCache = new(StringComparer.OrdinalIgnoreCase);
@@ -233,6 +235,8 @@ public class TexturePreviewService : ITexturePreviewService {
             startInfo.ArgumentList.Add(outputBaseName);
 
             string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
+            logger.Info($"[KTX_EXTRACT] Executing: {commandLine}");
+            logger.Info($"[KTX_EXTRACT] Input file exists: {File.Exists(ktxPath)}, size: {new FileInfo(ktxPath).Length} bytes");
             logService.LogInfo($"Executing command: {commandLine}");
             logService.LogInfo($"Working directory: {tempDirectory}");
             logService.LogInfo($"Input file exists: {File.Exists(ktxPath)}");
@@ -263,17 +267,24 @@ public class TexturePreviewService : ITexturePreviewService {
             string stdError = stdErrTask.Result;
 
             if (process.ExitCode != 0) {
+                logger.Warn($"[KTX_EXTRACT] Exit code: {process.ExitCode}, stderr: {stdError}");
                 logService.LogWarn($"ktx exit code: {process.ExitCode}, stderr: {stdError}, stdout: {stdOutput}");
                 throw new InvalidOperationException($"ktx exited with code {process.ExitCode}. Details logged.");
             }
 
+            logger.Info($"[KTX_EXTRACT] Success. stdout: {stdOutput}");
             logService.LogInfo($"ktx extract completed successfully. stdout: {stdOutput}");
             if (!string.IsNullOrEmpty(stdError)) {
+                logger.Info($"[KTX_EXTRACT] stderr (non-fatal): {stdError}");
                 logService.LogInfo($"ktx extract stderr (non-fatal): {stdError}");
             }
 
             // List all files in temp directory to diagnose output format
             var filesInTempDir = Directory.GetFiles(tempDirectory, "*.png", SearchOption.AllDirectories);
+            logger.Info($"[KTX_EXTRACT] PNG files created: {filesInTempDir.Length}");
+            foreach (var file in filesInTempDir) {
+                logger.Info($"[KTX_EXTRACT]   - {Path.GetFileName(file)}");
+            }
             logService.LogInfo($"PNG files created ({filesInTempDir.Length} files):");
             foreach (var file in filesInTempDir) {
                 logService.LogInfo($"  - {file}");
@@ -286,18 +297,26 @@ public class TexturePreviewService : ITexturePreviewService {
             // Pattern 2: {base}.png (single-level, no suffix)
             // Pattern 3: Check if outputBaseName is used as a directory
 
+            logger.Info($"[KTX_EXTRACT] Looking for pattern: {outputBaseName}_level{{N}}.png");
+
             int level = 0;
             while (true) {
                 string pngPath = $"{outputBaseName}_level{level}.png";
-                if (!File.Exists(pngPath)) {
+                bool found1 = File.Exists(pngPath);
+                if (!found1) {
                     // Try inside subdirectory (ktx might interpret path as directory)
                     pngPath = Path.Combine(outputBaseName, $"mip_level{level}.png");
                 }
 
-                if (!File.Exists(pngPath)) {
+                bool found2 = File.Exists(pngPath);
+                if (!found1 && !found2) {
+                    if (level == 0) {
+                        logger.Info($"[KTX_EXTRACT] Pattern 1 not found: {outputBaseName}_level0.png");
+                    }
                     break;
                 }
 
+                logger.Info($"[KTX_EXTRACT] Found mipmap: {Path.GetFileName(pngPath)}");
                 logService.LogInfo($"Found mipmap file: {pngPath}");
                 mipmaps.Add(CreateMipLevel(pngPath, level));
                 level++;
@@ -306,12 +325,17 @@ public class TexturePreviewService : ITexturePreviewService {
             // If no level-suffixed files found, try single file without suffix
             if (mipmaps.Count == 0) {
                 string singleFilePath = $"{outputBaseName}.png";
+                logger.Info($"[KTX_EXTRACT] Trying single file: {singleFilePath}");
                 if (File.Exists(singleFilePath)) {
+                    logger.Info($"[KTX_EXTRACT] Found single file!");
                     logService.LogInfo($"Found single mipmap file (no level suffix): {singleFilePath}");
                     mipmaps.Add(CreateMipLevel(singleFilePath, 0));
+                } else {
+                    logger.Info($"[KTX_EXTRACT] Single file not found either");
                 }
             }
 
+            logger.Info($"[KTX_EXTRACT] Total mipmaps found: {mipmaps.Count}");
             logService.LogInfo($"Total mipmaps found: {mipmaps.Count}");
 
             mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));

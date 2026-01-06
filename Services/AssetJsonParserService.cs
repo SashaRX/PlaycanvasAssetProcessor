@@ -183,6 +183,8 @@ public class AssetJsonParserService : IAssetJsonParserService {
                 var aoTexture = FindTextureByPattern(textureList, directory, baseName + "_ao");
                 var glossTexture = FindTextureByPattern(textureList, directory, baseName + "_gloss");
                 var metallicTexture = FindTextureByPattern(textureList, directory, baseName + "_metallic")
+                                   ?? FindTextureByPattern(textureList, directory, baseName + "_metalness")
+                                   ?? FindTextureByPattern(textureList, directory, baseName + "_Metalness") // case variant
                                    ?? FindTextureByPattern(textureList, directory, baseName + "_metalic");
 
                 var ormTexture = new ORMTextureResource {

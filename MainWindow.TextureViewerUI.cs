@@ -781,8 +781,8 @@ namespace AssetProcessor {
                 MipmapLevelSlider.Value = 0;
                 MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
                 MipmapInfoTextBlock.Text = mipmaps.Count > 0
-                    ? $"���-������� 0 �� {Math.Max(0, mipmaps.Count - 1)} � {mipmaps[0].Width}?{mipmaps[0].Height}"
-                    : "���-������ ����������";
+                    ? $"Mip 0 of {Math.Max(0, mipmaps.Count - 1)} | {mipmaps[0].Width}x{mipmaps[0].Height}"
+                    : "No mipmaps";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -811,7 +811,7 @@ namespace AssetProcessor {
 
                 int width = D3D11TextureViewer.Renderer.TextureWidth;
                 int height = D3D11TextureViewer.Renderer.TextureHeight;
-                MipmapInfoTextBlock.Text = $"���-������� 0 �� {Math.Max(0, mipCount - 1)} � {width}?{height} (D3D11)";
+                MipmapInfoTextBlock.Text = $"Mip 0 of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
@@ -820,7 +820,7 @@ namespace AssetProcessor {
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
             if (MipmapInfoTextBlock != null) {
                 int maxLevel = Math.Max(0, totalLevels - 1);
-                MipmapInfoTextBlock.Text = $"���-������� {mipLevel.Level} �� {maxLevel} � {mipLevel.Width}?{mipLevel.Height}";
+                MipmapInfoTextBlock.Text = $"Mip {mipLevel.Level} of {maxLevel} | {mipLevel.Width}x{mipLevel.Height}";
             }
         }
 
@@ -885,15 +885,18 @@ namespace AssetProcessor {
                 logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
 
                 // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
-                if (texturePreviewService.OriginalBitmapSource != null) {
+                // CRITICAL: For KTX2/D3D11 mode, ALWAYS use OriginalFileBitmapSource (extracted from KTX2)
+                // OriginalBitmapSource may contain stale data from previously selected texture
+                BitmapSource? histogramSource = texturePreviewService.OriginalFileBitmapSource;
+                if (histogramSource != null) {
                     if (channel == "Normal") {
                         // For normal map mode, show RGB histogram (no grayscale) - use BeginInvoke
                         _ = Dispatcher.BeginInvoke(new Action(() => {
-                            UpdateHistogram(texturePreviewService.OriginalBitmapSource, false);
+                            UpdateHistogram(histogramSource, false);
                         }));
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
-                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
+                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(histogramSource, channel);
                         // Use BeginInvoke to avoid deadlock
                         _ = Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
@@ -905,8 +908,10 @@ namespace AssetProcessor {
             }
 
             // WPF mode: use bitmap filtering
-            if (texturePreviewService.OriginalBitmapSource != null) {
-                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
+            // Prefer OriginalFileBitmapSource (KTX2 extracted) over OriginalBitmapSource (may be stale)
+            BitmapSource? wpfHistogramSource = texturePreviewService.OriginalFileBitmapSource ?? texturePreviewService.OriginalBitmapSource;
+            if (wpfHistogramSource != null) {
+                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(wpfHistogramSource, channel);
 
                 // ��������� UI � �������� ������ - use BeginInvoke to avoid deadlock
                 _ = Dispatcher.BeginInvoke(new Action(() => {
@@ -946,7 +951,7 @@ namespace AssetProcessor {
                         int mipCount = D3D11TextureViewer.Renderer.MipCount;
                         int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
                         int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
-                        MipmapInfoTextBlock.Text = $"���-������� {newLevel} �� {Math.Max(0, mipCount - 1)} � {width}?{height} (D3D11)";
+                        MipmapInfoTextBlock.Text = $"Mip {newLevel} of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
                     }
 
                     logger.Info($"D3D11 mip level changed to {newLevel}");

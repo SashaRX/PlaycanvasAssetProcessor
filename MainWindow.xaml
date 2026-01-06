@@ -461,6 +461,7 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                             <DataGrid.GroupStyle>
+                                <!-- Первый уровень: GroupName (основная группа) -->
                                 <GroupStyle>
                                     <GroupStyle.HeaderTemplate>
                                         <DataTemplate>
@@ -482,13 +483,82 @@
                                                                 <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
                                                             </Expander.Header>
                                                             <Expander.Style>
-                                                                <Style TargetType="Expander">
+                                                                <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
                                                                     <Setter Property="Margin" Value="0"/>
                                                                     <Setter Property="Padding" Value="0"/>
                                                                 </Style>
                                                             </Expander.Style>
                                                             <ItemsPresenter Margin="0"/>
                                                         </Expander>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </GroupStyle.ContainerStyle>
+                                </GroupStyle>
+                                <!-- Второй уровень: SubGroupName (ORM подгруппы) без отступа -->
+                                <GroupStyle>
+                                    <GroupStyle.ContainerStyle>
+                                        <Style TargetType="{x:Type GroupItem}">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type GroupItem}">
+                                                        <StackPanel>
+                                                            <!-- ORM подгруппа с кастомным заголовком и рамкой со всех сторон -->
+                                                            <Border x:Name="SubGroupBorder" Margin="4,2,4,2" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="1" Background="{DynamicResource ThemeBackgroundAlt}" CornerRadius="2">
+                                                                <StackPanel>
+                                                                    <!-- Заголовок: кнопка сворачивания + кликабельная область выделения -->
+                                                                    <Border x:Name="ORMHeaderBorder" Background="#30B050B0" MouseLeftButtonDown="ORMSubGroupHeader_Click" Cursor="Hand">
+                                                                        <StackPanel Orientation="Horizontal" Margin="2,1,2,1">
+                                                                            <!-- Кнопка сворачивания -->
+                                                                            <ToggleButton x:Name="ExpanderToggle" IsChecked="True" Width="12" Height="12" Margin="0,0,4,0"
+                                                                                          Style="{StaticResource ExpandCollapseToggleStyle}" VerticalAlignment="Center"/>
+                                                                            <!-- Тип ORM (OG/OGM/OGMH) -->
+                                                                            <TextBlock Text="{Binding Name, Converter={StaticResource ORMTypeExtractor}}" FontWeight="Bold" FontSize="10" Foreground="{DynamicResource ThemeMaterialORM}" VerticalAlignment="Center"/>
+                                                                            <!-- Разделитель -->
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                                                            <!-- Разрешение -->
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Resolution, Converter={StaticResource ResolutionConverter}}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <!-- Размер -->
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.CompressedSize, Converter={StaticResource SizeConverter}}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <!-- Статус -->
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Status}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                    <!-- Содержимое подгруппы -->
+                                                                    <ItemsPresenter x:Name="SubGroupItems" Margin="0"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                            <!-- Прямые элементы без подгруппы -->
+                                                            <ItemsPresenter x:Name="DirectItems" Visibility="Collapsed" Margin="0"/>
+                                                        </StackPanel>
+                                                        <ControlTemplate.Triggers>
+                                                            <!-- Скрытие содержимого при сворачивании -->
+                                                            <Trigger SourceName="ExpanderToggle" Property="IsChecked" Value="False">
+                                                                <Setter TargetName="SubGroupItems" Property="Visibility" Value="Collapsed"/>
+                                                            </Trigger>
+                                                            <!-- Выделение при выборе ORM подгруппы -->
+                                                            <DataTrigger Value="True">
+                                                                <DataTrigger.Binding>
+                                                                    <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                                        <Binding Path="Name"/>
+                                                                        <Binding Path="SelectedORMSubGroupName" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    </MultiBinding>
+                                                                </DataTrigger.Binding>
+                                                                <Setter TargetName="ORMHeaderBorder" Property="Background" Value="{DynamicResource ThemeSelection}"/>
+                                                            </DataTrigger>
+                                                            <!-- Пустые подгруппы -->
+                                                            <DataTrigger Binding="{Binding Name}" Value="">
+                                                                <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
+                                                                <Setter TargetName="DirectItems" Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Name}" Value="{x:Null}">
+                                                                <Setter TargetName="SubGroupBorder" Property="Visibility" Value="Collapsed"/>
+                                                                <Setter TargetName="DirectItems" Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
                                                     </ControlTemplate>
                                                 </Setter.Value>
                                             </Setter>

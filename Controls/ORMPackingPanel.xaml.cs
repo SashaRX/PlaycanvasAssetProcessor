@@ -108,8 +108,12 @@ namespace AssetProcessor.Controls {
             Logger.Info($"  Captured aoSource: {aoSource?.Name ?? "null"} (ID={aoSource?.ID})");
             Logger.Info($"  Captured glossSource: {glossSource?.Name ?? "null"} (ID={glossSource?.ID})");
 
-            // Packing mode
-            PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 1;
+            // CRITICAL FIX: Set flag BEFORE any UI changes to prevent SaveORMSettings from
+            // overwriting currentORMTexture with stale ComboBox values from previous selection
+            _isSettingComboBoxes = true;
+
+            // Packing mode (OG=2, OGM=3, OGMH=4 in enum, but ComboBox index is 0, 1, 2)
+            PackingModeComboBox.SelectedIndex = (int)currentORMTexture.PackingMode - 2;
 
             // AO settings (None=0, BiasedDarkening=1, Percentile=2)
             AOProcessingComboBox.SelectedIndex = currentORMTexture.AOProcessingMode switch {
@@ -157,8 +161,6 @@ namespace AssetProcessor.Controls {
             // CRITICAL: Use Dispatcher.BeginInvoke to set ALL ComboBox selections after UI is fully loaded
             // Variables were captured at the TOP of this method to avoid SaveORMSettings overwriting them
             _ = Dispatcher.BeginInvoke(new Action(() => {
-                // Set flag to prevent recursive UpdateStatus calls during ComboBox initialization
-                _isSettingComboBoxes = true;
                 try {
                     // Sources - find by ID and set
                     if (aoSource != null) {
@@ -192,17 +194,24 @@ namespace AssetProcessor.Controls {
                     GlossFilterTypeComboBox.SelectedItem = glossFilterType;
                     MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
                 } finally {
+                    Logger.Info("[LoadORMSettings] Dispatcher callback finally block - setting _isSettingComboBoxes = false");
                     _isSettingComboBoxes = false;
+                    // Now that ComboBoxes are set correctly, update status
+                    Logger.Info("[LoadORMSettings] Calling final UpdateStatus...");
+                    UpdateStatus();
+                    Logger.Info("[LoadORMSettings] Final UpdateStatus completed, Dispatcher callback done");
                 }
             }), System.Windows.Threading.DispatcherPriority.Background);
-
-            UpdateStatus();
         }
 
         /// <summary>
         /// Сохраняет настройки в ORM текстуру
         /// </summary>
         private void SaveORMSettings() {
+            // CRITICAL: Skip saving during ComboBox initialization to prevent overwriting
+            // ORM settings with stale values from previous selection
+            if (_isSettingComboBoxes) return;
+
             // Early return if controls not initialized yet
             if (AOSourceComboBox == null || GlossSourceComboBox == null ||
                 MetallicSourceComboBox == null || HeightSourceComboBox == null ||
@@ -296,9 +305,12 @@ namespace AssetProcessor.Controls {
             if (StatusText == null || MissingChannelsText == null || PackConvertButton == null) return;
             if (currentORMTexture == null) return;
 
+            Logger.Info("[UpdateStatus] Starting...");
             SaveORMSettings();
+            Logger.Info("[UpdateStatus] SaveORMSettings completed");
 
             var missing = currentORMTexture.GetMissingChannels();
+            Logger.Info($"[UpdateStatus] GetMissingChannels returned {missing.Count} items");
 
             if (missing.Count == 0) {
                 StatusText.Text = "✓ All required channels configured";
@@ -311,6 +323,7 @@ namespace AssetProcessor.Controls {
                 MissingChannelsText.Text = $"Missing sources: {string.Join(", ", missing)}";
                 PackConvertButton.IsEnabled = true; // Разрешаем упаковку с константами
             }
+            Logger.Info("[UpdateStatus] Completed");
         }
 
         // Event handlers
@@ -401,7 +414,9 @@ namespace AssetProcessor.Controls {
                 Logger.Info("Switched to UASTC compression format");
             }
 
+            Logger.Info("[CompressionFormat_Changed] Calling UpdateStatus...");
             UpdateStatus();
+            Logger.Info("[CompressionFormat_Changed] UpdateStatus completed");
         }
 
         private void EnableRDO_Changed(object sender, RoutedEventArgs e) {

@@ -219,4 +219,48 @@ namespace AssetProcessor.Helpers {
         }
     }
 
+    /// <summary>
+    /// Конвертер для извлечения типа ORM (OG/OGM/OGMH) из имени текстуры
+    /// </summary>
+    public class ORMTypeExtractor : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            if (value is string name) {
+                if (name.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase))
+                    return "OGMH";
+                if (name.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase))
+                    return "OGM";
+                if (name.EndsWith("_og", StringComparison.OrdinalIgnoreCase))
+                    return "OG";
+            }
+            return "";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// MultiValueConverter для сравнения двух значений на равенство
+    /// </summary>
+    public class EqualityConverter : IMultiValueConverter {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) {
+            if (values.Length < 2)
+                return false;
+
+            var value1 = values[0]?.ToString();
+            var value2 = values[1]?.ToString();
+
+            // Оба null или пустые - не равны (чтобы не выделять пустые подгруппы)
+            if (string.IsNullOrEmpty(value1) || string.IsNullOrEmpty(value2))
+                return false;
+
+            return string.Equals(value1, value2, StringComparison.Ordinal);
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
 }

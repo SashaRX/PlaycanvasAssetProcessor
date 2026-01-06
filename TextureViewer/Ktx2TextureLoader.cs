@@ -20,25 +20,43 @@ public static class Ktx2TextureLoader {
     /// Load a KTX2 texture from a file path.
     /// </summary>
     public static TextureData LoadFromFile(string filePath) {
-        logger.Info($"Loading KTX2: {filePath}");
-
-        // Read entire file into memory first to avoid file locking issues
-        byte[] fileData = File.ReadAllBytes(filePath);
-
-        // Parse metadata from memory buffer (no libktx involved, no logging to avoid deadlock)
-        var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadataFromMemory(fileData);
-
-        // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
-        if (!LibKtxNative.LoadKtxDll()) {
-            logger.Error("Failed to load ktx.dll");
-            throw new DllNotFoundException("Unable to load ktx.dll");
+        // Use simple file logging to avoid NLog deadlock with UI thread
+        void DiagLog(string msg) {
+            try {
+                var logPath = Path.Combine(Path.GetDirectoryName(filePath) ?? Path.GetTempPath(), "ktx2_diag.log");
+                File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
+            } catch { }
         }
 
+        DiagLog($"[KTX2LOADER] Loading KTX2: {filePath}");
+
+        // Read entire file into memory first to avoid file locking issues
+        DiagLog("[KTX2LOADER] Reading file bytes...");
+        byte[] fileData = File.ReadAllBytes(filePath);
+        DiagLog($"[KTX2LOADER] File read: {fileData.Length} bytes");
+
+        // Parse metadata from memory buffer (no libktx involved)
+        DiagLog("[KTX2LOADER] Parsing metadata...");
+        var (histogramMetadata, normalLayoutMetadata) = Ktx2MetadataReader.ReadAllMetadataFromMemory(fileData);
+        DiagLog("[KTX2LOADER] Metadata parsed");
+
+        // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
+        DiagLog("[KTX2LOADER] Loading ktx.dll...");
+        if (!LibKtxNative.LoadKtxDll()) {
+            logger.Error("[KTX2LOADER] ERROR: Failed to load ktx.dll");
+            throw new DllNotFoundException("Unable to load ktx.dll");
+        }
+        DiagLog("[KTX2LOADER] ktx.dll loaded");
+
         // Lock all libktx operations - the library may not be thread-safe
+        DiagLog("[KTX2LOADER] Acquiring _libktxLock...");
         lock (_libktxLock) {
+            DiagLog("[KTX2LOADER] Lock acquired");
             IntPtr dataPtr = Marshal.AllocHGlobal(fileData.Length);
             try {
+                DiagLog("[KTX2LOADER] Copying to unmanaged memory...");
                 Marshal.Copy(fileData, 0, dataPtr, fileData.Length);
+                DiagLog("[KTX2LOADER] Calling ktxTexture2_CreateFromMemory...");
 
                 uint createFlags = (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT |
                                   (uint)LibKtxNative.KtxTextureCreateFlagBits.KTX_TEXTURE_CREATE_RAW_KVDATA_BIT;
@@ -48,18 +66,23 @@ public static class Ktx2TextureLoader {
                     createFlags,
                     out IntPtr textureHandle);
 
+                DiagLog($"[KTX2LOADER] CreateFromMemory returned: {result}");
+
                 if (result != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
                     throw new Exception($"Failed to load KTX2: {LibKtxNative.GetErrorString(result)}");
                 }
 
                 try {
+                    DiagLog("[KTX2LOADER] Calling LoadFromHandle...");
                     var textureData = LoadFromHandle(textureHandle, filePath, histogramMetadata, normalLayoutMetadata);
-                    logger.Info($"KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
+                    DiagLog($"[KTX2LOADER] KTX2 loaded: {textureData.Width}x{textureData.Height}, {textureData.MipCount} mips");
                     return textureData;
                 } finally {
+                    DiagLog("[KTX2LOADER] Destroying texture handle...");
                     LibKtxNative.ktxTexture2_Destroy(textureHandle);
                 }
             } finally {
+                DiagLog("[KTX2LOADER] Freeing unmanaged memory...");
                 Marshal.FreeHGlobal(dataPtr);
             }
         }
@@ -304,12 +327,23 @@ public static class Ktx2TextureLoader {
     /// Load texture data from a ktxTexture2 handle.
     /// </summary>
     private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath, HistogramMetadata? histogramMetadata = null, NormalLayoutMetadata? normalLayoutMetadata = null) {
+        // Use simple file logging to avoid NLog deadlock
+        void DiagLog(string msg) {
+            try {
+                var logPath = Path.Combine(Path.GetDirectoryName(filePath) ?? Path.GetTempPath(), "ktx2_diag.log");
+                File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
+            } catch { }
+        }
+
+        DiagLog("[LoadFromHandle] ENTRY");
+
         // Read basic texture info from structure (minimal fields only)
         var tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
 
-        logger.Debug($"KTX2: {tex.baseWidth}x{tex.baseHeight}, {tex.numLevels} levels, compressed={tex.isCompressed}");
+        DiagLog($"[LoadFromHandle] KTX2: {tex.baseWidth}x{tex.baseHeight}, {tex.numLevels} levels, compressed={tex.isCompressed}");
 
         // Read OETF (transfer function) from DFD to determine sRGB vs linear
+        DiagLog("[LoadFromHandle] Getting OETF...");
         uint oetf = LibKtxNative.ktxTexture2_GetOETF(textureHandle);
         var transfer = (LibKtxNative.KhrDfTransfer)oetf;
         bool isSRGB = transfer switch {
@@ -318,13 +352,16 @@ public static class Ktx2TextureLoader {
             LibKtxNative.KhrDfTransfer.KHR_DF_TRANSFER_LINEAR => false,    // Linear
             _ => true  // Default to sRGB for safety (unspecified/unknown)
         };
+        DiagLog($"[LoadFromHandle] OETF={oetf}, isSRGB={isSRGB}");
 
         // Check if needs transcoding (Basis Universal compressed)
+        DiagLog("[LoadFromHandle] Checking NeedsTranscoding...");
         bool needsTranscode = LibKtxNative.ktxTexture2_NeedsTranscoding(textureHandle);
+        DiagLog($"[LoadFromHandle] NeedsTranscoding={needsTranscode}");
         string? transcodeFormat = null; // Track what format we transcoded to
 
         if (needsTranscode) {
-            logger.Debug("Transcoding Basis Universal to BC3...");
+            DiagLog("[LoadFromHandle] Transcoding Basis Universal to BC3...");
 
             // Transcode Basis Universal to BC3_RGBA
             // libktx vcpkg v4.4.2 supports BC3, BC7 may not work properly
@@ -333,12 +370,14 @@ public static class Ktx2TextureLoader {
                 LibKtxNative.KtxTranscodeFormat.KTX_TTF_BC3_RGBA,
                 0);
 
+            DiagLog($"[LoadFromHandle] TranscodeBasis returned: {transcodeResult}");
             if (transcodeResult != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
                 throw new Exception($"Failed to transcode Basis Universal texture: {LibKtxNative.GetErrorString(transcodeResult)}");
             }
 
             // We KNOW we transcoded to BC3 - use sRGB variant based on source VkFormat
             transcodeFormat = isSRGB ? "BC3_SRGB_BLOCK" : "BC3_UNORM_BLOCK";
+            DiagLog($"[LoadFromHandle] Transcoded to: {transcodeFormat}");
 
             // Re-read structure after transcode
             tex = Marshal.PtrToStructure<LibKtxNative.KtxTexture2>(textureHandle);
@@ -346,6 +385,7 @@ public static class Ktx2TextureLoader {
 
         // Extract mip levels using iterator callback
         // This is the safest way that works regardless of internal format
+        DiagLog("[LoadFromHandle] Starting mip iteration...");
         var mipLevels = new List<MipLevel>();
 
         LibKtxNative.KtxIterCallback callback = (int miplevel, int face, int width, int height, int depth, UIntPtr imageSize, IntPtr pixels, IntPtr userdata) => {
@@ -381,7 +421,9 @@ public static class Ktx2TextureLoader {
             return LibKtxNative.KtxErrorCode.KTX_SUCCESS;
         };
 
+        DiagLog("[LoadFromHandle] Calling ktxTexture_IterateLevelFaces...");
         var iterResult = LibKtxNative.ktxTexture_IterateLevelFaces(textureHandle, callback, IntPtr.Zero);
+        DiagLog($"[LoadFromHandle] IterateLevelFaces returned: {iterResult}, mipLevels.Count={mipLevels.Count}");
 
         if (iterResult != LibKtxNative.KtxErrorCode.KTX_SUCCESS) {
             throw new Exception($"Failed to iterate texture levels: {LibKtxNative.GetErrorString(iterResult)}");
@@ -390,6 +432,7 @@ public static class Ktx2TextureLoader {
         if (mipLevels.Count == 0) {
             throw new Exception("No mip levels extracted from KTX2 texture");
         }
+        DiagLog("[LoadFromHandle] Mip iteration complete");
 
         // Filter out mips with inconsistent format
         // BC7 blocks are 4x4, so for mips < 4x4 libktx returns uncompressed RGBA32
@@ -461,7 +504,8 @@ public static class Ktx2TextureLoader {
             ? $"KTX2/BasisU -> {detectedFormat}"
             : $"KTX2 ({detectedFormat})";
 
-        logger.Info($"KTX2 loaded: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, {detectedFormat}");
+        // Use Trace instead of NLog to avoid deadlock between UI and background threads
+        System.Diagnostics.Trace.WriteLine($"[KTX2LOADER] KTX2 loaded: {actualWidth}x{actualHeight}, {mipLevels.Count} mips, {detectedFormat}");
 
         // Histogram metadata was already read before transcoding (passed as parameter)
 

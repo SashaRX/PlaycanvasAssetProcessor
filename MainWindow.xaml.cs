@@ -87,6 +87,7 @@ namespace AssetProcessor {
         private FileSystemWatcher? projectFileWatcher; // Monitors project folder for file deletions
         private readonly ConcurrentQueue<string> pendingDeletedPaths = new(); // Queue of paths to process
         private int fileWatcherRefreshPending; // 0 = no refresh pending, 1 = refresh scheduled
+        private string? selectedORMSubGroupName; // Имя выбранной ORM подгруппы для визуального выделения
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -222,6 +223,19 @@ namespace AssetProcessor {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        /// <summary>
+        /// Имя выбранной ORM подгруппы для визуального выделения в DataGrid
+        /// </summary>
+        public string? SelectedORMSubGroupName {
+            get => selectedORMSubGroupName;
+            set {
+                if (selectedORMSubGroupName != value) {
+                    selectedORMSubGroupName = value;
+                    OnPropertyChanged(nameof(SelectedORMSubGroupName));
+                }
+            }
+        }
+
         private void HandlePreviewRendererChanged(bool useD3D11) {
             _ = ApplyRendererPreferenceAsync(useD3D11);
         }
@@ -346,6 +360,11 @@ namespace AssetProcessor {
             textureLoadCancellation = new CancellationTokenSource();
             CancellationToken cancellationToken = textureLoadCancellation.Token;
 
+            // Снимаем выделение с ORM подгруппы при выборе обычной строки
+            if (TexturesDataGrid.SelectedItem != null) {
+                SelectedORMSubGroupName = null;
+            }
+
             // Update selection count and command state (lightweight, no delay needed)
             UpdateSelectedTexturesCount();
             viewModel.SelectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
@@ -389,6 +408,11 @@ namespace AssetProcessor {
                 if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
                     logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture is packed, loading preview from: {ormTexture.Path}");
 
+                    // CRITICAL: Reset preview state before loading ORM texture
+                    // This clears OriginalBitmapSource from previous texture to ensure histogram uses ORM data
+                    ResetPreviewState();
+                    ClearD3D11Viewer();
+
                     // Update texture info
                     TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
                     TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
@@ -412,6 +436,52 @@ namespace AssetProcessor {
                             // WPF MODE: Extract PNG from KTX2
                             Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
                             ktxLoaded = await ktxPreviewTask;
+                        }
+
+                        // Extract histogram for packed ORM textures
+                        if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
+                            string? ormPath = ormTexture.Path;
+                            string ormName = ormTexture.Name;
+                            logger.Info($"[ORM Histogram] Starting extraction for: {ormName}, path: {ormPath}");
+
+                            _ = Task.Run(async () => {
+                                try {
+                                    if (string.IsNullOrEmpty(ormPath)) {
+                                        logger.Warn($"[ORM Histogram] Path is empty for: {ormName}");
+                                        return;
+                                    }
+
+                                    logger.Info($"[ORM Histogram] Extracting mipmaps from: {ormPath}");
+
+                                    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                                    var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
+                                    logger.Info($"[ORM Histogram] Extracted {mipmaps.Count} mipmaps for: {ormName}");
+
+                                    if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
+                                        var mip0Bitmap = mipmaps[0].Bitmap;
+                                        logger.Info($"[ORM Histogram] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight}, updating histogram...");
+                                        _ = Dispatcher.BeginInvoke(new Action(() => {
+                                            if (!cancellationToken.IsCancellationRequested) {
+                                                texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
+                                                UpdateHistogram(mip0Bitmap);
+                                                logger.Info($"[ORM Histogram] Histogram updated for: {ormName}");
+                                            } else {
+                                                logger.Info($"[ORM Histogram] Cancelled before UI update for: {ormName}");
+                                            }
+                                        }));
+                                    } else {
+                                        logger.Warn($"[ORM Histogram] No mipmaps or cancelled for: {ormName}");
+                                    }
+                                } catch (OperationCanceledException) {
+                                    logger.Info($"[ORM Histogram] Extraction cancelled/timeout for: {ormName}");
+                                } catch (Exception ex) {
+                                    logger.Warn(ex, $"[ORM Histogram] Failed to extract for: {ormName}");
+                                }
+                            });
+                        } else {
+                            logger.Info($"[ORM Histogram] Skipped - ktxLoaded={ktxLoaded}, cancelled={cancellationToken.IsCancellationRequested}");
                         }
 
                         if (!ktxLoaded) {
@@ -602,7 +672,10 @@ namespace AssetProcessor {
 
             try {
                 // Load KTX2 directly to D3D11 (no PNG extraction)
+                logger.Info($"[TryLoadKtx2ToD3D11Async] Calling LoadKtx2ToD3D11ViewerAsync for: {ktxPath}");
                 bool loaded = await LoadKtx2ToD3D11ViewerAsync(ktxPath);
+                logger.Info($"[TryLoadKtx2ToD3D11Async] LoadKtx2ToD3D11ViewerAsync returned: {loaded}, cancelled: {cancellationToken.IsCancellationRequested}");
+
                 if (!loaded || cancellationToken.IsCancellationRequested) {
                     logger.Warn($"Failed to load KTX2 to D3D11 viewer: {ktxPath}");
                     return false;
@@ -1521,10 +1594,12 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private void AdjustLastColumnToFill(DataGrid grid) => FillRemainingSpace(grid);
 
         private void UpdateColumnHeadersBasedOnWidth(DataGrid grid) {
-            if (grid == null || grid.Columns.Count == 0) return;
+            if (grid == null || grid.Columns.Count <= 1) return;
 
-            for (int i = 0; i < grid.Columns.Count && i < TextureColumnHeaders.Length; i++) {
-                var column = grid.Columns[i];
+            // Start from column index 1 to skip Export checkbox column
+            // TextureColumnHeaders[i] maps to grid.Columns[i + 1]
+            for (int i = 0; i < TextureColumnHeaders.Length && i + 1 < grid.Columns.Count; i++) {
+                var column = grid.Columns[i + 1];  // +1 to skip Export column
                 double actualWidth = column.ActualWidth;
 
                 // Skip if width not yet calculated
@@ -1763,12 +1838,175 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 if (view != null && view.CanGroup) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
+                    // Второй уровень группировки для ORM подгрупп (ao/gloss/metallic/height под og/ogm/ogmh)
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
                 }
             } else {
                 ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                 if (view != null) {
                     view.GroupDescriptions.Clear();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Обработчик клика на заголовок ORM подгруппы - показывает настройки ORM
+        /// </summary>
+        private void ORMSubGroupHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            // Останавливаем событие чтобы Expander не сворачивался
+            e.Handled = true;
+
+            if (sender is FrameworkElement element && element.DataContext is CollectionViewGroup group) {
+                // Получаем имя подгруппы (это имя ORM текстуры)
+                string? subGroupName = group.Name?.ToString();
+                if (string.IsNullOrEmpty(subGroupName)) return;
+
+                // Ищем любую текстуру из этой подгруппы чтобы получить ParentORMTexture
+                var textureInGroup = viewModel.Textures.FirstOrDefault(t => t.SubGroupName == subGroupName);
+                if (textureInGroup?.ParentORMTexture != null) {
+                    var ormTexture = textureInGroup.ParentORMTexture;
+                    logService.LogInfo($"ORM subgroup clicked: {ormTexture.Name} ({ormTexture.PackingMode})");
+
+                    // Устанавливаем выбранную подгруппу для визуального выделения
+                    SelectedORMSubGroupName = subGroupName;
+
+                    // Снимаем выделение с обычных строк DataGrid
+                    TexturesDataGrid.SelectedItem = null;
+
+                    // Показываем ORM панель настроек (как при выборе ORM в DataGrid)
+                    if (ConversionSettingsExpander != null) {
+                        ConversionSettingsExpander.Visibility = Visibility.Collapsed;
+                    }
+
+                    if (ORMPanel != null) {
+                        ORMPanel.Visibility = Visibility.Visible;
+
+                        // Инициализируем ORM панель с доступными текстурами (исключаем ORM текстуры)
+                        var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                        ORMPanel.Initialize(this, availableTextures);
+                        ORMPanel.SetORMTexture(ormTexture);
+                    }
+
+                    // Обновляем информацию о текстуре в preview панели
+                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+
+                    // Если ORM уже упакована - загружаем preview
+                    if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
+                        TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                            ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
+                            : "Resolution: Unknown";
+                        TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+
+                        // Загружаем preview асинхронно
+                        _ = LoadORMPreviewAsync(ormTexture);
+                    } else {
+                        TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
+                        TextureFormatTextBlock.Text = "Format: Not packed";
+                        ResetPreviewState();
+                        ClearD3D11Viewer();
+                    }
+
+                    // Обновляем ViewModel.SelectedTexture
+                    viewModel.SelectedTexture = ormTexture;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Загружает preview для упакованной ORM текстуры
+        /// </summary>
+        private async Task LoadORMPreviewAsync(ORMTextureResource ormTexture) {
+            // Cancel any pending texture load
+            textureLoadCancellation?.Cancel();
+            textureLoadCancellation = new CancellationTokenSource();
+            var cancellationToken = textureLoadCancellation.Token;
+
+            try {
+                bool ktxLoaded = false;
+
+                if (texturePreviewService.IsUsingD3D11Renderer) {
+                    // D3D11 MODE: Try native KTX2 loading
+                    logger.Info($"[LoadORMPreviewAsync] Loading packed ORM to D3D11: {ormTexture.Name}");
+                    ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
+
+                    if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
+                        // Extract mip0 bitmap for histogram calculation (fire-and-forget with timeout)
+                        string? ormPath = ormTexture.Path;
+                        string ormName = ormTexture.Name;
+                        logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
+
+                        // DIAGNOSTIC: Add delay to let LoadTexture complete first
+                        // This tests if the freeze is caused by concurrent execution
+                        _ = Task.Run(async () => {
+                            try {
+                                // Wait for LoadTexture to complete (queued via BeginInvoke)
+                                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+
+                                if (string.IsNullOrEmpty(ormPath)) {
+                                    logger.Warn($"[LoadORMPreviewAsync] ORM path is empty for: {ormName}");
+                                    return;
+                                }
+
+                                logger.Info($"[LoadORMPreviewAsync] Extracting mipmaps from: {ormPath}");
+
+                                // Add timeout to prevent hanging
+                                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                                var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
+                                logger.Info($"[LoadORMPreviewAsync] Extracted {mipmaps.Count} mipmaps for: {ormName}");
+
+                                if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
+                                    var mip0Bitmap = mipmaps[0].Bitmap;
+                                    logger.Info($"[LoadORMPreviewAsync] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight} for: {ormName}");
+
+                                    // Use BeginInvoke to avoid deadlock
+                                    _ = Dispatcher.BeginInvoke(new Action(() => {
+                                        if (!cancellationToken.IsCancellationRequested) {
+                                            texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
+                                            UpdateHistogram(mip0Bitmap);
+                                            logger.Info($"[LoadORMPreviewAsync] Histogram updated for ORM: {ormName}");
+                                        } else {
+                                            logger.Info($"[LoadORMPreviewAsync] Cancelled before histogram update: {ormName}");
+                                        }
+                                    }));
+                                } else {
+                                    logger.Warn($"[LoadORMPreviewAsync] No mipmaps or cancelled for: {ormName}");
+                                }
+                            } catch (OperationCanceledException) {
+                                logger.Info($"[LoadORMPreviewAsync] Histogram extraction cancelled/timeout for: {ormName}");
+                            } catch (Exception ex) {
+                                logger.Warn(ex, $"[LoadORMPreviewAsync] Failed to extract bitmap for histogram: {ormName}");
+                            }
+                        });
+                    } else {
+                        logger.Info($"[LoadORMPreviewAsync] Histogram skipped - ktxLoaded={ktxLoaded}, cancelled={cancellationToken.IsCancellationRequested}");
+                    }
+
+                    if (!ktxLoaded) {
+                        // Fallback: Try extracting PNG from KTX2
+                        logger.Info($"[LoadORMPreviewAsync] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
+                        ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                    }
+                } else {
+                    // WPF MODE: Extract PNG from KTX2
+                    ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                }
+
+                if (!ktxLoaded && !cancellationToken.IsCancellationRequested) {
+                    await Dispatcher.InvokeAsync(() => {
+                        texturePreviewService.IsKtxPreviewAvailable = false;
+                        TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
+                        logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
+                    });
+                }
+            } catch (OperationCanceledException) {
+                logService.LogInfo($"[LoadORMPreviewAsync] Cancelled for ORM: {ormTexture.Name}");
+            } catch (Exception ex) {
+                logService.LogError($"Error loading packed ORM texture {ormTexture.Name}: {ex.Message}");
+                ResetPreviewState();
+                ClearD3D11Viewer();
             }
         }
 

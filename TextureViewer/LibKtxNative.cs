@@ -64,46 +64,38 @@ internal static class LibKtxNative {
         }
 
         // 5. Пробуем загрузить из каждого места
+        // NOTE: Using Trace instead of NLog to avoid deadlock with UI thread
         foreach (var ktxDllPath in searchPaths) {
-            logger.Debug($"[LibKtxNative] Checking: {ktxDllPath}");
+            System.Diagnostics.Trace.WriteLine($"[LibKtxNative] Checking: {ktxDllPath}");
 
             if (!File.Exists(ktxDllPath)) {
-                logger.Debug($"[LibKtxNative]   File not found");
                 continue;
             }
 
-            logger.Debug($"[LibKtxNative]   File exists, attempting LoadLibrary...");
-            
+            System.Diagnostics.Trace.WriteLine($"[LibKtxNative] File exists, attempting LoadLibrary...");
+
             // Добавляем директорию в путь поиска DLL для P/Invoke
             var dllDirectory = Path.GetDirectoryName(ktxDllPath);
             if (!string.IsNullOrEmpty(dllDirectory)) {
                 SetDllDirectory(dllDirectory);
-                logger.Debug($"[LibKtxNative]   Added to DLL search path: {dllDirectory}");
             }
-            
+
             _ktxHandle = LoadLibrary(ktxDllPath);
 
             if (_ktxHandle != IntPtr.Zero) {
-                logger.Info($"[LibKtxNative]   ✓ Loaded successfully from: {ktxDllPath} (handle: 0x{_ktxHandle:X})");
+                System.Diagnostics.Trace.WriteLine($"[LibKtxNative] Loaded successfully from: {ktxDllPath}");
                 _dllLoaded = true;
                 _loadedFrom = ktxDllPath;
                 return true;
             } else {
                 var error = Marshal.GetLastWin32Error();
-                logger.Warn($"[LibKtxNative]   ✗ LoadLibrary failed for {ktxDllPath} (Win32 error: {error})");
+                System.Diagnostics.Trace.WriteLine($"[LibKtxNative] LoadLibrary failed for {ktxDllPath} (Win32 error: {error})");
                 // Сбрасываем SetDllDirectory при ошибке
                 SetDllDirectory(null);
             }
         }
 
-        logger.Error($"[LibKtxNative] Failed to load ktx.dll from any location. Searched in:");
-        logger.Error($"  - Executable directory: {exeDirectory}");
-        if (!string.IsNullOrEmpty(ktxDirectory)) {
-            logger.Error($"  - Specified directory: {ktxDirectory}");
-        }
-        logger.Error($"  - Standard KTX-Software installation paths");
-        logger.Error($"  - Directory containing ktx.exe (if found)");
-        logger.Error($"Please ensure KTX-Software is installed and ktx.dll is available in one of these locations.");
+        System.Diagnostics.Trace.WriteLine($"[LibKtxNative] Failed to load ktx.dll from any location");
         return false;
     }
 

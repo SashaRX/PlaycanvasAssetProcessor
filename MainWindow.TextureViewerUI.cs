@@ -887,7 +887,9 @@ namespace AssetProcessor {
                 // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
                 // Use OriginalFileBitmapSource as fallback for ORM textures where OriginalBitmapSource is not set
                 BitmapSource? histogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
+                logger.Info($"[FilterChannel] Channel={channel}, OriginalBitmapSource={texturePreviewService.OriginalBitmapSource != null}, OriginalFileBitmapSource={texturePreviewService.OriginalFileBitmapSource != null}, histogramSource={histogramSource != null}");
                 if (histogramSource != null) {
+                    logger.Info($"[FilterChannel] histogramSource size: {histogramSource.PixelWidth}x{histogramSource.PixelHeight}, format: {histogramSource.Format}");
                     if (channel == "Normal") {
                         // For normal map mode, show RGB histogram (no grayscale) - use BeginInvoke
                         _ = Dispatcher.BeginInvoke(new Action(() => {
@@ -896,11 +898,14 @@ namespace AssetProcessor {
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
                         BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(histogramSource, channel);
+                        logger.Info($"[FilterChannel] Filtered bitmap for channel {channel}: {filteredBitmap.PixelWidth}x{filteredBitmap.PixelHeight}");
                         // Use BeginInvoke to avoid deadlock
                         _ = Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
                         }));
                     }
+                } else {
+                    logger.Warn($"[FilterChannel] No histogram source available for channel {channel}");
                 }
 
                 return;

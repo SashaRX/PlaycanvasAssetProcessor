@@ -6,6 +6,8 @@ using System.Windows.Media.Imaging;
 namespace AssetProcessor.Services;
 
 public sealed class TextureChannelService : ITextureChannelService {
+    private static readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+
     public Task<BitmapSource> ApplyChannelFilterAsync(BitmapSource source, string channel) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrEmpty(channel);
@@ -30,6 +32,14 @@ public sealed class TextureChannelService : ITextureChannelService {
 
         byte[] pixels = new byte[stride * height];
         normalized.CopyPixels(pixels, stride, 0);
+
+        // Log sample pixel values before filtering
+        int sampleIdx = (height / 2) * stride + (width / 2) * bytesPerPixel;
+        byte sampleB = pixels[sampleIdx];
+        byte sampleG = pixels[sampleIdx + 1];
+        byte sampleR = pixels[sampleIdx + 2];
+        byte sampleA = pixels[sampleIdx + 3];
+        logger.Info($"[ChannelFilter] Input channel={channel}, center pixel RGBA=({sampleR},{sampleG},{sampleB},{sampleA})");
 
         byte[] output = new byte[pixels.Length];
         Buffer.BlockCopy(pixels, 0, output, 0, pixels.Length);
@@ -58,6 +68,10 @@ public sealed class TextureChannelService : ITextureChannelService {
                 output[index + 3] = channel == "A" ? channelValue : a;
             }
         }
+
+        // Log sample pixel value after filtering
+        byte filteredValue = output[sampleIdx]; // All RGB are same after filtering
+        logger.Info($"[ChannelFilter] Output channel={channel}, center pixel value={filteredValue}");
 
         WriteableBitmap result = new(width, height, normalized.DpiX, normalized.DpiY, PixelFormats.Bgra32, null);
         result.WritePixels(new Int32Rect(0, 0, width, height), output, stride, 0);

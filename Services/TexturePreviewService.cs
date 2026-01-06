@@ -255,6 +255,18 @@ public class TexturePreviewService : ITexturePreviewService {
                 throw new InvalidOperationException("Не удалось запустить ktx для извлечения содержимого KTX2.", ex);
             }
 
+            // Register callback to kill process if cancellation is requested
+            using var processKillRegistration = cancellationToken.Register(() => {
+                try {
+                    if (!process.HasExited) {
+                        logger.Info("[KTX_EXTRACT] Cancellation requested - killing ktx process");
+                        process.Kill();
+                    }
+                } catch {
+                    // Process may have already exited
+                }
+            });
+
             // Read stdout and stderr in parallel to prevent deadlock
             // (process can block if buffer fills before parent reads)
             var stdOutTask = process.StandardOutput.ReadToEndAsync();
@@ -262,6 +274,9 @@ public class TexturePreviewService : ITexturePreviewService {
 
             await Task.WhenAll(stdOutTask, stdErrTask).ConfigureAwait(false);
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+            // Check cancellation after process completes (it might have been killed)
+            cancellationToken.ThrowIfCancellationRequested();
 
             string stdOutput = stdOutTask.Result;
             string stdError = stdErrTask.Result;
@@ -290,6 +305,9 @@ public class TexturePreviewService : ITexturePreviewService {
                 logService.LogInfo($"  - {file}");
             }
 
+            // Check cancellation after ktx extract completes (user may have switched textures)
+            cancellationToken.ThrowIfCancellationRequested();
+
             List<KtxMipLevel> mipmaps = new();
 
             // Parse PNG files from temp directory - ktx extract creates output_level{N}.png
@@ -297,6 +315,9 @@ public class TexturePreviewService : ITexturePreviewService {
             var levelPattern = new System.Text.RegularExpressions.Regex(@"_level(\d+)\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
             foreach (var pngFile in filesInTempDir) {
+                // Check cancellation before loading each mipmap (BitmapImage loading can be slow)
+                cancellationToken.ThrowIfCancellationRequested();
+
                 string fileName = Path.GetFileName(pngFile);
                 var match = levelPattern.Match(fileName);
 
@@ -310,6 +331,7 @@ public class TexturePreviewService : ITexturePreviewService {
 
             // If no level-suffixed files found, try files without level suffix (single mip)
             if (mipmaps.Count == 0 && filesInTempDir.Length > 0) {
+                cancellationToken.ThrowIfCancellationRequested();
                 // Take the first PNG file as level 0
                 string singleFile = filesInTempDir[0];
                 logger.Info($"[KTX_EXTRACT] No level pattern found, using single file: {Path.GetFileName(singleFile)}");

@@ -885,15 +885,17 @@ namespace AssetProcessor {
                 logger.Info($"Applied D3D11 channel mask: {channel} = 0x{mask:X}");
 
                 // Update histogram for the filtered channel (D3D11 filters on GPU, but histogram needs CPU filtering)
-                if (texturePreviewService.OriginalBitmapSource != null) {
+                // Use OriginalFileBitmapSource as fallback for ORM textures where OriginalBitmapSource is not set
+                BitmapSource? histogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
+                if (histogramSource != null) {
                     if (channel == "Normal") {
                         // For normal map mode, show RGB histogram (no grayscale) - use BeginInvoke
                         _ = Dispatcher.BeginInvoke(new Action(() => {
-                            UpdateHistogram(texturePreviewService.OriginalBitmapSource, false);
+                            UpdateHistogram(histogramSource, false);
                         }));
                     } else {
                         // For R/G/B/A channels, show grayscale histogram
-                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
+                        BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(histogramSource, channel);
                         // Use BeginInvoke to avoid deadlock
                         _ = Dispatcher.BeginInvoke(new Action(() => {
                             UpdateHistogram(filteredBitmap, true);  // Update histogram in grayscale mode
@@ -905,8 +907,10 @@ namespace AssetProcessor {
             }
 
             // WPF mode: use bitmap filtering
-            if (texturePreviewService.OriginalBitmapSource != null) {
-                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(texturePreviewService.OriginalBitmapSource, channel);
+            // Use OriginalFileBitmapSource as fallback for ORM textures
+            BitmapSource? wpfHistogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
+            if (wpfHistogramSource != null) {
+                BitmapSource filteredBitmap = await textureChannelService.ApplyChannelFilterAsync(wpfHistogramSource, channel);
 
                 // ��������� UI � �������� ������ - use BeginInvoke to avoid deadlock
                 _ = Dispatcher.BeginInvoke(new Action(() => {

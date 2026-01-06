@@ -408,6 +408,11 @@ namespace AssetProcessor {
                 if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
                     logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture is packed, loading preview from: {ormTexture.Path}");
 
+                    // CRITICAL: Reset preview state before loading ORM texture
+                    // This clears OriginalBitmapSource from previous texture to ensure histogram uses ORM data
+                    ResetPreviewState();
+                    ClearD3D11Viewer();
+
                     // Update texture info
                     TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
                     TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";

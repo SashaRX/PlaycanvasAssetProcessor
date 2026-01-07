@@ -1,9 +1,9 @@
-2026-01-04 15:57:19.8382 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
-2026-01-04 15:57:19.8382 Info Registered target NLog.Targets.ConsoleTarget(Name=consoleTarget)
-2026-01-04 15:57:19.8382 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
-2026-01-04 15:57:19.8489 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=21, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
-2026-01-04 15:57:19.8489 Info Configuration initialized.
-2026-01-04 15:57:20.6759 Info Registered target AssetProcessor.Controls.LogTarget(Name=)
-2026-01-04 15:57:20.6759 Info Closing old configuration.
-2026-01-04 15:57:20.6759 Info Validating config: TargetNames=fileTarget, consoleTarget, ConfigItems=31, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
-2026-01-04 15:57:20.6759 Info Configuration initialized.
+2026-01-07 15:46:05.2968 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2026-01-07 15:46:05.2968 Info Registered target NLog.Targets.Wrappers.AsyncTargetWrapper(Name=asyncFile)
+2026-01-07 15:46:05.2968 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-01-07 15:46:05.3095 Info Validating config: TargetNames=asyncFile, ConfigItems=13, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
+2026-01-07 15:46:05.3095 Info Configuration initialized.
+2026-01-07 15:46:06.2669 Info Registered target AssetProcessor.Controls.LogTarget(Name=)
+2026-01-07 15:46:06.2669 Info Closing old configuration.
+2026-01-07 15:46:06.2801 Info Validating config: TargetNames=asyncFile, ConfigItems=23, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
+2026-01-07 15:46:06.2801 Info Configuration initialized.

@@ -19,8 +19,19 @@ public sealed class HistogramService : IHistogramService {
 
         double[] smoothedHistogram = MovingAverage(histogram, 32);
 
+        // Find max value for normalization (0-100% scale)
+        double maxValue = 0;
         for (int i = 0; i < 256; i++) {
-            series.Points.Add(new DataPoint(i, smoothedHistogram[i]));
+            if (smoothedHistogram[i] > maxValue) {
+                maxValue = smoothedHistogram[i];
+            }
+        }
+
+        // Normalize to 0-100 range
+        double scale = maxValue > 0 ? 100.0 / maxValue : 1.0;
+
+        for (int i = 0; i < 256; i++) {
+            series.Points.Add(new DataPoint(i, smoothedHistogram[i] * scale));
             series.Points2.Add(new DataPoint(i, 0));
         }
 

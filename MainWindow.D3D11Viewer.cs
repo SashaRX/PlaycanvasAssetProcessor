@@ -266,17 +266,17 @@ namespace AssetProcessor {
                 convertedBitmap.Freeze(); // Freeze for safe access from background thread
 
                 // Copy pixels in background thread (safe operation on frozen bitmap)
+                // NOTE: NO NLog calls inside Task.Run - causes deadlock with UI thread!
                 logger.Info("Starting pixel copy in background thread...");
                 await Task.Run(() => {
                     cancellationToken.ThrowIfCancellationRequested();
-                    logger.Info("Copying pixels from bitmap...");
                     convertedBitmap.CopyPixels(pixels, stride, 0);
-                    logger.Info("Pixel copy completed");
                     // Check cancellation immediately after copy to fail fast if user switched textures
                     cancellationToken.ThrowIfCancellationRequested();
-                }, cancellationToken);
+                }, cancellationToken).ConfigureAwait(false);
 
-                logger.Info("Pixel conversion task completed, checking cancellation...");
+                // Back on thread pool thread after ConfigureAwait(false)
+                // Check cancellation before scheduling UI work
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var mipLevel = new MipLevel {
@@ -300,63 +300,89 @@ namespace AssetProcessor {
                     SourceFormat = $"PNG/RGBA8 (isSRGB={isSRGB})"
                 };
 
-                logger.Info($"About to call D3D11TextureRenderer.LoadTexture: {width}x{height}, sRGB={isSRGB}");
-
                 // Check cancellation before UI work
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Check if texture is still valid (user might have switched textures)
-                if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
-                    logger.Info($"Texture was switched during loading (from {texturePathAtStart} to {texturePreviewService.CurrentSelectedTexture?.Path}), ignoring result");
-                    return;
-                }
+                // Now schedule UI work via Dispatcher (we're on thread pool thread)
+                // NOTE: NO NLog calls inside BeginInvoke - causes deadlock!
+                // Capture semaphoreEntered value before clearing (closures capture by reference)
+                bool needReleaseSemaphore = semaphoreEntered;
+                _ = Dispatcher.BeginInvoke(new Action(() => {
+                    try {
+                        // Check if texture is still valid (user might have switched textures)
+                        if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
+                            Trace.WriteLine($"[PNG] Texture was switched during loading, ignoring result");
+                            return;
+                        }
 
-                if (D3D11TextureViewer?.Renderer == null) {
-                    logger.Error("D3D11TextureViewer.Renderer is null!");
-                    return;
-                }
+                        var viewer = D3D11TextureViewer;
+                        if (viewer?.Renderer == null) {
+                            Trace.WriteLine("[PNG] D3D11TextureViewer.Renderer is null!");
+                            return;
+                        }
 
-                // LoadTexture - we're already on UI thread (called via Dispatcher.InvokeAsync)
-                logger.Info("Calling LoadTexture on renderer...");
-                D3D11TextureViewer.Renderer.LoadTexture(textureData);
-                logger.Info($"D3D11TextureRenderer.LoadTexture completed successfully");
+                        Trace.WriteLine($"[PNG] Calling LoadTexture: {width}x{height}, sRGB={isSRGB}");
+                        viewer.Renderer.LoadTexture(textureData);
+                        Trace.WriteLine("[PNG] LoadTexture completed");
 
-                // Update format info in UI
-                if (TextureFormatTextBlock != null) {
-                    string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
-                    TextureFormatTextBlock.Text = $"Format: {formatInfo}";
-                }
+                        // Update format info in UI
+                        if (TextureFormatTextBlock != null) {
+                            string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                            TextureFormatTextBlock.Text = $"Format: {formatInfo}";
+                        }
 
-                // Update histogram correction button state (PNG has no metadata)
-                UpdateHistogramCorrectionButtonState();
+                        // Update histogram correction button state (PNG has no metadata)
+                        UpdateHistogramCorrectionButtonState();
 
-                // Note: NOT resetting zoom/pan to preserve user's viewport when switching sources
+                        // Force immediate render to update viewport with current zoom/pan
+                        viewer.Renderer.Render();
+                        Trace.WriteLine("[PNG] Render completed");
+                    } catch (Exception ex) {
+                        Trace.WriteLine($"[PNG] ERROR: {ex.Message}");
+                        // Schedule error logging to avoid potential deadlock
+                        Dispatcher.BeginInvoke(new Action(() => logger.Error(ex, "Error in PNG UI update")), System.Windows.Threading.DispatcherPriority.Background);
+                    } finally {
+                        // Release semaphore and re-enable render loop
+                        if (needReleaseSemaphore) {
+                            d3dTextureLoadSemaphore.Release();
+                            Trace.WriteLine("[PNG] Semaphore released");
+                        }
+
+                        texturePreviewService.IsD3D11RenderLoopEnabled = true;
+                        Trace.WriteLine("[PNG] Render loop re-enabled");
+
+                        CompleteD3DPreviewLoad(loadCts);
+                    }
+                }));
+
+                // Mark that we've scheduled cleanup in BeginInvoke
+                semaphoreEntered = false;
+                renderLoopDisabled = false;
+                Trace.WriteLine("[PNG] BeginInvoke scheduled, returning");
             } catch (OperationCanceledException) {
-                logger.Info("Texture loading was cancelled");
+                Trace.WriteLine("[PNG] Texture loading was cancelled");
                 throw;
             } catch (Exception ex) {
-                logger.Error(ex, "Failed to load texture to D3D11 viewer");
+                Trace.WriteLine($"[PNG] Exception: {ex.Message}");
+                // Schedule error logging to avoid potential deadlock
+                Dispatcher.BeginInvoke(new Action(() => logger.Error(ex, "Failed to load texture to D3D11 viewer")), System.Windows.Threading.DispatcherPriority.Background);
             } finally {
+                // Only release if not already transferred to BeginInvoke
                 if (semaphoreEntered) {
                     d3dTextureLoadSemaphore.Release();
-                    logger.Info("Semaphore released");
+                    Trace.WriteLine("[PNG] Semaphore released (finally)");
                 }
 
                 if (renderLoopDisabled) {
                     texturePreviewService.IsD3D11RenderLoopEnabled = true;
-                    logger.Info("Render loop re-enabled");
+                    Trace.WriteLine("[PNG] Render loop re-enabled (finally)");
                 }
 
-                // Force immediate render to update viewport with current zoom/pan (only if not cancelled and texture is still valid)
-                if (!cancellationToken.IsCancellationRequested &&
-                    (texturePathAtStart == null || texturePreviewService.CurrentSelectedTexture?.Path == texturePathAtStart)) {
-                    D3D11TextureViewer?.Renderer?.Render();
-                    logger.Info("Forced render to apply current zoom/pan");
-                } else if (texturePathAtStart != null && texturePreviewService.CurrentSelectedTexture?.Path != texturePathAtStart) {
-                    logger.Info("Skipping render - texture was switched during loading");
+                // CompleteD3DPreviewLoad is called in BeginInvoke if successful
+                // Only call here if we didn't reach BeginInvoke
+                if (semaphoreEntered || renderLoopDisabled) {
+                    CompleteD3DPreviewLoad(loadCts);
                 }
-
-                CompleteD3DPreviewLoad(loadCts);
             }
         }
 

@@ -37,18 +37,30 @@ public class HistogramCoordinator : IHistogramCoordinator {
 
         histogramService.ProcessImage(bitmapSource, redHistogram, greenHistogram, blueHistogram);
 
-        int[] combinedHistogram = new int[256];
-        for (int i = 0; i < 256; i++) {
-            combinedHistogram[i] = redHistogram[i] + greenHistogram[i] + blueHistogram[i];
-        }
-
-        var stats = histogramService.CalculateStatistics(combinedHistogram);
-
+        HistogramStatistics stats;
         if (!isGray) {
+            // RGB mode: calculate per-channel statistics and average them
+            var redStats = histogramService.CalculateStatistics(redHistogram);
+            var greenStats = histogramService.CalculateStatistics(greenHistogram);
+            var blueStats = histogramService.CalculateStatistics(blueHistogram);
+
+            // Average the statistics across channels for consistent display
+            stats = new HistogramStatistics {
+                Min = Math.Min(Math.Min(redStats.Min, greenStats.Min), blueStats.Min),
+                Max = Math.Max(Math.Max(redStats.Max, greenStats.Max), blueStats.Max),
+                Mean = (redStats.Mean + greenStats.Mean + blueStats.Mean) / 3.0,
+                Median = (redStats.Median + greenStats.Median + blueStats.Median) / 3,
+                StdDev = (redStats.StdDev + greenStats.StdDev + blueStats.StdDev) / 3.0,
+                TotalPixels = redStats.TotalPixels // Same for all channels
+            };
+
             histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColors.Red);
             histogramService.AddSeriesToModel(histogramModel, greenHistogram, OxyColors.Green);
             histogramService.AddSeriesToModel(histogramModel, blueHistogram, OxyColors.Blue);
         } else {
+            // Grayscale mode: use only red channel for statistics (R=G=B in grayscale)
+            stats = histogramService.CalculateStatistics(redHistogram);
+
             // Use gray color visible on both themes
             histogramService.AddSeriesToModel(histogramModel, redHistogram, OxyColor.FromRgb(128, 128, 128));
         }

@@ -1833,6 +1833,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         #region Column Visibility Management
 
         private void GroupTexturesCheckBox_Changed(object sender, RoutedEventArgs e) {
+            // Skip if ItemsSource is not yet set (during InitializeComponent)
+            if (TexturesDataGrid?.ItemsSource == null) return;
+
             if (GroupTexturesCheckBox.IsChecked == true) {
                 ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                 if (view != null && view.CanGroup) {

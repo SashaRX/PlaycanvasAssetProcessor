@@ -362,7 +362,7 @@
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,15,0" MinWidth="40"/>
-                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
+                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center" IsChecked="True" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
                             <CheckBox x:Name="DarkThemeCheckBox" Content="Dark Theme" VerticalAlignment="Center" Click="DarkThemeCheckBox_Click"/>
                         </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"

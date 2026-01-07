@@ -1850,6 +1850,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
+        /// Applies texture grouping if the GroupTextures checkbox is checked.
+        /// Called after loading assets to apply default grouping.
+        /// </summary>
+        private void ApplyTextureGroupingIfEnabled() {
+            if (GroupTexturesCheckBox.IsChecked == true) {
+                ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                if (view != null && view.CanGroup) {
+                    view.GroupDescriptions.Clear();
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
+                }
+            }
+        }
+
+        /// <summary>
         /// Обработчик клика на заголовок ORM подгруппы - показывает настройки ORM
         /// </summary>
         private void ORMSubGroupHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) {

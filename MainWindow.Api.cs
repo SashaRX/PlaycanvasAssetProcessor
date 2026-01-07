@@ -205,6 +205,10 @@ namespace AssetProcessor {
 
                     await ProcessAssetsFromJson(assetsResponse);
                     logService.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
+
+                    // Apply default grouping if checkbox is checked
+                    ApplyTextureGroupingIfEnabled();
+
                     return true;
                 }
             } catch (JsonReaderException ex) {

@@ -132,6 +132,14 @@ namespace AssetProcessor.Helpers {
             // Hyperlink colors
             app.Resources["ThemeHyperlink"] = new SolidColorBrush(
                 isDark ? Color.FromRgb(0xee, 0x90, 0x00) : Color.FromRgb(0, 102, 204));
+
+            // OxyPlot Tracker (tooltip) colors
+            app.Resources["ThemeTrackerBackground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(45, 45, 48) : Color.FromRgb(255, 255, 225));
+            app.Resources["ThemeTrackerForeground"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(241, 241, 241) : Color.FromRgb(0, 0, 0));
+            app.Resources["ThemeTrackerBorder"] = new SolidColorBrush(
+                isDark ? Color.FromRgb(100, 100, 100) : Color.FromRgb(180, 180, 150));
         }
 
         /// <summary>

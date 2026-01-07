@@ -389,17 +389,15 @@ public class ModelExportPipeline {
                     mipPaths.Add(mipPath);
                 }
 
+                // Читаем сохранённые ORM настройки из ResourceSettingsService
+                var ormCompressionSettings = BuildORMCompressionSettings(material.ID, options, material.Name, packingMode);
+
                 // Конвертируем в KTX2
                 var ktxResult = await _textureConversionPipeline.ConvertTextureAsync(
                     mipPaths[0], // Используем первый мипмап как источник
                     outputPath,
                     MipGenerationProfile.CreateDefault(TextureType.Generic),
-                    new CompressionSettings {
-                        CompressionFormat = CompressionFormat.ETC1S,
-                        QualityLevel = options.TextureQuality,
-                        GenerateMipmaps = true,
-                        UseCustomMipmaps = false
-                    });
+                    ormCompressionSettings);
 
                 // Очищаем временные файлы
                 foreach (var mip in packedMipmaps) mip.Dispose();
@@ -679,6 +677,76 @@ public class ModelExportPipeline {
         }
 
         return (profile, compression);
+    }
+
+    /// <summary>
+    /// Создаёт CompressionSettings для ORM текстуры из сохранённых настроек
+    /// </summary>
+    private CompressionSettings BuildORMCompressionSettings(int materialId, ExportOptions options, string? materialName = null, ChannelPackingMode packingMode = ChannelPackingMode.OGM) {
+        // Пытаемся получить сохранённые ORM настройки
+        Services.ORMTextureSettings? savedOrm = null;
+        if (options.ProjectId > 0) {
+            var safeName = GetSafeFileName(materialName ?? $"mat_{materialId}");
+            var suffix = packingMode switch {
+                ChannelPackingMode.OG => "_og",
+                ChannelPackingMode.OGM => "_ogm",
+                ChannelPackingMode.OGMH => "_ogmh",
+                _ => "_ogm"
+            };
+
+            // Пробуем несколько форматов ключей (в порядке приоритета)
+            var keysToTry = new[] {
+                $"orm_{safeName}_{safeName}{suffix}",  // Формат из MainWindow.Api.cs
+                $"orm_{safeName}_{safeName}",          // Без суффикса
+                $"orm_material_{materialId}",          // По ID материала
+                $"material_{materialId}"               // Legacy формат
+            };
+
+            foreach (var key in keysToTry) {
+                savedOrm = Services.ResourceSettingsService.Instance.GetORMTextureSettings(options.ProjectId, key);
+                if (savedOrm != null) {
+                    Logger.Info($"Found ORM settings with key '{key}' for material {materialName ?? materialId.ToString()}: Format={savedOrm.CompressionFormat}, Quality={savedOrm.QualityLevel}");
+                    break;
+                }
+            }
+        }
+
+        if (savedOrm != null) {
+            // Используем сохранённые настройки
+            var format = Enum.TryParse<CompressionFormat>(savedOrm.CompressionFormat, true, out var cf)
+                ? cf : CompressionFormat.ETC1S;
+
+            var supercompression = savedOrm.EnableSupercompression
+                ? KTX2SupercompressionType.Zstandard
+                : KTX2SupercompressionType.None;
+
+            return new CompressionSettings {
+                CompressionFormat = format,
+                ColorSpace = ColorSpace.Linear, // ORM всегда linear
+                CompressionLevel = savedOrm.CompressLevel,
+                QualityLevel = savedOrm.QualityLevel,
+                UASTCQuality = savedOrm.UASTCQuality,
+                UseUASTCRDO = format == CompressionFormat.UASTC && savedOrm.EnableRDO,
+                UASTCRDOQuality = savedOrm.RDOLambda,
+                UseETC1SRDO = format == CompressionFormat.ETC1S && savedOrm.EnableRDO,
+                ETC1SRDOLambda = savedOrm.RDOLambda,
+                PerceptualMode = savedOrm.Perceptual,
+                KTX2Supercompression = supercompression,
+                KTX2ZstdLevel = savedOrm.SupercompressionLevel,
+                GenerateMipmaps = true,
+                UseCustomMipmaps = false // ORM использует внешнюю генерацию мипмапов через ChannelPackingPipeline
+            };
+        }
+
+        // Fallback: используем default настройки
+        Logger.Info($"No saved ORM settings for material {materialId}, using defaults: ETC1S, Quality={options.TextureQuality}");
+        return new CompressionSettings {
+            CompressionFormat = CompressionFormat.ETC1S,
+            ColorSpace = ColorSpace.Linear,
+            QualityLevel = options.TextureQuality,
+            GenerateMipmaps = true,
+            UseCustomMipmaps = false
+        };
     }
 
     private TextureType DetermineTextureType(TextureResource texture) {

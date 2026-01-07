@@ -454,6 +454,12 @@ namespace AssetProcessor.Controls {
             UpdateStatus();
         }
 
+        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            // Skip during initialization
+            if (_isSettingComboBoxes) return;
+            UpdateStatus();
+        }
+
         // Pack & Convert button
         private async void PackConvert_Click(object sender, RoutedEventArgs e) {
             if (currentORMTexture == null || mainWindow == null) return;

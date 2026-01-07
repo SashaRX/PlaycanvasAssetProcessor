@@ -3710,10 +3710,78 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // not the intended settings from the UI panel
                 texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
 
+                // Сохраняем настройки в ResourceSettingsService для использования при экспорте модели
+                SaveTextureSettingsToService(texture, compression, mipProfile);
+
                 logService.LogInfo($"Updated conversion settings for {texture.Name}");
             } catch (Exception ex) {
                 logService.LogError($"Error updating conversion settings: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Сохраняет настройки текстуры в ResourceSettingsService
+        /// </summary>
+        private void SaveTextureSettingsToService(
+            TextureResource texture,
+            TextureConversion.Settings.CompressionSettingsData compression,
+            TextureConversion.Settings.MipProfileSettings? mipProfile) {
+
+            // Получаем projectId
+            if (string.IsNullOrEmpty(viewModel.SelectedProjectId) ||
+                !int.TryParse(viewModel.SelectedProjectId, out var projectId)) {
+                return; // Нет проекта - не сохраняем
+            }
+
+            var histogramSettings = ConversionSettingsPanel.GetHistogramSettings();
+
+            var settings = new Services.TextureSettings {
+                PresetName = ConversionSettingsPanel.PresetName,
+
+                // Compression
+                CompressionFormat = compression.CompressionFormat.ToString(),
+                ColorSpace = compression.ColorSpace.ToString(),
+                CompressionLevel = compression.CompressionLevel,
+                QualityLevel = compression.QualityLevel,
+                UASTCQuality = compression.UASTCQuality,
+                UseUASTCRDO = compression.UseUASTCRDO,
+                UASTCRDOQuality = compression.UASTCRDOQuality,
+                UseETC1SRDO = compression.UseETC1SRDO,
+                ETC1SRDOLambda = 1.0f, // Default value
+                KTX2Supercompression = compression.KTX2Supercompression.ToString(),
+                KTX2ZstdLevel = compression.KTX2ZstdLevel,
+
+                // Mipmaps
+                GenerateMipmaps = compression.GenerateMipmaps,
+                UseCustomMipmaps = compression.UseCustomMipmaps,
+                FilterType = mipProfile?.Filter.ToString() ?? "Kaiser",
+                ApplyGammaCorrection = mipProfile?.ApplyGammaCorrection ?? true,
+                Gamma = mipProfile?.Gamma ?? 2.2f,
+                NormalizeNormals = mipProfile?.NormalizeNormals ?? false,
+
+                // Normal map
+                ConvertToNormalMap = compression.ConvertToNormalMap,
+                NormalizeVectors = compression.NormalizeVectors,
+
+                // Advanced
+                PerceptualMode = compression.PerceptualMode,
+                SeparateAlpha = compression.SeparateAlpha,
+                ForceAlphaChannel = compression.ForceAlphaChannel,
+                RemoveAlphaChannel = compression.RemoveAlphaChannel,
+                WrapMode = compression.WrapMode.ToString(),
+
+                // Histogram
+                HistogramEnabled = histogramSettings != null && histogramSettings.Mode != TextureConversion.Core.HistogramMode.Off,
+                HistogramMode = histogramSettings?.Mode.ToString() ?? "Off",
+                HistogramQuality = histogramSettings?.Quality.ToString() ?? "HighQuality",
+                HistogramChannelMode = histogramSettings?.ChannelMode.ToString() ?? "PerChannel",
+                HistogramPercentileLow = histogramSettings?.PercentileLow ?? 5.0f,
+                HistogramPercentileHigh = histogramSettings?.PercentileHigh ?? 95.0f,
+                HistogramKneeWidth = histogramSettings?.KneeWidth ?? 0.02f
+            };
+
+            Services.ResourceSettingsService.Instance.SaveTextureSettings(projectId, texture.ID, settings);
+            logService.LogInfo($"Saved texture settings to ResourceSettingsService: {texture.Name} (ID={texture.ID})");
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {

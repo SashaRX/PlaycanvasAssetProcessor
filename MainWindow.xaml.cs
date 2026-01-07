@@ -161,6 +161,7 @@ namespace AssetProcessor {
             // �������� �� ������� ������ �������� �����������
             ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
             ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
+            ConversionSettingsPanel.SettingsChanged += ConversionSettingsPanel_SettingsChanged;
 
             // ����������� ������ ���������� � ����������� � ������ � �������
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
@@ -3784,17 +3785,115 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logService.LogInfo($"Saved texture settings to ResourceSettingsService: {texture.Name} (ID={texture.ID})");
         }
 
+        /// <summary>
+        /// Загружает сохранённые настройки текстуры в UI панель
+        /// </summary>
+        private void LoadSavedSettingsToUI(Services.TextureSettings saved) {
+            try {
+                // Устанавливаем флаг загрузки чтобы не триггерить SettingsChanged
+                ConversionSettingsPanel.BeginLoadingSettings();
+
+                // Preset
+                if (!string.IsNullOrEmpty(saved.PresetName)) {
+                    ConversionSettingsPanel.SetPresetSilently(saved.PresetName);
+                } else {
+                    ConversionSettingsPanel.SetPresetSilently("Custom");
+                }
+
+                // Compression format
+                if (Enum.TryParse<TextureConversion.Core.CompressionFormat>(saved.CompressionFormat, true, out var format)) {
+                    ConversionSettingsPanel.CompressionFormatComboBox.SelectedItem = format;
+                }
+
+                // Color space
+                if (Enum.TryParse<TextureConversion.Core.ColorSpace>(saved.ColorSpace, true, out var colorSpace)) {
+                    ConversionSettingsPanel.ColorSpaceComboBox.SelectedItem = colorSpace;
+                }
+
+                // ETC1S settings
+                ConversionSettingsPanel.CompressionLevelSlider.Value = saved.CompressionLevel;
+                ConversionSettingsPanel.ETC1SQualitySlider.Value = saved.QualityLevel;
+                ConversionSettingsPanel.UseETC1SRDOCheckBox.IsChecked = saved.UseETC1SRDO;
+
+                // UASTC settings
+                ConversionSettingsPanel.UASTCQualitySlider.Value = saved.UASTCQuality;
+                ConversionSettingsPanel.UseUASTCRDOCheckBox.IsChecked = saved.UseUASTCRDO;
+                ConversionSettingsPanel.UASTCRDOLambdaSlider.Value = saved.UASTCRDOQuality;
+
+                // Supercompression
+                if (Enum.TryParse<TextureConversion.Core.KTX2SupercompressionType>(saved.KTX2Supercompression, true, out var supercomp)) {
+                    ConversionSettingsPanel.KTX2SupercompressionComboBox.SelectedItem = supercomp;
+                }
+                ConversionSettingsPanel.ZstdLevelSlider.Value = saved.KTX2ZstdLevel;
+
+                // Mipmaps
+                ConversionSettingsPanel.GenerateMipmapsCheckBox.IsChecked = saved.GenerateMipmaps;
+                ConversionSettingsPanel.CustomMipmapsCheckBox.IsChecked = saved.UseCustomMipmaps;
+
+                if (Enum.TryParse<TextureConversion.Core.FilterType>(saved.FilterType, true, out var filter)) {
+                    ConversionSettingsPanel.MipFilterComboBox.SelectedItem = filter;
+                }
+
+                ConversionSettingsPanel.ApplyGammaCorrectionCheckBox.IsChecked = saved.ApplyGammaCorrection;
+                ConversionSettingsPanel.NormalizeNormalsCheckBox.IsChecked = saved.NormalizeNormals;
+
+                // Normal map
+                ConversionSettingsPanel.ConvertToNormalMapCheckBox.IsChecked = saved.ConvertToNormalMap;
+                ConversionSettingsPanel.NormalizeVectorsCheckBox.IsChecked = saved.NormalizeVectors;
+
+                // Advanced
+                ConversionSettingsPanel.PerceptualModeCheckBox.IsChecked = saved.PerceptualMode;
+                ConversionSettingsPanel.ForceAlphaCheckBox.IsChecked = saved.ForceAlphaChannel;
+                ConversionSettingsPanel.RemoveAlphaCheckBox.IsChecked = saved.RemoveAlphaChannel;
+
+                if (Enum.TryParse<TextureConversion.Core.WrapMode>(saved.WrapMode, true, out var wrapMode)) {
+                    ConversionSettingsPanel.WrapModeComboBox.SelectedItem = wrapMode;
+                }
+
+                // Histogram
+                ConversionSettingsPanel.EnableHistogramCheckBox.IsChecked = saved.HistogramEnabled;
+                if (saved.HistogramEnabled) {
+                    if (Enum.TryParse<TextureConversion.Core.HistogramQuality>(saved.HistogramQuality, true, out var hquality)) {
+                        ConversionSettingsPanel.HistogramQualityComboBox.SelectedItem = hquality;
+                    }
+                    if (Enum.TryParse<TextureConversion.Core.HistogramChannelMode>(saved.HistogramChannelMode, true, out var hchannel)) {
+                        ConversionSettingsPanel.HistogramChannelModeComboBox.SelectedItem = hchannel;
+                    }
+                    ConversionSettingsPanel.HistogramPercentileLowSlider.Value = saved.HistogramPercentileLow;
+                    ConversionSettingsPanel.HistogramPercentileHighSlider.Value = saved.HistogramPercentileHigh;
+                }
+
+                logService.LogInfo($"Loaded saved settings to UI: Format={saved.CompressionFormat}, Quality={saved.QualityLevel}");
+            } catch (Exception ex) {
+                logService.LogError($"Error loading saved settings to UI: {ex.Message}");
+            } finally {
+                ConversionSettingsPanel.EndLoadingSettings();
+            }
+        }
+
         private void LoadTextureConversionSettings(TextureResource texture) {
             logService.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
 
-            // ��������: ������������� ���� ������� �������� ��� auto-detect normal map!
+            // ВАЖНО: Устанавливаем путь текстуры для auto-detect normal map!
             ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
 
-            // ��������: ������� NormalMapPath ����� auto-detect ������� ��� ����� ��������!
+            // ВАЖНО: Очищаем NormalMapPath перед auto-detect normal map!
             ConversionSettingsPanel.ClearNormalMapPath();
 
-            // ��������: ������ auto-detect preset �� ����� ����� ����� ��������� ��������!
-            // ��� ��������� ������������� �������� ���������� preset ��� ������ ��������
+            // Сначала проверяем, есть ли сохранённые настройки в ResourceSettingsService
+            if (!string.IsNullOrEmpty(viewModel.SelectedProjectId) &&
+                int.TryParse(viewModel.SelectedProjectId, out var projectId)) {
+
+                var savedSettings = Services.ResourceSettingsService.Instance.GetTextureSettings(projectId, texture.ID);
+                if (savedSettings != null) {
+                    logService.LogInfo($"[LoadTextureConversionSettings] Found saved settings for texture {texture.Name} (ID={texture.ID})");
+                    LoadSavedSettingsToUI(savedSettings);
+                    logService.LogInfo($"[LoadTextureConversionSettings] END (loaded from saved) for: {texture.Name}");
+                    return;
+                }
+            }
+
+            // Нет сохранённых настроек - auto-detect preset по имени файла
             var presetManager = new TextureConversion.Settings.PresetManager();
             var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
             logService.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");

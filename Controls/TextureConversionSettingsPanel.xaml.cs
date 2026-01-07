@@ -57,6 +57,20 @@ namespace AssetProcessor.Controls {
             }
         }
 
+        /// <summary>
+        /// Начинает загрузку настроек - блокирует события SettingsChanged
+        /// </summary>
+        public void BeginLoadingSettings() {
+            _isLoading = true;
+        }
+
+        /// <summary>
+        /// Завершает загрузку настроек - разблокирует события SettingsChanged
+        /// </summary>
+        public void EndLoadingSettings() {
+            _isLoading = false;
+        }
+
         private void InitializePresets() {
             // Загружаем все пресеты (встроенные + пользовательские)
             var presets = _presetManager.GetAllPresets();

@@ -479,7 +479,11 @@ namespace AssetProcessor {
 
                     // Проверяем, не установлен ли уже ParentORMTexture на компонентах
                     // (значит DetectAndLoadORMTextures уже нашла готовый KTX2)
-                    string ormName = groupName + suffix;
+                    // Убираем суффикс _mat из имени группы для имени ORM
+                    string baseName = groupName.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                        ? groupName.Substring(0, groupName.Length - 4)
+                        : groupName;
+                    string ormName = baseName + suffix;
                     bool alreadyHasORM = (aoTexture?.ParentORMTexture != null) ||
                                          (glossTexture?.ParentORMTexture != null) ||
                                          (metallicTexture?.ParentORMTexture != null) ||

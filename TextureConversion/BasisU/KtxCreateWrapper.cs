@@ -260,7 +260,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // КРИТИЧНО: Указываем transfer function входных PNG файлов
             // Без этого ktx create по умолчанию думает что PNG = sRGB и конвертирует в linear,
             // что ОСВЕТЛЯЕТ linear данные (AO, Gloss, Metallic, Normal maps)
-            args.Add("--assign-oetf");
+            // ПРИМЕЧАНИЕ: --assign-oetf deprecated, используем --assign-tf
+            args.Add("--assign-tf");
             args.Add(isSRGB ? "srgb" : "linear");
 
             // ============================================
@@ -344,8 +345,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
             // ============================================
             // NORMALIZE
             // ============================================
-            if (settings.NormalizeVectors) {
+            // ВАЖНО: --normalize несовместим с sRGB форматами!
+            // Используется только для normal maps (linear space)
+            if (settings.NormalizeVectors && settings.ColorSpace != ColorSpace.SRGB) {
                 args.Add("--normalize");
+            } else if (settings.NormalizeVectors && settings.ColorSpace == ColorSpace.SRGB) {
+                Logger.Warn("--normalize cannot be used with sRGB formats. Skipping normalize flag.");
             }
 
             // ============================================

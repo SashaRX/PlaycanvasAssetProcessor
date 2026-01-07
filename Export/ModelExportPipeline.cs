@@ -182,6 +182,18 @@ public class ModelExportPipeline {
                 texturePathMap, ormResults, options, cancellationToken);
             Logger.Info($"Updated global mapping: {GetMappingPath()}");
 
+            // Генерируем JSON файл модели с LODs и материалами
+            var modelJson = GenerateModelJson(model, modelMaterials, modelFileName, options);
+            var modelJsonPath = Path.Combine(exportPath, $"{modelFileName}.json");
+            var modelJsonStr = JsonSerializer.Serialize(modelJson, new JsonSerializerOptions {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+            await File.WriteAllTextAsync(modelJsonPath, modelJsonStr, cancellationToken);
+            result.GeneratedModelJson = modelJsonPath;
+            Logger.Info($"Generated model JSON: {modelJsonPath}");
+
             // 8. Конвертируем модель в GLB + LOD
             if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
                 ReportProgress("Converting model to GLB...", 85);
@@ -705,7 +717,7 @@ public class ModelExportPipeline {
     }
 
     /// <summary>
-    /// Генерирует материал JSON с ID текстур (для mapping.json архитектуры)
+    /// Генерирует материал JSON с ID текстур и путями для ORM
     /// </summary>
     private object GenerateMaterialJsonWithIds(
         MaterialResource material,
@@ -736,16 +748,16 @@ public class ModelExportPipeline {
         if (material.OpacityMapId.HasValue)
             textures["opacityMap"] = material.OpacityMapId.Value;
 
-        // ORM packed текстуры - формат { "asset": id }
+        // ORM packed текстуры - путь (т.к. создан нами, не PlayCanvas)
         if (options.UsePackedTextures && ormResults.TryGetValue(material.ID, out var ormResult)) {
-            var ormTextureId = -material.ID; // Отрицательный ID для сгенерированных ORM
             var ormKey = ormResult.PackingMode switch {
                 ChannelPackingMode.OG => "_og",
                 ChannelPackingMode.OGM => "_ogm",
                 ChannelPackingMode.OGMH => "_ogmh",
                 _ => "_ogm"
             };
-            textures[ormKey] = new { asset = ormTextureId };
+            // Используем относительный путь вместо ID
+            textures[ormKey] = ormResult.RelativePath;
         } else {
             // Отдельные текстуры - формат { "asset": id }
             if (material.AOMapId.HasValue)
@@ -758,20 +770,116 @@ public class ModelExportPipeline {
                 textures["metalnessMap"] = new { asset = material.MetalnessMapId.Value };
         }
 
+        // Собираем параметры материала
+        var matParams = new Dictionary<string, object?>();
+
+        // Базовые цвета
+        if (material.Diffuse != null && material.Diffuse.Count >= 3)
+            matParams["diffuse"] = NormalizeColor(material.Diffuse);
+
+        if (material.Emissive != null && material.Emissive.Count >= 3)
+            matParams["emissive"] = NormalizeColor(material.Emissive);
+
+        if (material.Specular != null && material.Specular.Count >= 3)
+            matParams["specular"] = NormalizeColor(material.Specular);
+
+        // Tint флаги и значения
+        if (material.DiffuseTint) {
+            matParams["diffuseTint"] = true;
+            if (material.Diffuse != null)
+                matParams["diffuseMapTintColor"] = NormalizeColor(material.Diffuse);
+        }
+
+        if (material.SpecularTint) {
+            matParams["specularTint"] = true;
+            if (material.Specular != null)
+                matParams["specularMapTintColor"] = NormalizeColor(material.Specular);
+        }
+
+        // Числовые параметры
+        if (material.UseMetalness) {
+            matParams["useMetalness"] = true;
+            if (material.Metalness.HasValue)
+                matParams["metalness"] = material.Metalness.Value;
+        }
+
+        if (material.Glossiness.HasValue)
+            matParams["gloss"] = material.Glossiness.Value;
+        else if (material.Shininess.HasValue)
+            matParams["gloss"] = material.Shininess.Value;
+
+        if (material.EmissiveIntensity.HasValue && material.EmissiveIntensity.Value != 1.0f)
+            matParams["emissiveIntensity"] = material.EmissiveIntensity.Value;
+
+        if (material.Opacity.HasValue && material.Opacity.Value != 1.0f)
+            matParams["opacity"] = material.Opacity.Value;
+
+        if (material.AlphaTest.HasValue && material.AlphaTest.Value > 0)
+            matParams["alphaTest"] = material.AlphaTest.Value;
+
+        if (material.BumpMapFactor.HasValue && material.BumpMapFactor.Value != 1.0f)
+            matParams["bumpiness"] = material.BumpMapFactor.Value;
+
+        // Дополнительные параметры
+        if (material.AOTint)
+            matParams["aoTint"] = true;
+
+        if (material.Reflectivity.HasValue && material.Reflectivity.Value != 1.0f)
+            matParams["reflectivity"] = material.Reflectivity.Value;
+
+        if (material.RefractionIndex.HasValue && material.RefractionIndex.Value != 0)
+            matParams["refraction"] = material.RefractionIndex.Value;
+
+        if (!string.IsNullOrEmpty(material.FresnelModel))
+            matParams["fresnelModel"] = material.FresnelModel;
+
+        // Cull mode
+        if (!string.IsNullOrEmpty(material.Cull) && material.Cull != "1")
+            matParams["cull"] = material.Cull;
+
+        // Two sided lighting
+        if (material.TwoSidedLighting)
+            matParams["twoSidedLighting"] = true;
+
         return new {
             master = masterName,
-            @params = new {
-                diffuse = NormalizeColor(material.Diffuse),
-                metalness = material.UseMetalness ? material.Metalness : (float?)null,
-                gloss = material.Glossiness ?? material.Shininess,
-                emissive = NormalizeColor(material.Emissive),
-                emissiveIntensity = material.EmissiveIntensity,
-                opacity = material.Opacity,
-                alphaTest = material.AlphaTest,
-                bumpiness = material.BumpMapFactor,
-                useMetalness = material.UseMetalness ? true : (bool?)null
-            },
+            @params = matParams.Count > 0 ? matParams : null,
             textures = textures.Count > 0 ? textures : null
+        };
+    }
+
+    /// <summary>
+    /// Генерирует JSON файл модели с LODs и материалами
+    /// </summary>
+    private object GenerateModelJson(
+        ModelResource model,
+        List<MaterialResource> modelMaterials,
+        string modelFileName,
+        ExportOptions options) {
+
+        var lods = new List<object>();
+
+        // LOD0 всегда есть
+        lods.Add(new {
+            path = $"{modelFileName}_lod0.glb",
+            maxDistance = 50
+        });
+
+        if (options.GenerateLODs) {
+            lods.Add(new {
+                path = $"{modelFileName}_lod1.glb",
+                maxDistance = 150
+            });
+            lods.Add(new {
+                path = $"{modelFileName}_lod2.glb",
+                maxDistance = (int?)null // null = loadFirst (последний LOD, загружается первым)
+            });
+        }
+
+        return new {
+            name = model.Name ?? modelFileName,
+            materials = modelMaterials.Select(m => m.ID).ToList(),
+            lods = lods
         };
     }
 
@@ -922,6 +1030,7 @@ public class ModelExportResult {
     public int TextureCount { get; set; }
 
     public string? ConvertedModelPath { get; set; }
+    public string? GeneratedModelJson { get; set; }
     public List<string> LODPaths { get; set; } = new();
     public List<string> GeneratedMaterialJsons { get; set; } = new();
     public List<string> ConvertedTextures { get; set; } = new();

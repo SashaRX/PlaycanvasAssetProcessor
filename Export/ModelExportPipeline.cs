@@ -360,7 +360,22 @@ public class ModelExportPipeline {
                 continue;
             }
 
-            var ormFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}");
+            // Определяем имя ORM по GroupName текстур (как в UI)
+            var groupName = aoTexture?.GroupName ?? glossTexture?.GroupName ?? metallicTexture?.GroupName;
+            string baseName;
+            if (!string.IsNullOrEmpty(groupName)) {
+                // Убираем суффикс _mat из имени группы
+                baseName = groupName.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
+                    ? groupName[..^4]
+                    : groupName;
+            } else {
+                // Fallback: используем имя материала без _mat
+                baseName = material.Name ?? $"mat_{material.ID}";
+                if (baseName.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)) {
+                    baseName = baseName[..^4];
+                }
+            }
+            var ormFileName = GetSafeFileName(baseName);
             var suffix = packingMode switch {
                 ChannelPackingMode.OG => "_og",
                 ChannelPackingMode.OGM => "_ogm",
@@ -390,7 +405,8 @@ public class ModelExportPipeline {
                 }
 
                 // Читаем сохранённые ORM настройки из ResourceSettingsService
-                var ormCompressionSettings = BuildORMCompressionSettings(material.ID, options, material.Name, packingMode);
+                var ormName = ormFileName + suffix; // e.g., "oldMailBox_ogm"
+                var ormCompressionSettings = BuildORMCompressionSettings(options, groupName, ormName, packingMode);
 
                 // Конвертируем в KTX2
                 var ktxResult = await _textureConversionPipeline.ConvertTextureAsync(
@@ -682,30 +698,20 @@ public class ModelExportPipeline {
     /// <summary>
     /// Создаёт CompressionSettings для ORM текстуры из сохранённых настроек
     /// </summary>
-    private CompressionSettings BuildORMCompressionSettings(int materialId, ExportOptions options, string? materialName = null, ChannelPackingMode packingMode = ChannelPackingMode.OGM) {
+    private CompressionSettings BuildORMCompressionSettings(ExportOptions options, string? groupName, string ormName, ChannelPackingMode packingMode) {
         // Пытаемся получить сохранённые ORM настройки
         Services.ORMTextureSettings? savedOrm = null;
-        if (options.ProjectId > 0) {
-            var safeName = GetSafeFileName(materialName ?? $"mat_{materialId}");
-            var suffix = packingMode switch {
-                ChannelPackingMode.OG => "_og",
-                ChannelPackingMode.OGM => "_ogm",
-                ChannelPackingMode.OGMH => "_ogmh",
-                _ => "_ogm"
-            };
-
-            // Пробуем несколько форматов ключей (в порядке приоритета)
+        if (options.ProjectId > 0 && !string.IsNullOrEmpty(groupName)) {
+            // Ключ в формате из MainWindow.Api.cs: orm_{groupName}_{ormName}
             var keysToTry = new[] {
-                $"orm_{safeName}_{safeName}{suffix}",  // Формат из MainWindow.Api.cs
-                $"orm_{safeName}_{safeName}",          // Без суффикса
-                $"orm_material_{materialId}",          // По ID материала
-                $"material_{materialId}"               // Legacy формат
+                $"orm_{groupName}_{ormName}",           // Точный формат из UI (orm_oldMailBox_mat_oldMailBox_ogm)
+                $"orm_{ormName}_{ormName}",             // Альтернатива без _mat в groupName
             };
 
             foreach (var key in keysToTry) {
                 savedOrm = Services.ResourceSettingsService.Instance.GetORMTextureSettings(options.ProjectId, key);
                 if (savedOrm != null) {
-                    Logger.Info($"Found ORM settings with key '{key}' for material {materialName ?? materialId.ToString()}: Format={savedOrm.CompressionFormat}, Quality={savedOrm.QualityLevel}");
+                    Logger.Info($"Found ORM settings with key '{key}': Format={savedOrm.CompressionFormat}, Quality={savedOrm.QualityLevel}");
                     break;
                 }
             }
@@ -739,7 +745,7 @@ public class ModelExportPipeline {
         }
 
         // Fallback: используем default настройки
-        Logger.Info($"No saved ORM settings for material {materialId}, using defaults: ETC1S, Quality={options.TextureQuality}");
+        Logger.Info($"No saved ORM settings for '{ormName}', using defaults: ETC1S, Quality={options.TextureQuality}");
         return new CompressionSettings {
             CompressionFormat = CompressionFormat.ETC1S,
             ColorSpace = ColorSpace.Linear,

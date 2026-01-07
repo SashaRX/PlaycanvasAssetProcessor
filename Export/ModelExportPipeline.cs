@@ -423,16 +423,7 @@ public class ModelExportPipeline {
         ExportOptions options,
         MaterialResource? material = null) {
 
-        // Если у материала есть ORM настройки, используем их
-        if (material?.ORMSettings != null && material.ORMSettings.Enabled) {
-            return material.ORMSettings.ToChannelPackingSettings(
-                aoTexture?.Path,
-                glossTexture?.Path,
-                metallicTexture?.Path
-            );
-        }
-
-        // Иначе используем настройки по умолчанию
+        // Используем настройки по умолчанию
         var settings = new ChannelPackingSettings { Mode = mode };
 
         // Настройка каналов зависит от режима упаковки:

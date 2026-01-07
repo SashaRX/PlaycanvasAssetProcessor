@@ -5,8 +5,10 @@ using AssetProcessor.Mapping.Models;
 using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Pipeline;
 using AssetProcessor.Resources;
+using AssetProcessor.Services;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Pipeline;
+using AssetProcessor.TextureConversion.Settings;
 using NLog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -529,10 +531,38 @@ public class ModelExportPipeline {
             var outputPath = Path.Combine(texturesDir, outputFileName);
 
             try {
-                // Определяем тип текстуры для выбора профиля
-                var textureType = DetermineTextureType(texture);
-                var profile = MipGenerationProfile.CreateDefault(textureType);
-                var compressionSettings = CreateCompressionSettings(textureType, options);
+                // Пробуем загрузить сохранённые настройки текстуры
+                MipGenerationProfile profile;
+                CompressionSettings compressionSettings;
+
+                var savedSettings = options.UseSavedTextureSettings && options.ProjectId > 0
+                    ? ResourceSettingsService.Instance.GetTextureSettings(options.ProjectId, texture.ID)
+                    : null;
+
+                if (savedSettings != null) {
+                    // Используем сохранённые настройки
+                    Logger.Info($"Using saved settings for texture {texture.Name} (ID={texture.ID})");
+                    (profile, compressionSettings) = BuildSettingsFromSaved(savedSettings);
+                } else {
+                    // Fallback: ищем подходящий пресет по имени файла
+                    var presetManager = new PresetManager();
+                    var matchingPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
+
+                    if (matchingPreset != null) {
+                        // Нашли пресет по постфиксу имени файла
+                        var textureType = DetermineTextureType(texture);
+                        profile = matchingPreset.ToMipGenerationProfile(textureType);
+                        compressionSettings = matchingPreset.ToCompressionSettings();
+                        Logger.Info($"Using preset '{matchingPreset.Name}' for texture {texture.Name}: Format={compressionSettings.CompressionFormat}");
+                    } else {
+                        // Не нашли - используем Default ETC1S
+                        var defaultPreset = TextureConversionPreset.CreateDefaultETC1S();
+                        var textureType = DetermineTextureType(texture);
+                        profile = defaultPreset.ToMipGenerationProfile(textureType);
+                        compressionSettings = defaultPreset.ToCompressionSettings();
+                        Logger.Info($"Using default preset for texture {texture.Name}: Type={textureType}, Format={compressionSettings.CompressionFormat}");
+                    }
+                }
 
                 var ktxResult = await _textureConversionPipeline.ConvertTextureAsync(
                     texture.Path,
@@ -544,7 +574,7 @@ public class ModelExportPipeline {
                     // Сохраняем относительный путь
                     var relativePath = Path.GetRelativePath(exportPath, outputPath).Replace('\\', '/');
                     results[texture.ID] = relativePath;
-                    Logger.Info($"Converted texture: {texture.Name} -> {outputPath}");
+                    Logger.Info($"Converted texture: {texture.Name} -> {outputPath} (Format={compressionSettings.CompressionFormat})");
                 } else {
                     Logger.Error($"Failed to convert texture {texture.Name}: {ktxResult.Error}");
                 }
@@ -555,6 +585,100 @@ public class ModelExportPipeline {
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Строит MipGenerationProfile и CompressionSettings из сохранённых настроек
+    /// </summary>
+    private (MipGenerationProfile profile, CompressionSettings compression) BuildSettingsFromSaved(TextureSettings saved) {
+        // Parse texture type
+        var textureType = Enum.TryParse<TextureType>(saved.TextureType, true, out var tt) ? tt : TextureType.Generic;
+
+        // Parse filter type
+        var filterType = Enum.TryParse<FilterType>(saved.FilterType, true, out var ft) ? ft : FilterType.Kaiser;
+
+        // Build MipGenerationProfile
+        var profile = new MipGenerationProfile {
+            TextureType = textureType,
+            Filter = filterType,
+            ApplyGammaCorrection = saved.ApplyGammaCorrection,
+            Gamma = saved.Gamma,
+            BlurRadius = saved.BlurRadius,
+            MinMipSize = saved.MinMipSize,
+            NormalizeNormals = saved.NormalizeNormals,
+            UseEnergyPreserving = saved.UseEnergyPreserving
+        };
+
+        // Parse compression format
+        var compressionFormat = Enum.TryParse<CompressionFormat>(saved.CompressionFormat, true, out var cf)
+            ? cf : CompressionFormat.ETC1S;
+
+        // Parse color space
+        var colorSpace = Enum.TryParse<ColorSpace>(saved.ColorSpace, true, out var cs)
+            ? cs : ColorSpace.Auto;
+
+        // Parse supercompression
+        var supercompression = Enum.TryParse<KTX2SupercompressionType>(saved.KTX2Supercompression, true, out var sc)
+            ? sc : KTX2SupercompressionType.Zstandard;
+
+        // Parse wrap mode
+        var wrapMode = Enum.TryParse<WrapMode>(saved.WrapMode, true, out var wm)
+            ? wm : WrapMode.Clamp;
+
+        // Build CompressionSettings
+        var compression = new CompressionSettings {
+            CompressionFormat = compressionFormat,
+            ColorSpace = colorSpace,
+            GenerateMipmaps = saved.GenerateMipmaps,
+            UseCustomMipmaps = saved.UseCustomMipmaps,
+
+            // ETC1S settings
+            CompressionLevel = saved.CompressionLevel,
+            QualityLevel = saved.QualityLevel,
+            UseETC1SRDO = saved.UseETC1SRDO,
+            ETC1SRDOLambda = saved.ETC1SRDOLambda,
+
+            // UASTC settings
+            UASTCQuality = saved.UASTCQuality,
+            UseUASTCRDO = saved.UseUASTCRDO,
+            UASTCRDOQuality = saved.UASTCRDOQuality,
+
+            // Supercompression
+            KTX2Supercompression = supercompression,
+            KTX2ZstdLevel = saved.KTX2ZstdLevel,
+
+            // Normal map
+            ConvertToNormalMap = saved.ConvertToNormalMap,
+            NormalizeVectors = saved.NormalizeVectors,
+
+            // Other
+            PerceptualMode = saved.PerceptualMode,
+            SeparateAlpha = saved.SeparateAlpha,
+            ForceAlphaChannel = saved.ForceAlphaChannel,
+            RemoveAlphaChannel = saved.RemoveAlphaChannel,
+            WrapMode = wrapMode
+        };
+
+        // Histogram settings
+        if (saved.HistogramEnabled) {
+            var histogramMode = Enum.TryParse<HistogramMode>(saved.HistogramMode, true, out var hm)
+                ? hm : HistogramMode.Off;
+            var histogramQuality = Enum.TryParse<HistogramQuality>(saved.HistogramQuality, true, out var hq)
+                ? hq : HistogramQuality.HighQuality;
+            var histogramChannelMode = Enum.TryParse<HistogramChannelMode>(saved.HistogramChannelMode, true, out var hcm)
+                ? hcm : HistogramChannelMode.PerChannel;
+
+            compression.HistogramAnalysis = new HistogramSettings {
+                Mode = histogramMode,
+                Quality = histogramQuality,
+                ChannelMode = histogramChannelMode,
+                PercentileLow = saved.HistogramPercentileLow,
+                PercentileHigh = saved.HistogramPercentileHigh,
+                KneeWidth = saved.HistogramKneeWidth
+            };
+        }
+
+        return (profile, compression);
     }
 
     private TextureType DetermineTextureType(TextureResource texture) {
@@ -577,23 +701,6 @@ public class ModelExportPipeline {
         return TextureType.Generic;
     }
 
-    private CompressionSettings CreateCompressionSettings(TextureType textureType, ExportOptions options) {
-        var settings = new CompressionSettings {
-            QualityLevel = options.TextureQuality,
-            GenerateMipmaps = true
-        };
-
-        // Normal maps используют UASTC для лучшего качества
-        if (textureType == TextureType.Normal) {
-            settings.CompressionFormat = CompressionFormat.UASTC;
-            settings.UseCustomMipmaps = false; // Для --normal-mode
-        } else {
-            settings.CompressionFormat = CompressionFormat.ETC1S;
-            settings.UseCustomMipmaps = true;
-        }
-
-        return settings;
-    }
 
     private async Task<GLBConversionResult> ConvertModelToGLBAsync(
         ModelResource model,
@@ -1004,6 +1111,11 @@ public class ModelExportPipeline {
 #region Supporting Classes
 
 public class ExportOptions {
+    /// <summary>
+    /// ID проекта PlayCanvas для загрузки сохранённых настроек ресурсов
+    /// </summary>
+    public int ProjectId { get; set; }
+
     public bool ConvertModel { get; set; } = true;
     public bool ConvertTextures { get; set; } = true;
     public bool GenerateORMTextures { get; set; } = true;
@@ -1012,6 +1124,12 @@ public class ExportOptions {
     public int LODLevels { get; set; } = 2;
     public int TextureQuality { get; set; } = 128;
     public bool ApplyToksvig { get; set; } = true;
+
+    /// <summary>
+    /// Использовать сохранённые настройки текстур из ResourceSettingsService
+    /// Если false - используются автоматические настройки на основе типа текстуры
+    /// </summary>
+    public bool UseSavedTextureSettings { get; set; } = true;
 }
 
 public class ExportProgress {

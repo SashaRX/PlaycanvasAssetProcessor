@@ -360,14 +360,23 @@ namespace AssetProcessor {
                     ktxPath: ktxPath
                 );
 
+                // Получаем ProjectId для загрузки сохранённых настроек ресурсов
+                int projectId = 0;
+                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId) &&
+                    int.TryParse(viewModel.SelectedProjectId, out var pid)) {
+                    projectId = pid;
+                }
+
                 var options = new Export.ExportOptions {
+                    ProjectId = projectId,
                     ConvertModel = true,
                     ConvertTextures = true,
                     GenerateORMTextures = generateORM,
                     UsePackedTextures = generateORM,
                     GenerateLODs = generateLODs,
                     TextureQuality = 128,
-                    ApplyToksvig = true
+                    ApplyToksvig = true,
+                    UseSavedTextureSettings = true // Использовать настройки текстур из ResourceSettingsService
                 };
 
                 int successCount = 0;

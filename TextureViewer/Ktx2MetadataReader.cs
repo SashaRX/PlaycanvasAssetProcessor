@@ -1,17 +1,17 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using NLog;
 
 namespace AssetProcessor.TextureViewer;
 
 /// <summary>
 /// Reader for KTX2 Key-Value Data with TLV metadata parsing for histogram preprocessing.
+/// NOTE: Uses Trace.WriteLine instead of NLog to avoid deadlocks when called from Task.Run
 /// </summary>
 public static class Ktx2MetadataReader {
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
     // KTX2 file identifier (12 bytes)
     private static readonly byte[] KTX2_IDENTIFIER = new byte[] {
@@ -24,10 +24,10 @@ public static class Ktx2MetadataReader {
     /// </summary>
     public static (HistogramMetadata? histogram, NormalLayoutMetadata? normalLayout) ReadAllMetadata(string filePath) {
         try {
-            logger.Info($"[Ktx2MetadataReader] Reading metadata from file: {filePath}");
+            Trace.WriteLine($"[Ktx2MetadataReader] Reading metadata from file: {filePath}");
 
             if (!File.Exists(filePath)) {
-                logger.Warn($"File not found: {filePath}");
+                Trace.WriteLine($"[Ktx2MetadataReader] WARN: File not found: {filePath}");
                 return (null, null);
             }
 
@@ -37,41 +37,41 @@ public static class Ktx2MetadataReader {
             // Read and verify KTX2 identifier
             byte[] identifier = reader.ReadBytes(12);
             if (!identifier.SequenceEqual(KTX2_IDENTIFIER)) {
-                logger.Warn("Not a valid KTX2 file (identifier mismatch)");
+                Trace.WriteLine("[Ktx2MetadataReader] WARN: Not a valid KTX2 file (identifier mismatch)");
                 return (null, null);
             }
 
-            logger.Info("[Ktx2MetadataReader] KTX2 identifier verified");
+            Trace.WriteLine("[Ktx2MetadataReader] KTX2 identifier verified");
 
             // Skip to KVD section
             fileStream.Seek(56, SeekOrigin.Begin);
             uint kvdByteOffset = reader.ReadUInt32();
             uint kvdByteLength = reader.ReadUInt32();
 
-            logger.Info($"[Ktx2MetadataReader] KVD: offset={kvdByteOffset}, length={kvdByteLength}");
+            Trace.WriteLine($"[Ktx2MetadataReader] KVD: offset={kvdByteOffset}, length={kvdByteLength}");
 
             if (kvdByteLength == 0) {
-                logger.Info("[Ktx2MetadataReader] No Key-Value Data in this KTX2 file");
+                Trace.WriteLine("[Ktx2MetadataReader] No Key-Value Data in this KTX2 file");
                 return (null, null);
             }
 
             // Read KVD section
             fileStream.Seek(kvdByteOffset, SeekOrigin.Begin);
             byte[] kvdData = reader.ReadBytes((int)kvdByteLength);
-            logger.Info($"[Ktx2MetadataReader] Read {kvdData.Length} bytes of KVD data");
+            Trace.WriteLine($"[Ktx2MetadataReader] Read {kvdData.Length} bytes of KVD data");
 
             // Parse both metadata types
             var (histogram, normalLayout) = ParseKeyValueDataComplete(kvdData);
 
             if (histogram != null && histogram.Scale[0] > 1.0f) {
-                logger.Error($"INVALID histogram format detected: scale={histogram.Scale[0]:F4} > 1.0");
-                logger.Error("This file uses old/broken format. Please re-convert the texture with current version.");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: INVALID histogram format detected: scale={histogram.Scale[0]:F4} > 1.0");
+                Trace.WriteLine("[Ktx2MetadataReader] ERROR: This file uses old/broken format. Please re-convert the texture with current version.");
                 histogram = null;
             }
 
             return (histogram, normalLayout);
         } catch (Exception ex) {
-            logger.Error(ex, "Failed to read metadata from KTX2 file");
+            Trace.WriteLine($"[Ktx2MetadataReader] ERROR: {ex.Message} - Failed to read metadata from KTX2 file");
             return (null, null);
         }
     }
@@ -83,7 +83,7 @@ public static class Ktx2MetadataReader {
     public static (HistogramMetadata? histogram, NormalLayoutMetadata? normalLayout) ReadAllMetadataFromMemory(byte[] fileData) {
         try {
             if (fileData == null || fileData.Length < 80) {
-                logger.Warn("Invalid or too small KTX2 data");
+                Trace.WriteLine("[Ktx2MetadataReader] WARN: Invalid or too small KTX2 data");
                 return (null, null);
             }
 
@@ -93,7 +93,7 @@ public static class Ktx2MetadataReader {
             // Read and verify KTX2 identifier
             byte[] identifier = reader.ReadBytes(12);
             if (!identifier.SequenceEqual(KTX2_IDENTIFIER)) {
-                logger.Warn("Not a valid KTX2 data (identifier mismatch)");
+                Trace.WriteLine("[Ktx2MetadataReader] WARN: Not a valid KTX2 data (identifier mismatch)");
                 return (null, null);
             }
 
@@ -119,7 +119,7 @@ public static class Ktx2MetadataReader {
 
             return (histogram, normalLayout);
         } catch (Exception ex) {
-            logger.Error(ex, "Failed to read metadata from KTX2 memory");
+            Trace.WriteLine($"[Ktx2MetadataReader] ERROR: {ex.Message} - Failed to read metadata from KTX2 memory");
             return (null, null);
         }
     }
@@ -131,10 +131,10 @@ public static class Ktx2MetadataReader {
     /// </summary>
     public static HistogramMetadata? ReadHistogramMetadata(string filePath) {
         try {
-            logger.Info($"[Ktx2MetadataReader] Reading histogram metadata from file: {filePath}");
+            Trace.WriteLine($"[Ktx2MetadataReader] Reading histogram metadata from file: {filePath}");
 
             if (!File.Exists(filePath)) {
-                logger.Warn($"File not found: {filePath}");
+                Trace.WriteLine($"[Ktx2MetadataReader] WARN: File not found: {filePath}");
                 return null;
             }
 
@@ -144,11 +144,11 @@ public static class Ktx2MetadataReader {
             // Read and verify KTX2 identifier (12 bytes)
             byte[] identifier = reader.ReadBytes(12);
             if (!identifier.SequenceEqual(KTX2_IDENTIFIER)) {
-                logger.Warn("Not a valid KTX2 file (identifier mismatch)");
+                Trace.WriteLine("[Ktx2MetadataReader] WARN: Not a valid KTX2 file (identifier mismatch)");
                 return null;
             }
 
-            logger.Info("[Ktx2MetadataReader] KTX2 identifier verified");
+            Trace.WriteLine("[Ktx2MetadataReader] KTX2 identifier verified");
 
             // Read KTX2 header fields (according to KTX2 spec)
             uint vkFormat = reader.ReadUInt32();           // +12: VkFormat
@@ -169,11 +169,11 @@ public static class Ktx2MetadataReader {
             uint kvdByteOffset = reader.ReadUInt32();      // +56: kvdByteOffset
             uint kvdByteLength = reader.ReadUInt32();      // +60: kvdByteLength
 
-            logger.Info($"[Ktx2MetadataReader] KVD: offset={kvdByteOffset}, length={kvdByteLength}");
+            Trace.WriteLine($"[Ktx2MetadataReader] KVD: offset={kvdByteOffset}, length={kvdByteLength}");
 
             // Check if KVD exists
             if (kvdByteLength == 0) {
-                logger.Info("[Ktx2MetadataReader] No Key-Value Data in this KTX2 file");
+                Trace.WriteLine("[Ktx2MetadataReader] No Key-Value Data in this KTX2 file");
                 return null;
             }
 
@@ -182,25 +182,25 @@ public static class Ktx2MetadataReader {
 
             // Read entire KVD section
             byte[] kvdData = reader.ReadBytes((int)kvdByteLength);
-            logger.Info($"[Ktx2MetadataReader] Read {kvdData.Length} bytes of KVD data");
+            Trace.WriteLine($"[Ktx2MetadataReader] Read {kvdData.Length} bytes of KVD data");
 
             // Parse KVD to find "pc.meta" key
             var metadata = ParseKeyValueData(kvdData);
             if (metadata != null) {
-                logger.Info($"[Ktx2MetadataReader] Found histogram metadata: {metadata.Scale.Length} channel(s)");
+                Trace.WriteLine($"[Ktx2MetadataReader] Found histogram metadata: {metadata.Scale.Length} channel(s)");
 
                 // Verify format correctness
                 if (metadata.Scale[0] > 1.0f) {
-                    logger.Error($"INVALID histogram format detected: scale={metadata.Scale[0]:F4} > 1.0");
-                    logger.Error("This file uses old/broken format. Please re-convert the texture with current version.");
-                    logger.Error("Expected: scale < 1.0 (GPU recovery values)");
+                    Trace.WriteLine($"[Ktx2MetadataReader] ERROR: INVALID histogram format detected: scale={metadata.Scale[0]:F4} > 1.0");
+                    Trace.WriteLine("[Ktx2MetadataReader] ERROR: This file uses old/broken format. Please re-convert the texture with current version.");
+                    Trace.WriteLine("[Ktx2MetadataReader] ERROR: Expected: scale < 1.0 (GPU recovery values)");
                     return null;
                 }
             }
 
             return metadata;
         } catch (Exception ex) {
-            logger.Error(ex, "Failed to read histogram metadata from KTX2 file");
+            Trace.WriteLine($"[Ktx2MetadataReader] ERROR: {ex.Message} - Failed to read histogram metadata from KTX2 file");
             return null;
         }
     }
@@ -219,7 +219,7 @@ public static class Ktx2MetadataReader {
             offset += 4;
 
             if (keyAndValueByteSize == 0 || offset + keyAndValueByteSize > kvdData.Length) {
-                logger.Warn($"Invalid keyAndValueByteSize: {keyAndValueByteSize}");
+                Trace.WriteLine($"[Ktx2MetadataReader] WARN: Invalid keyAndValueByteSize: {keyAndValueByteSize}");
                 break;
             }
 
@@ -231,7 +231,7 @@ public static class Ktx2MetadataReader {
             }
 
             if (keyEnd >= offset + keyAndValueByteSize) {
-                logger.Warn("No null terminator found for key");
+                Trace.WriteLine("[Ktx2MetadataReader] WARN: No null terminator found for key");
                 break;
             }
 
@@ -242,11 +242,11 @@ public static class Ktx2MetadataReader {
             int valueStart = offset + keyLength;
             int valueLength = (int)keyAndValueByteSize - keyLength;
 
-            logger.Info($"[Ktx2MetadataReader] KVD entry: key=\"{key}\", valueLength={valueLength}");
+            Trace.WriteLine($"[Ktx2MetadataReader] KVD entry: key=\"{key}\", valueLength={valueLength}");
 
             // Check if this is "pc.meta"
             if (key == "pc.meta") {
-                logger.Info($"[Ktx2MetadataReader] Found pc.meta key with {valueLength} bytes of TLV data");
+                Trace.WriteLine($"[Ktx2MetadataReader] Found pc.meta key with {valueLength} bytes of TLV data");
                 byte[] tlvData = new byte[valueLength];
                 Array.Copy(kvdData, valueStart, tlvData, 0, valueLength);
                 return ParseTLVHistogramData(tlvData);
@@ -258,7 +258,7 @@ public static class Ktx2MetadataReader {
             offset += padding;
         }
 
-        logger.Info("[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data");
+        Trace.WriteLine("[Ktx2MetadataReader] No pc.meta key found in KTX2 Key-Value Data");
         return null;
     }
 
@@ -277,7 +277,7 @@ public static class Ktx2MetadataReader {
             offset += 4;
 
             if (keyAndValueByteSize == 0 || offset + keyAndValueByteSize > kvdData.Length) {
-                logger.Warn($"Invalid keyAndValueByteSize: {keyAndValueByteSize}");
+                Trace.WriteLine($"[Ktx2MetadataReader] WARN: Invalid keyAndValueByteSize: {keyAndValueByteSize}");
                 break;
             }
 
@@ -289,7 +289,7 @@ public static class Ktx2MetadataReader {
             }
 
             if (keyEnd >= offset + keyAndValueByteSize) {
-                logger.Warn("No null terminator found for key");
+                Trace.WriteLine("[Ktx2MetadataReader] WARN: No null terminator found for key");
                 break;
             }
 
@@ -333,14 +333,14 @@ public static class Ktx2MetadataReader {
             offset += 4;
 
             if (offset + length > tlvData.Length) {
-                logger.Warn($"TLV block length {length} exceeds remaining data");
+                Trace.WriteLine($"[Ktx2MetadataReader] WARN: TLV block length {length} exceeds remaining data");
                 break;
             }
 
             byte[] payload = new byte[length];
             Array.Copy(tlvData, offset, payload, 0, length);
 
-            logger.Info($"[Ktx2MetadataReader] TLV block: type=0x{type:X2}, flags=0x{flags:X2}, length={length}");
+            Trace.WriteLine($"[Ktx2MetadataReader] TLV block: type=0x{type:X2}, flags=0x{flags:X2}, length={length}");
 
             // Parse histogram block
             if (type >= 0x01 && type <= 0x04) {
@@ -374,14 +374,14 @@ public static class Ktx2MetadataReader {
             offset += 4;
 
             if (offset + length > tlvData.Length) {
-                logger.Warn($"TLV block length {length} exceeds remaining data");
+                Trace.WriteLine($"[Ktx2MetadataReader] WARN: TLV block length {length} exceeds remaining data");
                 break;
             }
 
             byte[] payload = new byte[length];
             Array.Copy(tlvData, offset, payload, 0, length);
 
-            logger.Info($"[Ktx2MetadataReader] TLV block: type=0x{type:X2}, flags=0x{flags:X2}, length={length}");
+            Trace.WriteLine($"[Ktx2MetadataReader] TLV block: type=0x{type:X2}, flags=0x{flags:X2}, length={length}");
 
             // Check if this is a histogram block
             var histogramMeta = ParseHistogramTLV(type, flags, payload);
@@ -395,7 +395,7 @@ public static class Ktx2MetadataReader {
             offset += padding;
         }
 
-        logger.Debug("No histogram TLV block found");
+        Trace.WriteLine("[Ktx2MetadataReader] No histogram TLV block found");
         return null;
     }
 
@@ -410,15 +410,15 @@ public static class Ktx2MetadataReader {
 
         switch (type) {
             case 0x01: // HIST_SCALAR (AverageLuminance)
-                logger.Info("[Ktx2MetadataReader] Found HIST_SCALAR metadata");
+                Trace.WriteLine("[Ktx2MetadataReader] Found HIST_SCALAR metadata");
                 return ParseScalarHistogram(payload, quantization);
 
             case 0x03: // HIST_PER_CHANNEL_3 (RGB PerChannel)
-                logger.Info("[Ktx2MetadataReader] Found HIST_PER_CHANNEL_3 metadata");
+                Trace.WriteLine("[Ktx2MetadataReader] Found HIST_PER_CHANNEL_3 metadata");
                 return ParsePerChannelHistogram(payload, 3, quantization);
 
             default:
-                logger.Info($"[Ktx2MetadataReader] Unknown TLV type: 0x{type:X2} (not a histogram block)");
+                Trace.WriteLine($"[Ktx2MetadataReader] Unknown TLV type: 0x{type:X2} (not a histogram block)");
                 return null; // Not a histogram block
         }
     }
@@ -432,7 +432,7 @@ public static class Ktx2MetadataReader {
         if (quantization == 0) {
             // Half16: 2 bytes scale, 2 bytes offset
             if (payload.Length < 4) {
-                logger.Error($"HIST_SCALAR payload too short: {payload.Length} bytes");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: HIST_SCALAR payload too short: {payload.Length} bytes");
                 return HistogramMetadata.Identity();
             }
 
@@ -444,7 +444,7 @@ public static class Ktx2MetadataReader {
         } else if (quantization == 1) {
             // PackedUInt32: 2 bytes scale (uint16), 2 bytes offset (uint16)
             if (payload.Length < 4) {
-                logger.Error($"HIST_SCALAR payload too short: {payload.Length} bytes");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: HIST_SCALAR payload too short: {payload.Length} bytes");
                 return HistogramMetadata.Identity();
             }
 
@@ -457,7 +457,7 @@ public static class Ktx2MetadataReader {
         } else {
             // Float32: 4 bytes scale, 4 bytes offset
             if (payload.Length < 8) {
-                logger.Error($"HIST_SCALAR payload too short: {payload.Length} bytes");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: HIST_SCALAR payload too short: {payload.Length} bytes");
                 return HistogramMetadata.Identity();
             }
 
@@ -482,7 +482,7 @@ public static class Ktx2MetadataReader {
             // Half16: channelCount * 2 bytes for scale, channelCount * 2 bytes for offset
             int expectedSize = channelCount * 4;
             if (payload.Length < expectedSize) {
-                logger.Error($"HIST_PER_CHANNEL payload too short: {payload.Length} < {expectedSize}");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: HIST_PER_CHANNEL payload too short: {payload.Length} < {expectedSize}");
                 return HistogramMetadata.Identity();
             }
 
@@ -497,7 +497,7 @@ public static class Ktx2MetadataReader {
             // PackedUInt32: channelCount * 4 bytes (each uint32 contains scale and offset)
             int expectedSize = channelCount * 4;
             if (payload.Length < expectedSize) {
-                logger.Error($"HIST_PER_CHANNEL payload too short: {payload.Length} < {expectedSize}");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: HIST_PER_CHANNEL payload too short: {payload.Length} < {expectedSize}");
                 return HistogramMetadata.Identity();
             }
 
@@ -513,7 +513,7 @@ public static class Ktx2MetadataReader {
             // Float32: channelCount * 4 bytes for scale, channelCount * 4 bytes for offset
             int expectedSize = channelCount * 8;
             if (payload.Length < expectedSize) {
-                logger.Error($"HIST_PER_CHANNEL payload too short: {payload.Length} < {expectedSize}");
+                Trace.WriteLine($"[Ktx2MetadataReader] ERROR: HIST_PER_CHANNEL payload too short: {payload.Length} < {expectedSize}");
                 return HistogramMetadata.Identity();
             }
 
@@ -548,7 +548,7 @@ public static class Ktx2MetadataReader {
         // Extract layout from flags [2:0]
         NormalLayout layout = (NormalLayout)(flags & 0x07);
 
-        logger.Info($"[Ktx2MetadataReader] Found NORMAL_LAYOUT: {layout}");
+        Trace.WriteLine($"[Ktx2MetadataReader] Found NORMAL_LAYOUT: {layout}");
 
         if (layout == NormalLayout.NONE) {
             return null; // Not a normal map

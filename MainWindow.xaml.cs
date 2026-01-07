@@ -224,6 +224,20 @@ namespace AssetProcessor {
         }
 
         /// <summary>
+        /// ID текущего проекта для хранения настроек ресурсов
+        /// </summary>
+        public int CurrentProjectId {
+            get {
+                if (ProjectsComboBox?.SelectedItem is KeyValuePair<string, string> selectedProject) {
+                    if (int.TryParse(selectedProject.Key, out int projectId)) {
+                        return projectId;
+                    }
+                }
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// Имя выбранной ORM подгруппы для визуального выделения в DataGrid
         /// </summary>
         public string? SelectedORMSubGroupName {

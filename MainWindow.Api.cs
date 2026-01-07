@@ -335,8 +335,14 @@ namespace AssetProcessor {
                         GlossSource = glossTexture,
                         MetallicSource = metallicTexture,
                         Status = "Converted", // Already packed
-                        Extension = ".ktx2"
+                        Extension = ".ktx2",
+                        // Settings persistence
+                        ProjectId = CurrentProjectId,
+                        SettingsKey = $"orm_{baseName}_{fileName}"
                     };
+
+                    // Load persisted settings (compression settings, etc.)
+                    ormTexture.LoadSettings();
 
                     // Устанавливаем SubGroupName для source текстур
                     if (aoTexture != null) {
@@ -504,8 +510,16 @@ namespace AssetProcessor {
                         Resolution = resolution,
                         Status = "Not Packed",
                         Extension = ".ktx2",
-                        TextureType = $"ORM ({packingMode})"
+                        TextureType = $"ORM ({packingMode})",
+                        // Settings persistence
+                        ProjectId = CurrentProjectId,
+                        SettingsKey = $"orm_{groupName}_{ormName}"
                     };
+
+                    // Load persisted settings if available
+                    ormTexture.LoadSettings();
+                    // Restore source texture references by ID (in case saved settings have different sources)
+                    ormTexture.RestoreSources(viewModel.Textures.OfType<TextureResource>().ToList());
 
                     // Устанавливаем SubGroupName и ParentORMTexture для ORM компонентов
                     // Заголовок подгруппы кликабельный - получаем ORM через ParentORMTexture

@@ -205,7 +205,7 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
-        /// Сохраняет настройки в ORM текстуру
+        /// Сохраняет настройки в ORM текстуру и персистит в хранилище
         /// </summary>
         private void SaveORMSettings() {
             // CRITICAL: Skip saving during ComboBox initialization to prevent overwriting
@@ -225,6 +225,14 @@ namespace AssetProcessor.Controls {
                 ToksvigMinMipLevelSlider == null || ToksvigEnergyPreservingCheckBox == null ||
                 ToksvigSmoothVarianceCheckBox == null) return;
             if (currentORMTexture == null) return;
+
+            // Set project ID and settings key if not set
+            if (currentORMTexture.ProjectId == 0 && mainWindow != null) {
+                currentORMTexture.ProjectId = mainWindow.CurrentProjectId;
+            }
+            if (string.IsNullOrEmpty(currentORMTexture.SettingsKey)) {
+                currentORMTexture.SettingsKey = $"orm_{currentORMTexture.GetHashCode()}";
+            }
 
             // Sources
             currentORMTexture.AOSource = AOSourceComboBox.SelectedItem as TextureResource;
@@ -295,6 +303,15 @@ namespace AssetProcessor.Controls {
             if (MetallicFilterTypeComboBox.SelectedItem != null) {
                 currentORMTexture.MetallicFilterType = (FilterType)MetallicFilterTypeComboBox.SelectedItem;
             }
+
+            // Persist settings to storage (fire-and-forget to avoid blocking UI)
+            _ = Task.Run(() => {
+                try {
+                    currentORMTexture.SaveSettings();
+                } catch (Exception ex) {
+                    System.Diagnostics.Trace.WriteLine($"[ORMPackingPanel] SaveSettings failed: {ex.Message}");
+                }
+            });
         }
 
         /// <summary>

@@ -1,3 +1,4 @@
+using AssetProcessor.Services;
 using AssetProcessor.TextureConversion.Core;
 using System.Collections.Generic;
 
@@ -464,6 +465,163 @@ namespace AssetProcessor.Resources {
             // Виртуальная текстура имеет специальное имя
             Name = "[ORM Texture - Not Packed]";
             TextureType = "ORM (Virtual)";
+        }
+
+        /// <summary>
+        /// ID проекта для сохранения настроек
+        /// </summary>
+        public int ProjectId { get; set; }
+
+        /// <summary>
+        /// Уникальный ключ для хранения настроек (на основе материала или имени)
+        /// </summary>
+        public string SettingsKey { get; set; } = "";
+
+        /// <summary>
+        /// Загрузить настройки из хранилища
+        /// </summary>
+        public void LoadSettings() {
+            if (ProjectId == 0 || string.IsNullOrEmpty(SettingsKey)) return;
+
+            var settings = ResourceSettingsService.Instance.GetORMTextureSettings(ProjectId, SettingsKey);
+            if (settings == null) return;
+
+            // Packing mode
+            if (Enum.TryParse<ChannelPackingMode>(settings.PackingMode, out var mode)) {
+                packingMode = mode;
+            }
+
+            // AO settings
+            if (Enum.TryParse<AOProcessingMode>(settings.AOProcessingMode, out var aoMode)) {
+                aoProcessingMode = aoMode;
+            }
+            aoBias = settings.AOBias;
+            aoPercentile = settings.AOPercentile;
+            if (Enum.TryParse<FilterType>(settings.AOFilterType, out var aoFilter)) {
+                aoFilterType = aoFilter;
+            }
+
+            // Gloss settings
+            glossToksvigEnabled = settings.GlossToksvigEnabled;
+            glossToksvigPower = settings.GlossToksvigPower;
+            if (Enum.TryParse<ToksvigCalculationMode>(settings.GlossToksvigCalculationMode, out var toksvigMode)) {
+                glossToksvigCalculationMode = toksvigMode;
+            }
+            glossToksvigMinMipLevel = settings.GlossToksvigMinMipLevel;
+            glossToksvigEnergyPreserving = settings.GlossToksvigEnergyPreserving;
+            glossToksvigSmoothVariance = settings.GlossToksvigSmoothVariance;
+            if (Enum.TryParse<FilterType>(settings.GlossFilterType, out var glossFilter)) {
+                glossFilterType = glossFilter;
+            }
+
+            // Metallic settings
+            if (Enum.TryParse<AOProcessingMode>(settings.MetallicProcessingMode, out var metalMode)) {
+                metallicProcessingMode = metalMode;
+            }
+            metallicBias = settings.MetallicBias;
+            metallicPercentile = settings.MetallicPercentile;
+            if (Enum.TryParse<FilterType>(settings.MetallicFilterType, out var metalFilter)) {
+                metallicFilterType = metalFilter;
+            }
+
+            // Compression settings
+            if (Enum.TryParse<CompressionFormat>(settings.CompressionFormat, out var format)) {
+                compressionFormat = format;
+            }
+            compressLevel = settings.CompressLevel;
+            qualityLevel = settings.QualityLevel;
+            uastcQuality = settings.UASTCQuality;
+            enableRDO = settings.EnableRDO;
+            rdoLambda = settings.RDOLambda;
+            perceptual = settings.Perceptual;
+            enableSupercompression = settings.EnableSupercompression;
+            supercompressionLevel = settings.SupercompressionLevel;
+
+            // Status
+            if (!string.IsNullOrEmpty(settings.Status)) {
+                Status = settings.Status;
+            }
+            if (!string.IsNullOrEmpty(settings.OutputPath)) {
+                Path = settings.OutputPath;
+            }
+        }
+
+        /// <summary>
+        /// Сохранить настройки в хранилище
+        /// </summary>
+        public void SaveSettings() {
+            if (ProjectId == 0 || string.IsNullOrEmpty(SettingsKey)) return;
+
+            var settings = new ORMTextureSettings {
+                PackingMode = packingMode.ToString(),
+
+                // Source IDs
+                AOSourceId = aoSource?.ID,
+                GlossSourceId = glossSource?.ID,
+                MetallicSourceId = metallicSource?.ID,
+                HeightSourceId = heightSource?.ID,
+
+                // AO settings
+                AOProcessingMode = aoProcessingMode.ToString(),
+                AOBias = aoBias,
+                AOPercentile = aoPercentile,
+                AOFilterType = aoFilterType.ToString(),
+
+                // Gloss settings
+                GlossToksvigEnabled = glossToksvigEnabled,
+                GlossToksvigPower = glossToksvigPower,
+                GlossToksvigCalculationMode = glossToksvigCalculationMode.ToString(),
+                GlossToksvigMinMipLevel = glossToksvigMinMipLevel,
+                GlossToksvigEnergyPreserving = glossToksvigEnergyPreserving,
+                GlossToksvigSmoothVariance = glossToksvigSmoothVariance,
+                GlossFilterType = glossFilterType.ToString(),
+
+                // Metallic settings
+                MetallicProcessingMode = metallicProcessingMode.ToString(),
+                MetallicBias = metallicBias,
+                MetallicPercentile = metallicPercentile,
+                MetallicFilterType = metallicFilterType.ToString(),
+
+                // Compression settings
+                CompressionFormat = compressionFormat.ToString(),
+                CompressLevel = compressLevel,
+                QualityLevel = qualityLevel,
+                UASTCQuality = uastcQuality,
+                EnableRDO = enableRDO,
+                RDOLambda = rdoLambda,
+                Perceptual = perceptual,
+                EnableSupercompression = enableSupercompression,
+                SupercompressionLevel = supercompressionLevel,
+
+                // Status
+                Status = Status,
+                OutputPath = Path
+            };
+
+            ResourceSettingsService.Instance.SaveORMTextureSettings(ProjectId, SettingsKey, settings);
+        }
+
+        /// <summary>
+        /// Восстановить источники текстур по сохраненным ID
+        /// </summary>
+        public void RestoreSources(List<TextureResource> availableTextures) {
+            if (ProjectId == 0 || string.IsNullOrEmpty(SettingsKey)) return;
+
+            var settings = ResourceSettingsService.Instance.GetORMTextureSettings(ProjectId, SettingsKey);
+            if (settings == null) return;
+
+            if (settings.AOSourceId.HasValue) {
+                aoSource = availableTextures.Find(t => t.ID == settings.AOSourceId.Value);
+            }
+            if (settings.GlossSourceId.HasValue) {
+                glossSource = availableTextures.Find(t => t.ID == settings.GlossSourceId.Value);
+            }
+            if (settings.MetallicSourceId.HasValue) {
+                metallicSource = availableTextures.Find(t => t.ID == settings.MetallicSourceId.Value);
+            }
+            if (settings.HeightSourceId.HasValue) {
+                heightSource = availableTextures.Find(t => t.ID == settings.HeightSourceId.Value);
+            }
         }
     }
 }

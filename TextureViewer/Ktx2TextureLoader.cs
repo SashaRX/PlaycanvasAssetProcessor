@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using NLog;
 
 namespace AssetProcessor.TextureViewer;
 
 /// <summary>
 /// Loads KTX2 textures via libktx and transcodes Basis Universal to RGBA8.
+/// NOTE: Uses Trace.WriteLine instead of NLog to avoid deadlocks when called from Task.Run
 /// </summary>
 public static class Ktx2TextureLoader {
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
     // Lock object for libktx calls - libktx may not be fully thread-safe
     private static readonly object _libktxLock = new object();
@@ -43,7 +43,7 @@ public static class Ktx2TextureLoader {
         // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
         DiagLog("[KTX2LOADER] Loading ktx.dll...");
         if (!LibKtxNative.LoadKtxDll()) {
-            logger.Error("[KTX2LOADER] ERROR: Failed to load ktx.dll");
+            Trace.WriteLine("[KTX2LOADER] ERROR: Failed to load ktx.dll");
             throw new DllNotFoundException("Unable to load ktx.dll");
         }
         DiagLog("[KTX2LOADER] ktx.dll loaded");
@@ -101,7 +101,7 @@ public static class Ktx2TextureLoader {
             try {
                 if (Path.IsPathRooted(path)) {
                     if (File.Exists(path)) {
-                        logger.Debug($"Found ktx.exe at: {path}");
+                        Trace.WriteLine($"[KTX2LOADER] Found ktx.exe at: {path}");
                         return path;
                     }
                 } else {
@@ -122,7 +122,7 @@ public static class Ktx2TextureLoader {
                         process.StandardError.ReadToEnd();
                         process.WaitForExit();
                         if (process.ExitCode == 0 || process.ExitCode == 1) { // Some versions return 1 for --version
-                            logger.Debug($"Found ktx via PATH: {path}");
+                            Trace.WriteLine($"[KTX2LOADER] Found ktx via PATH: {path}");
                             return path;
                         }
                     }
@@ -136,7 +136,7 @@ public static class Ktx2TextureLoader {
     }
 
     private static TextureData LoadViaKtxExtract(string filePath) {
-        logger.Debug($"Loading KTX2 via ktx extract tool: {filePath}");
+        Trace.WriteLine($"[KTX2LOADER] Loading KTX2 via ktx extract tool: {filePath}");
 
         // Create temp directory
         string tempDir = Path.Combine(Path.GetTempPath(), "ktx_extract_" + Guid.NewGuid().ToString("N"));
@@ -158,7 +158,7 @@ public static class Ktx2TextureLoader {
                 CreateNoWindow = true
             };
 
-            logger.Debug($"Running: ktx extract --level all --transcode rgba8 \"{filePath}\" \"{outputBase}\"");
+            Trace.WriteLine($"[KTX2LOADER] Running: ktx extract --level all --transcode rgba8 \"{filePath}\" \"{outputBase}\"");
 
             using var process = System.Diagnostics.Process.Start(psi);
             if (process == null) {
@@ -184,8 +184,8 @@ public static class Ktx2TextureLoader {
             string stderr = stderrBuilder.ToString();
 
             if (process.ExitCode != 0) {
-                logger.Error($"ktx extract failed with exit code {process.ExitCode}");
-                if (!string.IsNullOrEmpty(stderr)) logger.Error($"stderr: {stderr}");
+                Trace.WriteLine($"[KTX2LOADER] ERROR: ktx extract failed with exit code {process.ExitCode}");
+                if (!string.IsNullOrEmpty(stderr)) Trace.WriteLine($"[KTX2LOADER] ERROR: stderr: {stderr}");
                 throw new Exception($"ktx extract failed with exit code {process.ExitCode}");
             }
 
@@ -198,7 +198,7 @@ public static class Ktx2TextureLoader {
                 throw new Exception("No PNG files extracted by ktx");
             }
 
-            logger.Debug($"Found {pngFiles.Count} extracted PNG files");
+            Trace.WriteLine($"[KTX2LOADER] Found {pngFiles.Count} extracted PNG files");
 
             // Load first PNG as base mip
             var baseImage = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(pngFiles[0]);
@@ -261,11 +261,11 @@ public static class Ktx2TextureLoader {
     /// Load a KTX2 texture from a byte array.
     /// </summary>
     public static TextureData LoadFromMemory(byte[] data) {
-        logger.Debug($"Loading KTX2 texture from memory ({data.Length} bytes)");
+        Trace.WriteLine($"[KTX2LOADER] Loading KTX2 texture from memory ({data.Length} bytes)");
 
         // КРИТИЧНО: Загружаем ktx.dll перед использованием P/Invoke
         if (!LibKtxNative.LoadKtxDll()) {
-            logger.Error("Failed to load ktx.dll. Cannot load KTX2 files.");
+            Trace.WriteLine("[KTX2LOADER] ERROR: Failed to load ktx.dll. Cannot load KTX2 files.");
             throw new DllNotFoundException("Unable to load ktx.dll. Please ensure KTX-Software is installed and ktx.dll is available.");
         }
 
@@ -452,14 +452,14 @@ public static class Ktx2TextureLoader {
             bool matches = mipIsCompressed == primaryIsCompressed;
 
             if (!matches) {
-                logger.Warn($"Discarding mip {mip.Level} ({mip.Width}x{mip.Height}): format mismatch (compressed={mipIsCompressed}, expected={primaryIsCompressed})");
+                Trace.WriteLine($"[KTX2LOADER] WARN: Discarding mip {mip.Level} ({mip.Width}x{mip.Height}): format mismatch (compressed={mipIsCompressed}, expected={primaryIsCompressed})");
             }
 
             return matches;
         }).ToList();
 
         if (mipLevels.Count < originalMipCount) {
-            logger.Debug($"Filtered mips: kept {mipLevels.Count} / {originalMipCount} (discarded {originalMipCount - mipLevels.Count} with mismatched format)");
+            Trace.WriteLine($"[KTX2LOADER] Filtered mips: kept {mipLevels.Count} / {originalMipCount} (discarded {originalMipCount - mipLevels.Count} with mismatched format)");
         }
 
         // Use real dimensions from first mip level (iterator gives correct values)
@@ -492,7 +492,7 @@ public static class Ktx2TextureLoader {
                     detectedFormat = "BC3" + formatSuffix;
                 } else {
                     detectedFormat = $"COMPRESSED_UNKNOWN({bytesPerPixel:F2} bytes/pixel)";
-                    logger.Warn($"Unknown compressed format: {bytesPerPixel:F2} bytes/pixel");
+                    Trace.WriteLine($"[KTX2LOADER] WARN: Unknown compressed format: {bytesPerPixel:F2} bytes/pixel");
                 }
             } else {
                 // Uncompressed RGBA8
@@ -529,7 +529,7 @@ public static class Ktx2TextureLoader {
     /// Load KTX2 via basisu CLI decoder (fallback when libktx transcode doesn't work).
     /// </summary>
     private static TextureData LoadViaBasisuCli(string filePath) {
-        logger.Debug($"Loading KTX2 via basisu CLI: {filePath}");
+        Trace.WriteLine($"[KTX2LOADER] Loading KTX2 via basisu CLI: {filePath}");
 
         // Create temp directory for unpacked PNGs
         string tempDir = Path.Combine(Path.GetTempPath(), "basisu_unpack_" + Guid.NewGuid().ToString("N"));
@@ -581,8 +581,8 @@ public static class Ktx2TextureLoader {
             string stderr = stderrBuilder.ToString();
 
             if (process.ExitCode != 0) {
-                logger.Error($"basisu failed with exit code {process.ExitCode}");
-                if (!string.IsNullOrEmpty(stderr)) logger.Error($"stderr: {stderr}");
+                Trace.WriteLine($"[KTX2LOADER] ERROR: basisu failed with exit code {process.ExitCode}");
+                if (!string.IsNullOrEmpty(stderr)) Trace.WriteLine($"[KTX2LOADER] ERROR: stderr: {stderr}");
                 throw new Exception($"basisu -unpack failed with exit code {process.ExitCode}");
             }
 
@@ -702,17 +702,17 @@ public static class Ktx2TextureLoader {
                     process.StandardError.ReadToEnd();
                     process.WaitForExit();
                     if (process.ExitCode == 0 || process.ExitCode == 1) {
-                        logger.Debug($"Found basisu: {path}");
+                        Trace.WriteLine($"[KTX2LOADER] Found basisu: {path}");
                         return path;
                     }
                 }
             } catch (Exception ex) {
-                logger.Debug($"Failed to execute {path}: {ex.Message}");
+                Trace.WriteLine($"[KTX2LOADER] Failed to execute {path}: {ex.Message}");
                 // Continue searching
             }
         }
 
-        logger.Warn("basisu.exe not found in any search path");
+        Trace.WriteLine("[KTX2LOADER] WARN: basisu.exe not found in any search path");
         return null;
     }
 }

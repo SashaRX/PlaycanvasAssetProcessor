@@ -69,10 +69,5 @@ namespace AssetProcessor.Resources {
         public ColorChannel? MetalnessColorChannel { get; set; }
         public ColorChannel? GlossinessColorChannel { get; set; }
         public ColorChannel? AOChannel { get; set; }
-
-        /// <summary>
-        /// Настройки ORM упаковки текстур для экспорта
-        /// </summary>
-        public MaterialORMSettings ORMSettings { get; set; } = new();
     }
 }

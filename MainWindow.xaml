@@ -39,6 +39,21 @@
 
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
 
+        <!-- OxyPlot tracker (tooltip) template with theme-aware colors -->
+        <ControlTemplate x:Key="HistogramTrackerTemplate">
+            <oxy:TrackerControl Position="{Binding Position}"
+                                Background="{DynamicResource ThemeTrackerBackground}"
+                                BorderBrush="{DynamicResource ThemeTrackerBorder}"
+                                BorderThickness="1"
+                                LineExtents="{Binding PlotModel.PlotArea}">
+                <oxy:TrackerControl.Content>
+                    <TextBlock Text="{Binding}"
+                               Foreground="{DynamicResource ThemeTrackerForeground}"
+                               Margin="6,4"/>
+                </oxy:TrackerControl.Content>
+            </oxy:TrackerControl>
+        </ControlTemplate>
+
         <!-- Стиль для кликабельных гиперссылок текстур в материалах -->
         <Style x:Key="TextureHyperlinkStyle" TargetType="Hyperlink">
             <Setter Property="FontSize" Value="12"/>
@@ -920,7 +935,7 @@
                             <StackPanel Orientation="Vertical">
                                 <!-- Histogram Plot -->
                                 <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,0,0,4" Height="128">
-                                    <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" />
+                                    <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" DefaultTrackerTemplate="{StaticResource HistogramTrackerTemplate}" />
                                 </Border>
 
                                 <!-- Histogram Statistics -->

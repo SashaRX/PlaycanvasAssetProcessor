@@ -211,7 +211,7 @@ namespace AssetProcessor {
                 // Показываем LOD UI
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: Showing LOD UI\n");
                 ShowGlbLodUI();
-                PopulateLodDataGrid();
+                UpdateLodSliderLimits();
                 File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: LOD UI shown\n");
 
                 // Создаём SharpGlbLoader если его еще нет
@@ -919,23 +919,21 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Заполняет DataGrid информацией о LOD уровнях
+        /// Обновляет слайдер LOD на основе доступных уровней
         /// </summary>
-        private void PopulateLodDataGrid() {
+        private void UpdateLodSliderLimits() {
             Dispatcher.Invoke(() => {
-                _lodDisplayItems.Clear();
-
-                foreach (var kvp in _currentLodInfos.OrderBy(x => x.Key)) {
-                    var lodInfo = kvp.Value;
-                    _lodDisplayItems.Add(new LodDisplayInfo {
-                        Level = lodInfo.Level,
-                        TriangleCount = lodInfo.TriangleCount,
-                        VertexCount = lodInfo.VertexCount,
-                        FileSizeFormatted = lodInfo.FileSizeFormatted
-                    });
+                // Определяем максимальный доступный LOD
+                int maxLod = 0;
+                for (int i = 3; i >= 0; i--) {
+                    if (_currentLodInfos.ContainsKey((LodLevel)i)) {
+                        maxLod = i;
+                        break;
+                    }
                 }
 
-                LodInformationGrid.ItemsSource = _lodDisplayItems;
+                LodSlider.Maximum = maxLod;
+                LodSlider.IsEnabled = maxLod > 0;
             });
         }
 
@@ -960,14 +958,8 @@ namespace AssetProcessor {
                     ModelVerticesTextBlock.Text = $"Vertices: {lodInfo.VertexCount:N0}";
                 }
 
-                // Обновляем кнопки (подсвечиваем активную)
-                UpdateLodButtonStates(lodLevel);
-
-                // Обновляем выделение в DataGrid
-                var selectedItem = _lodDisplayItems.FirstOrDefault(x => x.Level == lodLevel);
-                if (selectedItem != null) {
-                    LodInformationGrid.SelectedItem = selectedItem;
-                }
+                // Обновляем состояние слайдера LOD
+                UpdateLodSliderState(lodLevel);
 
                 LodLogger.Info($"LOD {lodLevel} selected successfully");
 
@@ -977,41 +969,53 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Обновляет состояние кнопок LOD (подсвечивает активную)
+        /// Обновляет состояние слайдера LOD и информационного текста
         /// </summary>
-        private void UpdateLodButtonStates(LodLevel currentLod) {
-            // Обновляем стили кнопок
-            LodButton0.FontWeight = currentLod == LodLevel.LOD0 ? FontWeights.Bold : FontWeights.Normal;
-            LodButton1.FontWeight = currentLod == LodLevel.LOD1 ? FontWeights.Bold : FontWeights.Normal;
-            LodButton2.FontWeight = currentLod == LodLevel.LOD2 ? FontWeights.Bold : FontWeights.Normal;
-            LodButton3.FontWeight = currentLod == LodLevel.LOD3 ? FontWeights.Bold : FontWeights.Normal;
-
-            // Включаем/выключаем кнопки в зависимости от доступности LOD
-            LodButton0.IsEnabled = _currentLodInfos.ContainsKey(LodLevel.LOD0);
-            LodButton1.IsEnabled = _currentLodInfos.ContainsKey(LodLevel.LOD1);
-            LodButton2.IsEnabled = _currentLodInfos.ContainsKey(LodLevel.LOD2);
-            LodButton3.IsEnabled = _currentLodInfos.ContainsKey(LodLevel.LOD3);
-        }
-
-        /// <summary>
-        /// Обработчик клика по кнопкам LOD
-        /// </summary>
-        private void LodButton_Click(object sender, RoutedEventArgs e) {
-            if (sender is Button button && button.Tag is string tagStr) {
-                if (int.TryParse(tagStr, out int lodIndex)) {
-                    var lodLevel = (LodLevel)lodIndex;
-                    SelectLod(lodLevel);
+        private void UpdateLodSliderState(LodLevel currentLod) {
+            // Определяем максимальный доступный LOD
+            int maxLod = 0;
+            for (int i = 3; i >= 0; i--) {
+                if (_currentLodInfos.ContainsKey((LodLevel)i)) {
+                    maxLod = i;
+                    break;
                 }
             }
+
+            // Обновляем слайдер
+            LodSlider.Maximum = maxLod;
+            LodSlider.Value = (int)currentLod;
+
+            // Обновляем текст LOD
+            LodSliderValueText.Text = $"LOD{(int)currentLod}";
+
+            // Обновляем информацию о текущем LOD
+            if (_currentLodInfos.TryGetValue(currentLod, out var lodInfo)) {
+                LodInfoText.Text = $"△ {lodInfo.TriangleCount:N0}  |  {lodInfo.FileSize / 1024.0:F0} KB";
+            } else {
+                LodInfoText.Text = "";
+            }
         }
 
         /// <summary>
-        /// Обработчик выбора строки в LOD Information DataGrid
+        /// Обработчик изменения значения слайдера LOD
         /// </summary>
-        private void LodInformationGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (LodInformationGrid.SelectedItem is LodDisplayInfo selectedLod) {
-                SelectLod(selectedLod.Level);
+        private void LodSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            // Проверяем, что слайдер инициализирован
+            if (LodSlider == null || LodSliderValueText == null) return;
+
+            int lodIndex = (int)e.NewValue;
+            var lodLevel = (LodLevel)lodIndex;
+
+            // Обновляем текст
+            LodSliderValueText.Text = $"LOD{lodIndex}";
+
+            // Обновляем информацию о LOD
+            if (_currentLodInfos != null && _currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
+                LodInfoText.Text = $"△ {lodInfo.TriangleCount:N0}  |  {lodInfo.FileSize / 1024.0:F0} KB";
             }
+
+            // Загружаем выбранный LOD
+            SelectLod(lodLevel);
         }
 
         /// <summary>
@@ -1056,11 +1060,8 @@ namespace AssetProcessor {
                 SourceFbxButton.FontWeight = showFbx ? FontWeights.Bold : FontWeights.Normal;
                 SourceGlbButton.FontWeight = showFbx ? FontWeights.Normal : FontWeights.Bold;
 
-                // Включаем/выключаем LOD кнопки
-                LodButton0.IsEnabled = !showFbx;
-                LodButton1.IsEnabled = !showFbx && _currentLodInfos.ContainsKey(LodLevel.LOD1);
-                LodButton2.IsEnabled = !showFbx && _currentLodInfos.ContainsKey(LodLevel.LOD2);
-                LodButton3.IsEnabled = !showFbx && _currentLodInfos.ContainsKey(LodLevel.LOD3);
+                // Включаем/выключаем LOD слайдер
+                LodSlider.IsEnabled = !showFbx;
 
                 if (showFbx) {
                     // Показываем FBX модель

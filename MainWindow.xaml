@@ -37,6 +37,45 @@
             <Setter Property="FontSize" Value="11"/>
         </Style>
 
+        <!-- CheckBox style for dark backgrounds (Model/Texture info panels) -->
+        <Style x:Key="DarkBackgroundCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="CheckBorder"
+                                    Width="12" Height="12"
+                                    BorderBrush="#FFAAAAAA"
+                                    BorderThickness="1"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="2"
+                                    Margin="0,0,4,0">
+                                <Path x:Name="CheckMark"
+                                      Visibility="Collapsed"
+                                      Stroke="White"
+                                      StrokeThickness="2"
+                                      Data="M 2,6 L 5,9 L 10,2"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="CheckBorder" Property="Background" Value="#FF4CAF50"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#FF4CAF50"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
 
         <!-- OxyPlot tracker (tooltip) template with theme-aware colors -->
@@ -149,7 +188,7 @@
                            Width="320"/>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="Gray" FontSize="10" MinWidth="200" TextAlignment="Right"/>
+                <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="10" MinWidth="200" TextAlignment="Right"/>
             </StatusBarItem>
         </StatusBar>
 
@@ -488,6 +527,18 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Upload" Width="70" MinWidth="50" SortMemberPath="UploadStatus">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding UploadStatusOrProgress}"
+                                                       Foreground="{Binding UploadStatusColor}"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       ToolTip="{Binding RemoteUrl}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                             <DataGrid.GroupStyle>
                                 <!-- Первый уровень: GroupName (основная группа) -->
@@ -777,6 +828,10 @@
                     </DataGrid>
                     </Grid>
                 </TabItem>
+                <TabItem x:Name="ServerTabItem" Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"
+                         Background="#FF9C27B0">
+                    <controls:ServerAssetsPanel x:Name="ServerAssetsPanel"/>
+                </TabItem>
                 <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
                     <controls:LogViewerControl x:Name="LogViewer"/>
                 </TabItem>
@@ -1014,17 +1069,17 @@
                 <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="800" />
+                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="250" MaxHeight="800" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" MinHeight="150" />
                         </Grid.RowDefinitions>
 
                         <!-- Model Preview Section -->
                         <Expander Grid.Row="0" Header="Model Preview" IsExpanded="True" Style="{StaticResource RightPanelExpanderStyle}">
-                            <Grid>
+                            <Grid MinHeight="200">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition x:Name="ModelViewportRow" Height="300" />
+                                    <RowDefinition x:Name="ModelViewportRow" Height="300" MinHeight="100" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
@@ -1056,23 +1111,17 @@
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                 <CheckBox x:Name="ShowPivotCheckBox"
                                                          Content="Pivot"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
+                                                         Style="{StaticResource DarkBackgroundCheckBoxStyle}"
                                                          Checked="ShowPivotCheckBox_Changed"
                                                          Unchecked="ShowPivotCheckBox_Changed" />
                                                 <CheckBox x:Name="ShowWireframeCheckBox"
                                                          Content="Wireframe"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
+                                                         Style="{StaticResource DarkBackgroundCheckBoxStyle}"
                                                          Checked="ShowWireframeCheckBox_Changed"
                                                          Unchecked="ShowWireframeCheckBox_Changed" />
                                                 <CheckBox x:Name="ShowHumanCheckBox"
                                                          Content="1.8m"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
+                                                         Style="{StaticResource DarkBackgroundCheckBoxStyle}"
                                                          Checked="ShowHumanCheckBox_Changed"
                                                          Unchecked="ShowHumanCheckBox_Changed"
                                                          IsChecked="True" />
@@ -1168,96 +1217,37 @@
 
                                         <Separator Width="10" Background="Transparent" />
 
+                                        <!-- LOD Slider -->
                                         <TextBlock Text="LOD:"
                                                   Foreground="{DynamicResource ThemeForeground}"
                                                   FontSize="10"
                                                   VerticalAlignment="Center"
                                                   Margin="0,0,6,0" />
-                                        <Button x:Name="LodButton0"
-                                               Content="LOD0"
-                                               Click="LodButton_Click"
-                                               Tag="0"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
-                                        <Button x:Name="LodButton1"
-                                               Content="LOD1"
-                                               Click="LodButton_Click"
-                                               Tag="1"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
-                                        <Button x:Name="LodButton2"
-                                               Content="LOD2"
-                                               Click="LodButton_Click"
-                                               Tag="2"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
-                                        <Button x:Name="LodButton3"
-                                               Content="LOD3"
-                                               Click="LodButton_Click"
-                                               Tag="3"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
+                                        <Slider x:Name="LodSlider"
+                                               Minimum="0"
+                                               Maximum="3"
+                                               Value="0"
+                                               TickFrequency="1"
+                                               IsSnapToTickEnabled="True"
+                                               Width="100"
+                                               VerticalAlignment="Center"
+                                               ValueChanged="LodSlider_ValueChanged"
+                                               ToolTip="Select LOD level" />
+                                        <TextBlock x:Name="LodSliderValueText"
+                                                  Text="LOD0"
+                                                  Foreground="{DynamicResource ThemeForeground}"
+                                                  FontSize="10"
+                                                  FontWeight="SemiBold"
+                                                  VerticalAlignment="Center"
+                                                  Margin="6,0,0,0"
+                                                  MinWidth="35" />
+                                        <TextBlock x:Name="LodInfoText"
+                                                  Text=""
+                                                  Foreground="{DynamicResource ThemeForegroundDim}"
+                                                  FontSize="9"
+                                                  VerticalAlignment="Center"
+                                                  Margin="8,0,0,0" />
                                     </StackPanel>
-
-                                    <!-- LOD Information DataGrid -->
-                                    <Border Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" HorizontalAlignment="Left">
-                                        <DataGrid x:Name="LodInformationGrid"
-                                                 AutoGenerateColumns="False"
-                                                 HeadersVisibility="Column"
-                                                 CanUserAddRows="False"
-                                                 CanUserDeleteRows="False"
-                                                 CanUserReorderColumns="False"
-                                                 CanUserResizeRows="False"
-                                                 IsReadOnly="True"
-                                                 SelectionMode="Single"
-                                                 GridLinesVisibility="Horizontal"
-                                                 Background="Transparent"
-                                                 RowBackground="#44FFFFFF"
-                                                 AlternatingRowBackground="#22FFFFFF"
-                                                 FontSize="9"
-                                                 RowHeight="20"
-                                                 MaxHeight="120"
-                                                 SelectionChanged="LodInformationGrid_SelectionChanged">
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="LOD" Binding="{Binding LodName}" Width="50" />
-                                                <DataGridTextColumn Header="Triangles" Binding="{Binding TriangleCount, StringFormat=N0}" Width="80" />
-                                                <DataGridTextColumn Header="Vertices" Binding="{Binding VertexCount, StringFormat=N0}" Width="80" />
-                                                <DataGridTextColumn Header="Size" Binding="{Binding FileSizeFormatted}" Width="70" />
-                                            </DataGrid.Columns>
-                                            <DataGrid.Resources>
-                                                <Style TargetType="DataGridColumnHeader">
-                                                    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundAlt}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
-                                                    <Setter Property="FontSize" Value="9" />
-                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                    <Setter Property="Padding" Value="4,2" />
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
-                                                    <Setter Property="BorderThickness" Value="0,0,1,1" />
-                                                </Style>
-                                                <Style TargetType="DataGridCell">
-                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
-                                                    <Setter Property="BorderThickness" Value="0" />
-                                                    <Setter Property="Padding" Value="4,2" />
-                                                </Style>
-                                            </DataGrid.Resources>
-                                        </DataGrid>
-                                    </Border>
                                 </StackPanel>
                             </Grid>
                         </Expander>
@@ -1296,7 +1286,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}"/>
                                         <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
                                             <Image x:Name="UVImage" Stretch="Uniform" MinWidth="128" MinHeight="128" />
                                         </Viewbox>
@@ -1306,7 +1296,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}"/>
                                         <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
                                             <Image x:Name="UVImage2" Stretch="Uniform" MinWidth="128" MinHeight="128" />
                                         </Viewbox>

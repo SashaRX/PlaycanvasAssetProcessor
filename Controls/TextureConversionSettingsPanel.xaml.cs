@@ -350,7 +350,7 @@ namespace AssetProcessor.Controls {
             // Обновляем статус auto-detect для normal map
             if (string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)) {
                 NormalMapStatusTextBlock.Text = "(auto-detect from filename)";
-                NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
+                NormalMapStatusTextBlock.Foreground = GetThemeForegroundDim();
             } else {
                 var fileName = System.IO.Path.GetFileName(NormalMapPathTextBox.Text);
                 if (System.IO.File.Exists(NormalMapPathTextBox.Text)) {
@@ -530,12 +530,23 @@ namespace AssetProcessor.Controls {
                     // Обновляем UI с найденным путем (серым цветом)
                     _ = Dispatcher.BeginInvoke(() => {
                         NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {System.IO.Path.GetFileName(normalMapPath)}";
-                        NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
+                        NormalMapStatusTextBlock.Foreground = GetThemeForegroundDim();
                     });
                 }
             }
 
             return settings;
+        }
+
+        /// <summary>
+        /// Gets theme-aware dim foreground brush for secondary text
+        /// </summary>
+        private static System.Windows.Media.Brush GetThemeForegroundDim() {
+            bool isDark = Helpers.ThemeHelper.IsDarkTheme;
+            return new System.Windows.Media.SolidColorBrush(
+                isDark
+                    ? System.Windows.Media.Color.FromRgb(160, 160, 160)  // Light gray for dark theme
+                    : System.Windows.Media.Color.FromRgb(96, 96, 96));   // Dark gray for light theme
         }
 
         /// <summary>

@@ -210,7 +210,7 @@
                         <ComboBox x:Name="HeightSourceComboBox" Style="{StaticResource CompactComboBoxStyle}"
                                   DisplayMemberPath="Name" SelectionChanged="SourceComboBox_SelectionChanged"/>
 
-                        <TextBlock Text="Processing: None" Style="{StaticResource CompactLabelStyle}" Foreground="Gray"/>
+                        <TextBlock Text="Processing: None" Style="{StaticResource CompactLabelStyle}" Foreground="{DynamicResource ThemeForegroundDim}"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>

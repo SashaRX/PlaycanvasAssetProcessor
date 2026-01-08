@@ -371,7 +371,7 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 Trace.WriteLine($"[PNG] Exception: {ex.Message}");
                 // Schedule error logging to avoid potential deadlock
-                Dispatcher.BeginInvoke(new Action(() => logger.Error(ex, "Failed to load texture to D3D11 viewer")), System.Windows.Threading.DispatcherPriority.Background);
+                _ = Dispatcher.BeginInvoke(new Action(() => logger.Error(ex, "Failed to load texture to D3D11 viewer")), System.Windows.Threading.DispatcherPriority.Background);
             } finally {
                 // Only release if not already transferred to BeginInvoke
                 if (semaphoreEntered) {
@@ -578,7 +578,7 @@ namespace AssetProcessor {
                 Volatile.Write(ref _currentLoadingKtx2Path, null);
                 Trace.WriteLine("[DIAG] Loading flag CLEARED (on error)");
                 // Schedule error logging to avoid potential deadlock
-                Dispatcher.BeginInvoke(new Action(() => logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}")), System.Windows.Threading.DispatcherPriority.Background);
+                _ = Dispatcher.BeginInvoke(new Action(() => logger.Error(ex, $"Failed to load KTX2 file to D3D11 viewer: {ktxPath}")), System.Windows.Threading.DispatcherPriority.Background);
                 return false;
             }
         }

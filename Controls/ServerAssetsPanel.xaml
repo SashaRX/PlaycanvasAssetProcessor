@@ -1,0 +1,194 @@
+<UserControl x:Class="AssetProcessor.Controls.ServerAssetsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800"
+             Background="{DynamicResource ThemeBackground}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="8,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Refresh and Filter -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="RefreshButton" Content="Refresh" Click="RefreshButton_Click"
+                            Background="#FF2196F3" Foreground="White" FontWeight="Bold"
+                            Padding="12,6" Margin="0,0,8,0"
+                            ToolTip="Refresh file list from B2 server"/>
+
+                    <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="0,0,5,0"
+                               Foreground="{DynamicResource ThemeForeground}"/>
+                    <ComboBox x:Name="FilterComboBox" Width="100" Margin="0,0,8,0"
+                              SelectionChanged="FilterComboBox_SelectionChanged">
+                        <ComboBoxItem Content="All" IsSelected="True"/>
+                        <ComboBoxItem Content="Textures"/>
+                        <ComboBoxItem Content="Models"/>
+                        <ComboBoxItem Content="JSON"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Status:" VerticalAlignment="Center" Margin="0,0,5,0"
+                               Foreground="{DynamicResource ThemeForeground}"/>
+                    <ComboBox x:Name="StatusFilterComboBox" Width="120" Margin="0,0,8,0"
+                              SelectionChanged="StatusFilterComboBox_SelectionChanged">
+                        <ComboBoxItem Content="All" IsSelected="True"/>
+                        <ComboBoxItem Content="Synced"/>
+                        <ComboBoxItem Content="ServerOnly"/>
+                        <ComboBoxItem Content="HashMismatch"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Center: Search -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0"
+                               Foreground="{DynamicResource ThemeForeground}"/>
+                    <TextBox x:Name="SearchTextBox" Width="250" Padding="5,3"
+                             TextChanged="SearchTextBox_TextChanged"
+                             VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Right: Actions -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="DeleteSelectedButton" Content="Delete" Click="DeleteSelectedButton_Click"
+                            Background="#FFF44336" Foreground="White"
+                            Padding="12,6" Margin="0,0,8,0"
+                            ToolTip="Delete selected files from server"/>
+
+                    <Button x:Name="CopyUrlButton" Content="Copy URL" Click="CopyUrlButton_Click"
+                            Padding="12,6"
+                            ToolTip="Copy CDN URL to clipboard"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- DataGrid -->
+        <DataGrid Grid.Row="1" x:Name="ServerAssetsDataGrid"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Extended"
+                  GridLinesVisibility="Horizontal"
+                  RowHeaderWidth="0"
+                  Background="{DynamicResource ThemeDataGridBackground}"
+                  Foreground="{DynamicResource ThemeForeground}"
+                  BorderThickness="0"
+                  CanUserSortColumns="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling">
+
+            <DataGrid.Columns>
+                <!-- File Name -->
+                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="200" MinWidth="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Type -->
+                <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="70">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Size -->
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="80">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="TextAlignment" Value="Right"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Sync Status -->
+                <DataGridTemplateColumn Header="Status" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding SyncStatus}"
+                                       Foreground="{Binding SyncStatusColor}"
+                                       FontWeight="SemiBold"
+                                       Padding="4,2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Uploaded At -->
+                <DataGridTextColumn Header="Uploaded" Binding="{Binding UploadedAtDisplay}" Width="130">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- SHA1 -->
+                <DataGridTextColumn Header="SHA1" Binding="{Binding ContentSha1Short}" Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="FontFamily" Value="Consolas"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Remote Path -->
+                <DataGridTextColumn Header="Remote Path" Binding="{Binding RemotePath}" Width="*" MinWidth="150">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding RemotePath}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource ThemeBackgroundAlt}" Padding="8,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText" Grid.Column="0"
+                           Text="Click Refresh to load files from server"
+                           Foreground="{DynamicResource ThemeForeground}"
+                           VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock x:Name="CountText" Text="0 files"
+                               Foreground="{DynamicResource ThemeForeground}"
+                               VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <TextBlock x:Name="SizeText" Text="0 MB total"
+                               Foreground="{DynamicResource ThemeForeground}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

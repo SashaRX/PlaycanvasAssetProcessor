@@ -475,7 +475,8 @@ namespace AssetProcessor {
                 UploadToCloudButton.Content = "Uploading...";
 
                 using var b2Service = new B2UploadService();
-                var uploadCoordinator = new AssetUploadCoordinator(b2Service);
+                using var uploadStateService = new Data.UploadStateService();
+                var uploadCoordinator = new AssetUploadCoordinator(b2Service, uploadStateService);
 
                 var initialized = await uploadCoordinator.InitializeAsync();
                 if (!initialized) {
@@ -494,16 +495,55 @@ namespace AssetProcessor {
                     recursive: true,
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
-                            ProgressBar.Value = p.PercentComplete;
+                            ProgressBar.Value = p.PercentComplete * 0.9; // 90% for content
                         });
                     })
                 );
 
+                // Upload mapping.json separately (it's in server/, not in content/)
+                int mappingUploaded = 0;
+                var serverPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(contentPath)); // Go up from assets/content to server
+                if (!string.IsNullOrEmpty(serverPath)) {
+                    var mappingPath = System.IO.Path.Combine(serverPath, "mapping.json");
+                    if (System.IO.File.Exists(mappingPath)) {
+                        try {
+                            var mappingResult = await b2Service.UploadFileAsync(
+                                mappingPath,
+                                $"{projectName}/mapping.json",
+                                null
+                            );
+                            if (mappingResult.Success) {
+                                mappingUploaded = 1;
+                                logger.Info($"Uploaded mapping.json to {projectName}/mapping.json");
+
+                                // Save to persistence
+                                var mappingRecord = new Data.UploadRecord {
+                                    LocalPath = mappingPath,
+                                    RemotePath = $"{projectName}/mapping.json",
+                                    ContentSha1 = mappingResult.ContentSha1 ?? "",
+                                    ContentLength = mappingResult.ContentLength,
+                                    UploadedAt = DateTime.UtcNow,
+                                    CdnUrl = mappingResult.CdnUrl ?? "",
+                                    Status = "Uploaded",
+                                    FileId = mappingResult.FileId,
+                                    ProjectName = projectName
+                                };
+                                await uploadStateService.SaveUploadAsync(mappingRecord);
+                            }
+                        } catch (Exception ex) {
+                            logger.Warn(ex, "Failed to upload mapping.json");
+                        }
+                    }
+                }
+
+                Dispatcher.Invoke(() => { ProgressBar.Value = 100; });
+
                 MessageBox.Show(
                     $"Upload completed!\n\n" +
-                    $"Uploaded: {result.SuccessCount}\n" +
+                    $"Uploaded: {result.SuccessCount + mappingUploaded}\n" +
                     $"Skipped (already exists): {result.SkippedCount}\n" +
                     $"Failed: {result.FailedCount}\n" +
+                    (mappingUploaded > 0 ? "mapping.json: uploaded\n" : "") +
                     $"Duration: {result.Duration.TotalSeconds:F1}s",
                     "Upload Result",
                     MessageBoxButton.OK,
@@ -620,7 +660,8 @@ namespace AssetProcessor {
                 UploadToCloudButton.Content = "Uploading...";
 
                 using var b2Service = new B2UploadService();
-                var uploadCoordinator = new AssetUploadCoordinator(b2Service);
+                using var uploadStateService = new Data.UploadStateService();
+                var uploadCoordinator = new AssetUploadCoordinator(b2Service, uploadStateService);
 
                 // Подписываемся на события прогресса
                 uploadCoordinator.UploadProgressChanged += (s, args) => {
@@ -648,16 +689,55 @@ namespace AssetProcessor {
                     recursive: true,
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
-                            ProgressBar.Value = p.PercentComplete;
+                            ProgressBar.Value = p.PercentComplete * 0.9; // 90% for content
                         });
                     })
                 );
 
+                // Upload mapping.json separately (it's in server/, not in content/)
+                int mappingUploaded = 0;
+                var serverPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(contentPath)); // Go up from assets/content to server
+                if (!string.IsNullOrEmpty(serverPath)) {
+                    var mappingPath = System.IO.Path.Combine(serverPath, "mapping.json");
+                    if (System.IO.File.Exists(mappingPath)) {
+                        try {
+                            var mappingResult = await b2Service.UploadFileAsync(
+                                mappingPath,
+                                $"{projectName}/mapping.json",
+                                null
+                            );
+                            if (mappingResult.Success) {
+                                mappingUploaded = 1;
+                                logger.Info($"Uploaded mapping.json to {projectName}/mapping.json");
+
+                                // Save to persistence
+                                var mappingRecord = new Data.UploadRecord {
+                                    LocalPath = mappingPath,
+                                    RemotePath = $"{projectName}/mapping.json",
+                                    ContentSha1 = mappingResult.ContentSha1 ?? "",
+                                    ContentLength = mappingResult.ContentLength,
+                                    UploadedAt = DateTime.UtcNow,
+                                    CdnUrl = mappingResult.CdnUrl ?? "",
+                                    Status = "Uploaded",
+                                    FileId = mappingResult.FileId,
+                                    ProjectName = projectName
+                                };
+                                await uploadStateService.SaveUploadAsync(mappingRecord);
+                            }
+                        } catch (Exception ex) {
+                            logger.Warn(ex, "Failed to upload mapping.json");
+                        }
+                    }
+                }
+
+                Dispatcher.Invoke(() => { ProgressBar.Value = 100; });
+
                 MessageBox.Show(
                     $"Upload completed!\n\n" +
-                    $"Uploaded: {result.SuccessCount}\n" +
+                    $"Uploaded: {result.SuccessCount + mappingUploaded}\n" +
                     $"Skipped (already exists): {result.SkippedCount}\n" +
                     $"Failed: {result.FailedCount}\n" +
+                    (mappingUploaded > 0 ? "mapping.json: uploaded\n" : "") +
                     $"Duration: {result.Duration.TotalSeconds:F1}s",
                     "Upload Result",
                     MessageBoxButton.OK,

@@ -20,7 +20,10 @@ namespace AssetProcessor.Helpers {
         [GeneratedRegex(@"[\[\]]")]
         public static partial Regex BracketsRegex();
 
+#if DEBUG
+        /// <summary>Dev-only: path to test model for quick debugging at startup</summary>
         public const string MODEL_PATH = @"C:\models\carbitLamp\ao.fbx";
+#endif
 
         public static readonly string baseUrl = "https://playcanvas.com";
 

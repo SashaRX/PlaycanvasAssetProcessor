@@ -184,7 +184,12 @@ namespace AssetProcessor {
             ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
             ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
 
-            LoadModel(path: MainWindowHelpers.MODEL_PATH);
+#if DEBUG
+            // Dev-only: load test model at startup for quick debugging
+            if (File.Exists(MainWindowHelpers.MODEL_PATH)) {
+                LoadModel(path: MainWindowHelpers.MODEL_PATH);
+            }
+#endif
 
             getAssetsSemaphore = new SemaphoreSlim(AppSettings.Default.GetTexturesSemaphoreLimit);
             downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);

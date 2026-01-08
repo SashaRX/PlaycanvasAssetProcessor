@@ -73,6 +73,12 @@ namespace AssetProcessor {
 
             // Initialize dark theme checkbox state
             InitializeDarkThemeCheckBox();
+
+            // Initialize bottom panel visibility based on current tab (Textures is default)
+            if (tabControl.SelectedItem is TabItem selectedTab && selectedTab.Header?.ToString() == "Textures") {
+                TextureOperationsGroupBox.Visibility = Visibility.Visible;
+                ModelExportGroupBox.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void InitializeDarkThemeCheckBox() {

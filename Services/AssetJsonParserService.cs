@@ -1,4 +1,3 @@
-using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
@@ -80,8 +79,8 @@ public class AssetJsonParserService : IAssetJsonParserService {
         var models = new ConcurrentBag<ModelResource>();
         var materials = new ConcurrentBag<MaterialResource>();
 
-        // Строим иерархию папок
-        var folderPaths = BuildFolderHierarchy(assetsJson);
+        // Строим иерархию папок (единая реализация в AssetResourceService)
+        var folderPaths = new Dictionary<int, string>();
         _assetResourceService.BuildFolderHierarchy(assetsJson, folderPaths);
 
         // Фильтруем только ассеты с файлами
@@ -234,58 +233,6 @@ public class AssetJsonParserService : IAssetJsonParserService {
         }
 
         return ormTextures;
-    }
-
-    public Dictionary<int, string> BuildFolderHierarchy(JArray assetsJson) {
-        var folderPaths = new Dictionary<int, string>();
-
-        try {
-            var folders = assetsJson.Where(asset => asset["type"]?.ToString() == "folder").ToList();
-            var foldersById = new Dictionary<int, JToken>();
-
-            foreach (JToken folder in folders) {
-                int? folderId = folder["id"]?.Type == JTokenType.Integer ? (int?)folder["id"] : null;
-                if (folderId.HasValue) {
-                    foldersById[folderId.Value] = folder;
-                }
-            }
-
-            string BuildFolderPath(int folderId) {
-                if (folderPaths.ContainsKey(folderId)) {
-                    return folderPaths[folderId];
-                }
-
-                if (!foldersById.ContainsKey(folderId)) {
-                    return string.Empty;
-                }
-
-                JToken folder = foldersById[folderId];
-                string folderName = PathSanitizer.SanitizePath(folder["name"]?.ToString());
-                int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
-
-                string fullPath;
-                if (parentId.HasValue && parentId.Value != 0) {
-                    string parentPath = BuildFolderPath(parentId.Value);
-                    fullPath = string.IsNullOrEmpty(parentPath) ? folderName : Path.Combine(parentPath, folderName);
-                } else {
-                    fullPath = folderName;
-                }
-
-                fullPath = PathSanitizer.SanitizePath(fullPath);
-                folderPaths[folderId] = fullPath;
-                return fullPath;
-            }
-
-            foreach (var folderId in foldersById.Keys) {
-                BuildFolderPath(folderId);
-            }
-
-            _logService.LogInfo($"Built folder hierarchy with {folderPaths.Count} folders");
-        } catch (Exception ex) {
-            _logService.LogError($"Error building folder hierarchy: {ex.Message}");
-        }
-
-        return folderPaths;
     }
 
     private static TextureResource? FindTextureByPattern(

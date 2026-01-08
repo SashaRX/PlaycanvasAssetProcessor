@@ -53,12 +53,7 @@ public interface IAssetJsonParserService {
         string projectFolderPath,
         IEnumerable<TextureResource> existingTextures);
 
-    /// <summary>
-    /// Строит иерархию папок из JSON ассетов.
-    /// </summary>
-    /// <param name="assetsJson">JSON массив ассетов.</param>
-    /// <returns>Словарь путей папок (ID → путь).</returns>
-    Dictionary<int, string> BuildFolderHierarchy(JArray assetsJson);
+    // NOTE: BuildFolderHierarchy method was removed - use IAssetResourceService.BuildFolderHierarchy instead
 }
 
 /// <summary>

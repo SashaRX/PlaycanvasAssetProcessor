@@ -16,15 +16,18 @@ public sealed class ProjectSyncService : IProjectSyncService {
 
     private readonly IPlayCanvasService playCanvasService;
     private readonly ILocalCacheService localCacheService;
+    private readonly IAssetResourceService assetResourceService;
     private readonly ILogService logService;
     private readonly SemaphoreSlim downloadSemaphore;
 
     public ProjectSyncService(
         IPlayCanvasService playCanvasService,
         ILocalCacheService localCacheService,
+        IAssetResourceService assetResourceService,
         ILogService logService) {
         this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
         this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
+        this.assetResourceService = assetResourceService ?? throw new ArgumentNullException(nameof(assetResourceService));
         this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
         downloadSemaphore = new SemaphoreSlim(AppSettings.Default.DownloadSemaphoreLimit);
     }
@@ -45,7 +48,10 @@ public sealed class ProjectSyncService : IProjectSyncService {
             assetsJson.Add(JToken.Parse(asset.ToJsonString()));
         }
 
-        IReadOnlyDictionary<int, string> folderPaths = BuildFolderHierarchyFromAssets(assetsJson);
+        // Используем единую реализацию из AssetResourceService
+        Dictionary<int, string> folderPathsDict = new();
+        assetResourceService.BuildFolderHierarchy(assetsJson, folderPathsDict);
+        IReadOnlyDictionary<int, string> folderPaths = folderPathsDict;
 
         string projectFolderPath = Path.Combine(request.ProjectsRoot, request.ProjectName);
         projectFolderPath = projectFolderPath.Replace('\\', '/');
@@ -204,48 +210,5 @@ public sealed class ProjectSyncService : IProjectSyncService {
         if (file.TryGetValue("size", out JToken? sizeToken) && int.TryParse(sizeToken?.ToString(), out int size)) {
             resource.Size = size;
         }
-    }
-
-    private IReadOnlyDictionary<int, string> BuildFolderHierarchyFromAssets(JArray assetsResponse) {
-        Dictionary<int, string> folderPaths = new();
-
-        IEnumerable<JToken> folders = assetsResponse.Where(asset => string.Equals(asset["type"]?.ToString(), "folder", StringComparison.OrdinalIgnoreCase));
-        Dictionary<int, JToken> foldersById = new();
-        foreach (JToken folder in folders) {
-            int? folderId = folder["id"]?.Type == JTokenType.Integer ? (int?)folder["id"] : null;
-            if (folderId.HasValue) {
-                foldersById[folderId.Value] = folder;
-            }
-        }
-
-        string BuildFolderPath(int folderId) {
-            if (folderPaths.TryGetValue(folderId, out string? existing)) {
-                return existing;
-            }
-
-            if (!foldersById.TryGetValue(folderId, out JToken? folder)) {
-                return string.Empty;
-            }
-
-            string folderName = localCacheService.SanitizePath(folder["name"]?.ToString());
-            int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
-
-            string fullPath = folderName;
-            if (parentId.HasValue && parentId.Value != 0) {
-                string parentPath = BuildFolderPath(parentId.Value);
-                fullPath = string.IsNullOrEmpty(parentPath) ? folderName : Path.Combine(parentPath, folderName);
-            }
-
-            fullPath = localCacheService.SanitizePath(fullPath);
-            folderPaths[folderId] = fullPath;
-            return fullPath;
-        }
-
-        foreach (int folderId in foldersById.Keys) {
-            BuildFolderPath(folderId);
-        }
-
-        logService.LogInfo($"BuildFolderHierarchyFromAssets: Created {folderPaths.Count} folder paths");
-        return folderPaths;
     }
 }

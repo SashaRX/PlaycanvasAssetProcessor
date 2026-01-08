@@ -37,6 +37,45 @@
             <Setter Property="FontSize" Value="11"/>
         </Style>
 
+        <!-- CheckBox style for dark backgrounds (Model/Texture info panels) -->
+        <Style x:Key="DarkBackgroundCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="CheckBorder"
+                                    Width="12" Height="12"
+                                    BorderBrush="#FFAAAAAA"
+                                    BorderThickness="1"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="2"
+                                    Margin="0,0,4,0">
+                                <Path x:Name="CheckMark"
+                                      Visibility="Collapsed"
+                                      Stroke="White"
+                                      StrokeThickness="2"
+                                      Data="M 2,6 L 5,9 L 10,2"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="CheckBorder" Property="Background" Value="#FF4CAF50"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#FF4CAF50"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <help:ChannelColorConverter x:Key="ChannelColorConverter" />
 
         <!-- OxyPlot tracker (tooltip) template with theme-aware colors -->
@@ -1072,23 +1111,17 @@
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                 <CheckBox x:Name="ShowPivotCheckBox"
                                                          Content="Pivot"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
+                                                         Style="{StaticResource DarkBackgroundCheckBoxStyle}"
                                                          Checked="ShowPivotCheckBox_Changed"
                                                          Unchecked="ShowPivotCheckBox_Changed" />
                                                 <CheckBox x:Name="ShowWireframeCheckBox"
                                                          Content="Wireframe"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
+                                                         Style="{StaticResource DarkBackgroundCheckBoxStyle}"
                                                          Checked="ShowWireframeCheckBox_Changed"
                                                          Unchecked="ShowWireframeCheckBox_Changed" />
                                                 <CheckBox x:Name="ShowHumanCheckBox"
                                                          Content="1.8m"
-                                                         Foreground="White"
-                                                         FontSize="9"
-                                                         Margin="0,0,8,0"
+                                                         Style="{StaticResource DarkBackgroundCheckBoxStyle}"
                                                          Checked="ShowHumanCheckBox_Changed"
                                                          Unchecked="ShowHumanCheckBox_Changed"
                                                          IsChecked="True" />

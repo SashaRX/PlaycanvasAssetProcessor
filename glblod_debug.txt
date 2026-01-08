@@ -4512,3 +4512,13 @@
 08.01.26 00:06:07: [PIPELINE] ConvertAsync COMPLETE, Success: True
 08.01.26 00:06:07: [PIPELINE] Duration: 0,50s, LOD files: 3
 08.01.26 00:06:07: [PIPELINE] About to return result
+08.01.26 03:56:44: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 03:56:44: TryLoadGlbLodAsync START
+08.01.26 03:56:44: Loading albedo texture
+08.01.26 03:56:44: Albedo texture done
+08.01.26 03:56:44: Finding GLB LOD files
+08.01.26 03:56:44: Found 0 files
+08.01.26 03:56:44: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 03:56:44: [SelectionChanged] Loading FBX model
+08.01.26 03:56:44: [SelectionChanged] FBX loaded
+08.01.26 03:56:44: [SelectionChanged] COMPLETE

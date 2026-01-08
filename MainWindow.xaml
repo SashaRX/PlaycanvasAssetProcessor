@@ -1030,17 +1030,17 @@
                 <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="800" />
+                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="250" MaxHeight="800" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" MinHeight="150" />
                         </Grid.RowDefinitions>
 
                         <!-- Model Preview Section -->
                         <Expander Grid.Row="0" Header="Model Preview" IsExpanded="True" Style="{StaticResource RightPanelExpanderStyle}">
-                            <Grid>
+                            <Grid MinHeight="200">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition x:Name="ModelViewportRow" Height="300" />
+                                    <RowDefinition x:Name="ModelViewportRow" Height="300" MinHeight="100" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>

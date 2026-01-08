@@ -1,16 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using AssetProcessor.Helpers;
 using Microsoft.Win32;
 using NLog;
 
 namespace AssetProcessor.Controls {
+    /// <summary>
+    /// Converter that returns true if value is null, false otherwise
+    /// </summary>
+    public class NullCheckConverter : IValueConverter {
+        public static readonly NullCheckConverter Instance = new();
+
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+            return value == null;
+        }
+
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
     /// <summary>
     /// Log entry model for display
     /// </summary>
@@ -58,17 +75,8 @@ namespace AssetProcessor.Controls {
             } else if (message.Contains("━━━") || message.Contains("📊") || message.Contains("🔧")) {
                 return new SolidColorBrush(Color.FromRgb(156, 39, 176)); // Purple - visible on both themes
             }
-            // Use theme foreground for normal messages
-            return GetThemeForeground();
-        }
-
-        private static Brush GetThemeForeground() {
-            // Always create a fresh brush based on current theme to ensure correct color
-            // Don't rely on Resources lookup as the brush object might be stale
-            bool isDark = ThemeHelper.IsDarkTheme;
-            return new SolidColorBrush(isDark
-                ? Color.FromRgb(220, 220, 220)  // Light gray for dark theme (high contrast)
-                : Color.FromRgb(30, 30, 30));   // Almost black for light theme (high contrast)
+            // Return null for normal messages - XAML will use ThemeForeground as fallback
+            return null!;
         }
     }
 

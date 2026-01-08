@@ -4674,3 +4674,13 @@
 08.01.26 04:34:05: [SelectionChanged] Loading FBX model
 08.01.26 04:34:05: [SelectionChanged] FBX loaded
 08.01.26 04:34:05: [SelectionChanged] COMPLETE
+08.01.26 04:40:00: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 04:40:00: TryLoadGlbLodAsync START
+08.01.26 04:40:00: Loading albedo texture
+08.01.26 04:40:00: Albedo texture done
+08.01.26 04:40:00: Finding GLB LOD files
+08.01.26 04:40:00: Found 0 files
+08.01.26 04:40:00: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 04:40:00: [SelectionChanged] Loading FBX model
+08.01.26 04:40:00: [SelectionChanged] FBX loaded
+08.01.26 04:40:00: [SelectionChanged] COMPLETE

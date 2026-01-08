@@ -63,16 +63,12 @@ namespace AssetProcessor.Controls {
         }
 
         private static Brush GetThemeForeground() {
-            try {
-                if (Application.Current?.Resources["ThemeForeground"] is Brush brush) {
-                    return brush;
-                }
-            } catch { }
-            // Fallback: detect if system is using dark theme
+            // Always create a fresh brush based on current theme to ensure correct color
+            // Don't rely on Resources lookup as the brush object might be stale
             bool isDark = ThemeHelper.IsDarkTheme;
-            return isDark
-                ? new SolidColorBrush(Color.FromRgb(200, 200, 200)) // Light gray for dark theme
-                : new SolidColorBrush(Color.FromRgb(30, 30, 30));   // Dark gray for light theme
+            return new SolidColorBrush(isDark
+                ? Color.FromRgb(220, 220, 220)  // Light gray for dark theme (high contrast)
+                : Color.FromRgb(30, 30, 30));   // Almost black for light theme (high contrast)
         }
     }
 

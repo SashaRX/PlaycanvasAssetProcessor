@@ -421,7 +421,7 @@
 
                         <TextBlock Text="Normal Map Path:" Style="{StaticResource CompactLabelStyle}"/>
                         <TextBlock x:Name="NormalMapStatusTextBlock" Text="(auto-detect from filename)"
-                                   Foreground="Gray" Margin="0,0,0,1" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,1" TextWrapping="Wrap"
                                    ToolTip="Status of normal map auto-detection"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>

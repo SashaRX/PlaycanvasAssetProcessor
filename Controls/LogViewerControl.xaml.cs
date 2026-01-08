@@ -78,6 +78,14 @@ namespace AssetProcessor.Controls {
             // Return null for normal messages - XAML will use ThemeForeground as fallback
             return null!;
         }
+
+        private static Brush GetThemeForeground() {
+            bool isDark = ThemeHelper.IsDarkTheme;
+            return new SolidColorBrush(
+                isDark
+                    ? Color.FromRgb(220, 220, 220)  // Light text for dark theme
+                    : Color.FromRgb(32, 32, 32));   // Dark text for light theme
+        }
     }
 
     public partial class LogViewerControl : UserControl {

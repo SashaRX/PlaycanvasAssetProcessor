@@ -24,20 +24,19 @@ namespace AssetProcessor.Controls {
 
         private readonly ObservableCollection<ServerAssetViewModel> _allAssets = new();
         private readonly ObservableCollection<ServerAssetViewModel> _filteredAssets = new();
+        private readonly ObservableCollection<ServerAssetViewModel> _displayedAssets = new();
 
         private string? _projectFolderPath;
         private string? _projectName;
         private CancellationTokenSource? _refreshCts;
         private bool _isInitialized;
+        private bool _isTreeView = true;
+        private ServerFolderNode? _rootNode;
+        private ServerFolderNode? _selectedFolder;
 
         public ServerAssetsPanel() {
             InitializeComponent();
-
-            // Setup CollectionView with grouping
-            var view = CollectionViewSource.GetDefaultView(_filteredAssets);
-            view.GroupDescriptions.Add(new PropertyGroupDescription("FolderPath"));
-            ServerAssetsDataGrid.ItemsSource = view;
-
+            ServerAssetsDataGrid.ItemsSource = _displayedAssets;
             _isInitialized = true;
         }
 
@@ -54,6 +53,69 @@ namespace AssetProcessor.Controls {
         /// </summary>
         private async void RefreshButton_Click(object sender, RoutedEventArgs e) {
             await RefreshServerAssetsAsync();
+        }
+
+        /// <summary>
+        /// Переключает режим отображения (дерево/список)
+        /// </summary>
+        private void ToggleViewButton_Click(object sender, RoutedEventArgs e) {
+            _isTreeView = !_isTreeView;
+            UpdateViewMode();
+        }
+
+        private void UpdateViewMode() {
+            if (_isTreeView) {
+                ToggleViewButton.Content = "☰ List";
+                TreeColumn.Width = new GridLength(250);
+                TreeColumn.MinWidth = 150;
+                FolderTreeView.Visibility = Visibility.Visible;
+                TreeSplitter.Visibility = Visibility.Visible;
+
+                // Show files from selected folder
+                if (_selectedFolder != null) {
+                    ShowFolderFiles(_selectedFolder);
+                } else if (_rootNode != null) {
+                    ShowFolderFiles(_rootNode);
+                }
+            } else {
+                ToggleViewButton.Content = "🌳 Tree";
+                TreeColumn.Width = new GridLength(0);
+                TreeColumn.MinWidth = 0;
+                FolderTreeView.Visibility = Visibility.Collapsed;
+                TreeSplitter.Visibility = Visibility.Collapsed;
+
+                // Show all filtered files
+                ShowAllFiles();
+            }
+        }
+
+        private void ShowFolderFiles(ServerFolderNode folder) {
+            _displayedAssets.Clear();
+            AddFolderFilesRecursive(folder);
+            UpdateFileCount();
+        }
+
+        private void AddFolderFilesRecursive(ServerFolderNode folder) {
+            foreach (var file in folder.Files) {
+                if (PassesFilter(file)) {
+                    _displayedAssets.Add(file);
+                }
+            }
+            foreach (var child in folder.Children) {
+                AddFolderFilesRecursive(child);
+            }
+        }
+
+        private void ShowAllFiles() {
+            _displayedAssets.Clear();
+            foreach (var asset in _filteredAssets) {
+                _displayedAssets.Add(asset);
+            }
+            UpdateFileCount();
+        }
+
+        private void UpdateFileCount() {
+            CountText.Text = $"{_displayedAssets.Count} / {_allAssets.Count} files";
         }
 
         /// <summary>
@@ -79,6 +141,7 @@ namespace AssetProcessor.Controls {
 
                 _allAssets.Clear();
                 _filteredAssets.Clear();
+                _displayedAssets.Clear();
 
                 using var b2Service = new B2UploadService();
 
@@ -130,10 +193,17 @@ namespace AssetProcessor.Controls {
                     totalSize += file.ContentLength;
                 }
 
+                // Apply filters
                 ApplyFilters();
 
+                // Build tree
+                _rootNode = ServerFolderNode.BuildTree(_allAssets, _projectName ?? "Server");
+                FolderTreeView.ItemsSource = new[] { _rootNode };
+
+                // Update view
+                UpdateViewMode();
+
                 var totalSizeMB = totalSize / (1024.0 * 1024.0);
-                CountText.Text = $"{_allAssets.Count} files";
                 SizeText.Text = $"{totalSizeMB:F2} MB total";
                 StatusText.Text = $"Loaded {_allAssets.Count} files from server";
 
@@ -160,13 +230,7 @@ namespace AssetProcessor.Controls {
             }
 
             try {
-                // Try to find local file by matching the remote path structure
-                // Remote: projectName/textures/filename.ktx2
-                // Local: projectFolder/server/assets/content/.../filename.ktx2
-
                 var fileName = Path.GetFileName(asset.RemotePath);
-
-                // Search in server/assets/content
                 var contentPath = Path.Combine(_projectFolderPath, "server", "assets", "content");
                 string? localPath = null;
 
@@ -177,7 +241,6 @@ namespace AssetProcessor.Controls {
                     }
                 }
 
-                // Also check for mapping.json in server/
                 if (fileName.Equals("mapping.json", StringComparison.OrdinalIgnoreCase)) {
                     var mappingPath = Path.Combine(_projectFolderPath, "server", "mapping.json");
                     if (File.Exists(mappingPath)) {
@@ -187,8 +250,6 @@ namespace AssetProcessor.Controls {
 
                 if (!string.IsNullOrEmpty(localPath) && File.Exists(localPath)) {
                     asset.LocalPath = localPath;
-
-                    // Compare hashes
                     var localHash = await ComputeFileHashAsync(localPath, ct);
 
                     if (string.Equals(localHash, asset.ContentSha1, StringComparison.OrdinalIgnoreCase)) {
@@ -205,54 +266,60 @@ namespace AssetProcessor.Controls {
             }
         }
 
-        /// <summary>
-        /// Вычисляет SHA1 хеш файла
-        /// </summary>
         private static async Task<string> ComputeFileHashAsync(string filePath, CancellationToken ct) {
             await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
             var hash = await SHA1.HashDataAsync(stream, ct);
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
 
-        /// <summary>
-        /// Применяет фильтры к списку
-        /// </summary>
-        private void ApplyFilters() {
-            _filteredAssets.Clear();
-
+        private bool PassesFilter(ServerAssetViewModel asset) {
             var typeFilter = (FilterComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All";
             var statusFilter = (StatusFilterComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All";
             var searchText = SearchTextBox.Text?.Trim().ToLowerInvariant() ?? "";
 
-            foreach (var asset in _allAssets) {
-                // Type filter
-                if (typeFilter != "All") {
-                    var matchType = typeFilter switch {
-                        "Textures" => asset.FileType == "Texture",
-                        "Models" => asset.FileType == "Model",
-                        "JSON" => asset.FileType == "JSON",
-                        _ => true
-                    };
-                    if (!matchType) continue;
-                }
-
-                // Status filter
-                if (statusFilter != "All" && asset.SyncStatus != statusFilter) {
-                    continue;
-                }
-
-                // Search filter
-                if (!string.IsNullOrEmpty(searchText)) {
-                    if (!asset.RemotePath.ToLowerInvariant().Contains(searchText) &&
-                        !asset.FileName.ToLowerInvariant().Contains(searchText)) {
-                        continue;
-                    }
-                }
-
-                _filteredAssets.Add(asset);
+            // Type filter
+            if (typeFilter != "All") {
+                var matchType = typeFilter switch {
+                    "Textures" => asset.FileType == "Texture",
+                    "Models" => asset.FileType == "Model",
+                    "JSON" => asset.FileType == "JSON",
+                    _ => true
+                };
+                if (!matchType) return false;
             }
 
-            CountText.Text = $"{_filteredAssets.Count} / {_allAssets.Count} files";
+            // Status filter
+            if (statusFilter != "All" && asset.SyncStatus != statusFilter) {
+                return false;
+            }
+
+            // Search filter
+            if (!string.IsNullOrEmpty(searchText)) {
+                if (!asset.RemotePath.ToLowerInvariant().Contains(searchText) &&
+                    !asset.FileName.ToLowerInvariant().Contains(searchText)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ApplyFilters() {
+            _filteredAssets.Clear();
+
+            foreach (var asset in _allAssets) {
+                if (PassesFilter(asset)) {
+                    _filteredAssets.Add(asset);
+                }
+            }
+
+            // Rebuild tree with filtered assets
+            if (_filteredAssets.Any()) {
+                _rootNode = ServerFolderNode.BuildTree(_filteredAssets, _projectName ?? "Server");
+                FolderTreeView.ItemsSource = new[] { _rootNode };
+            }
+
+            UpdateViewMode();
         }
 
         private void FilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -265,6 +332,13 @@ namespace AssetProcessor.Controls {
 
         private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e) {
             if (_isInitialized) ApplyFilters();
+        }
+
+        private void FolderTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
+            if (e.NewValue is ServerFolderNode folder) {
+                _selectedFolder = folder;
+                ShowFolderFiles(folder);
+            }
         }
 
         /// <summary>
@@ -321,16 +395,12 @@ namespace AssetProcessor.Controls {
                 int failed = 0;
 
                 foreach (var asset in selectedAssets) {
-                    if (string.IsNullOrEmpty(asset.FileId)) {
-                        failed++;
-                        continue;
-                    }
-
                     try {
                         var success = await b2Service.DeleteFileAsync(asset.RemotePath);
                         if (success) {
                             _allAssets.Remove(asset);
                             _filteredAssets.Remove(asset);
+                            _displayedAssets.Remove(asset);
                             deleted++;
                         } else {
                             failed++;
@@ -340,8 +410,14 @@ namespace AssetProcessor.Controls {
                     }
                 }
 
+                // Rebuild tree
+                if (_allAssets.Any()) {
+                    _rootNode = ServerFolderNode.BuildTree(_filteredAssets, _projectName ?? "Server");
+                    FolderTreeView.ItemsSource = new[] { _rootNode };
+                }
+
                 StatusText.Text = $"Deleted {deleted} files, {failed} failed";
-                CountText.Text = $"{_filteredAssets.Count} / {_allAssets.Count} files";
+                UpdateFileCount();
 
             } catch (Exception ex) {
                 Logger.Error(ex, "Failed to delete files");

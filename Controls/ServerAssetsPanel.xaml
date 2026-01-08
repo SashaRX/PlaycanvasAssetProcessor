@@ -31,6 +31,10 @@
                             Padding="12,6" Margin="0,0,8,0"
                             ToolTip="Refresh file list from B2 server"/>
 
+                    <Button x:Name="ToggleViewButton" Content="☰ List" Click="ToggleViewButton_Click"
+                            Padding="12,6" Margin="0,0,8,0"
+                            ToolTip="Toggle between tree and list view"/>
+
                     <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="0,0,5,0"
                                Foreground="{DynamicResource ThemeForeground}"/>
                     <ComboBox x:Name="FilterComboBox" Width="100" Margin="0,0,8,0"
@@ -61,7 +65,7 @@
                              VerticalContentAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Right: Actions and Scale -->
+                <!-- Right: Scale and Actions -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"
                                Foreground="{DynamicResource ThemeForeground}"/>
@@ -86,145 +90,135 @@
             </Grid>
         </Border>
 
-        <!-- DataGrid -->
-        <DataGrid Grid.Row="1" x:Name="ServerAssetsDataGrid"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  SelectionMode="Extended"
-                  SelectionChanged="ServerAssetsDataGrid_SelectionChanged"
-                  GridLinesVisibility="Horizontal"
-                  RowHeaderWidth="0"
-                  Background="{DynamicResource ThemeDataGridBackground}"
-                  Foreground="{DynamicResource ThemeForeground}"
-                  BorderThickness="0"
-                  CanUserSortColumns="True"
-                  CanUserResizeColumns="True"
-                  RowHeight="20"
-                  VirtualizingPanel.IsVirtualizing="True"
-                  VirtualizingPanel.VirtualizationMode="Recycling"
-                  VirtualizingPanel.ScrollUnit="Pixel"
-                  EnableRowVirtualization="True"
-                  ScrollViewer.CanContentScroll="True">
+        <!-- Main Content: TreeView + DataGrid -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="TreeColumn" Width="250" MinWidth="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <DataGrid.LayoutTransform>
-                <ScaleTransform ScaleX="{Binding ElementName=ServerScaleSlider, Path=Value}"
-                                ScaleY="{Binding ElementName=ServerScaleSlider, Path=Value}"/>
-            </DataGrid.LayoutTransform>
-
-            <DataGrid.GroupStyle>
-                <GroupStyle>
-                    <GroupStyle.HeaderTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Background="{DynamicResource ThemeBackgroundAlt}" Margin="0,2,0,0" MinHeight="22">
-                                <TextBlock Text="▶ " FontSize="10" VerticalAlignment="Center" Foreground="{DynamicResource ThemeAccent}" Margin="2,0,0,0"/>
-                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12"
-                                           Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
-                                <TextBlock Text=" (" FontSize="11" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ItemCount}" FontSize="11"
-                                           Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
-                                <TextBlock Text=")" FontSize="11" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+            <!-- Folder Tree -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="0,0,1,0">
+                <TreeView x:Name="FolderTreeView"
+                          Background="{DynamicResource ThemeBackground}"
+                          BorderThickness="0"
+                          SelectedItemChanged="FolderTreeView_SelectedItemChanged">
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal" Margin="2">
+                                <TextBlock Text="📁 " FontSize="12"/>
+                                <TextBlock Text="{Binding DisplayName}" FontSize="12"/>
                             </StackPanel>
-                        </DataTemplate>
-                    </GroupStyle.HeaderTemplate>
-                    <GroupStyle.ContainerStyle>
-                        <Style TargetType="{x:Type GroupItem}">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type GroupItem}">
-                                        <Expander IsExpanded="True" Background="Transparent" BorderThickness="0">
-                                            <Expander.Header>
-                                                <ContentPresenter/>
-                                            </Expander.Header>
-                                            <ItemsPresenter Margin="20,0,0,0"/>
-                                        </Expander>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </GroupStyle.ContainerStyle>
-                </GroupStyle>
-            </DataGrid.GroupStyle>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Border>
 
-            <DataGrid.Columns>
-                <!-- File Name -->
-                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*" MinWidth="150">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                            <Setter Property="ToolTip" Value="{Binding FileName}"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+            <!-- Splitter -->
+            <GridSplitter x:Name="TreeSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="{DynamicResource ThemeBorder}"/>
 
-                <!-- Type -->
-                <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="80" MinWidth="60">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+            <!-- Files DataGrid -->
+            <DataGrid Grid.Column="2" x:Name="ServerAssetsDataGrid"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Extended"
+                      SelectionChanged="ServerAssetsDataGrid_SelectionChanged"
+                      GridLinesVisibility="Horizontal"
+                      RowHeaderWidth="0"
+                      Background="{DynamicResource ThemeDataGridBackground}"
+                      Foreground="{DynamicResource ThemeForeground}"
+                      BorderThickness="0"
+                      CanUserSortColumns="True"
+                      CanUserResizeColumns="True"
+                      RowHeight="22"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.ScrollUnit="Pixel"
+                      EnableRowVirtualization="True"
+                      ScrollViewer.CanContentScroll="True">
 
-                <!-- Size -->
-                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="90" MinWidth="70">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                            <Setter Property="TextAlignment" Value="Right"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                <DataGrid.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding ElementName=ServerScaleSlider, Path=Value}"
+                                    ScaleY="{Binding ElementName=ServerScaleSlider, Path=Value}"/>
+                </DataGrid.LayoutTransform>
 
-                <!-- Sync Status -->
-                <DataGridTemplateColumn Header="Status" Width="110" MinWidth="80">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding SyncStatus}"
-                                       Foreground="{Binding SyncStatusColor}"
-                                       FontWeight="SemiBold"
-                                       Padding="4,2"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+                <DataGrid.Columns>
+                    <!-- File Name -->
+                    <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*" MinWidth="150">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                <Setter Property="ToolTip" Value="{Binding FileName}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
-                <!-- Uploaded At -->
-                <DataGridTextColumn Header="Uploaded" Binding="{Binding UploadedAtDisplay}" Width="140" MinWidth="100">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                    <!-- Type -->
+                    <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="80" MinWidth="60">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
-                <!-- SHA1 -->
-                <DataGridTextColumn Header="SHA1" Binding="{Binding ContentSha1Short}" Width="110" MinWidth="80">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                            <Setter Property="FontFamily" Value="Consolas"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                    <!-- Size -->
+                    <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="90" MinWidth="70">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                                <Setter Property="TextAlignment" Value="Right"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
-                <!-- Remote Path -->
-                <DataGridTextColumn Header="Remote Path" Binding="{Binding RemotePath}" Width="3*" MinWidth="200">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                            <Setter Property="Padding" Value="4,2"/>
-                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                            <Setter Property="ToolTip" Value="{Binding RemotePath}"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                    <!-- Sync Status -->
+                    <DataGridTemplateColumn Header="Status" Width="110" MinWidth="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding SyncStatus}"
+                                           Foreground="{Binding SyncStatusColor}"
+                                           FontWeight="SemiBold"
+                                           Padding="4,2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Uploaded At -->
+                    <DataGridTextColumn Header="Uploaded" Binding="{Binding UploadedAtDisplay}" Width="140" MinWidth="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- SHA1 -->
+                    <DataGridTextColumn Header="SHA1" Binding="{Binding ContentSha1Short}" Width="100" MinWidth="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                <Setter Property="Padding" Value="4,2"/>
+                                <Setter Property="FontFamily" Value="Consolas"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
 
         <!-- Status Bar -->
         <Border Grid.Row="2" Background="{DynamicResource ThemeBackgroundAlt}" Padding="8,4">

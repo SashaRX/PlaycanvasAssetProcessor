@@ -60,8 +60,17 @@
                              VerticalContentAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Right: Actions -->
+                <!-- Right: Actions and Scale -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"
+                               Foreground="{DynamicResource ThemeForeground}"/>
+                    <Slider x:Name="ServerScaleSlider" Width="100" Minimum="0.5" Maximum="2.0"
+                            Value="1.0" VerticalAlignment="Center" Margin="0,0,5,0"
+                            TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                    <TextBlock Text="{Binding ElementName=ServerScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                               VerticalAlignment="Center" Width="40" Margin="0,0,15,0"
+                               Foreground="{DynamicResource ThemeForeground}"/>
+
                     <Button x:Name="DeleteSelectedButton" Content="Delete" Click="DeleteSelectedButton_Click"
                             Background="#FFF44336" Foreground="White"
                             Padding="12,6" Margin="0,0,8,0"
@@ -85,8 +94,18 @@
                   Foreground="{DynamicResource ThemeForeground}"
                   BorderThickness="0"
                   CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
+                  RowHeight="20"
                   VirtualizingPanel.IsVirtualizing="True"
-                  VirtualizingPanel.VirtualizationMode="Recycling">
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  VirtualizingPanel.ScrollUnit="Pixel"
+                  EnableRowVirtualization="True"
+                  ScrollViewer.CanContentScroll="True">
+
+            <DataGrid.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding ElementName=ServerScaleSlider, Path=Value}"
+                                ScaleY="{Binding ElementName=ServerScaleSlider, Path=Value}"/>
+            </DataGrid.LayoutTransform>
 
             <DataGrid.Columns>
                 <!-- File Name -->

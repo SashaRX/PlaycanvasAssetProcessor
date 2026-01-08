@@ -1,3 +1,4 @@
+using AssetProcessor.Data;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using AssetProcessor.Upload;
@@ -56,9 +57,34 @@ public interface IAssetUploadCoordinator {
         CancellationToken ct = default);
 
     /// <summary>
-    /// Проверка нужна ли загрузка (по хешу)
+    /// Проверка нужна ли загрузка (по хешу) - синхронная версия
     /// </summary>
     bool ShouldUpload(BaseResource resource);
+
+    /// <summary>
+    /// Проверка нужна ли загрузка с проверкой в базе данных
+    /// </summary>
+    Task<bool> ShouldUploadAsync(BaseResource resource, CancellationToken ct = default);
+
+    /// <summary>
+    /// Восстанавливает состояние загрузки для ресурса из базы данных
+    /// </summary>
+    Task RestoreUploadStateAsync(BaseResource resource, CancellationToken ct = default);
+
+    /// <summary>
+    /// Восстанавливает состояние загрузки для коллекции ресурсов
+    /// </summary>
+    Task RestoreUploadStatesAsync(IEnumerable<BaseResource> resources, CancellationToken ct = default);
+
+    /// <summary>
+    /// Получает количество записей в истории загрузок
+    /// </summary>
+    Task<int> GetUploadRecordCountAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Получает записи истории с пагинацией
+    /// </summary>
+    Task<IReadOnlyList<UploadRecord>> GetUploadHistoryAsync(int offset = 0, int limit = 100, CancellationToken ct = default);
 
     /// <summary>
     /// Вычисление SHA1 хеша файла

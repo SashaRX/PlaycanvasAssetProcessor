@@ -488,6 +488,18 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Upload" Width="70" MinWidth="50" SortMemberPath="UploadStatus">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding UploadStatusOrProgress}"
+                                                       Foreground="{Binding UploadStatusColor}"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       ToolTip="{Binding RemoteUrl}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                             <DataGrid.GroupStyle>
                                 <!-- Первый уровень: GroupName (основная группа) -->
@@ -776,6 +788,10 @@
                         </DataGrid.Columns>
                     </DataGrid>
                     </Grid>
+                </TabItem>
+                <TabItem x:Name="ServerTabItem" Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"
+                         Background="#FF9C27B0">
+                    <controls:ServerAssetsPanel x:Name="ServerAssetsPanel"/>
                 </TabItem>
                 <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
                     <controls:LogViewerControl x:Name="LogViewer"/>

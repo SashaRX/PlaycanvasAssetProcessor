@@ -274,6 +274,54 @@ namespace AssetProcessor {
 
             // Start watching project folder for file deletions
             StartFileWatcher();
+
+            // Restore upload state from database
+            await RestoreUploadStatesAsync();
+        }
+
+        /// <summary>
+        /// Восстанавливает состояние загрузки для всех текстур из базы данных
+        /// </summary>
+        private async Task RestoreUploadStatesAsync() {
+            try {
+                using var uploadStateService = new Data.UploadStateService();
+                await uploadStateService.InitializeAsync();
+
+                int restoredCount = 0;
+
+                foreach (var texture in viewModel.Textures) {
+                    if (string.IsNullOrEmpty(texture.Path)) continue;
+
+                    // Compute KTX2 path from original path
+                    var ktx2Path = System.IO.Path.ChangeExtension(texture.Path, ".ktx2");
+                    if (string.IsNullOrEmpty(ktx2Path) || !System.IO.File.Exists(ktx2Path)) continue;
+
+                    var record = await uploadStateService.GetByLocalPathAsync(ktx2Path);
+                    if (record != null && record.Status == "Uploaded") {
+                        texture.UploadedHash = record.ContentSha1;
+                        texture.RemoteUrl = record.CdnUrl;
+                        texture.LastUploadedAt = record.UploadedAt;
+
+                        // Check if file has changed since last upload
+                        using var stream = System.IO.File.OpenRead(ktx2Path);
+                        var currentHash = Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(stream)).ToLowerInvariant();
+
+                        if (string.Equals(currentHash, record.ContentSha1, StringComparison.OrdinalIgnoreCase)) {
+                            texture.UploadStatus = "Uploaded";
+                        } else {
+                            texture.UploadStatus = "Outdated";
+                        }
+
+                        restoredCount++;
+                    }
+                }
+
+                if (restoredCount > 0) {
+                    logService.LogInfo($"Restored upload state for {restoredCount} textures");
+                }
+            } catch (Exception ex) {
+                logService.LogWarn($"Failed to restore upload states: {ex.Message}");
+            }
         }
 
         /// <summary>

@@ -4282,7 +4282,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 UploadTexturesButton.Content = "Uploading...";
 
                 using var b2Service = new Upload.B2UploadService();
-                var uploadCoordinator = new Services.AssetUploadCoordinator(b2Service);
+                using var uploadStateService = new Data.UploadStateService();
+                var uploadCoordinator = new Services.AssetUploadCoordinator(b2Service, uploadStateService);
 
                 var initialized = await uploadCoordinator.InitializeAsync();
                 if (!initialized) {

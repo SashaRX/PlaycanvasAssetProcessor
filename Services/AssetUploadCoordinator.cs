@@ -1,5 +1,6 @@
 using System.IO;
 using System.Security.Cryptography;
+using AssetProcessor.Data;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
@@ -15,17 +16,28 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     private readonly IB2UploadService _b2Service;
+    private readonly IUploadStateService _uploadStateService;
 
     public event EventHandler<ResourceStatusChangedEventArgs>? ResourceStatusChanged;
     public event EventHandler<UploadProgressEventArgs>? UploadProgressChanged;
 
-    public AssetUploadCoordinator(IB2UploadService b2Service) {
+    public AssetUploadCoordinator(IB2UploadService b2Service, IUploadStateService uploadStateService) {
         _b2Service = b2Service ?? throw new ArgumentNullException(nameof(b2Service));
+        _uploadStateService = uploadStateService ?? throw new ArgumentNullException(nameof(uploadStateService));
     }
 
     public bool IsAuthorized => _b2Service.IsAuthorized;
 
     public async Task<bool> InitializeAsync(CancellationToken ct = default) {
+        // Initialize upload state database
+        try {
+            await _uploadStateService.InitializeAsync(ct);
+            Logger.Info("Upload state database initialized");
+        } catch (Exception ex) {
+            Logger.Error(ex, "Failed to initialize upload state database");
+            // Continue anyway - persistence is optional
+        }
+
         var keyId = AppSettings.Default.B2KeyId;
 
         if (string.IsNullOrEmpty(keyId)) {
@@ -87,6 +99,13 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
             OnResourceStatusChanged(resource, "Uploaded");
             Logger.Info($"Uploaded: {resource.Name} -> {remotePath}");
 
+            // Save to persistence
+            try {
+                await SaveUploadRecordAsync(resource, remotePath, result, projectName, ct);
+            } catch (Exception ex) {
+                Logger.Warn(ex, "Failed to save upload record to database");
+            }
+
             return new UploadResult(true, result.FileId, remotePath, result.CdnUrl, result.ContentSha1, result.ContentLength);
         } else {
             resource.UploadStatus = "Upload Failed";
@@ -94,8 +113,59 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
             OnResourceStatusChanged(resource, "Upload Failed");
             Logger.Error($"Upload failed: {resource.Name} - {result.ErrorMessage}");
 
+            // Save failed record for reference
+            try {
+                await SaveFailedUploadRecordAsync(resource, remotePath, result.ErrorMessage, projectName, ct);
+            } catch (Exception ex) {
+                Logger.Warn(ex, "Failed to save failed upload record");
+            }
+
             return new UploadResult(false, null, remotePath, null, null, 0, result.ErrorMessage);
         }
+    }
+
+    private async Task SaveUploadRecordAsync(
+        BaseResource resource,
+        string remotePath,
+        B2UploadResult result,
+        string projectName,
+        CancellationToken ct) {
+
+        var record = new UploadRecord {
+            LocalPath = resource.Path!,
+            RemotePath = remotePath,
+            ContentSha1 = result.ContentSha1 ?? resource.UploadedHash ?? "",
+            ContentLength = result.ContentLength,
+            UploadedAt = DateTime.UtcNow,
+            CdnUrl = result.CdnUrl ?? "",
+            Status = "Uploaded",
+            FileId = result.FileId,
+            ProjectName = projectName
+        };
+
+        await _uploadStateService.SaveUploadAsync(record, ct);
+    }
+
+    private async Task SaveFailedUploadRecordAsync(
+        BaseResource resource,
+        string remotePath,
+        string? errorMessage,
+        string projectName,
+        CancellationToken ct) {
+
+        var record = new UploadRecord {
+            LocalPath = resource.Path!,
+            RemotePath = remotePath,
+            ContentSha1 = "",
+            ContentLength = 0,
+            UploadedAt = DateTime.UtcNow,
+            CdnUrl = "",
+            Status = "Failed",
+            ProjectName = projectName,
+            ErrorMessage = errorMessage
+        };
+
+        await _uploadStateService.SaveUploadAsync(record, ct);
     }
 
     public async Task<AssetUploadResult> UploadResourcesAsync(
@@ -221,6 +291,91 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
 
         var currentHash = ComputeFileHash(resource.Path);
         return !string.Equals(currentHash, resource.UploadedHash, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Проверяет нужна ли загрузка, используя persistence database
+    /// </summary>
+    public async Task<bool> ShouldUploadAsync(BaseResource resource, CancellationToken ct = default) {
+        if (string.IsNullOrEmpty(resource.Path) || !File.Exists(resource.Path)) {
+            return false;
+        }
+
+        var currentHash = ComputeFileHash(resource.Path);
+
+        // First check in-memory
+        if (!string.IsNullOrEmpty(resource.UploadedHash) &&
+            string.Equals(currentHash, resource.UploadedHash, StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+
+        // Then check persistence
+        try {
+            var isUploaded = await _uploadStateService.IsUploadedAsync(resource.Path, currentHash, ct);
+            return !isUploaded;
+        } catch (Exception ex) {
+            Logger.Warn(ex, "Failed to check upload state from database");
+            return true; // Assume needs upload if database check fails
+        }
+    }
+
+    /// <summary>
+    /// Восстанавливает состояние загрузки для ресурса из базы данных
+    /// </summary>
+    public async Task RestoreUploadStateAsync(BaseResource resource, CancellationToken ct = default) {
+        if (string.IsNullOrEmpty(resource.Path)) return;
+
+        try {
+            var record = await _uploadStateService.GetByLocalPathAsync(resource.Path, ct);
+            if (record != null && record.Status == "Uploaded") {
+                resource.UploadedHash = record.ContentSha1;
+                resource.RemoteUrl = record.CdnUrl;
+                resource.LastUploadedAt = record.UploadedAt;
+                resource.UploadStatus = "Uploaded";
+
+                // Check if file has changed since last upload
+                var currentHash = ComputeFileHash(resource.Path);
+                if (!string.Equals(currentHash, record.ContentSha1, StringComparison.OrdinalIgnoreCase)) {
+                    resource.UploadStatus = "Outdated";
+                }
+            }
+        } catch (Exception ex) {
+            Logger.Warn(ex, $"Failed to restore upload state for {resource.Path}");
+        }
+    }
+
+    /// <summary>
+    /// Восстанавливает состояние загрузки для коллекции ресурсов
+    /// </summary>
+    public async Task RestoreUploadStatesAsync(IEnumerable<BaseResource> resources, CancellationToken ct = default) {
+        foreach (var resource in resources) {
+            await RestoreUploadStateAsync(resource, ct);
+        }
+    }
+
+    /// <summary>
+    /// Получает количество записей в базе
+    /// </summary>
+    public async Task<int> GetUploadRecordCountAsync(CancellationToken ct = default) {
+        try {
+            return await _uploadStateService.GetCountAsync(ct);
+        } catch {
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Получает записи с пагинацией для просмотра истории
+    /// </summary>
+    public async Task<IReadOnlyList<UploadRecord>> GetUploadHistoryAsync(
+        int offset = 0,
+        int limit = 100,
+        CancellationToken ct = default) {
+        try {
+            return await _uploadStateService.GetPageAsync(offset, limit, ct);
+        } catch {
+            return Array.Empty<UploadRecord>();
+        }
     }
 
     public string ComputeFileHash(string filePath) {

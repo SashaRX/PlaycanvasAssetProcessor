@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Windows.Media;
 
 namespace AssetProcessor.Resources {
     public abstract class BaseResource : INotifyPropertyChanged {
@@ -45,6 +46,7 @@ namespace AssetProcessor.Resources {
                     uploadStatus = value;
                     OnPropertyChanged(nameof(UploadStatus));
                     OnPropertyChanged(nameof(UploadStatusOrProgress));
+                    OnPropertyChanged(nameof(UploadStatusColor));
                 }
             }
         }
@@ -117,6 +119,18 @@ namespace AssetProcessor.Resources {
                 }
             }
         }
+
+        /// <summary>
+        /// Цвет статуса загрузки для отображения в UI
+        /// </summary>
+        public Brush UploadStatusColor => UploadStatus switch {
+            "Uploaded" => Brushes.Green,
+            "Uploading" => Brushes.DodgerBlue,
+            "Queued" => Brushes.Gray,
+            "Upload Failed" => Brushes.Red,
+            "Upload Outdated" => Brushes.Orange,
+            _ => Brushes.Transparent
+        };
 
         public int ID {
             get { return id; }

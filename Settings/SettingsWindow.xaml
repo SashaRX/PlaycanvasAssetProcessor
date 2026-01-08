@@ -320,7 +320,7 @@
                     <GroupBox Header="Backblaze B2:" Background="#7F64B5F6" BorderBrush="#FF2196F3" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
                         <StackPanel>
                             <Label Content="Application Key ID:" ToolTip="Get Key ID from Backblaze B2 Console → App Keys"/>
-                            <TextBox x:Name="B2KeyIdTextBox" Background="#FFBBDEFB"
+                            <TextBox x:Name="B2KeyIdTextBox" Background="#FFBBDEFB" Foreground="#FF000000"
                                      ToolTip="Application Key ID from B2 Console"/>
 
                             <Label Content="Application Key:" ToolTip="Application Key (shown only once when created)"/>
@@ -330,11 +330,11 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <PasswordBox x:Name="B2ApplicationKeyPasswordBox" Grid.Column="0"
-                                             Background="#FFBBDEFB"
+                                             Background="#FFBBDEFB" Foreground="#FF000000"
                                              PasswordChanged="B2ApplicationKeyPasswordBox_PasswordChanged"
                                              ToolTip="Your Backblaze B2 Application Key"/>
                                 <TextBox x:Name="B2ApplicationKeyRevealTextBox" Grid.Column="0"
-                                         Background="#FFBBDEFB"
+                                         Background="#FFBBDEFB" Foreground="#FF000000"
                                          Visibility="Collapsed"
                                          TextChanged="B2ApplicationKeyRevealTextBox_TextChanged"
                                          ToolTip="Your Backblaze B2 Application Key"/>
@@ -346,11 +346,11 @@
                                        Text="Значение ключа скрыто. Нажмите «Показать» для временного просмотра."/>
 
                             <Label Content="Bucket Name:"/>
-                            <TextBox x:Name="B2BucketNameTextBox" Background="#FFBBDEFB"
+                            <TextBox x:Name="B2BucketNameTextBox" Background="#FFBBDEFB" Foreground="#FF000000"
                                      ToolTip="Name of your B2 bucket"/>
 
                             <Label Content="Bucket ID (optional):"/>
-                            <TextBox x:Name="B2BucketIdTextBox" Background="#FFBBDEFB"
+                            <TextBox x:Name="B2BucketIdTextBox" Background="#FFBBDEFB" Foreground="#FF000000"
                                      ToolTip="Optional. Will be auto-detected if empty"/>
 
                             <Button x:Name="TestB2ConnectionButton" Content="Test Connection"
@@ -360,20 +360,20 @@
                         </StackPanel>
                     </GroupBox>
 
-                    <GroupBox Header="CDN Settings" Margin="2,4,2,4"
+                    <GroupBox Header="CDN Settings:" Background="#7F64B5F6" BorderBrush="#FF2196F3"
                               ToolTip="Settings for CDN URL generation">
                         <StackPanel>
                             <Label Content="CDN Base URL:"/>
-                            <TextBox x:Name="CdnBaseUrlTextBox"
+                            <TextBox x:Name="CdnBaseUrlTextBox" Background="#FFBBDEFB" Foreground="#FF000000"
                                      ToolTip="Public URL for accessing files (e.g., https://cdn.example.com)"/>
 
                             <Label Content="Path Prefix:"/>
-                            <TextBox x:Name="B2PathPrefixTextBox"
+                            <TextBox x:Name="B2PathPrefixTextBox" Background="#FFBBDEFB" Foreground="#FF000000"
                                      ToolTip="Path prefix in bucket (e.g., projects/my-game)"/>
                         </StackPanel>
                     </GroupBox>
 
-                    <GroupBox Header="Upload Settings" Margin="2,4,2,4"
+                    <GroupBox Header="Upload Settings:" Background="#7F64B5F6" BorderBrush="#FF2196F3"
                               ToolTip="Controls upload behavior">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">

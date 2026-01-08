@@ -4222,13 +4222,112 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             return resultMessage;
         }
 
-        private void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
-            MessageBox.Show(
-                "Upload functionality coming soon!\n\nThis will upload converted textures to PlayCanvas.",
-                "Coming Soon",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information
-            );
+        private async void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
+            var projectName = ProjectName ?? "UnknownProject";
+            var outputPath = Settings.AppSettings.Default.ProjectsFolderPath;
+
+            if (string.IsNullOrEmpty(outputPath)) {
+                MessageBox.Show(
+                    "Не указана папка проектов. Откройте настройки и укажите Projects Folder Path.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            // Проверяем настройки B2
+            if (string.IsNullOrEmpty(Settings.AppSettings.Default.B2KeyId) ||
+                string.IsNullOrEmpty(Settings.AppSettings.Default.B2BucketName)) {
+                MessageBox.Show(
+                    "Backblaze B2 credentials not configured. Go to Settings -> CDN/Upload to configure.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            // Получаем выбранные текстуры с KTX2 файлами
+            // Вычисляем путь к KTX2 из исходного Path (заменяем расширение на .ktx2)
+            var selectedTextures = TexturesDataGrid.SelectedItems.Cast<Resources.TextureResource>()
+                .Where(t => !string.IsNullOrEmpty(t.Path))
+                .Select(t => {
+                    var sourceDir = System.IO.Path.GetDirectoryName(t.Path)!;
+                    var fileName = System.IO.Path.GetFileNameWithoutExtension(t.Path);
+                    var ktx2Path = System.IO.Path.Combine(sourceDir, fileName + ".ktx2");
+                    return (Texture: t, Ktx2Path: ktx2Path);
+                })
+                .Where(x => System.IO.File.Exists(x.Ktx2Path))
+                .ToList();
+
+            if (!selectedTextures.Any()) {
+                MessageBox.Show(
+                    "No converted textures selected.\n\nProcess textures first (KTX2), then select them for upload.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            try {
+                UploadTexturesButton.IsEnabled = false;
+                UploadTexturesButton.Content = "Uploading...";
+
+                using var b2Service = new Upload.B2UploadService();
+                var uploadCoordinator = new Services.AssetUploadCoordinator(b2Service);
+
+                var initialized = await uploadCoordinator.InitializeAsync();
+                if (!initialized) {
+                    MessageBox.Show(
+                        "Failed to connect to Backblaze B2. Check your credentials in Settings.",
+                        "Upload Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                // Подготавливаем список файлов для загрузки
+                var files = selectedTextures
+                    .Select(x => (LocalPath: x.Ktx2Path, RemotePath: $"{projectName}/textures/{System.IO.Path.GetFileName(x.Ktx2Path)}"))
+                    .ToList();
+
+                var result = await b2Service.UploadBatchAsync(
+                    files,
+                    progress: new Progress<Upload.B2UploadProgress>(p => {
+                        Dispatcher.Invoke(() => {
+                            ProgressBar.Value = p.PercentComplete;
+                        });
+                    })
+                );
+
+                // Обновляем статусы текстур
+                foreach (var item in selectedTextures) {
+                    var uploadResult = result.Results.FirstOrDefault(r => r.LocalPath == item.Ktx2Path);
+                    if (uploadResult?.Success == true) {
+                        item.Texture.UploadStatus = "Uploaded";
+                        item.Texture.RemoteUrl = uploadResult.CdnUrl;
+                        item.Texture.UploadedHash = uploadResult.ContentSha1;
+                        item.Texture.LastUploadedAt = DateTime.UtcNow;
+                    }
+                }
+
+                MessageBox.Show(
+                    $"Upload completed!\n\n" +
+                    $"Uploaded: {result.SuccessCount}\n" +
+                    $"Skipped (already exists): {result.SkippedCount}\n" +
+                    $"Failed: {result.FailedCount}\n" +
+                    $"Duration: {result.Duration.TotalSeconds:F1}s",
+                    "Upload Result",
+                    MessageBoxButton.OK,
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+            } catch (Exception ex) {
+                logger.Error(ex, "Texture upload failed");
+                MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } finally {
+                UploadTexturesButton.IsEnabled = true;
+                UploadTexturesButton.Content = "Upload";
+                ProgressBar.Value = 0;
+            }
         }
 
         private void UpdateSelectedTexturesCount() {

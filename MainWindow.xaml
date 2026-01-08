@@ -263,17 +263,13 @@
                         <TextBlock x:Name="SelectedTexturesCountText" Text="0 textures" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Process Buttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,4">
+                    <!-- Process Buttons Row 1 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                         <Button x:Name="ProcessTexturesButton" Content="Process" Width="60" Margin="0,0,3,0"
                                 Command="{Binding ProcessTexturesCommand}"
                                 CommandParameter="{Binding SelectedItems, ElementName=TexturesDataGrid}"
+                                Background="#FF2196F3" Foreground="White" FontWeight="Bold"
                                 ToolTip="Convert selected textures to KTX2 format"/>
-
-                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="55" Margin="0,0,3,0"
-                                Click="UploadTexturesButton_Click"
-                                ToolTip="Upload converted textures to PlayCanvas (coming soon)"
-                                IsEnabled="False"/>
 
                         <Button x:Name="AutoDetectAllButton" Content="Auto-detect" Width="75" Margin="0,0,3,0"
                                 Command="{Binding AutoDetectPresetsCommand}"
@@ -284,11 +280,23 @@
                                 Click="CreateORMButton_Click"
                                 Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
                                 ToolTip="Create virtual ORM texture for channel packing (AO+Gloss+Metallic)"/>
+
+                        <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center" Margin="8,0,0,0"
+                                  ToolTip="Process all textures instead of just selected ones"
+                                  IsChecked="{Binding ProcessAllTextures, Mode=TwoWay}"/>
                     </StackPanel>
 
-                    <CheckBox x:Name="ProcessAllCheckBox" Content="Process All" VerticalAlignment="Center"
-                              ToolTip="Process all textures instead of just selected ones"
-                              IsChecked="{Binding ProcessAllTextures, Mode=TwoWay}"/>
+                    <!-- Upload Buttons Row 2 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="60" Margin="0,0,3,0"
+                                Click="UploadTexturesButton_Click"
+                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
+                                ToolTip="Upload converted textures to Backblaze B2 cloud storage"/>
+
+                        <CheckBox x:Name="AutoUploadTexturesCheckBox" Content="Auto Upload" VerticalAlignment="Center" Margin="5,0,0,0"
+                                  IsChecked="False"
+                                  ToolTip="Automatically upload textures after processing"/>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
 
@@ -302,8 +310,8 @@
                         <TextBlock x:Name="RelatedAssetsCountText" Text="0 materials, 0 textures" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Export Buttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,4">
+                    <!-- Export Buttons Row 1 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                         <Button x:Name="ExportModelsButton" Content="Export" Width="60" Margin="0,0,3,0"
                                 Click="ExportModelsButton_Click"
                                 Background="#FF2196F3" Foreground="White" FontWeight="Bold"
@@ -317,17 +325,18 @@
                                 Click="ClearExportMarksButton_Click"
                                 ToolTip="Clear all export marks"/>
 
-                        <CheckBox x:Name="GenerateORMCheckBox" Content="ORM Packing" VerticalAlignment="Center" Margin="5,0,5,0"
+                        <CheckBox x:Name="GenerateORMCheckBox" Content="ORM" VerticalAlignment="Center" Margin="8,0,5,0"
                                   IsChecked="True"
                                   ToolTip="Generate ORM packed textures (AO+Gloss+Metallic)"/>
 
                         <CheckBox x:Name="GenerateLODsCheckBox" Content="LODs" VerticalAlignment="Center" Margin="5,0,0,0"
                                   IsChecked="True"
                                   ToolTip="Generate LOD chain for models"/>
+                    </StackPanel>
 
-                        <Separator Margin="10,0,10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
-
-                        <Button x:Name="UploadToCloudButton" Content="Upload to Cloud" Width="100" Margin="0,0,3,0"
+                    <!-- Upload Buttons Row 2 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                        <Button x:Name="UploadToCloudButton" Content="Upload" Width="60" Margin="0,0,3,0"
                                 Click="UploadToCloudButton_Click"
                                 Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
                                 ToolTip="Upload exported assets to Backblaze B2 cloud storage"/>

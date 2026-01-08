@@ -4246,9 +4246,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 return;
             }
 
-            // Получаем выбранные текстуры с KTX2 файлами
+            // Получаем текстуры для загрузки:
+            // 1. Сначала пробуем выбранные в DataGrid
+            // 2. Если ничего не выбрано - берём отмеченные для экспорта (ExportToServer = true)
+            IEnumerable<Resources.TextureResource> texturesToUpload = TexturesDataGrid.SelectedItems.Cast<Resources.TextureResource>();
+
+            if (!texturesToUpload.Any()) {
+                // Используем текстуры, отмеченные для экспорта
+                texturesToUpload = viewModel.Textures.Where(t => t.ExportToServer);
+            }
+
             // Вычисляем путь к KTX2 из исходного Path (заменяем расширение на .ktx2)
-            var selectedTextures = TexturesDataGrid.SelectedItems.Cast<Resources.TextureResource>()
+            var selectedTextures = texturesToUpload
                 .Where(t => !string.IsNullOrEmpty(t.Path))
                 .Select(t => {
                     var sourceDir = System.IO.Path.GetDirectoryName(t.Path)!;
@@ -4261,7 +4270,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             if (!selectedTextures.Any()) {
                 MessageBox.Show(
-                    "No converted textures selected.\n\nProcess textures first (KTX2), then select them for upload.",
+                    "No converted textures found.\n\nEither select textures in the list, or mark them for export (Mark Related), then process them to KTX2.",
                     "Upload Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -4332,10 +4341,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void UpdateSelectedTexturesCount() {
             int selectedCount = TexturesDataGrid.SelectedItems.Count;
-            SelectedTexturesCountText.Text = selectedCount == 1
-                ? "1 texture"
-                : $"{selectedCount} textures";
+            int markedCount = viewModel.Textures.Count(t => t.ExportToServer);
 
+            if (selectedCount > 0) {
+                SelectedTexturesCountText.Text = selectedCount == 1
+                    ? "1 texture"
+                    : $"{selectedCount} textures";
+            } else if (markedCount > 0) {
+                SelectedTexturesCountText.Text = $"{markedCount} marked";
+            } else {
+                SelectedTexturesCountText.Text = "0 textures";
+            }
         }
 
         private void CreateORMButton_Click(object sender, RoutedEventArgs e) {

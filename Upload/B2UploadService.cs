@@ -165,7 +165,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             // Загружаем
             var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl.UploadUrl);
-            request.Headers.Add("Authorization", uploadUrl.AuthorizationToken);
+            request.Headers.TryAddWithoutValidation("Authorization", uploadUrl.AuthorizationToken);
             request.Headers.Add("X-Bz-File-Name", Uri.EscapeDataString(fullRemotePath));
             request.Headers.Add("X-Bz-Content-Sha1", sha1);
 
@@ -331,7 +331,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             var request = new HttpRequestMessage(HttpMethod.Post,
                 $"{_authResponse.ApiUrl}/b2api/v2/b2_list_file_names");
-            request.Headers.Add("Authorization", _authResponse.AuthorizationToken);
+            request.Headers.TryAddWithoutValidation("Authorization", _authResponse.AuthorizationToken);
             request.Content = new StringContent(
                 JsonSerializer.Serialize(requestBody, JsonOptions),
                 Encoding.UTF8,
@@ -384,7 +384,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             var request = new HttpRequestMessage(HttpMethod.Post,
                 $"{_authResponse.ApiUrl}/b2api/v2/b2_delete_file_version");
-            request.Headers.Add("Authorization", _authResponse.AuthorizationToken);
+            request.Headers.TryAddWithoutValidation("Authorization", _authResponse.AuthorizationToken);
             request.Content = new StringContent(
                 JsonSerializer.Serialize(requestBody, JsonOptions),
                 Encoding.UTF8,
@@ -424,7 +424,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
                 var request = new HttpRequestMessage(HttpMethod.Post,
                     $"{_authResponse.ApiUrl}/b2api/v2/b2_list_file_names");
-                request.Headers.Add("Authorization", _authResponse.AuthorizationToken);
+                request.Headers.TryAddWithoutValidation("Authorization", _authResponse.AuthorizationToken);
                 request.Content = new StringContent(
                     JsonSerializer.Serialize(requestBody, JsonOptions),
                     Encoding.UTF8,
@@ -481,7 +481,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             var request = new HttpRequestMessage(HttpMethod.Post,
                 $"{_authResponse.ApiUrl}/b2api/v2/b2_list_buckets");
-            request.Headers.Add("Authorization", _authResponse.AuthorizationToken);
+            request.Headers.TryAddWithoutValidation("Authorization", _authResponse.AuthorizationToken);
             request.Content = new StringContent(
                 JsonSerializer.Serialize(requestBody, JsonOptions),
                 Encoding.UTF8,
@@ -520,7 +520,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             var request = new HttpRequestMessage(HttpMethod.Post,
                 $"{_authResponse.ApiUrl}/b2api/v2/b2_get_upload_url");
-            request.Headers.Add("Authorization", _authResponse.AuthorizationToken);
+            request.Headers.TryAddWithoutValidation("Authorization", _authResponse.AuthorizationToken);
             request.Content = new StringContent(
                 JsonSerializer.Serialize(requestBody, JsonOptions),
                 Encoding.UTF8,

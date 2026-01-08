@@ -566,6 +566,13 @@ namespace AssetProcessor.Controls {
                     currentORMTexture.CompressionFormat = compressionSettings.CompressionFormat;
                     currentORMTexture.MipmapCount = result.MipLevels;
 
+                    // Обновляем размер файла
+                    if (File.Exists(outputPath)) {
+                        var fileInfo = new FileInfo(outputPath);
+                        currentORMTexture.CompressedSize = fileInfo.Length;
+                        currentORMTexture.Size = (int)fileInfo.Length;
+                    }
+
                     // Устанавливаем разрешение из source текстуры (приоритет: AO -> Gloss -> Metallic)
                     if (currentORMTexture.AOSource != null && currentORMTexture.AOSource.Resolution != null) {
                         currentORMTexture.Resolution = currentORMTexture.AOSource.Resolution;
@@ -575,7 +582,7 @@ namespace AssetProcessor.Controls {
                         currentORMTexture.Resolution = currentORMTexture.MetallicSource.Resolution;
                     }
 
-                    Logger.Info($"ORM texture updated: Status={currentORMTexture.Status}, Resolution={currentORMTexture.Resolution?[0]}x{currentORMTexture.Resolution?[1]}, MipLevels={result.MipLevels}");
+                    Logger.Info($"ORM texture updated: Status={currentORMTexture.Status}, Resolution={currentORMTexture.Resolution?[0]}x{currentORMTexture.Resolution?[1]}, MipLevels={result.MipLevels}, Size={currentORMTexture.CompressedSize}");
 
                     // Refresh MainWindow to update preview and row color
                     Logger.Info("Calling MainWindow.RefreshCurrentTexture() to update preview and row color");

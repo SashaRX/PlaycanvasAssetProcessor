@@ -535,6 +535,7 @@ namespace AssetProcessor {
             }
 
             UpdateModelExportCounts();
+            UpdateSelectedTexturesCount();
 
             MessageBox.Show(
                 $"Отмечено для экспорта:\n\n{relatedMaterials.Count} материалов\n{relatedTextures.Count} текстур",
@@ -560,6 +561,7 @@ namespace AssetProcessor {
             }
 
             UpdateModelExportCounts();
+            UpdateSelectedTexturesCount();
         }
 
         /// <summary>

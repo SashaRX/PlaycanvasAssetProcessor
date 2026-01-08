@@ -214,11 +214,13 @@ namespace AssetProcessor {
         }
 
         private void ClearHistogram() {
-            // Create empty dark PlotModel for histogram
+            // Create empty PlotModel for histogram with theme-aware colors
+            var bgColor = Helpers.ThemeHelper.GetHistogramBackgroundColor();
+            var borderColor = Helpers.ThemeHelper.GetHistogramBorderColor();
             var emptyModel = new PlotModel {
-                Background = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
-                PlotAreaBackground = OxyColor.FromRgb(0x2D, 0x2D, 0x30),
-                PlotAreaBorderColor = OxyColor.FromRgb(0x3F, 0x3F, 0x46),
+                Background = OxyColor.FromRgb(bgColor.R, bgColor.G, bgColor.B),
+                PlotAreaBackground = OxyColor.FromRgb(bgColor.R, bgColor.G, bgColor.B),
+                PlotAreaBorderColor = OxyColor.FromRgb(borderColor.R, borderColor.G, borderColor.B),
                 PlotAreaBorderThickness = new OxyThickness(0)
             };
             HistogramPlotView.Model = emptyModel;

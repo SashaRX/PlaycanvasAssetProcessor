@@ -89,6 +89,7 @@
     <!-- 3D Graphics and Models -->
     <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
     <PackageReference Include="HelixToolkit.Wpf" Version="2.27.3" NoWarn="NU1701" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.1" />
     <PackageReference Include="SharpGLTF.Core" Version="1.0.2" />
     <PackageReference Include="SharpGLTF.Toolkit" Version="1.0.2" />
 

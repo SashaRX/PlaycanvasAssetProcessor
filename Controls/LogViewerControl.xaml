@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:AssetProcessor"
+             xmlns:local="clr-namespace:AssetProcessor.Controls"
              xmlns:settings="clr-namespace:AssetProcessor.Settings;assembly=AssetProcessor"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
@@ -152,8 +152,18 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Message}" TextTrimming="CharacterEllipsis"
-                                       Foreground="{Binding MessageColor}" Padding="2,0"
-                                       ToolTip="{Binding Message}"/>
+                                       Padding="2,0" ToolTip="{Binding Message}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding MessageColor, Converter={x:Static local:NullCheckConverter.Instance}}" Value="False">
+                                                <Setter Property="Foreground" Value="{Binding MessageColor}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

@@ -456,7 +456,7 @@ namespace AssetProcessor {
                         // Extract histogram for packed ORM textures
                         if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
                             string? ormPath = ormTexture.Path;
-                            string ormName = ormTexture.Name;
+                            string ormName = ormTexture.Name ?? "unknown";
                             logger.Info($"[ORM Histogram] Starting extraction for: {ormName}, path: {ormPath}");
 
                             _ = Task.Run(async () => {
@@ -1966,7 +1966,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
                         // Extract mip0 bitmap for histogram calculation (fire-and-forget with timeout)
                         string? ormPath = ormTexture.Path;
-                        string ormName = ormTexture.Name;
+                        string ormName = ormTexture.Name ?? "unknown";
                         logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
 
                         // DIAGNOSTIC: Add delay to let LoadTexture complete first
@@ -4282,7 +4282,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 UploadTexturesButton.Content = "Uploading...";
 
                 using var b2Service = new Upload.B2UploadService();
-                var uploadCoordinator = new Services.AssetUploadCoordinator(b2Service);
+                using var uploadStateService = new Data.UploadStateService();
+                var uploadCoordinator = new Services.AssetUploadCoordinator(b2Service, uploadStateService);
 
                 var initialized = await uploadCoordinator.InitializeAsync();
                 if (!initialized) {

@@ -302,18 +302,21 @@ namespace AssetProcessor {
             TextureViewerScroll.Visibility = Visibility.Visible;
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowModelViewer() {
             TextureViewerScroll.Visibility = Visibility.Collapsed;
             ModelViewerScroll.Visibility = Visibility.Visible;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowMaterialViewer() {
             TextureViewerScroll.Visibility = Visibility.Collapsed;
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Visible;
+            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
         }
 
         private void HideAllViewers() {

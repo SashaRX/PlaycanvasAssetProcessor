@@ -163,8 +163,10 @@ namespace AssetProcessor {
             ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
             ConversionSettingsPanel.SettingsChanged += ConversionSettingsPanel_SettingsChanged;
 
-            // Server assets panel selection
-            ServerAssetsPanel.SelectionChanged += (s, asset) => UpdateServerFileInfo(asset);
+            // Server assets panel selection (deferred to Loaded to avoid initialization issues)
+            this.Loaded += (s, e) => {
+                ServerAssetsPanel.SelectionChanged += (sender, asset) => UpdateServerFileInfo(asset);
+            };
 
             // ����������� ������ ���������� � ����������� � ������ � �������
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
@@ -336,6 +338,9 @@ namespace AssetProcessor {
         public void UpdateServerFileInfo(ViewModels.ServerAssetViewModel? asset) {
             _selectedServerAsset = asset;
 
+            // Safety check - panel controls may not be ready
+            if (ServerFileNameText == null) return;
+
             if (asset == null) {
                 ServerFileNameText.Text = "-";
                 ServerFileTypeText.Text = "-";
@@ -418,6 +423,9 @@ namespace AssetProcessor {
         }
 
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Guard against early calls during initialization
+            if (!this.IsLoaded || TextureOperationsGroupBox == null) return;
+
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":

@@ -266,6 +266,7 @@ namespace AssetProcessor.Controls {
         public event EventHandler<ServerAssetViewModel?>? SelectionChanged;
 
         private void ServerAssetsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isInitialized) return;
             var selectedAsset = ServerAssetsDataGrid.SelectedItem as ServerAssetViewModel;
             SelectionChanged?.Invoke(this, selectedAsset);
         }

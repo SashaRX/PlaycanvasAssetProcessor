@@ -310,6 +310,7 @@
             </TabItem>
 
             <TabItem Header="CDN/Upload" Background="#FF2196F3">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Margin="1,0,1,0" TextAlignment="Center" HorizontalAlignment="Center">
                         <Hyperlink NavigateUri="https://www.backblaze.com/docs/cloud-storage-s3-compatible-api" RequestNavigate="Hyperlink_RequestNavigate">
@@ -396,6 +397,7 @@
                     <TextBlock Text="Note: Application Key is stored encrypted using Windows DPAPI"
                                FontSize="9" Foreground="{DynamicResource ThemeForegroundDim}" Margin="4,4,4,0"/>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
 

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using AssetProcessor.Helpers;
 using Microsoft.Win32;
 using NLog;
 
@@ -67,7 +68,11 @@ namespace AssetProcessor.Controls {
                     return brush;
                 }
             } catch { }
-            return new SolidColorBrush(Color.FromRgb(200, 200, 200)); // Light gray fallback
+            // Fallback: detect if system is using dark theme
+            bool isDark = ThemeHelper.IsDarkTheme;
+            return isDark
+                ? new SolidColorBrush(Color.FromRgb(200, 200, 200)) // Light gray for dark theme
+                : new SolidColorBrush(Color.FromRgb(30, 30, 30));   // Dark gray for light theme
         }
     }
 

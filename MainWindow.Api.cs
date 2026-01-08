@@ -63,66 +63,6 @@ namespace AssetProcessor {
         }
 
 
-        private void BuildFolderHierarchyFromAssets(JArray assetsResponse) {
-            try {
-                folderPaths.Clear();
-
-                // Извлекаем только папки из списка ассетов
-                var folders = assetsResponse.Where(asset => asset["type"]?.ToString() == "folder").ToList();
-
-                // Создаем словарь для быстрого доступа к папкам по ID
-                Dictionary<int, JToken> foldersById = new();
-                foreach (JToken folder in folders) {
-                    int? folderId = folder["id"]?.Type == JTokenType.Integer ? (int?)folder["id"] : null;
-                    if (folderId.HasValue) {
-                        foldersById[folderId.Value] = folder;
-                    }
-                }
-
-                // Рекурсивная функция для построения полного пути папки
-                string BuildFolderPath(int folderId) {
-                    if (folderPaths.ContainsKey(folderId)) {
-                        return folderPaths[folderId];
-                    }
-
-                    if (!foldersById.ContainsKey(folderId)) {
-                        return string.Empty;
-                    }
-
-                    JToken folder = foldersById[folderId];
-                    // КРИТИЧНО: Используем SanitizePath для очистки имени папки от \r, \n и пробелов!
-                    string folderName = PathSanitizer.SanitizePath(folder["name"]?.ToString());
-                    int? parentId = folder["parent"]?.Type == JTokenType.Integer ? (int?)folder["parent"] : null;
-
-                    string fullPath;
-                    if (parentId.HasValue && parentId.Value != 0) {
-                        // Есть родительская папка - рекурсивно строим путь
-                        string parentPath = BuildFolderPath(parentId.Value);
-                        fullPath = string.IsNullOrEmpty(parentPath) ? folderName : Path.Combine(parentPath, folderName);
-                    } else {
-                        // Папка верхнего уровня (parent == 0 или null)
-                        fullPath = folderName;
-                    }
-
-                    // КРИТИЧНО: Применяем SanitizePath к финальному пути для гарантии
-                    fullPath = PathSanitizer.SanitizePath(fullPath);
-
-                    folderPaths[folderId] = fullPath;
-                    return fullPath;
-                }
-
-                // Строим пути для всех папок
-                foreach (var folderId in foldersById.Keys) {
-                    BuildFolderPath(folderId);
-                }
-
-                logService.LogInfo($"Built folder hierarchy with {folderPaths.Count} folders from assets list");
-            } catch (Exception ex) {
-                logService.LogError($"Error building folder hierarchy from assets: {ex.Message}");
-                // Продолжаем работу даже если не удалось загрузить папки
-            }
-        }
-
         private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
             AssetProcessingResult? result = null;
 

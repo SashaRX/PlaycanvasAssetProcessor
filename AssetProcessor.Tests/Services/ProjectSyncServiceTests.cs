@@ -16,8 +16,9 @@ public class ProjectSyncServiceTests {
     public async Task SyncProjectAsync_BuildsFolderHierarchyAndSavesAssets() {
         StubPlayCanvasService playCanvas = new();
         StubLocalCacheService cache = new();
+        StubAssetResourceService assetResource = new();
         TestLogService log = new();
-        ProjectSyncService service = new(playCanvas, cache, log);
+        ProjectSyncService service = new(playCanvas, cache, assetResource, log);
 
         ProjectSyncRequest request = new(
             "project",
@@ -40,8 +41,9 @@ public class ProjectSyncServiceTests {
         StubLocalCacheService cache = new();
         cache.FileDownloadResults.Enqueue(new ResourceDownloadResult(true, "Downloaded", 1));
         cache.FileDownloadResults.Enqueue(new ResourceDownloadResult(false, "Error", 1, "boom"));
+        StubAssetResourceService assetResource = new();
         TestLogService log = new();
-        ProjectSyncService service = new(playCanvas, cache, log);
+        ProjectSyncService service = new(playCanvas, cache, assetResource, log);
 
         TextureResource texture = new() { ID = 1, Name = "texture", Url = "https://example.com/texture.png", Path = "texture.png" };
         ModelResource model = new() { ID = 2, Name = "model", Url = "https://example.com/model.fbx", Path = "model.fbx" };
@@ -153,5 +155,29 @@ public class ProjectSyncServiceTests {
         public void LogInfo(string message) { }
         public void LogWarn(string message) { }
         public void LogDebug(string message) { }
+    }
+
+    private sealed class StubAssetResourceService : IAssetResourceService {
+        public void BuildFolderHierarchy(JArray assetsResponse, IDictionary<int, string> targetFolderPaths) {
+            // Simulate building folder hierarchy from assets
+            foreach (var asset in assetsResponse) {
+                if (asset["type"]?.ToString() == "folder") {
+                    int? id = asset["id"]?.Type == JTokenType.Integer ? (int?)asset["id"] : null;
+                    string? name = asset["name"]?.ToString();
+                    if (id.HasValue && !string.IsNullOrEmpty(name)) {
+                        targetFolderPaths[id.Value] = name;
+                    }
+                }
+            }
+        }
+
+        public Task<AssetProcessingResult?> ProcessAssetAsync(JToken asset, AssetProcessingParameters parameters, CancellationToken cancellationToken) =>
+            Task.FromResult<AssetProcessingResult?>(null);
+
+        public Task<MaterialResource?> LoadMaterialFromFileAsync(string filePath, CancellationToken cancellationToken) =>
+            Task.FromResult<MaterialResource?>(null);
+
+        public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
     }
 }

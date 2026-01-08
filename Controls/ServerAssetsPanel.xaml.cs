@@ -261,6 +261,16 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
+        /// Событие при выборе файла в таблице
+        /// </summary>
+        public event EventHandler<ServerAssetViewModel?>? SelectionChanged;
+
+        private void ServerAssetsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            var selectedAsset = ServerAssetsDataGrid.SelectedItem as ServerAssetViewModel;
+            SelectionChanged?.Invoke(this, selectedAsset);
+        }
+
+        /// <summary>
         /// Удаляет выбранные файлы с сервера
         /// </summary>
         private async void DeleteSelectedButton_Click(object sender, RoutedEventArgs e) {

@@ -91,6 +91,7 @@
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Extended"
+                  SelectionChanged="ServerAssetsDataGrid_SelectionChanged"
                   GridLinesVisibility="Horizontal"
                   RowHeaderWidth="0"
                   Background="{DynamicResource ThemeDataGridBackground}"

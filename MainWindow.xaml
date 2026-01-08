@@ -1783,6 +1783,70 @@
                 </Border>
             </ScrollViewer>
 
+            <!-- Server File Info Panel -->
+            <ScrollViewer x:Name="ServerFileInfoScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                <Border Background="{DynamicResource ThemeBackground}" BorderThickness="2" BorderBrush="{DynamicResource ThemeBorder}" Padding="8" MinWidth="250">
+                    <StackPanel>
+                        <TextBlock Text="Server File Info" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"
+                                   Foreground="{DynamicResource ThemeForeground}"/>
+
+                        <!-- File Name -->
+                        <TextBlock Text="File Name" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileNameText" Text="-" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- Type -->
+                        <TextBlock Text="Type" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileTypeText" Text="-" FontSize="12"
+                                   Foreground="{DynamicResource ThemeForeground}" Margin="0,0,0,10"/>
+
+                        <!-- Size -->
+                        <TextBlock Text="Size" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileSizeText" Text="-" FontSize="12"
+                                   Foreground="{DynamicResource ThemeForeground}" Margin="0,0,0,10"/>
+
+                        <!-- Sync Status -->
+                        <TextBlock Text="Sync Status" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileSyncStatusText" Text="-" FontSize="12" FontWeight="SemiBold"
+                                   Margin="0,0,0,10"/>
+
+                        <!-- Uploaded At -->
+                        <TextBlock Text="Uploaded" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileUploadedText" Text="-" FontSize="12"
+                                   Foreground="{DynamicResource ThemeForeground}" Margin="0,0,0,10"/>
+
+                        <!-- SHA1 -->
+                        <TextBlock Text="SHA1 Hash" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileSha1Text" Text="-" FontSize="11" FontFamily="Consolas"
+                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- Remote Path -->
+                        <TextBlock Text="Remote Path" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileRemotePathText" Text="-" FontSize="11"
+                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- CDN URL -->
+                        <TextBlock Text="CDN URL" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBox x:Name="ServerFileCdnUrlText" Text="-" FontSize="11" IsReadOnly="True"
+                                 Background="Transparent" BorderThickness="0"
+                                 Foreground="{DynamicResource ThemeAccent}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                        <Button x:Name="CopyServerUrlButton" Content="Copy CDN URL" Click="CopyServerUrlButton_Click"
+                                Padding="8,4" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+
+                        <!-- Local Path -->
+                        <TextBlock Text="Local Path" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="ServerFileLocalPathText" Text="-" FontSize="11"
+                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- Actions -->
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button x:Name="DeleteServerFileButton" Content="Delete from Server" Click="DeleteServerFileButton_Click"
+                                    Background="#FFF44336" Foreground="White" Padding="8,4" Margin="0,0,8,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+
         </Grid>
     </DockPanel>
 </Window>

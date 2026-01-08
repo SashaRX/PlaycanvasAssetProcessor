@@ -163,6 +163,9 @@ namespace AssetProcessor {
             ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
             ConversionSettingsPanel.SettingsChanged += ConversionSettingsPanel_SettingsChanged;
 
+            // Server assets panel selection
+            ServerAssetsPanel.SelectionChanged += (s, asset) => UpdateServerFileInfo(asset);
+
             // ����������� ������ ���������� � ����������� � ������ � �������
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
@@ -315,6 +318,97 @@ namespace AssetProcessor {
             TextureViewerScroll.Visibility = Visibility.Collapsed;
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowServerFileInfo() {
+            TextureViewerScroll.Visibility = Visibility.Collapsed;
+            ModelViewerScroll.Visibility = Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = Visibility.Visible;
+        }
+
+        private ViewModels.ServerAssetViewModel? _selectedServerAsset;
+
+        /// <summary>
+        /// Updates the server file info panel with the selected asset
+        /// </summary>
+        public void UpdateServerFileInfo(ViewModels.ServerAssetViewModel? asset) {
+            _selectedServerAsset = asset;
+
+            if (asset == null) {
+                ServerFileNameText.Text = "-";
+                ServerFileTypeText.Text = "-";
+                ServerFileSizeText.Text = "-";
+                ServerFileSyncStatusText.Text = "-";
+                ServerFileSyncStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+                ServerFileUploadedText.Text = "-";
+                ServerFileSha1Text.Text = "-";
+                ServerFileRemotePathText.Text = "-";
+                ServerFileCdnUrlText.Text = "-";
+                ServerFileLocalPathText.Text = "-";
+                return;
+            }
+
+            ServerFileNameText.Text = asset.FileName;
+            ServerFileTypeText.Text = asset.FileType;
+            ServerFileSizeText.Text = asset.SizeDisplay;
+            ServerFileSyncStatusText.Text = asset.SyncStatus;
+            ServerFileSyncStatusText.Foreground = asset.SyncStatusColor;
+            ServerFileUploadedText.Text = asset.UploadedAtDisplay;
+            ServerFileSha1Text.Text = asset.ContentSha1;
+            ServerFileRemotePathText.Text = asset.RemotePath;
+            ServerFileCdnUrlText.Text = asset.CdnUrl ?? "-";
+            ServerFileLocalPathText.Text = asset.LocalPath ?? "Not found locally";
+        }
+
+        private void CopyServerUrlButton_Click(object sender, RoutedEventArgs e) {
+            if (_selectedServerAsset != null && !string.IsNullOrEmpty(_selectedServerAsset.CdnUrl)) {
+                Clipboard.SetText(_selectedServerAsset.CdnUrl);
+                logService.LogInfo($"Copied CDN URL: {_selectedServerAsset.CdnUrl}");
+            }
+        }
+
+        private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {
+            if (_selectedServerAsset == null) return;
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete '{_selectedServerAsset.FileName}' from the server?\n\nThis action cannot be undone.",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try {
+                using var b2Service = new Upload.B2UploadService();
+
+                if (!Settings.AppSettings.Default.TryGetDecryptedB2ApplicationKey(out var appKey) || string.IsNullOrEmpty(appKey)) {
+                    logService.LogError("Failed to decrypt B2 application key.");
+                    return;
+                }
+
+                var settings = new Upload.B2UploadSettings {
+                    KeyId = Settings.AppSettings.Default.B2KeyId,
+                    ApplicationKey = appKey,
+                    BucketName = Settings.AppSettings.Default.B2BucketName,
+                    BucketId = Settings.AppSettings.Default.B2BucketId
+                };
+
+                await b2Service.AuthorizeAsync(settings);
+                var success = await b2Service.DeleteFileAsync(_selectedServerAsset.RemotePath);
+
+                if (success) {
+                    logService.LogInfo($"Deleted: {_selectedServerAsset.RemotePath}");
+                    UpdateServerFileInfo(null);
+                    // Refresh the server assets panel
+                    await ServerAssetsPanel.RefreshServerAssetsAsync();
+                } else {
+                    logService.LogError($"Failed to delete: {_selectedServerAsset.RemotePath}");
+                }
+            } catch (Exception ex) {
+                logService.LogError($"Error deleting file: {ex.Message}");
+            }
         }
 
         private void SetRightPanelVisibility(bool visible) {
@@ -346,6 +440,10 @@ namespace AssetProcessor {
                         ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
                     case "Server":
+                        ShowServerFileInfo();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        break;
                     case "Logs":
                         SetRightPanelVisibility(false);
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;

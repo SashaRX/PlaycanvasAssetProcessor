@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using AssetProcessor.Settings;
 using AssetProcessor.Upload;
 using AssetProcessor.ViewModels;
@@ -30,7 +32,12 @@ namespace AssetProcessor.Controls {
 
         public ServerAssetsPanel() {
             InitializeComponent();
-            ServerAssetsDataGrid.ItemsSource = _filteredAssets;
+
+            // Setup CollectionView with grouping
+            var view = CollectionViewSource.GetDefaultView(_filteredAssets);
+            view.GroupDescriptions.Add(new PropertyGroupDescription("FolderPath"));
+            ServerAssetsDataGrid.ItemsSource = view;
+
             _isInitialized = true;
         }
 

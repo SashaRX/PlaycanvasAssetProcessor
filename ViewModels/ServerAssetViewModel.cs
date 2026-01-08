@@ -34,6 +34,16 @@ namespace AssetProcessor.ViewModels {
         public string FileName => System.IO.Path.GetFileName(_remotePath);
 
         /// <summary>
+        /// Путь к папке (для группировки)
+        /// </summary>
+        public string FolderPath {
+            get {
+                var dir = System.IO.Path.GetDirectoryName(_remotePath)?.Replace('\\', '/');
+                return string.IsNullOrEmpty(dir) ? "/" : dir;
+            }
+        }
+
+        /// <summary>
         /// Размер файла в байтах
         /// </summary>
         public long Size {

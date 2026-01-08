@@ -111,6 +111,40 @@
                                 ScaleY="{Binding ElementName=ServerScaleSlider, Path=Value}"/>
             </DataGrid.LayoutTransform>
 
+            <DataGrid.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Background="{DynamicResource ThemeBackgroundAlt}" Margin="0,2,0,0" MinHeight="22">
+                                <TextBlock Text="▶ " FontSize="10" VerticalAlignment="Center" Foreground="{DynamicResource ThemeAccent}" Margin="2,0,0,0"/>
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12"
+                                           Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                <TextBlock Text=" (" FontSize="11" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ItemCount}" FontSize="11"
+                                           Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                                <TextBlock Text=")" FontSize="11" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                    <GroupStyle.ContainerStyle>
+                        <Style TargetType="{x:Type GroupItem}">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type GroupItem}">
+                                        <Expander IsExpanded="True" Background="Transparent" BorderThickness="0">
+                                            <Expander.Header>
+                                                <ContentPresenter/>
+                                            </Expander.Header>
+                                            <ItemsPresenter Margin="20,0,0,0"/>
+                                        </Expander>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </GroupStyle.ContainerStyle>
+                </GroupStyle>
+            </DataGrid.GroupStyle>
+
             <DataGrid.Columns>
                 <!-- File Name -->
                 <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*" MinWidth="150">

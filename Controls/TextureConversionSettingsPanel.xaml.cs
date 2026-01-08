@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using AssetProcessor.Helpers;
 using AssetProcessor.Services;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
@@ -550,14 +551,6 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
-        /// Sanitizes file path by removing newlines and whitespace
-        /// </summary>
-        private static string SanitizePath(string? path) {
-            if (string.IsNullOrWhiteSpace(path)) return string.Empty;
-            return path.Replace("\r", "").Replace("\n", "").Trim();
-        }
-
-        /// <summary>
         /// Ищет normal map по имени файла gloss текстуры
         /// </summary>
         private string? FindNormalMapForTexture(string texturePath) {
@@ -565,7 +558,7 @@ namespace AssetProcessor.Controls {
 
             try {
                 // КРИТИЧНО: Sanitize path перед использованием File.Exists!
-                texturePath = SanitizePath(texturePath);
+                texturePath = PathSanitizer.SanitizePath(texturePath);
 
                 var directory = System.IO.Path.GetDirectoryName(texturePath);
                 if (string.IsNullOrEmpty(directory) || !System.IO.Directory.Exists(directory)) return null;

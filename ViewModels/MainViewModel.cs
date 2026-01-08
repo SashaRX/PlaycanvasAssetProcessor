@@ -532,8 +532,8 @@ namespace AssetProcessor.ViewModels {
                     continue;
                 }
 
-                string sanitizedName = localCacheService.SanitizePath(asset.Name);
-                string fileName = localCacheService.SanitizePath(asset.File?.Filename ?? sanitizedName ?? $"asset_{asset.Id}");
+                string sanitizedName = PathSanitizer.SanitizePath(asset.Name);
+                string fileName = PathSanitizer.SanitizePath(asset.File?.Filename ?? sanitizedName ?? $"asset_{asset.Id}");
 
                 if (string.Equals(asset.Type, "material", StringComparison.OrdinalIgnoreCase) && !fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) {
                     fileName = string.IsNullOrEmpty(fileName) ? $"material_{asset.Id}.json" : $"{fileName}.json";

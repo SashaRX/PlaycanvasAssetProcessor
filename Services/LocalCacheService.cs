@@ -23,17 +23,6 @@ public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem
 
     private static string GetAssetsListPath(string projectFolderPath) => Path.Combine(projectFolderPath, "assets_list.json");
 
-    public string SanitizePath(string? path) {
-        if (string.IsNullOrWhiteSpace(path)) {
-            return string.Empty;
-        }
-
-        return path
-            .Replace("\r", string.Empty)
-            .Replace("\n", string.Empty)
-            .Trim();
-    }
-
     public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) {
         ArgumentException.ThrowIfNullOrEmpty(projectsRoot);
         ArgumentException.ThrowIfNullOrEmpty(projectName);

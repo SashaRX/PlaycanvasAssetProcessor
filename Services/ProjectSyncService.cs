@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
@@ -157,7 +158,7 @@ public sealed class ProjectSyncService : IProjectSyncService {
     private async Task<ResourceDownloadResult> DownloadMaterialInternalAsync(MaterialResource material, ProjectDownloadRequest request, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(material);
 
-        string sanitizedName = localCacheService.SanitizePath(material.Name);
+        string sanitizedName = PathSanitizer.SanitizePath(material.Name);
         material.Path = localCacheService.GetResourcePath(request.ProjectsRoot, request.ProjectName, request.FolderPaths, $"{sanitizedName}.json", material.Parent);
 
         try {
@@ -181,7 +182,7 @@ public sealed class ProjectSyncService : IProjectSyncService {
             await PopulateResourceMetadataAsync(resource, request.ApiKey, cancellationToken).ConfigureAwait(false);
         }
 
-        string sanitizedName = localCacheService.SanitizePath(resource.Name);
+        string sanitizedName = PathSanitizer.SanitizePath(resource.Name);
         if (string.IsNullOrEmpty(resource.Path)) {
             resource.Path = localCacheService.GetResourcePath(request.ProjectsRoot, request.ProjectName, request.FolderPaths, sanitizedName, resource.Parent);
         }

@@ -136,7 +136,5 @@ public class AssetDownloadCoordinatorTests {
             System.IO.Path.Combine(projectsRoot, projectName, LocalCacheService.AssetsDirectoryName, fileName ?? string.Empty);
 
         public Task SaveAssetsListAsync(Newtonsoft.Json.Linq.JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) => throw new NotImplementedException();
-
-        public string SanitizePath(string? path) => path ?? string.Empty;
     }
 }

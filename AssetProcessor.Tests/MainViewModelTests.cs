@@ -240,8 +240,6 @@ public class MainViewModelTests {
         public Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) =>
             Task.FromResult<JArray?>(null);
 
-        public string SanitizePath(string? path) => path ?? string.Empty;
-
         public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) =>
             Task.CompletedTask;
     }
@@ -293,8 +291,6 @@ public class MainViewModelTests {
 
         public Task<JArray?> LoadAssetsListAsync(string projectFolderPath, CancellationToken cancellationToken) =>
             Task.FromResult<JArray?>(null);
-
-        public string SanitizePath(string? path) => path ?? string.Empty;
 
         public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) =>
             Task.CompletedTask;

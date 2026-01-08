@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 namespace AssetProcessor.Services;
 
 public interface ILocalCacheService {
-    string SanitizePath(string? path);
-
     string GetResourcePath(
         string projectsRoot,
         string projectName,

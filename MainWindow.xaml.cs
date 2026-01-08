@@ -311,22 +311,46 @@ namespace AssetProcessor {
             MaterialViewerScroll.Visibility = Visibility.Visible;
         }
 
+        private void HideAllViewers() {
+            TextureViewerScroll.Visibility = Visibility.Collapsed;
+            ModelViewerScroll.Visibility = Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = Visibility.Collapsed;
+        }
+
+        private void SetRightPanelVisibility(bool visible) {
+            var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            RightPanelSplitter.Visibility = visibility;
+            ToggleViewButton.Visibility = visibility;
+            if (!visible) {
+                HideAllViewers();
+            }
+        }
+
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
+                        SetRightPanelVisibility(true);
                         ShowTextureViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Visible;
                         ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
                     case "Models":
+                        SetRightPanelVisibility(true);
                         ShowModelViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         ModelExportGroupBox.Visibility = Visibility.Visible;
                         UpdateModelExportCounts();
                         break;
                     case "Materials":
+                        SetRightPanelVisibility(true);
                         ShowMaterialViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        break;
+                    case "Server":
+                    case "Logs":
+                        SetRightPanelVisibility(false);
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;

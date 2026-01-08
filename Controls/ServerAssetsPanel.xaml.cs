@@ -26,10 +26,12 @@ namespace AssetProcessor.Controls {
         private string? _projectFolderPath;
         private string? _projectName;
         private CancellationTokenSource? _refreshCts;
+        private bool _isInitialized;
 
         public ServerAssetsPanel() {
             InitializeComponent();
             ServerAssetsDataGrid.ItemsSource = _filteredAssets;
+            _isInitialized = true;
         }
 
         /// <summary>
@@ -247,15 +249,15 @@ namespace AssetProcessor.Controls {
         }
 
         private void FilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            ApplyFilters();
+            if (_isInitialized) ApplyFilters();
         }
 
         private void StatusFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            ApplyFilters();
+            if (_isInitialized) ApplyFilters();
         }
 
         private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e) {
-            ApplyFilters();
+            if (_isInitialized) ApplyFilters();
         }
 
         /// <summary>

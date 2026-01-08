@@ -38,7 +38,7 @@
 
                 <!-- Filter Buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                    <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold" Foreground="{DynamicResource ThemeForeground}"/>
 
                     <ToggleButton x:Name="FilterDebugBtn" Content="DEBUG" IsChecked="False"
                                   Style="{StaticResource FilterButtonStyle}"
@@ -59,7 +59,7 @@
 
                 <!-- Search Box -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,0">
-                    <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource ThemeForeground}"/>
                     <TextBox x:Name="SearchTextBox" Width="250"
                              TextChanged="SearchTextBox_TextChanged"
                              VerticalContentAlignment="Center"
@@ -68,13 +68,13 @@
 
                 <!-- Control Buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource ThemeForeground}"/>
                     <Slider x:Name="LogScaleSlider" Width="100" Minimum="0.5" Maximum="2.0"
                             Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=LogsTableScale, Mode=TwoWay}"
                             TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                             ToolTip="Adjust table scale (50% - 200%)" Margin="0,0,5,0"/>
                     <TextBlock Text="{Binding ElementName=LogScaleSlider, Path=Value, StringFormat={}{0:P0}}"
-                               VerticalAlignment="Center" Margin="0,0,10,0" MinWidth="40"/>
+                               VerticalAlignment="Center" Margin="0,0,10,0" MinWidth="40" Foreground="{DynamicResource ThemeForeground}"/>
                     <Button x:Name="AutoScrollBtn" Content="📌 Auto-scroll" Width="95" Height="26"
                             Click="AutoScrollBtn_Click"
                             ToolTip="Auto-scroll to bottom on new logs"
@@ -127,7 +127,13 @@
                 </Style>
             </DataGrid.CellStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="100" MinWidth="70"/>
+                <DataGridTemplateColumn Header="Time" Width="100" MinWidth="70">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Timestamp}" Foreground="{DynamicResource ThemeForeground}" Padding="2,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTemplateColumn Header="Level" Width="60" MinWidth="50">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -135,7 +141,13 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Logger" Binding="{Binding Logger}" Width="180" MinWidth="80"/>
+                <DataGridTemplateColumn Header="Logger" Width="180" MinWidth="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Logger}" Foreground="{DynamicResource ThemeForeground}" Padding="2,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTemplateColumn Header="Message" Width="*" MinWidth="200">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -156,8 +168,8 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock x:Name="StatusText" Grid.Column="0" Text="Ready" VerticalAlignment="Center" FontSize="10"/>
-                <TextBlock x:Name="LogCountText" Grid.Column="1" Text="0 logs" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"/>
+                <TextBlock x:Name="StatusText" Grid.Column="0" Text="Ready" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource ThemeForeground}"/>
+                <TextBlock x:Name="LogCountText" Grid.Column="1" Text="0 logs" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource ThemeForeground}"/>
             </Grid>
         </Border>
     </Grid>

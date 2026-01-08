@@ -20,13 +20,8 @@ public static class Ktx2TextureLoader {
     /// Load a KTX2 texture from a file path.
     /// </summary>
     public static TextureData LoadFromFile(string filePath) {
-        // Use simple file logging to avoid NLog deadlock with UI thread
-        void DiagLog(string msg) {
-            try {
-                var logPath = Path.Combine(Path.GetDirectoryName(filePath) ?? Path.GetTempPath(), "ktx2_diag.log");
-                File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
-            } catch { }
-        }
+        // Diagnostic logging disabled
+        void DiagLog(string msg) { }
 
         DiagLog($"[KTX2LOADER] Loading KTX2: {filePath}");
 
@@ -327,13 +322,8 @@ public static class Ktx2TextureLoader {
     /// Load texture data from a ktxTexture2 handle.
     /// </summary>
     private static TextureData LoadFromHandle(IntPtr textureHandle, string filePath, HistogramMetadata? histogramMetadata = null, NormalLayoutMetadata? normalLayoutMetadata = null) {
-        // Use simple file logging to avoid NLog deadlock
-        void DiagLog(string msg) {
-            try {
-                var logPath = Path.Combine(Path.GetDirectoryName(filePath) ?? Path.GetTempPath(), "ktx2_diag.log");
-                File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
-            } catch { }
-        }
+        // Diagnostic logging disabled
+        void DiagLog(string msg) { }
 
         DiagLog("[LoadFromHandle] ENTRY");
 

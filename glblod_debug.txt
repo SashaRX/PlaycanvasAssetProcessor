@@ -4684,3 +4684,41 @@
 08.01.26 04:40:00: [SelectionChanged] Loading FBX model
 08.01.26 04:40:00: [SelectionChanged] FBX loaded
 08.01.26 04:40:00: [SelectionChanged] COMPLETE
+08.01.26 04:41:54: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 04:41:54: TryLoadGlbLodAsync START
+08.01.26 04:41:54: Loading albedo texture
+08.01.26 04:41:54: Albedo texture done
+08.01.26 04:41:54: Finding GLB LOD files
+08.01.26 04:41:54: Found 0 files
+08.01.26 04:41:54: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 04:41:54: [SelectionChanged] Loading FBX model
+08.01.26 04:41:54: [SelectionChanged] FBX loaded
+08.01.26 04:41:54: [SelectionChanged] COMPLETE
+08.01.26 04:42:12: [PIPELINE] ConvertAsync START
+08.01.26 04:42:12: [PIPELINE] Checking FBX2glTF availability
+08.01.26 04:42:12: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 04:42:12: [PIPELINE] gltfpack OK
+08.01.26 04:42:12: [PIPELINE] Creating directories
+08.01.26 04:42:12: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 04:42:12: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 04:42:12: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 04:42:12: [PIPELINE] Calling InspectGlbUV
+08.01.26 04:42:13: [PIPELINE] InspectGlbUV done
+08.01.26 04:42:13: [PIPELINE] Starting LOD generation
+08.01.26 04:42:13: [PIPELINE] Generating LOD0
+08.01.26 04:42:13: [PIPELINE] LOD0 done, Success: True
+08.01.26 04:42:13: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 04:42:13: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 04:42:13: [PIPELINE] Generating LOD1
+08.01.26 04:42:13: [PIPELINE] LOD1 done, Success: True
+08.01.26 04:42:13: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 04:42:13: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 04:42:13: [PIPELINE] Generating LOD2
+08.01.26 04:42:13: [PIPELINE] LOD2 done, Success: True
+08.01.26 04:42:13: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 04:42:13: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 04:42:13: [PIPELINE] LOD loop complete
+08.01.26 04:42:13: [PIPELINE] Cleanup phase
+08.01.26 04:42:13: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 04:42:13: [PIPELINE] Duration: 0,37s, LOD files: 3
+08.01.26 04:42:13: [PIPELINE] About to return result

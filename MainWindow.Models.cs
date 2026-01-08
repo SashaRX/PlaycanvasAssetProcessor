@@ -382,10 +382,21 @@ namespace AssetProcessor {
 
                 int successCount = 0;
                 int failCount = 0;
+                int totalModels = modelsToExport.Count;
+                int currentModel = 0;
+
+                // Инициализируем прогресс
+                ProgressBar.Value = 0;
+                ProgressBar.Maximum = 100;
 
                 foreach (var model in modelsToExport) {
                     try {
-                        logger.Info($"Exporting model: {model.Name}");
+                        currentModel++;
+                        var progressPercent = (double)currentModel / totalModels * 100;
+                        ProgressBar.Value = progressPercent;
+                        ExportModelsButton.Content = $"Export {currentModel}/{totalModels}";
+
+                        logger.Info($"Exporting model: {model.Name} ({currentModel}/{totalModels})");
 
                         var result = await pipeline.ExportModelAsync(
                             model,
@@ -407,6 +418,8 @@ namespace AssetProcessor {
                         logger.Error(ex, $"Export exception for {model.Name}");
                     }
                 }
+
+                ProgressBar.Value = 100;
 
                 var exportMessage = $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}";
 
@@ -436,6 +449,7 @@ namespace AssetProcessor {
             } finally {
                 ExportModelsButton.IsEnabled = true;
                 ExportModelsButton.Content = "Export";
+                ProgressBar.Value = 0;
             }
         }
 

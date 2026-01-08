@@ -455,8 +455,9 @@ namespace AssetProcessor.Controls {
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            // Skip during initialization
+            // Skip during initialization or if ORM not set
             if (_isSettingComboBoxes) return;
+            if (currentORMTexture == null) return;
             UpdateStatus();
         }
 

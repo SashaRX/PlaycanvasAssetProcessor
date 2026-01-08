@@ -165,6 +165,14 @@ namespace AssetProcessor.Settings {
 
         [System.Configuration.UserScopedSetting()]
         [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("1.0")]
+        public double ServerTableScale {
+            get => (double)this[nameof(ServerTableScale)];
+            set => this[nameof(ServerTableScale)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
         [System.Configuration.DefaultSettingValue("400")]
         public double ModelPreviewRowHeight {
             get => (double)this[nameof(ModelPreviewRowHeight)];

@@ -42,12 +42,12 @@
                                 </Grid.ColumnDefinitions>
                                 <PasswordBox x:Name="PlaycanvasApiKeyPasswordBox"
                                              Grid.Column="0"
-                                             Background="#FFD6A27B"
+                                             Background="#FFD6A27B" Foreground="#FF000000"
                                              PasswordChanged="PlaycanvasApiKeyPasswordBox_PasswordChanged"
                                              ToolTip="Your PlayCanvas API token for authentication"/>
                                 <TextBox x:Name="PlaycanvasApiKeyRevealTextBox"
                                          Grid.Column="0"
-                                         Background="#FFD6A27B"
+                                         Background="#FFD6A27B" Foreground="#FF000000"
                                          Visibility="Collapsed"
                                          TextChanged="PlaycanvasApiKeyRevealTextBox_TextChanged"
                                          ToolTip="Your PlayCanvas API token for authentication"/>
@@ -65,7 +65,7 @@
                                        Text="Значение ключа скрыто. Нажмите «Показать» для временного просмотра."/>
 
                             <Label Content="User Name:" />
-                            <TextBox x:Name="UsernameTextBox" Background="#FFD6A27B" ToolTip="Usr name in Playcanvas">
+                            <TextBox x:Name="UsernameTextBox" Background="#FFD6A27B" Foreground="#FF000000" ToolTip="Usr name in Playcanvas">
                                 <behaviors:Interaction.Behaviors>
                                     <local:TextBoxWatermarkBehavior Watermark="Your username on playcanvas"/>
                                 </behaviors:Interaction.Behaviors>

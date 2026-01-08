@@ -589,7 +589,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            var contentPath = Path.Combine(outputPath, projectName, "content");
+            var contentPath = Path.Combine(outputPath, projectName, "server", "assets", "content");
             if (!Directory.Exists(contentPath)) {
                 MessageBox.Show(
                     $"Export folder not found: {contentPath}\n\nPlease export models first.",

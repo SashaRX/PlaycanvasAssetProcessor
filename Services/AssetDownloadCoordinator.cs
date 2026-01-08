@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using NLog;
@@ -124,7 +125,7 @@ public sealed class AssetDownloadCoordinator : IAssetDownloadCoordinator {
                 continue;
             }
 
-            string sanitizedName = localCacheService.SanitizePath(resource.Name);
+            string sanitizedName = PathSanitizer.SanitizePath(resource.Name);
             if (string.IsNullOrEmpty(resource.Path)) {
                 resource.Path = localCacheService.GetResourcePath(
                     context.ProjectsRoot,

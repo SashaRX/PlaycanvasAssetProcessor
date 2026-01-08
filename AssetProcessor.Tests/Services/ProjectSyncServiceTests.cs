@@ -146,8 +146,6 @@ public class ProjectSyncServiceTests {
             SaveAssetsListCalled = true;
             return Task.CompletedTask;
         }
-
-        public string SanitizePath(string? path) => path ?? string.Empty;
     }
 
     private sealed class TestLogService : ILogService {

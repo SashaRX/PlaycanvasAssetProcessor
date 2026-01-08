@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services.Models;
 using Newtonsoft.Json.Linq;
@@ -96,7 +97,7 @@ public class ProjectAssetService : IProjectAssetService {
         ArgumentException.ThrowIfNullOrEmpty(projectName);
         ArgumentNullException.ThrowIfNull(folderPaths);
 
-        string sanitizedFileName = localCacheService.SanitizePath(fileName);
+        string sanitizedFileName = PathSanitizer.SanitizePath(fileName);
         string fullPath = localCacheService.GetResourcePath(projectsRoot, projectName, folderPaths, sanitizedFileName, parentId);
         logService.LogInfo($"Generated resource path: {fullPath}");
         return fullPath;

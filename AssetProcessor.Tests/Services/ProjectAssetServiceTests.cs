@@ -123,8 +123,6 @@ public class ProjectAssetServiceTests {
         public JArray? AssetsToReturn { get; set; }
         public string? LastLoadPath { get; private set; }
 
-        public string SanitizePath(string? path) => path ?? string.Empty;
-
         public string GetResourcePath(string projectsRoot, string projectName, IReadOnlyDictionary<int, string> folderPaths, string? fileName, int? parentId) =>
             $"{projectsRoot}/{projectName}/{fileName}";
 

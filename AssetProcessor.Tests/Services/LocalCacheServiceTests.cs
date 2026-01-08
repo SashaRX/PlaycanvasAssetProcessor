@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using Newtonsoft.Json.Linq;
@@ -15,9 +16,8 @@ namespace AssetProcessor.Tests.Services;
 
 public class LocalCacheServiceTests {
     [Fact]
-    public void SanitizePath_RemovesNewLinesAndTrims() {
-        LocalCacheService service = CreateService(out _);
-        string sanitized = service.SanitizePath("  sample\n");
+    public void PathSanitizer_SanitizePath_RemovesNewLinesAndTrims() {
+        string sanitized = PathSanitizer.SanitizePath("  sample\n");
         Assert.Equal("sample", sanitized);
     }
 

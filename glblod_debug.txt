@@ -6728,3 +6728,48 @@
 08.01.26 05:08:14: [CONVERT] After TryLoadGlbLodAsync
 08.01.26 05:08:14: [CONVERT] About to show MessageBox
 08.01.26 05:08:15: [CONVERT] MessageBox closed
+08.01.26 16:09:19: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 16:09:19: TryLoadGlbLodAsync START
+08.01.26 16:09:19: Loading albedo texture
+08.01.26 16:09:19: Albedo texture done
+08.01.26 16:09:19: Finding GLB LOD files
+08.01.26 16:09:19: Found 0 files
+08.01.26 16:09:19: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 16:09:19: [SelectionChanged] Loading FBX model
+08.01.26 16:09:19: [SelectionChanged] FBX loaded
+08.01.26 16:09:19: [SelectionChanged] COMPLETE
+08.01.26 16:09:20: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 16:09:20: TryLoadGlbLodAsync START
+08.01.26 16:09:20: Loading albedo texture
+08.01.26 16:09:20: Albedo texture done
+08.01.26 16:09:20: Finding GLB LOD files
+08.01.26 16:09:20: Found 4 files
+08.01.26 16:09:20: Showing LOD UI
+08.01.26 16:09:20: LOD UI shown
+08.01.26 16:09:20: Creating/checking SharpGlbLoader
+08.01.26 16:09:20: SharpGlbLoader ready
+08.01.26 16:09:20: Getting LOD file paths
+08.01.26 16:09:20: Got 4 LOD paths
+08.01.26 16:09:20: Starting Task.Run for 4 LODs
+08.01.26 16:09:20: Loading LOD0
+08.01.26 16:09:20: Calling LoadGlb for LOD0
+08.01.26 16:09:20: LoadGlb done for LOD0, Success=True
+08.01.26 16:09:20: Loading LOD1
+08.01.26 16:09:20: Calling LoadGlb for LOD1
+08.01.26 16:09:20: LoadGlb done for LOD1, Success=True
+08.01.26 16:09:20: Loading LOD2
+08.01.26 16:09:20: Calling LoadGlb for LOD2
+08.01.26 16:09:20: LoadGlb done for LOD2, Success=True
+08.01.26 16:09:20: Loading LOD3
+08.01.26 16:09:20: Calling LoadGlb for LOD3
+08.01.26 16:09:20: LoadGlb done for LOD3, Success=True
+08.01.26 16:09:20: Task.Run loop complete
+08.01.26 16:09:20: Task.Run await complete
+08.01.26 16:09:20: Entering Dispatcher.InvokeAsync
+08.01.26 16:09:20: Inside Dispatcher.InvokeAsync
+08.01.26 16:09:20: Loading to viewport
+08.01.26 16:09:20: Viewport loaded
+08.01.26 16:09:21: Dispatcher.InvokeAsync DONE
+08.01.26 16:09:21: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 16:09:21: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=True
+08.01.26 16:09:21: [SelectionChanged] COMPLETE

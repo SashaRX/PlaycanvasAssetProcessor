@@ -1,0 +1,6 @@
+2026-01-08 19:01:41.6378 Info Registered target AssetProcessor.Controls.LogTarget(Name=)
+2026-01-08 19:01:41.6378 Info Closing old configuration.
+2026-01-08 19:01:41.6378 Info Validating config: TargetNames=asyncFile, ConfigItems=23, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
+2026-01-08 19:01:41.6378 Info Configuration initialized.
+2026-01-08 19:03:02.8169 Info AppDomain Shutting down. LogFactory closing...
+2026-01-08 19:03:02.8169 Info LogFactory has been closed.

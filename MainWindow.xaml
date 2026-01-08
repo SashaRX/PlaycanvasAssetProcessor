@@ -1168,96 +1168,37 @@
 
                                         <Separator Width="10" Background="Transparent" />
 
+                                        <!-- LOD Slider -->
                                         <TextBlock Text="LOD:"
                                                   Foreground="{DynamicResource ThemeForeground}"
                                                   FontSize="10"
                                                   VerticalAlignment="Center"
                                                   Margin="0,0,6,0" />
-                                        <Button x:Name="LodButton0"
-                                               Content="LOD0"
-                                               Click="LodButton_Click"
-                                               Tag="0"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
-                                        <Button x:Name="LodButton1"
-                                               Content="LOD1"
-                                               Click="LodButton_Click"
-                                               Tag="1"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
-                                        <Button x:Name="LodButton2"
-                                               Content="LOD2"
-                                               Click="LodButton_Click"
-                                               Tag="2"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
-                                        <Button x:Name="LodButton3"
-                                               Content="LOD3"
-                                               Click="LodButton_Click"
-                                               Tag="3"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}" />
+                                        <Slider x:Name="LodSlider"
+                                               Minimum="0"
+                                               Maximum="3"
+                                               Value="0"
+                                               TickFrequency="1"
+                                               IsSnapToTickEnabled="True"
+                                               Width="100"
+                                               VerticalAlignment="Center"
+                                               ValueChanged="LodSlider_ValueChanged"
+                                               ToolTip="Select LOD level" />
+                                        <TextBlock x:Name="LodSliderValueText"
+                                                  Text="LOD0"
+                                                  Foreground="{DynamicResource ThemeForeground}"
+                                                  FontSize="10"
+                                                  FontWeight="SemiBold"
+                                                  VerticalAlignment="Center"
+                                                  Margin="6,0,0,0"
+                                                  MinWidth="35" />
+                                        <TextBlock x:Name="LodInfoText"
+                                                  Text=""
+                                                  Foreground="{DynamicResource ThemeForegroundDim}"
+                                                  FontSize="9"
+                                                  VerticalAlignment="Center"
+                                                  Margin="8,0,0,0" />
                                     </StackPanel>
-
-                                    <!-- LOD Information DataGrid -->
-                                    <Border Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" HorizontalAlignment="Left">
-                                        <DataGrid x:Name="LodInformationGrid"
-                                                 AutoGenerateColumns="False"
-                                                 HeadersVisibility="Column"
-                                                 CanUserAddRows="False"
-                                                 CanUserDeleteRows="False"
-                                                 CanUserReorderColumns="False"
-                                                 CanUserResizeRows="False"
-                                                 IsReadOnly="True"
-                                                 SelectionMode="Single"
-                                                 GridLinesVisibility="Horizontal"
-                                                 Background="Transparent"
-                                                 RowBackground="#44FFFFFF"
-                                                 AlternatingRowBackground="#22FFFFFF"
-                                                 FontSize="9"
-                                                 RowHeight="20"
-                                                 MaxHeight="120"
-                                                 SelectionChanged="LodInformationGrid_SelectionChanged">
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="LOD" Binding="{Binding LodName}" Width="50" />
-                                                <DataGridTextColumn Header="Triangles" Binding="{Binding TriangleCount, StringFormat=N0}" Width="80" />
-                                                <DataGridTextColumn Header="Vertices" Binding="{Binding VertexCount, StringFormat=N0}" Width="80" />
-                                                <DataGridTextColumn Header="Size" Binding="{Binding FileSizeFormatted}" Width="70" />
-                                            </DataGrid.Columns>
-                                            <DataGrid.Resources>
-                                                <Style TargetType="DataGridColumnHeader">
-                                                    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundAlt}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
-                                                    <Setter Property="FontSize" Value="9" />
-                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                    <Setter Property="Padding" Value="4,2" />
-                                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
-                                                    <Setter Property="BorderThickness" Value="0,0,1,1" />
-                                                </Style>
-                                                <Style TargetType="DataGridCell">
-                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
-                                                    <Setter Property="BorderThickness" Value="0" />
-                                                    <Setter Property="Padding" Value="4,2" />
-                                                </Style>
-                                            </DataGrid.Resources>
-                                        </DataGrid>
-                                    </Border>
                                 </StackPanel>
                             </Grid>
                         </Expander>
@@ -1296,7 +1237,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                        <TextBlock Text="UV Map 1" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}"/>
                                         <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
                                             <Image x:Name="UVImage" Stretch="Uniform" MinWidth="128" MinHeight="128" />
                                         </Viewbox>
@@ -1306,7 +1247,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                        <TextBlock Text="UV Map 2" HorizontalAlignment="Center" Margin="0,5,0,5" FontWeight="Bold" Foreground="{DynamicResource ThemeForeground}"/>
                                         <Viewbox Stretch="Uniform" MinWidth="128" MinHeight="128" Grid.Row="1">
                                             <Image x:Name="UVImage2" Stretch="Uniform" MinWidth="128" MinHeight="128" />
                                         </Viewbox>

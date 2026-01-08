@@ -99,6 +99,11 @@ namespace AssetProcessor {
                 sp.GetRequiredService<ILocalCacheService>(),
                 LogManager.GetLogger(nameof(AssetDownloadCoordinator))));
 
+            // New refactored services for MainWindow
+            services.AddSingleton<IProjectConnectionService, ProjectConnectionService>();
+            services.AddSingleton<IAssetLoadCoordinator, AssetLoadCoordinator>();
+            services.AddSingleton<IProjectFileWatcherService, ProjectFileWatcherService>();
+
             services.AddSingleton<MainViewModel>(sp => {
                 var playCanvasService = sp.GetRequiredService<IPlayCanvasService>();
                 var textureProcessingService = sp.GetRequiredService<ITextureProcessingService>();

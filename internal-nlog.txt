@@ -1,0 +1,11 @@
+2026-01-08 22:03:16.1353 Info Registered target NLog.Targets.FileTarget(Name=fileTarget)
+2026-01-08 22:03:16.1379 Info Registered target NLog.Targets.Wrappers.AsyncTargetWrapper(Name=asyncFile)
+2026-01-08 22:03:16.1379 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-01-08 22:03:16.1379 Info Validating config: TargetNames=asyncFile, ConfigItems=13, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
+2026-01-08 22:03:16.1522 Info Configuration initialized.
+2026-01-08 22:03:16.8742 Info Registered target AssetProcessor.Controls.LogTarget(Name=)
+2026-01-08 22:03:16.8742 Info Closing old configuration.
+2026-01-08 22:03:16.8742 Info Validating config: TargetNames=asyncFile, ConfigItems=23, FilePath=D:\sourceProject\repos\PlaycanvasAssetProcessor\bin\Release\net9.0-windows10.0.26100.0\win-x64\NLog.config
+2026-01-08 22:03:16.8864 Info Configuration initialized.
+2026-01-08 22:04:18.2333 Info AppDomain Shutting down. LogFactory closing...
+2026-01-08 22:04:18.2333 Info LogFactory has been closed.

@@ -70,6 +70,9 @@ namespace AssetProcessor {
         private readonly IAssetJsonParserService assetJsonParserService;
         private readonly IORMTextureService ormTextureService;
         private readonly IFileStatusScannerService fileStatusScannerService;
+        private readonly IProjectConnectionService projectConnectionService;
+        private readonly IAssetLoadCoordinator assetLoadCoordinator;
+        private readonly IProjectFileWatcherService projectFileWatcherService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
@@ -128,6 +131,9 @@ namespace AssetProcessor {
             IAssetJsonParserService assetJsonParserService,
             IORMTextureService ormTextureService,
             IFileStatusScannerService fileStatusScannerService,
+            IProjectConnectionService projectConnectionService,
+            IAssetLoadCoordinator assetLoadCoordinator,
+            IProjectFileWatcherService projectFileWatcherService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -143,6 +149,9 @@ namespace AssetProcessor {
             this.assetJsonParserService = assetJsonParserService ?? throw new ArgumentNullException(nameof(assetJsonParserService));
             this.ormTextureService = ormTextureService ?? throw new ArgumentNullException(nameof(ormTextureService));
             this.fileStatusScannerService = fileStatusScannerService ?? throw new ArgumentNullException(nameof(fileStatusScannerService));
+            this.projectConnectionService = projectConnectionService ?? throw new ArgumentNullException(nameof(projectConnectionService));
+            this.assetLoadCoordinator = assetLoadCoordinator ?? throw new ArgumentNullException(nameof(assetLoadCoordinator));
+            this.projectFileWatcherService = projectFileWatcherService ?? throw new ArgumentNullException(nameof(projectFileWatcherService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 

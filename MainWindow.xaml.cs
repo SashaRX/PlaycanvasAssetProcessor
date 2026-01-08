@@ -318,9 +318,6 @@ namespace AssetProcessor {
         }
 
         private void SetRightPanelVisibility(bool visible) {
-            var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-            RightPanelSplitter.Visibility = visibility;
-            ToggleViewButton.Visibility = visibility;
             if (!visible) {
                 HideAllViewers();
             }

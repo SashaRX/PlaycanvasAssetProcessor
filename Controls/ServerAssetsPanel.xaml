@@ -90,17 +90,19 @@
 
             <DataGrid.Columns>
                 <!-- File Name -->
-                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="200" MinWidth="100">
+                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*" MinWidth="150">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
                             <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding FileName}"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
                 <!-- Type -->
-                <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="70">
+                <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="80" MinWidth="60">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
@@ -110,7 +112,7 @@
                 </DataGridTextColumn>
 
                 <!-- Size -->
-                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="80">
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="90" MinWidth="70">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
@@ -121,7 +123,7 @@
                 </DataGridTextColumn>
 
                 <!-- Sync Status -->
-                <DataGridTemplateColumn Header="Status" Width="100">
+                <DataGridTemplateColumn Header="Status" Width="110" MinWidth="80">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding SyncStatus}"
@@ -133,7 +135,7 @@
                 </DataGridTemplateColumn>
 
                 <!-- Uploaded At -->
-                <DataGridTextColumn Header="Uploaded" Binding="{Binding UploadedAtDisplay}" Width="130">
+                <DataGridTextColumn Header="Uploaded" Binding="{Binding UploadedAtDisplay}" Width="140" MinWidth="100">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
@@ -143,7 +145,7 @@
                 </DataGridTextColumn>
 
                 <!-- SHA1 -->
-                <DataGridTextColumn Header="SHA1" Binding="{Binding ContentSha1Short}" Width="100">
+                <DataGridTextColumn Header="SHA1" Binding="{Binding ContentSha1Short}" Width="110" MinWidth="80">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
@@ -154,7 +156,7 @@
                 </DataGridTextColumn>
 
                 <!-- Remote Path -->
-                <DataGridTextColumn Header="Remote Path" Binding="{Binding RemotePath}" Width="*" MinWidth="150">
+                <DataGridTextColumn Header="Remote Path" Binding="{Binding RemotePath}" Width="3*" MinWidth="200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>

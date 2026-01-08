@@ -294,16 +294,43 @@ Adjust based on connection speed (higher for fast connections, lower for slow/un
 
 ## Important File Locations
 
+### Core Application
 - `MainWindow.xaml.cs`: Main UI window with PlayCanvas connection logic
-- `Windows/PresetEditorWindow.xaml.cs`: Texture conversion preset editor
-- `Windows/PresetManagementWindow.xaml.cs`: Preset management interface
-- `App.xaml.cs`: DI container setup
-- `Services/PlayCanvasService.cs`: PlayCanvas API client implementation
+- `MainWindow.Models.cs`: Model export UI handlers
+- `App.xaml.cs`: DI container setup and theme initialization
+- `Settings/AppSettings.cs`: All application settings including B2/CDN
+
+### Texture Processing
 - `TextureConversion/Pipeline/TextureConversionPipeline.cs`: Main texture processing pipeline
 - `TextureConversion/MipGeneration/ToksvigProcessor.cs`: Toksvig correction implementation
 - `TextureConversion/Settings/ConversionSettingsManager.cs`: Advanced settings management
 - `TextureViewer/`: GPU-based texture viewer with D3D11 rendering
-- `Helpers/MainWindowHelpers.cs`: Histogram calculation with statistics (Min/Max/Mean/Median/StdDev)
+
+### Model Export
+- `Export/ModelExportPipeline.cs`: Complete model export workflow
+- `Export/ExportOptions.cs`: Export configuration
+- `Mapping/`: Mapping JSON generators (MaterialJsonGenerator, etc.)
+
+### CDN/Upload
+- `Upload/B2UploadService.cs`: Backblaze B2 API client (625 lines)
+- `Upload/IB2UploadService.cs`: Interface and upload models
+- `Upload/B2UploadSettings.cs`: Settings and result classes
+- `Services/AssetUploadCoordinator.cs`: Upload orchestration
+
+### Resources
+- `Resources/BaseResource.cs`: Abstract base with upload status properties
+- `Resources/TextureResource.cs`: Texture-specific properties
+- `Resources/ModelResource.cs`: Model resource
+
+### UI Components
+- `Windows/PresetEditorWindow.xaml.cs`: Texture conversion preset editor
+- `Windows/PresetManagementWindow.xaml.cs`: Preset management interface
+- `Controls/ORMPackingPanel.xaml.cs`: ORM texture packing UI
+- `Controls/LogViewerControl.xaml.cs`: Log viewer with filtering
+
+### Helpers & Utilities
+- `Helpers/MainWindowHelpers.cs`: Histogram calculation with statistics
+- `Helpers/ThemeHelper.cs`: Windows theme detection
 - `Exceptions/`: Custom exception types for API, network, file integrity errors
 
 ## Key Development Notes
@@ -465,3 +492,132 @@ var settings = new CompressionSettings {
 - Naming: PascalCase for types/methods, camelCase for fields
 - Comments and documentation in Russian (README, code comments)
 - Image processing uses SixLabors.ImageSharp 3.1.11
+
+---
+
+## CDN/Upload Pipeline
+
+### Overview
+
+The application supports uploading converted assets to Backblaze B2 cloud storage for CDN delivery.
+
+### B2 Upload Service
+
+Located in `Upload/B2UploadService.cs`:
+- Full Backblaze B2 Native API v2 integration
+- SHA1 hash-based file integrity verification
+- Concurrent upload capability (configurable, default 4)
+- Smart upload URL caching with automatic refresh
+- Skip-existing-files optimization via hash comparison
+
+**Key Methods**:
+```csharp
+AuthorizeAsync()           // B2 account authorization
+UploadFileAsync()          // Single file upload with hash verification
+UploadBatchAsync()         // Parallel batch upload with progress
+ListFilesAsync()           // List files in bucket with pagination
+FileExistsAsync()          // Check if file exists by prefix
+DeleteFileAsync()          // Delete file from B2
+```
+
+### Asset Upload Coordinator
+
+Located in `Services/AssetUploadCoordinator.cs`:
+- Orchestrates upload operations
+- SHA1-based upload necessity checking
+- Resource status event publishing
+- Remote path construction based on file type
+
+### Upload Status Tracking
+
+BaseResource includes upload properties:
+```csharp
+UploadStatus      // "Queued", "Uploading", "Uploaded", "Upload Failed", "Upload Outdated"
+UploadedHash      // SHA1 hash of uploaded file
+LastUploadedAt    // Timestamp of last upload
+RemoteUrl         // CDN URL for the file
+UploadProgress    // 0-100 percentage
+```
+
+**IMPORTANT**: Upload state is currently stored in-memory only and is lost on application restart. See `Docs/PIPELINE_REVIEW.md` for planned persistence improvements.
+
+### CDN Settings
+
+Settings stored in AppSettings:
+- `B2KeyId` - Application Key ID
+- `B2ApplicationKey` - Application Key (encrypted)
+- `B2BucketName` - Bucket name
+- `B2PathPrefix` - Path prefix in bucket
+- `CdnBaseUrl` - Base CDN URL
+- `B2MaxConcurrentUploads` - Max parallel uploads (default: 4)
+
+---
+
+## Model Export Pipeline
+
+### Overview
+
+Located in `Export/ModelExportPipeline.cs`. Exports PlayCanvas models with all associated textures and materials to a deployable format.
+
+### Export Structure
+
+```
+{project}/server/
+├── mapping.json                              # Global asset mapping
+└── assets/content/{model_folder}/
+    ├── textures/                             # Converted KTX2 textures
+    │   ├── albedo.ktx2
+    │   ├── normal.ktx2
+    │   └── orm_{materialId}.ktx2             # Packed ORM textures
+    ├── materials/
+    │   └── {material}.json                   # Material definitions
+    ├── {model}.glb                           # Base model
+    ├── {model}_lod1.glb, _lod2.glb           # LOD variants
+    └── {model}.json                          # Model manifest
+```
+
+### Export Workflow
+
+1. **Determine folder path** from PlayCanvas hierarchy
+2. **Find materials** for model (by Parent ID, folder path, name matching)
+3. **Collect textures** from materials
+4. **ORM Packing** - generate packed ORM textures (AO, Gloss, Metallic)
+5. **KTX2 Conversion** - convert textures to compressed KTX2
+6. **Material JSON** - generate per-material JSON with texture references
+7. **Model JSON** - generate model JSON with LODs and material IDs
+8. **GLB Conversion** - convert FBX to GLB with optional LOD generation
+9. **Mapping Update** - update global `mapping.json`
+
+### Key Classes
+
+- `ModelExportPipeline` - Main orchestrator
+- `ExportOptions` - Controls what gets exported
+- `ModelExportResult` - Export completion status
+- `MappingData` - Global mapping.json structure
+
+### Mapping.json Format
+
+```json
+{
+  "Models": {
+    "123": { "Path": "assets/content/model/model.json" }
+  },
+  "Materials": {
+    "456": { "Path": "assets/content/model/materials/mat.json" }
+  },
+  "Textures": {
+    "789": { "Path": "assets/content/model/textures/albedo.ktx2" },
+    "-456": { "Path": "assets/content/model/textures/orm_456.ktx2" }  // ORM uses negative material ID
+  }
+}
+```
+
+---
+
+## Known Issues and Planned Improvements
+
+See `Docs/PIPELINE_REVIEW.md` for:
+- Detailed pipeline architecture review
+- List of unused/obsolete code
+- Comprehensive improvement plan
+- Prioritized feature roadmap

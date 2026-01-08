@@ -4722,3 +4722,2009 @@
 08.01.26 04:42:13: [PIPELINE] ConvertAsync COMPLETE, Success: True
 08.01.26 04:42:13: [PIPELINE] Duration: 0,37s, LOD files: 3
 08.01.26 04:42:13: [PIPELINE] About to return result
+08.01.26 04:58:48: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 04:58:48: TryLoadGlbLodAsync START
+08.01.26 04:58:48: Loading albedo texture
+08.01.26 04:58:48: Albedo texture done
+08.01.26 04:58:48: Finding GLB LOD files
+08.01.26 04:58:48: Found 0 files
+08.01.26 04:58:48: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 04:58:48: [SelectionChanged] Loading FBX model
+08.01.26 04:58:48: [SelectionChanged] FBX loaded
+08.01.26 04:58:48: [SelectionChanged] COMPLETE
+08.01.26 04:59:27: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 04:59:27: TryLoadGlbLodAsync START
+08.01.26 04:59:27: Loading albedo texture
+08.01.26 04:59:27: Albedo texture done
+08.01.26 04:59:27: Finding GLB LOD files
+08.01.26 04:59:27: Found 0 files
+08.01.26 04:59:27: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 04:59:27: [SelectionChanged] Loading FBX model
+08.01.26 04:59:28: [SelectionChanged] FBX loaded
+08.01.26 04:59:28: [SelectionChanged] COMPLETE
+08.01.26 04:59:28: [SelectionChanged] Before TryLoadGlbLodAsync
+08.01.26 04:59:28: TryLoadGlbLodAsync START
+08.01.26 04:59:28: Loading albedo texture
+08.01.26 04:59:28: Albedo texture done
+08.01.26 04:59:28: Finding GLB LOD files
+08.01.26 04:59:28: Found 0 files
+08.01.26 04:59:28: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+08.01.26 04:59:28: [SelectionChanged] Loading FBX model
+08.01.26 04:59:28: [SelectionChanged] FBX loaded
+08.01.26 04:59:28: [SelectionChanged] COMPLETE
+08.01.26 04:59:55: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 04:59:55: [CONVERT] Model: oldMailBox
+08.01.26 04:59:55: [CONVERT] Calling ConvertAsync
+08.01.26 04:59:55: [PIPELINE] ConvertAsync START
+08.01.26 04:59:55: [PIPELINE] Checking FBX2glTF availability
+08.01.26 04:59:55: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 04:59:55: [PIPELINE] gltfpack OK
+08.01.26 04:59:55: [PIPELINE] Creating directories
+08.01.26 04:59:55: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 04:59:55: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 04:59:55: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 04:59:55: [PIPELINE] Calling InspectGlbUV
+08.01.26 04:59:55: [PIPELINE] InspectGlbUV done
+08.01.26 04:59:55: [PIPELINE] Starting LOD generation
+08.01.26 04:59:55: [PIPELINE] Generating LOD0
+08.01.26 04:59:55: [PIPELINE] LOD0 done, Success: True
+08.01.26 04:59:55: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 04:59:55: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 04:59:55: [PIPELINE] Generating LOD1
+08.01.26 04:59:55: [PIPELINE] LOD1 done, Success: True
+08.01.26 04:59:55: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 04:59:55: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 04:59:55: [PIPELINE] Generating LOD2
+08.01.26 04:59:55: [PIPELINE] LOD2 done, Success: True
+08.01.26 04:59:55: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 04:59:55: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 04:59:55: [PIPELINE] Generating LOD3
+08.01.26 04:59:55: [PIPELINE] LOD3 done, Success: True
+08.01.26 04:59:55: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 04:59:55: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 04:59:55: [PIPELINE] LOD loop complete
+08.01.26 04:59:55: [PIPELINE] Generating manifest
+08.01.26 04:59:55: [PIPELINE] Manifest done
+08.01.26 04:59:55: [PIPELINE] Generating QA report
+08.01.26 04:59:55: [PIPELINE] QA report done
+08.01.26 04:59:55: [PIPELINE] Cleanup phase
+08.01.26 04:59:55: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 04:59:55: [PIPELINE] Duration: 0,51s, LOD files: 4
+08.01.26 04:59:55: [PIPELINE] About to return result
+08.01.26 04:59:55: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 04:59:55: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 04:59:55: TryLoadGlbLodAsync START
+08.01.26 04:59:55: Loading albedo texture
+08.01.26 04:59:55: Albedo texture done
+08.01.26 04:59:55: Finding GLB LOD files
+08.01.26 04:59:55: Found 4 files
+08.01.26 04:59:55: Showing LOD UI
+08.01.26 04:59:55: LOD UI shown
+08.01.26 04:59:55: Creating/checking SharpGlbLoader
+08.01.26 04:59:55: SharpGlbLoader ready
+08.01.26 04:59:55: Getting LOD file paths
+08.01.26 04:59:55: Got 4 LOD paths
+08.01.26 04:59:55: Starting Task.Run for 4 LODs
+08.01.26 04:59:55: Loading LOD0
+08.01.26 04:59:55: Calling LoadGlb for LOD0
+08.01.26 04:59:56: LoadGlb done for LOD0, Success=True
+08.01.26 04:59:56: Loading LOD1
+08.01.26 04:59:56: Calling LoadGlb for LOD1
+08.01.26 04:59:56: LoadGlb done for LOD1, Success=True
+08.01.26 04:59:56: Loading LOD2
+08.01.26 04:59:56: Calling LoadGlb for LOD2
+08.01.26 04:59:56: LoadGlb done for LOD2, Success=True
+08.01.26 04:59:56: Loading LOD3
+08.01.26 04:59:56: Calling LoadGlb for LOD3
+08.01.26 04:59:56: LoadGlb done for LOD3, Success=True
+08.01.26 04:59:56: Task.Run loop complete
+08.01.26 04:59:56: Task.Run await complete
+08.01.26 04:59:56: Entering Dispatcher.InvokeAsync
+08.01.26 04:59:56: Inside Dispatcher.InvokeAsync
+08.01.26 04:59:56: Loading to viewport
+08.01.26 04:59:56: Viewport loaded
+08.01.26 04:59:56: Dispatcher.InvokeAsync DONE
+08.01.26 04:59:56: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 04:59:56: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 04:59:56: [CONVERT] About to show MessageBox
+08.01.26 04:59:57: [CONVERT] MessageBox closed
+08.01.26 05:02:58: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:02:58: [CONVERT] Model: oldMailBox
+08.01.26 05:02:58: [CONVERT] Calling ConvertAsync
+08.01.26 05:02:58: [PIPELINE] ConvertAsync START
+08.01.26 05:02:58: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:02:58: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:02:58: [PIPELINE] gltfpack OK
+08.01.26 05:02:58: [PIPELINE] Creating directories
+08.01.26 05:02:58: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:02:58: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:02:59: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:02:59: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:02:59: [PIPELINE] InspectGlbUV done
+08.01.26 05:02:59: [PIPELINE] Starting LOD generation
+08.01.26 05:02:59: [PIPELINE] Generating LOD0
+08.01.26 05:02:59: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:02:59: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:02:59: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:02:59: [PIPELINE] Generating LOD1
+08.01.26 05:02:59: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:02:59: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:02:59: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:02:59: [PIPELINE] Generating LOD2
+08.01.26 05:02:59: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:02:59: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:02:59: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:02:59: [PIPELINE] Generating LOD3
+08.01.26 05:02:59: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:02:59: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:02:59: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:02:59: [PIPELINE] LOD loop complete
+08.01.26 05:02:59: [PIPELINE] Generating manifest
+08.01.26 05:02:59: [PIPELINE] Manifest done
+08.01.26 05:02:59: [PIPELINE] Generating QA report
+08.01.26 05:02:59: [PIPELINE] QA report done
+08.01.26 05:02:59: [PIPELINE] Cleanup phase
+08.01.26 05:02:59: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:02:59: [PIPELINE] Duration: 0,35s, LOD files: 4
+08.01.26 05:02:59: [PIPELINE] About to return result
+08.01.26 05:02:59: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:02:59: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:02:59: TryLoadGlbLodAsync START
+08.01.26 05:02:59: Loading albedo texture
+08.01.26 05:02:59: Albedo texture done
+08.01.26 05:02:59: Finding GLB LOD files
+08.01.26 05:02:59: Found 4 files
+08.01.26 05:02:59: Showing LOD UI
+08.01.26 05:02:59: LOD UI shown
+08.01.26 05:02:59: Creating/checking SharpGlbLoader
+08.01.26 05:02:59: SharpGlbLoader ready
+08.01.26 05:02:59: Getting LOD file paths
+08.01.26 05:02:59: Got 4 LOD paths
+08.01.26 05:02:59: Starting Task.Run for 4 LODs
+08.01.26 05:02:59: Loading LOD0
+08.01.26 05:02:59: Calling LoadGlb for LOD0
+08.01.26 05:02:59: LoadGlb done for LOD0, Success=True
+08.01.26 05:02:59: Loading LOD1
+08.01.26 05:02:59: Calling LoadGlb for LOD1
+08.01.26 05:02:59: LoadGlb done for LOD1, Success=True
+08.01.26 05:02:59: Loading LOD2
+08.01.26 05:02:59: Calling LoadGlb for LOD2
+08.01.26 05:02:59: LoadGlb done for LOD2, Success=True
+08.01.26 05:02:59: Loading LOD3
+08.01.26 05:02:59: Calling LoadGlb for LOD3
+08.01.26 05:02:59: LoadGlb done for LOD3, Success=True
+08.01.26 05:02:59: Task.Run loop complete
+08.01.26 05:02:59: Task.Run await complete
+08.01.26 05:02:59: Entering Dispatcher.InvokeAsync
+08.01.26 05:02:59: Inside Dispatcher.InvokeAsync
+08.01.26 05:02:59: Loading to viewport
+08.01.26 05:02:59: Viewport loaded
+08.01.26 05:02:59: Dispatcher.InvokeAsync DONE
+08.01.26 05:02:59: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:02:59: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:02:59: [CONVERT] About to show MessageBox
+08.01.26 05:03:01: [CONVERT] MessageBox closed
+08.01.26 05:03:06: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:06: [CONVERT] Model: oldMailBox
+08.01.26 05:03:06: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:06: [PIPELINE] ConvertAsync START
+08.01.26 05:03:06: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:06: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:06: [PIPELINE] gltfpack OK
+08.01.26 05:03:06: [PIPELINE] Creating directories
+08.01.26 05:03:06: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:06: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:06: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:06: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:06: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:06: [PIPELINE] Starting LOD generation
+08.01.26 05:03:06: [PIPELINE] Generating LOD0
+08.01.26 05:03:07: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:07: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:07: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:07: [PIPELINE] Generating LOD1
+08.01.26 05:03:07: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:07: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:07: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:07: [PIPELINE] Generating LOD2
+08.01.26 05:03:07: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:07: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:07: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:07: [PIPELINE] Generating LOD3
+08.01.26 05:03:07: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:07: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:07: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:07: [PIPELINE] LOD loop complete
+08.01.26 05:03:07: [PIPELINE] Generating manifest
+08.01.26 05:03:07: [PIPELINE] Manifest done
+08.01.26 05:03:07: [PIPELINE] Generating QA report
+08.01.26 05:03:07: [PIPELINE] QA report done
+08.01.26 05:03:07: [PIPELINE] Cleanup phase
+08.01.26 05:03:07: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:07: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:03:07: [PIPELINE] About to return result
+08.01.26 05:03:07: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:07: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:07: TryLoadGlbLodAsync START
+08.01.26 05:03:07: Loading albedo texture
+08.01.26 05:03:07: Albedo texture done
+08.01.26 05:03:07: Finding GLB LOD files
+08.01.26 05:03:07: Found 4 files
+08.01.26 05:03:07: Showing LOD UI
+08.01.26 05:03:07: LOD UI shown
+08.01.26 05:03:07: Creating/checking SharpGlbLoader
+08.01.26 05:03:07: SharpGlbLoader ready
+08.01.26 05:03:07: Getting LOD file paths
+08.01.26 05:03:07: Got 4 LOD paths
+08.01.26 05:03:07: Starting Task.Run for 4 LODs
+08.01.26 05:03:07: Loading LOD0
+08.01.26 05:03:07: Calling LoadGlb for LOD0
+08.01.26 05:03:07: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:07: Loading LOD1
+08.01.26 05:03:07: Calling LoadGlb for LOD1
+08.01.26 05:03:07: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:07: Loading LOD2
+08.01.26 05:03:07: Calling LoadGlb for LOD2
+08.01.26 05:03:07: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:07: Loading LOD3
+08.01.26 05:03:07: Calling LoadGlb for LOD3
+08.01.26 05:03:07: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:07: Task.Run loop complete
+08.01.26 05:03:07: Task.Run await complete
+08.01.26 05:03:07: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:07: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:07: Loading to viewport
+08.01.26 05:03:07: Viewport loaded
+08.01.26 05:03:07: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:07: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:07: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:07: [CONVERT] About to show MessageBox
+08.01.26 05:03:08: [CONVERT] MessageBox closed
+08.01.26 05:03:12: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:12: [CONVERT] Model: oldMailBox
+08.01.26 05:03:12: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:12: [PIPELINE] ConvertAsync START
+08.01.26 05:03:12: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:12: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:12: [PIPELINE] gltfpack OK
+08.01.26 05:03:12: [PIPELINE] Creating directories
+08.01.26 05:03:12: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:12: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:12: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:12: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:13: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:13: [PIPELINE] Starting LOD generation
+08.01.26 05:03:13: [PIPELINE] Generating LOD0
+08.01.26 05:03:13: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:13: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:13: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:13: [PIPELINE] Generating LOD1
+08.01.26 05:03:13: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:13: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:13: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:13: [PIPELINE] Generating LOD2
+08.01.26 05:03:13: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:13: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:13: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:13: [PIPELINE] Generating LOD3
+08.01.26 05:03:13: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:13: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:13: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:13: [PIPELINE] LOD loop complete
+08.01.26 05:03:13: [PIPELINE] Generating manifest
+08.01.26 05:03:13: [PIPELINE] Manifest done
+08.01.26 05:03:13: [PIPELINE] Generating QA report
+08.01.26 05:03:13: [PIPELINE] QA report done
+08.01.26 05:03:13: [PIPELINE] Cleanup phase
+08.01.26 05:03:13: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:13: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:03:13: [PIPELINE] About to return result
+08.01.26 05:03:13: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:13: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:13: TryLoadGlbLodAsync START
+08.01.26 05:03:13: Loading albedo texture
+08.01.26 05:03:13: Albedo texture done
+08.01.26 05:03:13: Finding GLB LOD files
+08.01.26 05:03:13: Found 4 files
+08.01.26 05:03:13: Showing LOD UI
+08.01.26 05:03:13: LOD UI shown
+08.01.26 05:03:13: Creating/checking SharpGlbLoader
+08.01.26 05:03:13: SharpGlbLoader ready
+08.01.26 05:03:13: Getting LOD file paths
+08.01.26 05:03:13: Got 4 LOD paths
+08.01.26 05:03:13: Starting Task.Run for 4 LODs
+08.01.26 05:03:13: Loading LOD0
+08.01.26 05:03:13: Calling LoadGlb for LOD0
+08.01.26 05:03:13: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:13: Loading LOD1
+08.01.26 05:03:13: Calling LoadGlb for LOD1
+08.01.26 05:03:13: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:13: Loading LOD2
+08.01.26 05:03:13: Calling LoadGlb for LOD2
+08.01.26 05:03:13: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:13: Loading LOD3
+08.01.26 05:03:13: Calling LoadGlb for LOD3
+08.01.26 05:03:13: LoadGlb done for LOD3, Success=False
+08.01.26 05:03:13: Task.Run loop complete
+08.01.26 05:03:13: Task.Run await complete
+08.01.26 05:03:13: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:13: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:13: Loading to viewport
+08.01.26 05:03:13: Viewport loaded
+08.01.26 05:03:13: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:13: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:13: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:13: [CONVERT] About to show MessageBox
+08.01.26 05:03:14: [CONVERT] MessageBox closed
+08.01.26 05:03:23: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:23: [CONVERT] Model: oldMailBox
+08.01.26 05:03:23: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:23: [PIPELINE] ConvertAsync START
+08.01.26 05:03:23: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:23: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:23: [PIPELINE] gltfpack OK
+08.01.26 05:03:23: [PIPELINE] Creating directories
+08.01.26 05:03:23: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:23: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:23: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:23: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:23: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:23: [PIPELINE] Starting LOD generation
+08.01.26 05:03:23: [PIPELINE] Generating LOD0
+08.01.26 05:03:23: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:23: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:23: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:23: [PIPELINE] Generating LOD1
+08.01.26 05:03:23: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:23: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:23: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:23: [PIPELINE] Generating LOD2
+08.01.26 05:03:23: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:23: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:23: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:23: [PIPELINE] Generating LOD3
+08.01.26 05:03:23: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:23: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:23: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:23: [PIPELINE] LOD loop complete
+08.01.26 05:03:23: [PIPELINE] Generating manifest
+08.01.26 05:03:23: [PIPELINE] Manifest done
+08.01.26 05:03:23: [PIPELINE] Generating QA report
+08.01.26 05:03:23: [PIPELINE] QA report done
+08.01.26 05:03:23: [PIPELINE] Cleanup phase
+08.01.26 05:03:23: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:23: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:03:23: [PIPELINE] About to return result
+08.01.26 05:03:23: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:23: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:23: TryLoadGlbLodAsync START
+08.01.26 05:03:23: Loading albedo texture
+08.01.26 05:03:23: Albedo texture done
+08.01.26 05:03:23: Finding GLB LOD files
+08.01.26 05:03:23: Found 4 files
+08.01.26 05:03:23: Showing LOD UI
+08.01.26 05:03:23: LOD UI shown
+08.01.26 05:03:23: Creating/checking SharpGlbLoader
+08.01.26 05:03:23: SharpGlbLoader ready
+08.01.26 05:03:23: Getting LOD file paths
+08.01.26 05:03:23: Got 4 LOD paths
+08.01.26 05:03:23: Starting Task.Run for 4 LODs
+08.01.26 05:03:23: Loading LOD0
+08.01.26 05:03:23: Calling LoadGlb for LOD0
+08.01.26 05:03:23: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:23: Loading LOD1
+08.01.26 05:03:23: Calling LoadGlb for LOD1
+08.01.26 05:03:23: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:23: Loading LOD2
+08.01.26 05:03:23: Calling LoadGlb for LOD2
+08.01.26 05:03:23: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:23: Loading LOD3
+08.01.26 05:03:23: Calling LoadGlb for LOD3
+08.01.26 05:03:23: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:23: Task.Run loop complete
+08.01.26 05:03:23: Task.Run await complete
+08.01.26 05:03:23: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:23: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:23: Loading to viewport
+08.01.26 05:03:23: Viewport loaded
+08.01.26 05:03:23: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:23: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:23: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:23: [CONVERT] About to show MessageBox
+08.01.26 05:03:24: [CONVERT] MessageBox closed
+08.01.26 05:03:35: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:35: [CONVERT] Model: oldMailBox
+08.01.26 05:03:35: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:35: [PIPELINE] ConvertAsync START
+08.01.26 05:03:35: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:35: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:35: [PIPELINE] gltfpack OK
+08.01.26 05:03:35: [PIPELINE] Creating directories
+08.01.26 05:03:35: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:35: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:35: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:35: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:35: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:35: [PIPELINE] Starting LOD generation
+08.01.26 05:03:35: [PIPELINE] Generating LOD0
+08.01.26 05:03:35: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:35: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:35: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:35: [PIPELINE] Generating LOD1
+08.01.26 05:03:35: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:35: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:35: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:35: [PIPELINE] Generating LOD2
+08.01.26 05:03:35: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:35: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:35: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:35: [PIPELINE] Generating LOD3
+08.01.26 05:03:35: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:35: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:35: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:35: [PIPELINE] LOD loop complete
+08.01.26 05:03:35: [PIPELINE] Generating manifest
+08.01.26 05:03:35: [PIPELINE] Manifest done
+08.01.26 05:03:35: [PIPELINE] Generating QA report
+08.01.26 05:03:35: [PIPELINE] QA report done
+08.01.26 05:03:35: [PIPELINE] Cleanup phase
+08.01.26 05:03:35: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:35: [PIPELINE] Duration: 0,49s, LOD files: 4
+08.01.26 05:03:35: [PIPELINE] About to return result
+08.01.26 05:03:35: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:35: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:35: TryLoadGlbLodAsync START
+08.01.26 05:03:35: Loading albedo texture
+08.01.26 05:03:35: Albedo texture done
+08.01.26 05:03:35: Finding GLB LOD files
+08.01.26 05:03:35: Found 4 files
+08.01.26 05:03:35: Showing LOD UI
+08.01.26 05:03:35: LOD UI shown
+08.01.26 05:03:35: Creating/checking SharpGlbLoader
+08.01.26 05:03:35: SharpGlbLoader ready
+08.01.26 05:03:35: Getting LOD file paths
+08.01.26 05:03:35: Got 4 LOD paths
+08.01.26 05:03:35: Starting Task.Run for 4 LODs
+08.01.26 05:03:35: Loading LOD0
+08.01.26 05:03:35: Calling LoadGlb for LOD0
+08.01.26 05:03:35: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:35: Loading LOD1
+08.01.26 05:03:35: Calling LoadGlb for LOD1
+08.01.26 05:03:35: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:35: Loading LOD2
+08.01.26 05:03:35: Calling LoadGlb for LOD2
+08.01.26 05:03:35: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:35: Loading LOD3
+08.01.26 05:03:35: Calling LoadGlb for LOD3
+08.01.26 05:03:35: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:35: Task.Run loop complete
+08.01.26 05:03:35: Task.Run await complete
+08.01.26 05:03:35: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:35: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:35: Loading to viewport
+08.01.26 05:03:35: Viewport loaded
+08.01.26 05:03:35: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:35: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:35: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:35: [CONVERT] About to show MessageBox
+08.01.26 05:03:37: [CONVERT] MessageBox closed
+08.01.26 05:03:41: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:41: [CONVERT] Model: oldMailBox
+08.01.26 05:03:41: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:41: [PIPELINE] ConvertAsync START
+08.01.26 05:03:41: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:41: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:41: [PIPELINE] gltfpack OK
+08.01.26 05:03:41: [PIPELINE] Creating directories
+08.01.26 05:03:41: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:41: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:41: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:41: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:41: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:41: [PIPELINE] Starting LOD generation
+08.01.26 05:03:41: [PIPELINE] Generating LOD0
+08.01.26 05:03:41: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:41: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:41: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:41: [PIPELINE] Generating LOD1
+08.01.26 05:03:41: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:41: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:41: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:41: [PIPELINE] Generating LOD2
+08.01.26 05:03:41: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:41: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:41: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:41: [PIPELINE] Generating LOD3
+08.01.26 05:03:41: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:41: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:41: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:41: [PIPELINE] LOD loop complete
+08.01.26 05:03:41: [PIPELINE] Generating manifest
+08.01.26 05:03:41: [PIPELINE] Manifest done
+08.01.26 05:03:41: [PIPELINE] Generating QA report
+08.01.26 05:03:41: [PIPELINE] QA report done
+08.01.26 05:03:41: [PIPELINE] Cleanup phase
+08.01.26 05:03:41: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:41: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:03:41: [PIPELINE] About to return result
+08.01.26 05:03:41: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:41: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:41: TryLoadGlbLodAsync START
+08.01.26 05:03:41: Loading albedo texture
+08.01.26 05:03:41: Albedo texture done
+08.01.26 05:03:41: Finding GLB LOD files
+08.01.26 05:03:41: Found 4 files
+08.01.26 05:03:41: Showing LOD UI
+08.01.26 05:03:41: LOD UI shown
+08.01.26 05:03:41: Creating/checking SharpGlbLoader
+08.01.26 05:03:41: SharpGlbLoader ready
+08.01.26 05:03:41: Getting LOD file paths
+08.01.26 05:03:41: Got 4 LOD paths
+08.01.26 05:03:41: Starting Task.Run for 4 LODs
+08.01.26 05:03:41: Loading LOD0
+08.01.26 05:03:41: Calling LoadGlb for LOD0
+08.01.26 05:03:41: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:41: Loading LOD1
+08.01.26 05:03:41: Calling LoadGlb for LOD1
+08.01.26 05:03:41: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:41: Loading LOD2
+08.01.26 05:03:41: Calling LoadGlb for LOD2
+08.01.26 05:03:41: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:41: Loading LOD3
+08.01.26 05:03:41: Calling LoadGlb for LOD3
+08.01.26 05:03:41: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:41: Task.Run loop complete
+08.01.26 05:03:41: Task.Run await complete
+08.01.26 05:03:41: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:41: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:41: Loading to viewport
+08.01.26 05:03:41: Viewport loaded
+08.01.26 05:03:41: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:41: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:41: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:41: [CONVERT] About to show MessageBox
+08.01.26 05:03:43: [CONVERT] MessageBox closed
+08.01.26 05:03:46: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:46: [CONVERT] Model: oldMailBox
+08.01.26 05:03:46: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:46: [PIPELINE] ConvertAsync START
+08.01.26 05:03:46: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:46: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:47: [PIPELINE] gltfpack OK
+08.01.26 05:03:47: [PIPELINE] Creating directories
+08.01.26 05:03:47: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:47: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:47: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:47: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:47: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:47: [PIPELINE] Starting LOD generation
+08.01.26 05:03:47: [PIPELINE] Generating LOD0
+08.01.26 05:03:47: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:47: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:47: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:47: [PIPELINE] Generating LOD1
+08.01.26 05:03:47: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:47: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:47: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:47: [PIPELINE] Generating LOD2
+08.01.26 05:03:47: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:47: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:47: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:47: [PIPELINE] Generating LOD3
+08.01.26 05:03:47: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:47: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:47: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:47: [PIPELINE] LOD loop complete
+08.01.26 05:03:47: [PIPELINE] Generating manifest
+08.01.26 05:03:47: [PIPELINE] Manifest done
+08.01.26 05:03:47: [PIPELINE] Generating QA report
+08.01.26 05:03:47: [PIPELINE] QA report done
+08.01.26 05:03:47: [PIPELINE] Cleanup phase
+08.01.26 05:03:47: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:47: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:03:47: [PIPELINE] About to return result
+08.01.26 05:03:47: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:47: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:47: TryLoadGlbLodAsync START
+08.01.26 05:03:47: Loading albedo texture
+08.01.26 05:03:47: Albedo texture done
+08.01.26 05:03:47: Finding GLB LOD files
+08.01.26 05:03:47: Found 4 files
+08.01.26 05:03:47: Showing LOD UI
+08.01.26 05:03:47: LOD UI shown
+08.01.26 05:03:47: Creating/checking SharpGlbLoader
+08.01.26 05:03:47: SharpGlbLoader ready
+08.01.26 05:03:47: Getting LOD file paths
+08.01.26 05:03:47: Got 4 LOD paths
+08.01.26 05:03:47: Starting Task.Run for 4 LODs
+08.01.26 05:03:47: Loading LOD0
+08.01.26 05:03:47: Calling LoadGlb for LOD0
+08.01.26 05:03:47: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:47: Loading LOD1
+08.01.26 05:03:47: Calling LoadGlb for LOD1
+08.01.26 05:03:47: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:47: Loading LOD2
+08.01.26 05:03:47: Calling LoadGlb for LOD2
+08.01.26 05:03:47: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:47: Loading LOD3
+08.01.26 05:03:47: Calling LoadGlb for LOD3
+08.01.26 05:03:47: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:47: Task.Run loop complete
+08.01.26 05:03:47: Task.Run await complete
+08.01.26 05:03:47: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:47: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:47: Loading to viewport
+08.01.26 05:03:47: Viewport loaded
+08.01.26 05:03:47: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:47: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:47: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:47: [CONVERT] About to show MessageBox
+08.01.26 05:03:48: [CONVERT] MessageBox closed
+08.01.26 05:03:51: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:51: [CONVERT] Model: oldMailBox
+08.01.26 05:03:51: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:51: [PIPELINE] ConvertAsync START
+08.01.26 05:03:51: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:51: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:51: [PIPELINE] gltfpack OK
+08.01.26 05:03:51: [PIPELINE] Creating directories
+08.01.26 05:03:51: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:51: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:51: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:51: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:51: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:51: [PIPELINE] Starting LOD generation
+08.01.26 05:03:51: [PIPELINE] Generating LOD0
+08.01.26 05:03:51: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:51: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:51: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:51: [PIPELINE] Generating LOD1
+08.01.26 05:03:51: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:51: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:51: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:51: [PIPELINE] Generating LOD2
+08.01.26 05:03:51: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:51: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:51: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:51: [PIPELINE] Generating LOD3
+08.01.26 05:03:51: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:51: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:51: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:51: [PIPELINE] LOD loop complete
+08.01.26 05:03:51: [PIPELINE] Generating manifest
+08.01.26 05:03:51: [PIPELINE] Manifest done
+08.01.26 05:03:51: [PIPELINE] Generating QA report
+08.01.26 05:03:51: [PIPELINE] QA report done
+08.01.26 05:03:51: [PIPELINE] Cleanup phase
+08.01.26 05:03:51: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:51: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:03:51: [PIPELINE] About to return result
+08.01.26 05:03:51: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:51: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:51: TryLoadGlbLodAsync START
+08.01.26 05:03:51: Loading albedo texture
+08.01.26 05:03:51: Albedo texture done
+08.01.26 05:03:51: Finding GLB LOD files
+08.01.26 05:03:51: Found 4 files
+08.01.26 05:03:51: Showing LOD UI
+08.01.26 05:03:51: LOD UI shown
+08.01.26 05:03:51: Creating/checking SharpGlbLoader
+08.01.26 05:03:51: SharpGlbLoader ready
+08.01.26 05:03:51: Getting LOD file paths
+08.01.26 05:03:51: Got 4 LOD paths
+08.01.26 05:03:51: Starting Task.Run for 4 LODs
+08.01.26 05:03:51: Loading LOD0
+08.01.26 05:03:51: Calling LoadGlb for LOD0
+08.01.26 05:03:51: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:51: Loading LOD1
+08.01.26 05:03:51: Calling LoadGlb for LOD1
+08.01.26 05:03:51: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:51: Loading LOD2
+08.01.26 05:03:51: Calling LoadGlb for LOD2
+08.01.26 05:03:51: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:51: Loading LOD3
+08.01.26 05:03:51: Calling LoadGlb for LOD3
+08.01.26 05:03:51: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:51: Task.Run loop complete
+08.01.26 05:03:51: Task.Run await complete
+08.01.26 05:03:51: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:51: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:51: Loading to viewport
+08.01.26 05:03:51: Viewport loaded
+08.01.26 05:03:51: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:51: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:51: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:51: [CONVERT] About to show MessageBox
+08.01.26 05:03:52: [CONVERT] MessageBox closed
+08.01.26 05:03:55: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:03:55: [CONVERT] Model: oldMailBox
+08.01.26 05:03:55: [CONVERT] Calling ConvertAsync
+08.01.26 05:03:55: [PIPELINE] ConvertAsync START
+08.01.26 05:03:55: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:03:55: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:03:55: [PIPELINE] gltfpack OK
+08.01.26 05:03:55: [PIPELINE] Creating directories
+08.01.26 05:03:55: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:03:55: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:03:55: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:03:55: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:03:55: [PIPELINE] InspectGlbUV done
+08.01.26 05:03:55: [PIPELINE] Starting LOD generation
+08.01.26 05:03:55: [PIPELINE] Generating LOD0
+08.01.26 05:03:55: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:03:55: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:03:55: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:03:55: [PIPELINE] Generating LOD1
+08.01.26 05:03:55: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:03:55: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:03:55: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:03:55: [PIPELINE] Generating LOD2
+08.01.26 05:03:55: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:03:55: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:03:55: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:03:55: [PIPELINE] Generating LOD3
+08.01.26 05:03:55: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:03:55: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:03:55: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:03:55: [PIPELINE] LOD loop complete
+08.01.26 05:03:55: [PIPELINE] Generating manifest
+08.01.26 05:03:55: [PIPELINE] Manifest done
+08.01.26 05:03:55: [PIPELINE] Generating QA report
+08.01.26 05:03:55: [PIPELINE] QA report done
+08.01.26 05:03:55: [PIPELINE] Cleanup phase
+08.01.26 05:03:55: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:03:55: [PIPELINE] Duration: 0,30s, LOD files: 4
+08.01.26 05:03:55: [PIPELINE] About to return result
+08.01.26 05:03:55: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:03:55: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:03:55: TryLoadGlbLodAsync START
+08.01.26 05:03:55: Loading albedo texture
+08.01.26 05:03:55: Albedo texture done
+08.01.26 05:03:55: Finding GLB LOD files
+08.01.26 05:03:55: Found 4 files
+08.01.26 05:03:55: Showing LOD UI
+08.01.26 05:03:55: LOD UI shown
+08.01.26 05:03:55: Creating/checking SharpGlbLoader
+08.01.26 05:03:55: SharpGlbLoader ready
+08.01.26 05:03:55: Getting LOD file paths
+08.01.26 05:03:55: Got 4 LOD paths
+08.01.26 05:03:55: Starting Task.Run for 4 LODs
+08.01.26 05:03:55: Loading LOD0
+08.01.26 05:03:55: Calling LoadGlb for LOD0
+08.01.26 05:03:55: LoadGlb done for LOD0, Success=True
+08.01.26 05:03:55: Loading LOD1
+08.01.26 05:03:55: Calling LoadGlb for LOD1
+08.01.26 05:03:55: LoadGlb done for LOD1, Success=True
+08.01.26 05:03:55: Loading LOD2
+08.01.26 05:03:55: Calling LoadGlb for LOD2
+08.01.26 05:03:55: LoadGlb done for LOD2, Success=True
+08.01.26 05:03:55: Loading LOD3
+08.01.26 05:03:55: Calling LoadGlb for LOD3
+08.01.26 05:03:55: LoadGlb done for LOD3, Success=True
+08.01.26 05:03:55: Task.Run loop complete
+08.01.26 05:03:55: Task.Run await complete
+08.01.26 05:03:55: Entering Dispatcher.InvokeAsync
+08.01.26 05:03:55: Inside Dispatcher.InvokeAsync
+08.01.26 05:03:55: Loading to viewport
+08.01.26 05:03:55: Viewport loaded
+08.01.26 05:03:55: Dispatcher.InvokeAsync DONE
+08.01.26 05:03:55: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:03:55: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:03:55: [CONVERT] About to show MessageBox
+08.01.26 05:03:57: [CONVERT] MessageBox closed
+08.01.26 05:04:00: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:00: [CONVERT] Model: oldMailBox
+08.01.26 05:04:00: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:00: [PIPELINE] ConvertAsync START
+08.01.26 05:04:00: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:00: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:00: [PIPELINE] gltfpack OK
+08.01.26 05:04:00: [PIPELINE] Creating directories
+08.01.26 05:04:00: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:00: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:00: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:00: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:00: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:00: [PIPELINE] Starting LOD generation
+08.01.26 05:04:00: [PIPELINE] Generating LOD0
+08.01.26 05:04:00: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:00: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:00: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:00: [PIPELINE] Generating LOD1
+08.01.26 05:04:00: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:00: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:00: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:00: [PIPELINE] Generating LOD2
+08.01.26 05:04:00: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:00: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:00: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:00: [PIPELINE] Generating LOD3
+08.01.26 05:04:00: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:00: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:00: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:00: [PIPELINE] LOD loop complete
+08.01.26 05:04:00: [PIPELINE] Generating manifest
+08.01.26 05:04:00: [PIPELINE] Manifest done
+08.01.26 05:04:00: [PIPELINE] Generating QA report
+08.01.26 05:04:00: [PIPELINE] QA report done
+08.01.26 05:04:00: [PIPELINE] Cleanup phase
+08.01.26 05:04:00: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:00: [PIPELINE] Duration: 0,30s, LOD files: 4
+08.01.26 05:04:00: [PIPELINE] About to return result
+08.01.26 05:04:00: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:00: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:00: TryLoadGlbLodAsync START
+08.01.26 05:04:00: Loading albedo texture
+08.01.26 05:04:00: Albedo texture done
+08.01.26 05:04:00: Finding GLB LOD files
+08.01.26 05:04:00: Found 4 files
+08.01.26 05:04:00: Showing LOD UI
+08.01.26 05:04:00: LOD UI shown
+08.01.26 05:04:00: Creating/checking SharpGlbLoader
+08.01.26 05:04:00: SharpGlbLoader ready
+08.01.26 05:04:00: Getting LOD file paths
+08.01.26 05:04:00: Got 4 LOD paths
+08.01.26 05:04:00: Starting Task.Run for 4 LODs
+08.01.26 05:04:00: Loading LOD0
+08.01.26 05:04:00: Calling LoadGlb for LOD0
+08.01.26 05:04:00: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:00: Loading LOD1
+08.01.26 05:04:00: Calling LoadGlb for LOD1
+08.01.26 05:04:00: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:00: Loading LOD2
+08.01.26 05:04:00: Calling LoadGlb for LOD2
+08.01.26 05:04:00: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:00: Loading LOD3
+08.01.26 05:04:00: Calling LoadGlb for LOD3
+08.01.26 05:04:00: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:00: Task.Run loop complete
+08.01.26 05:04:00: Task.Run await complete
+08.01.26 05:04:00: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:00: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:00: Loading to viewport
+08.01.26 05:04:00: Viewport loaded
+08.01.26 05:04:00: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:00: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:00: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:00: [CONVERT] About to show MessageBox
+08.01.26 05:04:03: [CONVERT] MessageBox closed
+08.01.26 05:04:07: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:07: [CONVERT] Model: oldMailBox
+08.01.26 05:04:07: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:07: [PIPELINE] ConvertAsync START
+08.01.26 05:04:07: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:07: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:07: [PIPELINE] gltfpack OK
+08.01.26 05:04:07: [PIPELINE] Creating directories
+08.01.26 05:04:07: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:07: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:07: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:07: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:07: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:07: [PIPELINE] Starting LOD generation
+08.01.26 05:04:07: [PIPELINE] Generating LOD0
+08.01.26 05:04:07: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:07: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:07: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:07: [PIPELINE] Generating LOD1
+08.01.26 05:04:07: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:07: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:07: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:07: [PIPELINE] Generating LOD2
+08.01.26 05:04:07: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:07: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:07: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:07: [PIPELINE] Generating LOD3
+08.01.26 05:04:07: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:07: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:07: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:07: [PIPELINE] LOD loop complete
+08.01.26 05:04:07: [PIPELINE] Generating manifest
+08.01.26 05:04:07: [PIPELINE] Manifest done
+08.01.26 05:04:07: [PIPELINE] Generating QA report
+08.01.26 05:04:07: [PIPELINE] QA report done
+08.01.26 05:04:07: [PIPELINE] Cleanup phase
+08.01.26 05:04:07: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:07: [PIPELINE] Duration: 0,33s, LOD files: 4
+08.01.26 05:04:07: [PIPELINE] About to return result
+08.01.26 05:04:07: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:07: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:07: TryLoadGlbLodAsync START
+08.01.26 05:04:07: Loading albedo texture
+08.01.26 05:04:07: Albedo texture done
+08.01.26 05:04:07: Finding GLB LOD files
+08.01.26 05:04:07: Found 4 files
+08.01.26 05:04:07: Showing LOD UI
+08.01.26 05:04:07: LOD UI shown
+08.01.26 05:04:07: Creating/checking SharpGlbLoader
+08.01.26 05:04:07: SharpGlbLoader ready
+08.01.26 05:04:07: Getting LOD file paths
+08.01.26 05:04:07: Got 4 LOD paths
+08.01.26 05:04:07: Starting Task.Run for 4 LODs
+08.01.26 05:04:07: Loading LOD0
+08.01.26 05:04:07: Calling LoadGlb for LOD0
+08.01.26 05:04:07: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:07: Loading LOD1
+08.01.26 05:04:07: Calling LoadGlb for LOD1
+08.01.26 05:04:07: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:07: Loading LOD2
+08.01.26 05:04:07: Calling LoadGlb for LOD2
+08.01.26 05:04:07: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:07: Loading LOD3
+08.01.26 05:04:07: Calling LoadGlb for LOD3
+08.01.26 05:04:07: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:07: Task.Run loop complete
+08.01.26 05:04:07: Task.Run await complete
+08.01.26 05:04:07: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:07: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:07: Loading to viewport
+08.01.26 05:04:07: Viewport loaded
+08.01.26 05:04:07: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:07: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:07: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:07: [CONVERT] About to show MessageBox
+08.01.26 05:04:10: [CONVERT] MessageBox closed
+08.01.26 05:04:13: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:13: [CONVERT] Model: oldMailBox
+08.01.26 05:04:13: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:13: [PIPELINE] ConvertAsync START
+08.01.26 05:04:13: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:13: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:13: [PIPELINE] gltfpack OK
+08.01.26 05:04:13: [PIPELINE] Creating directories
+08.01.26 05:04:13: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:13: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:13: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:13: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:13: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:13: [PIPELINE] Starting LOD generation
+08.01.26 05:04:13: [PIPELINE] Generating LOD0
+08.01.26 05:04:13: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:13: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:13: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:13: [PIPELINE] Generating LOD1
+08.01.26 05:04:13: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:13: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:13: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:13: [PIPELINE] Generating LOD2
+08.01.26 05:04:13: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:13: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:13: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:13: [PIPELINE] Generating LOD3
+08.01.26 05:04:13: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:13: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:13: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:13: [PIPELINE] LOD loop complete
+08.01.26 05:04:13: [PIPELINE] Generating manifest
+08.01.26 05:04:13: [PIPELINE] Manifest done
+08.01.26 05:04:13: [PIPELINE] Generating QA report
+08.01.26 05:04:13: [PIPELINE] QA report done
+08.01.26 05:04:13: [PIPELINE] Cleanup phase
+08.01.26 05:04:13: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:13: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:04:13: [PIPELINE] About to return result
+08.01.26 05:04:13: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:13: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:13: TryLoadGlbLodAsync START
+08.01.26 05:04:13: Loading albedo texture
+08.01.26 05:04:13: Albedo texture done
+08.01.26 05:04:13: Finding GLB LOD files
+08.01.26 05:04:13: Found 4 files
+08.01.26 05:04:13: Showing LOD UI
+08.01.26 05:04:13: LOD UI shown
+08.01.26 05:04:13: Creating/checking SharpGlbLoader
+08.01.26 05:04:13: SharpGlbLoader ready
+08.01.26 05:04:13: Getting LOD file paths
+08.01.26 05:04:13: Got 4 LOD paths
+08.01.26 05:04:13: Starting Task.Run for 4 LODs
+08.01.26 05:04:13: Loading LOD0
+08.01.26 05:04:13: Calling LoadGlb for LOD0
+08.01.26 05:04:13: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:13: Loading LOD1
+08.01.26 05:04:13: Calling LoadGlb for LOD1
+08.01.26 05:04:13: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:13: Loading LOD2
+08.01.26 05:04:13: Calling LoadGlb for LOD2
+08.01.26 05:04:13: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:13: Loading LOD3
+08.01.26 05:04:13: Calling LoadGlb for LOD3
+08.01.26 05:04:13: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:13: Task.Run loop complete
+08.01.26 05:04:13: Task.Run await complete
+08.01.26 05:04:13: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:13: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:13: Loading to viewport
+08.01.26 05:04:13: Viewport loaded
+08.01.26 05:04:13: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:13: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:13: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:13: [CONVERT] About to show MessageBox
+08.01.26 05:04:14: [CONVERT] MessageBox closed
+08.01.26 05:04:35: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:35: [CONVERT] Model: oldMailBox
+08.01.26 05:04:35: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:35: [PIPELINE] ConvertAsync START
+08.01.26 05:04:35: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:35: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:35: [PIPELINE] gltfpack OK
+08.01.26 05:04:35: [PIPELINE] Creating directories
+08.01.26 05:04:35: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:35: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:35: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:35: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:35: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:35: [PIPELINE] Starting LOD generation
+08.01.26 05:04:35: [PIPELINE] Generating LOD0
+08.01.26 05:04:35: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:35: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:35: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:35: [PIPELINE] Generating LOD1
+08.01.26 05:04:35: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:35: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:35: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:35: [PIPELINE] Generating LOD2
+08.01.26 05:04:35: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:35: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:35: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:35: [PIPELINE] Generating LOD3
+08.01.26 05:04:35: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:35: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:35: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:35: [PIPELINE] LOD loop complete
+08.01.26 05:04:35: [PIPELINE] Generating manifest
+08.01.26 05:04:35: [PIPELINE] Manifest done
+08.01.26 05:04:35: [PIPELINE] Generating QA report
+08.01.26 05:04:35: [PIPELINE] QA report done
+08.01.26 05:04:35: [PIPELINE] Cleanup phase
+08.01.26 05:04:35: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:35: [PIPELINE] Duration: 0,33s, LOD files: 4
+08.01.26 05:04:35: [PIPELINE] About to return result
+08.01.26 05:04:35: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:35: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:35: TryLoadGlbLodAsync START
+08.01.26 05:04:35: Loading albedo texture
+08.01.26 05:04:35: Albedo texture done
+08.01.26 05:04:35: Finding GLB LOD files
+08.01.26 05:04:35: Found 4 files
+08.01.26 05:04:35: Showing LOD UI
+08.01.26 05:04:35: LOD UI shown
+08.01.26 05:04:35: Creating/checking SharpGlbLoader
+08.01.26 05:04:35: SharpGlbLoader ready
+08.01.26 05:04:35: Getting LOD file paths
+08.01.26 05:04:35: Got 4 LOD paths
+08.01.26 05:04:35: Starting Task.Run for 4 LODs
+08.01.26 05:04:35: Loading LOD0
+08.01.26 05:04:35: Calling LoadGlb for LOD0
+08.01.26 05:04:35: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:35: Loading LOD1
+08.01.26 05:04:35: Calling LoadGlb for LOD1
+08.01.26 05:04:35: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:35: Loading LOD2
+08.01.26 05:04:35: Calling LoadGlb for LOD2
+08.01.26 05:04:35: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:35: Loading LOD3
+08.01.26 05:04:35: Calling LoadGlb for LOD3
+08.01.26 05:04:35: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:35: Task.Run loop complete
+08.01.26 05:04:35: Task.Run await complete
+08.01.26 05:04:35: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:35: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:35: Loading to viewport
+08.01.26 05:04:35: Viewport loaded
+08.01.26 05:04:35: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:35: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:35: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:35: [CONVERT] About to show MessageBox
+08.01.26 05:04:37: [CONVERT] MessageBox closed
+08.01.26 05:04:39: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:39: [CONVERT] Model: oldMailBox
+08.01.26 05:04:39: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:39: [PIPELINE] ConvertAsync START
+08.01.26 05:04:39: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:39: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:39: [PIPELINE] gltfpack OK
+08.01.26 05:04:39: [PIPELINE] Creating directories
+08.01.26 05:04:39: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:39: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:40: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:40: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:40: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:40: [PIPELINE] Starting LOD generation
+08.01.26 05:04:40: [PIPELINE] Generating LOD0
+08.01.26 05:04:40: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:40: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:40: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:40: [PIPELINE] Generating LOD1
+08.01.26 05:04:40: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:40: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:40: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:40: [PIPELINE] Generating LOD2
+08.01.26 05:04:40: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:40: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:40: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:40: [PIPELINE] Generating LOD3
+08.01.26 05:04:40: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:40: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:40: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:40: [PIPELINE] LOD loop complete
+08.01.26 05:04:40: [PIPELINE] Generating manifest
+08.01.26 05:04:40: [PIPELINE] Manifest done
+08.01.26 05:04:40: [PIPELINE] Generating QA report
+08.01.26 05:04:40: [PIPELINE] QA report done
+08.01.26 05:04:40: [PIPELINE] Cleanup phase
+08.01.26 05:04:40: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:40: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:04:40: [PIPELINE] About to return result
+08.01.26 05:04:40: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:40: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:40: TryLoadGlbLodAsync START
+08.01.26 05:04:40: Loading albedo texture
+08.01.26 05:04:40: Albedo texture done
+08.01.26 05:04:40: Finding GLB LOD files
+08.01.26 05:04:40: Found 4 files
+08.01.26 05:04:40: Showing LOD UI
+08.01.26 05:04:40: LOD UI shown
+08.01.26 05:04:40: Creating/checking SharpGlbLoader
+08.01.26 05:04:40: SharpGlbLoader ready
+08.01.26 05:04:40: Getting LOD file paths
+08.01.26 05:04:40: Got 4 LOD paths
+08.01.26 05:04:40: Starting Task.Run for 4 LODs
+08.01.26 05:04:40: Loading LOD0
+08.01.26 05:04:40: Calling LoadGlb for LOD0
+08.01.26 05:04:40: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:40: Loading LOD1
+08.01.26 05:04:40: Calling LoadGlb for LOD1
+08.01.26 05:04:40: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:40: Loading LOD2
+08.01.26 05:04:40: Calling LoadGlb for LOD2
+08.01.26 05:04:40: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:40: Loading LOD3
+08.01.26 05:04:40: Calling LoadGlb for LOD3
+08.01.26 05:04:40: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:40: Task.Run loop complete
+08.01.26 05:04:40: Task.Run await complete
+08.01.26 05:04:40: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:40: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:40: Loading to viewport
+08.01.26 05:04:40: Viewport loaded
+08.01.26 05:04:40: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:40: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:40: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:40: [CONVERT] About to show MessageBox
+08.01.26 05:04:41: [CONVERT] MessageBox closed
+08.01.26 05:04:44: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:44: [CONVERT] Model: oldMailBox
+08.01.26 05:04:44: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:44: [PIPELINE] ConvertAsync START
+08.01.26 05:04:44: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:44: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:44: [PIPELINE] gltfpack OK
+08.01.26 05:04:44: [PIPELINE] Creating directories
+08.01.26 05:04:44: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:44: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:44: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:44: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:44: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:44: [PIPELINE] Starting LOD generation
+08.01.26 05:04:44: [PIPELINE] Generating LOD0
+08.01.26 05:04:44: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:44: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:44: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:44: [PIPELINE] Generating LOD1
+08.01.26 05:04:45: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:45: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:45: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:45: [PIPELINE] Generating LOD2
+08.01.26 05:04:45: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:45: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:45: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:45: [PIPELINE] Generating LOD3
+08.01.26 05:04:45: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:45: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:45: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:45: [PIPELINE] LOD loop complete
+08.01.26 05:04:45: [PIPELINE] Generating manifest
+08.01.26 05:04:45: [PIPELINE] Manifest done
+08.01.26 05:04:45: [PIPELINE] Generating QA report
+08.01.26 05:04:45: [PIPELINE] QA report done
+08.01.26 05:04:45: [PIPELINE] Cleanup phase
+08.01.26 05:04:45: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:45: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:04:45: [PIPELINE] About to return result
+08.01.26 05:04:45: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:45: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:45: TryLoadGlbLodAsync START
+08.01.26 05:04:45: Loading albedo texture
+08.01.26 05:04:45: Albedo texture done
+08.01.26 05:04:45: Finding GLB LOD files
+08.01.26 05:04:45: Found 4 files
+08.01.26 05:04:45: Showing LOD UI
+08.01.26 05:04:45: LOD UI shown
+08.01.26 05:04:45: Creating/checking SharpGlbLoader
+08.01.26 05:04:45: SharpGlbLoader ready
+08.01.26 05:04:45: Getting LOD file paths
+08.01.26 05:04:45: Got 4 LOD paths
+08.01.26 05:04:45: Starting Task.Run for 4 LODs
+08.01.26 05:04:45: Loading LOD0
+08.01.26 05:04:45: Calling LoadGlb for LOD0
+08.01.26 05:04:45: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:45: Loading LOD1
+08.01.26 05:04:45: Calling LoadGlb for LOD1
+08.01.26 05:04:45: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:45: Loading LOD2
+08.01.26 05:04:45: Calling LoadGlb for LOD2
+08.01.26 05:04:45: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:45: Loading LOD3
+08.01.26 05:04:45: Calling LoadGlb for LOD3
+08.01.26 05:04:45: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:45: Task.Run loop complete
+08.01.26 05:04:45: Task.Run await complete
+08.01.26 05:04:45: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:45: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:45: Loading to viewport
+08.01.26 05:04:45: Viewport loaded
+08.01.26 05:04:45: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:45: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:45: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:45: [CONVERT] About to show MessageBox
+08.01.26 05:04:46: [CONVERT] MessageBox closed
+08.01.26 05:04:56: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:04:56: [CONVERT] Model: oldMailBox
+08.01.26 05:04:56: [CONVERT] Calling ConvertAsync
+08.01.26 05:04:56: [PIPELINE] ConvertAsync START
+08.01.26 05:04:56: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:04:56: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:04:56: [PIPELINE] gltfpack OK
+08.01.26 05:04:56: [PIPELINE] Creating directories
+08.01.26 05:04:56: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:04:56: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:04:56: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:04:56: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:04:56: [PIPELINE] InspectGlbUV done
+08.01.26 05:04:56: [PIPELINE] Starting LOD generation
+08.01.26 05:04:56: [PIPELINE] Generating LOD0
+08.01.26 05:04:56: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:04:56: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:04:56: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:04:56: [PIPELINE] Generating LOD1
+08.01.26 05:04:56: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:04:56: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:04:56: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:04:56: [PIPELINE] Generating LOD2
+08.01.26 05:04:56: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:04:56: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:04:56: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:04:56: [PIPELINE] Generating LOD3
+08.01.26 05:04:56: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:04:56: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:04:56: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:04:56: [PIPELINE] LOD loop complete
+08.01.26 05:04:56: [PIPELINE] Generating manifest
+08.01.26 05:04:56: [PIPELINE] Manifest done
+08.01.26 05:04:56: [PIPELINE] Generating QA report
+08.01.26 05:04:56: [PIPELINE] QA report done
+08.01.26 05:04:56: [PIPELINE] Cleanup phase
+08.01.26 05:04:56: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:04:56: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:04:56: [PIPELINE] About to return result
+08.01.26 05:04:56: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:04:56: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:04:56: TryLoadGlbLodAsync START
+08.01.26 05:04:56: Loading albedo texture
+08.01.26 05:04:56: Albedo texture done
+08.01.26 05:04:56: Finding GLB LOD files
+08.01.26 05:04:56: Found 4 files
+08.01.26 05:04:56: Showing LOD UI
+08.01.26 05:04:56: LOD UI shown
+08.01.26 05:04:56: Creating/checking SharpGlbLoader
+08.01.26 05:04:56: SharpGlbLoader ready
+08.01.26 05:04:56: Getting LOD file paths
+08.01.26 05:04:56: Got 4 LOD paths
+08.01.26 05:04:56: Starting Task.Run for 4 LODs
+08.01.26 05:04:56: Loading LOD0
+08.01.26 05:04:56: Calling LoadGlb for LOD0
+08.01.26 05:04:56: LoadGlb done for LOD0, Success=True
+08.01.26 05:04:56: Loading LOD1
+08.01.26 05:04:56: Calling LoadGlb for LOD1
+08.01.26 05:04:56: LoadGlb done for LOD1, Success=True
+08.01.26 05:04:56: Loading LOD2
+08.01.26 05:04:56: Calling LoadGlb for LOD2
+08.01.26 05:04:56: LoadGlb done for LOD2, Success=True
+08.01.26 05:04:56: Loading LOD3
+08.01.26 05:04:56: Calling LoadGlb for LOD3
+08.01.26 05:04:56: LoadGlb done for LOD3, Success=True
+08.01.26 05:04:56: Task.Run loop complete
+08.01.26 05:04:56: Task.Run await complete
+08.01.26 05:04:56: Entering Dispatcher.InvokeAsync
+08.01.26 05:04:56: Inside Dispatcher.InvokeAsync
+08.01.26 05:04:56: Loading to viewport
+08.01.26 05:04:56: Viewport loaded
+08.01.26 05:04:56: Dispatcher.InvokeAsync DONE
+08.01.26 05:04:56: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:04:56: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:04:56: [CONVERT] About to show MessageBox
+08.01.26 05:04:58: [CONVERT] MessageBox closed
+08.01.26 05:05:03: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:05:03: [CONVERT] Model: oldMailBox
+08.01.26 05:05:03: [CONVERT] Calling ConvertAsync
+08.01.26 05:05:03: [PIPELINE] ConvertAsync START
+08.01.26 05:05:03: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:05:03: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:05:03: [PIPELINE] gltfpack OK
+08.01.26 05:05:03: [PIPELINE] Creating directories
+08.01.26 05:05:03: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:05:03: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:05:03: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:05:03: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:05:03: [PIPELINE] InspectGlbUV done
+08.01.26 05:05:03: [PIPELINE] Starting LOD generation
+08.01.26 05:05:03: [PIPELINE] Generating LOD0
+08.01.26 05:05:03: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:05:03: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:05:03: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:05:03: [PIPELINE] Generating LOD1
+08.01.26 05:05:03: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:05:03: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:05:03: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:05:03: [PIPELINE] Generating LOD2
+08.01.26 05:05:03: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:05:03: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:05:03: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:05:03: [PIPELINE] Generating LOD3
+08.01.26 05:05:03: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:05:03: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:05:03: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:05:03: [PIPELINE] LOD loop complete
+08.01.26 05:05:03: [PIPELINE] Generating manifest
+08.01.26 05:05:03: [PIPELINE] Manifest done
+08.01.26 05:05:03: [PIPELINE] Generating QA report
+08.01.26 05:05:03: [PIPELINE] QA report done
+08.01.26 05:05:03: [PIPELINE] Cleanup phase
+08.01.26 05:05:03: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:05:03: [PIPELINE] Duration: 0,34s, LOD files: 4
+08.01.26 05:05:03: [PIPELINE] About to return result
+08.01.26 05:05:03: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:05:03: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:05:03: TryLoadGlbLodAsync START
+08.01.26 05:05:03: Loading albedo texture
+08.01.26 05:05:03: Albedo texture done
+08.01.26 05:05:03: Finding GLB LOD files
+08.01.26 05:05:03: Found 4 files
+08.01.26 05:05:03: Showing LOD UI
+08.01.26 05:05:03: LOD UI shown
+08.01.26 05:05:03: Creating/checking SharpGlbLoader
+08.01.26 05:05:03: SharpGlbLoader ready
+08.01.26 05:05:03: Getting LOD file paths
+08.01.26 05:05:03: Got 4 LOD paths
+08.01.26 05:05:03: Starting Task.Run for 4 LODs
+08.01.26 05:05:03: Loading LOD0
+08.01.26 05:05:03: Calling LoadGlb for LOD0
+08.01.26 05:05:03: LoadGlb done for LOD0, Success=True
+08.01.26 05:05:03: Loading LOD1
+08.01.26 05:05:03: Calling LoadGlb for LOD1
+08.01.26 05:05:03: LoadGlb done for LOD1, Success=True
+08.01.26 05:05:03: Loading LOD2
+08.01.26 05:05:03: Calling LoadGlb for LOD2
+08.01.26 05:05:03: LoadGlb done for LOD2, Success=True
+08.01.26 05:05:03: Loading LOD3
+08.01.26 05:05:03: Calling LoadGlb for LOD3
+08.01.26 05:05:03: LoadGlb done for LOD3, Success=True
+08.01.26 05:05:03: Task.Run loop complete
+08.01.26 05:05:03: Task.Run await complete
+08.01.26 05:05:03: Entering Dispatcher.InvokeAsync
+08.01.26 05:05:03: Inside Dispatcher.InvokeAsync
+08.01.26 05:05:03: Loading to viewport
+08.01.26 05:05:03: Viewport loaded
+08.01.26 05:05:03: Dispatcher.InvokeAsync DONE
+08.01.26 05:05:03: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:05:03: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:05:03: [CONVERT] About to show MessageBox
+08.01.26 05:05:05: [CONVERT] MessageBox closed
+08.01.26 05:05:15: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:05:15: [CONVERT] Model: oldMailBox
+08.01.26 05:05:15: [CONVERT] Calling ConvertAsync
+08.01.26 05:05:15: [PIPELINE] ConvertAsync START
+08.01.26 05:05:15: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:05:15: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:05:15: [PIPELINE] gltfpack OK
+08.01.26 05:05:15: [PIPELINE] Creating directories
+08.01.26 05:05:15: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:05:15: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:05:15: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:05:15: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:05:16: [PIPELINE] InspectGlbUV done
+08.01.26 05:05:16: [PIPELINE] Starting LOD generation
+08.01.26 05:05:16: [PIPELINE] Generating LOD0
+08.01.26 05:05:16: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:05:16: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:05:16: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:05:16: [PIPELINE] Generating LOD1
+08.01.26 05:05:16: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:05:16: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:05:16: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:05:16: [PIPELINE] Generating LOD2
+08.01.26 05:05:16: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:05:16: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:05:16: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:05:16: [PIPELINE] Generating LOD3
+08.01.26 05:05:16: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:05:16: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:05:16: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:05:16: [PIPELINE] LOD loop complete
+08.01.26 05:05:16: [PIPELINE] Generating manifest
+08.01.26 05:05:16: [PIPELINE] Manifest done
+08.01.26 05:05:16: [PIPELINE] Generating QA report
+08.01.26 05:05:16: [PIPELINE] QA report done
+08.01.26 05:05:16: [PIPELINE] Cleanup phase
+08.01.26 05:05:16: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:05:16: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:05:16: [PIPELINE] About to return result
+08.01.26 05:05:16: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:05:16: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:05:16: TryLoadGlbLodAsync START
+08.01.26 05:05:16: Loading albedo texture
+08.01.26 05:05:16: Albedo texture done
+08.01.26 05:05:16: Finding GLB LOD files
+08.01.26 05:05:16: Found 4 files
+08.01.26 05:05:16: Showing LOD UI
+08.01.26 05:05:16: LOD UI shown
+08.01.26 05:05:16: Creating/checking SharpGlbLoader
+08.01.26 05:05:16: SharpGlbLoader ready
+08.01.26 05:05:16: Getting LOD file paths
+08.01.26 05:05:16: Got 4 LOD paths
+08.01.26 05:05:16: Starting Task.Run for 4 LODs
+08.01.26 05:05:16: Loading LOD0
+08.01.26 05:05:16: Calling LoadGlb for LOD0
+08.01.26 05:05:16: LoadGlb done for LOD0, Success=True
+08.01.26 05:05:16: Loading LOD1
+08.01.26 05:05:16: Calling LoadGlb for LOD1
+08.01.26 05:05:16: LoadGlb done for LOD1, Success=True
+08.01.26 05:05:16: Loading LOD2
+08.01.26 05:05:16: Calling LoadGlb for LOD2
+08.01.26 05:05:16: LoadGlb done for LOD2, Success=True
+08.01.26 05:05:16: Loading LOD3
+08.01.26 05:05:16: Calling LoadGlb for LOD3
+08.01.26 05:05:16: LoadGlb done for LOD3, Success=True
+08.01.26 05:05:16: Task.Run loop complete
+08.01.26 05:05:16: Task.Run await complete
+08.01.26 05:05:16: Entering Dispatcher.InvokeAsync
+08.01.26 05:05:16: Inside Dispatcher.InvokeAsync
+08.01.26 05:05:16: Loading to viewport
+08.01.26 05:05:16: Viewport loaded
+08.01.26 05:05:16: Dispatcher.InvokeAsync DONE
+08.01.26 05:05:16: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:05:16: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:05:16: [CONVERT] About to show MessageBox
+08.01.26 05:05:18: [CONVERT] MessageBox closed
+08.01.26 05:05:54: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:05:54: [CONVERT] Model: oldMailBox
+08.01.26 05:05:54: [CONVERT] Calling ConvertAsync
+08.01.26 05:05:54: [PIPELINE] ConvertAsync START
+08.01.26 05:05:54: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:05:54: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:05:54: [PIPELINE] gltfpack OK
+08.01.26 05:05:54: [PIPELINE] Creating directories
+08.01.26 05:05:54: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:05:54: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:05:54: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:05:54: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:05:55: [PIPELINE] InspectGlbUV done
+08.01.26 05:05:55: [PIPELINE] Starting LOD generation
+08.01.26 05:05:55: [PIPELINE] Generating LOD0
+08.01.26 05:05:55: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:05:55: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:05:55: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:05:55: [PIPELINE] Generating LOD1
+08.01.26 05:05:55: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:05:55: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:05:55: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:05:55: [PIPELINE] Generating LOD2
+08.01.26 05:05:55: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:05:55: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:05:55: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:05:55: [PIPELINE] Generating LOD3
+08.01.26 05:05:55: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:05:55: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:05:55: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:05:55: [PIPELINE] LOD loop complete
+08.01.26 05:05:55: [PIPELINE] Generating manifest
+08.01.26 05:05:55: [PIPELINE] Manifest done
+08.01.26 05:05:55: [PIPELINE] Generating QA report
+08.01.26 05:05:55: [PIPELINE] QA report done
+08.01.26 05:05:55: [PIPELINE] Cleanup phase
+08.01.26 05:05:55: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:05:55: [PIPELINE] Duration: 0,35s, LOD files: 4
+08.01.26 05:05:55: [PIPELINE] About to return result
+08.01.26 05:05:55: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:05:55: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:05:55: TryLoadGlbLodAsync START
+08.01.26 05:05:55: Loading albedo texture
+08.01.26 05:05:55: Albedo texture done
+08.01.26 05:05:55: Finding GLB LOD files
+08.01.26 05:05:55: Found 4 files
+08.01.26 05:05:55: Showing LOD UI
+08.01.26 05:05:55: LOD UI shown
+08.01.26 05:05:55: Creating/checking SharpGlbLoader
+08.01.26 05:05:55: SharpGlbLoader ready
+08.01.26 05:05:55: Getting LOD file paths
+08.01.26 05:05:55: Got 4 LOD paths
+08.01.26 05:05:55: Starting Task.Run for 4 LODs
+08.01.26 05:05:55: Loading LOD0
+08.01.26 05:05:55: Calling LoadGlb for LOD0
+08.01.26 05:05:55: LoadGlb done for LOD0, Success=True
+08.01.26 05:05:55: Loading LOD1
+08.01.26 05:05:55: Calling LoadGlb for LOD1
+08.01.26 05:05:55: LoadGlb done for LOD1, Success=True
+08.01.26 05:05:55: Loading LOD2
+08.01.26 05:05:55: Calling LoadGlb for LOD2
+08.01.26 05:05:55: LoadGlb done for LOD2, Success=True
+08.01.26 05:05:55: Loading LOD3
+08.01.26 05:05:55: Calling LoadGlb for LOD3
+08.01.26 05:05:55: LoadGlb done for LOD3, Success=True
+08.01.26 05:05:55: Task.Run loop complete
+08.01.26 05:05:55: Task.Run await complete
+08.01.26 05:05:55: Entering Dispatcher.InvokeAsync
+08.01.26 05:05:55: Inside Dispatcher.InvokeAsync
+08.01.26 05:05:55: Loading to viewport
+08.01.26 05:05:55: Viewport loaded
+08.01.26 05:05:55: Dispatcher.InvokeAsync DONE
+08.01.26 05:05:55: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:05:55: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:05:55: [CONVERT] About to show MessageBox
+08.01.26 05:05:56: [CONVERT] MessageBox closed
+08.01.26 05:06:18: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:06:18: [CONVERT] Model: oldMailBox
+08.01.26 05:06:18: [CONVERT] Calling ConvertAsync
+08.01.26 05:06:18: [PIPELINE] ConvertAsync START
+08.01.26 05:06:18: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:06:18: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:06:18: [PIPELINE] gltfpack OK
+08.01.26 05:06:18: [PIPELINE] Creating directories
+08.01.26 05:06:18: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:06:18: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:06:19: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:06:19: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:06:19: [PIPELINE] InspectGlbUV done
+08.01.26 05:06:19: [PIPELINE] Starting LOD generation
+08.01.26 05:06:19: [PIPELINE] Generating LOD0
+08.01.26 05:06:19: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:06:19: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:06:19: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:06:19: [PIPELINE] Generating LOD1
+08.01.26 05:06:19: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:06:19: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:06:19: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:06:19: [PIPELINE] Generating LOD2
+08.01.26 05:06:19: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:06:19: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:06:19: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:06:19: [PIPELINE] Generating LOD3
+08.01.26 05:06:19: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:06:19: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:06:19: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:06:19: [PIPELINE] LOD loop complete
+08.01.26 05:06:19: [PIPELINE] Generating manifest
+08.01.26 05:06:19: [PIPELINE] Manifest done
+08.01.26 05:06:19: [PIPELINE] Generating QA report
+08.01.26 05:06:19: [PIPELINE] QA report done
+08.01.26 05:06:19: [PIPELINE] Cleanup phase
+08.01.26 05:06:19: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:06:19: [PIPELINE] Duration: 0,30s, LOD files: 4
+08.01.26 05:06:19: [PIPELINE] About to return result
+08.01.26 05:06:19: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:06:19: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:06:19: TryLoadGlbLodAsync START
+08.01.26 05:06:19: Loading albedo texture
+08.01.26 05:06:19: Albedo texture done
+08.01.26 05:06:19: Finding GLB LOD files
+08.01.26 05:06:19: Found 4 files
+08.01.26 05:06:19: Showing LOD UI
+08.01.26 05:06:19: LOD UI shown
+08.01.26 05:06:19: Creating/checking SharpGlbLoader
+08.01.26 05:06:19: SharpGlbLoader ready
+08.01.26 05:06:19: Getting LOD file paths
+08.01.26 05:06:19: Got 4 LOD paths
+08.01.26 05:06:19: Starting Task.Run for 4 LODs
+08.01.26 05:06:19: Loading LOD0
+08.01.26 05:06:19: Calling LoadGlb for LOD0
+08.01.26 05:06:19: LoadGlb done for LOD0, Success=True
+08.01.26 05:06:19: Loading LOD1
+08.01.26 05:06:19: Calling LoadGlb for LOD1
+08.01.26 05:06:19: LoadGlb done for LOD1, Success=True
+08.01.26 05:06:19: Loading LOD2
+08.01.26 05:06:19: Calling LoadGlb for LOD2
+08.01.26 05:06:19: LoadGlb done for LOD2, Success=True
+08.01.26 05:06:19: Loading LOD3
+08.01.26 05:06:19: Calling LoadGlb for LOD3
+08.01.26 05:06:19: LoadGlb done for LOD3, Success=True
+08.01.26 05:06:19: Task.Run loop complete
+08.01.26 05:06:19: Task.Run await complete
+08.01.26 05:06:19: Entering Dispatcher.InvokeAsync
+08.01.26 05:06:19: Inside Dispatcher.InvokeAsync
+08.01.26 05:06:19: Loading to viewport
+08.01.26 05:06:19: Viewport loaded
+08.01.26 05:06:19: Dispatcher.InvokeAsync DONE
+08.01.26 05:06:19: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:06:19: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:06:19: [CONVERT] About to show MessageBox
+08.01.26 05:06:20: [CONVERT] MessageBox closed
+08.01.26 05:06:35: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:06:35: [CONVERT] Model: oldMailBox
+08.01.26 05:06:35: [CONVERT] Calling ConvertAsync
+08.01.26 05:06:35: [PIPELINE] ConvertAsync START
+08.01.26 05:06:35: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:06:35: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:06:35: [PIPELINE] gltfpack OK
+08.01.26 05:06:35: [PIPELINE] Creating directories
+08.01.26 05:06:35: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:06:35: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:06:35: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:06:35: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:06:35: [PIPELINE] InspectGlbUV done
+08.01.26 05:06:35: [PIPELINE] Starting LOD generation
+08.01.26 05:06:35: [PIPELINE] Generating LOD0
+08.01.26 05:06:35: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:06:35: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:06:35: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:06:35: [PIPELINE] Generating LOD1
+08.01.26 05:06:35: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:06:35: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:06:35: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:06:35: [PIPELINE] Generating LOD2
+08.01.26 05:06:35: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:06:35: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:06:35: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:06:35: [PIPELINE] Generating LOD3
+08.01.26 05:06:35: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:06:35: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:06:35: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:06:35: [PIPELINE] LOD loop complete
+08.01.26 05:06:35: [PIPELINE] Generating manifest
+08.01.26 05:06:35: [PIPELINE] Manifest done
+08.01.26 05:06:35: [PIPELINE] Generating QA report
+08.01.26 05:06:35: [PIPELINE] QA report done
+08.01.26 05:06:35: [PIPELINE] Cleanup phase
+08.01.26 05:06:35: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:06:35: [PIPELINE] Duration: 0,32s, LOD files: 4
+08.01.26 05:06:35: [PIPELINE] About to return result
+08.01.26 05:06:35: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:06:35: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:06:35: TryLoadGlbLodAsync START
+08.01.26 05:06:35: Loading albedo texture
+08.01.26 05:06:35: Albedo texture done
+08.01.26 05:06:35: Finding GLB LOD files
+08.01.26 05:06:35: Found 4 files
+08.01.26 05:06:35: Showing LOD UI
+08.01.26 05:06:35: LOD UI shown
+08.01.26 05:06:35: Creating/checking SharpGlbLoader
+08.01.26 05:06:35: SharpGlbLoader ready
+08.01.26 05:06:35: Getting LOD file paths
+08.01.26 05:06:35: Got 4 LOD paths
+08.01.26 05:06:35: Starting Task.Run for 4 LODs
+08.01.26 05:06:35: Loading LOD0
+08.01.26 05:06:35: Calling LoadGlb for LOD0
+08.01.26 05:06:35: LoadGlb done for LOD0, Success=True
+08.01.26 05:06:35: Loading LOD1
+08.01.26 05:06:35: Calling LoadGlb for LOD1
+08.01.26 05:06:35: LoadGlb done for LOD1, Success=True
+08.01.26 05:06:35: Loading LOD2
+08.01.26 05:06:35: Calling LoadGlb for LOD2
+08.01.26 05:06:35: LoadGlb done for LOD2, Success=True
+08.01.26 05:06:35: Loading LOD3
+08.01.26 05:06:35: Calling LoadGlb for LOD3
+08.01.26 05:06:35: LoadGlb done for LOD3, Success=True
+08.01.26 05:06:35: Task.Run loop complete
+08.01.26 05:06:35: Task.Run await complete
+08.01.26 05:06:35: Entering Dispatcher.InvokeAsync
+08.01.26 05:06:35: Inside Dispatcher.InvokeAsync
+08.01.26 05:06:35: Loading to viewport
+08.01.26 05:06:35: Viewport loaded
+08.01.26 05:06:35: Dispatcher.InvokeAsync DONE
+08.01.26 05:06:35: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:06:35: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:06:35: [CONVERT] About to show MessageBox
+08.01.26 05:06:36: [CONVERT] MessageBox closed
+08.01.26 05:06:53: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:06:53: [CONVERT] Model: oldMailBox
+08.01.26 05:06:53: [CONVERT] Calling ConvertAsync
+08.01.26 05:06:53: [PIPELINE] ConvertAsync START
+08.01.26 05:06:53: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:06:53: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:06:53: [PIPELINE] gltfpack OK
+08.01.26 05:06:53: [PIPELINE] Creating directories
+08.01.26 05:06:53: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:06:53: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:06:53: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:06:53: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:06:53: [PIPELINE] InspectGlbUV done
+08.01.26 05:06:53: [PIPELINE] Starting LOD generation
+08.01.26 05:06:53: [PIPELINE] Generating LOD0
+08.01.26 05:06:54: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:06:54: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:06:54: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:06:54: [PIPELINE] Generating LOD1
+08.01.26 05:06:54: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:06:54: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:06:54: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:06:54: [PIPELINE] Generating LOD2
+08.01.26 05:06:54: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:06:54: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:06:54: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:06:54: [PIPELINE] Generating LOD3
+08.01.26 05:06:54: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:06:54: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:06:54: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:06:54: [PIPELINE] LOD loop complete
+08.01.26 05:06:54: [PIPELINE] Generating manifest
+08.01.26 05:06:54: [PIPELINE] Manifest done
+08.01.26 05:06:54: [PIPELINE] Generating QA report
+08.01.26 05:06:54: [PIPELINE] QA report done
+08.01.26 05:06:54: [PIPELINE] Cleanup phase
+08.01.26 05:06:54: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:06:54: [PIPELINE] Duration: 0,30s, LOD files: 4
+08.01.26 05:06:54: [PIPELINE] About to return result
+08.01.26 05:06:54: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:06:54: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:06:54: TryLoadGlbLodAsync START
+08.01.26 05:06:54: Loading albedo texture
+08.01.26 05:06:54: Albedo texture done
+08.01.26 05:06:54: Finding GLB LOD files
+08.01.26 05:06:54: Found 4 files
+08.01.26 05:06:54: Showing LOD UI
+08.01.26 05:06:54: LOD UI shown
+08.01.26 05:06:54: Creating/checking SharpGlbLoader
+08.01.26 05:06:54: SharpGlbLoader ready
+08.01.26 05:06:54: Getting LOD file paths
+08.01.26 05:06:54: Got 4 LOD paths
+08.01.26 05:06:54: Starting Task.Run for 4 LODs
+08.01.26 05:06:54: Loading LOD0
+08.01.26 05:06:54: Calling LoadGlb for LOD0
+08.01.26 05:06:54: LoadGlb done for LOD0, Success=True
+08.01.26 05:06:54: Loading LOD1
+08.01.26 05:06:54: Calling LoadGlb for LOD1
+08.01.26 05:06:54: LoadGlb done for LOD1, Success=True
+08.01.26 05:06:54: Loading LOD2
+08.01.26 05:06:54: Calling LoadGlb for LOD2
+08.01.26 05:06:54: LoadGlb done for LOD2, Success=True
+08.01.26 05:06:54: Loading LOD3
+08.01.26 05:06:54: Calling LoadGlb for LOD3
+08.01.26 05:06:54: LoadGlb done for LOD3, Success=True
+08.01.26 05:06:54: Task.Run loop complete
+08.01.26 05:06:54: Task.Run await complete
+08.01.26 05:06:54: Entering Dispatcher.InvokeAsync
+08.01.26 05:06:54: Inside Dispatcher.InvokeAsync
+08.01.26 05:06:54: Loading to viewport
+08.01.26 05:06:54: Viewport loaded
+08.01.26 05:06:54: Dispatcher.InvokeAsync DONE
+08.01.26 05:06:54: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:06:54: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:06:54: [CONVERT] About to show MessageBox
+08.01.26 05:06:55: [CONVERT] MessageBox closed
+08.01.26 05:07:09: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:07:09: [CONVERT] Model: oldMailBox
+08.01.26 05:07:09: [CONVERT] Calling ConvertAsync
+08.01.26 05:07:09: [PIPELINE] ConvertAsync START
+08.01.26 05:07:09: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:07:09: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:07:09: [PIPELINE] gltfpack OK
+08.01.26 05:07:09: [PIPELINE] Creating directories
+08.01.26 05:07:09: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:07:09: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:07:09: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:07:09: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:07:09: [PIPELINE] InspectGlbUV done
+08.01.26 05:07:09: [PIPELINE] Starting LOD generation
+08.01.26 05:07:09: [PIPELINE] Generating LOD0
+08.01.26 05:07:09: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:07:09: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:07:09: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:07:09: [PIPELINE] Generating LOD1
+08.01.26 05:07:09: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:07:09: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:07:09: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:07:09: [PIPELINE] Generating LOD2
+08.01.26 05:07:09: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:07:09: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:07:09: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:07:09: [PIPELINE] Generating LOD3
+08.01.26 05:07:09: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:07:09: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:07:09: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:07:09: [PIPELINE] LOD loop complete
+08.01.26 05:07:09: [PIPELINE] Generating manifest
+08.01.26 05:07:09: [PIPELINE] Manifest done
+08.01.26 05:07:09: [PIPELINE] Generating QA report
+08.01.26 05:07:09: [PIPELINE] QA report done
+08.01.26 05:07:09: [PIPELINE] Cleanup phase
+08.01.26 05:07:09: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:07:09: [PIPELINE] Duration: 0,35s, LOD files: 4
+08.01.26 05:07:09: [PIPELINE] About to return result
+08.01.26 05:07:09: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:07:09: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:07:09: TryLoadGlbLodAsync START
+08.01.26 05:07:09: Loading albedo texture
+08.01.26 05:07:09: Albedo texture done
+08.01.26 05:07:09: Finding GLB LOD files
+08.01.26 05:07:09: Found 4 files
+08.01.26 05:07:09: Showing LOD UI
+08.01.26 05:07:09: LOD UI shown
+08.01.26 05:07:09: Creating/checking SharpGlbLoader
+08.01.26 05:07:09: SharpGlbLoader ready
+08.01.26 05:07:09: Getting LOD file paths
+08.01.26 05:07:09: Got 4 LOD paths
+08.01.26 05:07:09: Starting Task.Run for 4 LODs
+08.01.26 05:07:09: Loading LOD0
+08.01.26 05:07:09: Calling LoadGlb for LOD0
+08.01.26 05:07:09: LoadGlb done for LOD0, Success=True
+08.01.26 05:07:09: Loading LOD1
+08.01.26 05:07:09: Calling LoadGlb for LOD1
+08.01.26 05:07:09: LoadGlb done for LOD1, Success=True
+08.01.26 05:07:09: Loading LOD2
+08.01.26 05:07:09: Calling LoadGlb for LOD2
+08.01.26 05:07:09: LoadGlb done for LOD2, Success=True
+08.01.26 05:07:09: Loading LOD3
+08.01.26 05:07:09: Calling LoadGlb for LOD3
+08.01.26 05:07:09: LoadGlb done for LOD3, Success=True
+08.01.26 05:07:09: Task.Run loop complete
+08.01.26 05:07:09: Task.Run await complete
+08.01.26 05:07:09: Entering Dispatcher.InvokeAsync
+08.01.26 05:07:09: Inside Dispatcher.InvokeAsync
+08.01.26 05:07:09: Loading to viewport
+08.01.26 05:07:09: Viewport loaded
+08.01.26 05:07:09: Dispatcher.InvokeAsync DONE
+08.01.26 05:07:09: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:07:09: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:07:09: [CONVERT] About to show MessageBox
+08.01.26 05:07:10: [CONVERT] MessageBox closed
+08.01.26 05:07:20: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:07:20: [CONVERT] Model: oldMailBox
+08.01.26 05:07:20: [CONVERT] Calling ConvertAsync
+08.01.26 05:07:20: [PIPELINE] ConvertAsync START
+08.01.26 05:07:20: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:07:20: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:07:20: [PIPELINE] gltfpack OK
+08.01.26 05:07:20: [PIPELINE] Creating directories
+08.01.26 05:07:20: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:07:20: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:07:20: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:07:20: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:07:20: [PIPELINE] InspectGlbUV done
+08.01.26 05:07:20: [PIPELINE] Starting LOD generation
+08.01.26 05:07:20: [PIPELINE] Generating LOD0
+08.01.26 05:07:20: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:07:20: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:07:20: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:07:20: [PIPELINE] Generating LOD1
+08.01.26 05:07:20: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:07:20: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:07:20: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:07:20: [PIPELINE] Generating LOD2
+08.01.26 05:07:20: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:07:20: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:07:20: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:07:20: [PIPELINE] Generating LOD3
+08.01.26 05:07:20: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:07:20: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:07:20: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:07:20: [PIPELINE] LOD loop complete
+08.01.26 05:07:20: [PIPELINE] Generating manifest
+08.01.26 05:07:20: [PIPELINE] Manifest done
+08.01.26 05:07:20: [PIPELINE] Generating QA report
+08.01.26 05:07:20: [PIPELINE] QA report done
+08.01.26 05:07:20: [PIPELINE] Cleanup phase
+08.01.26 05:07:20: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:07:20: [PIPELINE] Duration: 0,38s, LOD files: 4
+08.01.26 05:07:20: [PIPELINE] About to return result
+08.01.26 05:07:20: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:07:20: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:07:20: TryLoadGlbLodAsync START
+08.01.26 05:07:20: Loading albedo texture
+08.01.26 05:07:20: Albedo texture done
+08.01.26 05:07:20: Finding GLB LOD files
+08.01.26 05:07:20: Found 4 files
+08.01.26 05:07:20: Showing LOD UI
+08.01.26 05:07:20: LOD UI shown
+08.01.26 05:07:20: Creating/checking SharpGlbLoader
+08.01.26 05:07:20: SharpGlbLoader ready
+08.01.26 05:07:20: Getting LOD file paths
+08.01.26 05:07:20: Got 4 LOD paths
+08.01.26 05:07:20: Starting Task.Run for 4 LODs
+08.01.26 05:07:20: Loading LOD0
+08.01.26 05:07:20: Calling LoadGlb for LOD0
+08.01.26 05:07:20: LoadGlb done for LOD0, Success=True
+08.01.26 05:07:20: Loading LOD1
+08.01.26 05:07:20: Calling LoadGlb for LOD1
+08.01.26 05:07:20: LoadGlb done for LOD1, Success=True
+08.01.26 05:07:20: Loading LOD2
+08.01.26 05:07:20: Calling LoadGlb for LOD2
+08.01.26 05:07:20: LoadGlb done for LOD2, Success=True
+08.01.26 05:07:20: Loading LOD3
+08.01.26 05:07:20: Calling LoadGlb for LOD3
+08.01.26 05:07:20: LoadGlb done for LOD3, Success=True
+08.01.26 05:07:20: Task.Run loop complete
+08.01.26 05:07:20: Task.Run await complete
+08.01.26 05:07:20: Entering Dispatcher.InvokeAsync
+08.01.26 05:07:20: Inside Dispatcher.InvokeAsync
+08.01.26 05:07:20: Loading to viewport
+08.01.26 05:07:20: Viewport loaded
+08.01.26 05:07:20: Dispatcher.InvokeAsync DONE
+08.01.26 05:07:20: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:07:20: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:07:20: [CONVERT] About to show MessageBox
+08.01.26 05:07:21: [CONVERT] MessageBox closed
+08.01.26 05:08:13: [CONVERT] ProcessSelectedModel_Click START
+08.01.26 05:08:13: [CONVERT] Model: oldMailBox
+08.01.26 05:08:13: [CONVERT] Calling ConvertAsync
+08.01.26 05:08:13: [PIPELINE] ConvertAsync START
+08.01.26 05:08:13: [PIPELINE] Checking FBX2glTF availability
+08.01.26 05:08:13: [PIPELINE] FBX2glTF OK, checking gltfpack
+08.01.26 05:08:13: [PIPELINE] gltfpack OK
+08.01.26 05:08:13: [PIPELINE] Creating directories
+08.01.26 05:08:13: [PIPELINE] Model name: oldMailBox, isGltfInput: False
+08.01.26 05:08:13: [PIPELINE] Starting FBX2glTF conversion
+08.01.26 05:08:13: [PIPELINE] FBX2glTF done, Success: True
+08.01.26 05:08:13: [PIPELINE] Calling InspectGlbUV
+08.01.26 05:08:13: [PIPELINE] InspectGlbUV done
+08.01.26 05:08:13: [PIPELINE] Starting LOD generation
+08.01.26 05:08:13: [PIPELINE] Generating LOD0
+08.01.26 05:08:13: [PIPELINE] LOD0 done, Success: True
+08.01.26 05:08:13: [PIPELINE] Calling InspectGlbUV for LOD0
+08.01.26 05:08:13: [PIPELINE] InspectGlbUV for LOD0 done
+08.01.26 05:08:13: [PIPELINE] Generating LOD1
+08.01.26 05:08:13: [PIPELINE] LOD1 done, Success: True
+08.01.26 05:08:13: [PIPELINE] Calling InspectGlbUV for LOD1
+08.01.26 05:08:13: [PIPELINE] InspectGlbUV for LOD1 done
+08.01.26 05:08:13: [PIPELINE] Generating LOD2
+08.01.26 05:08:13: [PIPELINE] LOD2 done, Success: True
+08.01.26 05:08:13: [PIPELINE] Calling InspectGlbUV for LOD2
+08.01.26 05:08:13: [PIPELINE] InspectGlbUV for LOD2 done
+08.01.26 05:08:13: [PIPELINE] Generating LOD3
+08.01.26 05:08:13: [PIPELINE] LOD3 done, Success: True
+08.01.26 05:08:13: [PIPELINE] Calling InspectGlbUV for LOD3
+08.01.26 05:08:13: [PIPELINE] InspectGlbUV for LOD3 done
+08.01.26 05:08:13: [PIPELINE] LOD loop complete
+08.01.26 05:08:13: [PIPELINE] Generating manifest
+08.01.26 05:08:13: [PIPELINE] Manifest done
+08.01.26 05:08:13: [PIPELINE] Generating QA report
+08.01.26 05:08:13: [PIPELINE] QA report done
+08.01.26 05:08:13: [PIPELINE] Cleanup phase
+08.01.26 05:08:13: [PIPELINE] ConvertAsync COMPLETE, Success: True
+08.01.26 05:08:13: [PIPELINE] Duration: 0,31s, LOD files: 4
+08.01.26 05:08:13: [PIPELINE] About to return result
+08.01.26 05:08:13: [CONVERT] ConvertAsync returned, Success=True
+08.01.26 05:08:13: [CONVERT] Before TryLoadGlbLodAsync
+08.01.26 05:08:13: TryLoadGlbLodAsync START
+08.01.26 05:08:13: Loading albedo texture
+08.01.26 05:08:13: Albedo texture done
+08.01.26 05:08:13: Finding GLB LOD files
+08.01.26 05:08:13: Found 4 files
+08.01.26 05:08:13: Showing LOD UI
+08.01.26 05:08:13: LOD UI shown
+08.01.26 05:08:13: Creating/checking SharpGlbLoader
+08.01.26 05:08:13: SharpGlbLoader ready
+08.01.26 05:08:13: Getting LOD file paths
+08.01.26 05:08:13: Got 4 LOD paths
+08.01.26 05:08:13: Starting Task.Run for 4 LODs
+08.01.26 05:08:13: Loading LOD0
+08.01.26 05:08:13: Calling LoadGlb for LOD0
+08.01.26 05:08:13: LoadGlb done for LOD0, Success=True
+08.01.26 05:08:13: Loading LOD1
+08.01.26 05:08:13: Calling LoadGlb for LOD1
+08.01.26 05:08:14: LoadGlb done for LOD1, Success=True
+08.01.26 05:08:14: Loading LOD2
+08.01.26 05:08:14: Calling LoadGlb for LOD2
+08.01.26 05:08:14: LoadGlb done for LOD2, Success=True
+08.01.26 05:08:14: Loading LOD3
+08.01.26 05:08:14: Calling LoadGlb for LOD3
+08.01.26 05:08:14: LoadGlb done for LOD3, Success=True
+08.01.26 05:08:14: Task.Run loop complete
+08.01.26 05:08:14: Task.Run await complete
+08.01.26 05:08:14: Entering Dispatcher.InvokeAsync
+08.01.26 05:08:14: Inside Dispatcher.InvokeAsync
+08.01.26 05:08:14: Loading to viewport
+08.01.26 05:08:14: Viewport loaded
+08.01.26 05:08:14: Dispatcher.InvokeAsync DONE
+08.01.26 05:08:14: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+08.01.26 05:08:14: [CONVERT] After TryLoadGlbLodAsync
+08.01.26 05:08:14: [CONVERT] About to show MessageBox
+08.01.26 05:08:15: [CONVERT] MessageBox closed

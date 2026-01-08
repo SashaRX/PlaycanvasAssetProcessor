@@ -16,6 +16,11 @@ namespace AssetProcessor.Resources {
         private int? folder;
         private int? parent;
         private bool exportToServer;
+        private string? uploadStatus;
+        private string? uploadedHash;
+        private DateTime? lastUploadedAt;
+        private string? remoteUrl;
+        private double uploadProgress;
 
         /// <summary>
         /// Флаг для пометки ресурса к экспорту на сервер
@@ -26,6 +31,89 @@ namespace AssetProcessor.Resources {
                 if (exportToServer != value) {
                     exportToServer = value;
                     OnPropertyChanged(nameof(ExportToServer));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Статус загрузки: "Queued", "Uploading", "Uploaded", "Upload Failed", "Upload Outdated"
+        /// </summary>
+        public string? UploadStatus {
+            get => uploadStatus;
+            set {
+                if (uploadStatus != value) {
+                    uploadStatus = value;
+                    OnPropertyChanged(nameof(UploadStatus));
+                    OnPropertyChanged(nameof(UploadStatusOrProgress));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Отображение статуса или прогресса загрузки
+        /// </summary>
+        public string? UploadStatusOrProgress {
+            get {
+                if (UploadStatus == "Uploading") {
+                    return $"{UploadProgress:F0}%";
+                }
+                return UploadStatus;
+            }
+        }
+
+        /// <summary>
+        /// SHA1 хеш загруженного файла для версионирования
+        /// </summary>
+        public string? UploadedHash {
+            get => uploadedHash;
+            set {
+                if (uploadedHash != value) {
+                    uploadedHash = value;
+                    OnPropertyChanged(nameof(UploadedHash));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Время последней загрузки на сервер
+        /// </summary>
+        public DateTime? LastUploadedAt {
+            get => lastUploadedAt;
+            set {
+                if (lastUploadedAt != value) {
+                    lastUploadedAt = value;
+                    OnPropertyChanged(nameof(LastUploadedAt));
+                }
+            }
+        }
+
+        /// <summary>
+        /// URL файла на Backblaze B2
+        /// </summary>
+        public string? RemoteUrl {
+            get => remoteUrl;
+            set {
+                if (remoteUrl != value) {
+                    remoteUrl = value;
+                    OnPropertyChanged(nameof(RemoteUrl));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Прогресс загрузки на сервер (0-100)
+        /// </summary>
+        public double UploadProgress {
+            get => uploadProgress;
+            set {
+                if (Math.Abs(uploadProgress - value) > 0.5) {
+                    uploadProgress = value;
+                    OnPropertyChanged(nameof(UploadProgress));
+                    if (UploadStatus == "Uploading") {
+                        OnPropertyChanged(nameof(UploadStatusOrProgress));
+                    }
+                } else if (uploadProgress != value) {
+                    uploadProgress = value;
                 }
             }
         }

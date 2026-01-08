@@ -8,5 +8,6 @@
         "UNORM",
         "Xceed",
         "Xunit"
-    ]
+    ],
+    "cmake.sourceDirectory": "D:/sourceProject/repos/PlaycanvasAssetProcessor/Native/meshoptimizer"
 }

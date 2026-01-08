@@ -3,6 +3,7 @@ using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
+using AssetProcessor.Upload;
 using AssetProcessor.ViewModels;
 using Assimp;
 using HelixToolkit.Wpf;
@@ -407,11 +408,27 @@ namespace AssetProcessor {
                     }
                 }
 
-                MessageBox.Show(
-                    $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}",
-                    "Export Result",
-                    MessageBoxButton.OK,
-                    successCount > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                var exportMessage = $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}";
+
+                // Auto-upload if enabled and export was successful
+                if (successCount > 0 && (AutoUploadCheckBox.IsChecked ?? false)) {
+                    var shouldUpload = MessageBox.Show(
+                        exportMessage + "\n\nUpload to cloud now?",
+                        "Export Result",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (shouldUpload == MessageBoxResult.Yes) {
+                        // Trigger upload
+                        await AutoUploadAfterExportAsync(pipeline.GetContentBasePath());
+                    }
+                } else {
+                    MessageBox.Show(
+                        exportMessage,
+                        "Export Result",
+                        MessageBoxButton.OK,
+                        successCount > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                }
 
             } catch (Exception ex) {
                 logger.Error(ex, "Export failed");
@@ -419,6 +436,72 @@ namespace AssetProcessor {
             } finally {
                 ExportModelsButton.IsEnabled = true;
                 ExportModelsButton.Content = "Export";
+            }
+        }
+
+        /// <summary>
+        /// Автоматическая загрузка после экспорта
+        /// </summary>
+        private async Task AutoUploadAfterExportAsync(string contentPath) {
+            var projectName = ProjectName ?? "UnknownProject";
+
+            // Проверяем настройки B2
+            if (string.IsNullOrEmpty(AppSettings.Default.B2KeyId) ||
+                string.IsNullOrEmpty(AppSettings.Default.B2BucketName)) {
+                MessageBox.Show(
+                    "Backblaze B2 credentials not configured. Go to Settings -> CDN/Upload to configure.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            try {
+                UploadToCloudButton.IsEnabled = false;
+                UploadToCloudButton.Content = "Uploading...";
+
+                using var b2Service = new B2UploadService();
+                var uploadCoordinator = new AssetUploadCoordinator(b2Service);
+
+                var initialized = await uploadCoordinator.InitializeAsync();
+                if (!initialized) {
+                    MessageBox.Show(
+                        "Failed to connect to Backblaze B2. Check your credentials in Settings.",
+                        "Upload Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                var result = await b2Service.UploadDirectoryAsync(
+                    contentPath,
+                    projectName,
+                    "*",
+                    recursive: true,
+                    progress: new Progress<B2UploadProgress>(p => {
+                        Dispatcher.Invoke(() => {
+                            ProgressBar.Value = p.PercentComplete;
+                        });
+                    })
+                );
+
+                MessageBox.Show(
+                    $"Upload completed!\n\n" +
+                    $"Uploaded: {result.SuccessCount}\n" +
+                    $"Skipped (already exists): {result.SkippedCount}\n" +
+                    $"Failed: {result.FailedCount}\n" +
+                    $"Duration: {result.Duration.TotalSeconds:F1}s",
+                    "Upload Result",
+                    MessageBoxButton.OK,
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+            } catch (Exception ex) {
+                logger.Error(ex, "Auto-upload failed");
+                MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } finally {
+                UploadToCloudButton.IsEnabled = true;
+                UploadToCloudButton.Content = "Upload to Cloud";
+                ProgressBar.Value = 0;
             }
         }
 
@@ -477,6 +560,101 @@ namespace AssetProcessor {
             }
 
             UpdateModelExportCounts();
+        }
+
+        /// <summary>
+        /// Загрузка экспортированных ресурсов на Backblaze B2
+        /// </summary>
+        private async void UploadToCloudButton_Click(object sender, RoutedEventArgs e) {
+            var projectName = ProjectName ?? "UnknownProject";
+            var outputPath = AppSettings.Default.ProjectsFolderPath;
+
+            if (string.IsNullOrEmpty(outputPath)) {
+                MessageBox.Show(
+                    "Не указана папка проектов. Откройте настройки и укажите Projects Folder Path.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            // Проверяем настройки B2
+            if (string.IsNullOrEmpty(AppSettings.Default.B2KeyId) ||
+                string.IsNullOrEmpty(AppSettings.Default.B2BucketName)) {
+                MessageBox.Show(
+                    "Backblaze B2 credentials not configured. Go to Settings -> CDN/Upload to configure.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var contentPath = Path.Combine(outputPath, projectName, "content");
+            if (!Directory.Exists(contentPath)) {
+                MessageBox.Show(
+                    $"Export folder not found: {contentPath}\n\nPlease export models first.",
+                    "Upload Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            try {
+                UploadToCloudButton.IsEnabled = false;
+                UploadToCloudButton.Content = "Uploading...";
+
+                using var b2Service = new B2UploadService();
+                var uploadCoordinator = new AssetUploadCoordinator(b2Service);
+
+                // Подписываемся на события прогресса
+                uploadCoordinator.UploadProgressChanged += (s, args) => {
+                    Dispatcher.Invoke(() => {
+                        ProgressBar.Value = args.OverallProgress;
+                    });
+                };
+
+                // Инициализируем сервис
+                var initialized = await uploadCoordinator.InitializeAsync();
+                if (!initialized) {
+                    MessageBox.Show(
+                        "Failed to connect to Backblaze B2. Check your credentials in Settings.",
+                        "Upload Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                // Загружаем всю папку content
+                var result = await b2Service.UploadDirectoryAsync(
+                    contentPath,
+                    projectName,
+                    "*",
+                    recursive: true,
+                    progress: new Progress<B2UploadProgress>(p => {
+                        Dispatcher.Invoke(() => {
+                            ProgressBar.Value = p.PercentComplete;
+                        });
+                    })
+                );
+
+                MessageBox.Show(
+                    $"Upload completed!\n\n" +
+                    $"Uploaded: {result.SuccessCount}\n" +
+                    $"Skipped (already exists): {result.SkippedCount}\n" +
+                    $"Failed: {result.FailedCount}\n" +
+                    $"Duration: {result.Duration.TotalSeconds:F1}s",
+                    "Upload Result",
+                    MessageBoxButton.OK,
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+            } catch (Exception ex) {
+                logger.Error(ex, "Upload failed");
+                MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            } finally {
+                UploadToCloudButton.IsEnabled = true;
+                UploadToCloudButton.Content = "Upload to Cloud";
+                ProgressBar.Value = 0;
+            }
         }
 
         /// <summary>

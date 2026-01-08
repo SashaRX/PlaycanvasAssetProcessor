@@ -324,6 +324,17 @@
                         <CheckBox x:Name="GenerateLODsCheckBox" Content="LODs" VerticalAlignment="Center" Margin="5,0,0,0"
                                   IsChecked="True"
                                   ToolTip="Generate LOD chain for models"/>
+
+                        <Separator Margin="10,0,10,0" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
+
+                        <Button x:Name="UploadToCloudButton" Content="Upload to Cloud" Width="100" Margin="0,0,3,0"
+                                Click="UploadToCloudButton_Click"
+                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
+                                ToolTip="Upload exported assets to Backblaze B2 cloud storage"/>
+
+                        <CheckBox x:Name="AutoUploadCheckBox" Content="Auto Upload" VerticalAlignment="Center" Margin="5,0,0,0"
+                                  IsChecked="False"
+                                  ToolTip="Automatically upload assets after export"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>

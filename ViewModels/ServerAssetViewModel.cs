@@ -116,15 +116,15 @@ namespace AssetProcessor.ViewModels {
         }
 
         /// <summary>
-        /// Цвет статуса для отображения
+        /// Цвет статуса для отображения (видимый на обоих темах)
         /// </summary>
         public Brush SyncStatusColor => SyncStatus switch {
-            "Synced" => Brushes.Green,
-            "LocalOnly" => Brushes.Orange,
-            "ServerOnly" => Brushes.Blue,
-            "HashMismatch" => Brushes.Red,
-            "Outdated" => Brushes.DarkOrange,
-            _ => Brushes.Gray
+            "Synced" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green
+            "LocalOnly" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),   // Orange
+            "ServerOnly" => new SolidColorBrush(Color.FromRgb(100, 181, 246)), // Light Blue
+            "HashMismatch" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red
+            "Outdated" => new SolidColorBrush(Color.FromRgb(255, 167, 38)),    // Dark Orange
+            _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray
         };
 
         /// <summary>

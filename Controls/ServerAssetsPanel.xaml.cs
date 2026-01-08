@@ -64,6 +64,8 @@ namespace AssetProcessor.Controls {
         }
 
         private void UpdateViewMode() {
+            if (!_isInitialized) return;
+
             if (_isTreeView) {
                 ToggleViewButton.Content = "☰ List";
                 TreeColumn.Width = new GridLength(250);
@@ -273,6 +275,9 @@ namespace AssetProcessor.Controls {
         }
 
         private bool PassesFilter(ServerAssetViewModel asset) {
+            if (!_isInitialized || FilterComboBox == null || StatusFilterComboBox == null || SearchTextBox == null)
+                return true;
+
             var typeFilter = (FilterComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All";
             var statusFilter = (StatusFilterComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All";
             var searchText = SearchTextBox.Text?.Trim().ToLowerInvariant() ?? "";
@@ -305,6 +310,8 @@ namespace AssetProcessor.Controls {
         }
 
         private void ApplyFilters() {
+            if (!_isInitialized) return;
+
             _filteredAssets.Clear();
 
             foreach (var asset in _allAssets) {
@@ -335,6 +342,7 @@ namespace AssetProcessor.Controls {
         }
 
         private void FolderTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
+            if (!_isInitialized) return;
             if (e.NewValue is ServerFolderNode folder) {
                 _selectedFolder = folder;
                 ShowFolderFiles(folder);
@@ -347,7 +355,7 @@ namespace AssetProcessor.Controls {
         public event EventHandler<ServerAssetViewModel?>? SelectionChanged;
 
         private void ServerAssetsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isInitialized) return;
+            if (!_isInitialized || !IsLoaded) return;
             var selectedAsset = ServerAssetsDataGrid.SelectedItem as ServerAssetViewModel;
             SelectionChanged?.Invoke(this, selectedAsset);
         }

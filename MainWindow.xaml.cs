@@ -73,6 +73,7 @@ namespace AssetProcessor {
         private readonly IProjectConnectionService projectConnectionService;
         private readonly IAssetLoadCoordinator assetLoadCoordinator;
         private readonly IProjectFileWatcherService projectFileWatcherService;
+        private readonly IKtx2InfoService ktx2InfoService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
@@ -131,6 +132,7 @@ namespace AssetProcessor {
             IProjectConnectionService projectConnectionService,
             IAssetLoadCoordinator assetLoadCoordinator,
             IProjectFileWatcherService projectFileWatcherService,
+            IKtx2InfoService ktx2InfoService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -149,6 +151,7 @@ namespace AssetProcessor {
             this.projectConnectionService = projectConnectionService ?? throw new ArgumentNullException(nameof(projectConnectionService));
             this.assetLoadCoordinator = assetLoadCoordinator ?? throw new ArgumentNullException(nameof(assetLoadCoordinator));
             this.projectFileWatcherService = projectFileWatcherService ?? throw new ArgumentNullException(nameof(projectFileWatcherService));
+            this.ktx2InfoService = ktx2InfoService ?? throw new ArgumentNullException(nameof(ktx2InfoService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 
@@ -2844,30 +2847,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void RecalculateIndices() {
-            // ���������� ���������� �������� ��� ��������� race condition � DataGrid
-            int index = 1;
-            foreach (TextureResource texture in viewModel.Textures) {
-                texture.Index = index++;
-                // INotifyPropertyChanged ������������� ������� ������ � DataGrid
-            }
-
-            index = 1;
-            foreach (ModelResource model in viewModel.Models) {
-                model.Index = index++;
-                // INotifyPropertyChanged ������������� ������� ������ � DataGrid
-            }
-
-            index = 1;
-            foreach (MaterialResource material in viewModel.Materials) {
-                material.Index = index++;
-                // INotifyPropertyChanged ������������� ������� ������ � DataGrid
-            }
-
-            // Items.Refresh() ����� - INotifyPropertyChanged �� Index ������������� ��������� UI
-            // ��� ��������� ������ ����������� DataGrid � ����������� �������� ����������
-
-            // UpdateLayout() ���������� ������ ���� ��� � ����� ����� DeferUpdateLayout()
-            // ����� �������� ������������� ����������� ��� ���������������� ������� RecalculateIndices()
+            viewModel.RecalculateIndices();
         }
 
         private bool _layoutUpdatePending = false;
@@ -2895,80 +2875,26 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// </summary>
         private void ScanKtx2InfoForAllTextures() {
             // Take a snapshot of textures to process
-            var texturesToScan = viewModel.Textures.Where(t =>
-                !string.IsNullOrEmpty(t.Path) &&
-                t.CompressedSize == 0 &&
-                !(t is ORMTextureResource)).ToList();
+            var texturesToScan = viewModel.Textures.ToList();
 
             if (texturesToScan.Count == 0) {
                 return;
             }
 
-            logger.Info($"ScanKtx2InfoForAllTextures: Scanning {texturesToScan.Count} textures for KTX2 info");
-
+            // Run scanning in background, apply results on UI thread
             Task.Run(() => {
-                int foundCount = 0;
+                var results = ktx2InfoService.ScanTextures(texturesToScan);
 
-                foreach (var texture in texturesToScan) {
-                    try {
-                        if (string.IsNullOrEmpty(texture.Path)) continue;
-
-                        var sourceDir = Path.GetDirectoryName(texture.Path);
-                        var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
-
-                        if (string.IsNullOrEmpty(sourceDir) || string.IsNullOrEmpty(sourceFileName)) continue;
-
-                        // Check for .ktx2 file
-                        var ktx2Path = Path.Combine(sourceDir, sourceFileName + ".ktx2");
-                        if (File.Exists(ktx2Path)) {
-                            var fileInfo = new FileInfo(ktx2Path);
-                            int mipLevels = 0;
-                            string? compressionFormat = null;
-
-                            try {
-                                using var stream = File.OpenRead(ktx2Path);
-                                using var reader = new BinaryReader(stream);
-                                // KTX2 header structure:
-                                // Bytes 12-15: vkFormat (uint32) - 0 means Basis Universal
-                                // Bytes 40-43: levelCount (uint32)
-                                // Bytes 44-47: supercompressionScheme (uint32)
-                                reader.BaseStream.Seek(12, SeekOrigin.Begin);
-                                uint vkFormat = reader.ReadUInt32();
-
-                                reader.BaseStream.Seek(40, SeekOrigin.Begin);
-                                mipLevels = (int)reader.ReadUInt32();
-                                uint supercompression = reader.ReadUInt32();
-
-                                // Only set compression format for Basis Universal textures (vkFormat = 0)
-                                if (vkFormat == 0) {
-                                    // supercompressionScheme: 1=BasisLZ(ETC1S), 0/2=UASTC(None/Zstd)
-                                    compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
-                                }
-                                // vkFormat != 0 means raw texture format, no Basis compression
-                            } catch {
-                                // Ignore header read errors
-                            }
-
-                            // Update texture on UI thread
-                            Dispatcher.InvokeAsync(() => {
-                                texture.CompressedSize = fileInfo.Length;
-                                if (mipLevels > 0) {
-                                    texture.MipmapCount = mipLevels;
-                                }
-                                if (compressionFormat != null) {
-                                    texture.CompressionFormat = compressionFormat;
-                                }
-                            });
-
-                            foundCount++;
+                foreach (var result in results) {
+                    Dispatcher.InvokeAsync(() => {
+                        result.Texture.CompressedSize = result.Info.FileSize;
+                        if (result.Info.MipmapCount > 0) {
+                            result.Texture.MipmapCount = result.Info.MipmapCount;
                         }
-                    } catch {
-                        // Ignore errors for individual textures
-                    }
-                }
-
-                if (foundCount > 0) {
-                    logger.Info($"ScanKtx2InfoForAllTextures: Found KTX2 info for {foundCount} textures");
+                        if (result.Info.CompressionFormat != null) {
+                            result.Texture.CompressionFormat = result.Info.CompressionFormat;
+                        }
+                    });
                 }
             });
         }

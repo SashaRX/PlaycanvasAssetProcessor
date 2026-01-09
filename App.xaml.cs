@@ -94,6 +94,7 @@ namespace AssetProcessor {
             services.AddSingleton<IAssetJsonParserService, AssetJsonParserService>();
             services.AddSingleton<IORMTextureService, ORMTextureService>();
             services.AddSingleton<IFileStatusScannerService, FileStatusScannerService>();
+            services.AddSingleton<IKtx2InfoService, Ktx2InfoService>();
             services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(
                 sp.GetRequiredService<IProjectSyncService>(),
                 sp.GetRequiredService<ILocalCacheService>(),

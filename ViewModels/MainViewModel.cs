@@ -651,6 +651,26 @@ namespace AssetProcessor.ViewModels {
         }
 
         /// <summary>
+        /// Recalculates sequential indices for all resources after filtering or sorting changes.
+        /// </summary>
+        public void RecalculateIndices() {
+            int index = 1;
+            foreach (TextureResource texture in Textures) {
+                texture.Index = index++;
+            }
+
+            index = 1;
+            foreach (ModelResource model in Models) {
+                model.Index = index++;
+            }
+
+            index = 1;
+            foreach (MaterialResource material in Materials) {
+                material.Index = index++;
+            }
+        }
+
+        /// <summary>
         /// Filters textures based on selected material
         /// </summary>
         private void FilterTexturesForMaterial(MaterialResource? material) {

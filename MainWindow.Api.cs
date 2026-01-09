@@ -149,6 +149,14 @@ namespace AssetProcessor {
             // Scan KTX2 files for compression info
             ScanKtx2InfoForAllTextures();
 
+            // Force flush NLog async buffer for debugging
+            logService.LogInfo(">>> About to call DetectAndLoadORMTextures <<<");
+            NLog.LogManager.Flush();
+
+            // Debug: write directly to temp file to trace freeze
+            var debugPath = Path.Combine(Path.GetTempPath(), "AssetProcessor_Debug.txt");
+            File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - About to call DetectAndLoadORMTextures\n");
+
             // Detect and load local ORM textures (synchronous - fast header reads only)
             DetectAndLoadORMTextures();
 
@@ -216,11 +224,17 @@ namespace AssetProcessor {
                 return;
             }
 
-            logService.LogInfo("=== Detecting local ORM textures ===");
+            var debugPath = Path.Combine(Path.GetTempPath(), "AssetProcessor_Debug.txt");
+            File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - DetectAndLoadORMTextures START\n");
+
+            logService.LogInfo("=== DetectAndLoadORMTextures START ===");
+            NLog.LogManager.Flush();
 
             try {
                 // Сканируем все .ktx2 файлы рекурсивно
+                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Scanning for .ktx2 files\n");
                 var ktx2Files = Directory.GetFiles(ProjectFolderPath!, "*.ktx2", SearchOption.AllDirectories);
+                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Found {ktx2Files.Length} .ktx2 files\n");
 
                 // Собираем все ORM-связи для применения в конце (избегаем PropertyChanged в цикле)
                 var ormAssociations = new List<(TextureResource texture, string subGroupName, ORMTextureResource orm)>();
@@ -317,22 +331,34 @@ namespace AssetProcessor {
                 }
 
                 // Применяем все ORM-связи разом после цикла
+                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Applying {ormAssociations.Count} ORM associations\n");
+                int assocIndex = 0;
                 foreach (var (texture, subGroupName, orm) in ormAssociations) {
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Setting SubGroupName for {texture.Name}\n");
                     texture.SubGroupName = subGroupName;
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Setting ParentORMTexture for {texture.Name}\n");
                     texture.ParentORMTexture = orm;
+                    assocIndex++;
                 }
+                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - All {assocIndex} associations applied\n");
 
                 if (ormCount > 0) {
-                    logService.LogInfo($"=== Detected {ormCount} ORM textures ===");
-                    RecalculateIndices(); // Recalculate indices after adding ORM textures
-                    DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Calling RecalculateIndices\n");
+                    RecalculateIndices();
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - RecalculateIndices done\n");
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Calling DeferUpdateLayout\n");
+                    DeferUpdateLayout();
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - DeferUpdateLayout done\n");
                 } else {
-                    logService.LogInfo("  No ORM textures found");
+                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - No ORM textures found\n");
                 }
 
             } catch (Exception ex) {
+                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - ERROR: {ex.Message}\n");
                 logService.LogError($"Error detecting ORM textures: {ex.Message}");
             }
+
+            File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - DetectAndLoadORMTextures END\n");
         }
 
         /// <summary>

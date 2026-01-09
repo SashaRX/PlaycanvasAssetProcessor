@@ -4365,26 +4365,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
             logService.LogInfo($"[OnAssetsLoaded] Loaded {e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials");
 
-            // Batch update: assign new collections instead of Add() loops
-            // This triggers only ONE CollectionChanged event per collection
-            viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
-            viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
-            viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+            // Use BeginInvoke with Background priority to not block UI thread
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // Batch update: assign new collections instead of Add() loops
+                // This triggers only ONE CollectionChanged event per collection
+                viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+                viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+                viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
 
-            // Build combined Assets collection
-            var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
-            allAssets.AddRange(e.Textures);
-            allAssets.AddRange(e.Models);
-            allAssets.AddRange(e.Materials);
-            viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+                // Build combined Assets collection
+                var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
+                allAssets.AddRange(e.Textures);
+                allAssets.AddRange(e.Models);
+                allAssets.AddRange(e.Materials);
+                viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
 
-            // Update folder paths
-            folderPaths = new Dictionary<int, string>(e.FolderPaths);
+                // Update folder paths
+                folderPaths = new Dictionary<int, string>(e.FolderPaths);
 
-            // Post-processing UI updates
-            RecalculateIndices();
-            DeferUpdateLayout();
-            ApplyTextureGroupingIfEnabled();
+                // Post-processing UI updates
+                RecalculateIndices();
+                DeferUpdateLayout();
+                ApplyTextureGroupingIfEnabled();
+            });
         }
 
         private void OnAssetLoadingProgressChanged(object? sender, AssetLoadProgressEventArgs e) {
@@ -4398,58 +4401,64 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {
             logService.LogInfo($"[OnORMTexturesDetected] Detected {e.DetectedCount} ORM textures");
 
-            // ORMs are NOT added to collection - they serve as group headers (SubGroupName) only
-            // The ORM settings are accessible via component textures' ParentORMTexture property
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // ORMs are NOT added to collection - they serve as group headers (SubGroupName) only
+                // The ORM settings are accessible via component textures' ParentORMTexture property
 
-            // Apply associations to textures
-            foreach (var (texture, subGroupName, orm) in e.Associations) {
-                texture.SubGroupName = subGroupName;
-                texture.ParentORMTexture = orm;
-            }
+                // Apply associations to textures
+                foreach (var (texture, subGroupName, orm) in e.Associations) {
+                    texture.SubGroupName = subGroupName;
+                    texture.ParentORMTexture = orm;
+                }
 
-            // Recalculate UI
-            if (e.DetectedCount > 0) {
-                RecalculateIndices();
-                DeferUpdateLayout();
-            }
+                // Recalculate UI
+                if (e.DetectedCount > 0) {
+                    RecalculateIndices();
+                    DeferUpdateLayout();
+                }
+            });
         }
 
         private void OnVirtualORMTexturesGenerated(object? sender, VirtualORMTexturesGeneratedEventArgs e) {
             logService.LogInfo($"[OnVirtualORMTexturesGenerated] Generated {e.GeneratedCount} virtual ORM textures");
 
-            // Apply associations to textures FIRST (before adding ORMs)
-            foreach (var (texture, subGroupName, orm) in e.Associations) {
-                texture.SubGroupName = subGroupName;
-                texture.ParentORMTexture = orm;
-            }
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // Apply associations to textures FIRST (before adding ORMs)
+                foreach (var (texture, subGroupName, orm) in e.Associations) {
+                    texture.SubGroupName = subGroupName;
+                    texture.ParentORMTexture = orm;
+                }
 
-            // Restore sources for virtual ORMs (don't add to collection - they serve as group headers only)
-            foreach (var orm in e.GeneratedORMs) {
-                orm.RestoreSources(viewModel.Textures.OfType<TextureResource>().ToList());
-            }
+                // Restore sources for virtual ORMs (don't add to collection - they serve as group headers only)
+                foreach (var orm in e.GeneratedORMs) {
+                    orm.RestoreSources(viewModel.Textures.OfType<TextureResource>().ToList());
+                }
 
-            // Recalculate UI
-            if (e.GeneratedCount > 0) {
-                RecalculateIndices();
-                DeferUpdateLayout();
-                // Re-apply grouping after SubGroupName is set and refresh view to see updated properties
-                ApplyTextureGroupingIfEnabled();
-                // Force refresh the view to recognize changed SubGroupName values
-                ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                view?.Refresh();
-            }
+                // Recalculate UI
+                if (e.GeneratedCount > 0) {
+                    RecalculateIndices();
+                    DeferUpdateLayout();
+                    // Re-apply grouping after SubGroupName is set and refresh view to see updated properties
+                    ApplyTextureGroupingIfEnabled();
+                    // Force refresh the view to recognize changed SubGroupName values
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.Refresh();
+                }
+            });
         }
 
         private void OnUploadStatesRestored(object? sender, UploadStatesRestoredEventArgs e) {
             logService.LogInfo($"[OnUploadStatesRestored] Restored {e.RestoredCount} upload states");
 
-            // Apply restored states to textures
-            foreach (var (texture, status, hash, url, uploadedAt) in e.RestoredTextures) {
-                texture.UploadStatus = status;
-                texture.UploadedHash = hash;
-                texture.RemoteUrl = url;
-                texture.LastUploadedAt = uploadedAt;
-            }
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // Apply restored states to textures
+                foreach (var (texture, status, hash, url, uploadedAt) in e.RestoredTextures) {
+                    texture.UploadStatus = status;
+                    texture.UploadedHash = hash;
+                    texture.RemoteUrl = url;
+                    texture.LastUploadedAt = uploadedAt;
+                }
+            });
         }
 
         private void OnAssetLoadingError(object? sender, AssetLoadErrorEventArgs e) {

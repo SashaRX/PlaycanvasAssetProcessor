@@ -48,9 +48,9 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
 
             logService.LogInfo("=== AssetLoadCoordinator: Loading assets from JSON ===");
 
-            // Load JSON from cache
+            // Load JSON from cache - use ConfigureAwait(false) to not capture UI context
             JArray? assetsResponse = await projectAssetService.LoadAssetsFromJsonAsync(
-                projectFolderPath, cancellationToken);
+                projectFolderPath, cancellationToken).ConfigureAwait(false);
 
             if (assetsResponse == null) {
                 logService.LogInfo("No local assets_list.json found");
@@ -84,10 +84,10 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
 
             var tasks = supportedAssets.Select(async asset => {
                 try {
-                    await processSemaphore.WaitAsync(cancellationToken);
+                    await processSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                     try {
                         var result = await assetResourceService.ProcessAssetAsync(
-                            asset, parameters, cancellationToken);
+                            asset, parameters, cancellationToken).ConfigureAwait(false);
 
                         if (result != null) {
                             lock (lockObj) {
@@ -117,7 +117,7 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
                 }
             });
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
 
             logService.LogInfo($"Processed {textures.Count} textures, {models.Count} models, {materials.Count} materials");
             logService.LogInfo("=== AssetLoadCoordinator: Loading complete ===");

@@ -98,20 +98,22 @@ public partial class AssetLoadingViewModel : ObservableObject {
         LoadingTotal = 0;
 
         try {
-            // Create progress reporter
+            // Create progress reporter that will marshal to UI thread
             var progress = new Progress<AssetLoadProgress>(p => {
                 LoadingProgress = p.Processed;
                 LoadingTotal = p.Total;
                 LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(p.Processed, p.Total));
             });
 
-            // Load assets using the coordinator service
-            var result = await assetLoadCoordinator.LoadAssetsFromJsonAsync(
-                request.ProjectFolderPath,
-                request.ProjectName,
-                request.ProjectsBasePath,
-                progress,
-                ct);
+            // Run loading on background thread to not block UI
+            var result = await Task.Run(async () => {
+                return await assetLoadCoordinator.LoadAssetsFromJsonAsync(
+                    request.ProjectFolderPath,
+                    request.ProjectName,
+                    request.ProjectsBasePath,
+                    progress,
+                    ct).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
 
             if (!result.Success) {
                 logService.LogError($"Failed to load assets: {result.Error}");
@@ -129,23 +131,24 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
             logService.LogInfo($"Loaded {result.Textures.Count} textures, {result.Models.Count} models, {result.Materials.Count} materials");
 
-            // Post-processing: Detect ORM textures
+            // Post-processing on background thread
             LoadingStatus = "Detecting ORM textures...";
-            var ormResult = DetectORMTextures(request.ProjectFolderPath, result.Textures, request.ProjectId);
+            var ormResult = await Task.Run(() =>
+                DetectORMTextures(request.ProjectFolderPath, result.Textures, request.ProjectId), ct).ConfigureAwait(false);
             if (ormResult.DetectedCount > 0) {
                 ORMTexturesDetected?.Invoke(this, ormResult);
             }
 
-            // Post-processing: Generate virtual ORM textures
             LoadingStatus = "Generating virtual ORM textures...";
-            var virtualOrmResult = GenerateVirtualORMTextures(result.Textures, request.ProjectId);
+            var virtualOrmResult = await Task.Run(() =>
+                GenerateVirtualORMTextures(result.Textures, request.ProjectId), ct).ConfigureAwait(false);
             if (virtualOrmResult.GeneratedCount > 0) {
                 VirtualORMTexturesGenerated?.Invoke(this, virtualOrmResult);
             }
 
-            // Post-processing: Restore upload states
             LoadingStatus = "Restoring upload states...";
-            var uploadResult = await RestoreUploadStatesAsync(result.Textures, ct);
+            var uploadResult = await Task.Run(async () =>
+                await RestoreUploadStatesAsync(result.Textures, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
             if (uploadResult.RestoredCount > 0) {
                 UploadStatesRestored?.Invoke(this, uploadResult);
             }

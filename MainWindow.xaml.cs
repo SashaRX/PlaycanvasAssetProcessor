@@ -87,9 +87,6 @@ namespace AssetProcessor {
         private static readonly TextureConversion.Settings.PresetManager cachedPresetManager = new(); // Кэшированный PresetManager для ускорения загрузки данных
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
-        private FileSystemWatcher? projectFileWatcher; // Monitors project folder for file deletions
-        private readonly ConcurrentQueue<string> pendingDeletedPaths = new(); // Queue of paths to process
-        private int fileWatcherRefreshPending; // 0 = no refresh pending, 1 = refresh scheduled
         private string? selectedORMSubGroupName; // Имя выбранной ORM подгруппы для визуального выделения
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
@@ -176,6 +173,9 @@ namespace AssetProcessor {
             this.Loaded += (s, e) => {
                 ServerAssetsPanel.SelectionChanged += (sender, asset) => UpdateServerFileInfo(asset);
             };
+
+            // Subscribe to file watcher events (debounced by service)
+            projectFileWatcherService.FilesDeletionDetected += OnFilesDeletionDetected;
 
             // ����������� ������ ���������� � ����������� � ������ � �������
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
@@ -3312,140 +3312,50 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void StartFileWatcher() {
             StopFileWatcher(); // Stop existing watcher if any
 
-            if (string.IsNullOrEmpty(ProjectFolderPath) || !Directory.Exists(ProjectFolderPath)) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) {
                 return;
             }
 
-            try {
-                projectFileWatcher = new FileSystemWatcher(ProjectFolderPath) {
-                    IncludeSubdirectories = true,
-                    // Monitor both file and directory names
-                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
-                    EnableRaisingEvents = true
-                };
-
-                projectFileWatcher.Deleted += OnProjectFileDeleted;
-                projectFileWatcher.Renamed += OnProjectFileRenamed;
-
-                logger.Info($"FileWatcher started for: {ProjectFolderPath}");
-            } catch (Exception ex) {
-                logger.Error(ex, "Failed to start FileSystemWatcher");
-            }
+            projectFileWatcherService.Start(ProjectFolderPath);
         }
 
         /// <summary>
         /// Stops the file watcher. Call when project is unloaded or window closes.
         /// </summary>
         private void StopFileWatcher() {
-            if (projectFileWatcher != null) {
-                projectFileWatcher.EnableRaisingEvents = false;
-                projectFileWatcher.Deleted -= OnProjectFileDeleted;
-                projectFileWatcher.Renamed -= OnProjectFileRenamed;
-                projectFileWatcher.Dispose();
-                projectFileWatcher = null;
-                logger.Info("FileWatcher stopped");
-            }
+            projectFileWatcherService.Stop();
         }
 
         /// <summary>
-        /// Handles file/directory deletion events from FileSystemWatcher.
-        /// For directories, triggers a full rescan. For files, queues the path.
+        /// Handles file deletion events from ProjectFileWatcherService.
         /// </summary>
-        private void OnProjectFileDeleted(object sender, FileSystemEventArgs e) {
-            // Check if this might be a directory deletion
-            // FileSystemWatcher doesn't distinguish file vs directory in the event
-            // If the path has no extension, it's likely a directory
-            bool isLikelyDirectory = string.IsNullOrEmpty(Path.GetExtension(e.FullPath));
+        private void OnFilesDeletionDetected(object? sender, Services.Models.FilesDeletionDetectedEventArgs e) {
+            // Must dispatch to UI thread since event comes from background
+            Dispatcher.InvokeAsync(() => {
+                if (e.RequiresFullRescan) {
+                    logger.Info("Performing full rescan due to directory deletion");
+                    RescanFileStatuses();
 
-            // Ignore build directories (created/deleted during model conversion)
-            if (e.FullPath.Contains("\\build\\") || e.FullPath.EndsWith("\\build")) {
-                return;
-            }
+                    if (HasMissingFiles()) {
+                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    }
+                } else if (e.DeletedPaths.Count > 0) {
+                    int updatedCount = fileStatusScannerService.ProcessDeletedPaths(
+                        e.DeletedPaths.ToList(), viewModel.Textures, viewModel.Models, viewModel.Materials);
 
-            if (isLikelyDirectory) {
-                logger.Info($"Directory likely deleted: {e.FullPath}, scheduling full rescan");
-                ScheduleFullRescan();
-            } else {
-                pendingDeletedPaths.Enqueue(e.FullPath);
-                ScheduleFileWatcherRefresh();
-            }
-        }
+                    if (updatedCount > 0) {
+                        // Single refresh after all updates
+                        TexturesDataGrid?.Items.Refresh();
+                        ModelsDataGrid?.Items.Refresh();
+                        MaterialsDataGrid?.Items.Refresh();
 
-        private int fullRescanPending;
-
-        /// <summary>
-        /// Schedules a full rescan of all asset statuses (for directory deletions).
-        /// </summary>
-        private void ScheduleFullRescan() {
-            if (Interlocked.CompareExchange(ref fullRescanPending, 1, 0) == 0) {
-                Task.Delay(500).ContinueWith(_ => {
-                    Dispatcher.InvokeAsync(() => {
-                        Interlocked.Exchange(ref fullRescanPending, 0);
-                        logger.Info("Performing full rescan due to directory deletion");
-                        RescanFileStatuses();
-
+                        // Update connection button state
                         if (HasMissingFiles()) {
                             UpdateConnectionButton(ConnectionState.NeedsDownload);
                         }
-                    });
-                });
-            }
-        }
-
-        /// <summary>
-        /// Handles file rename events (moving to trash also triggers this).
-        /// </summary>
-        private void OnProjectFileRenamed(object sender, RenamedEventArgs e) {
-            pendingDeletedPaths.Enqueue(e.OldFullPath);
-            ScheduleFileWatcherRefresh();
-        }
-
-        /// <summary>
-        /// Schedules a debounced refresh after file system changes.
-        /// Only one refresh will occur even if many files are deleted.
-        /// </summary>
-        private void ScheduleFileWatcherRefresh() {
-            // Use Interlocked to ensure only one refresh is scheduled
-            if (Interlocked.CompareExchange(ref fileWatcherRefreshPending, 1, 0) == 0) {
-                // Schedule refresh after 500ms delay
-                Task.Delay(500).ContinueWith(_ => {
-                    Dispatcher.InvokeAsync(() => {
-                        ProcessPendingDeletedFiles();
-                    });
-                });
-            }
-        }
-
-        /// <summary>
-        /// Processes all pending deleted files and updates asset statuses.
-        /// Called once after debounce delay.
-        /// </summary>
-        private void ProcessPendingDeletedFiles() {
-            // Reset the pending flag
-            Interlocked.Exchange(ref fileWatcherRefreshPending, 0);
-
-            // Drain the queue
-            var deletedPaths = new List<string>();
-            while (pendingDeletedPaths.TryDequeue(out string? deletedPath)) {
-                if (!string.IsNullOrEmpty(deletedPath)) {
-                    deletedPaths.Add(deletedPath);
+                    }
                 }
-            }
-
-            int updatedCount = fileStatusScannerService.ProcessDeletedPaths(
-                deletedPaths, viewModel.Textures, viewModel.Models, viewModel.Materials);
-
-            if (updatedCount > 0) {
-                // Single refresh after all updates
-                TexturesDataGrid?.Items.Refresh();
-                ModelsDataGrid?.Items.Refresh();
-                MaterialsDataGrid?.Items.Refresh();
-
-                // Update connection button state
-                if (HasMissingFiles()) {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                }
-            }
+            });
         }
 
         /// <summary>
@@ -3572,7 +3482,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MainWindow_Closing(object? sender, CancelEventArgs? e) {
             try {
-                // Stop file watcher
+                // Stop file watcher and unsubscribe
+                projectFileWatcherService.FilesDeletionDetected -= OnFilesDeletionDetected;
                 StopFileWatcher();
 
                 // ������������� billboard ����������
@@ -3688,17 +3599,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// ����� �������� �������: ��������� hash � ��������� �������� ���� ���������
-        /// ���� hash ���������� - ��������� � �������
+        /// Smart asset loading: loads local assets and checks for server updates.
+        /// If hashes differ - shows download button.
         /// </summary>
         private async Task SmartLoadAssets() {
             try {
                 logger.Info("=== SmartLoadAssets: Starting ===");
-                logService.LogInfo("=== SmartLoadAssets: Checking for updates ===");
 
                 if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
-                    logger.Warn($"SmartLoadAssets: No project or branch selected (Project={ProjectsComboBox.SelectedItem != null}, Branch={BranchesComboBox.SelectedItem != null})");
-                    logService.LogInfo("No project or branch selected");
+                    logger.Warn("SmartLoadAssets: No project or branch selected");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
@@ -3707,50 +3616,52 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
                 if (string.IsNullOrEmpty(ProjectFolderPath)) {
-                    logService.LogInfo("Project folder path is empty during SmartLoadAssets");
+                    logService.LogInfo("Project folder path is empty");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
-                JArray? localAssets = await projectAssetService.LoadAssetsFromJsonAsync(ProjectFolderPath, CancellationToken.None);
+                // Try to load local assets first
+                bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
-                if (localAssets != null) {
-                    logService.LogInfo($"Local assets_list.json found for project {ProjectName}");
-
-                    logger.Info("SmartLoadAssets: Loading local assets...");
-                    logService.LogInfo("Loading local assets...");
-                    await LoadAssetsFromJsonFileAsync();
-
+                if (assetsLoaded) {
+                    // Local assets loaded, now check for server updates
                     string? apiKey = GetDecryptedApiKey();
                     if (string.IsNullOrEmpty(apiKey)) {
-                        logService.LogError("API key missing during SmartLoadAssets");
+                        logService.LogError("API key missing");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                         return;
                     }
 
-                    ProjectUpdateContext context = new(ProjectFolderPath, selectedProjectId, selectedBranchId, apiKey);
-                    bool hasUpdates = await projectAssetService.HasUpdatesAsync(context, CancellationToken.None);
+                    // Use service to check for updates
+                    var checkResult = await projectConnectionService.CheckForUpdatesAsync(
+                        ProjectFolderPath,
+                        selectedProjectId,
+                        selectedBranchId,
+                        apiKey,
+                        CancellationToken.None);
 
-                    if (hasUpdates) {
-                        logger.Info("SmartLoadAssets: Updates available on server.");
-                        logService.LogInfo("Hashes differ! Updates available on server.");
+                    if (!checkResult.Success) {
+                        logger.Warn($"SmartLoadAssets: Failed to check for updates: {checkResult.Error}");
+                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                        return;
+                    }
+
+                    if (checkResult.HasUpdates) {
+                        logger.Info("SmartLoadAssets: Updates available on server");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     } else {
-                        logger.Info("SmartLoadAssets: Project is up to date.");
-                        logService.LogInfo("Hashes match! Project is up to date.");
+                        logger.Info("SmartLoadAssets: Project is up to date");
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     }
-                    logger.Info("SmartLoadAssets: Assets loaded successfully");
                 } else {
-                    // ���������� ����� ��� - ����� ��������
-                    logger.Info("SmartLoadAssets: No local assets_list.json found - need to download");
-                    logService.LogInfo("No local assets_list.json found - need to download");
+                    // No local assets - need to download
+                    logger.Info("SmartLoadAssets: No local assets found - need to download");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 }
 
             } catch (Exception ex) {
                 logger.Error(ex, "Error in SmartLoadAssets");
-                logService.LogError($"Error in SmartLoadAssets: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
         }

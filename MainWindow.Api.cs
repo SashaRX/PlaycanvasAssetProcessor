@@ -1,4 +1,4 @@
-﻿using AssetProcessor.Helpers;
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -7,8 +7,6 @@ using AssetProcessor.ViewModels;
 using Assimp;
 using HelixToolkit.Wpf;
 using CommunityToolkit.Mvvm.Input;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using NLog;
 using OxyPlot;
 using OxyPlot.Axes;
@@ -26,7 +24,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives; // DragDeltaEventArgs для GridSplitter
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -62,64 +60,6 @@ namespace AssetProcessor {
             }
         }
 
-
-        private async Task ProcessAsset(JToken asset, int index, CancellationToken cancellationToken) {
-            AssetProcessingResult? result = null;
-
-            try {
-                await getAssetsSemaphore.WaitAsync(cancellationToken);
-                AssetProcessingParameters parameters = CreateAssetProcessingParameters(index);
-                result = await assetResourceService.ProcessAssetAsync(asset, parameters, cancellationToken);
-            } catch (Exception ex) {
-                logService.LogError($"Error in ProcessAsset: {ex}");
-            } finally {
-                getAssetsSemaphore.Release();
-            }
-
-            if (result != null) {
-                await Dispatcher.InvokeAsync(() => ApplyProcessedAssetResult(result));
-            }
-        }
-
-        private AssetProcessingParameters CreateAssetProcessingParameters(int assetIndex) {
-            if (string.IsNullOrEmpty(ProjectName)) {
-                throw new InvalidOperationException("Project name is required for asset processing.");
-            }
-
-            return new AssetProcessingParameters(
-                AppSettings.Default.ProjectsFolderPath,
-                ProjectName!,
-                folderPaths,
-                assetIndex);
-        }
-
-        private void ApplyProcessedAssetResult(AssetProcessingResult result) {
-            switch (result.ResultType) {
-                case AssetProcessingResultType.Texture when result.Resource is TextureResource texture:
-                    viewModel.Textures.Add(texture);
-                    viewModel.Assets.Add(texture);
-                    UpdateTextureProgress();
-                    break;
-                case AssetProcessingResultType.Model when result.Resource is ModelResource model:
-                    viewModel.Models.Add(model);
-                    viewModel.Assets.Add(model);
-                    break;
-                case AssetProcessingResultType.Material when result.Resource is MaterialResource material:
-                    viewModel.Materials.Add(material);
-                    viewModel.Assets.Add(material);
-                    break;
-            }
-        }
-
-        private void UpdateTextureProgress() {
-            if (ProgressBar.Maximum <= 0) {
-                ProgressBar.Maximum = viewModel.Textures.Count;
-            }
-
-            ProgressBar.Value = Math.Min(ProgressBar.Maximum, ProgressBar.Value + 1);
-            ProgressTextBlock.Text = $"{ProgressBar.Value}/{ProgressBar.Maximum}";
-        }
-
         private async Task InitializeAsync() {
             // Попробуйте загрузить данные из сохраненного JSON
             bool jsonLoaded = await LoadAssetsFromJsonFileAsync();
@@ -132,84 +72,87 @@ namespace AssetProcessor {
             try {
                 logService.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
 
-                if (String.IsNullOrEmpty(ProjectFolderPath) || String.IsNullOrEmpty(ProjectName)) {
-                    throw new Exception("Project folder path or name is null or empty");
+                if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
+                    logService.LogError("Project folder path or name is null or empty");
+                    return false;
                 }
 
-                JArray? assetsResponse = await projectAssetService.LoadAssetsFromJsonAsync(ProjectFolderPath!, CancellationToken.None);
-                if (assetsResponse != null) {
-                    logService.LogInfo($"Loaded {assetsResponse.Count} assets from local JSON cache");
+                // Clear ViewModel collections
+                viewModel.Textures.Clear();
+                viewModel.Models.Clear();
+                viewModel.Materials.Clear();
+                viewModel.Assets.Clear();
 
-                    // Строим иерархию папок из списка ассетов
-                    assetResourceService.BuildFolderHierarchy(assetsResponse, folderPaths);
+                // Create progress reporter for UI updates
+                var progress = new Progress<Services.Models.AssetLoadProgress>(p => {
+                    Dispatcher.InvokeAsync(() => {
+                        ProgressBar.Maximum = p.Total;
+                        ProgressBar.Value = p.Processed;
+                        ProgressTextBlock.Text = $"{p.Processed}/{p.Total}";
+                    });
+                });
 
-                    await ProcessAssetsFromJson(assetsResponse);
-                    logService.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
+                // Load assets using the coordinator service
+                var result = await assetLoadCoordinator.LoadAssetsFromJsonAsync(
+                    ProjectFolderPath!,
+                    ProjectName!,
+                    AppSettings.Default.ProjectsFolderPath,
+                    progress,
+                    CancellationToken.None);
 
-                    // Apply default grouping if checkbox is checked
-                    ApplyTextureGroupingIfEnabled();
-
-                    return true;
+                if (!result.Success) {
+                    logService.LogError($"Failed to load assets: {result.Error}");
+                    return false;
                 }
-            } catch (JsonReaderException ex) {
-                MessageBox.Show($"Invalid JSON format: {ex.Message}");
+
+                // Update ViewModel with loaded assets
+                foreach (var texture in result.Textures) {
+                    viewModel.Textures.Add(texture);
+                    viewModel.Assets.Add(texture);
+                }
+                foreach (var model in result.Models) {
+                    viewModel.Models.Add(model);
+                    viewModel.Assets.Add(model);
+                }
+                foreach (var material in result.Materials) {
+                    viewModel.Materials.Add(material);
+                    viewModel.Assets.Add(material);
+                }
+
+                // Update folder paths
+                folderPaths = new Dictionary<int, string>(result.FolderPaths);
+
+                // Post-processing
+                await PostProcessLoadedAssetsAsync();
+
+                logService.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
+
+                // Apply default grouping if checkbox is checked
+                ApplyTextureGroupingIfEnabled();
+
+                return true;
+
             } catch (Exception ex) {
+                logService.LogError($"Error loading JSON file: {ex.Message}");
                 MessageBox.Show($"Error loading JSON file: {ex.Message}");
+                return false;
             }
-            return false;
         }
 
-        private async Task ProcessAssetsFromJson(JToken assetsResponse) {
-            viewModel.Textures.Clear();
-            viewModel.Models.Clear();
-            viewModel.Materials.Clear();
-            viewModel.Assets.Clear();
+        /// <summary>
+        /// Post-processing after assets are loaded from JSON
+        /// </summary>
+        private async Task PostProcessLoadedAssetsAsync() {
+            RecalculateIndices();
+            DeferUpdateLayout();
 
-            List<JToken> supportedAssets = [.. assetsResponse.Where(asset => asset["file"] != null)];
-            int assetCount = supportedAssets.Count;
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                ProgressBar.Value = 0;
-                ProgressBar.Maximum = assetCount;
-                ProgressTextBlock.Text = $"0/{assetCount}";
-            });
-
-            // Create throttled progress to batch UI updates (reduces Dispatcher calls from thousands to dozens)
-            int processedCount = 0;
-            var progress = new Progress<int>(increment => {
-                int newCount = Interlocked.Add(ref processedCount, increment);
-                Dispatcher.InvokeAsync(() => {
-                    ProgressBar.Value = newCount;
-                    ProgressTextBlock.Text = $"{newCount}/{assetCount}";
-                });
-            });
-            using var throttledProgress = new ThrottledProgress<int>(progress, intervalMs: 100);
-
-            IEnumerable<Task> tasks = supportedAssets.Select(asset => Task.Run(async () =>
-            {
-                await ProcessAsset(asset, 0, CancellationToken.None); // Используем токен отмены по умолчанию
-                throttledProgress.Report(1); // Report increment, will be batched
-            }));
-
-            await Task.WhenAll(tasks);
-
-            // Final flush to ensure progress shows 100%
-            await Dispatcher.InvokeAsync(() => {
-                ProgressBar.Value = assetCount;
-                ProgressTextBlock.Text = $"{assetCount}/{assetCount}";
-            });
-
-            RecalculateIndices(); // Пересчитываем индексы после обработки всех ассетов
-            DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
-
-            // Сканируем KTX2 файлы для получения информации о компрессии
+            // Scan KTX2 files for compression info
             ScanKtx2InfoForAllTextures();
 
-            // Детектируем и загружаем локальные ORM текстуры
-            await DetectAndLoadORMTextures();
+            // Detect and load local ORM textures (synchronous - fast header reads only)
+            DetectAndLoadORMTextures();
 
-            // Генерируем виртуальные ORM текстуры для групп с AO/Gloss/Metallic/Height
+            // Generate virtual ORM textures for groups with AO/Gloss/Metallic/Height
             GenerateVirtualORMTextures();
 
             // Start watching project folder for file deletions
@@ -268,7 +211,7 @@ namespace AssetProcessor {
         /// Детектирует и загружает локальные ORM текстуры (_og.ktx2, _ogm.ktx2, _ogmh.ktx2)
         /// Эти текстуры не являются частью PlayCanvas проекта, но хранятся локально
         /// </summary>
-        private async Task DetectAndLoadORMTextures() {
+        private void DetectAndLoadORMTextures() {
             if (string.IsNullOrEmpty(ProjectFolderPath) || !Directory.Exists(ProjectFolderPath)) {
                 return;
             }
@@ -279,6 +222,8 @@ namespace AssetProcessor {
                 // Сканируем все .ktx2 файлы рекурсивно
                 var ktx2Files = Directory.GetFiles(ProjectFolderPath!, "*.ktx2", SearchOption.AllDirectories);
 
+                // Собираем все ORM-связи для применения в конце (избегаем PropertyChanged в цикле)
+                var ormAssociations = new List<(TextureResource texture, string subGroupName, ORMTextureResource orm)>();
                 int ormCount = 0;
 
                 foreach (var ktx2Path in ktx2Files) {
@@ -332,21 +277,18 @@ namespace AssetProcessor {
                     // Load persisted settings (compression settings, etc.)
                     ormTexture.LoadSettings();
 
-                    // Устанавливаем SubGroupName для source текстур
+                    // Собираем связи для применения позже (не вызываем PropertyChanged сейчас)
                     if (aoTexture != null) {
-                        aoTexture.SubGroupName = fileName;
-                        aoTexture.ParentORMTexture = ormTexture;
+                        ormAssociations.Add((aoTexture, fileName, ormTexture));
                     }
                     if (glossTexture != null) {
-                        glossTexture.SubGroupName = fileName;
-                        glossTexture.ParentORMTexture = ormTexture;
+                        ormAssociations.Add((glossTexture, fileName, ormTexture));
                     }
                     if (metallicTexture != null) {
-                        metallicTexture.SubGroupName = fileName;
-                        metallicTexture.ParentORMTexture = ormTexture;
+                        ormAssociations.Add((metallicTexture, fileName, ormTexture));
                     }
 
-                    // Извлекаем информацию о файле и метаданные из KTX2
+                    // Извлекаем информацию о файле и метаданные из KTX2 (синхронно - чтение заголовка быстрое)
                     if (File.Exists(ktx2Path)) {
                         var fileInfo = new FileInfo(ktx2Path);
                         ormTexture.CompressedSize = fileInfo.Length;
@@ -354,7 +296,7 @@ namespace AssetProcessor {
 
                         // Извлекаем метаданные из KTX2: resolution, mipmap count, compression format
                         try {
-                            var ktxInfo = await GetKtx2InfoAsync(ktx2Path);
+                            var ktxInfo = GetKtx2InfoSync(ktx2Path);
                             if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
                                 ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
                                 ormTexture.MipmapCount = ktxInfo.MipLevels;
@@ -363,9 +305,6 @@ namespace AssetProcessor {
                                     ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
                                         ? TextureConversion.Core.CompressionFormat.UASTC
                                         : TextureConversion.Core.CompressionFormat.ETC1S;
-                                    logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, {ktxInfo.CompressionFormat}");
-                                } else {
-                                    logService.LogInfo($"    Extracted metadata: {ktxInfo.Width}x{ktxInfo.Height}, {ktxInfo.MipLevels} mips, (no Basis compression)");
                                 }
                             }
                         } catch (Exception ex) {
@@ -373,19 +312,20 @@ namespace AssetProcessor {
                         }
                     }
 
-                    // ORM texture is NOT added to the collection - it's accessed via ParentORMTexture
-                    // on component textures and represented by the ORM subgroup header
-
                     ormCount++;
                     logService.LogInfo($"  Loaded ORM texture: {fileName} ({packingMode.Value})");
                 }
 
+                // Применяем все ORM-связи разом после цикла
+                foreach (var (texture, subGroupName, orm) in ormAssociations) {
+                    texture.SubGroupName = subGroupName;
+                    texture.ParentORMTexture = orm;
+                }
+
                 if (ormCount > 0) {
                     logService.LogInfo($"=== Detected {ormCount} ORM textures ===");
-                    Dispatcher.Invoke(() => {
-                        RecalculateIndices(); // Recalculate indices after adding ORM textures
-                        DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
-                    });
+                    RecalculateIndices(); // Recalculate indices after adding ORM textures
+                    DeferUpdateLayout(); // Отложенное обновление layout для предотвращения множественных перерисовок
                 } else {
                     logService.LogInfo("  No ORM textures found");
                 }
@@ -393,6 +333,33 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 logService.LogError($"Error detecting ORM textures: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Синхронное чтение метаданных KTX2 заголовка (быстрое - всего ~50 байт)
+        /// </summary>
+        private static (int Width, int Height, int MipLevels, string? CompressionFormat) GetKtx2InfoSync(string ktx2Path) {
+            using var stream = File.OpenRead(ktx2Path);
+            using var reader = new BinaryReader(stream);
+
+            // KTX2 header structure
+            reader.BaseStream.Seek(12, SeekOrigin.Begin);
+            uint vkFormat = reader.ReadUInt32();
+
+            reader.BaseStream.Seek(20, SeekOrigin.Begin);
+            int width = (int)reader.ReadUInt32();
+            int height = (int)reader.ReadUInt32();
+
+            reader.BaseStream.Seek(40, SeekOrigin.Begin);
+            int mipLevels = (int)reader.ReadUInt32();
+            uint supercompression = reader.ReadUInt32();
+
+            string? compressionFormat = null;
+            if (vkFormat == 0) {
+                compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
+            }
+
+            return (width, height, mipLevels, compressionFormat);
         }
 
         /// <summary>

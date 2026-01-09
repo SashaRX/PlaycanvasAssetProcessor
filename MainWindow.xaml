@@ -24,6 +24,7 @@
     KeyDown="Window_KeyDown">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <help:SizeConverter x:Key="SizeConverter" />
         <help:ResolutionConverter x:Key="ResolutionConverter" />
         <help:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
@@ -200,13 +201,22 @@
                          VerticalAlignment="Center"
                          Minimum="0"
                          Maximum="{Binding ProgressMaximum}"
-                         Value="{Binding ProgressValue}"/>
+                         Value="{Binding ProgressValue}"
+                         IsIndeterminate="{Binding AssetLoading.IsLoading}"/>
             <TextBlock x:Name="ProgressTextBlock"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource ThemeForeground}"
                        FontWeight="Bold"
                        Text="{Binding ProgressText}"/>
+            <!-- Loading status overlay -->
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"
+                       Foreground="{DynamicResource ThemeForeground}"
+                       FontWeight="SemiBold"
+                       Text="{Binding AssetLoading.LoadingStatus}"
+                       Visibility="{Binding AssetLoading.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </Grid>
 
         <!-- Панель управления внизу -->

@@ -4365,24 +4365,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
             logService.LogInfo($"[OnAssetsLoaded] Loaded {e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials");
 
-            // Clear and update ViewModel collections
-            viewModel.Textures.Clear();
-            viewModel.Models.Clear();
-            viewModel.Materials.Clear();
-            viewModel.Assets.Clear();
+            // Batch update: assign new collections instead of Add() loops
+            // This triggers only ONE CollectionChanged event per collection
+            viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+            viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+            viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
 
-            foreach (var texture in e.Textures) {
-                viewModel.Textures.Add(texture);
-                viewModel.Assets.Add(texture);
-            }
-            foreach (var model in e.Models) {
-                viewModel.Models.Add(model);
-                viewModel.Assets.Add(model);
-            }
-            foreach (var material in e.Materials) {
-                viewModel.Materials.Add(material);
-                viewModel.Assets.Add(material);
-            }
+            // Build combined Assets collection
+            var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
+            allAssets.AddRange(e.Textures);
+            allAssets.AddRange(e.Models);
+            allAssets.AddRange(e.Materials);
+            viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
 
             // Update folder paths
             folderPaths = new Dictionary<int, string>(e.FolderPaths);

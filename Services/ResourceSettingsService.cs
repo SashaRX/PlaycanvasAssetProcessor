@@ -72,7 +72,6 @@ public class ResourceSettingsService {
                 var settings = JsonSerializer.Deserialize<ProjectSettings>(json, _jsonOptions);
                 if (settings != null) {
                     _projectSettings[key] = settings;
-                    Logger.Info($"Loaded settings for project {projectId}: {settings.TextureSettings.Count} textures, {settings.MaterialSettings.Count} materials");
                     return settings;
                 }
             } catch (Exception ex) {

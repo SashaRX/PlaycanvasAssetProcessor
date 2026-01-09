@@ -149,14 +149,6 @@ namespace AssetProcessor {
             // Scan KTX2 files for compression info
             ScanKtx2InfoForAllTextures();
 
-            // Force flush NLog async buffer for debugging
-            logService.LogInfo(">>> About to call DetectAndLoadORMTextures <<<");
-            NLog.LogManager.Flush();
-
-            // Debug: write directly to temp file to trace freeze
-            var debugPath = Path.Combine(Path.GetTempPath(), "AssetProcessor_Debug.txt");
-            File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - About to call DetectAndLoadORMTextures\n");
-
             // Detect and load local ORM textures (synchronous - fast header reads only)
             DetectAndLoadORMTextures();
 
@@ -224,141 +216,93 @@ namespace AssetProcessor {
                 return;
             }
 
-            var debugPath = Path.Combine(Path.GetTempPath(), "AssetProcessor_Debug.txt");
-            File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - DetectAndLoadORMTextures START\n");
-
-            logService.LogInfo("=== DetectAndLoadORMTextures START ===");
-            NLog.LogManager.Flush();
-
             try {
-                // Сканируем все .ktx2 файлы рекурсивно
-                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Scanning for .ktx2 files\n");
                 var ktx2Files = Directory.GetFiles(ProjectFolderPath!, "*.ktx2", SearchOption.AllDirectories);
-                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Found {ktx2Files.Length} .ktx2 files\n");
-
-                // Собираем все ORM-связи для применения в конце (избегаем PropertyChanged в цикле)
                 var ormAssociations = new List<(TextureResource texture, string subGroupName, ORMTextureResource orm)>();
                 int ormCount = 0;
 
                 foreach (var ktx2Path in ktx2Files) {
                     string fileName = Path.GetFileNameWithoutExtension(ktx2Path);
 
-                    // Проверяем паттерны _og/_ogm/_ogmh
                     ChannelPackingMode? packingMode = null;
                     string baseName = fileName;
 
                     if (fileName.EndsWith("_og", StringComparison.OrdinalIgnoreCase)) {
                         packingMode = ChannelPackingMode.OG;
-                        baseName = fileName.Substring(0, fileName.Length - 3); // Remove "_og"
+                        baseName = fileName.Substring(0, fileName.Length - 3);
                     } else if (fileName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase)) {
                         packingMode = ChannelPackingMode.OGM;
-                        baseName = fileName.Substring(0, fileName.Length - 4); // Remove "_ogm"
+                        baseName = fileName.Substring(0, fileName.Length - 4);
                     } else if (fileName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase)) {
                         packingMode = ChannelPackingMode.OGMH;
-                        baseName = fileName.Substring(0, fileName.Length - 5); // Remove "_ogmh"
+                        baseName = fileName.Substring(0, fileName.Length - 5);
                     }
 
-                    if (!packingMode.HasValue) {
-                        continue; // Not an ORM texture
-                    }
+                    if (!packingMode.HasValue) continue;
 
-                    // Ищем source текстуры по имени base
                     string directory = Path.GetDirectoryName(ktx2Path) ?? "";
                     TextureResource? aoTexture = FindTextureByPattern(directory, baseName + "_ao");
                     TextureResource? glossTexture = FindTextureByPattern(directory, baseName + "_gloss");
                     TextureResource? metallicTexture = FindTextureByPattern(directory, baseName + "_metallic")
                                                     ?? FindTextureByPattern(directory, baseName + "_metalness")
-                                                    ?? FindTextureByPattern(directory, baseName + "_Metalness") // case variant
-                                                    ?? FindTextureByPattern(directory, baseName + "_metalic"); // typo variant
+                                                    ?? FindTextureByPattern(directory, baseName + "_Metalness")
+                                                    ?? FindTextureByPattern(directory, baseName + "_metalic");
 
-                    // Создаем ORMTextureResource
                     var ormTexture = new ORMTextureResource {
                         Name = fileName,
-                        GroupName = baseName,  // Важно! Устанавливаем GroupName для группировки
-                        SubGroupName = fileName,  // ORM в своей подгруппе
+                        GroupName = baseName,
+                        SubGroupName = fileName,
                         Path = ktx2Path,
                         PackingMode = packingMode.Value,
                         AOSource = aoTexture,
                         GlossSource = glossTexture,
                         MetallicSource = metallicTexture,
-                        Status = "Converted", // Already packed
+                        Status = "Converted",
                         Extension = ".ktx2",
-                        // Settings persistence
                         ProjectId = CurrentProjectId,
                         SettingsKey = $"orm_{baseName}_{fileName}"
                     };
 
-                    // Load persisted settings (compression settings, etc.)
                     ormTexture.LoadSettings();
 
-                    // Собираем связи для применения позже (не вызываем PropertyChanged сейчас)
-                    if (aoTexture != null) {
-                        ormAssociations.Add((aoTexture, fileName, ormTexture));
-                    }
-                    if (glossTexture != null) {
-                        ormAssociations.Add((glossTexture, fileName, ormTexture));
-                    }
-                    if (metallicTexture != null) {
-                        ormAssociations.Add((metallicTexture, fileName, ormTexture));
-                    }
+                    if (aoTexture != null) ormAssociations.Add((aoTexture, fileName, ormTexture));
+                    if (glossTexture != null) ormAssociations.Add((glossTexture, fileName, ormTexture));
+                    if (metallicTexture != null) ormAssociations.Add((metallicTexture, fileName, ormTexture));
 
-                    // Извлекаем информацию о файле и метаданные из KTX2 (синхронно - чтение заголовка быстрое)
                     if (File.Exists(ktx2Path)) {
                         var fileInfo = new FileInfo(ktx2Path);
                         ormTexture.CompressedSize = fileInfo.Length;
-                        ormTexture.Size = (int)fileInfo.Length; // For ORM, Size = CompressedSize
+                        ormTexture.Size = (int)fileInfo.Length;
 
-                        // Извлекаем метаданные из KTX2: resolution, mipmap count, compression format
                         try {
                             var ktxInfo = GetKtx2InfoSync(ktx2Path);
                             if (ktxInfo.Width > 0 && ktxInfo.Height > 0) {
                                 ormTexture.Resolution = new[] { ktxInfo.Width, ktxInfo.Height };
                                 ormTexture.MipmapCount = ktxInfo.MipLevels;
-                                // Set compression format from KTX2 header only if it's Basis Universal
                                 if (!string.IsNullOrEmpty(ktxInfo.CompressionFormat)) {
                                     ormTexture.CompressionFormat = ktxInfo.CompressionFormat == "UASTC"
                                         ? TextureConversion.Core.CompressionFormat.UASTC
                                         : TextureConversion.Core.CompressionFormat.ETC1S;
                                 }
                             }
-                        } catch (Exception ex) {
-                            logService.LogError($"  Failed to extract KTX2 metadata for {fileName}: {ex.Message}");
-                        }
+                        } catch { }
                     }
-
                     ormCount++;
-                    logService.LogInfo($"  Loaded ORM texture: {fileName} ({packingMode.Value})");
                 }
 
-                // Применяем все ORM-связи разом после цикла
-                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Applying {ormAssociations.Count} ORM associations\n");
-                int assocIndex = 0;
                 foreach (var (texture, subGroupName, orm) in ormAssociations) {
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Setting SubGroupName for {texture.Name}\n");
                     texture.SubGroupName = subGroupName;
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Setting ParentORMTexture for {texture.Name}\n");
                     texture.ParentORMTexture = orm;
-                    assocIndex++;
                 }
-                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - All {assocIndex} associations applied\n");
 
                 if (ormCount > 0) {
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Calling RecalculateIndices\n");
+                    logService.LogInfo($"Detected {ormCount} ORM textures, {ormAssociations.Count} associations");
                     RecalculateIndices();
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - RecalculateIndices done\n");
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - Calling DeferUpdateLayout\n");
                     DeferUpdateLayout();
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - DeferUpdateLayout done\n");
-                } else {
-                    File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - No ORM textures found\n");
                 }
-
             } catch (Exception ex) {
-                File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - ERROR: {ex.Message}\n");
                 logService.LogError($"Error detecting ORM textures: {ex.Message}");
             }
-
-            File.AppendAllText(debugPath, $"{DateTime.Now:HH:mm:ss.fff} - DetectAndLoadORMTextures END\n");
         }
 
         /// <summary>
@@ -406,10 +350,7 @@ namespace AssetProcessor {
         /// Эти виртуальные текстуры отображаются в UI и могут быть обработаны для создания упакованных ORM текстур.
         /// </summary>
         private void GenerateVirtualORMTextures() {
-            logService.LogInfo("=== Generating virtual ORM textures ===");
-
             try {
-                // Группируем текстуры по GroupName, исключая уже существующие ORM текстуры
                 var textureGroups = viewModel.Textures
                     .Where(t => !t.IsORMTexture && !string.IsNullOrEmpty(t.GroupName))
                     .GroupBy(t => t.GroupName)
@@ -420,30 +361,21 @@ namespace AssetProcessor {
                 foreach (var group in textureGroups) {
                     string groupName = group.Key!;
 
-                    // Ищем компоненты ORM в группе (значения из DetermineTextureType)
                     TextureResource? aoTexture = group.FirstOrDefault(t => t.TextureType == "AO");
                     TextureResource? glossTexture = group.FirstOrDefault(t =>
                         t.TextureType == "Gloss" || t.TextureType == "Roughness");
                     TextureResource? metallicTexture = group.FirstOrDefault(t => t.TextureType == "Metallic");
                     TextureResource? heightTexture = group.FirstOrDefault(t => t.TextureType == "Height");
 
-                    // Определяем режим упаковки на основе доступных компонентов
-                    // Минимум нужны AO и Gloss для создания ORM
-                    if (aoTexture == null && glossTexture == null) {
-                        continue; // Недостаточно компонентов для ORM
-                    }
+                    if (aoTexture == null && glossTexture == null) continue;
 
-                    // Подсчитываем доступные каналы
                     int channelCount = (aoTexture != null ? 1 : 0) +
                                       (glossTexture != null ? 1 : 0) +
                                       (metallicTexture != null ? 1 : 0) +
                                       (heightTexture != null ? 1 : 0);
 
-                    if (channelCount < 2) {
-                        continue; // Нужно минимум 2 канала для ORM упаковки
-                    }
+                    if (channelCount < 2) continue;
 
-                    // Определяем режим упаковки
                     ChannelPackingMode packingMode;
                     string suffix;
 
@@ -458,9 +390,6 @@ namespace AssetProcessor {
                         suffix = "_og";
                     }
 
-                    // Проверяем, не установлен ли уже ParentORMTexture на компонентах
-                    // (значит DetectAndLoadORMTextures уже нашла готовый KTX2)
-                    // Убираем суффикс _mat из имени группы для имени ORM
                     string baseName = groupName.EndsWith("_mat", StringComparison.OrdinalIgnoreCase)
                         ? groupName.Substring(0, groupName.Length - 4)
                         : groupName;
@@ -470,19 +399,14 @@ namespace AssetProcessor {
                                          (metallicTexture?.ParentORMTexture != null) ||
                                          (heightTexture?.ParentORMTexture != null);
 
-                    if (alreadyHasORM) {
-                        continue; // ORM уже создана из существующего KTX2 файла
-                    }
+                    if (alreadyHasORM) continue;
 
-                    // Определяем разрешение из первого доступного источника
                     var sourceForResolution = aoTexture ?? glossTexture ?? metallicTexture ?? heightTexture;
                     int[] resolution = sourceForResolution?.Resolution ?? [0, 0];
 
-                    // Определяем путь (папку) из первого доступного источника
                     string? sourcePath = (aoTexture ?? glossTexture ?? metallicTexture ?? heightTexture)?.Path;
                     string? directory = !string.IsNullOrEmpty(sourcePath) ? Path.GetDirectoryName(sourcePath) : null;
 
-                    // Создаём виртуальную ORM текстуру (НЕ добавляем в коллекцию)
                     var ormTexture = new ORMTextureResource {
                         Name = ormName,
                         GroupName = groupName,
@@ -496,18 +420,13 @@ namespace AssetProcessor {
                         Status = "Not Packed",
                         Extension = ".ktx2",
                         TextureType = $"ORM ({packingMode})",
-                        // Settings persistence
                         ProjectId = CurrentProjectId,
                         SettingsKey = $"orm_{groupName}_{ormName}"
                     };
 
-                    // Load persisted settings if available
                     ormTexture.LoadSettings();
-                    // Restore source texture references by ID (in case saved settings have different sources)
                     ormTexture.RestoreSources(viewModel.Textures.OfType<TextureResource>().ToList());
 
-                    // Устанавливаем SubGroupName и ParentORMTexture для ORM компонентов
-                    // Заголовок подгруппы кликабельный - получаем ORM через ParentORMTexture
                     if (aoTexture != null) {
                         aoTexture.SubGroupName = ormName;
                         aoTexture.ParentORMTexture = ormTexture;
@@ -525,24 +444,14 @@ namespace AssetProcessor {
                         heightTexture.ParentORMTexture = ormTexture;
                     }
 
-                    // ORM НЕ в коллекции - доступна через клик на заголовок подгруппы
                     generatedCount++;
-
-                    logService.LogInfo($"  Generated virtual ORM: {ormName} ({packingMode}) - " +
-                        $"AO:{(aoTexture != null ? "✓" : "✗")} " +
-                        $"Gloss:{(glossTexture != null ? "✓" : "✗")} " +
-                        $"Metal:{(metallicTexture != null ? "✓" : "✗")} " +
-                        $"Height:{(heightTexture != null ? "✓" : "✗")}");
                 }
 
                 if (generatedCount > 0) {
-                    logService.LogInfo($"=== Generated {generatedCount} virtual ORM textures ===");
+                    logService.LogInfo($"Generated {generatedCount} virtual ORM textures");
                     RecalculateIndices();
                     DeferUpdateLayout();
-                } else {
-                    logService.LogInfo("  No virtual ORM textures to generate");
                 }
-
             } catch (Exception ex) {
                 logService.LogError($"Error generating virtual ORM textures: {ex.Message}");
             }

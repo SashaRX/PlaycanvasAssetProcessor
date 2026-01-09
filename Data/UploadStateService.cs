@@ -4,14 +4,12 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using NLog;
 
 namespace AssetProcessor.Data {
     /// <summary>
     /// SQLite-based implementation of upload state persistence
     /// </summary>
     public class UploadStateService : IUploadStateService {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private readonly string _connectionString;
         private bool _isInitialized;
         private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -28,7 +26,6 @@ namespace AssetProcessor.Data {
             }
 
             _connectionString = $"Data Source={databasePath}";
-            Logger.Info($"UploadStateService initialized with database: {databasePath}");
         }
 
         public async Task InitializeAsync(CancellationToken ct = default) {
@@ -67,9 +64,7 @@ namespace AssetProcessor.Data {
                 await command.ExecuteNonQueryAsync(ct);
 
                 _isInitialized = true;
-                Logger.Info("Upload state database initialized successfully");
-            } catch (Exception ex) {
-                Logger.Error(ex, "Failed to initialize upload state database");
+            } catch (Exception) {
                 throw;
             } finally {
                 _initLock.Release();
@@ -106,8 +101,6 @@ namespace AssetProcessor.Data {
             var result = await command.ExecuteScalarAsync(ct);
             var id = Convert.ToInt64(result);
             record.Id = id;
-
-            Logger.Debug($"Saved upload record: {record.LocalPath} -> {record.RemotePath}");
             return id;
         }
 
@@ -290,9 +283,7 @@ namespace AssetProcessor.Data {
 
             var sql = "DELETE FROM upload_history";
             await using var command = new SqliteCommand(sql, connection);
-
-            var count = await command.ExecuteNonQueryAsync(ct);
-            Logger.Info($"Cleared {count} upload records");
+            await command.ExecuteNonQueryAsync(ct);
         }
 
         private async Task EnsureInitializedAsync(CancellationToken ct) {

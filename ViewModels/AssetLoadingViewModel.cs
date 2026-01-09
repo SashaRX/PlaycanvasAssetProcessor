@@ -102,7 +102,7 @@ public partial class AssetLoadingViewModel : ObservableObject {
             var progress = new Progress<AssetLoadProgress>(p => {
                 LoadingProgress = p.Processed;
                 LoadingTotal = p.Total;
-                LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(p.Processed, p.Total));
+                LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(p.Processed, p.Total, p.CurrentAsset));
             });
 
             // Run loading on background thread to not block UI
@@ -503,10 +503,12 @@ public class AssetsLoadedEventArgs : EventArgs {
 public class AssetLoadProgressEventArgs : EventArgs {
     public int Processed { get; }
     public int Total { get; }
+    public string? CurrentAsset { get; }
 
-    public AssetLoadProgressEventArgs(int processed, int total) {
+    public AssetLoadProgressEventArgs(int processed, int total, string? currentAsset = null) {
         Processed = processed;
         Total = total;
+        CurrentAsset = currentAsset;
     }
 }
 

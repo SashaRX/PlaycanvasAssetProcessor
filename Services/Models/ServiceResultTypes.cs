@@ -77,7 +77,7 @@ public sealed record AssetLoadResult {
 /// <summary>
 /// Progress report for asset loading
 /// </summary>
-public readonly record struct AssetLoadProgress(int Processed, int Total) {
+public readonly record struct AssetLoadProgress(int Processed, int Total, string? CurrentAsset = null) {
     public double Percentage => Total > 0 ? (double)Processed / Total * 100 : 0;
 }
 

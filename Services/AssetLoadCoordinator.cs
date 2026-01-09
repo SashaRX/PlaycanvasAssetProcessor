@@ -89,6 +89,8 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
                         var result = await assetResourceService.ProcessAssetAsync(
                             asset, parameters, cancellationToken).ConfigureAwait(false);
 
+                        string? assetName = result?.Resource?.Name ?? asset["name"]?.ToString();
+
                         if (result != null) {
                             lock (lockObj) {
                                 switch (result.ResultType) {
@@ -106,7 +108,7 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
                         }
 
                         int current = Interlocked.Increment(ref processedCount);
-                        progress?.Report(new AssetLoadProgress(current, totalAssets));
+                        progress?.Report(new AssetLoadProgress(current, totalAssets, assetName));
                     } finally {
                         processSemaphore.Release();
                     }

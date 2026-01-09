@@ -4365,10 +4365,19 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
             logService.LogInfo($"[OnAssetsLoaded] Loaded {e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials");
 
+            // Update status
+            viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
+
+            // Temporarily hide DataGrids to prevent costly re-renders during bulk updates
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, () => {
+                TexturesDataGrid.Visibility = Visibility.Hidden;
+                ModelsDataGrid.Visibility = Visibility.Hidden;
+                MaterialsDataGrid.Visibility = Visibility.Hidden;
+            });
+
             // Use BeginInvoke with Background priority to not block UI thread
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
                 // Batch update: assign new collections instead of Add() loops
-                // This triggers only ONE CollectionChanged event per collection
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
@@ -4384,18 +4393,40 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);
 
                 // Post-processing UI updates
+                viewModel.ProgressText = "Recalculating indices...";
                 RecalculateIndices();
-                DeferUpdateLayout();
+            });
+
+            // Defer grouping and show DataGrids after all data is ready
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                viewModel.ProgressText = "Applying grouping...";
                 ApplyTextureGroupingIfEnabled();
+
+                viewModel.ProgressText = "Rendering...";
+
+                // Show DataGrids - this triggers render
+                TexturesDataGrid.Visibility = Visibility.Visible;
+                ModelsDataGrid.Visibility = Visibility.Visible;
+                MaterialsDataGrid.Visibility = Visibility.Visible;
+            });
+
+            // Update "Ready" status after render completes (lowest priority = after all UI work)
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => {
+                viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
+                viewModel.ProgressValue = viewModel.ProgressMaximum; // Fill progress bar
             });
         }
 
         private void OnAssetLoadingProgressChanged(object? sender, AssetLoadProgressEventArgs e) {
-            Dispatcher.InvokeAsync(() => {
-                ProgressBar.Maximum = e.Total;
-                ProgressBar.Value = e.Processed;
-                ProgressTextBlock.Text = $"{e.Processed}/{e.Total}";
-            });
+            // Progress<T> already marshals to UI thread, no need for Dispatcher
+            viewModel.ProgressMaximum = e.Total;
+            viewModel.ProgressValue = e.Processed;
+            // Show asset name being processed
+            if (!string.IsNullOrEmpty(e.CurrentAsset)) {
+                viewModel.ProgressText = $"{e.CurrentAsset} ({e.Processed}/{e.Total})";
+            } else {
+                viewModel.ProgressText = e.Total > 0 ? $"Loading... ({e.Processed}/{e.Total})" : "Loading...";
+            }
         }
 
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {
@@ -4422,29 +4453,32 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void OnVirtualORMTexturesGenerated(object? sender, VirtualORMTexturesGeneratedEventArgs e) {
             logService.LogInfo($"[OnVirtualORMTexturesGenerated] Generated {e.GeneratedCount} virtual ORM textures");
 
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                // Apply associations to textures FIRST (before adding ORMs)
-                foreach (var (texture, subGroupName, orm) in e.Associations) {
-                    texture.SubGroupName = subGroupName;
-                    texture.ParentORMTexture = orm;
-                }
+            // First pass: apply associations (fast, doesn't need UI)
+            foreach (var (texture, subGroupName, orm) in e.Associations) {
+                texture.SubGroupName = subGroupName;
+                texture.ParentORMTexture = orm;
+            }
 
-                // Restore sources for virtual ORMs (don't add to collection - they serve as group headers only)
-                foreach (var orm in e.GeneratedORMs) {
-                    orm.RestoreSources(viewModel.Textures.OfType<TextureResource>().ToList());
-                }
+            // Restore sources (fast)
+            var texturesList = viewModel.Textures.OfType<TextureResource>().ToList();
+            foreach (var orm in e.GeneratedORMs) {
+                orm.RestoreSources(texturesList);
+            }
 
-                // Recalculate UI
-                if (e.GeneratedCount > 0) {
+            // Schedule UI updates with lower priority to not block
+            if (e.GeneratedCount > 0) {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
                     RecalculateIndices();
-                    DeferUpdateLayout();
-                    // Re-apply grouping after SubGroupName is set and refresh view to see updated properties
+                });
+
+                // Defer grouping to allow UI to breathe
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
                     ApplyTextureGroupingIfEnabled();
-                    // Force refresh the view to recognize changed SubGroupName values
+                    // Refresh view after grouping
                     ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
                     view?.Refresh();
-                }
-            });
+                });
+            }
         }
 
         private void OnUploadStatesRestored(object? sender, UploadStatesRestoredEventArgs e) {

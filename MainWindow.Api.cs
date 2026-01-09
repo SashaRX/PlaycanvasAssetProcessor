@@ -78,6 +78,11 @@ namespace AssetProcessor {
                 return false;
             }
 
+            // Reset progress at start
+            viewModel.ProgressValue = 0;
+            viewModel.ProgressMaximum = 0;
+            viewModel.ProgressText = "Loading...";
+
             try {
                 logService.LogInfo("[LoadAssetsFromJsonFileAsync] Calling viewModel.AssetLoading.LoadAssetsCommand.ExecuteAsync...");
                 await viewModel.AssetLoading.LoadAssetsCommand.ExecuteAsync(new ViewModels.AssetLoadRequest {

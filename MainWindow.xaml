@@ -201,8 +201,7 @@
                          VerticalAlignment="Center"
                          Minimum="0"
                          Maximum="{Binding ProgressMaximum}"
-                         Value="{Binding ProgressValue}"
-                         IsIndeterminate="{Binding AssetLoading.IsLoading}"/>
+                         Value="{Binding ProgressValue}"/>
             <TextBlock x:Name="ProgressTextBlock"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"

@@ -23,6 +23,9 @@ dotnet restore
 # Clean build artifacts
 dotnet clean
 
+# Build script
+.\build-and-run.bat
+
 # Publish optimized Release build (single-file, win-x64 only, with trimming)
 dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 --self-contained false
 ```
@@ -54,7 +57,7 @@ The texture conversion pipeline requires the **ktx** CLI tool from KTX-Software:
 - Installation: `winget install KhronosGroup.KTX-Software` (Windows)
 - Verify: `ktx --version`
 - Used by TextureConversion pipeline via `ktx create` command for Basis Universal compression and KTX2 packing
-- Required version: 4.3.0 or higher
+- Required version: 4.4.0 or higher
 - **Important**: We use `ktx.exe` (modern tool), NOT the legacy `toktx.exe`
 
 ## Architecture Overview

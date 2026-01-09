@@ -91,7 +91,14 @@
       "Bash(dotnet clean:*)",
       "Bash(cmd.exe /c:*)",
       "Bash(find:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(dotnet test:*)",
+      "Bash(git -C \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" diff --stat HEAD)",
+      "Bash(\"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\Release\\\\net9.0-windows10.0.26100.0\\\\win-x64\\\\AssetProcessor.exe\")",
+      "Bash(git -C \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" status)",
+      "Bash(git -C \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" log --oneline -5)",
+      "Bash(git -C \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" add App.xaml.cs MainWindow.xaml.cs MainWindow.Api.cs ViewModels/MainViewModel.cs ViewModels/AssetLoadingViewModel.cs ViewModels/MaterialSelectionViewModel.cs AssetProcessor.Tests/MainViewModelTests.cs)",
+      "Bash(git -C \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" commit -m \"$\\(cat <<''EOF''\nAdd AssetLoadingViewModel and MaterialSelectionViewModel \\(MVVM Phase 4-5\\)\n\n- Extract asset loading logic into AssetLoadingViewModel with events\n- Add MaterialSelectionViewModel for material selection and texture navigation\n- Fix ORM grouping: ORMs serve as group headers only, not list items\n- Add view.Refresh\\(\\) to update CollectionView after SubGroupName changes\n- Update DI registration and MainViewModel composition\n- Update tests with proper service mocks\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []

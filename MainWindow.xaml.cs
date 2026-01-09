@@ -164,6 +164,36 @@ namespace AssetProcessor {
             viewModel.TextureProcessingCompleted += ViewModel_TextureProcessingCompleted;
             viewModel.TexturePreviewLoaded += ViewModel_TexturePreviewLoaded;
 
+            // Subscribe to TextureSelectionViewModel events
+            viewModel.TextureSelection.SelectionReady += OnTextureSelectionReady;
+            viewModel.TextureSelection.ORMTextureSelected += OnORMTextureSelected;
+            viewModel.TextureSelection.PanelVisibilityRequested += OnPanelVisibilityRequested;
+
+            // Subscribe to ORMTextureViewModel events
+            viewModel.ORMTexture.ORMCreated += OnORMCreated;
+            viewModel.ORMTexture.ORMDeleted += OnORMDeleted;
+            viewModel.ORMTexture.ConfirmationRequested += OnORMConfirmationRequested;
+            viewModel.ORMTexture.ErrorOccurred += OnORMErrorOccurred;
+            viewModel.ORMTexture.BatchCreationCompleted += OnORMBatchCreationCompleted;
+
+            // Subscribe to TextureConversionSettingsViewModel events
+            viewModel.ConversionSettings.SettingsLoaded += OnConversionSettingsLoaded;
+            viewModel.ConversionSettings.SettingsSaved += OnConversionSettingsSaved;
+            viewModel.ConversionSettings.ErrorOccurred += OnConversionSettingsError;
+
+            // Subscribe to AssetLoadingViewModel events
+            viewModel.AssetLoading.AssetsLoaded += OnAssetsLoaded;
+            viewModel.AssetLoading.LoadingProgressChanged += OnAssetLoadingProgressChanged;
+            viewModel.AssetLoading.ORMTexturesDetected += OnORMTexturesDetected;
+            viewModel.AssetLoading.VirtualORMTexturesGenerated += OnVirtualORMTexturesGenerated;
+            viewModel.AssetLoading.UploadStatesRestored += OnUploadStatesRestored;
+            viewModel.AssetLoading.ErrorOccurred += OnAssetLoadingError;
+
+            // Subscribe to MaterialSelectionViewModel events
+            viewModel.MaterialSelection.MaterialParametersLoaded += OnMaterialParametersLoaded;
+            viewModel.MaterialSelection.NavigateToTextureRequested += OnNavigateToTextureRequested;
+            viewModel.MaterialSelection.ErrorOccurred += OnMaterialSelectionError;
+
             // �������� �� ������� ������ �������� �����������
             ConversionSettingsPanel.AutoDetectRequested += ConversionSettingsPanel_AutoDetectRequested;
             ConversionSettingsPanel.ConvertRequested += ConversionSettingsPanel_ConvertRequested;
@@ -513,268 +543,15 @@ namespace AssetProcessor {
             }
         }
 
-        private async void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            // Cancel any pending texture load immediately
-            textureLoadCancellation?.Cancel();
-            textureLoadCancellation = new CancellationTokenSource();
-            CancellationToken cancellationToken = textureLoadCancellation.Token;
-
-            // Снимаем выделение с ORM подгруппы при выборе обычной строки
-            if (TexturesDataGrid.SelectedItem != null) {
-                SelectedORMSubGroupName = null;
-            }
-
-            // Update selection count and command state (lightweight, no delay needed)
+        private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Update selection count and command state (lightweight, UI-only)
             UpdateSelectedTexturesCount();
             viewModel.SelectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
             viewModel.ProcessTexturesCommand.NotifyCanExecuteChanged();
 
-            // Debounce: wait before starting heavy texture loading
-            // This prevents loading textures during rapid scrolling
-            try {
-                await Task.Delay(150, cancellationToken);
-            } catch (OperationCanceledException) {
-                return; // Another selection happened, abort this one
-            }
-
-            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Processing after debounce");
-
-            // Check if selected item is an ORM texture (virtual texture for packing)
-            if (TexturesDataGrid.SelectedItem is ORMTextureResource ormTexture) {
-                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected ORM texture: {ormTexture.Name}");
-
-                // Hide conversion settings panel, show ORM panel
-                if (ConversionSettingsExpander != null) {
-                    ConversionSettingsExpander.Visibility = Visibility.Collapsed;
-                }
-
-                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel is null: {ORMPanel == null}");
-                if (ORMPanel != null) {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Setting ORMPanel visibility and initializing...");
-                    ORMPanel.Visibility = Visibility.Visible;
-
-                    // Initialize ORM panel with available viewModel.Textures (exclude other ORM textures)
-                    var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] availableTextures count: {availableTextures.Count}");
-                    ORMPanel.Initialize(this, availableTextures);
-                    ORMPanel.SetORMTexture(ormTexture);
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORMPanel initialized and texture set");
-                } else {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ERROR: ORMPanel is NULL! Cannot initialize ORM settings.");
-                }
-
-                // Load preview and histogram for packed ORM textures
-                if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture is packed, loading preview from: {ormTexture.Path}");
-
-                    // CRITICAL: Reset preview state before loading ORM texture
-                    // This clears OriginalBitmapSource from previous texture to ensure histogram uses ORM data
-                    ResetPreviewState();
-                    ClearD3D11Viewer();
-
-                    // Update texture info
-                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
-                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
-
-                    // Load the packed KTX2 file for preview and histogram
-                    try {
-                        bool ktxLoaded = false;
-
-                        if (texturePreviewService.IsUsingD3D11Renderer) {
-                            // D3D11 MODE: Try native KTX2 loading
-                            logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Loading packed ORM to D3D11: {ormTexture.Name}");
-                            ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
-
-                            if (!ktxLoaded) {
-                                // Fallback: Try extracting PNG from KTX2 using ktx extract
-                                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
-                                Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
-                                ktxLoaded = await ktxPreviewTask;
-                            }
-                        } else {
-                            // WPF MODE: Extract PNG from KTX2
-                            Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
-                            ktxLoaded = await ktxPreviewTask;
-                        }
-
-                        // Extract histogram for packed ORM textures
-                        if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
-                            string? ormPath = ormTexture.Path;
-                            string ormName = ormTexture.Name ?? "unknown";
-                            logger.Info($"[ORM Histogram] Starting extraction for: {ormName}, path: {ormPath}");
-
-                            _ = Task.Run(async () => {
-                                try {
-                                    if (string.IsNullOrEmpty(ormPath)) {
-                                        logger.Warn($"[ORM Histogram] Path is empty for: {ormName}");
-                                        return;
-                                    }
-
-                                    logger.Info($"[ORM Histogram] Extracting mipmaps from: {ormPath}");
-
-                                    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-                                    var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
-                                    logger.Info($"[ORM Histogram] Extracted {mipmaps.Count} mipmaps for: {ormName}");
-
-                                    if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
-                                        var mip0Bitmap = mipmaps[0].Bitmap;
-                                        logger.Info($"[ORM Histogram] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight}, updating histogram...");
-                                        _ = Dispatcher.BeginInvoke(new Action(() => {
-                                            if (!cancellationToken.IsCancellationRequested) {
-                                                texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
-                                                UpdateHistogram(mip0Bitmap);
-                                                logger.Info($"[ORM Histogram] Histogram updated for: {ormName}");
-                                            } else {
-                                                logger.Info($"[ORM Histogram] Cancelled before UI update for: {ormName}");
-                                            }
-                                        }));
-                                    } else {
-                                        logger.Warn($"[ORM Histogram] No mipmaps or cancelled for: {ormName}");
-                                    }
-                                } catch (OperationCanceledException) {
-                                    logger.Info($"[ORM Histogram] Extraction cancelled/timeout for: {ormName}");
-                                } catch (Exception ex) {
-                                    logger.Warn(ex, $"[ORM Histogram] Failed to extract for: {ormName}");
-                                }
-                            });
-                        } else {
-                            logger.Info($"[ORM Histogram] Skipped - ktxLoaded={ktxLoaded}, cancelled={cancellationToken.IsCancellationRequested}");
-                        }
-
-                        if (!ktxLoaded) {
-                            // Use BeginInvoke to avoid deadlock
-                            _ = Dispatcher.BeginInvoke(new Action(() => {
-                                if (cancellationToken.IsCancellationRequested) return;
-
-                                texturePreviewService.IsKtxPreviewAvailable = false;
-                                TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
-
-                                // Show error message
-                                logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
-                            }));
-                        }
-                    } catch (OperationCanceledException) {
-                        logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Cancelled for ORM: {ormTexture.Name}");
-                    } catch (Exception ex) {
-                        logService.LogError($"Error loading packed ORM texture {ormTexture.Name}: {ex.Message}");
-                        ResetPreviewState();
-                        ClearD3D11Viewer();
-                    }
-                } else {
-                    // Not packed yet - clear preview
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] ORM texture not packed yet, clearing preview");
-                    ResetPreviewState();
-                    ClearD3D11Viewer();
-
-                    // Show info that it's not packed yet
-                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
-                    TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
-                    TextureSizeTextBlock.Text = "Size: N/A";
-                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
-                    TextureFormatTextBlock.Text = "Format: Not packed";
-                }
-
-                return; // Exit early for ORM textures
-            }
-
-            if (TexturesDataGrid.SelectedItem is TextureResource selectedTexture) {
-                logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Selected texture: {selectedTexture.Name}, Path: {selectedTexture.Path ?? "NULL"}");
-
-                // Show conversion settings panel, hide ORM panel (for regular viewModel.Textures)
-                if (ConversionSettingsExpander != null) {
-                    ConversionSettingsExpander.Visibility = Visibility.Visible;
-                }
-                if (ORMPanel != null) {
-                    ORMPanel.Visibility = Visibility.Collapsed;
-                }
-
-                ResetPreviewState();
-                ClearD3D11Viewer();
-
-                if (!string.IsNullOrEmpty(selectedTexture.Path)) {
-                    logService.LogInfo($"[TexturesDataGrid_SelectionChanged] Path is valid, entering main load block");
-                    try {
-                        // ��������� ���������� � �������� �����
-                        TextureNameTextBlock.Text = "Texture Name: " + selectedTexture.Name;
-                        TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", selectedTexture.Resolution);
-                        AssetProcessor.Helpers.SizeConverter sizeConverter = new();
-                        object size = AssetProcessor.Helpers.SizeConverter.Convert(selectedTexture.Size) ?? "Unknown size";
-                        TextureSizeTextBlock.Text = "Size: " + size;
-
-                        // Add color space info
-                        bool isSRGB = IsSRGBTexture(selectedTexture);
-                        string colorSpace = isSRGB ? "sRGB" : "Linear";
-                        string textureType = selectedTexture.TextureType ?? "Unknown";
-                        TextureColorSpaceTextBlock.Text = $"Color Space: {colorSpace} ({textureType})";
-
-                        // Format will be updated when texture is loaded
-                        TextureFormatTextBlock.Text = "Format: Loading...";
-
-                        // Load conversion settings for this texture (lightweight)
-                        logService.LogInfo($"[TextureSelection] Loading conversion settings for: {selectedTexture.Name}");
-                        LoadTextureConversionSettings(selectedTexture);
-                        logService.LogInfo($"[TextureSelection] Conversion settings loaded for: {selectedTexture.Name}");
-
-                        // Check cancellation before starting heavy operations
-                        cancellationToken.ThrowIfCancellationRequested();
-                        logService.LogInfo($"[TextureSelection] Starting texture load for: {selectedTexture.Name}");
-
-                        // FIXED: Separate D3D11 native KTX2 loading from PNG extraction
-                        // to prevent conflicts
-                        bool ktxLoaded = false;
-
-                        if (texturePreviewService.IsUsingD3D11Renderer) {
-                            // D3D11 MODE: Try D3D11 native KTX2 loading (always use native when D3D11 is active)
-                            logService.LogInfo($"[TextureSelection] Attempting KTX2 load for: {selectedTexture.Name}");
-                            ktxLoaded = await TryLoadKtx2ToD3D11Async(selectedTexture, cancellationToken);
-                            logService.LogInfo($"[TextureSelection] KTX2 load result for {selectedTexture.Name}: {ktxLoaded}");
-
-                            if (ktxLoaded) {
-                                // KTX2 loaded successfully to D3D11, still load source for histogram/info
-                                // If user is in Source mode, show the PNG; otherwise just load for histogram
-                                bool showInViewer = (texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source);
-                                logService.LogInfo($"[TextureSelection] Loading source preview for {selectedTexture.Name}, showInViewer: {showInViewer}");
-                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: showInViewer);
-                                logService.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
-                            } else {
-                                // No KTX2 or failed, fallback to source preview
-                                logService.LogInfo($"[TextureSelection] No KTX2, loading source preview for: {selectedTexture.Name}");
-                                await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
-                                logService.LogInfo($"[TextureSelection] Source preview loaded for: {selectedTexture.Name}");
-                            }
-                        } else {
-                            // WPF MODE: Use PNG extraction for mipmaps (old method)
-                            Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(selectedTexture, cancellationToken);
-                            await LoadSourcePreviewAsync(selectedTexture, cancellationToken, loadToViewer: true);
-                            ktxLoaded = await ktxPreviewTask;
-                        }
-
-                        if (!ktxLoaded) {
-                            // Use BeginInvoke to avoid deadlock
-                            _ = Dispatcher.BeginInvoke(new Action(() => {
-                                if (cancellationToken.IsCancellationRequested) {
-                                    return;
-                                }
-
-                                texturePreviewService.IsKtxPreviewAvailable = false;
-
-                                if (!texturePreviewService.IsUserPreviewSelection && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
-                                    SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: false);
-                                } else {
-                                    UpdatePreviewSourceControls();
-                                }
-                            }));
-                        }
-                    } catch (OperationCanceledException) {
-                        logService.LogInfo($"[TextureSelection] Cancelled for: {selectedTexture.Name}");
-                        // �������� ���� �������� - ��� ���������
-                    } catch (Exception ex) {
-                        logService.LogError($"Error loading texture {selectedTexture.Name}: {ex.Message}");
-                    }
-                }
-            }
+            // Delegate to ViewModel for debouncing, cancellation, and preview loading
+            var selectedResource = TexturesDataGrid.SelectedItem as BaseResource;
+            viewModel.TextureSelection.SelectTextureCommand.Execute(selectedResource);
         }
 
         /// <summary>
@@ -796,29 +573,238 @@ namespace AssetProcessor {
             // Restore selection
             TexturesDataGrid.SelectedItem = selectedItem;
 
-            // Reload the preview by simulating selection changed
-            if (selectedItem != null) {
-                textureLoadCancellation?.Cancel();
-                textureLoadCancellation = new CancellationTokenSource();
-
+            // Reload the preview using ViewModel
+            if (selectedItem is BaseResource resource) {
                 // Small delay to allow DataGrid to rebind
                 await Task.Delay(100);
 
-                // Trigger selection changed logic manually
-                logService.LogInfo($"[RefreshCurrentTexture] Triggering preview reload for: {(selectedItem as TextureResource)?.Name ?? "unknown"}");
+                // Trigger preview reload via ViewModel
+                logService.LogInfo($"[RefreshCurrentTexture] Triggering preview reload for: {resource.Name ?? "unknown"}");
+                await viewModel.TextureSelection.RefreshPreviewCommand.ExecuteAsync(null);
+            }
+        }
 
-                TexturesDataGrid_SelectionChanged(TexturesDataGrid, new SelectionChangedEventArgs(
-                    System.Windows.Controls.Primitives.Selector.SelectionChangedEvent,
-                    new List<object>(),
-                    new List<object> { selectedItem }
-                ));
+        #region TextureSelectionViewModel Event Handlers
+
+        /// <summary>
+        /// Handles panel visibility changes requested by TextureSelectionViewModel
+        /// </summary>
+        private void OnPanelVisibilityRequested(object? sender, PanelVisibilityRequestEventArgs e) {
+            if (ConversionSettingsExpander != null) {
+                ConversionSettingsExpander.Visibility = e.ShowConversionSettingsPanel ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (ORMPanel != null) {
+                ORMPanel.Visibility = e.ShowORMPanel ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 
         /// <summary>
+        /// Handles ORM texture selection - initializes ORM panel with available textures
+        /// </summary>
+        private void OnORMTextureSelected(object? sender, ORMTextureSelectedEventArgs e) {
+            logService.LogInfo($"[OnORMTextureSelected] Initializing ORM panel for: {e.ORMTexture.Name}");
+
+            if (ORMPanel != null) {
+                // Initialize ORM panel with available textures (exclude other ORM textures)
+                var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                logService.LogInfo($"[OnORMTextureSelected] availableTextures count: {availableTextures.Count}");
+                ORMPanel.Initialize(this, availableTextures);
+                ORMPanel.SetORMTexture(e.ORMTexture);
+                logService.LogInfo($"[OnORMTextureSelected] ORMPanel initialized and texture set");
+            } else {
+                logService.LogInfo($"[OnORMTextureSelected] ERROR: ORMPanel is NULL!");
+            }
+        }
+
+        /// <summary>
+        /// Handles debounced texture selection - performs actual preview loading
+        /// </summary>
+        private async void OnTextureSelectionReady(object? sender, TextureSelectionReadyEventArgs e) {
+            var ct = e.CancellationToken;
+
+            try {
+                if (e.IsORM) {
+                    await LoadORMTexturePreviewAsync((ORMTextureResource)e.Texture, e.IsPacked, ct);
+                } else {
+                    await LoadTexturePreviewAsync(e.Texture, ct);
+                }
+
+                viewModel.TextureSelection.OnPreviewLoadCompleted(true);
+            } catch (OperationCanceledException) {
+                logService.LogInfo($"[OnTextureSelectionReady] Cancelled for: {e.Texture.Name}");
+            } catch (Exception ex) {
+                logService.LogError($"[OnTextureSelectionReady] Error loading texture {e.Texture.Name}: {ex.Message}");
+                viewModel.TextureSelection.OnPreviewLoadCompleted(false, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Loads preview for ORM texture (packed or unpacked)
+        /// </summary>
+        private async Task LoadORMTexturePreviewAsync(ORMTextureResource ormTexture, bool isPacked, CancellationToken ct) {
+            logService.LogInfo($"[LoadORMTexturePreview] Loading preview for ORM: {ormTexture.Name}, isPacked: {isPacked}");
+
+            // Reset preview state
+            ResetPreviewState();
+            ClearD3D11Viewer();
+
+            // Update texture info
+            TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+            TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+
+            if (!isPacked || string.IsNullOrEmpty(ormTexture.Path)) {
+                // Not packed yet - show info
+                TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
+                TextureSizeTextBlock.Text = "Size: N/A";
+                TextureFormatTextBlock.Text = "Format: Not packed";
+                return;
+            }
+
+            // Load the packed KTX2 file for preview and histogram
+            bool ktxLoaded = false;
+
+            if (texturePreviewService.IsUsingD3D11Renderer) {
+                // D3D11 MODE: Try native KTX2 loading
+                logService.LogInfo($"[LoadORMTexturePreview] Loading packed ORM to D3D11: {ormTexture.Name}");
+                ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, ct);
+
+                if (!ktxLoaded) {
+                    // Fallback: Try extracting PNG from KTX2
+                    logService.LogInfo($"[LoadORMTexturePreview] D3D11 native loading failed, trying PNG extraction");
+                    ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, ct);
+                }
+            } else {
+                // WPF MODE: Extract PNG from KTX2
+                ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, ct);
+            }
+
+            // Extract histogram for packed ORM textures
+            if (ktxLoaded && !ct.IsCancellationRequested) {
+                string? ormPath = ormTexture.Path;
+                string ormName = ormTexture.Name ?? "unknown";
+                logger.Info($"[ORM Histogram] Starting extraction for: {ormName}, path: {ormPath}");
+
+                _ = Task.Run(async () => {
+                    try {
+                        if (string.IsNullOrEmpty(ormPath)) {
+                            logger.Warn($"[ORM Histogram] Path is empty for: {ormName}");
+                            return;
+                        }
+
+                        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+                        var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
+                        logger.Info($"[ORM Histogram] Extracted {mipmaps.Count} mipmaps for: {ormName}");
+
+                        if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
+                            var mip0Bitmap = mipmaps[0].Bitmap;
+                            logger.Info($"[ORM Histogram] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight}");
+                            _ = Dispatcher.BeginInvoke(new Action(() => {
+                                if (!ct.IsCancellationRequested) {
+                                    texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
+                                    UpdateHistogram(mip0Bitmap);
+                                    logger.Info($"[ORM Histogram] Histogram updated for: {ormName}");
+                                }
+                            }));
+                        }
+                    } catch (OperationCanceledException) {
+                        logger.Info($"[ORM Histogram] Extraction cancelled/timeout for: {ormName}");
+                    } catch (Exception ex) {
+                        logger.Warn(ex, $"[ORM Histogram] Failed to extract for: {ormName}");
+                    }
+                });
+            }
+
+            if (!ktxLoaded) {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
+                    if (ct.IsCancellationRequested) return;
+                    texturePreviewService.IsKtxPreviewAvailable = false;
+                    TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
+                    logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
+                }));
+            }
+        }
+
+        /// <summary>
+        /// Loads preview for regular texture (PNG/JPG source)
+        /// </summary>
+        private async Task LoadTexturePreviewAsync(TextureResource texture, CancellationToken ct) {
+            logService.LogInfo($"[LoadTexturePreview] Loading preview for: {texture.Name}, Path: {texture.Path ?? "NULL"}");
+
+            ResetPreviewState();
+            ClearD3D11Viewer();
+
+            if (string.IsNullOrEmpty(texture.Path)) {
+                return;
+            }
+
+            // Update texture info
+            TextureNameTextBlock.Text = "Texture Name: " + texture.Name;
+            TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", texture.Resolution);
+            AssetProcessor.Helpers.SizeConverter sizeConverter = new();
+            object size = AssetProcessor.Helpers.SizeConverter.Convert(texture.Size) ?? "Unknown size";
+            TextureSizeTextBlock.Text = "Size: " + size;
+
+            // Add color space info
+            bool isSRGB = IsSRGBTexture(texture);
+            string colorSpace = isSRGB ? "sRGB" : "Linear";
+            string textureType = texture.TextureType ?? "Unknown";
+            TextureColorSpaceTextBlock.Text = $"Color Space: {colorSpace} ({textureType})";
+            TextureFormatTextBlock.Text = "Format: Loading...";
+
+            // Load conversion settings for this texture
+            logService.LogInfo($"[LoadTexturePreview] Loading conversion settings for: {texture.Name}");
+            LoadTextureConversionSettings(texture);
+
+            ct.ThrowIfCancellationRequested();
+
+            bool ktxLoaded = false;
+
+            if (texturePreviewService.IsUsingD3D11Renderer) {
+                // D3D11 MODE: Try D3D11 native KTX2 loading
+                logService.LogInfo($"[LoadTexturePreview] Attempting KTX2 load for: {texture.Name}");
+                ktxLoaded = await TryLoadKtx2ToD3D11Async(texture, ct);
+                logService.LogInfo($"[LoadTexturePreview] KTX2 load result: {ktxLoaded}");
+
+                if (ktxLoaded) {
+                    // KTX2 loaded successfully, still load source for histogram
+                    bool showInViewer = (texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source);
+                    logService.LogInfo($"[LoadTexturePreview] Loading source for histogram, showInViewer: {showInViewer}");
+                    await LoadSourcePreviewAsync(texture, ct, loadToViewer: showInViewer);
+                } else {
+                    // No KTX2 or failed, fallback to source preview
+                    logService.LogInfo($"[LoadTexturePreview] No KTX2, loading source preview");
+                    await LoadSourcePreviewAsync(texture, ct, loadToViewer: true);
+                }
+            } else {
+                // WPF MODE: Use PNG extraction for mipmaps
+                Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(texture, ct);
+                await LoadSourcePreviewAsync(texture, ct, loadToViewer: true);
+                ktxLoaded = await ktxPreviewTask;
+            }
+
+            if (!ktxLoaded) {
+                _ = Dispatcher.BeginInvoke(new Action(() => {
+                    if (ct.IsCancellationRequested) return;
+
+                    texturePreviewService.IsKtxPreviewAvailable = false;
+
+                    if (!texturePreviewService.IsUserPreviewSelection && texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: false);
+                    } else {
+                        UpdatePreviewSourceControls();
+                    }
+                }));
+            }
+        }
+
+        #endregion
+
+        /// <summary>
         /// NEW METHOD: Load KTX2 directly to D3D11 viewer (native format, all mipmaps).
         /// </summary>
-        
+
 
         private async Task<bool> TryLoadKtx2ToD3D11Async(TextureResource selectedTexture, CancellationToken cancellationToken) {
             string? ktxPath = texturePreviewService.GetExistingKtx2Path(selectedTexture.Path, ProjectFolderPath);
@@ -2717,23 +2703,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                // ��������� ��������� �������� � ViewModel ��� ���������� �������
-                if (DataContext is MainViewModel viewModel) {
-                    viewModel.SelectedMaterial = selectedMaterial;
-                }
+                // Update MainViewModel's selected material for filtering
+                viewModel.SelectedMaterial = selectedMaterial;
 
-                if (!string.IsNullOrEmpty(selectedMaterial.Path) && File.Exists(selectedMaterial.Path)) {
-                    MaterialResource? materialParameters = await assetResourceService.LoadMaterialFromFileAsync(
-                        selectedMaterial.Path,
-                        CancellationToken.None);
-                    if (materialParameters != null) {
-                        selectedMaterial = materialParameters;
-                        DisplayMaterialParameters(selectedMaterial); // �������� ���� ������ MaterialResource
-                    }
-                }
-
-                // ������������� ������������� �� ������� ������� � �������� ��������� ��������
-                // SwitchToTexturesTabAndSelectTexture(selectedMaterial); // ���������: �� ������������� ������������� ��� ������ ���������
+                // Delegate to MaterialSelectionViewModel for parameter loading
+                // The ViewModel will raise MaterialParametersLoaded event which triggers DisplayMaterialParameters
+                await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
             }
         }
 
@@ -3759,85 +3734,78 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void UpdateTextureConversionSettings(TextureResource texture) {
             try {
+                // Get project ID
+                int projectId = 0;
+                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                    int.TryParse(viewModel.SelectedProjectId, out projectId);
+                }
+                if (projectId <= 0) return;
+
+                // Build TextureSettings from UI panel
                 var compression = ConversionSettingsPanel.GetCompressionSettings();
                 var mipProfile = ConversionSettingsPanel.GetMipProfileSettings();
+                var histogramSettings = ConversionSettingsPanel.GetHistogramSettings();
 
                 // Don't update CompressionFormat here - it shows actual compression from KTX2 file,
                 // not the intended settings from the UI panel
                 texture.PresetName = ConversionSettingsPanel.PresetName ?? "(Custom)";
 
-                // Сохраняем настройки в ResourceSettingsService для использования при экспорте модели
-                SaveTextureSettingsToService(texture, compression, mipProfile);
+                var settings = new Services.TextureSettings {
+                    PresetName = ConversionSettingsPanel.PresetName,
+
+                    // Compression
+                    CompressionFormat = compression.CompressionFormat.ToString(),
+                    ColorSpace = compression.ColorSpace.ToString(),
+                    CompressionLevel = compression.CompressionLevel,
+                    QualityLevel = compression.QualityLevel,
+                    UASTCQuality = compression.UASTCQuality,
+                    UseUASTCRDO = compression.UseUASTCRDO,
+                    UASTCRDOQuality = compression.UASTCRDOQuality,
+                    UseETC1SRDO = compression.UseETC1SRDO,
+                    ETC1SRDOLambda = 1.0f,
+                    KTX2Supercompression = compression.KTX2Supercompression.ToString(),
+                    KTX2ZstdLevel = compression.KTX2ZstdLevel,
+
+                    // Mipmaps
+                    GenerateMipmaps = compression.GenerateMipmaps,
+                    UseCustomMipmaps = compression.UseCustomMipmaps,
+                    FilterType = mipProfile?.Filter.ToString() ?? "Kaiser",
+                    ApplyGammaCorrection = mipProfile?.ApplyGammaCorrection ?? true,
+                    Gamma = mipProfile?.Gamma ?? 2.2f,
+                    NormalizeNormals = mipProfile?.NormalizeNormals ?? false,
+
+                    // Normal map
+                    ConvertToNormalMap = compression.ConvertToNormalMap,
+                    NormalizeVectors = compression.NormalizeVectors,
+
+                    // Advanced
+                    PerceptualMode = compression.PerceptualMode,
+                    SeparateAlpha = compression.SeparateAlpha,
+                    ForceAlphaChannel = compression.ForceAlphaChannel,
+                    RemoveAlphaChannel = compression.RemoveAlphaChannel,
+                    WrapMode = compression.WrapMode.ToString(),
+
+                    // Histogram
+                    HistogramEnabled = histogramSettings != null && histogramSettings.Mode != TextureConversion.Core.HistogramMode.Off,
+                    HistogramMode = histogramSettings?.Mode.ToString() ?? "Off",
+                    HistogramQuality = histogramSettings?.Quality.ToString() ?? "HighQuality",
+                    HistogramChannelMode = histogramSettings?.ChannelMode.ToString() ?? "PerChannel",
+                    HistogramPercentileLow = histogramSettings?.PercentileLow ?? 5.0f,
+                    HistogramPercentileHigh = histogramSettings?.PercentileHigh ?? 95.0f,
+                    HistogramKneeWidth = histogramSettings?.KneeWidth ?? 0.02f
+                };
+
+                // Delegate to ViewModel for saving
+                viewModel.ConversionSettings.SaveSettingsCommand.Execute(new SettingsSaveRequest {
+                    Texture = texture,
+                    Settings = settings,
+                    ProjectId = projectId
+                });
 
                 logService.LogInfo($"Updated conversion settings for {texture.Name}");
             } catch (Exception ex) {
                 logService.LogError($"Error updating conversion settings: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Сохраняет настройки текстуры в ResourceSettingsService
-        /// </summary>
-        private void SaveTextureSettingsToService(
-            TextureResource texture,
-            TextureConversion.Settings.CompressionSettingsData compression,
-            TextureConversion.Settings.MipProfileSettings? mipProfile) {
-
-            // Получаем projectId
-            if (string.IsNullOrEmpty(viewModel.SelectedProjectId) ||
-                !int.TryParse(viewModel.SelectedProjectId, out var projectId)) {
-                return; // Нет проекта - не сохраняем
-            }
-
-            var histogramSettings = ConversionSettingsPanel.GetHistogramSettings();
-
-            var settings = new Services.TextureSettings {
-                PresetName = ConversionSettingsPanel.PresetName,
-
-                // Compression
-                CompressionFormat = compression.CompressionFormat.ToString(),
-                ColorSpace = compression.ColorSpace.ToString(),
-                CompressionLevel = compression.CompressionLevel,
-                QualityLevel = compression.QualityLevel,
-                UASTCQuality = compression.UASTCQuality,
-                UseUASTCRDO = compression.UseUASTCRDO,
-                UASTCRDOQuality = compression.UASTCRDOQuality,
-                UseETC1SRDO = compression.UseETC1SRDO,
-                ETC1SRDOLambda = 1.0f, // Default value
-                KTX2Supercompression = compression.KTX2Supercompression.ToString(),
-                KTX2ZstdLevel = compression.KTX2ZstdLevel,
-
-                // Mipmaps
-                GenerateMipmaps = compression.GenerateMipmaps,
-                UseCustomMipmaps = compression.UseCustomMipmaps,
-                FilterType = mipProfile?.Filter.ToString() ?? "Kaiser",
-                ApplyGammaCorrection = mipProfile?.ApplyGammaCorrection ?? true,
-                Gamma = mipProfile?.Gamma ?? 2.2f,
-                NormalizeNormals = mipProfile?.NormalizeNormals ?? false,
-
-                // Normal map
-                ConvertToNormalMap = compression.ConvertToNormalMap,
-                NormalizeVectors = compression.NormalizeVectors,
-
-                // Advanced
-                PerceptualMode = compression.PerceptualMode,
-                SeparateAlpha = compression.SeparateAlpha,
-                ForceAlphaChannel = compression.ForceAlphaChannel,
-                RemoveAlphaChannel = compression.RemoveAlphaChannel,
-                WrapMode = compression.WrapMode.ToString(),
-
-                // Histogram
-                HistogramEnabled = histogramSettings != null && histogramSettings.Mode != TextureConversion.Core.HistogramMode.Off,
-                HistogramMode = histogramSettings?.Mode.ToString() ?? "Off",
-                HistogramQuality = histogramSettings?.Quality.ToString() ?? "HighQuality",
-                HistogramChannelMode = histogramSettings?.ChannelMode.ToString() ?? "PerChannel",
-                HistogramPercentileLow = histogramSettings?.PercentileLow ?? 5.0f,
-                HistogramPercentileHigh = histogramSettings?.PercentileHigh ?? 95.0f,
-                HistogramKneeWidth = histogramSettings?.KneeWidth ?? 0.02f
-            };
-
-            Services.ResourceSettingsService.Instance.SaveTextureSettings(projectId, texture.ID, settings);
-            logService.LogInfo($"Saved texture settings to ResourceSettingsService: {texture.Name} (ID={texture.ID})");
         }
 
         /// <summary>
@@ -3927,75 +3895,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void LoadTextureConversionSettings(TextureResource texture) {
-            logService.LogInfo($"[LoadTextureConversionSettings] START for: {texture.Name}");
-
-            // ВАЖНО: Устанавливаем путь текстуры для auto-detect normal map!
-            ConversionSettingsPanel.SetCurrentTexturePath(texture.Path);
-
-            // ВАЖНО: Очищаем NormalMapPath перед auto-detect normal map!
-            ConversionSettingsPanel.ClearNormalMapPath();
-
-            // Сначала проверяем, есть ли сохранённые настройки в ResourceSettingsService
-            if (!string.IsNullOrEmpty(viewModel.SelectedProjectId) &&
-                int.TryParse(viewModel.SelectedProjectId, out var projectId)) {
-
-                var savedSettings = Services.ResourceSettingsService.Instance.GetTextureSettings(projectId, texture.ID);
-                if (savedSettings != null) {
-                    logService.LogInfo($"[LoadTextureConversionSettings] Found saved settings for texture {texture.Name} (ID={texture.ID})");
-                    LoadSavedSettingsToUI(savedSettings);
-                    logService.LogInfo($"[LoadTextureConversionSettings] END (loaded from saved) for: {texture.Name}");
-                    return;
-                }
+            // Delegate to ViewModel - it will raise SettingsLoaded event
+            // which is handled by OnConversionSettingsLoaded
+            int projectId = 0;
+            if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                int.TryParse(viewModel.SelectedProjectId, out projectId);
             }
 
-            // Нет сохранённых настроек - auto-detect preset по имени файла
-            var presetManager = new TextureConversion.Settings.PresetManager();
-            var matchedPreset = presetManager.FindPresetByFileName(texture.Name ?? "");
-            logService.LogInfo($"[LoadTextureConversionSettings] PresetManager.FindPresetByFileName returned: {matchedPreset?.Name ?? "null"}");
-
-            if (matchedPreset != null) {
-                // ����� preset �� ����� ����� (�������� "gloss" > "Gloss (Linear + Toksvig)")
-                texture.PresetName = matchedPreset.Name;
-                logService.LogInfo($"Auto-detected preset '{matchedPreset.Name}' for texture {texture.Name}");
-
-                // ��������� ������� preset � dropdown
-                var dropdownItems = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().ToList();
-                logService.LogInfo($"[LoadTextureConversionSettings] Dropdown contains {dropdownItems.Count} items: {string.Join(", ", dropdownItems)}");
-
-                bool presetExistsInDropdown = dropdownItems.Contains(matchedPreset.Name);
-                logService.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' exists in dropdown: {presetExistsInDropdown}");
-
-                // ��������: ������������� preset ��� �������� ������� ����� �� ����������� �������� ��������!
-                if (presetExistsInDropdown) {
-                    logService.LogInfo($"[LoadTextureConversionSettings] Setting dropdown SILENTLY to preset: {matchedPreset.Name}");
-                    ConversionSettingsPanel.SetPresetSilently(matchedPreset.Name);
-                } else {
-                    logService.LogInfo($"[LoadTextureConversionSettings] Preset '{matchedPreset.Name}' not in dropdown, setting to Custom SILENTLY");
-                    ConversionSettingsPanel.SetPresetSilently("Custom");
-                }
-            } else {
-                // Preset �� ������ �� ����� ����� - ���������� "Custom"
-                texture.PresetName = "";
-                logService.LogInfo($"No preset matched for '{texture.Name}', using Custom SILENTLY");
-                ConversionSettingsPanel.SetPresetSilently("Custom");
-            }
-
-            logService.LogInfo($"[LoadTextureConversionSettings] END for: {texture.Name}");
-
-            // ��������� default ��������� ��� ���� �������� (���� Custom)
-            if (string.IsNullOrEmpty(texture.PresetName)) {
-                var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
-                var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
-                    MapTextureTypeToCore(textureType));
-
-                var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
-                var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
-                var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
-
-                ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
-                // Don't override CompressionFormat if already set from KTX2 scan
-                // CompressionFormat shows actual compression, not intended settings
-            }
+            viewModel.ConversionSettings.LoadSettingsForTextureCommand.Execute(new SettingsLoadRequest {
+                Texture = texture,
+                ProjectId = projectId
+            });
         }
 
         // Initialize compression format and preset for texture without updating UI panel
@@ -4410,304 +4320,304 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
-        private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
-            try {
-                var ormTexture = ormTextureService.CreateEmptyORM(viewModel.Textures);
-                viewModel.Textures.Add(ormTexture);
+        #region ORMTextureViewModel Event Handlers
 
-                TexturesDataGrid.SelectedItem = ormTexture;
-                TexturesDataGrid.ScrollIntoView(ormTexture);
+        private void OnORMCreated(object? sender, ORMCreatedEventArgs e) {
+            // Select and scroll to the newly created ORM texture
+            tabControl.SelectedItem = TexturesTabItem;
+            TexturesDataGrid.SelectedItem = e.ORMTexture;
+            TexturesDataGrid.ScrollIntoView(e.ORMTexture);
 
-                logService.LogInfo($"Created new ORM texture: {ormTexture.Name}");
-            } catch (Exception ex) {
-                logService.LogError($"Error creating ORM texture: {ex.Message}");
-                MessageBox.Show($"Failed to create ORM texture: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            // Show success message with details
+            if (e.Mode.HasValue) {
+                MessageBox.Show(
+                    $"Created ORM texture:\n\n" +
+                    $"Name: {e.ORMTexture.Name}\n" +
+                    $"Mode: {e.Mode}\n" +
+                    $"AO: {e.AOSource?.Name ?? "None"}\n" +
+                    $"Gloss: {e.GlossSource?.Name ?? "None"}\n" +
+                    $"Metallic: {e.MetallicSource?.Name ?? "None"}",
+                    "ORM Texture Created", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        private void OnORMDeleted(object? sender, ORMDeletedEventArgs e) {
+            logService.LogInfo($"ORM texture deleted: {e.ORMTexture.Name}");
+        }
+
+        private void OnORMConfirmationRequested(object? sender, ORMConfirmationRequestEventArgs e) {
+            var result = MessageBox.Show(e.Message, "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result == MessageBoxResult.Yes) {
+                e.OnConfirmed?.Invoke();
+            }
+        }
+
+        private void OnORMErrorOccurred(object? sender, ORMErrorEventArgs e) {
+            MessageBox.Show(e.Message, e.Title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void OnORMBatchCreationCompleted(object? sender, ORMBatchCreationCompletedEventArgs e) {
+            var message = $"Batch ORM Creation Results:\n\n" +
+                         $"Created: {e.Created}\n" +
+                         $"Skipped: {e.Skipped}\n" +
+                         $"Errors: {e.Errors.Count}";
+
+            if (e.Errors.Count > 0) {
+                message += $"\n\nErrors:\n{string.Join("\n", e.Errors.Take(5))}";
+                if (e.Errors.Count > 5) {
+                    message += $"\n... and {e.Errors.Count - 5} more";
+                }
+            }
+
+            MessageBox.Show(message, "Batch ORM Creation Complete",
+                MessageBoxButton.OK, e.Errors.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
+
+        #endregion
+
+        #region TextureConversionSettingsViewModel Event Handlers
+
+        private void OnConversionSettingsLoaded(object? sender, SettingsLoadedEventArgs e) {
+            logService.LogInfo($"[OnConversionSettingsLoaded] Settings loaded for {e.Texture.Name}, Source: {e.Source}");
+
+            // Set current texture path for auto-detect normal map
+            ConversionSettingsPanel.SetCurrentTexturePath(e.Texture.Path);
+            ConversionSettingsPanel.ClearNormalMapPath();
+
+            switch (e.Source) {
+                case SettingsSource.Saved:
+                    // Load saved settings to UI
+                    if (e.Settings != null) {
+                        LoadSavedSettingsToUI(e.Settings);
+                    }
+                    break;
+
+                case SettingsSource.AutoDetectedPreset:
+                    // Set preset silently (without triggering change events)
+                    if (!string.IsNullOrEmpty(e.PresetName)) {
+                        var dropdownItems = ConversionSettingsPanel.PresetComboBox.Items.Cast<string>().ToList();
+                        bool presetExistsInDropdown = dropdownItems.Contains(e.PresetName);
+
+                        if (presetExistsInDropdown) {
+                            ConversionSettingsPanel.SetPresetSilently(e.PresetName);
+                        } else {
+                            ConversionSettingsPanel.SetPresetSilently("Custom");
+                        }
+                    }
+                    break;
+
+                case SettingsSource.Default:
+                    // Set to Custom preset and apply default settings
+                    ConversionSettingsPanel.SetPresetSilently("Custom");
+
+                    // Apply default settings based on texture type
+                    var textureType = TextureResource.DetermineTextureType(e.Texture.Name ?? "");
+                    var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
+                        MapTextureTypeToCore(textureType));
+                    var compression = TextureConversion.Core.CompressionSettings.CreateETC1SDefault();
+                    var compressionData = TextureConversion.Settings.CompressionSettingsData.FromCompressionSettings(compression);
+                    var mipProfileData = TextureConversion.Settings.MipProfileSettings.FromMipGenerationProfile(profile);
+
+                    ConversionSettingsPanel.LoadSettings(compressionData, mipProfileData, true, false);
+                    break;
+            }
+        }
+
+        private void OnConversionSettingsSaved(object? sender, SettingsSavedEventArgs e) {
+            logService.LogInfo($"[OnConversionSettingsSaved] Settings saved for {e.Texture.Name}");
+        }
+
+        private void OnConversionSettingsError(object? sender, SettingsErrorEventArgs e) {
+            logService.LogError($"[OnConversionSettingsError] {e.Title}: {e.Message}");
+            MessageBox.Show(e.Message, e.Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        #endregion
+
+        #region AssetLoadingViewModel Event Handlers
+
+        private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
+            logService.LogInfo($"[OnAssetsLoaded] Loaded {e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials");
+
+            // Clear and update ViewModel collections
+            viewModel.Textures.Clear();
+            viewModel.Models.Clear();
+            viewModel.Materials.Clear();
+            viewModel.Assets.Clear();
+
+            foreach (var texture in e.Textures) {
+                viewModel.Textures.Add(texture);
+                viewModel.Assets.Add(texture);
+            }
+            foreach (var model in e.Models) {
+                viewModel.Models.Add(model);
+                viewModel.Assets.Add(model);
+            }
+            foreach (var material in e.Materials) {
+                viewModel.Materials.Add(material);
+                viewModel.Assets.Add(material);
+            }
+
+            // Update folder paths
+            folderPaths = new Dictionary<int, string>(e.FolderPaths);
+
+            // Post-processing UI updates
+            RecalculateIndices();
+            DeferUpdateLayout();
+            ApplyTextureGroupingIfEnabled();
+        }
+
+        private void OnAssetLoadingProgressChanged(object? sender, AssetLoadProgressEventArgs e) {
+            Dispatcher.InvokeAsync(() => {
+                ProgressBar.Maximum = e.Total;
+                ProgressBar.Value = e.Processed;
+                ProgressTextBlock.Text = $"{e.Processed}/{e.Total}";
+            });
+        }
+
+        private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {
+            logService.LogInfo($"[OnORMTexturesDetected] Detected {e.DetectedCount} ORM textures");
+
+            // ORMs are NOT added to collection - they serve as group headers (SubGroupName) only
+            // The ORM settings are accessible via component textures' ParentORMTexture property
+
+            // Apply associations to textures
+            foreach (var (texture, subGroupName, orm) in e.Associations) {
+                texture.SubGroupName = subGroupName;
+                texture.ParentORMTexture = orm;
+            }
+
+            // Recalculate UI
+            if (e.DetectedCount > 0) {
+                RecalculateIndices();
+                DeferUpdateLayout();
+            }
+        }
+
+        private void OnVirtualORMTexturesGenerated(object? sender, VirtualORMTexturesGeneratedEventArgs e) {
+            logService.LogInfo($"[OnVirtualORMTexturesGenerated] Generated {e.GeneratedCount} virtual ORM textures");
+
+            // Apply associations to textures FIRST (before adding ORMs)
+            foreach (var (texture, subGroupName, orm) in e.Associations) {
+                texture.SubGroupName = subGroupName;
+                texture.ParentORMTexture = orm;
+            }
+
+            // Restore sources for virtual ORMs (don't add to collection - they serve as group headers only)
+            foreach (var orm in e.GeneratedORMs) {
+                orm.RestoreSources(viewModel.Textures.OfType<TextureResource>().ToList());
+            }
+
+            // Recalculate UI
+            if (e.GeneratedCount > 0) {
+                RecalculateIndices();
+                DeferUpdateLayout();
+                // Re-apply grouping after SubGroupName is set and refresh view to see updated properties
+                ApplyTextureGroupingIfEnabled();
+                // Force refresh the view to recognize changed SubGroupName values
+                ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                view?.Refresh();
+            }
+        }
+
+        private void OnUploadStatesRestored(object? sender, UploadStatesRestoredEventArgs e) {
+            logService.LogInfo($"[OnUploadStatesRestored] Restored {e.RestoredCount} upload states");
+
+            // Apply restored states to textures
+            foreach (var (texture, status, hash, url, uploadedAt) in e.RestoredTextures) {
+                texture.UploadStatus = status;
+                texture.UploadedHash = hash;
+                texture.RemoteUrl = url;
+                texture.LastUploadedAt = uploadedAt;
+            }
+        }
+
+        private void OnAssetLoadingError(object? sender, AssetLoadErrorEventArgs e) {
+            logService.LogError($"[OnAssetLoadingError] {e.Title}: {e.Message}");
+            MessageBox.Show(e.Message, e.Title, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        #endregion
+
+        #region MaterialSelectionViewModel Event Handlers
+
+        private void OnMaterialParametersLoaded(object? sender, MaterialParametersLoadedEventArgs e) {
+            Dispatcher.Invoke(() => {
+                DisplayMaterialParameters(e.Material);
+            });
+        }
+
+        private void OnNavigateToTextureRequested(object? sender, NavigateToTextureEventArgs e) {
+            Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturesTabItem != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
+                }
+
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == e.TextureId);
+                if (texture != null) {
+                    var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(texture);
+
+                    TexturesDataGrid.SelectedItem = texture;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.Focus();
+
+                    logger.Info("Navigated to texture {TextureName} (ID {TextureId}) for {MapType}",
+                        texture.Name, texture.ID, e.MapType);
+                } else {
+                    logger.Warn("Texture with ID {TextureId} not found for navigation", e.TextureId);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void OnMaterialSelectionError(object? sender, MaterialErrorEventArgs e) {
+            logService.LogError($"[OnMaterialSelectionError] {e.Message}");
+        }
+
+        #endregion
+
+        private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
+            // Delegate to ViewModel
+            viewModel.ORMTexture.CreateEmptyORMCommand.Execute(viewModel.Textures);
         }
 
         // ORM from Material handlers
         private void CreateORMFromMaterial_Click(object sender, RoutedEventArgs e) {
-            MaterialResource? material = null;
-
-            // Get material from DataGrid selection or button context
-            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                material = selectedMaterial;
-            }
-
-            if (material == null) {
-                MessageBox.Show("Please select a material first.",
-                    "No Material Selected", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            try {
-                // Debug: Log material map IDs
-                logService.LogInfo($"Material '{material.Name}': AOMapId={material.AOMapId?.ToString() ?? "null"}, GlossMapId={material.GlossMapId?.ToString() ?? "null"}, " +
-                    $"MetalnessMapId={material.MetalnessMapId?.ToString() ?? "null"}, SpecularMapId={material.SpecularMapId?.ToString() ?? "null"}, UseMetalness={material.UseMetalness}");
-
-                // Find viewModel.Textures by map IDs
-                TextureResource? aoTexture = ormTextureService.FindTextureById(material.AOMapId, viewModel.Textures);
-                TextureResource? glossTexture = ormTextureService.FindTextureById(material.GlossMapId, viewModel.Textures);
-                TextureResource? metalnessTexture = null;
-
-                // Debug: Log found textures
-                logService.LogInfo($"Found textures: AO={aoTexture?.Name ?? "null"}, Gloss={glossTexture?.Name ?? "null"}");
-
-                // Smart workflow detection: prefer actual texture presence over UseMetalness flag
-                string workflowInfo = "";
-                string mapType = ""; // Track which map type we're actually using
-
-                // First try to find Metalness texture (modern PBR workflow)
-                TextureResource? metalnessCandidate = ormTextureService.FindTextureById(material.MetalnessMapId, viewModel.Textures);
-                TextureResource? specularCandidate = ormTextureService.FindTextureById(material.SpecularMapId, viewModel.Textures);
-
-                logService.LogInfo($"Texture candidates: Metalness={metalnessCandidate?.Name ?? "null"}, Specular={specularCandidate?.Name ?? "null"}");
-
-                if (metalnessCandidate != null) {
-                    // Metalness texture exists - use PBR workflow
-                    metalnessTexture = metalnessCandidate;
-                    workflowInfo = "Workflow: Metalness (PBR)";
-                    mapType = "Metallic";
-                    logService.LogInfo($"Metalness workflow detected: Metallic={metalnessTexture.Name}");
-                } else if (specularCandidate != null) {
-                    // Only Specular texture exists - use legacy workflow
-                    metalnessTexture = specularCandidate;
-                    workflowInfo = "Workflow: Specular (Legacy)\nNote: Specular map will be used as Metallic";
-                    mapType = "Specular";
-                    logService.LogInfo($"Specular workflow detected: Specular={metalnessTexture.Name}");
-                } else {
-                    // No metallic/specular texture found
-                    logService.LogWarn($"No metallic or specular texture found for material '{material.Name}' (MetalnessMapId={material.MetalnessMapId}, SpecularMapId={material.SpecularMapId})");
-                    workflowInfo = material.UseMetalness ? "Workflow: Metalness (PBR)" : "Workflow: Specular (Legacy)";
-                    mapType = material.UseMetalness ? "Metallic" : "Specular";
-                }
-
-                // Auto-detect packing mode
-                ChannelPackingMode mode = ormTextureService.DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
-
-                // If insufficient textures for ORM - don't create
-                if (mode == ChannelPackingMode.None) {
-                    // mapType is already set by workflow detection above
-                    var aoStatus = aoTexture != null ? $"Found: {aoTexture.Name}" : "Missing";
-                    var glossStatus = glossTexture != null ? $"Found: {glossTexture.Name}" : "Missing";
-                    var metallicStatus = metalnessTexture != null ? $"Found: {metalnessTexture.Name}" : "Missing";
-
-                    MessageBox.Show($"Cannot create ORM texture - insufficient textures.\n\n" +
-                                  $"{workflowInfo}\n\n" +
-                                  $"AO: {aoStatus}\n" +
-                                  $"Gloss: {glossStatus}\n" +
-                                  $"{mapType}: {metallicStatus}\n\n" +
-                                  $"Required combinations:\n" +
-                                  $"  - OGM: AO + Gloss + Metallic\n" +
-                                  $"  - OG: AO + Gloss",
-                        "Insufficient Textures", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                // Get base material name without _mat suffix
-                string baseMaterialName = (material.Name?.EndsWith("_mat", StringComparison.OrdinalIgnoreCase) == true)
-                    ? material.Name.Substring(0, material.Name.Length - 4)
-                    : (material.Name ?? "unknown");
-
-                // Generate ORM texture name based on packing mode
-                string modeSuffix = mode switch {
-                    ChannelPackingMode.OG => "_og",
-                    ChannelPackingMode.OGM => "_ogm",
-                    ChannelPackingMode.OGMH => "_ogmh",
-                    _ => "_ogm"
-                };
-                string ormTextureName = baseMaterialName + modeSuffix;
-
-                // Check if ORM texture already exists for this material
-                var existingORM = viewModel.Textures.OfType<ORMTextureResource>()
-                    .FirstOrDefault(t => t.Name == ormTextureName);
-
-                if (existingORM != null) {
-                    var result = MessageBox.Show($"ORM texture '{ormTextureName}' already exists.\n\nDo you want to update it?",
-                        "ORM Already Exists", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                    if (result == MessageBoxResult.No) {
-                        return;
-                    }
-                    // Remove existing
-                    viewModel.Textures.Remove(existingORM);
-                }
-
-                // Create ORM texture
-                var ormTexture = new ORMTextureResource {
-                    Name = ormTextureName,
-                    TextureType = "ORM (Virtual)",
-                    PackingMode = mode,
-                    AOSource = aoTexture,
-                    GlossSource = glossTexture,
-                    MetallicSource = metalnessTexture,
-                    Status = "Ready to pack"
-                };
-
-                // Add to viewModel.Textures collection
-                viewModel.Textures.Add(ormTexture);
-
-                // Select the newly created ORM texture and switch to viewModel.Textures tab
-                tabControl.SelectedItem = TexturesTabItem;
-                TexturesDataGrid.SelectedItem = ormTexture;
-                TexturesDataGrid.ScrollIntoView(ormTexture);
-
-                logService.LogInfo($"Created ORM texture '{ormTexture.Name}' with mode {mode}");
-                MessageBox.Show($"Created ORM texture:\n\n" +
-                              $"Name: {ormTexture.Name}\n" +
-                              $"Mode: {mode}\n" +
-                              $"AO: {aoTexture?.Name ?? "None"}\n" +
-                              $"Gloss: {glossTexture?.Name ?? "None"}\n" +
-                              $"Metallic: {metalnessTexture?.Name ?? "None"}",
-                    "ORM Texture Created", MessageBoxButton.OK, MessageBoxImage.Information);
-            } catch (Exception ex) {
-                logService.LogError($"Error creating ORM from material: {ex.Message}");
-                MessageBox.Show($"Failed to create ORM texture: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            // Delegate to ViewModel
+            var material = MaterialsDataGrid.SelectedItem as MaterialResource;
+            viewModel.ORMTexture.CreateORMFromMaterialCommand.Execute(new ORMFromMaterialRequest {
+                Material = material,
+                Textures = viewModel.Textures
+            });
         }
 
-        private void CreateORMForAllMaterials_Click(object sender, RoutedEventArgs e) {
-            try {
-                int created = 0;
-                int skipped = 0;
-                var errors = new List<string>();
-
-                foreach (var material in viewModel.Materials) {
-                    try {
-                        // Find textures
-                        TextureResource? aoTexture = ormTextureService.FindTextureById(material.AOMapId, viewModel.Textures);
-                        TextureResource? glossTexture = ormTextureService.FindTextureById(material.GlossMapId, viewModel.Textures);
-                        TextureResource? metalnessTexture = null;
-
-                        // Smart workflow detection: prefer actual texture presence over UseMetalness flag
-                        TextureResource? metalnessCandidate = ormTextureService.FindTextureById(material.MetalnessMapId, viewModel.Textures);
-                        TextureResource? specularCandidate = ormTextureService.FindTextureById(material.SpecularMapId, viewModel.Textures);
-
-                        if (metalnessCandidate != null) {
-                            metalnessTexture = metalnessCandidate;
-                        } else if (specularCandidate != null) {
-                            metalnessTexture = specularCandidate;
-                        }
-
-                        // Auto-detect mode
-                        ChannelPackingMode mode = ormTextureService.DetectPackingMode(aoTexture, glossTexture, metalnessTexture);
-
-                        if (mode == ChannelPackingMode.None) {
-                            skipped++;
-                            continue;
-                        }
-
-                        // Get base material name without _mat suffix
-                        string baseMaterialName = (material.Name?.EndsWith("_mat", StringComparison.OrdinalIgnoreCase) == true)
-                            ? material.Name.Substring(0, material.Name.Length - 4)
-                            : (material.Name ?? "unknown");
-
-                        // Generate ORM texture name based on packing mode
-                        string modeSuffix = mode switch {
-                            ChannelPackingMode.OG => "_og",
-                            ChannelPackingMode.OGM => "_ogm",
-                            ChannelPackingMode.OGMH => "_ogmh",
-                            _ => "_ogm"
-                        };
-                        string ormTextureName = baseMaterialName + modeSuffix;
-
-                        // Check if already exists
-                        var existingORM = viewModel.Textures.OfType<ORMTextureResource>()
-                            .FirstOrDefault(t => t.Name == ormTextureName);
-
-                        if (existingORM != null) {
-                            skipped++;
-                            continue;
-                        }
-
-                        // Create ORM texture
-                        var ormTexture = new ORMTextureResource {
-                            Name = ormTextureName,
-                            TextureType = "ORM (Virtual)",
-                            PackingMode = mode,
-                            AOSource = aoTexture,
-                            GlossSource = glossTexture,
-                            MetallicSource = metalnessTexture,
-                            Status = "Ready to pack"
-                        };
-
-                        viewModel.Textures.Add(ormTexture);
-                        created++;
-                    } catch (Exception ex) {
-                        errors.Add($"{material.Name}: {ex.Message}");
-                    }
-                }
-
-                var message = $"Batch ORM Creation Results:\n\n" +
-                             $"? Created: {created}\n" +
-                             $"? Skipped: {skipped}\n" +
-                             $"? Errors: {errors.Count}";
-
-                if (errors.Count > 0) {
-                    message += $"\n\nErrors:\n{string.Join("\n", errors.Take(5))}";
-                    if (errors.Count > 5) {
-                        message += $"\n... and {errors.Count - 5} more";
-                    }
-                }
-
-                logService.LogInfo($"Batch ORM creation: {created} created, {skipped} skipped, {errors.Count} errors");
-                MessageBox.Show(message, "Batch ORM Creation Complete",
-                    MessageBoxButton.OK, errors.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
-            } catch (Exception ex) {
-                logService.LogError($"Error in batch ORM creation: {ex.Message}");
-                MessageBox.Show($"Failed to create ORM textures: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+        private async void CreateORMForAllMaterials_Click(object sender, RoutedEventArgs e) {
+            // Delegate to ViewModel
+            await viewModel.ORMTexture.CreateAllORMsCommand.ExecuteAsync(new ORMBatchCreationRequest {
+                Materials = viewModel.Materials,
+                Textures = viewModel.Textures
+            });
         }
 
         private void DeleteORMTexture_Click(object sender, RoutedEventArgs e) {
-            // Get selected material to find associated ORM
-            if (MaterialsDataGrid.SelectedItem is not MaterialResource material) {
-                return;
-            }
+            // Delegate to ViewModel
+            var material = MaterialsDataGrid.SelectedItem as MaterialResource;
+            if (material == null) return;
 
-            // Get base material name without _mat suffix
-            string baseMaterialName = (material.Name?.EndsWith("_mat", StringComparison.OrdinalIgnoreCase) == true)
-                ? material.Name.Substring(0, material.Name.Length - 4)
-                : (material.Name ?? "unknown");
-
-            // Try all possible ORM suffixes
-            var ormTexture = viewModel.Textures.OfType<ORMTextureResource>()
-                .FirstOrDefault(t => t.Name == baseMaterialName + "_og" ||
-                                     t.Name == baseMaterialName + "_ogm" ||
-                                     t.Name == baseMaterialName + "_ogmh");
-
-            if (ormTexture == null) {
-                MessageBox.Show($"No ORM texture found for material '{material.Name}'.\n\nExpected: {baseMaterialName}_og, {baseMaterialName}_ogm, or {baseMaterialName}_ogmh",
-                    "Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source textures.",
-                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes) {
-                viewModel.Textures.Remove(ormTexture);
-                logService.LogInfo($"Deleted ORM texture: {ormTexture.Name}");
-            }
+            viewModel.ORMTexture.DeleteORMForMaterialCommand.Execute(new ORMDeleteRequest {
+                Material = material,
+                Textures = viewModel.Textures
+            });
         }
 
         private void DeleteORMFromList_Click(object sender, RoutedEventArgs e) {
-            // Get selected texture from TexturesDataGrid
-            if (TexturesDataGrid.SelectedItem is not ORMTextureResource ormTexture) {
-                MessageBox.Show("Please select an ORM texture to delete.\n\nThis option only works for ORM textures (textureName_og, textureName_ogm, textureName_ogmh).",
-                    "Not an ORM Texture", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var result = MessageBox.Show($"Delete ORM texture '{ormTexture.Name}'?\n\nThis will only remove the virtual container, not the source textures.",
-                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes) {
-                viewModel.Textures.Remove(ormTexture);
-                logService.LogInfo($"Deleted ORM texture '{ormTexture.Name}' from texture list");
-            }
+            // Delegate to ViewModel
+            var ormTexture = TexturesDataGrid.SelectedItem as ORMTextureResource;
+            viewModel.ORMTexture.DeleteORMCommand.Execute(new ORMDirectDeleteRequest {
+                ORMTexture = ormTexture,
+                Textures = viewModel.Textures
+            });
         }
 
         // Reads KTX2 file header to extract metadata (width, height, mip levels)

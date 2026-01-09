@@ -42,7 +42,7 @@ public class MainViewModelTests {
     [Fact]
     public async Task ProcessTexturesCommand_RaisesCompletionEvent() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "Texture1", Path = "file.png" }
             }
@@ -76,7 +76,7 @@ public class MainViewModelTests {
                 ResultToReturn = new AssetDownloadResult(true, "Downloaded 1 assets. Failed: 0", new ResourceDownloadBatchResult(1, 0, 1))
             };
 
-            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator, new DummyProjectSelectionService()) {
+            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator, new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
                 ApiKey = "token",
                 SelectedProjectId = "proj1",
                 SelectedBranchId = "branch1",
@@ -103,7 +103,7 @@ public class MainViewModelTests {
     [Fact]
     public void AutoDetectPresetsCommand_UpdatesStatusMessage() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
             ConversionSettingsProvider = new StubSettingsProvider(),
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "rock_albedo.png", Path = "c:/tex/rock_albedo.png" }
@@ -134,7 +134,7 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -144,6 +144,26 @@ public class MainViewModelTests {
         };
 
         return viewModel;
+    }
+
+    private static TextureSelectionViewModel CreateTextureSelectionViewModel() {
+        return new TextureSelectionViewModel(new DummyLogService());
+    }
+
+    private static ORMTextureViewModel CreateORMTextureViewModel() {
+        return new ORMTextureViewModel(new DummyORMTextureService(), new DummyLogService());
+    }
+
+    private static TextureConversionSettingsViewModel CreateConversionSettingsViewModel() {
+        return new TextureConversionSettingsViewModel(new DummyLogService());
+    }
+
+    private static AssetLoadingViewModel CreateAssetLoadingViewModel() {
+        return new AssetLoadingViewModel(new DummyLogService(), new DummyAssetLoadCoordinator());
+    }
+
+    private static MaterialSelectionViewModel CreateMaterialSelectionViewModel() {
+        return new MaterialSelectionViewModel(new DummyAssetResourceService(), new DummyLogService());
     }
 
     private sealed class FakeTextureProcessingService : ITextureProcessingService {
@@ -296,6 +316,34 @@ public class MainViewModelTests {
             Task.CompletedTask;
     }
 
+    private sealed class DummyLogService : ILogService {
+        public void LogDebug(string message) { }
+        public void LogInfo(string message) { }
+        public void LogWarn(string message) { }
+        public void LogError(string? message) { }
+        public void LogError(string message, Exception ex) { }
+    }
+
+    private sealed class DummyORMTextureService : IORMTextureService {
+        public ChannelPackingMode DetectPackingMode(TextureResource? ao, TextureResource? gloss, TextureResource? metallic) =>
+            ChannelPackingMode.None;
+
+        public TextureResource? FindTextureById(int? mapId, IEnumerable<TextureResource> textures) => null;
+
+        public WorkflowResult DetectWorkflow(MaterialResource material, IEnumerable<TextureResource> textures) =>
+            new WorkflowResult { IsMetalnessWorkflow = true, WorkflowInfo = "Test", MapTypeLabel = "Metallic" };
+
+        public ORMCreationResult CreateORMFromMaterial(MaterialResource material, IEnumerable<TextureResource> textures) =>
+            new ORMCreationResult { Success = false };
+
+        public ORMTextureResource CreateEmptyORM(IEnumerable<TextureResource> existingTextures) =>
+            new ORMTextureResource { Name = "test_orm" };
+
+        public string GenerateORMName(string? materialName, ChannelPackingMode mode) => "test_orm";
+
+        public string GetBaseMaterialName(string? materialName) => materialName ?? "test";
+    }
+
     private sealed class DummyProjectSelectionService : IProjectSelectionService {
         public string? ProjectFolderPath { get; private set; }
         public string? ProjectName { get; private set; }
@@ -334,6 +382,57 @@ public class MainViewModelTests {
             SelectedBranchId = branch.Id;
             SelectedBranchName = branch.Name;
             IsBranchInitializationInProgress = false;
+        }
+    }
+
+    private sealed class DummyAssetLoadCoordinator : IAssetLoadCoordinator {
+        public Task<AssetLoadResult> LoadAssetsFromJsonAsync(
+            string projectFolderPath,
+            string projectName,
+            string projectsRoot,
+            IProgress<AssetLoadProgress>? progress,
+            CancellationToken cancellationToken) {
+            return Task.FromResult(new AssetLoadResult {
+                Success = true,
+                Error = null,
+                Textures = new List<TextureResource>(),
+                Models = new List<ModelResource>(),
+                Materials = new List<MaterialResource>(),
+                FolderPaths = new Dictionary<int, string>()
+            });
+        }
+
+        public IReadOnlyList<ORMTextureResource> GenerateVirtualORMTextures(
+            IEnumerable<TextureResource> textures,
+            int projectId) {
+            return new List<ORMTextureResource>();
+        }
+
+        public Task<IReadOnlyList<ORMTextureResource>> DetectExistingORMTexturesAsync(
+            string projectFolderPath,
+            IEnumerable<TextureResource> existingTextures,
+            int projectId,
+            CancellationToken cancellationToken) {
+            return Task.FromResult<IReadOnlyList<ORMTextureResource>>(new List<ORMTextureResource>());
+        }
+    }
+
+    private sealed class DummyAssetResourceService : IAssetResourceService {
+        public void BuildFolderHierarchy(JArray assetsResponse, IDictionary<int, string> targetFolderPaths) { }
+
+        public Task<AssetProcessingResult?> ProcessAssetAsync(
+            JToken asset,
+            AssetProcessingParameters parameters,
+            CancellationToken cancellationToken) {
+            return Task.FromResult<AssetProcessingResult?>(null);
+        }
+
+        public Task<MaterialResource?> LoadMaterialFromFileAsync(string filePath, CancellationToken cancellationToken) {
+            return Task.FromResult<MaterialResource?>(null);
+        }
+
+        public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) {
+            return Task.CompletedTask;
         }
     }
 

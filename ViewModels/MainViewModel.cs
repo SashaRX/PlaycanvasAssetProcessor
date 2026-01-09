@@ -32,6 +32,11 @@ namespace AssetProcessor.ViewModels {
         private readonly IAssetDownloadCoordinator assetDownloadCoordinator;
         private readonly SynchronizationContext? synchronizationContext;
         private readonly IProjectSelectionService projectSelectionService;
+        private readonly TextureSelectionViewModel textureSelectionViewModel;
+        private readonly ORMTextureViewModel ormTextureViewModel;
+        private readonly TextureConversionSettingsViewModel conversionSettingsViewModel;
+        private readonly AssetLoadingViewModel assetLoadingViewModel;
+        private readonly MaterialSelectionViewModel materialSelectionViewModel;
         private long lastProgressUpdateTicks;
         private AssetDownloadProgress? pendingProgress;
         private BaseResource? pendingResource;
@@ -45,6 +50,31 @@ namespace AssetProcessor.ViewModels {
         public event EventHandler<BranchSelectionChangedEventArgs>? BranchSelectionChanged;
 
         public ITextureConversionSettingsProvider? ConversionSettingsProvider { get; set; }
+
+        /// <summary>
+        /// ViewModel for texture selection logic (debouncing, cancellation, state)
+        /// </summary>
+        public TextureSelectionViewModel TextureSelection => textureSelectionViewModel;
+
+        /// <summary>
+        /// ViewModel for ORM texture creation and management
+        /// </summary>
+        public ORMTextureViewModel ORMTexture => ormTextureViewModel;
+
+        /// <summary>
+        /// ViewModel for texture conversion settings management
+        /// </summary>
+        public TextureConversionSettingsViewModel ConversionSettings => conversionSettingsViewModel;
+
+        /// <summary>
+        /// ViewModel for asset loading orchestration
+        /// </summary>
+        public AssetLoadingViewModel AssetLoading => assetLoadingViewModel;
+
+        /// <summary>
+        /// ViewModel for material selection and texture navigation
+        /// </summary>
+        public MaterialSelectionViewModel MaterialSelection => materialSelectionViewModel;
 
         [ObservableProperty]
         private ObservableCollection<TextureResource> textures = [];
@@ -121,13 +151,23 @@ namespace AssetProcessor.ViewModels {
             ILocalCacheService localCacheService,
             IProjectSyncService projectSyncService,
             IAssetDownloadCoordinator assetDownloadCoordinator,
-            IProjectSelectionService projectSelectionService) {
+            IProjectSelectionService projectSelectionService,
+            TextureSelectionViewModel textureSelectionViewModel,
+            ORMTextureViewModel ormTextureViewModel,
+            TextureConversionSettingsViewModel conversionSettingsViewModel,
+            AssetLoadingViewModel assetLoadingViewModel,
+            MaterialSelectionViewModel materialSelectionViewModel) {
             this.playCanvasService = playCanvasService;
             this.textureProcessingService = textureProcessingService;
             this.localCacheService = localCacheService;
             this.projectSyncService = projectSyncService;
             this.assetDownloadCoordinator = assetDownloadCoordinator;
             this.projectSelectionService = projectSelectionService;
+            this.textureSelectionViewModel = textureSelectionViewModel;
+            this.ormTextureViewModel = ormTextureViewModel;
+            this.conversionSettingsViewModel = conversionSettingsViewModel;
+            this.assetLoadingViewModel = assetLoadingViewModel;
+            this.materialSelectionViewModel = materialSelectionViewModel;
             synchronizationContext = SynchronizationContext.Current;
 
             logger.Info("MainViewModel initialized");

@@ -69,71 +69,34 @@ namespace AssetProcessor {
         }
 
         private async Task<bool> LoadAssetsFromJsonFileAsync() {
+            // Delegate to AssetLoadingViewModel
+            // The ViewModel raises events that are handled by MainWindow event handlers
+            logService.LogInfo($"[LoadAssetsFromJsonFileAsync] Starting. ProjectFolderPath={ProjectFolderPath}, ProjectName={ProjectName}");
+
+            if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
+                logService.LogError("Project folder path or name is null or empty");
+                return false;
+            }
+
             try {
-                logService.LogInfo("=== LoadAssetsFromJsonFileAsync CALLED ===");
-
-                if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
-                    logService.LogError("Project folder path or name is null or empty");
-                    return false;
-                }
-
-                // Clear ViewModel collections
-                viewModel.Textures.Clear();
-                viewModel.Models.Clear();
-                viewModel.Materials.Clear();
-                viewModel.Assets.Clear();
-
-                // Create progress reporter for UI updates
-                var progress = new Progress<Services.Models.AssetLoadProgress>(p => {
-                    Dispatcher.InvokeAsync(() => {
-                        ProgressBar.Maximum = p.Total;
-                        ProgressBar.Value = p.Processed;
-                        ProgressTextBlock.Text = $"{p.Processed}/{p.Total}";
-                    });
+                logService.LogInfo("[LoadAssetsFromJsonFileAsync] Calling viewModel.AssetLoading.LoadAssetsCommand.ExecuteAsync...");
+                await viewModel.AssetLoading.LoadAssetsCommand.ExecuteAsync(new ViewModels.AssetLoadRequest {
+                    ProjectFolderPath = ProjectFolderPath,
+                    ProjectName = ProjectName,
+                    ProjectsBasePath = AppSettings.Default.ProjectsFolderPath,
+                    ProjectId = CurrentProjectId
                 });
+                logService.LogInfo("[LoadAssetsFromJsonFileAsync] LoadAssetsCommand completed");
 
-                // Load assets using the coordinator service
-                var result = await assetLoadCoordinator.LoadAssetsFromJsonAsync(
-                    ProjectFolderPath!,
-                    ProjectName!,
-                    AppSettings.Default.ProjectsFolderPath,
-                    progress,
-                    CancellationToken.None);
+                // Start watching project folder for file deletions (UI-specific)
+                StartFileWatcher();
 
-                if (!result.Success) {
-                    logService.LogError($"Failed to load assets: {result.Error}");
-                    return false;
-                }
-
-                // Update ViewModel with loaded assets
-                foreach (var texture in result.Textures) {
-                    viewModel.Textures.Add(texture);
-                    viewModel.Assets.Add(texture);
-                }
-                foreach (var model in result.Models) {
-                    viewModel.Models.Add(model);
-                    viewModel.Assets.Add(model);
-                }
-                foreach (var material in result.Materials) {
-                    viewModel.Materials.Add(material);
-                    viewModel.Assets.Add(material);
-                }
-
-                // Update folder paths
-                folderPaths = new Dictionary<int, string>(result.FolderPaths);
-
-                // Post-processing
-                await PostProcessLoadedAssetsAsync();
-
-                logService.LogInfo("=== LoadAssetsFromJsonFileAsync COMPLETED ===");
-
-                // Apply default grouping if checkbox is checked
-                ApplyTextureGroupingIfEnabled();
+                // Scan KTX2 files for compression info (UI-specific display update)
+                ScanKtx2InfoForAllTextures();
 
                 return true;
-
             } catch (Exception ex) {
-                logService.LogError($"Error loading JSON file: {ex.Message}");
+                logService.LogError($"Error loading assets: {ex.Message}");
                 MessageBox.Show($"Error loading JSON file: {ex.Message}");
                 return false;
             }

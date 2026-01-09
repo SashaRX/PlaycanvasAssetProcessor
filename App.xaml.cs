@@ -104,6 +104,34 @@ namespace AssetProcessor {
             services.AddSingleton<IAssetLoadCoordinator, AssetLoadCoordinator>();
             services.AddSingleton<IProjectFileWatcherService, ProjectFileWatcherService>();
 
+            services.AddSingleton<TextureSelectionViewModel>(sp => {
+                var logService = sp.GetRequiredService<ILogService>();
+                return new TextureSelectionViewModel(logService);
+            });
+
+            services.AddSingleton<ORMTextureViewModel>(sp => {
+                var ormTextureService = sp.GetRequiredService<IORMTextureService>();
+                var logService = sp.GetRequiredService<ILogService>();
+                return new ORMTextureViewModel(ormTextureService, logService);
+            });
+
+            services.AddSingleton<TextureConversionSettingsViewModel>(sp => {
+                var logService = sp.GetRequiredService<ILogService>();
+                return new TextureConversionSettingsViewModel(logService);
+            });
+
+            services.AddSingleton<AssetLoadingViewModel>(sp => {
+                var logService = sp.GetRequiredService<ILogService>();
+                var assetLoadCoordinator = sp.GetRequiredService<IAssetLoadCoordinator>();
+                return new AssetLoadingViewModel(logService, assetLoadCoordinator);
+            });
+
+            services.AddSingleton<MaterialSelectionViewModel>(sp => {
+                var assetResourceService = sp.GetRequiredService<IAssetResourceService>();
+                var logService = sp.GetRequiredService<ILogService>();
+                return new MaterialSelectionViewModel(assetResourceService, logService);
+            });
+
             services.AddSingleton<MainViewModel>(sp => {
                 var playCanvasService = sp.GetRequiredService<IPlayCanvasService>();
                 var textureProcessingService = sp.GetRequiredService<ITextureProcessingService>();
@@ -111,13 +139,23 @@ namespace AssetProcessor {
                 var projectSyncService = sp.GetRequiredService<IProjectSyncService>();
                 var assetDownloadCoordinator = sp.GetRequiredService<IAssetDownloadCoordinator>();
                 var projectSelectionService = sp.GetRequiredService<IProjectSelectionService>();
+                var textureSelectionViewModel = sp.GetRequiredService<TextureSelectionViewModel>();
+                var ormTextureViewModel = sp.GetRequiredService<ORMTextureViewModel>();
+                var conversionSettingsViewModel = sp.GetRequiredService<TextureConversionSettingsViewModel>();
+                var assetLoadingViewModel = sp.GetRequiredService<AssetLoadingViewModel>();
+                var materialSelectionViewModel = sp.GetRequiredService<MaterialSelectionViewModel>();
                 return new MainViewModel(
                     playCanvasService,
                     textureProcessingService,
                     localCacheService,
                     projectSyncService,
                     assetDownloadCoordinator,
-                    projectSelectionService);
+                    projectSelectionService,
+                    textureSelectionViewModel,
+                    ormTextureViewModel,
+                    conversionSettingsViewModel,
+                    assetLoadingViewModel,
+                    materialSelectionViewModel);
             });
             services.AddTransient<MainWindow>();
         }

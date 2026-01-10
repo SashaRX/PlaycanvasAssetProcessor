@@ -437,7 +437,13 @@ namespace AssetProcessor {
             else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase))
                 baseNameWithoutSuffix = baseName[..^5];
 
-            // Try textures (including ORM textures) - no logging inside loop for performance
+            // Debug: Log all ORM textures to understand matching
+            logger.Info($"[Navigation] Searching for: fileName='{fileName}', baseName='{baseName}', baseNameWithoutSuffix='{baseNameWithoutSuffix}'");
+            foreach (var t in viewModel.Textures.OfType<Resources.ORMTextureResource>().Take(5)) {
+                logger.Info($"[Navigation] ORM: Name='{t.Name}', SettingsKey='{t.SettingsKey}', Path='{t.Path}'");
+            }
+
+            // Try textures (including ORM textures)
             var texture = viewModel.Textures.FirstOrDefault(t => {
                 // Direct name match (most common case - check first)
                 if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)

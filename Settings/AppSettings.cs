@@ -141,7 +141,7 @@ namespace AssetProcessor.Settings {
 
         [System.Configuration.UserScopedSetting()]
         [System.Diagnostics.DebuggerNonUserCode()]
-        [System.Configuration.DefaultSettingValue("False")]
+        [System.Configuration.DefaultSettingValue("True")]
         public bool GroupTexturesByType {
             get => (bool)this[nameof(GroupTexturesByType)];
             set => this[nameof(GroupTexturesByType)] = value;

@@ -427,7 +427,6 @@ namespace AssetProcessor {
 
         private void OnNavigateToResourceRequested(object? sender, string fileName) {
             string baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
-            logger.Info($"[Navigation] Looking for resource: fileName={fileName}, baseName={baseName}");
 
             // Strip ORM suffix patterns for better matching (_og, _ogm, _ogmh)
             string baseNameWithoutSuffix = baseName;
@@ -438,69 +437,47 @@ namespace AssetProcessor {
             else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase))
                 baseNameWithoutSuffix = baseName[..^5];
 
-            logger.Debug($"[Navigation] baseNameWithoutSuffix={baseNameWithoutSuffix}");
-
-            // Try textures (including ORM textures)
+            // Try textures (including ORM textures) - no logging inside loop for performance
             var texture = viewModel.Textures.FirstOrDefault(t => {
-                // Direct name match
-                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true) {
-                    logger.Debug($"[Navigation] Match: direct name match with {t.Name}");
+                // Direct name match (most common case - check first)
+                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
                     return true;
-                }
                 // Path ends with filename
-                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)) {
-                    logger.Debug($"[Navigation] Match: path ends with {fileName}");
+                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
                     return true;
-                }
-                // For ORM textures, also try matching against various properties
+                // For ORM textures, try additional matching
                 if (t is Resources.ORMTextureResource orm) {
-                    // Match against SettingsKey (e.g., "orm_groupName_textureName")
+                    // Match against SettingsKey
                     if (!string.IsNullOrEmpty(orm.SettingsKey)) {
-                        // Try with or without "orm_" prefix
                         var settingsKeyBase = orm.SettingsKey.StartsWith("orm_", StringComparison.OrdinalIgnoreCase)
                             ? orm.SettingsKey[4..]
                             : orm.SettingsKey;
                         if (baseName.Equals(orm.SettingsKey, StringComparison.OrdinalIgnoreCase) ||
                             baseName.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
                             baseNameWithoutSuffix.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
-                            settingsKeyBase.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase)) {
-                            logger.Debug($"[Navigation] Match: SettingsKey '{orm.SettingsKey}' matches '{baseName}'");
+                            settingsKeyBase.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase))
                             return true;
-                        }
                     }
                     // Match file name from Path property (packed ORM)
                     if (!string.IsNullOrEmpty(orm.Path)) {
                         var ormPathBaseName = System.IO.Path.GetFileNameWithoutExtension(orm.Path);
-                        if (baseName.Equals(ormPathBaseName, StringComparison.OrdinalIgnoreCase)) {
-                            logger.Debug($"[Navigation] Match: ORM Path basename '{ormPathBaseName}'");
+                        if (baseName.Equals(ormPathBaseName, StringComparison.OrdinalIgnoreCase))
                             return true;
-                        }
                     }
-                    // Match ORM texture name patterns (without [ORM Texture - Not Packed])
+                    // Match ORM texture name patterns
                     var cleanName = t.Name?.Replace("[ORM Texture - Not Packed]", "").Trim();
                     if (!string.IsNullOrEmpty(cleanName)) {
-                        // Direct match on cleaned name
                         if (cleanName.Equals(baseName, StringComparison.OrdinalIgnoreCase) ||
-                            cleanName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase)) {
-                            logger.Debug($"[Navigation] Match: cleaned name '{cleanName}'");
+                            cleanName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) ||
+                            baseNameWithoutSuffix.Contains(cleanName, StringComparison.OrdinalIgnoreCase) ||
+                            cleanName.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase))
                             return true;
-                        }
-                        // Partial match (baseName contains ORM name or vice versa)
-                        if (baseNameWithoutSuffix.Contains(cleanName, StringComparison.OrdinalIgnoreCase) ||
-                            cleanName.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase)) {
-                            logger.Debug($"[Navigation] Match: partial match between '{cleanName}' and '{baseNameWithoutSuffix}'");
-                            return true;
-                        }
                     }
                     // Match against source texture names
-                    if (orm.AOSource?.Name != null && baseNameWithoutSuffix.Contains(orm.AOSource.Name.Replace("_ao", "").Replace("_AO", ""), StringComparison.OrdinalIgnoreCase)) {
-                        logger.Debug($"[Navigation] Match: AO source name pattern");
+                    if (orm.AOSource?.Name != null && baseNameWithoutSuffix.Contains(orm.AOSource.Name.Replace("_ao", "").Replace("_AO", ""), StringComparison.OrdinalIgnoreCase))
                         return true;
-                    }
-                    if (orm.GlossSource?.Name != null && baseNameWithoutSuffix.Contains(orm.GlossSource.Name.Replace("_gloss", "").Replace("_Gloss", "").Replace("_roughness", "").Replace("_Roughness", ""), StringComparison.OrdinalIgnoreCase)) {
-                        logger.Debug($"[Navigation] Match: Gloss source name pattern");
+                    if (orm.GlossSource?.Name != null && baseNameWithoutSuffix.Contains(orm.GlossSource.Name.Replace("_gloss", "").Replace("_Gloss", "").Replace("_roughness", "").Replace("_Roughness", ""), StringComparison.OrdinalIgnoreCase))
                         return true;
-                    }
                 }
                 return false;
             });

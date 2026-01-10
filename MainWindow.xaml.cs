@@ -2143,7 +2143,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         #region Column Visibility Management
 
         private void GroupTexturesCheckBox_Changed(object sender, RoutedEventArgs e) {
-            // Skip if ItemsSource is not yet set (during InitializeComponent)
+            // Always save the preference
+            AppSettings.Default.Save();
+
+            // Skip grouping logic if ItemsSource is not yet set (during InitializeComponent)
             if (TexturesDataGrid?.ItemsSource == null) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
@@ -2160,9 +2163,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     view.GroupDescriptions.Clear();
                 }
             }
-
-            // Save the grouping preference
-            AppSettings.Default.Save();
         }
 
         /// <summary>

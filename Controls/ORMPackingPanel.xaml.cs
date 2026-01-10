@@ -585,8 +585,9 @@ namespace AssetProcessor.Controls {
                     Logger.Info($"ORM texture updated: Status={currentORMTexture.Status}, Resolution={currentORMTexture.Resolution?[0]}x{currentORMTexture.Resolution?[1]}, MipLevels={result.MipLevels}, Size={currentORMTexture.CompressedSize}");
 
                     // Refresh MainWindow to update preview and row color
-                    Logger.Info("Calling MainWindow.RefreshCurrentTexture() to update preview and row color");
-                    mainWindow?.RefreshCurrentTexture();
+                    Logger.Info("Calling MainWindow.RefreshCurrentTextureAsync() to update preview and row color");
+                    if (mainWindow != null)
+                        await mainWindow.RefreshCurrentTextureAsync();
                 } else {
                     MessageBox.Show($"Packing failed: {result.Error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     StatusText.Text = "✗ Packing failed";

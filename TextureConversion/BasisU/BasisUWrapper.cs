@@ -54,7 +54,8 @@ namespace AssetProcessor.TextureConversion.BasisU {
                 await Task.WhenAll(outputTask, errorTask);
 
                 return process.ExitCode == 0;
-            } catch {
+            } catch (Exception ex) {
+                LogManager.GetCurrentClassLogger().Debug(ex, "BasisU availability check failed");
                 return false;
             }
         }
@@ -362,8 +363,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
 
                 process.Start();
 
-                var outputTask = process.StandardOutput.ReadToEndAsync();
-                var errorTask = process.StandardError.ReadToEndAsync();
+                // Use Task.Run to read streams on thread pool threads,
+                // avoiding deadlock when called from UI synchronization context
+                string output = string.Empty;
+                string error = string.Empty;
+                var outputTask = Task.Run(() => output = process.StandardOutput.ReadToEnd());
+                var errorTask = Task.Run(() => error = process.StandardError.ReadToEnd());
 
                 if (!process.WaitForExit(5000)) {
                     try {
@@ -371,10 +376,12 @@ namespace AssetProcessor.TextureConversion.BasisU {
                     } catch { }
                 }
 
+                // Safe to WaitAll since tasks run on thread pool
                 Task.WaitAll(outputTask, errorTask);
-                var combined = (outputTask.Result + Environment.NewLine + errorTask.Result).Trim();
+                var combined = (output + Environment.NewLine + error).Trim();
                 return combined;
-            } catch {
+            } catch (Exception ex) {
+                LogManager.GetCurrentClassLogger().Debug(ex, "Failed to capture BasisU CLI output");
                 return string.Empty;
             }
         }

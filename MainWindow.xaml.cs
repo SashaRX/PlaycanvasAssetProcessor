@@ -428,10 +428,64 @@ namespace AssetProcessor {
         private void OnNavigateToResourceRequested(object? sender, string fileName) {
             string baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
 
-            // Try textures
-            var texture = viewModel.Textures.FirstOrDefault(t =>
-                t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
-                (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
+            // Strip ORM suffix patterns for better matching (_og, _ogm, _ogmh)
+            string baseNameWithoutSuffix = baseName;
+            bool isOrmFile = false;
+            if (baseName.EndsWith("_og", StringComparison.OrdinalIgnoreCase)) {
+                baseNameWithoutSuffix = baseName[..^3];
+                isOrmFile = true;
+            } else if (baseName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase)) {
+                baseNameWithoutSuffix = baseName[..^4];
+                isOrmFile = true;
+            } else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase)) {
+                baseNameWithoutSuffix = baseName[..^5];
+                isOrmFile = true;
+            }
+
+            // Try textures (including ORM textures)
+            var texture = viewModel.Textures.FirstOrDefault(t => {
+                // Direct name match (most common case - check first)
+                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
+                    return true;
+                // Path ends with filename
+                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                // For ORM textures, try additional matching
+                if (t is Resources.ORMTextureResource orm) {
+                    // Match against SettingsKey
+                    if (!string.IsNullOrEmpty(orm.SettingsKey)) {
+                        var settingsKeyBase = orm.SettingsKey.StartsWith("orm_", StringComparison.OrdinalIgnoreCase)
+                            ? orm.SettingsKey[4..]
+                            : orm.SettingsKey;
+                        if (baseName.Equals(orm.SettingsKey, StringComparison.OrdinalIgnoreCase) ||
+                            baseName.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
+                            baseNameWithoutSuffix.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
+                            settingsKeyBase.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                    // Match file name from Path property (packed ORM)
+                    if (!string.IsNullOrEmpty(orm.Path)) {
+                        var ormPathBaseName = System.IO.Path.GetFileNameWithoutExtension(orm.Path);
+                        if (baseName.Equals(ormPathBaseName, StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                    // Match ORM texture name patterns
+                    var cleanName = t.Name?.Replace("[ORM Texture - Not Packed]", "").Trim();
+                    if (!string.IsNullOrEmpty(cleanName)) {
+                        if (cleanName.Equals(baseName, StringComparison.OrdinalIgnoreCase) ||
+                            cleanName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) ||
+                            baseNameWithoutSuffix.Contains(cleanName, StringComparison.OrdinalIgnoreCase) ||
+                            cleanName.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                    // Match against source texture names
+                    if (orm.AOSource?.Name != null && baseNameWithoutSuffix.Contains(orm.AOSource.Name.Replace("_ao", "").Replace("_AO", ""), StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    if (orm.GlossSource?.Name != null && baseNameWithoutSuffix.Contains(orm.GlossSource.Name.Replace("_gloss", "").Replace("_Gloss", "").Replace("_roughness", "").Replace("_Roughness", ""), StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                return false;
+            });
             if (texture != null) {
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItem = texture;
@@ -441,11 +495,66 @@ namespace AssetProcessor {
                 return;
             }
 
+            // For ORM files, highlight the ORM group header and show ORM panel
+            if (isOrmFile) {
+                tabControl.SelectedItem = TexturesTabItem;
+                TexturesDataGrid.SelectedItems.Clear();
+
+                // Ищем текстуру по GroupName = baseNameWithoutSuffix (например "oldMailBox")
+                var textureInGroup = viewModel.Textures.FirstOrDefault(t =>
+                    !string.IsNullOrEmpty(t.GroupName) &&
+                    t.GroupName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrEmpty(t.SubGroupName));
+
+                if (textureInGroup != null) {
+                    SelectedORMSubGroupName = textureInGroup.SubGroupName;
+
+                    // Скролл к текстуре в группе
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                        TexturesDataGrid.ScrollIntoView(textureInGroup);
+                    });
+
+                    // Показываем ORM панель если есть ParentORMTexture
+                    if (textureInGroup.ParentORMTexture != null) {
+                        var ormTexture = textureInGroup.ParentORMTexture;
+
+                        if (ConversionSettingsExpander != null) {
+                            ConversionSettingsExpander.Visibility = Visibility.Collapsed;
+                        }
+
+                        if (ORMPanel != null) {
+                            ORMPanel.Visibility = Visibility.Visible;
+                            var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                            ORMPanel.Initialize(this, availableTextures);
+                            ORMPanel.SetORMTexture(ormTexture);
+                        }
+
+                        TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+                        TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+
+                        if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
+                            TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                                ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
+                                : "Resolution: Unknown";
+                            TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+                            _ = LoadORMPreviewAsync(ormTexture);
+                        } else {
+                            TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
+                            TextureFormatTextBlock.Text = "Format: Not packed";
+                        }
+
+                        viewModel.SelectedTexture = ormTexture;
+                    }
+                }
+                return;
+            }
+
             // Try models
             var model = viewModel.Models.FirstOrDefault(m =>
                 m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
                 (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
             if (model != null) {
+                logger.Debug($"[Navigation] Found model: {model.Name}");
                 tabControl.SelectedItem = ModelsTabItem;
                 ModelsDataGrid.SelectedItem = model;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
@@ -459,6 +568,7 @@ namespace AssetProcessor {
                 m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
                 (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
             if (material != null) {
+                logger.Debug($"[Navigation] Found material: {material.Name}");
                 tabControl.SelectedItem = MaterialsTabItem;
                 MaterialsDataGrid.SelectedItem = material;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
@@ -466,6 +576,8 @@ namespace AssetProcessor {
                 });
                 return;
             }
+
+            logger.Debug($"[Navigation] Resource not found: {fileName}");
         }
 
         private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {
@@ -556,6 +668,9 @@ namespace AssetProcessor {
         }
 
         private async Task HandleProjectSelectionChangedAsync() {
+            // Clear texture check cache on project change to prevent unbounded memory growth
+            texturesBeingChecked.Clear();
+
             if (projectSelectionService.IsProjectInitializationInProgress) {
                 logService.LogInfo("Skipping project selection - initialization in progress");
                 return;
@@ -579,6 +694,9 @@ namespace AssetProcessor {
         }
 
         private async Task HandleBranchSelectionChangedAsync() {
+            // Clear texture check cache on branch change to prevent unbounded memory growth
+            texturesBeingChecked.Clear();
+
             SaveCurrentSettings();
 
             if (projectSelectionService.IsBranchInitializationInProgress) {
@@ -605,7 +723,7 @@ namespace AssetProcessor {
         /// Refreshes the DataGrid and reloads the preview for the currently selected texture.
         /// Called after ORM packing to update the UI (row colors and preview).
         /// </summary>
-        public async void RefreshCurrentTexture() {
+        public async Task RefreshCurrentTextureAsync() {
             logService.LogInfo("[RefreshCurrentTexture] Refreshing DataGrid and preview");
 
             // Save the selected item
@@ -3438,7 +3556,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 cancellationTokenSource?.Cancel();
                 textureLoadCancellation?.Cancel();
 
-                System.Threading.Thread.Sleep(100);
+                // Thread.Sleep removed - CancellationToken.Cancel() is instant
 
                 cancellationTokenSource?.Dispose();
                 textureLoadCancellation?.Dispose();
@@ -3447,6 +3565,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             } catch (Exception ex) {
                 logger.Error(ex, "Error canceling operations during window closing");
             }
+
+            // Cleanup DispatcherTimers to prevent memory leaks
+            foreach (var kvp in _saveColumnWidthsTimers)
+            {
+                kvp.Value.Stop();
+                if (_saveColumnWidthsHandlers.TryGetValue(kvp.Key, out var handler))
+                    kvp.Value.Tick -= handler;
+            }
+            _saveColumnWidthsTimers.Clear();
+            _saveColumnWidthsHandlers.Clear();
+            _columnWidthsLoadedGrids.Clear();
+            _columnWidthsLoadedTime.Clear();
+            _hasSavedWidthsFromSettings.Clear();
+            _sortDirections.Clear();
+            _previousColumnWidths.Clear();
+
+            // Cleanup GLB viewer resources
+            CleanupGlbViewer();
 
             viewModel.ProjectSelectionChanged -= ViewModel_ProjectSelectionChanged;
             viewModel.BranchSelectionChanged -= ViewModel_BranchSelectionChanged;

@@ -255,7 +255,7 @@ namespace AssetProcessor.Helpers {
             if (string.IsNullOrEmpty(value1) || string.IsNullOrEmpty(value2))
                 return false;
 
-            return string.Equals(value1, value2, StringComparison.Ordinal);
+            return string.Equals(value1, value2, StringComparison.OrdinalIgnoreCase);
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) {

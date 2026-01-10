@@ -499,7 +499,13 @@ namespace AssetProcessor {
             if (isOrmFile) {
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItems.Clear();
+
+                // Log для диагностики
+                var subGroups = viewModel.Textures.Where(t => !string.IsNullOrEmpty(t.SubGroupName)).Select(t => t.SubGroupName).Distinct().ToList();
+                logger.Info($"[ORM Nav] baseName='{baseName}', SubGroups: {string.Join(", ", subGroups.Take(10))}");
+
                 SelectedORMSubGroupName = baseName;
+                logger.Info($"[ORM Nav] SelectedORMSubGroupName set to '{SelectedORMSubGroupName}'");
                 return;
             }
 

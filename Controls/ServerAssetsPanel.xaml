@@ -145,13 +145,12 @@
                       VirtualizingPanel.CacheLength="1,1"
                       VirtualizingPanel.CacheLengthUnit="Page"
                       EnableRowVirtualization="True"
-                      ScrollViewer.CanContentScroll="True"
-                      RenderTransformOrigin="0,0">
+                      ScrollViewer.CanContentScroll="True">
 
-                <DataGrid.RenderTransform>
+                <DataGrid.LayoutTransform>
                     <ScaleTransform ScaleX="{Binding ElementName=ServerScaleSlider, Path=Value}"
                                     ScaleY="{Binding ElementName=ServerScaleSlider, Path=Value}"/>
-                </DataGrid.RenderTransform>
+                </DataGrid.LayoutTransform>
 
                 <DataGrid.Columns>
                     <!-- File Name with link to source asset -->

@@ -428,10 +428,31 @@ namespace AssetProcessor {
         private void OnNavigateToResourceRequested(object? sender, string fileName) {
             string baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
 
-            // Try textures
-            var texture = viewModel.Textures.FirstOrDefault(t =>
-                t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
-                (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
+            // Try textures (including ORM textures)
+            var texture = viewModel.Textures.FirstOrDefault(t => {
+                // Direct name match
+                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
+                    return true;
+                // Path ends with filename
+                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                // ORM texture matching: server file is "orm_<name>.ktx2"
+                if (t is Resources.ORMTextureResource orm) {
+                    // Match against SettingsKey (e.g., "orm_groupName_textureName")
+                    if (!string.IsNullOrEmpty(orm.SettingsKey) &&
+                        baseName.Equals(orm.SettingsKey, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    // Match "orm_<name>" against texture name without [ORM Texture - Not Packed]
+                    var cleanName = t.Name?.Replace("[ORM Texture - Not Packed]", "").Trim();
+                    if (!string.IsNullOrEmpty(cleanName) && baseName.StartsWith("orm_", StringComparison.OrdinalIgnoreCase)) {
+                        var ormBaseName = baseName.Substring(4); // Remove "orm_" prefix
+                        if (cleanName.Equals(ormBaseName, StringComparison.OrdinalIgnoreCase) ||
+                            cleanName.Contains(ormBaseName, StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                }
+                return false;
+            });
             if (texture != null) {
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItem = texture;

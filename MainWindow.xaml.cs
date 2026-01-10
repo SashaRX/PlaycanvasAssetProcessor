@@ -2160,6 +2160,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     view.GroupDescriptions.Clear();
                 }
             }
+
+            // Save the grouping preference
+            AppSettings.Default.Save();
         }
 
         /// <summary>

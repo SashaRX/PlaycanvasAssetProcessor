@@ -141,6 +141,14 @@ namespace AssetProcessor.Settings {
 
         [System.Configuration.UserScopedSetting()]
         [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("False")]
+        public bool GroupTexturesByType {
+            get => (bool)this[nameof(GroupTexturesByType)];
+            set => this[nameof(GroupTexturesByType)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
         [System.Configuration.DefaultSettingValue("1.0")]
         public double ModelsTableScale {
             get => (double)this[nameof(ModelsTableScale)];

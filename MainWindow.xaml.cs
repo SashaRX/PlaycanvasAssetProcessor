@@ -2247,7 +2247,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
                 // Column indices: 0=№, 1=ID, 2=TextureName, 3=Extension, 4=Size, 5=Compressed,
-                // 6=Resolution, 7=ResizeResolution, 8=Compression(Format), 9=Mipmaps, 10=Preset, 11=Status
+                // 6=Resolution, 7=ResizeResolution, 8=Compression(Format), 9=Mipmaps, 10=Preset, 11=Status, 12=Upload
                 int columnIndex = columnTag switch {
                     "ID" => 1,
                     "TextureName" => 2,
@@ -2260,6 +2260,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     "Mipmaps" => 9,
                     "Preset" => 10,
                     "Status" => 11,
+                    "Upload" => 12,
                     _ => -1
                 };
 

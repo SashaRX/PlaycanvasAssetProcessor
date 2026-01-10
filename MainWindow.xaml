@@ -122,6 +122,7 @@
                 <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
                 <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
                 <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
+                <MenuItem Header="Upload" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Upload"/>
             </MenuItem>
         </ContextMenu>
 

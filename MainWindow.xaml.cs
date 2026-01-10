@@ -495,24 +495,9 @@ namespace AssetProcessor {
                 return;
             }
 
-            // If ORM file from server but no ORM texture found, try to find source textures by name pattern
-            // e.g., oldMailBox_ogm.ktx2 -> look for oldMailBox_ao, oldMailBox_gloss, etc.
-            if (isOrmFile && !string.IsNullOrEmpty(baseNameWithoutSuffix)) {
-                var sourceTexture = viewModel.Textures.FirstOrDefault(t =>
-                    t.Name != null && t.Name.StartsWith(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) &&
-                    (t.Name.Contains("_ao", StringComparison.OrdinalIgnoreCase) ||
-                     t.Name.Contains("_gloss", StringComparison.OrdinalIgnoreCase) ||
-                     t.Name.Contains("_roughness", StringComparison.OrdinalIgnoreCase) ||
-                     t.Name.Contains("_metalness", StringComparison.OrdinalIgnoreCase) ||
-                     t.Name.Contains("_metallic", StringComparison.OrdinalIgnoreCase)));
-                if (sourceTexture != null) {
-                    tabControl.SelectedItem = TexturesTabItem;
-                    TexturesDataGrid.SelectedItem = sourceTexture;
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                        TexturesDataGrid.ScrollIntoView(sourceTexture);
-                    });
-                    return;
-                }
+            // Log if ORM file from server was not found
+            if (isOrmFile) {
+                logger.Warn($"[Navigation] ORM texture not found for: {fileName}");
             }
 
             // Try models
@@ -4580,8 +4565,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logService.LogInfo($"[OnORMTexturesDetected] Detected {e.DetectedCount} ORM textures");
 
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                // ORMs are NOT added to collection - they serve as group headers (SubGroupName) only
-                // The ORM settings are accessible via component textures' ParentORMTexture property
+                // Add detected ORM textures to collection so they can be navigated to
+                foreach (var orm in e.DetectedORMs) {
+                    // Check if an ORM with same SettingsKey already exists
+                    var existingOrm = viewModel.Textures.OfType<Resources.ORMTextureResource>()
+                        .FirstOrDefault(o => o.SettingsKey == orm.SettingsKey);
+                    if (existingOrm == null) {
+                        viewModel.Textures.Add(orm);
+                    }
+                }
 
                 // Apply associations to textures
                 foreach (var (texture, subGroupName, orm) in e.Associations) {
@@ -4615,6 +4607,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Schedule UI updates with lower priority to not block
             if (e.GeneratedCount > 0) {
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    // Add generated ORM textures to collection so they can be navigated to
+                    foreach (var orm in e.GeneratedORMs) {
+                        var existingOrm = viewModel.Textures.OfType<Resources.ORMTextureResource>()
+                            .FirstOrDefault(o => o.SettingsKey == orm.SettingsKey);
+                        if (existingOrm == null) {
+                            viewModel.Textures.Add(orm);
+                        }
+                    }
                     RecalculateIndices();
                 });
 

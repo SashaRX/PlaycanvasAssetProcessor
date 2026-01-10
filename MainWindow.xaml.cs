@@ -495,20 +495,11 @@ namespace AssetProcessor {
                 return;
             }
 
-            // For ORM files, highlight the ORM group header only (no texture selection)
+            // For ORM files, highlight the ORM group header only
             if (isOrmFile) {
                 tabControl.SelectedItem = TexturesTabItem;
+                TexturesDataGrid.SelectedItems.Clear();
                 SelectedORMSubGroupName = baseName;
-
-                // Scroll to first texture in group
-                var firstInGroup = viewModel.Textures.FirstOrDefault(t =>
-                    !string.IsNullOrEmpty(t.SubGroupName) &&
-                    t.SubGroupName.Equals(baseName, StringComparison.OrdinalIgnoreCase));
-                if (firstInGroup != null) {
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                        TexturesDataGrid.ScrollIntoView(firstInGroup);
-                    });
-                }
                 return;
             }
 

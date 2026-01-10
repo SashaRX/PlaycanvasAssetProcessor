@@ -427,33 +427,85 @@ namespace AssetProcessor {
 
         private void OnNavigateToResourceRequested(object? sender, string fileName) {
             string baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+            logger.Info($"[Navigation] Looking for resource: fileName={fileName}, baseName={baseName}");
+
+            // Strip ORM suffix patterns for better matching (_og, _ogm, _ogmh)
+            string baseNameWithoutSuffix = baseName;
+            if (baseName.EndsWith("_og", StringComparison.OrdinalIgnoreCase))
+                baseNameWithoutSuffix = baseName[..^3];
+            else if (baseName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase))
+                baseNameWithoutSuffix = baseName[..^4];
+            else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase))
+                baseNameWithoutSuffix = baseName[..^5];
+
+            logger.Debug($"[Navigation] baseNameWithoutSuffix={baseNameWithoutSuffix}");
 
             // Try textures (including ORM textures)
             var texture = viewModel.Textures.FirstOrDefault(t => {
                 // Direct name match
-                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
+                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true) {
+                    logger.Debug($"[Navigation] Match: direct name match with {t.Name}");
                     return true;
+                }
                 // Path ends with filename
-                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
+                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)) {
+                    logger.Debug($"[Navigation] Match: path ends with {fileName}");
                     return true;
-                // ORM texture matching: server file is "orm_<name>.ktx2"
+                }
+                // For ORM textures, also try matching against various properties
                 if (t is Resources.ORMTextureResource orm) {
                     // Match against SettingsKey (e.g., "orm_groupName_textureName")
-                    if (!string.IsNullOrEmpty(orm.SettingsKey) &&
-                        baseName.Equals(orm.SettingsKey, StringComparison.OrdinalIgnoreCase))
-                        return true;
-                    // Match "orm_<name>" against texture name without [ORM Texture - Not Packed]
-                    var cleanName = t.Name?.Replace("[ORM Texture - Not Packed]", "").Trim();
-                    if (!string.IsNullOrEmpty(cleanName) && baseName.StartsWith("orm_", StringComparison.OrdinalIgnoreCase)) {
-                        var ormBaseName = baseName.Substring(4); // Remove "orm_" prefix
-                        if (cleanName.Equals(ormBaseName, StringComparison.OrdinalIgnoreCase) ||
-                            cleanName.Contains(ormBaseName, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(orm.SettingsKey)) {
+                        // Try with or without "orm_" prefix
+                        var settingsKeyBase = orm.SettingsKey.StartsWith("orm_", StringComparison.OrdinalIgnoreCase)
+                            ? orm.SettingsKey[4..]
+                            : orm.SettingsKey;
+                        if (baseName.Equals(orm.SettingsKey, StringComparison.OrdinalIgnoreCase) ||
+                            baseName.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
+                            baseNameWithoutSuffix.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
+                            settingsKeyBase.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase)) {
+                            logger.Debug($"[Navigation] Match: SettingsKey '{orm.SettingsKey}' matches '{baseName}'");
                             return true;
+                        }
+                    }
+                    // Match file name from Path property (packed ORM)
+                    if (!string.IsNullOrEmpty(orm.Path)) {
+                        var ormPathBaseName = System.IO.Path.GetFileNameWithoutExtension(orm.Path);
+                        if (baseName.Equals(ormPathBaseName, StringComparison.OrdinalIgnoreCase)) {
+                            logger.Debug($"[Navigation] Match: ORM Path basename '{ormPathBaseName}'");
+                            return true;
+                        }
+                    }
+                    // Match ORM texture name patterns (without [ORM Texture - Not Packed])
+                    var cleanName = t.Name?.Replace("[ORM Texture - Not Packed]", "").Trim();
+                    if (!string.IsNullOrEmpty(cleanName)) {
+                        // Direct match on cleaned name
+                        if (cleanName.Equals(baseName, StringComparison.OrdinalIgnoreCase) ||
+                            cleanName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase)) {
+                            logger.Debug($"[Navigation] Match: cleaned name '{cleanName}'");
+                            return true;
+                        }
+                        // Partial match (baseName contains ORM name or vice versa)
+                        if (baseNameWithoutSuffix.Contains(cleanName, StringComparison.OrdinalIgnoreCase) ||
+                            cleanName.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase)) {
+                            logger.Debug($"[Navigation] Match: partial match between '{cleanName}' and '{baseNameWithoutSuffix}'");
+                            return true;
+                        }
+                    }
+                    // Match against source texture names
+                    if (orm.AOSource?.Name != null && baseNameWithoutSuffix.Contains(orm.AOSource.Name.Replace("_ao", "").Replace("_AO", ""), StringComparison.OrdinalIgnoreCase)) {
+                        logger.Debug($"[Navigation] Match: AO source name pattern");
+                        return true;
+                    }
+                    if (orm.GlossSource?.Name != null && baseNameWithoutSuffix.Contains(orm.GlossSource.Name.Replace("_gloss", "").Replace("_Gloss", "").Replace("_roughness", "").Replace("_Roughness", ""), StringComparison.OrdinalIgnoreCase)) {
+                        logger.Debug($"[Navigation] Match: Gloss source name pattern");
+                        return true;
                     }
                 }
                 return false;
             });
             if (texture != null) {
+                logger.Debug($"[Navigation] Found texture: {texture.Name}");
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItem = texture;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
@@ -467,6 +519,7 @@ namespace AssetProcessor {
                 m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
                 (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
             if (model != null) {
+                logger.Debug($"[Navigation] Found model: {model.Name}");
                 tabControl.SelectedItem = ModelsTabItem;
                 ModelsDataGrid.SelectedItem = model;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
@@ -480,6 +533,7 @@ namespace AssetProcessor {
                 m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
                 (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
             if (material != null) {
+                logger.Debug($"[Navigation] Found material: {material.Name}");
                 tabControl.SelectedItem = MaterialsTabItem;
                 MaterialsDataGrid.SelectedItem = material;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
@@ -487,6 +541,8 @@ namespace AssetProcessor {
                 });
                 return;
             }
+
+            logger.Debug($"[Navigation] Resource not found: {fileName}");
         }
 
         private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {

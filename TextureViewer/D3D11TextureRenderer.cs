@@ -4,6 +4,7 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
@@ -51,6 +52,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
     private float currentGamma = 2.2f; // Default: sRGB gamma
     private float originalGamma = 2.2f; // Original gamma set during LoadTexture (for restoring after mask)
     private bool tilingEnabled = false;
+    private volatile bool shadersReady = false; // Flag to track if shaders are compiled
 
     // Histogram preprocessing compensation
     private HistogramMetadata? histogramMetadata = null;
@@ -89,6 +91,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
     }
 
     public bool IsInitialized => device != null;
+    public bool IsRenderReady => shadersReady && vertexShader != null && pixelShader != null;
     public int TextureWidth => currentTexture?.Width ?? 0;
     public int TextureHeight => currentTexture?.Height ?? 0;
     public int ViewportWidth => viewportWidth;
@@ -98,6 +101,7 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
     /// <summary>
     /// Initialize D3D11 device and resources.
+    /// Shader compilation runs asynchronously to avoid blocking startup.
     /// </summary>
     public void Initialize(IntPtr hwnd, int width, int height) {
         logger.Debug($"Initializing D3D11 renderer: {width}x{height}");
@@ -137,8 +141,18 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
             CreateRenderTarget();
             CreateSamplers();
-            CreateShaders();
             CreateVertexBuffer();
+
+            // Compile shaders asynchronously to avoid blocking startup
+            _ = Task.Run(() => {
+                try {
+                    CreateShaders();
+                    shadersReady = true;
+                    logger.Debug("Shaders compiled successfully");
+                } catch (Exception ex) {
+                    logger.Error(ex, "Failed to compile shaders asynchronously");
+                }
+            });
         } catch (Exception ex) {
             logger.Error(ex, "Failed to initialize D3D11 renderer");
             throw;
@@ -470,9 +484,9 @@ public sealed class D3D11TextureRenderer : IDisposable {
             var viewport = new Viewport(0, 0, viewportWidth, viewportHeight);
             context.RSSetViewport(viewport);
 
-            // Check if shaders are available
-            if (vertexShader == null || pixelShader == null || inputLayout == null || constantBuffer == null || vertexBuffer == null) {
-                logger.Error("Cannot render: shaders not initialized");
+            // Skip rendering if shaders aren't compiled yet (async compilation in progress)
+            if (!shadersReady || vertexShader == null || pixelShader == null || inputLayout == null || constantBuffer == null || vertexBuffer == null) {
+                // Shaders still compiling, just show cleared background
                 swapChain!.Present(1, PresentFlags.None);
                 return;
             }

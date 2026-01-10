@@ -497,21 +497,12 @@ namespace AssetProcessor {
 
             // For ORM files, find ALL source textures that belong to this ORM group and select them
             if (isOrmFile) {
-                // Find all textures in this ORM group
-                var groupTextures = viewModel.Textures.Where(t => {
-                    var parentOrm = t.ParentORMTexture;
-                    if (parentOrm == null) return false;
-                    // Match by ORM Path
-                    if (!string.IsNullOrEmpty(parentOrm.Path)) {
-                        var ormPathBaseName = System.IO.Path.GetFileNameWithoutExtension(parentOrm.Path);
-                        if (baseName.Equals(ormPathBaseName, StringComparison.OrdinalIgnoreCase))
-                            return true;
-                    }
-                    // Match by ORM Name
-                    if (parentOrm.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
-                        return true;
-                    return false;
-                }).ToList();
+                // Find all textures in this ORM group by SubGroupName
+                // SubGroupName is set to ORM file name (e.g., "oldMailBox_ogm")
+                var groupTextures = viewModel.Textures.Where(t =>
+                    !string.IsNullOrEmpty(t.SubGroupName) &&
+                    t.SubGroupName.Equals(baseName, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
 
                 if (groupTextures.Count > 0) {
                     tabControl.SelectedItem = TexturesTabItem;
@@ -523,7 +514,7 @@ namespace AssetProcessor {
                     }
 
                     // Set ORM SubGroupName for visual highlighting
-                    SelectedORMSubGroupName = groupTextures[0].SubGroupName;
+                    SelectedORMSubGroupName = baseName;
 
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
                         TexturesDataGrid.ScrollIntoView(groupTextures[0]);

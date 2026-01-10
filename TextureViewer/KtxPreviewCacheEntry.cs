@@ -8,6 +8,11 @@ internal sealed class KtxPreviewCacheEntry {
     public required DateTime LastWriteTimeUtc { get; init; }
 
     public required List<KtxMipLevel> Mipmaps { get; init; }
+
+    /// <summary>
+    /// Timestamp when this entry was loaded, used for LRU cache eviction
+    /// </summary>
+    public DateTime LoadedAt { get; init; } = DateTime.UtcNow;
 }
 
 public sealed class KtxMipLevel {

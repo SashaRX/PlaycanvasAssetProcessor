@@ -54,12 +54,14 @@ public sealed class Ktx2InfoService : IKtx2InfoService {
                     compressionFormat = supercompression == 1 ? "ETC1S" : "UASTC";
                 }
                 // vkFormat != 0 means raw texture format, no Basis compression
-            } catch {
+            } catch (Exception ex) {
                 // Ignore header read errors, still return file size
+                logger.Debug(ex, $"Failed to read KTX2 header: {ktx2Path}");
             }
 
             return new Ktx2Info(fileInfo.Length, mipLevels, compressionFormat);
-        } catch {
+        } catch (Exception ex) {
+            logger.Debug(ex, $"Failed to get KTX2 info: {ktx2Path}");
             return null;
         }
     }

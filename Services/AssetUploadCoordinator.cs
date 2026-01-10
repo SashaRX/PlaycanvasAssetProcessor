@@ -359,7 +359,8 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
     public async Task<int> GetUploadRecordCountAsync(CancellationToken ct = default) {
         try {
             return await _uploadStateService.GetCountAsync(ct);
-        } catch {
+        } catch (Exception ex) {
+            Logger.Debug(ex, "Failed to get upload record count from database");
             return 0;
         }
     }
@@ -373,7 +374,8 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
         CancellationToken ct = default) {
         try {
             return await _uploadStateService.GetPageAsync(offset, limit, ct);
-        } catch {
+        } catch (Exception ex) {
+            Logger.Debug(ex, "Failed to get upload history from database");
             return Array.Empty<UploadRecord>();
         }
     }

@@ -78,8 +78,8 @@ public class B2UploadService : IB2UploadService, IDisposable {
             var request = new HttpRequestMessage(HttpMethod.Get, "https://api.backblazeb2.com/b2api/v2/b2_authorize_account");
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authString);
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode) {
                 Logger.Error($"B2 authorization failed: {response.StatusCode} - {content}");
@@ -97,7 +97,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             // Получаем bucket ID если не указан
             if (string.IsNullOrEmpty(settings.BucketId)) {
-                settings.BucketId = await GetBucketIdAsync(settings.BucketName, cancellationToken);
+                settings.BucketId = await GetBucketIdAsync(settings.BucketName, cancellationToken).ConfigureAwait(false);
             }
 
             return true;
@@ -134,7 +134,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
 
             // Проверяем существование файла если включено
             if (_settings.SkipExistingFiles) {
-                var existingFile = await GetFileInfoAsync(fullRemotePath, cancellationToken);
+                var existingFile = await GetFileInfoAsync(fullRemotePath, cancellationToken).ConfigureAwait(false);
                 if (existingFile != null) {
                     var localHash = ComputeFileSha1(localPath);
                     if (existingFile.ContentSha1 == localHash) {
@@ -150,14 +150,14 @@ public class B2UploadService : IB2UploadService, IDisposable {
             }
 
             // Получаем upload URL
-            var uploadUrl = await GetUploadUrlAsync(cancellationToken);
+            var uploadUrl = await GetUploadUrlAsync(cancellationToken).ConfigureAwait(false);
             if (uploadUrl == null) {
                 result.ErrorMessage = "Failed to get upload URL";
                 return result;
             }
 
             // Читаем файл
-            var fileBytes = await File.ReadAllBytesAsync(localPath, cancellationToken);
+            var fileBytes = await File.ReadAllBytesAsync(localPath, cancellationToken).ConfigureAwait(false);
             var sha1 = ComputeSha1(fileBytes);
 
             // Определяем content type
@@ -173,8 +173,8 @@ public class B2UploadService : IB2UploadService, IDisposable {
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
             request.Content.Headers.ContentLength = fileBytes.Length;
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
-            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode) {
                 // Если upload URL expired, сбрасываем и пробуем снова
@@ -231,9 +231,9 @@ public class B2UploadService : IB2UploadService, IDisposable {
         }
 
         var tasks = fileList.Select(async file => {
-            await semaphore.WaitAsync(cancellationToken);
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try {
-                var uploadResult = await UploadFileAsync(file.LocalPath, file.RemotePath, null, cancellationToken);
+                var uploadResult = await UploadFileAsync(file.LocalPath, file.RemotePath, null, cancellationToken).ConfigureAwait(false);
 
                 lock (progressLock) {
                     processedCount++;
@@ -271,7 +271,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
             }
         });
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         stopwatch.Stop();
         result.Duration = stopwatch.Elapsed;
@@ -306,11 +306,11 @@ public class B2UploadService : IB2UploadService, IDisposable {
             return (LocalPath: f, RemotePath: remotePath);
         });
 
-        return await UploadBatchAsync(filePairs, progress, cancellationToken);
+        return await UploadBatchAsync(filePairs, progress, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> FileExistsAsync(string remotePath, CancellationToken cancellationToken = default) {
-        var info = await GetFileInfoAsync(remotePath, cancellationToken);
+        var info = await GetFileInfoAsync(remotePath, cancellationToken).ConfigureAwait(false);
         return info != null;
     }
 
@@ -337,13 +337,13 @@ public class B2UploadService : IB2UploadService, IDisposable {
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode) {
                 return null;
             }
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var listResponse = JsonSerializer.Deserialize<B2ListFilesResponse>(content, JsonOptions);
 
             var file = listResponse?.Files?.FirstOrDefault(f => f.FileName == fullPath);
@@ -372,7 +372,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
                 return false;
             }
 
-            var fileInfo = await GetFileInfoAsync(remotePath, cancellationToken);
+            var fileInfo = await GetFileInfoAsync(remotePath, cancellationToken).ConfigureAwait(false);
             if (fileInfo == null) {
                 return true; // Already doesn't exist
             }
@@ -390,7 +390,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
 
         } catch (Exception ex) {
@@ -430,13 +430,13 @@ public class B2UploadService : IB2UploadService, IDisposable {
                     Encoding.UTF8,
                     "application/json");
 
-                var response = await _httpClient.SendAsync(request, cancellationToken);
+                var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode) {
                     break;
                 }
 
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 var listResponse = JsonSerializer.Deserialize<B2ListFilesResponse>(content, JsonOptions);
 
                 if (listResponse?.Files == null || listResponse.Files.Count == 0) {
@@ -487,8 +487,8 @@ public class B2UploadService : IB2UploadService, IDisposable {
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode) {
                 Logger.Error($"Failed to get bucket ID: {content}");
@@ -526,8 +526,8 @@ public class B2UploadService : IB2UploadService, IDisposable {
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode) {
                 Logger.Error($"Failed to get upload URL: {content}");

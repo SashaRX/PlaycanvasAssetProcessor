@@ -425,7 +425,8 @@ namespace AssetProcessor.Controls {
                         } else {
                             failed++;
                         }
-                    } catch {
+                    } catch (Exception ex) {
+                        Logger.Warn(ex, $"Failed to delete file: {asset.RemotePath}");
                         failed++;
                     }
                 }

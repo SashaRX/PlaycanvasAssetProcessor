@@ -556,6 +556,9 @@ namespace AssetProcessor {
         }
 
         private async Task HandleProjectSelectionChangedAsync() {
+            // Clear texture check cache on project change to prevent unbounded memory growth
+            texturesBeingChecked.Clear();
+
             if (projectSelectionService.IsProjectInitializationInProgress) {
                 logService.LogInfo("Skipping project selection - initialization in progress");
                 return;
@@ -579,6 +582,9 @@ namespace AssetProcessor {
         }
 
         private async Task HandleBranchSelectionChangedAsync() {
+            // Clear texture check cache on branch change to prevent unbounded memory growth
+            texturesBeingChecked.Clear();
+
             SaveCurrentSettings();
 
             if (projectSelectionService.IsBranchInitializationInProgress) {
@@ -605,7 +611,7 @@ namespace AssetProcessor {
         /// Refreshes the DataGrid and reloads the preview for the currently selected texture.
         /// Called after ORM packing to update the UI (row colors and preview).
         /// </summary>
-        public async void RefreshCurrentTexture() {
+        public async Task RefreshCurrentTextureAsync() {
             logService.LogInfo("[RefreshCurrentTexture] Refreshing DataGrid and preview");
 
             // Save the selected item
@@ -3438,7 +3444,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 cancellationTokenSource?.Cancel();
                 textureLoadCancellation?.Cancel();
 
-                System.Threading.Thread.Sleep(100);
+                // Thread.Sleep removed - CancellationToken.Cancel() is instant
 
                 cancellationTokenSource?.Dispose();
                 textureLoadCancellation?.Dispose();
@@ -3447,6 +3453,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             } catch (Exception ex) {
                 logger.Error(ex, "Error canceling operations during window closing");
             }
+
+            // Cleanup DispatcherTimers to prevent memory leaks
+            foreach (var kvp in _saveColumnWidthsTimers)
+            {
+                kvp.Value.Stop();
+                if (_saveColumnWidthsHandlers.TryGetValue(kvp.Key, out var handler))
+                    kvp.Value.Tick -= handler;
+            }
+            _saveColumnWidthsTimers.Clear();
+            _saveColumnWidthsHandlers.Clear();
+            _columnWidthsLoadedGrids.Clear();
+            _columnWidthsLoadedTime.Clear();
+            _hasSavedWidthsFromSettings.Clear();
+            _sortDirections.Clear();
+            _previousColumnWidths.Clear();
+
+            // Cleanup GLB viewer resources
+            CleanupGlbViewer();
 
             viewModel.ProjectSelectionChanged -= ViewModel_ProjectSelectionChanged;
             viewModel.BranchSelectionChanged -= ViewModel_BranchSelectionChanged;

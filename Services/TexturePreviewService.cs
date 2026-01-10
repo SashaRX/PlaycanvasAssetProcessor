@@ -345,8 +345,17 @@ public class TexturePreviewService : ITexturePreviewService {
             mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));
             ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
                 LastWriteTimeUtc = lastWriteTimeUtc,
-                Mipmaps = mipmaps
+                Mipmaps = mipmaps,
+                LoadedAt = DateTime.UtcNow
             };
+
+            // Evict oldest entries if cache exceeds limit (KTX entries contain multiple BitmapImages)
+            const int MaxKtxCacheSize = 20;
+            if (ktxPreviewCache.Count > MaxKtxCacheSize) {
+                var oldest = ktxPreviewCache.OrderBy(x => x.Value.LoadedAt).First();
+                ktxPreviewCache.Remove(oldest.Key);
+                logger.Debug($"[KTX_CACHE] Evicted oldest entry: {oldest.Key}");
+            }
 
             return mipmaps;
         } finally {

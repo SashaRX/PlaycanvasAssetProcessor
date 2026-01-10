@@ -37,16 +37,9 @@ namespace AssetProcessor.Helpers {
 
         /// <summary>
         /// Get a cached theme-aware brush by resource key.
-        /// Automatically invalidates cache if theme has changed.
+        /// Cache is invalidated only via InvalidateCache() called from ThemeHelper.ApplyTheme().
         /// </summary>
         public static Brush GetThemeBrush(string resourceKey, Brush fallback) {
-            // Check for theme change
-            bool currentTheme = ThemeHelper.IsDarkTheme;
-            if (currentTheme != _isDarkTheme) {
-                _cache.Clear();
-                _isDarkTheme = currentTheme;
-            }
-
             return _cache.GetOrAdd(resourceKey, key => {
                 var brush = Application.Current?.Resources[key] as Brush ?? fallback;
                 // Freeze if not already frozen for thread-safety and performance
@@ -68,9 +61,10 @@ namespace AssetProcessor.Helpers {
 
         /// <summary>
         /// Get theme-aware foreground brush (for log messages)
+        /// Uses cached theme state, updated only via InvalidateCache()
         /// </summary>
         public static Brush GetThemeForeground() {
-            return ThemeHelper.IsDarkTheme ? _darkForeground : _lightForeground;
+            return _isDarkTheme ? _darkForeground : _lightForeground;
         }
 
         private static SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b) {

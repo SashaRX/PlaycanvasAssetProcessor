@@ -500,12 +500,19 @@ namespace AssetProcessor {
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItems.Clear();
 
-                // Log для диагностики
-                var subGroups = viewModel.Textures.Where(t => !string.IsNullOrEmpty(t.SubGroupName)).Select(t => t.SubGroupName).Distinct().ToList();
-                logger.Info($"[ORM Nav] baseName='{baseName}', SubGroups: {string.Join(", ", subGroups.Take(10))}");
+                // Ищем текстуру по GroupName = baseNameWithoutSuffix (например "oldMailBox")
+                var textureInGroup = viewModel.Textures.FirstOrDefault(t =>
+                    !string.IsNullOrEmpty(t.GroupName) &&
+                    t.GroupName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrEmpty(t.SubGroupName));
 
-                SelectedORMSubGroupName = baseName;
-                logger.Info($"[ORM Nav] SelectedORMSubGroupName set to '{SelectedORMSubGroupName}'");
+                if (textureInGroup != null) {
+                    SelectedORMSubGroupName = textureInGroup.SubGroupName;
+                    logger.Info($"[ORM Nav] Found SubGroupName='{textureInGroup.SubGroupName}' for group '{baseNameWithoutSuffix}'");
+                } else {
+                    SelectedORMSubGroupName = baseName;
+                    logger.Info($"[ORM Nav] No texture found, using baseName='{baseName}'");
+                }
                 return;
             }
 

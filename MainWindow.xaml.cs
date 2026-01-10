@@ -495,45 +495,21 @@ namespace AssetProcessor {
                 return;
             }
 
-            // For ORM files, find ALL source textures that belong to this ORM group and select them
+            // For ORM files, highlight the ORM group header only (no texture selection)
             if (isOrmFile) {
-                // Find all textures in this ORM group by SubGroupName
-                // SubGroupName is set to ORM file name (e.g., "oldMailBox_ogm")
-                logger.Info($"[Navigation ORM] Looking for SubGroupName='{baseName}'");
+                tabControl.SelectedItem = TexturesTabItem;
+                SelectedORMSubGroupName = baseName;
 
-                // Debug: show all unique SubGroupNames
-                var allSubGroups = viewModel.Textures
-                    .Where(t => !string.IsNullOrEmpty(t.SubGroupName))
-                    .Select(t => t.SubGroupName)
-                    .Distinct()
-                    .Take(20)
-                    .ToList();
-                logger.Info($"[Navigation ORM] Available SubGroupNames: {string.Join(", ", allSubGroups)}");
-
-                var groupTextures = viewModel.Textures.Where(t =>
+                // Scroll to first texture in group
+                var firstInGroup = viewModel.Textures.FirstOrDefault(t =>
                     !string.IsNullOrEmpty(t.SubGroupName) &&
-                    t.SubGroupName.Equals(baseName, StringComparison.OrdinalIgnoreCase)
-                ).ToList();
-
-                logger.Info($"[Navigation ORM] Found {groupTextures.Count} textures in group");
-
-                if (groupTextures.Count > 0) {
-                    tabControl.SelectedItem = TexturesTabItem;
-
-                    // Select all textures in the ORM group
-                    TexturesDataGrid.SelectedItems.Clear();
-                    foreach (var tex in groupTextures) {
-                        TexturesDataGrid.SelectedItems.Add(tex);
-                    }
-
-                    // Set ORM SubGroupName for visual highlighting (use actual SubGroupName value for exact match)
-                    SelectedORMSubGroupName = groupTextures[0].SubGroupName;
-
+                    t.SubGroupName.Equals(baseName, StringComparison.OrdinalIgnoreCase));
+                if (firstInGroup != null) {
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                        TexturesDataGrid.ScrollIntoView(groupTextures[0]);
+                        TexturesDataGrid.ScrollIntoView(firstInGroup);
                     });
-                    return;
                 }
+                return;
             }
 
             // Try models

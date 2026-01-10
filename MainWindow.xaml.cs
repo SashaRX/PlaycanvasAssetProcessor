@@ -495,9 +495,10 @@ namespace AssetProcessor {
                 return;
             }
 
-            // For ORM files, find a source texture that has this ORM as ParentORMTexture
+            // For ORM files, find ALL source textures that belong to this ORM group and select them
             if (isOrmFile) {
-                var sourceTexture = viewModel.Textures.FirstOrDefault(t => {
+                // Find all textures in this ORM group
+                var groupTextures = viewModel.Textures.Where(t => {
                     var parentOrm = t.ParentORMTexture;
                     if (parentOrm == null) return false;
                     // Match by ORM Path
@@ -510,12 +511,22 @@ namespace AssetProcessor {
                     if (parentOrm.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
                         return true;
                     return false;
-                });
-                if (sourceTexture != null) {
+                }).ToList();
+
+                if (groupTextures.Count > 0) {
                     tabControl.SelectedItem = TexturesTabItem;
-                    TexturesDataGrid.SelectedItem = sourceTexture;
+
+                    // Select all textures in the ORM group
+                    TexturesDataGrid.SelectedItems.Clear();
+                    foreach (var tex in groupTextures) {
+                        TexturesDataGrid.SelectedItems.Add(tex);
+                    }
+
+                    // Set ORM SubGroupName for visual highlighting
+                    SelectedORMSubGroupName = groupTextures[0].SubGroupName;
+
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                        TexturesDataGrid.ScrollIntoView(sourceTexture);
+                        TexturesDataGrid.ScrollIntoView(groupTextures[0]);
                     });
                     return;
                 }

@@ -1,5 +1,5 @@
-﻿using System.Windows;
-using System.Windows.Media;
+﻿using System.Windows.Media;
+using AssetProcessor.Helpers;
 
 namespace AssetProcessor.Resources {
     public class TextureResource : BaseResource {
@@ -8,22 +8,18 @@ namespace AssetProcessor.Resources {
         /// </summary>
         public virtual bool IsORMTexture => false;
 
-        // Theme-aware brush helpers (fetched from Application.Resources for dynamic theming)
-        private static Brush GetBrush(string resourceKey, Brush fallback) =>
-            Application.Current?.Resources[resourceKey] as Brush ?? fallback;
-
         /// <summary>
-        /// Computed row background color based on texture type (theme-aware)
+        /// Computed row background color based on texture type (theme-aware, cached)
         /// </summary>
         public Brush RowBackground {
             get {
-                if (IsORMTexture) return GetBrush("ThemeMaterialORM", Brushes.Pink);
+                if (IsORMTexture) return ThemeBrushCache.GetThemeBrush("ThemeMaterialORM", Brushes.Pink);
                 return TextureType switch {
-                    "Normal" => GetBrush("ThemeMaterialNormal", Brushes.LightBlue),
-                    "Albedo" => GetBrush("ThemeTextureAlbedo", Brushes.Khaki),
-                    "Gloss" => GetBrush("ThemeTextureGloss", Brushes.LightGray),
-                    "AO" => GetBrush("ThemeTextureAO", Brushes.Gray),
-                    _ => GetBrush("ThemeDataGridRowBackground", Brushes.Transparent)
+                    "Normal" => ThemeBrushCache.GetThemeBrush("ThemeMaterialNormal", Brushes.LightBlue),
+                    "Albedo" => ThemeBrushCache.GetThemeBrush("ThemeTextureAlbedo", Brushes.Khaki),
+                    "Gloss" => ThemeBrushCache.GetThemeBrush("ThemeTextureGloss", Brushes.LightGray),
+                    "AO" => ThemeBrushCache.GetThemeBrush("ThemeTextureAO", Brushes.Gray),
+                    _ => ThemeBrushCache.GetThemeBrush("ThemeDataGridRowBackground", Brushes.Transparent)
                 };
             }
         }

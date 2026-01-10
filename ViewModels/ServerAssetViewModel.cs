@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
+using AssetProcessor.Helpers;
 
 namespace AssetProcessor.ViewModels {
     /// <summary>
@@ -126,15 +127,15 @@ namespace AssetProcessor.ViewModels {
         }
 
         /// <summary>
-        /// Цвет статуса для отображения (видимый на обоих темах)
+        /// Цвет статуса для отображения (видимый на обоих темах, cached)
         /// </summary>
         public Brush SyncStatusColor => SyncStatus switch {
-            "Synced" => new SolidColorBrush(Color.FromRgb(76, 175, 80)),      // Green
-            "LocalOnly" => new SolidColorBrush(Color.FromRgb(255, 152, 0)),   // Orange
-            "ServerOnly" => new SolidColorBrush(Color.FromRgb(100, 181, 246)), // Light Blue
-            "HashMismatch" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red
-            "Outdated" => new SolidColorBrush(Color.FromRgb(255, 167, 38)),    // Dark Orange
-            _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))             // Gray
+            "Synced" => ThemeBrushCache.SyncedBrush,
+            "LocalOnly" => ThemeBrushCache.LocalOnlyBrush,
+            "ServerOnly" => ThemeBrushCache.ServerOnlyBrush,
+            "HashMismatch" => ThemeBrushCache.HashMismatchBrush,
+            "Outdated" => ThemeBrushCache.OutdatedBrush,
+            _ => ThemeBrushCache.UnknownBrush
         };
 
         /// <summary>

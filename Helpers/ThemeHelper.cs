@@ -41,6 +41,9 @@ namespace AssetProcessor.Helpers {
         };
 
         public static void ApplyTheme(Application app) {
+            // Invalidate brush cache before applying new theme
+            ThemeBrushCache.InvalidateCache();
+
             bool isDark = IsDarkTheme;
 
             // Background colors

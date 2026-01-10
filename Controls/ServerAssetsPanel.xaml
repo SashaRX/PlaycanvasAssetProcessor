@@ -142,13 +142,16 @@
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling"
                       VirtualizingPanel.ScrollUnit="Pixel"
+                      VirtualizingPanel.CacheLength="1,1"
+                      VirtualizingPanel.CacheLengthUnit="Page"
                       EnableRowVirtualization="True"
-                      ScrollViewer.CanContentScroll="True">
+                      ScrollViewer.CanContentScroll="True"
+                      RenderTransformOrigin="0,0">
 
-                <DataGrid.LayoutTransform>
+                <DataGrid.RenderTransform>
                     <ScaleTransform ScaleX="{Binding ElementName=ServerScaleSlider, Path=Value}"
                                     ScaleY="{Binding ElementName=ServerScaleSlider, Path=Value}"/>
-                </DataGrid.LayoutTransform>
+                </DataGrid.RenderTransform>
 
                 <DataGrid.Columns>
                     <!-- File Name with link to source asset -->

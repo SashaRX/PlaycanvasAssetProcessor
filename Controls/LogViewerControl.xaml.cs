@@ -54,37 +54,28 @@ namespace AssetProcessor.Controls {
 
         private static Brush GetLevelColor(LogLevel level) {
             if (level == LogLevel.Error || level == LogLevel.Fatal) {
-                return new SolidColorBrush(Color.FromRgb(211, 47, 47)); // Red - visible on both themes
+                return ThemeBrushCache.LogErrorBrush;
             } else if (level == LogLevel.Warn) {
-                return new SolidColorBrush(Color.FromRgb(245, 124, 0)); // Orange - visible on both themes
+                return ThemeBrushCache.LogWarnBrush;
             } else if (level == LogLevel.Info) {
-                return new SolidColorBrush(Color.FromRgb(86, 156, 214)); // Light blue - visible on both themes
+                return ThemeBrushCache.LogInfoBrush;
             } else if (level == LogLevel.Debug) {
-                return new SolidColorBrush(Color.FromRgb(128, 128, 128)); // Gray - visible on both themes
+                return ThemeBrushCache.LogDebugBrush;
             }
-            // Use theme foreground as fallback
-            return GetThemeForeground();
+            return ThemeBrushCache.GetThemeForeground();
         }
 
         private static Brush GetMessageColor(LogLevel level, string message) {
-            // Highlight special messages with colors visible on both themes
+            // Highlight special messages with cached frozen brushes
             if (message.Contains("✓") || message.Contains("SUCCESS") || message.Contains("успешно")) {
-                return new SolidColorBrush(Color.FromRgb(76, 175, 80)); // Green - visible on both themes
+                return ThemeBrushCache.SuccessBrush;
             } else if (message.Contains("✗") || message.Contains("FAIL") || message.Contains("ошибк")) {
-                return new SolidColorBrush(Color.FromRgb(244, 67, 54)); // Red - visible on both themes
+                return ThemeBrushCache.FailureBrush;
             } else if (message.Contains("━━━") || message.Contains("📊") || message.Contains("🔧")) {
-                return new SolidColorBrush(Color.FromRgb(156, 39, 176)); // Purple - visible on both themes
+                return ThemeBrushCache.SpecialBrush;
             }
             // Return null for normal messages - XAML will use ThemeForeground as fallback
             return null!;
-        }
-
-        private static Brush GetThemeForeground() {
-            bool isDark = ThemeHelper.IsDarkTheme;
-            return new SolidColorBrush(
-                isDark
-                    ? Color.FromRgb(220, 220, 220)  // Light text for dark theme
-                    : Color.FromRgb(32, 32, 32));   // Dark text for light theme
         }
     }
 

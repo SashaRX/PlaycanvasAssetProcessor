@@ -16,6 +16,7 @@ namespace AssetProcessor.Resources {
         private double downloadProgress;
         private int? folder;
         private int? parent;
+        private int projectId;
         private bool exportToServer;
         private string? uploadStatus;
         private string? uploadedHash;
@@ -260,6 +261,25 @@ namespace AssetProcessor.Resources {
                 OnPropertyChanged(nameof(Parent));
             }
         }
+
+        /// <summary>
+        /// PlayCanvas project ID for URL generation
+        /// </summary>
+        public int ProjectId {
+            get => projectId;
+            set {
+                projectId = value;
+                OnPropertyChanged(nameof(ProjectId));
+                OnPropertyChanged(nameof(PlayCanvasUrl));
+            }
+        }
+
+        /// <summary>
+        /// URL to open asset in PlayCanvas editor
+        /// </summary>
+        public string? PlayCanvasUrl => ProjectId > 0 && ID > 0
+            ? $"https://playcanvas.com/editor/project/{ProjectId}/asset/{ID}"
+            : null;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

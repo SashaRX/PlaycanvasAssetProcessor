@@ -354,10 +354,22 @@ namespace AssetProcessor.Controls {
         /// </summary>
         public event EventHandler<ServerAssetViewModel?>? SelectionChanged;
 
+        /// <summary>
+        /// Событие для навигации к ресурсу в основных таблицах
+        /// </summary>
+        public event EventHandler<string>? NavigateToResourceRequested;
+
         private void ServerAssetsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (!_isInitialized || !IsLoaded) return;
             var selectedAsset = ServerAssetsDataGrid.SelectedItem as ServerAssetViewModel;
             SelectionChanged?.Invoke(this, selectedAsset);
+        }
+
+        private void GoToResourceLink_Click(object sender, RoutedEventArgs e) {
+            if (sender is System.Windows.Documents.Hyperlink hyperlink &&
+                hyperlink.DataContext is ServerAssetViewModel asset) {
+                NavigateToResourceRequested?.Invoke(this, asset.FileName);
+            }
         }
 
         /// <summary>

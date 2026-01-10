@@ -151,17 +151,20 @@
                 </DataGrid.LayoutTransform>
 
                 <DataGrid.Columns>
-                    <!-- File Name -->
-                    <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*" MinWidth="150">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                                <Setter Property="Padding" Value="4,2"/>
-                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                <Setter Property="ToolTip" Value="{Binding FileName}"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <!-- File Name with link to source asset -->
+                    <DataGridTemplateColumn Header="File Name" Width="2*" MinWidth="150" SortMemberPath="FileName">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Padding="4,2" TextTrimming="CharacterEllipsis" ToolTip="{Binding FileName}">
+                                    <Hyperlink Click="GoToResourceLink_Click"
+                                               Foreground="{DynamicResource ThemeForeground}"
+                                               TextDecorations="None">
+                                        <Run Text="{Binding FileName, Mode=OneWay}"/>
+                                    </Hyperlink>
+                                </TextBlock>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                     <!-- Type -->
                     <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="80" MinWidth="60">

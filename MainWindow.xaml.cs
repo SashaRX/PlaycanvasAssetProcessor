@@ -205,6 +205,7 @@ namespace AssetProcessor {
             // Server assets panel selection (deferred to Loaded to avoid initialization issues)
             this.Loaded += (s, e) => {
                 ServerAssetsPanel.SelectionChanged += (sender, asset) => UpdateServerFileInfo(asset);
+                ServerAssetsPanel.NavigateToResourceRequested += OnNavigateToResourceRequested;
             };
 
             // Subscribe to file watcher events (debounced by service)
@@ -421,6 +422,49 @@ namespace AssetProcessor {
             if (_selectedServerAsset != null && !string.IsNullOrEmpty(_selectedServerAsset.CdnUrl)) {
                 Clipboard.SetText(_selectedServerAsset.CdnUrl);
                 logService.LogInfo($"Copied CDN URL: {_selectedServerAsset.CdnUrl}");
+            }
+        }
+
+        private void OnNavigateToResourceRequested(object? sender, string fileName) {
+            string baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+
+            // Try textures
+            var texture = viewModel.Textures.FirstOrDefault(t =>
+                t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
+                (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
+            if (texture != null) {
+                tabControl.SelectedItem = TexturesTabItem;
+                TexturesDataGrid.SelectedItem = texture;
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                    TexturesDataGrid.ScrollIntoView(texture);
+                });
+                return;
+            }
+
+            // Try models
+            var model = viewModel.Models.FirstOrDefault(m =>
+                m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
+                (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
+            if (model != null) {
+                tabControl.SelectedItem = ModelsTabItem;
+                ModelsDataGrid.SelectedItem = model;
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                    ModelsDataGrid.ScrollIntoView(model);
+                });
+                return;
+            }
+
+            // Try materials
+            var material = viewModel.Materials.FirstOrDefault(m =>
+                m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
+                (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
+            if (material != null) {
+                tabControl.SelectedItem = MaterialsTabItem;
+                MaterialsDataGrid.SelectedItem = material;
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                    MaterialsDataGrid.ScrollIntoView(material);
+                });
+                return;
             }
         }
 

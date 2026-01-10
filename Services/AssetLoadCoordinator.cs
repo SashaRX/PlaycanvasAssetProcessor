@@ -31,6 +31,7 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
         string projectFolderPath,
         string projectName,
         string projectsRoot,
+        int projectId,
         IProgress<AssetLoadProgress>? progress,
         CancellationToken cancellationToken) {
         try {
@@ -80,7 +81,7 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
             var materials = new List<MaterialResource>();
             var lockObj = new object();
 
-            var parameters = new AssetProcessingParameters(projectsRoot, projectName, folderPaths, 0);
+            var parameters = new AssetProcessingParameters(projectsRoot, projectName, folderPaths, 0, projectId);
 
             var tasks = supportedAssets.Select(async asset => {
                 try {

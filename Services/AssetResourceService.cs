@@ -224,7 +224,8 @@ public sealed class AssetResourceService : IAssetResourceService {
             Parent = parentId,
             Type = asset["type"]?.ToString(),
             GroupName = TextureResource.ExtractBaseTextureName(textureName),
-            TextureType = TextureResource.DetermineTextureType(textureName)
+            TextureType = TextureResource.DetermineTextureType(textureName),
+            ProjectId = parameters.ProjectId
         };
 
         await MainWindowHelpers.VerifyAndProcessResourceAsync(texture, async () => {
@@ -279,7 +280,8 @@ public sealed class AssetResourceService : IAssetResourceService {
             Status = "On Server",
             Hash = asset["file"]?["hash"]?.ToString() ?? string.Empty,
             Parent = parentId,
-            UVChannels = 0
+            UVChannels = 0,
+            ProjectId = parameters.ProjectId
         };
 
         await MainWindowHelpers.VerifyAndProcessResourceAsync(model, async () => {
@@ -323,7 +325,8 @@ public sealed class AssetResourceService : IAssetResourceService {
             Path = materialPath,
             Status = "On Server",
             Hash = string.Empty,
-            Parent = parentId
+            Parent = parentId,
+            ProjectId = parameters.ProjectId
         };
 
         await MainWindowHelpers.VerifyAndProcessResourceAsync(material, async () => {

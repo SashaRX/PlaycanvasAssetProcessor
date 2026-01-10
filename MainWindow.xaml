@@ -658,7 +658,7 @@
                         </DataGrid>
                     </Grid>
                 </TabItem>
-                <TabItem Header="Models">
+                <TabItem x:Name="ModelsTabItem" Header="Models">
                     <Grid Background="{DynamicResource ThemeBackgroundAlt}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

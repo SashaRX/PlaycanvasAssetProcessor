@@ -468,11 +468,6 @@ namespace AssetProcessor.Resources {
         }
 
         /// <summary>
-        /// ID проекта для сохранения настроек
-        /// </summary>
-        public int ProjectId { get; set; }
-
-        /// <summary>
         /// Уникальный ключ для хранения настроек (на основе материала или имени)
         /// </summary>
         public string SettingsKey { get; set; } = "";

@@ -390,6 +390,7 @@ public class MainViewModelTests {
             string projectFolderPath,
             string projectName,
             string projectsRoot,
+            int projectId,
             IProgress<AssetLoadProgress>? progress,
             CancellationToken cancellationToken) {
             return Task.FromResult(new AssetLoadResult {

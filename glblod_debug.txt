@@ -1,0 +1,89 @@
+10.01.26 03:48:18: [SelectionChanged] Before TryLoadGlbLodAsync
+10.01.26 03:48:18: TryLoadGlbLodAsync START
+10.01.26 03:48:18: Loading albedo texture
+10.01.26 03:48:18: Albedo texture done
+10.01.26 03:48:18: Finding GLB LOD files
+10.01.26 03:48:18: Found 4 files
+10.01.26 03:48:18: Showing LOD UI
+10.01.26 03:48:18: LOD UI shown
+10.01.26 03:48:18: Creating/checking SharpGlbLoader
+10.01.26 03:48:18: SharpGlbLoader ready
+10.01.26 03:48:18: Getting LOD file paths
+10.01.26 03:48:18: Got 4 LOD paths
+10.01.26 03:48:18: Starting Task.Run for 4 LODs
+10.01.26 03:48:18: Loading LOD0
+10.01.26 03:48:18: Calling LoadGlb for LOD0
+10.01.26 03:48:18: [SelectionChanged] Before TryLoadGlbLodAsync
+10.01.26 03:48:18: TryLoadGlbLodAsync START
+10.01.26 03:48:18: Loading albedo texture
+10.01.26 03:48:18: Albedo texture done
+10.01.26 03:48:18: Finding GLB LOD files
+10.01.26 03:48:18: Found 4 files
+10.01.26 03:48:18: Showing LOD UI
+10.01.26 03:48:18: LOD UI shown
+10.01.26 03:48:18: Creating/checking SharpGlbLoader
+10.01.26 03:48:18: SharpGlbLoader ready
+10.01.26 03:48:18: Getting LOD file paths
+10.01.26 03:48:18: Got 4 LOD paths
+10.01.26 03:48:18: Starting Task.Run for 4 LODs
+10.01.26 03:48:18: Loading LOD0
+10.01.26 03:48:18: Calling LoadGlb for LOD0
+10.01.26 03:48:18: LoadGlb done for LOD0, Success=True
+10.01.26 03:48:18: Loading LOD1
+10.01.26 03:48:18: Calling LoadGlb for LOD1
+10.01.26 03:48:18: LoadGlb done for LOD0, Success=True
+10.01.26 03:48:18: Loading LOD1
+10.01.26 03:48:18: Calling LoadGlb for LOD1
+10.01.26 03:48:18: LoadGlb done for LOD1, Success=True
+10.01.26 03:48:18: Loading LOD2
+10.01.26 03:48:18: Calling LoadGlb for LOD2
+10.01.26 03:48:18: LoadGlb done for LOD1, Success=True
+10.01.26 03:48:18: Loading LOD2
+10.01.26 03:48:18: Calling LoadGlb for LOD2
+10.01.26 03:48:18: LoadGlb done for LOD2, Success=True
+10.01.26 03:48:18: Loading LOD3
+10.01.26 03:48:18: Calling LoadGlb for LOD3
+10.01.26 03:48:18: LoadGlb done for LOD2, Success=True
+10.01.26 03:48:18: Loading LOD3
+10.01.26 03:48:18: Calling LoadGlb for LOD3
+10.01.26 03:48:18: LoadGlb done for LOD3, Success=True
+10.01.26 03:48:18: Task.Run loop complete
+10.01.26 03:48:18: Task.Run await complete
+10.01.26 03:48:18: Entering Dispatcher.InvokeAsync
+10.01.26 03:48:18: Inside Dispatcher.InvokeAsync
+10.01.26 03:48:18: Loading to viewport
+10.01.26 04:21:50: [SelectionChanged] Before TryLoadGlbLodAsync
+10.01.26 04:21:50: TryLoadGlbLodAsync START
+10.01.26 04:21:50: Loading albedo texture
+10.01.26 04:21:50: Albedo texture done
+10.01.26 04:21:50: Finding GLB LOD files
+10.01.26 04:21:50: Found 4 files
+10.01.26 04:21:50: Showing LOD UI
+10.01.26 04:21:50: LOD UI shown
+10.01.26 04:21:50: Creating/checking SharpGlbLoader
+10.01.26 04:21:50: SharpGlbLoader ready
+10.01.26 04:21:50: Getting LOD file paths
+10.01.26 04:21:50: Got 4 LOD paths
+10.01.26 04:21:50: Starting Task.Run for 4 LODs
+10.01.26 04:21:50: Loading LOD0
+10.01.26 04:21:50: Calling LoadGlb for LOD0
+10.01.26 04:21:51: LoadGlb done for LOD0, Success=True
+10.01.26 04:21:51: Loading LOD1
+10.01.26 04:21:51: Calling LoadGlb for LOD1
+10.01.26 04:21:51: LoadGlb done for LOD1, Success=True
+10.01.26 04:21:51: Loading LOD2
+10.01.26 04:21:51: Calling LoadGlb for LOD2
+10.01.26 04:21:51: LoadGlb done for LOD2, Success=True
+10.01.26 04:21:51: Loading LOD3
+10.01.26 04:21:51: Calling LoadGlb for LOD3
+10.01.26 04:21:51: LoadGlb done for LOD3, Success=True
+10.01.26 04:21:51: Task.Run loop complete
+10.01.26 04:21:51: Task.Run await complete
+10.01.26 04:21:51: Entering Dispatcher.InvokeAsync
+10.01.26 04:21:51: Inside Dispatcher.InvokeAsync
+10.01.26 04:21:51: Loading to viewport
+10.01.26 04:21:51: Viewport loaded
+10.01.26 04:21:51: Dispatcher.InvokeAsync DONE
+10.01.26 04:21:51: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+10.01.26 04:21:51: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=True
+10.01.26 04:21:51: [SelectionChanged] COMPLETE

@@ -13,7 +13,8 @@ public sealed record AssetProcessingParameters(
     string ProjectsRoot,
     string ProjectName,
     IReadOnlyDictionary<int, string> FolderPaths,
-    int AssetIndex);
+    int AssetIndex,
+    int ProjectId = 0);
 
 public sealed record AssetProcessingResult(
     AssetProcessingResultType ResultType,

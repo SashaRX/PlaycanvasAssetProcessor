@@ -111,6 +111,7 @@ public partial class AssetLoadingViewModel : ObservableObject {
                     request.ProjectFolderPath,
                     request.ProjectName,
                     request.ProjectsBasePath,
+                    request.ProjectId,
                     progress,
                     ct).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);

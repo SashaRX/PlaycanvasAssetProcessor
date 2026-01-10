@@ -495,7 +495,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            // For ORM files, highlight the ORM group header only
+            // For ORM files, highlight the ORM group header and show ORM panel
             if (isOrmFile) {
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItems.Clear();
@@ -508,10 +508,43 @@ namespace AssetProcessor {
 
                 if (textureInGroup != null) {
                     SelectedORMSubGroupName = textureInGroup.SubGroupName;
-                    logger.Info($"[ORM Nav] Found SubGroupName='{textureInGroup.SubGroupName}' for group '{baseNameWithoutSuffix}'");
-                } else {
-                    SelectedORMSubGroupName = baseName;
-                    logger.Info($"[ORM Nav] No texture found, using baseName='{baseName}'");
+
+                    // Скролл к текстуре в группе
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                        TexturesDataGrid.ScrollIntoView(textureInGroup);
+                    });
+
+                    // Показываем ORM панель если есть ParentORMTexture
+                    if (textureInGroup.ParentORMTexture != null) {
+                        var ormTexture = textureInGroup.ParentORMTexture;
+
+                        if (ConversionSettingsExpander != null) {
+                            ConversionSettingsExpander.Visibility = Visibility.Collapsed;
+                        }
+
+                        if (ORMPanel != null) {
+                            ORMPanel.Visibility = Visibility.Visible;
+                            var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                            ORMPanel.Initialize(this, availableTextures);
+                            ORMPanel.SetORMTexture(ormTexture);
+                        }
+
+                        TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
+                        TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+
+                        if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
+                            TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                                ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
+                                : "Resolution: Unknown";
+                            TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+                            _ = LoadORMPreviewAsync(ormTexture);
+                        } else {
+                            TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
+                            TextureFormatTextBlock.Text = "Format: Not packed";
+                        }
+
+                        viewModel.SelectedTexture = ormTexture;
+                    }
                 }
                 return;
             }

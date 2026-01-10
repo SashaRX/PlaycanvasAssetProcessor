@@ -430,17 +430,16 @@ namespace AssetProcessor {
 
             // Strip ORM suffix patterns for better matching (_og, _ogm, _ogmh)
             string baseNameWithoutSuffix = baseName;
-            if (baseName.EndsWith("_og", StringComparison.OrdinalIgnoreCase))
+            bool isOrmFile = false;
+            if (baseName.EndsWith("_og", StringComparison.OrdinalIgnoreCase)) {
                 baseNameWithoutSuffix = baseName[..^3];
-            else if (baseName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase))
+                isOrmFile = true;
+            } else if (baseName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase)) {
                 baseNameWithoutSuffix = baseName[..^4];
-            else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase))
+                isOrmFile = true;
+            } else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase)) {
                 baseNameWithoutSuffix = baseName[..^5];
-
-            // Debug: Log all ORM textures to understand matching
-            logger.Info($"[Navigation] Searching for: fileName='{fileName}', baseName='{baseName}', baseNameWithoutSuffix='{baseNameWithoutSuffix}'");
-            foreach (var t in viewModel.Textures.OfType<Resources.ORMTextureResource>().Take(5)) {
-                logger.Info($"[Navigation] ORM: Name='{t.Name}', SettingsKey='{t.SettingsKey}', Path='{t.Path}'");
+                isOrmFile = true;
             }
 
             // Try textures (including ORM textures)
@@ -488,13 +487,32 @@ namespace AssetProcessor {
                 return false;
             });
             if (texture != null) {
-                logger.Debug($"[Navigation] Found texture: {texture.Name}");
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItem = texture;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
                     TexturesDataGrid.ScrollIntoView(texture);
                 });
                 return;
+            }
+
+            // If ORM file from server but no ORM texture found, try to find source textures by name pattern
+            // e.g., oldMailBox_ogm.ktx2 -> look for oldMailBox_ao, oldMailBox_gloss, etc.
+            if (isOrmFile && !string.IsNullOrEmpty(baseNameWithoutSuffix)) {
+                var sourceTexture = viewModel.Textures.FirstOrDefault(t =>
+                    t.Name != null && t.Name.StartsWith(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) &&
+                    (t.Name.Contains("_ao", StringComparison.OrdinalIgnoreCase) ||
+                     t.Name.Contains("_gloss", StringComparison.OrdinalIgnoreCase) ||
+                     t.Name.Contains("_roughness", StringComparison.OrdinalIgnoreCase) ||
+                     t.Name.Contains("_metalness", StringComparison.OrdinalIgnoreCase) ||
+                     t.Name.Contains("_metallic", StringComparison.OrdinalIgnoreCase)));
+                if (sourceTexture != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
+                    TexturesDataGrid.SelectedItem = sourceTexture;
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                        TexturesDataGrid.ScrollIntoView(sourceTexture);
+                    });
+                    return;
+                }
             }
 
             // Try models

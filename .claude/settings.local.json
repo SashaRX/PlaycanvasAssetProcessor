@@ -105,7 +105,8 @@
       "Bash(git -C \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" commit -m \"$\\(cat <<''EOF''\nAdd ArchitectureRules.md and extract Ktx2InfoService \\(MVVM refactoring\\)\n\n- Document MVVM + Service Layer architecture rules in Docs/ArchitectureRules.md\n- Extract ScanKtx2InfoForAllTextures to IKtx2InfoService/Ktx2InfoService\n- Move RecalculateIndices logic from MainWindow to MainViewModel\n- Register Ktx2InfoService in DI container\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED\")",
       "Bash(powershell.exe -Command \"dotnet build D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\AssetProcessor.csproj --configuration Release 2>&1 | Select-String -Pattern ''error|Build succeeded|Build FAILED''\")",
-      "Bash(powershell.exe -Command \"dotnet clean D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\AssetProcessor.csproj --configuration Release\")"
+      "Bash(powershell.exe -Command \"dotnet clean D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\AssetProcessor.csproj --configuration Release\")",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

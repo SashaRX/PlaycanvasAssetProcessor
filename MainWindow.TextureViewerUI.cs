@@ -102,7 +102,6 @@ namespace AssetProcessor {
                 D3D11TextureViewer.Renderer.SetChannelMask(0xFFFFFFFF);
                 D3D11TextureViewer.Renderer.RestoreOriginalGamma();
                 D3D11TextureViewer.Renderer.Render();
-                logger.Info("Cleared D3D11 channel mask without reloading texture");
 
                 // Refresh histogram using best available bitmap reference
                 BitmapSource? histogramSource = texturePreviewService.OriginalBitmapSource ?? texturePreviewService.OriginalFileBitmapSource;
@@ -119,7 +118,6 @@ namespace AssetProcessor {
         private void FitResetButton_Click(object sender, RoutedEventArgs e) {
             // Reset zoom/pan (call on control, not renderer, to reset local state too)
             D3D11TextureViewer?.ResetView();
-            logger.Info("Fit/Reset: Reset zoom/pan");
 
             // Reset channel masks without reloading texture or changing Source/KTX mode
             texturePreviewService.CurrentActiveChannelMask = null;
@@ -131,15 +129,12 @@ namespace AssetProcessor {
 
             // Reset channel buttons UI
             UpdateChannelButtonsState();
-
-            logger.Info("Fit/Reset: Reset channel masks (without changing Source/KTX mode)");
         }
 
         private void FilterToggleButton_Click(object sender, RoutedEventArgs e) {
             if (sender is ToggleButton button) {
                 bool useLinearFilter = button.IsChecked ?? true;
                 D3D11TextureViewer?.Renderer?.SetFilter(useLinearFilter);
-                logger.Info($"Filter toggle: {(useLinearFilter ? "Trilinear" : "Point")}");
             }
         }
 
@@ -148,7 +143,6 @@ namespace AssetProcessor {
                 bool enableTiling = button.IsChecked ?? false;
                 D3D11TextureViewer.Renderer.SetTiling(enableTiling);
                 D3D11TextureViewer.Renderer.Render();
-                logger.Info($"Tile toggle: {(enableTiling ? "Enabled" : "Disabled")}");
             }
         }
 
@@ -160,8 +154,6 @@ namespace AssetProcessor {
                 // Save setting for next session
                 AppSettings.Default.HistogramCorrectionEnabled = enabled;
                 AppSettings.Default.Save();
-
-                logger.Info($"Histogram correction {(enabled ? "enabled" : "disabled")} by user (saved to settings)");
 
                 // Force immediate render to show the change
                 D3D11TextureViewer.Renderer.Render();
@@ -288,35 +280,13 @@ namespace AssetProcessor {
 
         // Updated: Use D3D11 viewer for texture preview
         private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
-            logger.Info($"UpdatePreviewImage called: bitmap={bitmap?.PixelWidth}x{bitmap?.PixelHeight}");
-
-            if (bitmap == null) {
-                logger.Warn("Bitmap is null in UpdatePreviewImage");
-                return;
-            }
-
-            logger.Info("About to check D3D11TextureViewer");
-
-            if (D3D11TextureViewer == null) {
-                logger.Warn("D3D11TextureViewer is null in UpdatePreviewImage");
-                return;
-            }
-
-            logger.Info("D3D11TextureViewer is not null");
-            logger.Info("About to call LoadTextureToD3D11Viewer from UpdatePreviewImage");
+            if (bitmap == null || D3D11TextureViewer == null) return;
 
             try {
-                // Determine if texture is sRGB based on texture type
                 bool isSRGB = IsSRGBTexture(texturePreviewService.CurrentSelectedTexture);
-                logger.Info("Getting bitmap dimensions...");
-                int w = bitmap.PixelWidth;
-                int h = bitmap.PixelHeight;
-                logger.Info($"Bitmap dimensions: {w}x{h}");
-                logger.Info($"Calling LoadTextureToD3D11Viewer with bitmap {w}x{h}, isSRGB={isSRGB} (type={texturePreviewService.CurrentSelectedTexture?.TextureType})");
                 LoadTextureToD3D11Viewer(bitmap, isSRGB);
-                logger.Info("LoadTextureToD3D11Viewer returned successfully from UpdatePreviewImage");
             } catch (Exception ex) {
-                logger.Error(ex, "Exception in UpdatePreviewImage when calling LoadTextureToD3D11Viewer");
+                logger.Error(ex, "Exception in UpdatePreviewImage");
             }
         }
 

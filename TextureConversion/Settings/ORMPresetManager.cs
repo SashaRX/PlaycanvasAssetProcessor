@@ -166,8 +166,8 @@ public class ORMPresetManager {
             try {
                 string json = File.ReadAllText(PresetsFilePath);
                 savedData = JsonConvert.DeserializeObject<ORMPresetData>(json);
-            } catch (Exception ex) {
-                Console.WriteLine($"Error loading ORM presets: {ex.Message}");
+            } catch {
+                // Ignore preset load errors - continue with defaults
             }
         }
 

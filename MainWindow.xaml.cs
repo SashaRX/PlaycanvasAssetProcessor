@@ -1128,10 +1128,7 @@ namespace AssetProcessor {
                         ShowOriginalImage();
                     }
 
-                    // Always update histogram when source image is loaded (even if showing KTX2)
-                    // Use the source bitmap for histogram calculation
-                    _ = UpdateHistogramAsync(cachedImage);
-
+                    // Histogram is updated when full-res image loads (skip for cached to reduce CPU)
                     UpdatePreviewSourceControls();
                 }));
 
@@ -1162,10 +1159,7 @@ namespace AssetProcessor {
                     ShowOriginalImage();
                 }
 
-                // Always update histogram when source image is loaded (even if showing KTX2)
-                // Use the source bitmap for histogram calculation
-                _ = UpdateHistogramAsync(thumbnailImage);
-
+                // Histogram is updated when full-res image loads (skip for thumbnail to reduce CPU)
                 UpdatePreviewSourceControls();
             }));
 

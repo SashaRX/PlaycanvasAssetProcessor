@@ -49,12 +49,6 @@ public sealed class LogService : ILogService, IDisposable {
 
         // Non-blocking add - if queue is full, message is dropped
         logQueue.TryAdd(new LogEntry(fileName, formattedMessage, isWarning, writeToDebug));
-
-        // Debug output happens immediately (it's fast)
-        if (isWarning || writeToDebug) {
-            string prefix = isWarning ? "WARNING: " : string.Empty;
-            Debug.WriteLine($"{DateTime.Now}: {prefix}{message}");
-        }
     }
 
     private void ProcessLogQueue() {

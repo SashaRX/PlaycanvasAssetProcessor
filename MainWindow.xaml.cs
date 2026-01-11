@@ -1333,13 +1333,27 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private readonly Dictionary<DataGrid, double[]> _previousColumnWidths = new();
         private readonly Dictionary<DataGrid, double> _lastGridWidth = new();
         private bool _isAdjustingColumns = false;
+        private DispatcherTimer? _resizeDebounceTimer;
 
         private void TexturesDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
             if (sender is not DataGrid grid) return;
             InitializeGridColumnsIfNeeded(grid);
             SubscribeDataGridColumnResizing(grid);
-            UpdateColumnHeadersBasedOnWidth(grid);
-            FillRemainingSpace(grid);
+            // Debounce UpdateColumnHeadersBasedOnWidth and FillRemainingSpace
+            DebouncedResizeUpdate(grid);
+        }
+
+        private void DebouncedResizeUpdate(DataGrid grid) {
+            _resizeDebounceTimer?.Stop();
+            _resizeDebounceTimer = new DispatcherTimer {
+                Interval = TimeSpan.FromMilliseconds(16) // ~1 frame
+            };
+            _resizeDebounceTimer.Tick += (s, e) => {
+                _resizeDebounceTimer?.Stop();
+                UpdateColumnHeadersBasedOnWidth(grid);
+                FillRemainingSpace(grid);
+            };
+            _resizeDebounceTimer.Start();
         }
 
         private void TexturesDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
@@ -2489,8 +2503,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void ModelsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
             if (sender is not DataGrid grid) return;
             InitializeGridColumnsIfNeeded(grid);
-            SubscribeDataGridColumnResizing(grid); // Subscribe to left gripper when grid becomes visible
-            FillRemainingSpaceForGrid(grid);
+            SubscribeDataGridColumnResizing(grid);
+            DebouncedResizeUpdateForGrid(grid);
+        }
+
+        private void DebouncedResizeUpdateForGrid(DataGrid grid) {
+            _resizeDebounceTimer?.Stop();
+            _resizeDebounceTimer = new DispatcherTimer {
+                Interval = TimeSpan.FromMilliseconds(16)
+            };
+            _resizeDebounceTimer.Tick += (s, e) => {
+                _resizeDebounceTimer?.Stop();
+                FillRemainingSpaceForGrid(grid);
+            };
+            _resizeDebounceTimer.Start();
         }
 
         private void ModelsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {
@@ -2505,8 +2531,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void MaterialsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
             if (sender is not DataGrid grid) return;
             InitializeGridColumnsIfNeeded(grid);
-            SubscribeDataGridColumnResizing(grid); // Subscribe to left gripper when grid becomes visible
-            FillRemainingSpaceForGrid(grid);
+            SubscribeDataGridColumnResizing(grid);
+            DebouncedResizeUpdateForGrid(grid);
         }
 
         private void MaterialsDataGrid_ColumnDisplayIndexChanged(object? sender, DataGridColumnEventArgs e) {

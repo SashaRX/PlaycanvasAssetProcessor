@@ -2159,6 +2159,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
+        private void CollapseGroupsCheckBox_Changed(object sender, RoutedEventArgs e) {
+            // Save the preference when changed
+            AppSettings.Default.Save();
+        }
+
         /// <summary>
         /// Applies texture grouping if the GroupTextures checkbox is checked.
         /// Called after loading assets to apply default grouping.

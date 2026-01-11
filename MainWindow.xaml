@@ -831,6 +831,20 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
+                            <DataGridTemplateColumn Header="Master" Width="120" MinWidth="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  DisplayMemberPath="Name"
+                                                  SelectedValuePath="Name"
+                                                  SelectedValue="{Binding MasterMaterialName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  IsEditable="False"
+                                                  BorderThickness="0"
+                                                  Background="Transparent"
+                                                  MinWidth="100"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -843,6 +857,111 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    </Grid>
+                </TabItem>
+                <TabItem x:Name="MasterMaterialsTabItem" Header="Master Materials">
+                    <Grid Background="{DynamicResource ThemeBackgroundAlt}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="200"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="*" MinWidth="200"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: Master Materials List -->
+                        <Grid Grid.Column="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4,2">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Master Materials" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <Button Content="+ New" Command="{Binding MasterMaterialsViewModel.AddNewMasterCommand}"
+                                            Padding="8,2" Margin="0,0,4,0"/>
+                                    <Button Content="Save All" Command="{Binding MasterMaterialsViewModel.SaveConfigCommand}"
+                                            Padding="8,2" Background="#FF4CAF50" Foreground="White"/>
+                                </StackPanel>
+                            </Border>
+
+                            <DataGrid Grid.Row="1" x:Name="MasterMaterialsDataGrid"
+                                      AutoGenerateColumns="False"
+                                      ItemsSource="{Binding MasterMaterialsViewModel.MasterMaterials}"
+                                      SelectedItem="{Binding MasterMaterialsViewModel.SelectedMaster}"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False"
+                                      RowHeight="22"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      EnableRowVirtualization="True"
+                                      MouseDoubleClick="MasterMaterialsDataGrid_MouseDoubleClick"
+                                      Background="{DynamicResource ThemeDataGridBackground}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn Header="Base ID" Binding="{Binding BaseMaterialId}" Width="70"/>
+                                    <DataGridTextColumn Header="Blend" Binding="{Binding BlendType}" Width="60"/>
+                                    <DataGridTextColumn Header="Chunks" Binding="{Binding ChunkIds.Count}" Width="55"/>
+                                    <DataGridCheckBoxColumn Header="Built-in" Binding="{Binding IsBuiltIn}" Width="55" IsReadOnly="True"/>
+                                </DataGrid.Columns>
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                        <Setter Property="ContextMenu">
+                                            <Setter.Value>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Edit" Click="MasterMaterial_Edit_Click"/>
+                                                    <MenuItem Header="Delete" Click="MasterMaterial_Delete_Click"/>
+                                                </ContextMenu>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                            </DataGrid>
+                        </Grid>
+
+                        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ThemeBorder}"/>
+
+                        <!-- Right: Chunks List -->
+                        <Grid Grid.Column="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4,2">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Shader Chunks" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <Button Content="+ New Chunk" Command="{Binding MasterMaterialsViewModel.AddNewChunkCommand}"
+                                            Padding="8,2"/>
+                                </StackPanel>
+                            </Border>
+
+                            <DataGrid Grid.Row="1" x:Name="ChunksDataGrid"
+                                      AutoGenerateColumns="False"
+                                      ItemsSource="{Binding MasterMaterialsViewModel.Chunks}"
+                                      SelectedItem="{Binding MasterMaterialsViewModel.SelectedChunk}"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False"
+                                      RowHeight="22"
+                                      MouseDoubleClick="ChunksDataGrid_MouseDoubleClick"
+                                      Background="{DynamicResource ThemeDataGridBackground}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70"/>
+                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*"/>
+                                </DataGrid.Columns>
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                        <Setter Property="ContextMenu">
+                                            <Setter.Value>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Edit" Click="Chunk_Edit_Click"/>
+                                                    <MenuItem Header="Delete" Click="Chunk_Delete_Click"/>
+                                                </ContextMenu>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                            </DataGrid>
+                        </Grid>
                     </Grid>
                 </TabItem>
                 <TabItem x:Name="ServerTabItem" Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"

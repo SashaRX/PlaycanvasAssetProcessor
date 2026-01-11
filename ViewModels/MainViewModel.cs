@@ -37,6 +37,7 @@ namespace AssetProcessor.ViewModels {
         private readonly TextureConversionSettingsViewModel conversionSettingsViewModel;
         private readonly AssetLoadingViewModel assetLoadingViewModel;
         private readonly MaterialSelectionViewModel materialSelectionViewModel;
+        private readonly MasterMaterialsViewModel masterMaterialsViewModel;
         private long lastProgressUpdateTicks;
         private AssetDownloadProgress? pendingProgress;
         private BaseResource? pendingResource;
@@ -75,6 +76,11 @@ namespace AssetProcessor.ViewModels {
         /// ViewModel for material selection and texture navigation
         /// </summary>
         public MaterialSelectionViewModel MaterialSelection => materialSelectionViewModel;
+
+        /// <summary>
+        /// ViewModel for Master Materials and Shader Chunks management
+        /// </summary>
+        public MasterMaterialsViewModel MasterMaterialsViewModel => masterMaterialsViewModel;
 
         [ObservableProperty]
         private ObservableCollection<TextureResource> textures = [];
@@ -156,7 +162,8 @@ namespace AssetProcessor.ViewModels {
             ORMTextureViewModel ormTextureViewModel,
             TextureConversionSettingsViewModel conversionSettingsViewModel,
             AssetLoadingViewModel assetLoadingViewModel,
-            MaterialSelectionViewModel materialSelectionViewModel) {
+            MaterialSelectionViewModel materialSelectionViewModel,
+            MasterMaterialsViewModel masterMaterialsViewModel) {
             this.playCanvasService = playCanvasService;
             this.textureProcessingService = textureProcessingService;
             this.localCacheService = localCacheService;
@@ -168,6 +175,7 @@ namespace AssetProcessor.ViewModels {
             this.conversionSettingsViewModel = conversionSettingsViewModel;
             this.assetLoadingViewModel = assetLoadingViewModel;
             this.materialSelectionViewModel = materialSelectionViewModel;
+            this.masterMaterialsViewModel = masterMaterialsViewModel;
             synchronizationContext = SynchronizationContext.Current;
 
             logger.Info("MainViewModel initialized");

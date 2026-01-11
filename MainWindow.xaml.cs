@@ -5030,5 +5030,82 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         #endregion
+
+        #region Master Materials Tab Event Handlers
+
+        private void MasterMaterialsDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            if (MasterMaterialsDataGrid.SelectedItem is MasterMaterials.Models.MasterMaterial master) {
+                if (!master.IsBuiltIn) {
+                    OpenMasterMaterialEditor(master);
+                }
+            }
+        }
+
+        private void ChunksDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            if (ChunksDataGrid.SelectedItem is MasterMaterials.Models.ShaderChunk chunk) {
+                OpenChunkEditor(chunk);
+            }
+        }
+
+        private void MasterMaterial_Edit_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.MasterMaterial master) {
+                if (!master.IsBuiltIn) {
+                    OpenMasterMaterialEditor(master);
+                }
+            }
+        }
+
+        private void MasterMaterial_Delete_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.MasterMaterial master) {
+                if (master.IsBuiltIn) {
+                    MessageBox.Show("Cannot delete built-in master materials.", "Delete Master Material",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = MessageBox.Show($"Are you sure you want to delete master material '{master.Name}'?",
+                    "Delete Master Material", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) {
+                    viewModel.MasterMaterialsViewModel.DeleteMasterCommand.Execute(master);
+                }
+            }
+        }
+
+        private void Chunk_Edit_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                OpenChunkEditor(chunk);
+            }
+        }
+
+        private async void Chunk_Delete_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                var result = MessageBox.Show($"Are you sure you want to delete chunk '{chunk.Id}'?",
+                    "Delete Chunk", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) {
+                    await viewModel.MasterMaterialsViewModel.DeleteChunkCommand.ExecuteAsync(chunk);
+                }
+            }
+        }
+
+        private void OpenMasterMaterialEditor(MasterMaterials.Models.MasterMaterial master) {
+            // TODO: Implement MasterMaterialEditorWindow
+            MessageBox.Show($"Editing master material: {master.Name}\n\nMaster Material Editor will be implemented in a future update.",
+                "Edit Master Material", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void OpenChunkEditor(MasterMaterials.Models.ShaderChunk chunk) {
+            var editorWindow = new Windows.ChunkEditorWindow(chunk) {
+                Owner = this
+            };
+
+            if (editorWindow.ShowDialog() == true && editorWindow.EditedChunk != null) {
+                viewModel.MasterMaterialsViewModel.UpdateChunk(editorWindow.EditedChunk);
+                logger.Info($"Chunk '{editorWindow.EditedChunk.Id}' updated");
+            }
+        }
+
+        #endregion
     }
 }

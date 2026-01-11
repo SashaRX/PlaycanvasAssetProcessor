@@ -1383,36 +1383,26 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private void SubscribeDataGridColumnResizing(DataGrid grid) {
             if (grid == null) return;
 
+            // Skip if already subscribed - prevents expensive FindVisualChildren on every resize
+            if (_leftGripperSubscribedGrids.Contains(grid)) return;
+
             // Subscribe to column headers for left edge mouse handling
             var columnHeaders = FindVisualChildren<DataGridColumnHeader>(grid).ToList();
 
-            // Skip if no headers found yet (grid not visible) or already fully subscribed
+            // Skip if no headers found yet (grid not visible)
             if (columnHeaders.Count == 0) return;
 
-            // Check if we need to subscribe (new headers may appear)
-            bool hasNewHeaders = false;
             foreach (var header in columnHeaders) {
                 if (header.Column == null) continue;
-                // Check if this header already has our handler
-                hasNewHeaders = true;
-                header.PreviewMouseLeftButtonDown -= OnHeaderMouseDown;
                 header.PreviewMouseLeftButtonDown += OnHeaderMouseDown;
-                header.PreviewMouseMove -= OnHeaderMouseMoveForCursor;
                 header.PreviewMouseMove += OnHeaderMouseMoveForCursor;
             }
 
-            if (!hasNewHeaders) return;
-
-            // Subscribe to move/up events on DataGrid level for dragging (only once per grid)
-            if (!_leftGripperSubscribedGrids.Contains(grid)) {
-                grid.PreviewMouseMove -= OnDataGridMouseMove;
-                grid.PreviewMouseMove += OnDataGridMouseMove;
-                grid.PreviewMouseLeftButtonUp -= OnDataGridMouseUp;
-                grid.PreviewMouseLeftButtonUp += OnDataGridMouseUp;
-                grid.LostMouseCapture -= OnDataGridLostCapture;
-                grid.LostMouseCapture += OnDataGridLostCapture;
-                _leftGripperSubscribedGrids.Add(grid);
-            }
+            // Subscribe to move/up events on DataGrid level for dragging
+            grid.PreviewMouseMove += OnDataGridMouseMove;
+            grid.PreviewMouseLeftButtonUp += OnDataGridMouseUp;
+            grid.LostMouseCapture += OnDataGridLostCapture;
+            _leftGripperSubscribedGrids.Add(grid);
         }
 
         private bool _isLeftGripperDragging;

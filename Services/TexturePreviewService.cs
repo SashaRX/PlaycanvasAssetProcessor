@@ -235,14 +235,6 @@ public class TexturePreviewService : ITexturePreviewService {
             startInfo.ArgumentList.Add(outputBaseName);
 
             string commandLine = $"{ktxToolPath} {string.Join(" ", startInfo.ArgumentList.Select(arg => arg.Contains(' ') ? $"\"{arg}\"" : arg))}";
-            logger.Info($"[KTX_EXTRACT] Executing: {commandLine}");
-            logger.Info($"[KTX_EXTRACT] Input file exists: {File.Exists(ktxPath)}, size: {new FileInfo(ktxPath).Length} bytes");
-            logService.LogInfo($"Executing command: {commandLine}");
-            logService.LogInfo($"Working directory: {tempDirectory}");
-            logService.LogInfo($"Input file exists: {File.Exists(ktxPath)}");
-            logService.LogInfo($"Input file size: {new FileInfo(ktxPath).Length} bytes");
-            logService.LogInfo($"Output base path: {outputBaseName}");
-            logService.LogInfo($"Output directory exists: {Directory.Exists(tempDirectory)}");
 
             using Process process = new() { StartInfo = startInfo };
             try {
@@ -258,10 +250,7 @@ public class TexturePreviewService : ITexturePreviewService {
             // Register callback to kill process if cancellation is requested
             using var processKillRegistration = cancellationToken.Register(() => {
                 try {
-                    if (!process.HasExited) {
-                        logger.Info("[KTX_EXTRACT] Cancellation requested - killing ktx process");
-                        process.Kill();
-                    }
+                    if (!process.HasExited) process.Kill();
                 } catch {
                     // Process may have already exited
                 }
@@ -282,28 +271,11 @@ public class TexturePreviewService : ITexturePreviewService {
             string stdError = stdErrTask.Result;
 
             if (process.ExitCode != 0) {
-                logger.Warn($"[KTX_EXTRACT] Exit code: {process.ExitCode}, stderr: {stdError}");
-                logService.LogWarn($"ktx exit code: {process.ExitCode}, stderr: {stdError}, stdout: {stdOutput}");
-                throw new InvalidOperationException($"ktx exited with code {process.ExitCode}. Details logged.");
+                logger.Warn($"ktx extract failed: exit={process.ExitCode}, stderr={stdError}");
+                throw new InvalidOperationException($"ktx exited with code {process.ExitCode}");
             }
 
-            logger.Info($"[KTX_EXTRACT] Success. stdout: {stdOutput}");
-            logService.LogInfo($"ktx extract completed successfully. stdout: {stdOutput}");
-            if (!string.IsNullOrEmpty(stdError)) {
-                logger.Info($"[KTX_EXTRACT] stderr (non-fatal): {stdError}");
-                logService.LogInfo($"ktx extract stderr (non-fatal): {stdError}");
-            }
-
-            // List all files in temp directory to diagnose output format
             var filesInTempDir = Directory.GetFiles(tempDirectory, "*.png", SearchOption.AllDirectories);
-            logger.Info($"[KTX_EXTRACT] PNG files created: {filesInTempDir.Length}");
-            foreach (var file in filesInTempDir) {
-                logger.Info($"[KTX_EXTRACT]   - {Path.GetFileName(file)}");
-            }
-            logService.LogInfo($"PNG files created ({filesInTempDir.Length} files):");
-            foreach (var file in filesInTempDir) {
-                logService.LogInfo($"  - {file}");
-            }
 
             // Check cancellation after ktx extract completes (user may have switched textures)
             cancellationToken.ThrowIfCancellationRequested();
@@ -315,7 +287,6 @@ public class TexturePreviewService : ITexturePreviewService {
             var levelPattern = new System.Text.RegularExpressions.Regex(@"_level(\d+)\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
             foreach (var pngFile in filesInTempDir) {
-                // Check cancellation before loading each mipmap (BitmapImage loading can be slow)
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string fileName = Path.GetFileName(pngFile);
@@ -323,8 +294,6 @@ public class TexturePreviewService : ITexturePreviewService {
 
                 if (match.Success) {
                     int level = int.Parse(match.Groups[1].Value);
-                    logger.Info($"[KTX_EXTRACT] Found mipmap: {fileName} (level {level})");
-                    logService.LogInfo($"Found mipmap file: {pngFile} (level {level})");
                     mipmaps.Add(CreateMipLevel(pngFile, level));
                 }
             }
@@ -332,15 +301,8 @@ public class TexturePreviewService : ITexturePreviewService {
             // If no level-suffixed files found, try files without level suffix (single mip)
             if (mipmaps.Count == 0 && filesInTempDir.Length > 0) {
                 cancellationToken.ThrowIfCancellationRequested();
-                // Take the first PNG file as level 0
-                string singleFile = filesInTempDir[0];
-                logger.Info($"[KTX_EXTRACT] No level pattern found, using single file: {Path.GetFileName(singleFile)}");
-                logService.LogInfo($"Found single mipmap file (no level suffix): {singleFile}");
-                mipmaps.Add(CreateMipLevel(singleFile, 0));
+                mipmaps.Add(CreateMipLevel(filesInTempDir[0], 0));
             }
-
-            logger.Info($"[KTX_EXTRACT] Total mipmaps found: {mipmaps.Count}");
-            logService.LogInfo($"Total mipmaps found: {mipmaps.Count}");
 
             mipmaps.Sort((a, b) => a.Level.CompareTo(b.Level));
             ktxPreviewCache[ktxPath] = new KtxPreviewCacheEntry {
@@ -354,7 +316,6 @@ public class TexturePreviewService : ITexturePreviewService {
             if (ktxPreviewCache.Count > MaxKtxCacheSize) {
                 var oldest = ktxPreviewCache.OrderBy(x => x.Value.LoadedAt).First();
                 ktxPreviewCache.Remove(oldest.Key);
-                logger.Debug($"[KTX_CACHE] Evicted oldest entry: {oldest.Key}");
             }
 
             return mipmaps;

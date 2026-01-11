@@ -111,6 +111,7 @@
                   VerticalScrollBarVisibility="Auto"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
+                  VirtualizingPanel.ScrollUnit="Pixel"
                   EnableRowVirtualization="True">
             <DataGrid.LayoutTransform>
                 <ScaleTransform ScaleX="{Binding ElementName=LogScaleSlider, Path=Value}"

@@ -29,8 +29,8 @@ namespace AssetProcessor.ModelConversion.Settings {
 
                 var json = JsonSerializer.Serialize(settings, options);
                 File.WriteAllText(SettingsFilePath, json);
-            } catch (Exception ex) {
-                Console.WriteLine($"Failed to save model conversion settings: {ex.Message}");
+            } catch {
+                // Ignore save errors
             }
         }
 
@@ -50,8 +50,8 @@ namespace AssetProcessor.ModelConversion.Settings {
                         return settings;
                     }
                 }
-            } catch (Exception ex) {
-                Console.WriteLine($"Failed to load model conversion settings: {ex.Message}");
+            } catch {
+                // Ignore load errors - return defaults
             }
 
             return new GlobalModelConversionSettings();

@@ -141,6 +141,25 @@ namespace AssetProcessor.Settings {
 
         [System.Configuration.UserScopedSetting()]
         [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("True")]
+        public bool GroupTexturesByType {
+            get => (bool)this[nameof(GroupTexturesByType)];
+            set => this[nameof(GroupTexturesByType)] = value;
+        }
+
+        /// <summary>
+        /// If true, texture groups are collapsed by default. If false, groups are expanded.
+        /// </summary>
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
+        [System.Configuration.DefaultSettingValue("True")]
+        public bool CollapseTextureGroups {
+            get => (bool)this[nameof(CollapseTextureGroups)];
+            set => this[nameof(CollapseTextureGroups)] = value;
+        }
+
+        [System.Configuration.UserScopedSetting()]
+        [System.Diagnostics.DebuggerNonUserCode()]
         [System.Configuration.DefaultSettingValue("1.0")]
         public double ModelsTableScale {
             get => (double)this[nameof(ModelsTableScale)];

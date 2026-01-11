@@ -168,15 +168,13 @@ namespace AssetProcessor.TextureConversion.Settings {
                                     UserPresets = oldFormatPresets,
                                     HiddenBuiltInPresets = new List<string>()
                                 };
-                                Console.WriteLine($"Migrated {oldFormatPresets.Count} presets from old format to new format");
                             }
-                        } catch (Exception ex) {
-                            Console.WriteLine($"Error loading old format presets: {ex.Message}");
+                        } catch {
+                            // Ignore old format parse errors
                         }
                     }
-                } catch (Exception ex) {
-                    // Логируем ошибку, но продолжаем работу
-                    Console.WriteLine($"Error loading presets file: {ex.Message}");
+                } catch {
+                    // Ignore preset file load errors - continue with defaults
                 }
             }
 

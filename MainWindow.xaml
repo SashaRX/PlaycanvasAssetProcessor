@@ -32,6 +32,7 @@
         <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
+        <help:InverseBoolConverter x:Key="InverseBoolConverter" />
 
         <!-- Right panel expanders style (larger font than panel compact style) -->
         <Style x:Key="RightPanelExpanderStyle" TargetType="Expander" BasedOn="{StaticResource CompactExpanderStyle}">
@@ -440,7 +441,12 @@
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,15,0" MinWidth="40"/>
-                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center" IsChecked="True" Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
+                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center"
+                                        IsChecked="{Binding Source={x:Static settings:AppSettings.Default}, Path=GroupTexturesByType, Mode=TwoWay}"
+                                        Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
+                            <CheckBox x:Name="CollapseGroupsCheckBox" Content="Collapse Groups" Margin="0,0,15,0" VerticalAlignment="Center"
+                                        IsChecked="{Binding Source={x:Static settings:AppSettings.Default}, Path=CollapseTextureGroups, Mode=TwoWay}"
+                                        Checked="CollapseGroupsCheckBox_Changed" Unchecked="CollapseGroupsCheckBox_Changed"/>
                             <CheckBox x:Name="DarkThemeCheckBox" Content="Dark Theme" VerticalAlignment="Center" Click="DarkThemeCheckBox_Click"/>
                         </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
@@ -461,14 +467,15 @@
                                 Background="{DynamicResource ThemeDataGridBackground}"
                                 RowHeight="16"
                                 VirtualizingPanel.IsVirtualizing="True"
+                                VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
-                                VirtualizingPanel.ScrollUnit="Pixel"
-                                VirtualizingPanel.CacheLength="100"
+                                VirtualizingPanel.ScrollUnit="Item"
+                                VirtualizingPanel.CacheLength="20"
                                 VirtualizingPanel.CacheLengthUnit="Item"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True"
-                                ScrollViewer.IsDeferredScrollingEnabled="False"
+                                ScrollViewer.IsDeferredScrollingEnabled="True"
                                 HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
@@ -568,7 +575,7 @@
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type GroupItem}">
-                                                        <Expander IsExpanded="True" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
+                                                        <Expander IsExpanded="{Binding Source={x:Static settings:AppSettings.Default}, Path=CollapseTextureGroups, Converter={StaticResource InverseBoolConverter}, Mode=OneTime}" Background="{DynamicResource ThemeBackgroundAlt}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,1,0,1" Padding="0">
                                                             <Expander.Header>
                                                                 <ContentPresenter Content="{TemplateBinding Content}" Margin="2,2,2,2"/>
                                                             </Expander.Header>

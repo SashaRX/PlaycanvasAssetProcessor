@@ -1331,6 +1331,7 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private readonly bool[] _columnUsingShortHeader = new bool[12];
 
         private readonly Dictionary<DataGrid, double[]> _previousColumnWidths = new();
+        private readonly Dictionary<DataGrid, double> _lastGridWidth = new();
         private bool _isAdjustingColumns = false;
 
         private void TexturesDataGrid_SizeChanged(object sender, SizeChangedEventArgs e) {
@@ -1810,9 +1811,16 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
         private void FillRemainingSpace(DataGrid grid) {
             if (grid == null || grid.Columns.Count == 0 || _isAdjustingColumns) return;
 
+            // Skip if grid width hasn't changed significantly (avoids LINQ on every resize event)
+            double currentWidth = grid.ActualWidth;
+            if (_lastGridWidth.TryGetValue(grid, out double lastWidth) && Math.Abs(currentWidth - lastWidth) < 1) {
+                return;
+            }
+            _lastGridWidth[grid] = currentWidth;
+
             _isAdjustingColumns = true;
             try {
-                double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
+                double availableWidth = currentWidth - SystemParameters.VerticalScrollBarWidth - 2;
                 if (availableWidth <= 0) return;
 
                 // Get visible columns ordered by DisplayIndex (rightmost first for shrinking)
@@ -2531,9 +2539,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void FillRemainingSpaceForGrid(DataGrid grid) {
             if (grid == null || grid.Columns.Count == 0 || _isAdjustingColumns) return;
 
+            // Skip if grid width hasn't changed significantly (avoids LINQ on every resize event)
+            double currentWidth = grid.ActualWidth;
+            if (_lastGridWidth.TryGetValue(grid, out double lastWidth) && Math.Abs(currentWidth - lastWidth) < 1) {
+                return;
+            }
+            _lastGridWidth[grid] = currentWidth;
+
             _isAdjustingColumns = true;
             try {
-                double availableWidth = grid.ActualWidth - SystemParameters.VerticalScrollBarWidth - 2;
+                double availableWidth = currentWidth - SystemParameters.VerticalScrollBarWidth - 2;
                 if (availableWidth <= 0) return;
 
                 // Get visible columns ordered by DisplayIndex (rightmost first for shrinking)

@@ -179,6 +179,18 @@
             </MenuItem>
         </ContextMenu>
 
+        <!-- ContextMenu для строк Master Materials -->
+        <ContextMenu x:Key="MasterMaterialRowContextMenu">
+            <MenuItem Header="Edit" Click="MasterMaterial_Edit_Click"/>
+            <MenuItem Header="Delete" Click="MasterMaterial_Delete_Click"/>
+        </ContextMenu>
+
+        <!-- ContextMenu для строк Chunks -->
+        <ContextMenu x:Key="ChunkRowContextMenu">
+            <MenuItem Header="Edit" Click="Chunk_Edit_Click"/>
+            <MenuItem Header="Delete" Click="Chunk_Delete_Click"/>
+        </ContextMenu>
+
     </Window.Resources>
     <DockPanel>
         <!-- Статусная строка -->
@@ -904,14 +916,7 @@
                                 </DataGrid.Columns>
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-                                        <Setter Property="ContextMenu">
-                                            <Setter.Value>
-                                                <ContextMenu>
-                                                    <MenuItem Header="Edit" Click="MasterMaterial_Edit_Click"/>
-                                                    <MenuItem Header="Delete" Click="MasterMaterial_Delete_Click"/>
-                                                </ContextMenu>
-                                            </Setter.Value>
-                                        </Setter>
+                                        <Setter Property="ContextMenu" Value="{StaticResource MasterMaterialRowContextMenu}"/>
                                     </Style>
                                 </DataGrid.RowStyle>
                             </DataGrid>
@@ -950,14 +955,7 @@
                                 </DataGrid.Columns>
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-                                        <Setter Property="ContextMenu">
-                                            <Setter.Value>
-                                                <ContextMenu>
-                                                    <MenuItem Header="Edit" Click="Chunk_Edit_Click"/>
-                                                    <MenuItem Header="Delete" Click="Chunk_Delete_Click"/>
-                                                </ContextMenu>
-                                            </Setter.Value>
-                                        </Setter>
+                                        <Setter Property="ContextMenu" Value="{StaticResource ChunkRowContextMenu}"/>
                                     </Style>
                                 </DataGrid.RowStyle>
                             </DataGrid>

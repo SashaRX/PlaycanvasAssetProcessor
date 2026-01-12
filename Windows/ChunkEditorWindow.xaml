@@ -55,9 +55,9 @@
         </Grid>
 
         <!-- Code Editors -->
-        <TabControl x:Name="CodeTabControl" Grid.Row="1" Margin="10,0,10,0" Background="{DynamicResource ThemeBackground}">
+        <TabControl x:Name="CodeTabControl" Grid.Row="1" Margin="10,0,10,0" Background="{DynamicResource ThemeBackground}" BorderThickness="0">
             <TabItem Header="GLSL">
-                <Grid>
+                <Grid Background="{DynamicResource ThemeBackground}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -80,7 +80,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="WGSL">
-                <Grid>
+                <Grid Background="{DynamicResource ThemeBackground}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>

@@ -204,8 +204,8 @@
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
                 <TextBlock x:Name="ConnectionStatusTextBlock"
-                           Text="{Binding ConnectionStatusMessage}"
-                           Foreground="{Binding ConnectionStatusBrush}"
+                           Text="Disconnected"
+                           Foreground="Red"
                            VerticalAlignment="Center"
                            Width="320"/>
             </StatusBarItem>
@@ -634,13 +634,13 @@
                                                                             <!-- Разделитель -->
                                                                             <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
                                                                             <!-- Разрешение -->
-                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Resolution, Converter={StaticResource ResolutionConverter}}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Resolution, Converter={StaticResource ResolutionConverter}, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
                                                                             <!-- Размер -->
                                                                             <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
-                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.CompressedSize, Converter={StaticResource SizeConverter}}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.CompressedSize, Converter={StaticResource SizeConverter}, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
                                                                             <!-- Статус -->
                                                                             <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
-                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Status}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Status, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
                                                                         </StackPanel>
                                                                     </Border>
                                                                     <!-- Содержимое подгруппы -->

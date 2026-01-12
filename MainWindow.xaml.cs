@@ -214,18 +214,6 @@ namespace AssetProcessor {
             // ����������� ������ ���������� � ����������� � ������ � �������
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
-            // ���������� ComboBox ��� Color Channel
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
-
-            // ���������� ComboBox ��� UV Channel
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialDiffuseUVChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialSpecularUVChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
 
 #if DEBUG
             // Dev-only: load test model at startup for quick debugging
@@ -2639,65 +2627,63 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void DisplayMaterialParameters(MaterialResource parameters) {
             Dispatcher.Invoke(() => {
+                // Header
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
-                MaterialNameTextBlock.Text = $"Name: {parameters.Name}";
-                MaterialCreatedAtTextBlock.Text = $"Created At: {parameters.CreatedAt}";
-                MaterialShaderTextBlock.Text = $"Shader: {parameters.Shader}";
-                MaterialBlendTypeTextBlock.Text = $"Blend Type: {parameters.BlendType}";
-                MaterialCullTextBlock.Text = $"Cull: {parameters.Cull}";
-                MaterialUseLightingTextBlock.Text = $"Use Lighting: {parameters.UseLighting}";
-                MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
-                MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
-                MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
+                MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
 
-                UpdateHyperlinkAndVisibility(MaterialAOMapHyperlink, AOExpander, parameters.AOMapId, "AO Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialDiffuseMapHyperlink, DiffuseExpander, parameters.DiffuseMapId, "Diffuse Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialNormalMapHyperlink, NormalExpander, parameters.NormalMapId, "Normal Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialSpecularMapHyperlink, SpecularExpander, parameters.SpecularMapId, "Specular Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialMetalnessMapHyperlink, SpecularExpander, parameters.MetalnessMapId, "Metalness Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialGlossMapHyperlink, SpecularExpander, parameters.GlossMapId, "Gloss Map", parameters);
+                // Master Material ComboBox
+                MaterialMasterComboBox.SelectedValue = parameters.MasterMaterialName;
 
-                SetTintColor(MaterialDiffuseTintCheckBox, MaterialTintColorRect, TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
-                SetTintColor(MaterialSpecularTintCheckBox, MaterialSpecularTintColorRect, TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
-                SetTintColor(MaterialAOTintCheckBox, MaterialAOTintColorRect, AOTintColorPicker, parameters.AOTint, parameters.AOColor);
+                // Texture hyperlinks and previews
+                UpdateTextureHyperlink(MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);
+                UpdateTextureHyperlink(MaterialNormalMapHyperlink, parameters.NormalMapId, parameters);
+                UpdateTextureHyperlink(MaterialAOMapHyperlink, parameters.AOMapId, parameters);
+                UpdateTextureHyperlink(MaterialGlossMapHyperlink, parameters.GlossMapId, parameters);
+                UpdateTextureHyperlink(MaterialMetalnessMapHyperlink, parameters.MetalnessMapId, parameters);
+                UpdateTextureHyperlink(MaterialEmissiveMapHyperlink, parameters.EmissiveMapId, parameters);
+                UpdateTextureHyperlink(MaterialOpacityMapHyperlink, parameters.OpacityMapId, parameters);
 
-                SetTextureImage(TextureAOPreviewImage, parameters.AOMapId);
+                // Texture previews
                 SetTextureImage(TextureDiffusePreviewImage, parameters.DiffuseMapId);
                 SetTextureImage(TextureNormalPreviewImage, parameters.NormalMapId);
-                SetTextureImage(TextureSpecularPreviewImage, parameters.SpecularMapId);
-                SetTextureImage(TextureMetalnessPreviewImage, parameters.MetalnessMapId);
+                SetTextureImage(TextureAOPreviewImage, parameters.AOMapId);
                 SetTextureImage(TextureGlossPreviewImage, parameters.GlossMapId);
+                SetTextureImage(TextureMetalnessPreviewImage, parameters.MetalnessMapId);
+                SetTextureImage(TextureEmissivePreviewImage, parameters.EmissiveMapId);
+                SetTextureImage(TextureOpacityPreviewImage, parameters.OpacityMapId);
 
+                // Overrides sliders
+                MaterialBumpinessTextBox.Text = (parameters.BumpMapFactor ?? 1.0f).ToString("F2");
+                MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 1.0;
 
-                MaterialAOVertexColorCheckBox.IsChecked = parameters.AOVertexColor;
-                MaterialAOTintCheckBox.IsChecked = parameters.AOTint;
+                MaterialMetalnessTextBox.Text = (parameters.Metalness ?? 0.0f).ToString("F2");
+                MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0.0;
 
-                MaterialDiffuseVertexColorCheckBox.IsChecked = parameters.DiffuseVertexColor;
-                MaterialDiffuseTintCheckBox.IsChecked = parameters.DiffuseTint;
+                MaterialGlossinessTextBox.Text = (parameters.Glossiness ?? parameters.Shininess ?? 0.25f).ToString("F2");
+                MaterialGlossinessIntensitySlider.Value = parameters.Glossiness ?? parameters.Shininess ?? 0.25;
 
-                MaterialUseMetalnessCheckBox.IsChecked = parameters.UseMetalness;
-
-                MaterialSpecularTintCheckBox.IsChecked = parameters.SpecularTint;
-                MaterialSpecularVertexColorCheckBox.IsChecked = parameters.SpecularVertexColor;
-
-                MaterialGlossinessTextBox.Text = parameters.Shininess?.ToString() ?? "0";
-                MaterialGlossinessIntensitySlider.Value = parameters.Shininess ?? 0;
-
-                MaterialMetalnessTextBox.Text = parameters.Metalness?.ToString() ?? "0";
-                MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0;
-
-                MaterialBumpinessTextBox.Text = parameters.BumpMapFactor?.ToString() ?? "0";
-                MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 0;
-
-
-
-                // ��������� ��������� ��������� � ComboBox ��� Color Channel � UV Channel
-                MaterialDiffuseColorChannelComboBox.SelectedItem = parameters.DiffuseColorChannel?.ToString();
-                MaterialSpecularColorChannelComboBox.SelectedItem = parameters.SpecularColorChannel?.ToString();
-                MaterialMetalnessColorChannelComboBox.SelectedItem = parameters.MetalnessColorChannel?.ToString();
-                MaterialGlossinessColorChannelComboBox.SelectedItem = parameters.GlossinessColorChannel?.ToString();
-                MaterialAOColorChannelComboBox.SelectedItem = parameters.AOChannel?.ToString();
+                // Tint colors
+                SetTintColor(MaterialDiffuseTintCheckBox, MaterialTintColorRect, TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
+                SetTintColor(MaterialAOTintCheckBox, MaterialAOTintColorRect, AOTintColorPicker, parameters.AOTint, parameters.AOColor);
+                SetTintColor(MaterialSpecularTintCheckBox, MaterialSpecularTintColorRect, TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
             });
+        }
+
+        private void UpdateTextureHyperlink(Hyperlink hyperlink, int? mapId, MaterialResource material) {
+            if (hyperlink == null) return;
+
+            hyperlink.DataContext = material;
+
+            if (mapId.HasValue) {
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
+                hyperlink.Inlines.Clear();
+                hyperlink.Inlines.Add(texture?.Name ?? $"ID:{mapId.Value}");
+            } else {
+                hyperlink.NavigateUri = null;
+                hyperlink.Inlines.Clear();
+                hyperlink.Inlines.Add("-");
+            }
         }
 
         private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {
@@ -2717,29 +2703,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 colorRect.Background = new SolidColorBrush(Colors.Transparent);
                 colorRect.Text = "No Tint";
                 colorPicker.SelectedColor = null;
-            }
-        }
-
-        private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName, MaterialResource material) {
-            if (hyperlink != null && expander != null) {
-                // ������������� DataContext ��� hyperlink, ����� �� ���� � ������ ��������� ���������
-                hyperlink.DataContext = material;
-
-                if (mapId.HasValue) {
-                    TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
-                    if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
-                        // ��������� ID � NavigateUri � ���������������� ������ ��� ������������ ����������
-                        hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
-                        hyperlink.Inlines.Clear();
-                        hyperlink.Inlines.Add(texture.Name);
-                    }
-                    expander.Visibility = Visibility.Visible;
-                } else {
-                    hyperlink.NavigateUri = null;
-                    hyperlink.Inlines.Clear();
-                    hyperlink.Inlines.Add($"No {mapName}");
-                    expander.Visibility = Visibility.Collapsed;
-                }
             }
         }
 
@@ -2845,6 +2808,74 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             NavigateToTextureFromHyperlink(sender, "AO Map", material => material.AOMapId);
         }
 
+        private void MaterialEmissiveMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureFromHyperlink(sender, "Emissive Map", material => material.EmissiveMapId);
+        }
+
+        private void MaterialOpacityMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureFromHyperlink(sender, "Opacity Map", material => material.OpacityMapId);
+        }
+
+        private void NavigateToDiffuseTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.DiffuseMapId);
+        }
+
+        private void NavigateToNormalTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.NormalMapId);
+        }
+
+        private void NavigateToAOTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.AOMapId);
+        }
+
+        private void NavigateToGlossTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.GlossMapId);
+        }
+
+        private void NavigateToMetalnessTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.MetalnessMapId);
+        }
+
+        private void NavigateToEmissiveTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.EmissiveMapId);
+        }
+
+        private void NavigateToOpacityTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.OpacityMapId);
+        }
+
+        private MaterialResource? GetSelectedMaterial() {
+            return MaterialsDataGrid.SelectedItem as MaterialResource;
+        }
+
+        private void NavigateToTextureById(int? textureId) {
+            if (!textureId.HasValue) return;
+
+            _ = Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturesTabItem != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
+                }
+
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                if (texture != null) {
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(texture);
+
+                    TexturesDataGrid.SelectedItem = texture;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.Focus();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (MaterialsDataGrid.SelectedItem is MaterialResource material &&
+                MaterialMasterComboBox.SelectedValue is string masterName) {
+                material.MasterMaterialName = masterName;
+            }
+        }
+
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             if (sender is not System.Windows.Controls.Image image) {
                 logger.Warn("TexturePreview_MouseLeftButtonUp ������ ������������ ���� {SenderType}, �������� Image.", sender.GetType().FullName);
@@ -2865,6 +2896,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 "Specular" => material.SpecularMapId,
                 "Metalness" => material.MetalnessMapId,
                 "Gloss" => material.GlossMapId,
+                "Emissive" => material.EmissiveMapId,
+                "Opacity" => material.OpacityMapId,
                 _ => null
             };
 
@@ -2926,10 +2959,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             var textureIds = new int?[] {
                 material.DiffuseMapId,
                 material.NormalMapId,
-                material.SpecularMapId,
-                material.MetalnessMapId,
+                material.AOMapId,
                 material.GlossMapId,
-                material.AOMapId
+                material.MetalnessMapId,
+                material.EmissiveMapId,
+                material.OpacityMapId
             };
 
             foreach (var textureId in textureIds) {

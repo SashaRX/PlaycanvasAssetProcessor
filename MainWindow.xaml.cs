@@ -339,6 +339,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunksViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowModelViewer() {
@@ -346,6 +347,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Visible;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunksViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowMaterialViewer() {
@@ -353,6 +355,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Visible;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunksViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void HideAllViewers() {
@@ -360,6 +363,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunksViewerScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowServerFileInfo() {
@@ -367,6 +371,23 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Visible;
+            ChunksViewerScroll.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowChunksViewer() {
+            TextureViewerScroll.Visibility = Visibility.Collapsed;
+            ModelViewerScroll.Visibility = Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunksViewerScroll.Visibility = Visibility.Visible;
+            UpdateChunksCount();
+        }
+
+        private void UpdateChunksCount() {
+            if (ChunksCountTextBlock != null && viewModel?.MasterMaterialsViewModel?.Chunks != null) {
+                int count = viewModel.MasterMaterialsViewModel.Chunks.Count;
+                ChunksCountTextBlock.Text = $"{count} chunk{(count != 1 ? "s" : "")}";
+            }
         }
 
         private ViewModels.ServerAssetViewModel? _selectedServerAsset;
@@ -638,6 +659,12 @@ namespace AssetProcessor {
                     case "Materials":
                         SetRightPanelVisibility(true);
                         ShowMaterialViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        break;
+                    case "Master Materials":
+                        SetRightPanelVisibility(true);
+                        ShowChunksViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;

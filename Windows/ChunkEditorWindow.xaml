@@ -22,7 +22,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header: Chunk Info -->
-        <Grid Grid.Row="0" Margin="10,10,10,10" Background="{DynamicResource ThemeBackground}">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="10,10,10,10" Background="{DynamicResource ThemeBackground}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="200"/>
@@ -105,7 +105,7 @@
         </TabControl>
 
         <!-- Footer: Buttons -->
-        <Grid Grid.Row="2" Margin="10,10,10,10" Background="{DynamicResource ThemeBackground}">
+        <Grid x:Name="FooterGrid" Grid.Row="2" Margin="10,10,10,10" Background="{DynamicResource ThemeBackground}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>

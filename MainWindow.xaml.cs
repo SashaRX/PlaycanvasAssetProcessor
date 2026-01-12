@@ -2366,21 +2366,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
-                // Column indices: 0=№, 1=ID, 2=TextureName, 3=Extension, 4=Size, 5=Compressed,
-                // 6=Resolution, 7=ResizeResolution, 8=Compression(Format), 9=Mipmaps, 10=Preset, 11=Status, 12=Upload
+                // Column indices: 0=Export, 1=№, 2=ID, 3=TextureName, 4=Extension, 5=Size, 6=Compressed,
+                // 7=Resolution, 8=ResizeResolution, 9=Compression(Format), 10=Mipmaps, 11=Preset, 12=Status, 13=Upload
                 int columnIndex = columnTag switch {
-                    "ID" => 1,
-                    "TextureName" => 2,
-                    "Extension" => 3,
-                    "Size" => 4,
-                    "Compressed" => 5,
-                    "Resolution" => 6,
-                    "ResizeResolution" => 7,
-                    "Compression" => 8,
-                    "Mipmaps" => 9,
-                    "Preset" => 10,
-                    "Status" => 11,
-                    "Upload" => 12,
+                    "Export" => 0,
+                    "Index" => 1,
+                    "ID" => 2,
+                    "TextureName" => 3,
+                    "Extension" => 4,
+                    "Size" => 5,
+                    "Compressed" => 6,
+                    "Resolution" => 7,
+                    "ResizeResolution" => 8,
+                    "Compression" => 9,
+                    "Mipmaps" => 10,
+                    "Preset" => 11,
+                    "Status" => 12,
+                    "Upload" => 13,
                     _ => -1
                 };
 
@@ -2395,10 +2397,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MaterialColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=Export, 1=№, 2=ID, 3=Name, 4=Master, 5=Status
                 int columnIndex = columnTag switch {
-                    "ID" => 1,
-                    "Name" => 2,
-                    "Status" => 3,
+                    "Export" => 0,
+                    "Index" => 1,
+                    "ID" => 2,
+                    "Name" => 3,
+                    "Master" => 4,
+                    "Status" => 5,
                     _ => -1
                 };
 
@@ -2412,13 +2418,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void ModelColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=Export, 1=№, 2=ID, 3=Name, 4=Size, 5=UVChannels, 6=Extension, 7=Status
                 int columnIndex = columnTag switch {
-                    "ID" => 1,
-                    "Name" => 2,
-                    "Size" => 3,
-                    "UVChannels" => 4,
-                    "Extension" => 5,
-                    "Status" => 6,
+                    "Export" => 0,
+                    "Index" => 1,
+                    "ID" => 2,
+                    "Name" => 3,
+                    "Size" => 4,
+                    "UVChannels" => 5,
+                    "Extension" => 6,
+                    "Status" => 7,
                     _ => -1
                 };
 
@@ -2467,20 +2476,25 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private int GetColumnIndexByTag(DataGrid grid, string tag) {
             if (grid == TexturesDataGrid) {
+                // 0=Export, 1=№, 2=ID, 3=TextureName, 4=Extension, 5=Size, 6=Compressed,
+                // 7=Resolution, 8=ResizeResolution, 9=Compression, 10=Mipmaps, 11=Preset, 12=Status, 13=Upload
                 return tag switch {
-                    "ID" => 1, "TextureName" => 2, "Extension" => 3, "Size" => 4,
-                    "Compressed" => 5, "Resolution" => 6, "ResizeResolution" => 7,
-                    "Compression" => 8, "Mipmaps" => 9, "Preset" => 10, "Status" => 11,
+                    "Export" => 0, "Index" => 1, "ID" => 2, "TextureName" => 3, "Extension" => 4,
+                    "Size" => 5, "Compressed" => 6, "Resolution" => 7, "ResizeResolution" => 8,
+                    "Compression" => 9, "Mipmaps" => 10, "Preset" => 11, "Status" => 12, "Upload" => 13,
                     _ => -1
                 };
             } else if (grid == ModelsDataGrid) {
+                // 0=Export, 1=№, 2=ID, 3=Name, 4=Size, 5=UVChannels, 6=Extension, 7=Status
                 return tag switch {
-                    "ID" => 1, "Name" => 2, "Size" => 3, "UVChannels" => 4, "Extension" => 5, "Status" => 6,
+                    "Export" => 0, "Index" => 1, "ID" => 2, "Name" => 3, "Size" => 4,
+                    "UVChannels" => 5, "Extension" => 6, "Status" => 7,
                     _ => -1
                 };
             } else if (grid == MaterialsDataGrid) {
+                // 0=Export, 1=№, 2=ID, 3=Name, 4=Master, 5=Status
                 return tag switch {
-                    "ID" => 1, "Name" => 2, "Status" => 3,
+                    "Export" => 0, "Index" => 1, "ID" => 2, "Name" => 3, "Master" => 4, "Status" => 5,
                     _ => -1
                 };
             }

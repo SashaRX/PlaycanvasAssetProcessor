@@ -112,17 +112,19 @@
         <!-- ContextMenu для заголовков колонок текстур -->
         <ContextMenu x:Key="TextureColumnHeaderContextMenu">
             <MenuItem Header="Columns Visibility">
+                <MenuItem Header="Export" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Export"/>
+                <MenuItem Header="№" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Index"/>
                 <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ID"/>
                 <MenuItem Header="Texture Name" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="TextureName"/>
                 <MenuItem Header="Extension" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Extension"/>
                 <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Size"/>
                 <MenuItem Header="Compressed" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compressed"/>
                 <MenuItem Header="Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Resolution"/>
-                <MenuItem Header="Resize Resolution" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
+                <MenuItem Header="Resize" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="ResizeResolution"/>
                 <MenuItem Header="Format" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Compression"/>
                 <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
                 <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
-                <MenuItem Header="Status/Progress" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
+                <MenuItem Header="Status" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
                 <MenuItem Header="Upload" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Upload"/>
             </MenuItem>
         </ContextMenu>
@@ -153,6 +155,8 @@
         <!-- ContextMenu для заголовков колонок моделей -->
         <ContextMenu x:Key="ModelColumnHeaderContextMenu">
             <MenuItem Header="Columns Visibility">
+                <MenuItem Header="Export" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Export"/>
+                <MenuItem Header="№" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Index"/>
                 <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="ID"/>
                 <MenuItem Header="Model Name" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Name"/>
                 <MenuItem Header="Size" IsCheckable="True" IsChecked="True" Click="ModelColumnVisibility_Click" Tag="Size"/>
@@ -173,8 +177,11 @@
         <!-- ContextMenu для заголовков колонок материалов -->
         <ContextMenu x:Key="MaterialColumnHeaderContextMenu">
             <MenuItem Header="Columns Visibility">
+                <MenuItem Header="Export" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Export"/>
+                <MenuItem Header="№" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Index"/>
                 <MenuItem Header="ID" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="ID"/>
                 <MenuItem Header="Name" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Name"/>
+                <MenuItem Header="Master" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Master"/>
                 <MenuItem Header="Status" IsCheckable="True" IsChecked="True" Click="MaterialColumnVisibility_Click" Tag="Status"/>
             </MenuItem>
         </ContextMenu>

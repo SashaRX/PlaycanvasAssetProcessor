@@ -5096,9 +5096,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OpenMasterMaterialEditor(MasterMaterials.Models.MasterMaterial master) {
-            // TODO: Implement MasterMaterialEditorWindow
-            MessageBox.Show($"Editing master material: {master.Name}\n\nMaster Material Editor will be implemented in a future update.",
-                "Edit Master Material", MessageBoxButton.OK, MessageBoxImage.Information);
+            var availableChunks = viewModel.MasterMaterialsViewModel.Chunks.ToList();
+            var editorWindow = new Windows.MasterMaterialEditorWindow(master, availableChunks) {
+                Owner = this
+            };
+
+            if (editorWindow.ShowDialog() == true && editorWindow.EditedMaster != null) {
+                // Update the master in the collection
+                var index = viewModel.MasterMaterialsViewModel.MasterMaterials.IndexOf(master);
+                if (index >= 0) {
+                    viewModel.MasterMaterialsViewModel.MasterMaterials[index] = editorWindow.EditedMaster;
+                }
+                viewModel.MasterMaterialsViewModel.HasUnsavedChanges = true;
+                logger.Info($"Master material '{editorWindow.EditedMaster.Name}' updated");
+            }
         }
 
         private void OpenChunkEditor(MasterMaterials.Models.ShaderChunk chunk) {

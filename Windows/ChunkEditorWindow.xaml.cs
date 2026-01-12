@@ -33,6 +33,7 @@ public partial class ChunkEditorWindow : Window
             RootGrid.Background = bgBrush;
             HeaderGrid.Background = bgBrush;
             FooterGrid.Background = bgBrush;
+            CodeTabControl.Background = bgBrush;
         }
 
         ViewModel = new ChunkEditorViewModel();

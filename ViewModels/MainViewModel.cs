@@ -819,6 +819,46 @@ namespace AssetProcessor.ViewModels {
                 logger.Warn(ex, "Failed to load KTX2 preview");
             }
         }
+
+        /// <summary>
+        /// Syncs material-to-master mappings from MasterMaterialsConfig to MaterialResource.MasterMaterialName
+        /// Call this after both materials and MasterMaterialsConfig are loaded
+        /// </summary>
+        public void SyncMaterialMasterMappings() {
+            if (Materials == null || Materials.Count == 0) {
+                return;
+            }
+
+            foreach (var material in Materials) {
+                // Apply mapping from config to material
+                var masterName = masterMaterialsViewModel.GetMasterNameForMaterial(material.ID);
+                if (!string.IsNullOrEmpty(masterName)) {
+                    material.MasterMaterialName = masterName;
+                }
+
+                // Subscribe to changes on this material
+                material.PropertyChanged -= Material_PropertyChanged;
+                material.PropertyChanged += Material_PropertyChanged;
+            }
+
+            logger.Info($"Synced master material mappings for {Materials.Count} materials");
+        }
+
+        /// <summary>
+        /// Handles PropertyChanged on MaterialResource to update config when MasterMaterialName changes
+        /// </summary>
+        private void Material_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            if (e.PropertyName != nameof(MaterialResource.MasterMaterialName)) {
+                return;
+            }
+
+            if (sender is not MaterialResource material) {
+                return;
+            }
+
+            // Update the mapping in config
+            masterMaterialsViewModel.SetMasterForMaterial(material.ID, material.MasterMaterialName);
+        }
     }
 
     public sealed class TextureProcessingCompletedEventArgs : EventArgs {

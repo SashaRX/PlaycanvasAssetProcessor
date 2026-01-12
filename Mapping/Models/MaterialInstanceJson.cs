@@ -29,6 +29,14 @@ public class MaterialInstanceJson {
     /// </summary>
     [JsonPropertyName("textures")]
     public MaterialTextures Textures { get; set; } = new();
+
+    /// <summary>
+    /// Путь к файлу с кастомными shader chunks (MJS)
+    /// Используется когда master material имеет attached chunks
+    /// </summary>
+    [JsonPropertyName("chunksFile")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ChunksFile { get; set; }
 }
 
 /// <summary>

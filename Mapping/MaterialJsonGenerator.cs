@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using AssetProcessor.Helpers;
 using AssetProcessor.Mapping.Models;
+using AssetProcessor.MasterMaterials.Models;
 using AssetProcessor.Resources;
 using AssetProcessor.TextureConversion.Core;
 using NLog;
@@ -53,7 +54,8 @@ public class MaterialJsonGenerator {
         var instance = new MaterialInstanceJson {
             Master = masterName,
             Params = ExtractMaterialParams(material),
-            Textures = ExtractMaterialTextures(material, ormTextures, options)
+            Textures = ExtractMaterialTextures(material, ormTextures, options),
+            ChunksFile = GetChunksFilePath(masterName, options)
         };
 
         return instance;
@@ -120,7 +122,12 @@ public class MaterialJsonGenerator {
     #region Private Methods
 
     private string DetermineMasterMaterial(MaterialResource material, MaterialJsonOptions options) {
-        // Проверяем кастомный маппинг по имени
+        // 1. Приоритет: MasterMaterialName из UI выбора
+        if (!string.IsNullOrEmpty(material.MasterMaterialName)) {
+            return material.MasterMaterialName;
+        }
+
+        // 2. Проверяем кастомный маппинг по имени
         if (options.CustomMasterMappings != null && !string.IsNullOrEmpty(material.Name)) {
             foreach (var (pattern, master) in options.CustomMasterMappings) {
                 if (material.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase)) {
@@ -129,7 +136,7 @@ public class MaterialJsonGenerator {
             }
         }
 
-        // Определяем по blendType
+        // 3. Определяем по blendType
         if (!string.IsNullOrEmpty(material.BlendType)) {
             if (BlendTypeToMaster.TryGetValue(material.BlendType, out var master)) {
                 return master;
@@ -283,6 +290,29 @@ public class MaterialJsonGenerator {
         return result;
     }
 
+    /// <summary>
+    /// Получает путь к файлу chunks для master материала
+    /// Возвращает null если master не имеет chunks
+    /// </summary>
+    private string? GetChunksFilePath(string masterName, MaterialJsonOptions options) {
+        if (options.MasterMaterialsConfig == null) {
+            return null;
+        }
+
+        // Ищем master material в конфиге
+        var master = options.MasterMaterialsConfig.Masters
+            .FirstOrDefault(m => m.Name == masterName);
+
+        // Если это кастомный master с chunks
+        if (master != null && master.ChunkIds.Count > 0) {
+            // Возвращаем относительный путь к consolidated chunks файлу
+            var chunksBasePath = options.ChunksBasePath ?? "chunks";
+            return $"{chunksBasePath}/{masterName}_chunks.mjs";
+        }
+
+        return null;
+    }
+
     private async Task SaveMaterialJsonAsync(
         MaterialInstanceJson materialJson,
         string outputPath,
@@ -325,4 +355,16 @@ public class MaterialJsonOptions {
     /// Если null, текстуры не включаются в JSON
     /// </summary>
     public IReadOnlyDictionary<int, string>? TexturePathMap { get; set; }
+
+    /// <summary>
+    /// Конфигурация Master Materials для получения информации о chunks
+    /// Если null, chunks не включаются в JSON
+    /// </summary>
+    public MasterMaterialsConfig? MasterMaterialsConfig { get; set; }
+
+    /// <summary>
+    /// Базовый путь для chunks файлов (относительный)
+    /// По умолчанию: "chunks"
+    /// </summary>
+    public string ChunksBasePath { get; set; } = "chunks";
 }

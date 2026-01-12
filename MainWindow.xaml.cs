@@ -3361,10 +3361,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info("CheckProjectState: Loading local assets...");
                 await LoadAssetsFromJsonFileAsync();
 
-                // Initialize Master Materials context
+                // Initialize Master Materials context and sync material mappings
                 if (!string.IsNullOrEmpty(ProjectFolderPath))
                 {
                     await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                    viewModel.SyncMaterialMasterMappings();
                 }
 
                 logService.LogInfo("Checking for updates...");

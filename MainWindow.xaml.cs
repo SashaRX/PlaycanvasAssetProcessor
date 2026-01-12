@@ -5135,12 +5135,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private async void Chunk_Delete_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                if (chunk.IsBuiltIn) {
+                    MessageBox.Show("Cannot delete built-in chunks.", "Delete Chunk", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 var result = MessageBox.Show($"Are you sure you want to delete chunk '{chunk.Id}'?",
                     "Delete Chunk", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
                 if (result == MessageBoxResult.Yes) {
                     await viewModel.MasterMaterialsViewModel.DeleteChunkCommand.ExecuteAsync(chunk);
                 }
+            }
+        }
+
+        private void Chunk_Copy_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                viewModel.MasterMaterialsViewModel.CopyChunkCommand.Execute(chunk);
             }
         }
 
@@ -5162,13 +5173,19 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OpenChunkEditor(MasterMaterials.Models.ShaderChunk chunk) {
-            var editorWindow = new Windows.ChunkEditorWindow(chunk) {
+            var editorWindow = new Windows.ChunkEditorWindow(chunk, chunk.IsBuiltIn) {
                 Owner = this
             };
 
             if (editorWindow.ShowDialog() == true && editorWindow.EditedChunk != null) {
-                viewModel.MasterMaterialsViewModel.UpdateChunk(editorWindow.EditedChunk);
-                logger.Info($"Chunk '{editorWindow.EditedChunk.Id}' updated");
+                if (editorWindow.IsReadOnly && editorWindow.EditedChunk.IsBuiltIn) {
+                    // User clicked "Copy to Edit" - create a copy
+                    viewModel.MasterMaterialsViewModel.CopyChunkCommand.Execute(chunk);
+                    logger.Info($"Created copy of built-in chunk '{chunk.Id}'");
+                } else {
+                    viewModel.MasterMaterialsViewModel.UpdateChunk(editorWindow.EditedChunk);
+                    logger.Info($"Chunk '{editorWindow.EditedChunk.Id}' updated");
+                }
             }
         }
 

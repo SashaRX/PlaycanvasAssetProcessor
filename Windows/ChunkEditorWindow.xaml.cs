@@ -20,11 +20,17 @@ public partial class ChunkEditorWindow : Window
     public ShaderChunk? EditedChunk { get; private set; }
 
     /// <summary>
+    /// Whether the editor is in read-only mode (for built-in chunks)
+    /// </summary>
+    public bool IsReadOnly { get; }
+
+    /// <summary>
     /// Creates a new ChunkEditorWindow for editing an existing chunk
     /// </summary>
-    public ChunkEditorWindow(ShaderChunk chunk)
+    public ChunkEditorWindow(ShaderChunk chunk, bool isReadOnly = false)
     {
         InitializeComponent();
+        IsReadOnly = isReadOnly;
 
         // Explicitly apply theme resources (workaround for DynamicResource not resolving)
         if (Application.Current.Resources["ThemeBackground"] is System.Windows.Media.Brush bgBrush)
@@ -39,6 +45,20 @@ public partial class ChunkEditorWindow : Window
         ViewModel = new ChunkEditorViewModel();
         ViewModel.LoadChunk(chunk);
         DataContext = ViewModel;
+
+        // Configure read-only mode for built-in chunks
+        if (isReadOnly)
+        {
+            Title = $"View Chunk: {chunk.Id} (Built-in, Read-Only)";
+            GlslEditor.IsReadOnly = true;
+            WgslEditor.IsReadOnly = true;
+            ChunkIdTextBox.IsReadOnly = true;
+            DescriptionTextBox.IsReadOnly = true;
+            TypeComboBox.IsEnabled = false;
+            SaveButton.Content = "Copy to Edit";
+            SaveButton.ToolTip = "Create an editable copy of this chunk";
+            ResetButton.Visibility = Visibility.Collapsed;
+        }
 
         // Set initial focus to the GLSL editor
         Loaded += (_, _) => GlslEditor.Focus();
@@ -60,6 +80,16 @@ public partial class ChunkEditorWindow : Window
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
+        // For read-only mode, return the original chunk for copying
+        if (IsReadOnly)
+        {
+            EditedChunk = ViewModel.ToChunk();
+            EditedChunk.IsBuiltIn = true; // Mark for copying
+            DialogResult = true;
+            Close();
+            return;
+        }
+
         var (isValid, errorMessage) = ViewModel.Validate();
 
         if (!isValid)

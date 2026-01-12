@@ -44,4 +44,34 @@ public class ShaderChunk
     [JsonPropertyName("sourceFile")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SourceFile { get; set; }
+
+    /// <summary>
+    /// API version for PlayCanvas compatibility (e.g., "2.15")
+    /// </summary>
+    [JsonPropertyName("apiVersion")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ApiVersion { get; set; }
+
+    /// <summary>
+    /// Whether this is a built-in PlayCanvas chunk (read-only)
+    /// </summary>
+    [JsonIgnore]
+    public bool IsBuiltIn { get; set; }
+
+    /// <summary>
+    /// Creates a copy of this chunk with a new ID
+    /// </summary>
+    public ShaderChunk Clone(string newId)
+    {
+        return new ShaderChunk
+        {
+            Id = newId,
+            Glsl = Glsl,
+            Wgsl = Wgsl,
+            Type = Type,
+            Description = $"Copy of {Id}",
+            ApiVersion = ApiVersion,
+            IsBuiltIn = false // copies are always editable
+        };
+    }
 }

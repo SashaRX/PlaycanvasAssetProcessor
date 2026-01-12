@@ -115,24 +115,40 @@ public partial class MasterMaterialsViewModel : ObservableObject
                 MasterMaterials.Add(master);
             }
 
-            // Populate chunks and load their content from files
+            // Populate chunks: first add built-in PlayCanvas chunks
             Chunks.Clear();
+            foreach (var builtInChunk in DefaultShaderChunks.GetAllChunks())
+            {
+                Chunks.Add(builtInChunk);
+            }
+
+            // Then load custom chunks from files
             foreach (var chunkMeta in _config.Chunks)
             {
+                // Skip if a built-in chunk with same ID exists
+                if (Chunks.Any(c => c.Id == chunkMeta.Id && c.IsBuiltIn))
+                {
+                    continue;
+                }
+
                 var loadedChunk = await _masterMaterialService.LoadChunkFromFileAsync(_projectFolderPath, chunkMeta.Id, ct);
                 if (loadedChunk != null)
                 {
+                    loadedChunk.IsBuiltIn = false;
                     Chunks.Add(loadedChunk);
                 }
                 else
                 {
                     // Chunk file doesn't exist, use metadata only
+                    chunkMeta.IsBuiltIn = false;
                     Chunks.Add(chunkMeta);
                 }
             }
 
             HasUnsavedChanges = false;
-            StatusMessage = $"Loaded {MasterMaterials.Count} masters, {Chunks.Count} chunks";
+            int builtInCount = Chunks.Count(c => c.IsBuiltIn);
+            int customCount = Chunks.Count - builtInCount;
+            StatusMessage = $"Loaded {MasterMaterials.Count} masters, {builtInCount} built-in chunks, {customCount} custom chunks";
             _logService.LogInfo(StatusMessage);
         }
         catch (Exception ex)
@@ -161,7 +177,10 @@ public partial class MasterMaterialsViewModel : ObservableObject
         {
             // Update config from observable collections (excluding built-ins)
             _config.Masters = MasterMaterials.Where(m => !m.IsBuiltIn).ToList();
-            _config.Chunks = Chunks.Select(c => new ShaderChunk
+
+            // Only save custom chunks (not built-in ones)
+            var customChunks = Chunks.Where(c => !c.IsBuiltIn).ToList();
+            _config.Chunks = customChunks.Select(c => new ShaderChunk
             {
                 Id = c.Id,
                 Type = c.Type,
@@ -172,8 +191,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
             // Save config JSON
             await _masterMaterialService.SaveConfigAsync(_projectFolderPath, _config, ct);
 
-            // Save all chunk files
-            foreach (var chunk in Chunks)
+            // Save only custom chunk files (not built-in)
+            foreach (var chunk in customChunks)
             {
                 await _masterMaterialService.SaveChunkToFileAsync(_projectFolderPath, chunk, ct);
             }
@@ -266,13 +285,50 @@ public partial class MasterMaterialsViewModel : ObservableObject
     private void EditChunk(ShaderChunk? chunk)
     {
         if (chunk == null) return;
+
+        if (chunk.IsBuiltIn)
+        {
+            StatusMessage = "Cannot edit built-in chunks. Use 'Copy' to create an editable version.";
+            return;
+        }
+
         EditChunkRequested?.Invoke(this, chunk);
+    }
+
+    [RelayCommand]
+    private void CopyChunk(ShaderChunk? chunk)
+    {
+        if (chunk == null) return;
+
+        // Generate unique ID for the copy
+        string baseId = chunk.Id.EndsWith("_custom") ? chunk.Id : $"{chunk.Id}_custom";
+        string newId = baseId;
+        int counter = 1;
+        while (Chunks.Any(c => c.Id == newId))
+        {
+            newId = $"{baseId}_{counter++}";
+        }
+
+        var copiedChunk = chunk.Clone(newId);
+        Chunks.Add(copiedChunk);
+        SelectedChunk = copiedChunk;
+        HasUnsavedChanges = true;
+        StatusMessage = $"Created copy: {newId}";
+
+        // Open editor for the new chunk
+        EditChunkRequested?.Invoke(this, copiedChunk);
     }
 
     [RelayCommand]
     private async Task DeleteChunkAsync(ShaderChunk? chunk, CancellationToken ct = default)
     {
         if (chunk == null || string.IsNullOrEmpty(_projectFolderPath)) return;
+
+        if (chunk.IsBuiltIn)
+        {
+            StatusMessage = "Cannot delete built-in chunks";
+            return;
+        }
 
         // Remove from all masters using this chunk
         foreach (var master in MasterMaterials.Where(m => !m.IsBuiltIn))

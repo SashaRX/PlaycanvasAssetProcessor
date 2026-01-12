@@ -195,6 +195,8 @@
         <!-- ContextMenu для строк Chunks -->
         <ContextMenu x:Key="ChunkRowContextMenu">
             <MenuItem Header="Edit" Click="Chunk_Edit_Click"/>
+            <MenuItem Header="Copy" Click="Chunk_Copy_Click" FontWeight="Bold"/>
+            <Separator/>
             <MenuItem Header="Delete" Click="Chunk_Delete_Click"/>
         </ContextMenu>
 
@@ -956,13 +958,26 @@
                                       MouseDoubleClick="ChunksDataGrid_MouseDoubleClick"
                                       Background="{DynamicResource ThemeDataGridBackground}">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*"/>
-                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70"/>
-                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*"/>
+                                    <DataGridCheckBoxColumn Header="Built-in" Binding="{Binding IsBuiltIn, Mode=OneWay}" Width="55" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                <Setter Property="ToolTip" Value="{Binding Id}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="60"/>
+                                    <DataGridTextColumn Header="API" Binding="{Binding ApiVersion}" Width="40"/>
                                 </DataGrid.Columns>
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                         <Setter Property="ContextMenu" Value="{StaticResource ChunkRowContextMenu}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundDim}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </DataGrid.RowStyle>
                             </DataGrid>

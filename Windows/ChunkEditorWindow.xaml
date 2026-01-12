@@ -35,20 +35,20 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock Text="Chunk ID:" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"
-                       Foreground="{DynamicResource ThemeForeground}"/>
+                       Foreground="#F1F1F1"/>
             <TextBox x:Name="ChunkIdTextBox" Grid.Column="1"
                      Text="{Binding ChunkId, UpdateSourceTrigger=PropertyChanged}"
                      VerticalContentAlignment="Center"/>
 
             <TextBlock Text="Type:" Grid.Column="3" VerticalAlignment="Center" Margin="0,0,10,0"
-                       Foreground="{DynamicResource ThemeForeground}"/>
+                       Foreground="#F1F1F1"/>
             <ComboBox x:Name="ChunkTypeComboBox" Grid.Column="4"
                       ItemsSource="{Binding ChunkTypes}"
                       SelectedValue="{Binding ChunkType}"
                       VerticalContentAlignment="Center"/>
 
             <TextBlock Text="Description:" Grid.Column="6" VerticalAlignment="Center" Margin="0,0,10,0"
-                       Foreground="{DynamicResource ThemeForeground}"/>
+                       Foreground="#F1F1F1"/>
             <TextBox Grid.Column="7"
                      Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
                      VerticalContentAlignment="Center"/>
@@ -64,7 +64,7 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Text="GLSL Shader Code (WebGL)"
-                               Foreground="{DynamicResource ThemeForegroundDim}" Margin="5,5,5,2" FontSize="11"/>
+                               Foreground="#A0A0A0" Margin="5,5,5,2" FontSize="11"/>
 
                     <TextBox x:Name="GlslEditor" Grid.Row="1"
                              AcceptsReturn="True"
@@ -87,7 +87,7 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Text="WGSL Shader Code (WebGPU)"
-                               Foreground="{DynamicResource ThemeForegroundDim}" Margin="5,5,5,2" FontSize="11"/>
+                               Foreground="#A0A0A0" Margin="5,5,5,2" FontSize="11"/>
 
                     <TextBox x:Name="WgslEditor" Grid.Row="1"
                              AcceptsReturn="True"

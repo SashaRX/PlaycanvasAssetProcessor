@@ -26,6 +26,10 @@ public partial class ChunkEditorWindow : Window
     {
         InitializeComponent();
 
+        // Explicitly apply theme resources (workaround for DynamicResource not resolving)
+        if (Application.Current.Resources["ThemeBackground"] is System.Windows.Media.Brush bgBrush)
+            Background = bgBrush;
+
         ViewModel = new ChunkEditorViewModel();
         ViewModel.LoadChunk(chunk);
         DataContext = ViewModel;

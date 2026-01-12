@@ -37,6 +37,7 @@ namespace AssetProcessor.ViewModels {
         private readonly TextureConversionSettingsViewModel conversionSettingsViewModel;
         private readonly AssetLoadingViewModel assetLoadingViewModel;
         private readonly MaterialSelectionViewModel materialSelectionViewModel;
+        private readonly MasterMaterialsViewModel masterMaterialsViewModel;
         private long lastProgressUpdateTicks;
         private AssetDownloadProgress? pendingProgress;
         private BaseResource? pendingResource;
@@ -75,6 +76,11 @@ namespace AssetProcessor.ViewModels {
         /// ViewModel for material selection and texture navigation
         /// </summary>
         public MaterialSelectionViewModel MaterialSelection => materialSelectionViewModel;
+
+        /// <summary>
+        /// ViewModel for Master Materials and Shader Chunks management
+        /// </summary>
+        public MasterMaterialsViewModel MasterMaterialsViewModel => masterMaterialsViewModel;
 
         [ObservableProperty]
         private ObservableCollection<TextureResource> textures = [];
@@ -156,7 +162,8 @@ namespace AssetProcessor.ViewModels {
             ORMTextureViewModel ormTextureViewModel,
             TextureConversionSettingsViewModel conversionSettingsViewModel,
             AssetLoadingViewModel assetLoadingViewModel,
-            MaterialSelectionViewModel materialSelectionViewModel) {
+            MaterialSelectionViewModel materialSelectionViewModel,
+            MasterMaterialsViewModel masterMaterialsViewModel) {
             this.playCanvasService = playCanvasService;
             this.textureProcessingService = textureProcessingService;
             this.localCacheService = localCacheService;
@@ -168,6 +175,7 @@ namespace AssetProcessor.ViewModels {
             this.conversionSettingsViewModel = conversionSettingsViewModel;
             this.assetLoadingViewModel = assetLoadingViewModel;
             this.materialSelectionViewModel = materialSelectionViewModel;
+            this.masterMaterialsViewModel = masterMaterialsViewModel;
             synchronizationContext = SynchronizationContext.Current;
 
             logger.Info("MainViewModel initialized");
@@ -810,6 +818,46 @@ namespace AssetProcessor.ViewModels {
             } catch (Exception ex) {
                 logger.Warn(ex, "Failed to load KTX2 preview");
             }
+        }
+
+        /// <summary>
+        /// Syncs material-to-master mappings from MasterMaterialsConfig to MaterialResource.MasterMaterialName
+        /// Call this after both materials and MasterMaterialsConfig are loaded
+        /// </summary>
+        public void SyncMaterialMasterMappings() {
+            if (Materials == null || Materials.Count == 0) {
+                return;
+            }
+
+            foreach (var material in Materials) {
+                // Apply mapping from config to material
+                var masterName = masterMaterialsViewModel.GetMasterNameForMaterial(material.ID);
+                if (!string.IsNullOrEmpty(masterName)) {
+                    material.MasterMaterialName = masterName;
+                }
+
+                // Subscribe to changes on this material
+                material.PropertyChanged -= Material_PropertyChanged;
+                material.PropertyChanged += Material_PropertyChanged;
+            }
+
+            logger.Info($"Synced master material mappings for {Materials.Count} materials");
+        }
+
+        /// <summary>
+        /// Handles PropertyChanged on MaterialResource to update config when MasterMaterialName changes
+        /// </summary>
+        private void Material_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            if (e.PropertyName != nameof(MaterialResource.MasterMaterialName)) {
+                return;
+            }
+
+            if (sender is not MaterialResource material) {
+                return;
+            }
+
+            // Update the mapping in config
+            masterMaterialsViewModel.SetMasterForMaterial(material.ID, material.MasterMaterialName);
         }
     }
 

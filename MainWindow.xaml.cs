@@ -214,18 +214,6 @@ namespace AssetProcessor {
             // ����������� ������ ���������� � ����������� � ������ � �������
             VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
 
-            // ���������� ComboBox ��� Color Channel
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialAOColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialDiffuseColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialSpecularColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialMetalnessColorChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<ColorChannel>(MaterialGlossinessColorChannelComboBox);
-
-            // ���������� ComboBox ��� UV Channel
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialDiffuseUVChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialSpecularUVChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialNormalUVChannelComboBox);
-            ComboBoxHelper.PopulateComboBox<UVChannel>(MaterialAOUVChannelComboBox);
 
 #if DEBUG
             // Dev-only: load test model at startup for quick debugging
@@ -2378,21 +2366,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void TextureColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
-                // Column indices: 0=№, 1=ID, 2=TextureName, 3=Extension, 4=Size, 5=Compressed,
-                // 6=Resolution, 7=ResizeResolution, 8=Compression(Format), 9=Mipmaps, 10=Preset, 11=Status, 12=Upload
+                // Column indices: 0=Export, 1=№, 2=ID, 3=TextureName, 4=Extension, 5=Size, 6=Compressed,
+                // 7=Resolution, 8=ResizeResolution, 9=Compression(Format), 10=Mipmaps, 11=Preset, 12=Status, 13=Upload
                 int columnIndex = columnTag switch {
-                    "ID" => 1,
-                    "TextureName" => 2,
-                    "Extension" => 3,
-                    "Size" => 4,
-                    "Compressed" => 5,
-                    "Resolution" => 6,
-                    "ResizeResolution" => 7,
-                    "Compression" => 8,
-                    "Mipmaps" => 9,
-                    "Preset" => 10,
-                    "Status" => 11,
-                    "Upload" => 12,
+                    "Export" => 0,
+                    "Index" => 1,
+                    "ID" => 2,
+                    "TextureName" => 3,
+                    "Extension" => 4,
+                    "Size" => 5,
+                    "Compressed" => 6,
+                    "Resolution" => 7,
+                    "ResizeResolution" => 8,
+                    "Compression" => 9,
+                    "Mipmaps" => 10,
+                    "Preset" => 11,
+                    "Status" => 12,
+                    "Upload" => 13,
                     _ => -1
                 };
 
@@ -2407,10 +2397,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void MaterialColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=Export, 1=№, 2=ID, 3=Name, 4=Master, 5=Status
                 int columnIndex = columnTag switch {
-                    "ID" => 1,
-                    "Name" => 2,
-                    "Status" => 3,
+                    "Export" => 0,
+                    "Index" => 1,
+                    "ID" => 2,
+                    "Name" => 3,
+                    "Master" => 4,
+                    "Status" => 5,
                     _ => -1
                 };
 
@@ -2424,13 +2418,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void ModelColumnVisibility_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.Tag is string columnTag) {
+                // Column indices: 0=Export, 1=№, 2=ID, 3=Name, 4=Size, 5=UVChannels, 6=Extension, 7=Status
                 int columnIndex = columnTag switch {
-                    "ID" => 1,
-                    "Name" => 2,
-                    "Size" => 3,
-                    "UVChannels" => 4,
-                    "Extension" => 5,
-                    "Status" => 6,
+                    "Export" => 0,
+                    "Index" => 1,
+                    "ID" => 2,
+                    "Name" => 3,
+                    "Size" => 4,
+                    "UVChannels" => 5,
+                    "Extension" => 6,
+                    "Status" => 7,
                     _ => -1
                 };
 
@@ -2479,20 +2476,25 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private int GetColumnIndexByTag(DataGrid grid, string tag) {
             if (grid == TexturesDataGrid) {
+                // 0=Export, 1=№, 2=ID, 3=TextureName, 4=Extension, 5=Size, 6=Compressed,
+                // 7=Resolution, 8=ResizeResolution, 9=Compression, 10=Mipmaps, 11=Preset, 12=Status, 13=Upload
                 return tag switch {
-                    "ID" => 1, "TextureName" => 2, "Extension" => 3, "Size" => 4,
-                    "Compressed" => 5, "Resolution" => 6, "ResizeResolution" => 7,
-                    "Compression" => 8, "Mipmaps" => 9, "Preset" => 10, "Status" => 11,
+                    "Export" => 0, "Index" => 1, "ID" => 2, "TextureName" => 3, "Extension" => 4,
+                    "Size" => 5, "Compressed" => 6, "Resolution" => 7, "ResizeResolution" => 8,
+                    "Compression" => 9, "Mipmaps" => 10, "Preset" => 11, "Status" => 12, "Upload" => 13,
                     _ => -1
                 };
             } else if (grid == ModelsDataGrid) {
+                // 0=Export, 1=№, 2=ID, 3=Name, 4=Size, 5=UVChannels, 6=Extension, 7=Status
                 return tag switch {
-                    "ID" => 1, "Name" => 2, "Size" => 3, "UVChannels" => 4, "Extension" => 5, "Status" => 6,
+                    "Export" => 0, "Index" => 1, "ID" => 2, "Name" => 3, "Size" => 4,
+                    "UVChannels" => 5, "Extension" => 6, "Status" => 7,
                     _ => -1
                 };
             } else if (grid == MaterialsDataGrid) {
+                // 0=Export, 1=№, 2=ID, 3=Name, 4=Master, 5=Status
                 return tag switch {
-                    "ID" => 1, "Name" => 2, "Status" => 3,
+                    "Export" => 0, "Index" => 1, "ID" => 2, "Name" => 3, "Master" => 4, "Status" => 5,
                     _ => -1
                 };
             }
@@ -2639,65 +2641,63 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void DisplayMaterialParameters(MaterialResource parameters) {
             Dispatcher.Invoke(() => {
+                // Header
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
-                MaterialNameTextBlock.Text = $"Name: {parameters.Name}";
-                MaterialCreatedAtTextBlock.Text = $"Created At: {parameters.CreatedAt}";
-                MaterialShaderTextBlock.Text = $"Shader: {parameters.Shader}";
-                MaterialBlendTypeTextBlock.Text = $"Blend Type: {parameters.BlendType}";
-                MaterialCullTextBlock.Text = $"Cull: {parameters.Cull}";
-                MaterialUseLightingTextBlock.Text = $"Use Lighting: {parameters.UseLighting}";
-                MaterialTwoSidedLightingTextBlock.Text = $"Two-Sided Lighting: {parameters.TwoSidedLighting}";
-                MaterialReflectivityTextBlock.Text = $"Reflectivity: {parameters.Reflectivity}";
-                MaterialAlphaTestTextBlock.Text = $"Alpha Test: {parameters.AlphaTest}";
+                MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
 
-                UpdateHyperlinkAndVisibility(MaterialAOMapHyperlink, AOExpander, parameters.AOMapId, "AO Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialDiffuseMapHyperlink, DiffuseExpander, parameters.DiffuseMapId, "Diffuse Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialNormalMapHyperlink, NormalExpander, parameters.NormalMapId, "Normal Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialSpecularMapHyperlink, SpecularExpander, parameters.SpecularMapId, "Specular Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialMetalnessMapHyperlink, SpecularExpander, parameters.MetalnessMapId, "Metalness Map", parameters);
-                UpdateHyperlinkAndVisibility(MaterialGlossMapHyperlink, SpecularExpander, parameters.GlossMapId, "Gloss Map", parameters);
+                // Master Material ComboBox
+                MaterialMasterComboBox.SelectedValue = parameters.MasterMaterialName;
 
-                SetTintColor(MaterialDiffuseTintCheckBox, MaterialTintColorRect, TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
-                SetTintColor(MaterialSpecularTintCheckBox, MaterialSpecularTintColorRect, TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
-                SetTintColor(MaterialAOTintCheckBox, MaterialAOTintColorRect, AOTintColorPicker, parameters.AOTint, parameters.AOColor);
+                // Texture hyperlinks and previews
+                UpdateTextureHyperlink(MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);
+                UpdateTextureHyperlink(MaterialNormalMapHyperlink, parameters.NormalMapId, parameters);
+                UpdateTextureHyperlink(MaterialAOMapHyperlink, parameters.AOMapId, parameters);
+                UpdateTextureHyperlink(MaterialGlossMapHyperlink, parameters.GlossMapId, parameters);
+                UpdateTextureHyperlink(MaterialMetalnessMapHyperlink, parameters.MetalnessMapId, parameters);
+                UpdateTextureHyperlink(MaterialEmissiveMapHyperlink, parameters.EmissiveMapId, parameters);
+                UpdateTextureHyperlink(MaterialOpacityMapHyperlink, parameters.OpacityMapId, parameters);
 
-                SetTextureImage(TextureAOPreviewImage, parameters.AOMapId);
+                // Texture previews
                 SetTextureImage(TextureDiffusePreviewImage, parameters.DiffuseMapId);
                 SetTextureImage(TextureNormalPreviewImage, parameters.NormalMapId);
-                SetTextureImage(TextureSpecularPreviewImage, parameters.SpecularMapId);
-                SetTextureImage(TextureMetalnessPreviewImage, parameters.MetalnessMapId);
+                SetTextureImage(TextureAOPreviewImage, parameters.AOMapId);
                 SetTextureImage(TextureGlossPreviewImage, parameters.GlossMapId);
+                SetTextureImage(TextureMetalnessPreviewImage, parameters.MetalnessMapId);
+                SetTextureImage(TextureEmissivePreviewImage, parameters.EmissiveMapId);
+                SetTextureImage(TextureOpacityPreviewImage, parameters.OpacityMapId);
 
+                // Overrides sliders
+                MaterialBumpinessTextBox.Text = (parameters.BumpMapFactor ?? 1.0f).ToString("F2");
+                MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 1.0;
 
-                MaterialAOVertexColorCheckBox.IsChecked = parameters.AOVertexColor;
-                MaterialAOTintCheckBox.IsChecked = parameters.AOTint;
+                MaterialMetalnessTextBox.Text = (parameters.Metalness ?? 0.0f).ToString("F2");
+                MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0.0;
 
-                MaterialDiffuseVertexColorCheckBox.IsChecked = parameters.DiffuseVertexColor;
-                MaterialDiffuseTintCheckBox.IsChecked = parameters.DiffuseTint;
+                MaterialGlossinessTextBox.Text = (parameters.Glossiness ?? parameters.Shininess ?? 0.25f).ToString("F2");
+                MaterialGlossinessIntensitySlider.Value = parameters.Glossiness ?? parameters.Shininess ?? 0.25;
 
-                MaterialUseMetalnessCheckBox.IsChecked = parameters.UseMetalness;
-
-                MaterialSpecularTintCheckBox.IsChecked = parameters.SpecularTint;
-                MaterialSpecularVertexColorCheckBox.IsChecked = parameters.SpecularVertexColor;
-
-                MaterialGlossinessTextBox.Text = parameters.Shininess?.ToString() ?? "0";
-                MaterialGlossinessIntensitySlider.Value = parameters.Shininess ?? 0;
-
-                MaterialMetalnessTextBox.Text = parameters.Metalness?.ToString() ?? "0";
-                MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0;
-
-                MaterialBumpinessTextBox.Text = parameters.BumpMapFactor?.ToString() ?? "0";
-                MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 0;
-
-
-
-                // ��������� ��������� ��������� � ComboBox ��� Color Channel � UV Channel
-                MaterialDiffuseColorChannelComboBox.SelectedItem = parameters.DiffuseColorChannel?.ToString();
-                MaterialSpecularColorChannelComboBox.SelectedItem = parameters.SpecularColorChannel?.ToString();
-                MaterialMetalnessColorChannelComboBox.SelectedItem = parameters.MetalnessColorChannel?.ToString();
-                MaterialGlossinessColorChannelComboBox.SelectedItem = parameters.GlossinessColorChannel?.ToString();
-                MaterialAOColorChannelComboBox.SelectedItem = parameters.AOChannel?.ToString();
+                // Tint colors
+                SetTintColor(MaterialDiffuseTintCheckBox, MaterialTintColorRect, TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
+                SetTintColor(MaterialAOTintCheckBox, MaterialAOTintColorRect, AOTintColorPicker, parameters.AOTint, parameters.AOColor);
+                SetTintColor(MaterialSpecularTintCheckBox, MaterialSpecularTintColorRect, TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
             });
+        }
+
+        private void UpdateTextureHyperlink(Hyperlink hyperlink, int? mapId, MaterialResource material) {
+            if (hyperlink == null) return;
+
+            hyperlink.DataContext = material;
+
+            if (mapId.HasValue) {
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
+                hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
+                hyperlink.Inlines.Clear();
+                hyperlink.Inlines.Add(texture?.Name ?? $"ID:{mapId.Value}");
+            } else {
+                hyperlink.NavigateUri = null;
+                hyperlink.Inlines.Clear();
+                hyperlink.Inlines.Add("-");
+            }
         }
 
         private static void SetTintColor(CheckBox checkBox, TextBox colorRect, ColorPicker colorPicker, bool isTint, List<float>? colorValues) {
@@ -2717,29 +2717,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 colorRect.Background = new SolidColorBrush(Colors.Transparent);
                 colorRect.Text = "No Tint";
                 colorPicker.SelectedColor = null;
-            }
-        }
-
-        private void UpdateHyperlinkAndVisibility(Hyperlink hyperlink, Expander expander, int? mapId, string mapName, MaterialResource material) {
-            if (hyperlink != null && expander != null) {
-                // ������������� DataContext ��� hyperlink, ����� �� ���� � ������ ��������� ���������
-                hyperlink.DataContext = material;
-
-                if (mapId.HasValue) {
-                    TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
-                    if (texture != null && !string.IsNullOrEmpty(texture.Name)) {
-                        // ��������� ID � NavigateUri � ���������������� ������ ��� ������������ ����������
-                        hyperlink.NavigateUri = new Uri($"texture://{mapId.Value}");
-                        hyperlink.Inlines.Clear();
-                        hyperlink.Inlines.Add(texture.Name);
-                    }
-                    expander.Visibility = Visibility.Visible;
-                } else {
-                    hyperlink.NavigateUri = null;
-                    hyperlink.Inlines.Clear();
-                    hyperlink.Inlines.Add($"No {mapName}");
-                    expander.Visibility = Visibility.Collapsed;
-                }
             }
         }
 
@@ -2845,6 +2822,74 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             NavigateToTextureFromHyperlink(sender, "AO Map", material => material.AOMapId);
         }
 
+        private void MaterialEmissiveMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureFromHyperlink(sender, "Emissive Map", material => material.EmissiveMapId);
+        }
+
+        private void MaterialOpacityMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureFromHyperlink(sender, "Opacity Map", material => material.OpacityMapId);
+        }
+
+        private void NavigateToDiffuseTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.DiffuseMapId);
+        }
+
+        private void NavigateToNormalTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.NormalMapId);
+        }
+
+        private void NavigateToAOTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.AOMapId);
+        }
+
+        private void NavigateToGlossTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.GlossMapId);
+        }
+
+        private void NavigateToMetalnessTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.MetalnessMapId);
+        }
+
+        private void NavigateToEmissiveTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.EmissiveMapId);
+        }
+
+        private void NavigateToOpacityTexture_Click(object sender, RoutedEventArgs e) {
+            NavigateToTextureById(GetSelectedMaterial()?.OpacityMapId);
+        }
+
+        private MaterialResource? GetSelectedMaterial() {
+            return MaterialsDataGrid.SelectedItem as MaterialResource;
+        }
+
+        private void NavigateToTextureById(int? textureId) {
+            if (!textureId.HasValue) return;
+
+            _ = Dispatcher.BeginInvoke(new Action(() => {
+                if (TexturesTabItem != null) {
+                    tabControl.SelectedItem = TexturesTabItem;
+                }
+
+                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
+                if (texture != null) {
+                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    view?.MoveCurrentTo(texture);
+
+                    TexturesDataGrid.SelectedItem = texture;
+                    TexturesDataGrid.UpdateLayout();
+                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.Focus();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (MaterialsDataGrid.SelectedItem is MaterialResource material &&
+                MaterialMasterComboBox.SelectedValue is string masterName) {
+                material.MasterMaterialName = masterName;
+            }
+        }
+
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             if (sender is not System.Windows.Controls.Image image) {
                 logger.Warn("TexturePreview_MouseLeftButtonUp ������ ������������ ���� {SenderType}, �������� Image.", sender.GetType().FullName);
@@ -2865,6 +2910,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 "Specular" => material.SpecularMapId,
                 "Metalness" => material.MetalnessMapId,
                 "Gloss" => material.GlossMapId,
+                "Emissive" => material.EmissiveMapId,
+                "Opacity" => material.OpacityMapId,
                 _ => null
             };
 
@@ -2926,10 +2973,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             var textureIds = new int?[] {
                 material.DiffuseMapId,
                 material.NormalMapId,
-                material.SpecularMapId,
-                material.MetalnessMapId,
+                material.AOMapId,
                 material.GlossMapId,
-                material.AOMapId
+                material.MetalnessMapId,
+                material.EmissiveMapId,
+                material.OpacityMapId
             };
 
             foreach (var textureId in textureIds) {
@@ -3360,6 +3408,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logService.LogInfo("Project found, loading local assets...");
                 logger.Info("CheckProjectState: Loading local assets...");
                 await LoadAssetsFromJsonFileAsync();
+
+                // Initialize Master Materials context and sync material mappings
+                if (!string.IsNullOrEmpty(ProjectFolderPath))
+                {
+                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                    viewModel.SyncMaterialMasterMappings();
+                }
 
                 logService.LogInfo("Checking for updates...");
                 logger.Info("CheckProjectState: Checking for updates on server");
@@ -5026,6 +5081,111 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (e.Key == System.Windows.Input.Key.F) {
                 viewPort3d?.ZoomExtents();
                 e.Handled = true;
+            }
+        }
+
+        #endregion
+
+        #region Master Materials Tab Event Handlers
+
+        private void MasterMaterialsDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            if (MasterMaterialsDataGrid.SelectedItem is MasterMaterials.Models.MasterMaterial master) {
+                if (!master.IsBuiltIn) {
+                    OpenMasterMaterialEditor(master);
+                }
+            }
+        }
+
+        private void ChunksDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            if (ChunksDataGrid.SelectedItem is MasterMaterials.Models.ShaderChunk chunk) {
+                OpenChunkEditor(chunk);
+            }
+        }
+
+        private void MasterMaterial_Edit_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.MasterMaterial master) {
+                if (!master.IsBuiltIn) {
+                    OpenMasterMaterialEditor(master);
+                }
+            }
+        }
+
+        private void MasterMaterial_Delete_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.MasterMaterial master) {
+                if (master.IsBuiltIn) {
+                    MessageBox.Show("Cannot delete built-in master materials.", "Delete Master Material",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = MessageBox.Show($"Are you sure you want to delete master material '{master.Name}'?",
+                    "Delete Master Material", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) {
+                    viewModel.MasterMaterialsViewModel.DeleteMasterCommand.Execute(master);
+                }
+            }
+        }
+
+        private void Chunk_Edit_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                OpenChunkEditor(chunk);
+            }
+        }
+
+        private async void Chunk_Delete_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                if (chunk.IsBuiltIn) {
+                    MessageBox.Show("Cannot delete built-in chunks.", "Delete Chunk", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = MessageBox.Show($"Are you sure you want to delete chunk '{chunk.Id}'?",
+                    "Delete Chunk", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) {
+                    await viewModel.MasterMaterialsViewModel.DeleteChunkCommand.ExecuteAsync(chunk);
+                }
+            }
+        }
+
+        private void Chunk_Copy_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
+                viewModel.MasterMaterialsViewModel.CopyChunkCommand.Execute(chunk);
+            }
+        }
+
+        private void OpenMasterMaterialEditor(MasterMaterials.Models.MasterMaterial master) {
+            var availableChunks = viewModel.MasterMaterialsViewModel.Chunks.ToList();
+            var editorWindow = new Windows.MasterMaterialEditorWindow(master, availableChunks) {
+                Owner = this
+            };
+
+            if (editorWindow.ShowDialog() == true && editorWindow.EditedMaster != null) {
+                // Update the master in the collection
+                var index = viewModel.MasterMaterialsViewModel.MasterMaterials.IndexOf(master);
+                if (index >= 0) {
+                    viewModel.MasterMaterialsViewModel.MasterMaterials[index] = editorWindow.EditedMaster;
+                }
+                viewModel.MasterMaterialsViewModel.HasUnsavedChanges = true;
+                logger.Info($"Master material '{editorWindow.EditedMaster.Name}' updated");
+            }
+        }
+
+        private void OpenChunkEditor(MasterMaterials.Models.ShaderChunk chunk) {
+            var editorWindow = new Windows.ChunkEditorWindow(chunk, chunk.IsBuiltIn) {
+                Owner = this
+            };
+
+            if (editorWindow.ShowDialog() == true && editorWindow.EditedChunk != null) {
+                if (editorWindow.IsReadOnly && editorWindow.EditedChunk.IsBuiltIn) {
+                    // User clicked "Copy to Edit" - create a copy
+                    viewModel.MasterMaterialsViewModel.CopyChunkCommand.Execute(chunk);
+                    logger.Info($"Created copy of built-in chunk '{chunk.Id}'");
+                } else {
+                    viewModel.MasterMaterialsViewModel.UpdateChunk(editorWindow.EditedChunk);
+                    logger.Info($"Chunk '{editorWindow.EditedChunk.Id}' updated");
+                }
             }
         }
 

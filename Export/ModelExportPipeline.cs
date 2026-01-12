@@ -184,6 +184,11 @@ public class ModelExportPipeline {
                 texturePathMap, ormResults, options, cancellationToken);
             Logger.Info($"Updated global mapping: {GetMappingPath()}");
 
+            // 7.5 Генерируем consolidated chunks файлы для master materials с chunks
+            if (options.MasterMaterialsConfig != null && !string.IsNullOrEmpty(options.ProjectFolderPath)) {
+                await GenerateChunksFilesAsync(modelMaterials, exportPath, options, cancellationToken);
+            }
+
             // Генерируем JSON файл модели с LODs и материалами
             var modelJson = GenerateModelJson(model, modelMaterials, modelFileName, options);
             var modelJsonPath = Path.Combine(exportPath, $"{modelFileName}.json");
@@ -905,14 +910,30 @@ public class ModelExportPipeline {
         Dictionary<int, ORMExportResult> ormResults,
         ExportOptions options) {
 
-        // Определяем master материал по blendType
-        var masterName = material.BlendType switch {
-            "0" or "NONE" => "pbr_opaque",
-            "1" or "NORMAL" => "pbr_alpha",
-            "2" or "ADDITIVE" => "pbr_additive",
-            "3" or "PREMULTIPLIED" => "pbr_premul",
-            _ => "pbr_opaque"
-        };
+        // 1. Приоритет: MasterMaterialName из UI выбора
+        string masterName;
+        if (!string.IsNullOrEmpty(material.MasterMaterialName)) {
+            masterName = material.MasterMaterialName;
+        } else {
+            // Определяем master материал по blendType
+            masterName = material.BlendType switch {
+                "0" or "NONE" => "pbr_opaque",
+                "1" or "NORMAL" => "pbr_alpha",
+                "2" or "ADDITIVE" => "pbr_additive",
+                "3" or "PREMULTIPLIED" => "pbr_premul",
+                _ => "pbr_opaque"
+            };
+        }
+
+        // Проверяем, есть ли chunks для этого master
+        string? chunksFile = null;
+        if (options.MasterMaterialsConfig != null) {
+            var master = options.MasterMaterialsConfig.Masters
+                .FirstOrDefault(m => m.Name == masterName);
+            if (master != null && master.ChunkIds.Count > 0) {
+                chunksFile = $"chunks/{masterName}_chunks.mjs";
+            }
+        }
 
         var textures = new Dictionary<string, object>();
 
@@ -1022,11 +1043,18 @@ public class ModelExportPipeline {
         if (material.TwoSidedLighting)
             matParams["twoSidedLighting"] = true;
 
-        return new {
-            master = masterName,
-            @params = matParams.Count > 0 ? matParams : null,
-            textures = textures.Count > 0 ? textures : null
+        // Формируем результат с опциональным chunksFile
+        var result = new Dictionary<string, object?> {
+            ["master"] = masterName,
+            ["params"] = matParams.Count > 0 ? matParams : null,
+            ["textures"] = textures.Count > 0 ? textures : null
         };
+
+        if (!string.IsNullOrEmpty(chunksFile)) {
+            result["chunksFile"] = chunksFile;
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -1062,6 +1090,64 @@ public class ModelExportPipeline {
             materials = modelMaterials.Select(m => m.ID).ToList(),
             lods = lods
         };
+    }
+
+    /// <summary>
+    /// Генерирует consolidated chunks файлы для master materials, используемых материалами
+    /// </summary>
+    private async Task GenerateChunksFilesAsync(
+        List<MaterialResource> materials,
+        string exportPath,
+        ExportOptions options,
+        CancellationToken cancellationToken) {
+
+        if (options.MasterMaterialsConfig == null || string.IsNullOrEmpty(options.ProjectFolderPath)) {
+            return;
+        }
+
+        // Собираем уникальные master names с chunks
+        var masterNamesWithChunks = new HashSet<string>();
+        foreach (var material in materials) {
+            var masterName = material.MasterMaterialName;
+            if (string.IsNullOrEmpty(masterName)) {
+                // Fallback to blendType
+                masterName = material.BlendType switch {
+                    "0" or "NONE" => "pbr_opaque",
+                    "1" or "NORMAL" => "pbr_alpha",
+                    "2" or "ADDITIVE" => "pbr_additive",
+                    "3" or "PREMULTIPLIED" => "pbr_premul",
+                    _ => "pbr_opaque"
+                };
+            }
+
+            var master = options.MasterMaterialsConfig.Masters
+                .FirstOrDefault(m => m.Name == masterName);
+            if (master != null && master.ChunkIds.Count > 0) {
+                masterNamesWithChunks.Add(masterName);
+            }
+        }
+
+        if (masterNamesWithChunks.Count == 0) {
+            return;
+        }
+
+        // Создаём папку chunks
+        var chunksDir = Path.Combine(exportPath, "chunks");
+        Directory.CreateDirectory(chunksDir);
+
+        // Генерируем consolidated MJS для каждого master
+        var masterMaterialService = new Services.MasterMaterialService();
+        foreach (var masterName in masterNamesWithChunks) {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var master = options.MasterMaterialsConfig.Masters.First(m => m.Name == masterName);
+            var consolidatedMjs = await masterMaterialService.GenerateConsolidatedChunksAsync(
+                options.ProjectFolderPath, master, cancellationToken);
+
+            var outputPath = Path.Combine(chunksDir, $"{masterName}_chunks.mjs");
+            await File.WriteAllTextAsync(outputPath, consolidatedMjs, cancellationToken);
+            Logger.Info($"Generated chunks file: {outputPath}");
+        }
     }
 
     private float[]? NormalizeColor(List<float>? color) {
@@ -1204,6 +1290,17 @@ public class ExportOptions {
     /// Если false - используются автоматические настройки на основе типа текстуры
     /// </summary>
     public bool UseSavedTextureSettings { get; set; } = true;
+
+    /// <summary>
+    /// Конфигурация Master Materials для экспорта chunks
+    /// Если null, chunks не экспортируются
+    /// </summary>
+    public MasterMaterials.Models.MasterMaterialsConfig? MasterMaterialsConfig { get; set; }
+
+    /// <summary>
+    /// Путь к папке проекта для загрузки chunks файлов
+    /// </summary>
+    public string? ProjectFolderPath { get; set; }
 }
 
 public class ExportProgress {

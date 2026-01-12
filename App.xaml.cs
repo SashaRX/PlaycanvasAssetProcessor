@@ -95,6 +95,7 @@ namespace AssetProcessor {
             services.AddSingleton<IORMTextureService, ORMTextureService>();
             services.AddSingleton<IFileStatusScannerService, FileStatusScannerService>();
             services.AddSingleton<IKtx2InfoService, Ktx2InfoService>();
+            services.AddSingleton<IMasterMaterialService, MasterMaterialService>();
             services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(
                 sp.GetRequiredService<IProjectSyncService>(),
                 sp.GetRequiredService<ILocalCacheService>(),
@@ -133,6 +134,12 @@ namespace AssetProcessor {
                 return new MaterialSelectionViewModel(assetResourceService, logService);
             });
 
+            services.AddSingleton<MasterMaterialsViewModel>(sp => {
+                var masterMaterialService = sp.GetRequiredService<IMasterMaterialService>();
+                var logService = sp.GetRequiredService<ILogService>();
+                return new MasterMaterialsViewModel(masterMaterialService, logService);
+            });
+
             services.AddSingleton<MainViewModel>(sp => {
                 var playCanvasService = sp.GetRequiredService<IPlayCanvasService>();
                 var textureProcessingService = sp.GetRequiredService<ITextureProcessingService>();
@@ -145,6 +152,7 @@ namespace AssetProcessor {
                 var conversionSettingsViewModel = sp.GetRequiredService<TextureConversionSettingsViewModel>();
                 var assetLoadingViewModel = sp.GetRequiredService<AssetLoadingViewModel>();
                 var materialSelectionViewModel = sp.GetRequiredService<MaterialSelectionViewModel>();
+                var masterMaterialsViewModel = sp.GetRequiredService<MasterMaterialsViewModel>();
                 return new MainViewModel(
                     playCanvasService,
                     textureProcessingService,
@@ -156,7 +164,8 @@ namespace AssetProcessor {
                     ormTextureViewModel,
                     conversionSettingsViewModel,
                     assetLoadingViewModel,
-                    materialSelectionViewModel);
+                    materialSelectionViewModel,
+                    masterMaterialsViewModel);
             });
             services.AddTransient<MainWindow>();
         }

@@ -69,5 +69,21 @@ namespace AssetProcessor.Resources {
         public ColorChannel? MetalnessColorChannel { get; set; }
         public ColorChannel? GlossinessColorChannel { get; set; }
         public ColorChannel? AOChannel { get; set; }
+
+        // Master Material assignment
+        private string? masterMaterialName;
+
+        /// <summary>
+        /// Name of the master material this instance derives from
+        /// </summary>
+        public string? MasterMaterialName {
+            get => masterMaterialName;
+            set {
+                if (masterMaterialName != value) {
+                    masterMaterialName = value;
+                    OnPropertyChanged(nameof(MasterMaterialName));
+                }
+            }
+        }
     }
 }

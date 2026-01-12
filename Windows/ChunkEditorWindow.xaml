@@ -105,25 +105,15 @@
         </TabControl>
 
         <!-- Footer: Buttons -->
-        <Grid x:Name="FooterGrid" Grid.Row="2" Margin="10,10,10,10" Background="{DynamicResource ThemeBackground}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock x:Name="UnsavedIndicator" Text="* Unsaved changes"
-                           Foreground="Orange" VerticalAlignment="Center"
-                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            </StackPanel>
-
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Reset" Click="ResetButton_Click" Width="80" Margin="0,0,10,0"
-                        IsEnabled="{Binding HasUnsavedChanges}"/>
-                <Button Content="Save" Click="SaveButton_Click" Width="80" Margin="0,0,10,0"
-                        Background="#FF4CAF50" Foreground="White"/>
-                <Button Content="Cancel" Click="CancelButton_Click" Width="80" IsCancel="True"/>
-            </StackPanel>
-        </Grid>
+        <StackPanel x:Name="FooterGrid" Grid.Row="2" Margin="10,10,10,10" Orientation="Horizontal" HorizontalAlignment="Right" Background="{DynamicResource ThemeBackground}">
+            <TextBlock x:Name="UnsavedIndicator" Text="* Unsaved changes"
+                       Foreground="Orange" VerticalAlignment="Center" Margin="0,0,20,0"
+                       Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
+            <Button Content="Reset" Click="ResetButton_Click" Width="80" Margin="0,0,10,0"
+                    IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Save" Click="SaveButton_Click" Width="80" Margin="0,0,10,0"
+                    Background="#FF4CAF50" Foreground="White"/>
+            <Button Content="Cancel" Click="CancelButton_Click" Width="80" IsCancel="True"/>
+        </StackPanel>
     </Grid>
 </Window>

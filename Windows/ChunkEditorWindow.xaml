@@ -14,7 +14,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </Window.Resources>
 
-    <Grid Margin="10">
+    <Grid Margin="10" TextElement.Foreground="{DynamicResource ThemeForeground}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

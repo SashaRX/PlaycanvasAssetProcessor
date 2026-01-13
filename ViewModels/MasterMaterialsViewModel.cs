@@ -41,6 +41,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
     [ObservableProperty]
     private bool hasUnsavedChanges;
 
+    [ObservableProperty]
+    private ObservableCollection<ChunkSlotCategoryViewModel> chunkSlotCategories = [];
+
     /// <summary>
     /// Event raised when chunk editing is requested
     /// </summary>
@@ -256,6 +259,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
             IsBuiltIn = false
         };
 
+        // Initialize slot assignments with defaults
+        newMaster.InitializeSlotAssignments();
+
         MasterMaterials.Add(newMaster);
         SelectedMaster = newMaster;
         HasUnsavedChanges = true;
@@ -296,7 +302,13 @@ public partial class MasterMaterialsViewModel : ObservableObject
             Description = $"Clone of {master.Name}",
             BlendType = master.BlendType,
             IsBuiltIn = false,
-            ChunkIds = [.. master.ChunkIds] // Copy all chunk IDs
+            ChunkIds = [.. master.ChunkIds], // Copy all chunk IDs
+            SlotAssignments = master.SlotAssignments?.Select(a => new ChunkSlotAssignment
+            {
+                SlotId = a.SlotId,
+                ChunkId = a.ChunkId,
+                Enabled = a.Enabled
+            }).ToList()
         };
 
         MasterMaterials.Add(clonedMaster);
@@ -491,6 +503,94 @@ public partial class MasterMaterialsViewModel : ObservableObject
         if (master.IsBuiltIn) return;
 
         master.ChunkIds.Remove(chunkId);
+        HasUnsavedChanges = true;
+    }
+
+    /// <summary>
+    /// Called when SelectedMaster changes - rebuilds the chunk slot categories
+    /// </summary>
+    partial void OnSelectedMasterChanged(MasterMaterial? value)
+    {
+        RebuildChunkSlotCategories();
+    }
+
+    /// <summary>
+    /// Rebuilds the chunk slot categories based on the selected master material
+    /// </summary>
+    private void RebuildChunkSlotCategories()
+    {
+        ChunkSlotCategories.Clear();
+
+        if (SelectedMaster == null)
+        {
+            return;
+        }
+
+        // Group slots by category
+        var categories = ShaderChunkSchema.GetCategories();
+
+        foreach (var categoryName in categories)
+        {
+            var categoryVm = new ChunkSlotCategoryViewModel
+            {
+                CategoryName = categoryName,
+                IsExpanded = categoryName == "Surface" || categoryName == "Vertex" // Expand important ones by default
+            };
+
+            var slots = ShaderChunkSchema.GetSlotsByCategory(categoryName);
+            foreach (var slot in slots)
+            {
+                // Get current chunk assignment for this slot
+                var currentChunkId = SelectedMaster.SlotAssignments?
+                    .FirstOrDefault(a => a.SlotId == slot.Id)?.ChunkId;
+
+                var isEnabled = SelectedMaster.IsSlotEnabled(slot.Id);
+
+                var slotVm = new ChunkSlotViewModel(
+                    slot,
+                    Chunks,
+                    currentChunkId,
+                    isEnabled,
+                    OnSlotChunkChanged,
+                    OnSlotEnabledChanged
+                );
+
+                categoryVm.Slots.Add(slotVm);
+            }
+
+            ChunkSlotCategories.Add(categoryVm);
+        }
+    }
+
+    /// <summary>
+    /// Called when a chunk is selected for a slot
+    /// </summary>
+    private void OnSlotChunkChanged(string slotId, string? chunkId)
+    {
+        if (SelectedMaster == null || SelectedMaster.IsBuiltIn) return;
+
+        SelectedMaster.SetChunkForSlot(slotId, chunkId);
+        HasUnsavedChanges = true;
+
+        // If a chunk was selected, also select it in the editor
+        if (!string.IsNullOrEmpty(chunkId))
+        {
+            var chunk = Chunks.FirstOrDefault(c => c.Id == chunkId);
+            if (chunk != null)
+            {
+                SelectedChunk = chunk;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called when a slot is enabled/disabled
+    /// </summary>
+    private void OnSlotEnabledChanged(string slotId, bool enabled)
+    {
+        if (SelectedMaster == null || SelectedMaster.IsBuiltIn) return;
+
+        SelectedMaster.SetSlotEnabled(slotId, enabled);
         HasUnsavedChanges = true;
     }
 }

@@ -40,7 +40,11 @@ using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
 using AssetProcessor.Windows;
+using ICSharpCode.AvalonEdit.Highlighting;
+using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using Newtonsoft.Json.Linq;
+using System.Reflection;
+using System.Xml;
 
 namespace AssetProcessor {
     public partial class MainWindow : Window, INotifyPropertyChanged {
@@ -89,6 +93,15 @@ namespace AssetProcessor {
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
         private string? selectedORMSubGroupName; // Имя выбранной ORM подгруппы для визуального выделения
+
+        // Chunk Editor state
+        private static IHighlightingDefinition? _glslHighlighting;
+        private static IHighlightingDefinition? _wgslHighlighting;
+        private MasterMaterials.Models.ShaderChunk? _currentEditingChunk;
+        private bool _chunkEditorHasUnsavedChanges;
+        private string? _originalGlslCode;
+        private string? _originalWgslCode;
+
         private string? ProjectFolderPath => projectSelectionService.ProjectFolderPath;
         private string? ProjectName => projectSelectionService.ProjectName;
         private string? UserId => projectSelectionService.UserId;
@@ -206,6 +219,9 @@ namespace AssetProcessor {
             this.Loaded += (s, e) => {
                 ServerAssetsPanel.SelectionChanged += (sender, asset) => UpdateServerFileInfo(asset);
                 ServerAssetsPanel.NavigateToResourceRequested += OnNavigateToResourceRequested;
+
+                // Initialize chunk code editor
+                InitializeChunkCodeEditor();
             };
 
             // Subscribe to file watcher events (debounced by service)
@@ -339,6 +355,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowModelViewer() {
@@ -346,6 +363,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Visible;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowMaterialViewer() {
@@ -353,6 +371,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Visible;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
         }
 
         private void HideAllViewers() {
@@ -360,6 +379,7 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
         }
 
         private void ShowServerFileInfo() {
@@ -367,6 +387,15 @@ namespace AssetProcessor {
             ModelViewerScroll.Visibility = Visibility.Collapsed;
             MaterialViewerScroll.Visibility = Visibility.Collapsed;
             ServerFileInfoScroll.Visibility = Visibility.Visible;
+            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowChunkSlotsViewer() {
+            TextureViewerScroll.Visibility = Visibility.Collapsed;
+            ModelViewerScroll.Visibility = Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
+            ChunkSlotsScroll.Visibility = Visibility.Visible;
         }
 
         private ViewModels.ServerAssetViewModel? _selectedServerAsset;
@@ -638,6 +667,12 @@ namespace AssetProcessor {
                     case "Materials":
                         SetRightPanelVisibility(true);
                         ShowMaterialViewer();
+                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
+                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        break;
+                    case "Master Materials":
+                        SetRightPanelVisibility(true);
+                        ShowChunkSlotsViewer();
                         TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
                         ModelExportGroupBox.Visibility = Visibility.Collapsed;
                         break;
@@ -5114,19 +5149,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             // Force refresh the ListBox to update chunk count display
-            ChunksListBox.Items.Refresh();
+            AllChunksListBox.Items.Refresh();
         }
 
-        private void ChunkLabel_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e) {
-            if (sender is not TextBlock textBlock) return;
-            if (textBlock.DataContext is not MasterMaterials.Models.ShaderChunk chunk) return;
-
-            // Double-click to edit
-            if (e.ClickCount == 2) {
-                OpenChunkEditor(chunk);
-                e.Handled = true;
-            }
-        }
+        // ChunkLabel_MouseLeftButtonDown removed - selection is now handled by ListBox.SelectedItem binding
 
         private void MasterMaterial_Clone_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.MasterMaterial master) {
@@ -5161,7 +5187,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void Chunk_Edit_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.ShaderChunk chunk) {
-                OpenChunkEditor(chunk);
+                // Select the chunk, which will load it into the embedded editor via PropertyChanged
+                viewModel.MasterMaterialsViewModel.SelectedChunk = chunk;
             }
         }
 
@@ -5187,6 +5214,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
+        private void SlotEditChunk_Click(object sender, RoutedEventArgs e) {
+            if (sender is not Button button) return;
+            if (button.Tag is not ViewModels.ChunkSlotViewModel slotVm) return;
+
+            var selectedChunk = slotVm.SelectedChunk;
+            if (selectedChunk != null) {
+                // Select the chunk and load it into the editor
+                viewModel.MasterMaterialsViewModel.SelectedChunk = selectedChunk;
+                LoadChunkIntoEditor(selectedChunk);
+            }
+        }
+
         private void OpenMasterMaterialEditor(MasterMaterials.Models.MasterMaterial master) {
             var availableChunks = viewModel.MasterMaterialsViewModel.Chunks.ToList();
             var editorWindow = new Windows.MasterMaterialEditorWindow(master, availableChunks) {
@@ -5205,21 +5244,208 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OpenChunkEditor(MasterMaterials.Models.ShaderChunk chunk) {
-            var editorWindow = new Windows.ChunkEditorWindow(chunk, chunk.IsBuiltIn) {
-                Owner = this
+            // Instead of opening a separate window, load the chunk into the embedded editor
+            LoadChunkIntoEditor(chunk);
+        }
+
+        #region Embedded Chunk Editor
+
+        /// <summary>
+        /// Initializes the embedded chunk code editor with syntax highlighting
+        /// </summary>
+        private void InitializeChunkCodeEditor() {
+            // Load syntax highlighting definitions
+            if (_glslHighlighting == null) {
+                _glslHighlighting = LoadHighlightingDefinition("AssetProcessor.SyntaxHighlighting.GLSL.xshd");
+            }
+            if (_wgslHighlighting == null) {
+                _wgslHighlighting = LoadHighlightingDefinition("AssetProcessor.SyntaxHighlighting.WGSL.xshd");
+            }
+
+            // Apply highlighting to editors
+            if (_glslHighlighting != null) {
+                GlslCodeEditor.SyntaxHighlighting = _glslHighlighting;
+            }
+            if (_wgslHighlighting != null) {
+                WgslCodeEditor.SyntaxHighlighting = _wgslHighlighting;
+            }
+
+            // Wire up text change events
+            GlslCodeEditor.TextChanged += (_, _) => OnChunkCodeChanged();
+            WgslCodeEditor.TextChanged += (_, _) => OnChunkCodeChanged();
+
+            // Subscribe to SelectedChunk changes
+            viewModel.MasterMaterialsViewModel.PropertyChanged += (s, e) => {
+                if (e.PropertyName == nameof(viewModel.MasterMaterialsViewModel.SelectedChunk)) {
+                    var selectedChunk = viewModel.MasterMaterialsViewModel.SelectedChunk;
+                    if (selectedChunk != null) {
+                        LoadChunkIntoEditor(selectedChunk);
+                    }
+                }
             };
 
-            if (editorWindow.ShowDialog() == true && editorWindow.EditedChunk != null) {
-                if (editorWindow.IsReadOnly && editorWindow.EditedChunk.IsBuiltIn) {
-                    // User clicked "Copy to Edit" - create a copy
-                    viewModel.MasterMaterialsViewModel.CopyChunkCommand.Execute(chunk);
-                    logger.Info($"Created copy of built-in chunk '{chunk.Id}'");
-                } else {
-                    viewModel.MasterMaterialsViewModel.UpdateChunk(editorWindow.EditedChunk);
-                    logger.Info($"Chunk '{editorWindow.EditedChunk.Id}' updated");
+            // Initial state
+            UpdateChunkEditorStatus("Select a chunk to edit");
+        }
+
+        /// <summary>
+        /// Loads a syntax highlighting definition from an embedded resource
+        /// </summary>
+        private static IHighlightingDefinition? LoadHighlightingDefinition(string resourceName) {
+            try {
+                var assembly = Assembly.GetExecutingAssembly();
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+
+                if (stream == null) {
+                    System.Diagnostics.Debug.WriteLine($"Could not find embedded resource: {resourceName}");
+                    return null;
                 }
+
+                using var reader = new XmlTextReader(stream);
+                return HighlightingLoader.Load(reader, HighlightingManager.Instance);
+            } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine($"Error loading syntax highlighting: {ex.Message}");
+                return null;
             }
         }
+
+        /// <summary>
+        /// Loads a chunk into the embedded editor
+        /// </summary>
+        private void LoadChunkIntoEditor(MasterMaterials.Models.ShaderChunk chunk) {
+            // Check for unsaved changes
+            if (_chunkEditorHasUnsavedChanges && _currentEditingChunk != null) {
+                var result = MessageBox.Show(
+                    $"You have unsaved changes in chunk '{_currentEditingChunk.Id}'. Do you want to save them first?",
+                    "Unsaved Changes",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) {
+                    SaveCurrentChunk();
+                } else if (result == MessageBoxResult.Cancel) {
+                    // Restore selection to current chunk
+                    viewModel.MasterMaterialsViewModel.SelectedChunk = _currentEditingChunk;
+                    return;
+                }
+            }
+
+            _currentEditingChunk = chunk;
+            _originalGlslCode = chunk.Glsl;
+            _originalWgslCode = chunk.Wgsl;
+
+            // Load code into editors
+            GlslCodeEditor.Text = chunk.Glsl ?? "";
+            WgslCodeEditor.Text = chunk.Wgsl ?? "";
+
+            // Set read-only state for built-in chunks
+            GlslCodeEditor.IsReadOnly = chunk.IsBuiltIn;
+            WgslCodeEditor.IsReadOnly = chunk.IsBuiltIn;
+
+            // Update UI state
+            _chunkEditorHasUnsavedChanges = false;
+            UpdateChunkEditorUnsavedIndicator();
+
+            if (chunk.IsBuiltIn) {
+                UpdateChunkEditorStatus($"Viewing built-in chunk '{chunk.Id}' (read-only)");
+            } else {
+                UpdateChunkEditorStatus($"Editing chunk '{chunk.Id}'");
+            }
+
+            logger.Info($"Loaded chunk '{chunk.Id}' into editor");
+        }
+
+        /// <summary>
+        /// Called when code changes in either editor
+        /// </summary>
+        private void OnChunkCodeChanged() {
+            if (_currentEditingChunk == null || _currentEditingChunk.IsBuiltIn) return;
+
+            // Check if there are actual changes
+            bool glslChanged = GlslCodeEditor.Text != _originalGlslCode;
+            bool wgslChanged = WgslCodeEditor.Text != _originalWgslCode;
+
+            _chunkEditorHasUnsavedChanges = glslChanged || wgslChanged;
+            UpdateChunkEditorUnsavedIndicator();
+        }
+
+        /// <summary>
+        /// Updates the unsaved changes indicator visibility
+        /// </summary>
+        private void UpdateChunkEditorUnsavedIndicator() {
+            ChunkEditorUnsavedIndicator.Visibility = _chunkEditorHasUnsavedChanges
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// Updates the status text in the chunk editor
+        /// </summary>
+        private void UpdateChunkEditorStatus(string status) {
+            ChunkEditorStatusText.Text = status;
+        }
+
+        /// <summary>
+        /// Saves the current chunk being edited
+        /// </summary>
+        private void SaveCurrentChunk() {
+            if (_currentEditingChunk == null) return;
+
+            if (_currentEditingChunk.IsBuiltIn) {
+                MessageBox.Show("Cannot save built-in chunks. Use 'Copy' to create an editable version.",
+                    "Read-Only Chunk", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Update chunk with new code
+            _currentEditingChunk.Glsl = GlslCodeEditor.Text;
+            _currentEditingChunk.Wgsl = WgslCodeEditor.Text;
+
+            // Update in ViewModel
+            viewModel.MasterMaterialsViewModel.UpdateChunk(_currentEditingChunk);
+
+            // Update original values
+            _originalGlslCode = GlslCodeEditor.Text;
+            _originalWgslCode = WgslCodeEditor.Text;
+
+            _chunkEditorHasUnsavedChanges = false;
+            UpdateChunkEditorUnsavedIndicator();
+            UpdateChunkEditorStatus($"Chunk '{_currentEditingChunk.Id}' saved");
+
+            logger.Info($"Chunk '{_currentEditingChunk.Id}' saved");
+        }
+
+        /// <summary>
+        /// Handler for Save Chunk button click
+        /// </summary>
+        private void ChunkEditorSaveButton_Click(object sender, RoutedEventArgs e) {
+            SaveCurrentChunk();
+        }
+
+        /// <summary>
+        /// Handler for New Chunk button click
+        /// </summary>
+        private void ChunkEditorNewButton_Click(object sender, RoutedEventArgs e) {
+            // Check for unsaved changes
+            if (_chunkEditorHasUnsavedChanges && _currentEditingChunk != null) {
+                var result = MessageBox.Show(
+                    $"You have unsaved changes in chunk '{_currentEditingChunk.Id}'. Do you want to save them first?",
+                    "Unsaved Changes",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes) {
+                    SaveCurrentChunk();
+                } else if (result == MessageBoxResult.Cancel) {
+                    return;
+                }
+            }
+
+            // Create new chunk
+            viewModel.MasterMaterialsViewModel.AddNewChunkCommand.Execute(null);
+        }
+
+        #endregion
 
         #endregion
     }

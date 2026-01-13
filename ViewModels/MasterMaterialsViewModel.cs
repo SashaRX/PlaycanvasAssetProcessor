@@ -277,7 +277,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void CloneMaster(MasterMaterial? master)
+    private async Task CloneMasterAsync(MasterMaterial? master)
     {
         if (master == null) return;
 
@@ -304,6 +304,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         HasUnsavedChanges = true;
         StatusMessage = $"Created clone: {newName}";
         _logService.LogInfo(StatusMessage);
+
+        // Auto-save after cloning
+        await SaveConfigAsync();
     }
 
     [RelayCommand]

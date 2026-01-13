@@ -1,6 +1,10 @@
+using System.Reflection;
 using System.Windows;
+using System.Xml;
 using AssetProcessor.MasterMaterials.Models;
 using AssetProcessor.ViewModels;
+using ICSharpCode.AvalonEdit.Highlighting;
+using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 
 namespace AssetProcessor.Windows;
 
@@ -9,6 +13,9 @@ namespace AssetProcessor.Windows;
 /// </summary>
 public partial class ChunkEditorWindow : Window
 {
+    private static IHighlightingDefinition? _glslHighlighting;
+    private static IHighlightingDefinition? _wgslHighlighting;
+
     /// <summary>
     /// The ViewModel for this window
     /// </summary>
@@ -42,9 +49,33 @@ public partial class ChunkEditorWindow : Window
             CodeTabControl.Background = bgBrush;
         }
 
+        // Initialize syntax highlighting
+        InitializeSyntaxHighlighting();
+
         ViewModel = new ChunkEditorViewModel();
         ViewModel.LoadChunk(chunk);
         DataContext = ViewModel;
+
+        // Set editor content
+        GlslEditor.Text = ViewModel.GlslCode ?? "";
+        WgslEditor.Text = ViewModel.WgslCode ?? "";
+
+        // Wire up text change events to update ViewModel
+        GlslEditor.TextChanged += (_, _) =>
+        {
+            if (ViewModel.GlslCode != GlslEditor.Text)
+            {
+                ViewModel.GlslCode = GlslEditor.Text;
+            }
+        };
+
+        WgslEditor.TextChanged += (_, _) =>
+        {
+            if (ViewModel.WgslCode != WgslEditor.Text)
+            {
+                ViewModel.WgslCode = WgslEditor.Text;
+            }
+        };
 
         // Configure read-only mode for built-in chunks
         if (isReadOnly)
@@ -62,6 +93,61 @@ public partial class ChunkEditorWindow : Window
 
         // Set initial focus to the GLSL editor
         Loaded += (_, _) => GlslEditor.Focus();
+    }
+
+    /// <summary>
+    /// Initializes syntax highlighting for GLSL and WGSL
+    /// </summary>
+    private void InitializeSyntaxHighlighting()
+    {
+        // Load GLSL highlighting
+        if (_glslHighlighting == null)
+        {
+            _glslHighlighting = LoadHighlightingDefinition("AssetProcessor.SyntaxHighlighting.GLSL.xshd");
+        }
+
+        // Load WGSL highlighting
+        if (_wgslHighlighting == null)
+        {
+            _wgslHighlighting = LoadHighlightingDefinition("AssetProcessor.SyntaxHighlighting.WGSL.xshd");
+        }
+
+        // Apply highlighting to editors
+        if (_glslHighlighting != null)
+        {
+            GlslEditor.SyntaxHighlighting = _glslHighlighting;
+        }
+
+        if (_wgslHighlighting != null)
+        {
+            WgslEditor.SyntaxHighlighting = _wgslHighlighting;
+        }
+    }
+
+    /// <summary>
+    /// Loads a syntax highlighting definition from an embedded resource
+    /// </summary>
+    private static IHighlightingDefinition? LoadHighlightingDefinition(string resourceName)
+    {
+        try
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+
+            if (stream == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"Could not find embedded resource: {resourceName}");
+                return null;
+            }
+
+            using var reader = new XmlTextReader(stream);
+            return HighlightingLoader.Load(reader, HighlightingManager.Instance);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading syntax highlighting: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>
@@ -138,6 +224,9 @@ public partial class ChunkEditorWindow : Window
         if (result == MessageBoxResult.Yes)
         {
             ViewModel.Reset();
+            // Update editor content after reset
+            GlslEditor.Text = ViewModel.GlslCode ?? "";
+            WgslEditor.Text = ViewModel.WgslCode ?? "";
         }
     }
 }

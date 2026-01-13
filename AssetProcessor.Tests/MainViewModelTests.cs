@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.Settings;
+using AssetProcessor.MasterMaterials.Models;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -42,7 +43,7 @@ public class MainViewModelTests {
     [Fact]
     public async Task ProcessTexturesCommand_RaisesCompletionEvent() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel(), CreateMasterMaterialsViewModel()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "Texture1", Path = "file.png" }
             }
@@ -76,7 +77,7 @@ public class MainViewModelTests {
                 ResultToReturn = new AssetDownloadResult(true, "Downloaded 1 assets. Failed: 0", new ResourceDownloadBatchResult(1, 0, 1))
             };
 
-            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator, new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
+            var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), localCache, projectSync, coordinator, new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel(), CreateMasterMaterialsViewModel()) {
                 ApiKey = "token",
                 SelectedProjectId = "proj1",
                 SelectedBranchId = "branch1",
@@ -103,7 +104,7 @@ public class MainViewModelTests {
     [Fact]
     public void AutoDetectPresetsCommand_UpdatesStatusMessage() {
         var service = new RecordingTextureProcessingService();
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), service, new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel(), CreateMasterMaterialsViewModel()) {
             ConversionSettingsProvider = new StubSettingsProvider(),
             Textures = new ObservableCollection<TextureResource> {
                 new() { Name = "rock_albedo.png", Path = "c:/tex/rock_albedo.png" }
@@ -134,7 +135,7 @@ public class MainViewModelTests {
     }
 
     private static MainViewModel CreateViewModelWithTextures() {
-        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel()) {
+        var viewModel = new MainViewModel(new FakePlayCanvasService(), new FakeTextureProcessingService(), new DummyLocalCacheService(), new TestProjectSyncService(), new TestAssetDownloadCoordinator(), new DummyProjectSelectionService(), CreateTextureSelectionViewModel(), CreateORMTextureViewModel(), CreateConversionSettingsViewModel(), CreateAssetLoadingViewModel(), CreateMaterialSelectionViewModel(), CreateMasterMaterialsViewModel()) {
             Textures = new ObservableCollection<TextureResource> {
                 new() { ID = 1, Name = "Diffuse" },
                 new() { ID = 2, Name = "Normal" },
@@ -164,6 +165,10 @@ public class MainViewModelTests {
 
     private static MaterialSelectionViewModel CreateMaterialSelectionViewModel() {
         return new MaterialSelectionViewModel(new DummyAssetResourceService(), new DummyLogService());
+    }
+
+    private static MasterMaterialsViewModel CreateMasterMaterialsViewModel() {
+        return new MasterMaterialsViewModel(new DummyMasterMaterialService(), new DummyLogService());
     }
 
     private sealed class FakeTextureProcessingService : ITextureProcessingService {
@@ -434,6 +439,48 @@ public class MainViewModelTests {
 
         public Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) {
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class DummyMasterMaterialService : IMasterMaterialService {
+        public Task<MasterMaterialsConfig> LoadConfigAsync(string projectFolderPath, CancellationToken ct = default) {
+            return Task.FromResult(new MasterMaterialsConfig());
+        }
+
+        public Task SaveConfigAsync(string projectFolderPath, MasterMaterialsConfig config, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        public IEnumerable<MasterMaterial> GetAllMasters(MasterMaterialsConfig config) {
+            return Enumerable.Empty<MasterMaterial>();
+        }
+
+        public MasterMaterial? GetMasterForMaterial(MasterMaterialsConfig config, int materialId) {
+            return null;
+        }
+
+        public void SetMaterialMaster(MasterMaterialsConfig config, int materialId, string masterName) { }
+
+        public void RemoveMaterialMaster(MasterMaterialsConfig config, int materialId) { }
+
+        public Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default) {
+            return Task.FromResult<ShaderChunk?>(null);
+        }
+
+        public Task SaveChunkToFileAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteChunkFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<string> GenerateConsolidatedChunksAsync(string projectFolderPath, MasterMaterial master, CancellationToken ct = default) {
+            return Task.FromResult(string.Empty);
+        }
+
+        public string GetChunksFolderPath(string projectFolderPath) {
+            return string.Empty;
         }
     }
 

@@ -88,6 +88,7 @@
   <ItemGroup>
     <!-- 3D Graphics and Models -->
     <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
+    <PackageReference Include="AvalonEdit" Version="6.3.0.90" />
     <PackageReference Include="HelixToolkit.Wpf" Version="2.27.3" NoWarn="NU1701" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.1" />
     <PackageReference Include="SharpGLTF.Core" Version="1.0.2" />
@@ -119,6 +120,11 @@
   <ItemGroup>
     <Resource Include="colorPicker.png" />
     <Resource Include="refman.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="SyntaxHighlighting\GLSL.xshd" />
+    <EmbeddedResource Include="SyntaxHighlighting\WGSL.xshd" />
   </ItemGroup>
 
   <ItemGroup>

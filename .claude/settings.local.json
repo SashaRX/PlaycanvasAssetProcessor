@@ -106,7 +106,10 @@
       "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED\")",
       "Bash(powershell.exe -Command \"dotnet build D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\AssetProcessor.csproj --configuration Release 2>&1 | Select-String -Pattern ''error|Build succeeded|Build FAILED''\")",
       "Bash(powershell.exe -Command \"dotnet clean D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\AssetProcessor.csproj --configuration Release\")",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(dotnet add:*)"
     ],
     "deny": [],
     "ask": []

@@ -60,6 +60,33 @@ public partial class MasterMaterialsViewModel : ObservableObject
     {
         _masterMaterialService = masterMaterialService ?? throw new ArgumentNullException(nameof(masterMaterialService));
         _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+
+        // Load built-in chunks and masters immediately (without project context)
+        LoadBuiltInData();
+    }
+
+    /// <summary>
+    /// Loads built-in chunks and masters (available without project context)
+    /// </summary>
+    private void LoadBuiltInData()
+    {
+        // Add built-in PlayCanvas shader chunks
+        foreach (var builtInChunk in DefaultShaderChunks.GetAllChunks())
+        {
+            Chunks.Add(builtInChunk);
+        }
+
+        // Add built-in master materials (using empty config to get only built-ins)
+        var emptyConfig = new MasterMaterialsConfig();
+        foreach (var master in _masterMaterialService.GetAllMasters(emptyConfig))
+        {
+            MasterMaterials.Add(master);
+        }
+
+        int builtInChunksCount = Chunks.Count;
+        int builtInMastersCount = MasterMaterials.Count;
+        StatusMessage = $"Loaded {builtInMastersCount} built-in masters, {builtInChunksCount} built-in chunks";
+        _logService.LogInfo(StatusMessage);
     }
 
     /// <summary>
@@ -82,16 +109,19 @@ public partial class MasterMaterialsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Clears the project context
+    /// Clears the project context (keeps built-in data)
     /// </summary>
     public void ClearProjectContext()
     {
         _projectFolderPath = null;
         _config = null;
+
+        // Clear and reload only built-in data
         MasterMaterials.Clear();
         Chunks.Clear();
+        LoadBuiltInData();
+
         HasUnsavedChanges = false;
-        StatusMessage = null;
     }
 
     [RelayCommand]
@@ -108,14 +138,14 @@ public partial class MasterMaterialsViewModel : ObservableObject
         {
             _config = await _masterMaterialService.LoadConfigAsync(_projectFolderPath, ct);
 
-            // Populate master materials (built-in + custom)
+            // Clear and reload master materials (built-in + custom)
             MasterMaterials.Clear();
             foreach (var master in _masterMaterialService.GetAllMasters(_config))
             {
                 MasterMaterials.Add(master);
             }
 
-            // Populate chunks: first add built-in PlayCanvas chunks
+            // Clear and reload chunks: first add built-in PlayCanvas chunks
             Chunks.Clear();
             foreach (var builtInChunk in DefaultShaderChunks.GetAllChunks())
             {
@@ -244,6 +274,36 @@ public partial class MasterMaterialsViewModel : ObservableObject
         }
 
         EditMasterRequested?.Invoke(this, master);
+    }
+
+    [RelayCommand]
+    private void CloneMaster(MasterMaterial? master)
+    {
+        if (master == null) return;
+
+        // Generate unique name for the clone
+        string baseName = master.Name.EndsWith("_copy") ? master.Name : $"{master.Name}_copy";
+        string newName = baseName;
+        int counter = 1;
+        while (MasterMaterials.Any(m => m.Name == newName))
+        {
+            newName = $"{baseName}_{counter++}";
+        }
+
+        var clonedMaster = new MasterMaterial
+        {
+            Name = newName,
+            Description = $"Clone of {master.Name}",
+            BlendType = master.BlendType,
+            IsBuiltIn = false,
+            ChunkIds = [.. master.ChunkIds] // Copy all chunk IDs
+        };
+
+        MasterMaterials.Add(clonedMaster);
+        SelectedMaster = clonedMaster;
+        HasUnsavedChanges = true;
+        StatusMessage = $"Created clone: {newName}";
+        _logService.LogInfo(StatusMessage);
     }
 
     [RelayCommand]

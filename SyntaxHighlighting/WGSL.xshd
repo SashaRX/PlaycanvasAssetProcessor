@@ -1,0 +1,328 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="WGSL" extensions=".wgsl" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Comment" foreground="#6A9955" />
+  <Color name="String" foreground="#CE9178" />
+  <Color name="Number" foreground="#B5CEA8" />
+  <Color name="Keyword" foreground="#569CD6" fontWeight="bold" />
+  <Color name="Type" foreground="#4EC9B0" />
+  <Color name="Attribute" foreground="#C586C0" />
+  <Color name="Function" foreground="#DCDCAA" />
+  <Color name="Qualifier" foreground="#569CD6" />
+  <Color name="BuiltIn" foreground="#9CDCFE" />
+
+  <RuleSet>
+    <!-- Comments -->
+    <Span color="Comment" begin="//" />
+    <Span color="Comment" multiline="true" begin="/\*" end="\*/" />
+
+    <!-- Attributes -->
+    <Span color="Attribute" begin="@">
+      <RuleSet>
+        <Keywords fontWeight="bold">
+          <Word>align</Word>
+          <Word>binding</Word>
+          <Word>builtin</Word>
+          <Word>compute</Word>
+          <Word>const</Word>
+          <Word>fragment</Word>
+          <Word>group</Word>
+          <Word>id</Word>
+          <Word>interpolate</Word>
+          <Word>invariant</Word>
+          <Word>location</Word>
+          <Word>size</Word>
+          <Word>vertex</Word>
+          <Word>workgroup_size</Word>
+          <Word>diagnostic</Word>
+          <Word>must_use</Word>
+        </Keywords>
+      </RuleSet>
+    </Span>
+
+    <!-- Numbers -->
+    <Rule color="Number">
+      \b0[xX][0-9a-fA-F]+[iu]?\b |
+      \b[0-9]+\.?[0-9]*([eE][-+]?[0-9]+)?[fh]?\b |
+      \b\.[0-9]+([eE][-+]?[0-9]+)?[fh]?\b
+    </Rule>
+
+    <!-- Keywords -->
+    <Keywords color="Keyword">
+      <Word>alias</Word>
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>const</Word>
+      <Word>const_assert</Word>
+      <Word>continue</Word>
+      <Word>continuing</Word>
+      <Word>default</Word>
+      <Word>diagnostic</Word>
+      <Word>discard</Word>
+      <Word>else</Word>
+      <Word>enable</Word>
+      <Word>false</Word>
+      <Word>fn</Word>
+      <Word>for</Word>
+      <Word>if</Word>
+      <Word>let</Word>
+      <Word>loop</Word>
+      <Word>override</Word>
+      <Word>return</Word>
+      <Word>struct</Word>
+      <Word>switch</Word>
+      <Word>true</Word>
+      <Word>var</Word>
+      <Word>while</Word>
+      <Word>requires</Word>
+    </Keywords>
+
+    <!-- Storage Qualifiers -->
+    <Keywords color="Qualifier">
+      <Word>function</Word>
+      <Word>private</Word>
+      <Word>workgroup</Word>
+      <Word>uniform</Word>
+      <Word>storage</Word>
+      <Word>read</Word>
+      <Word>write</Word>
+      <Word>read_write</Word>
+    </Keywords>
+
+    <!-- Scalar Types -->
+    <Keywords color="Type">
+      <Word>bool</Word>
+      <Word>f16</Word>
+      <Word>f32</Word>
+      <Word>i32</Word>
+      <Word>u32</Word>
+    </Keywords>
+
+    <!-- Vector Types -->
+    <Keywords color="Type">
+      <Word>vec2</Word>
+      <Word>vec3</Word>
+      <Word>vec4</Word>
+      <Word>vec2i</Word>
+      <Word>vec3i</Word>
+      <Word>vec4i</Word>
+      <Word>vec2u</Word>
+      <Word>vec3u</Word>
+      <Word>vec4u</Word>
+      <Word>vec2f</Word>
+      <Word>vec3f</Word>
+      <Word>vec4f</Word>
+      <Word>vec2h</Word>
+      <Word>vec3h</Word>
+      <Word>vec4h</Word>
+      <Word>vec2bool</Word>
+      <Word>vec3bool</Word>
+      <Word>vec4bool</Word>
+    </Keywords>
+
+    <!-- Matrix Types -->
+    <Keywords color="Type">
+      <Word>mat2x2</Word>
+      <Word>mat2x3</Word>
+      <Word>mat2x4</Word>
+      <Word>mat3x2</Word>
+      <Word>mat3x3</Word>
+      <Word>mat3x4</Word>
+      <Word>mat4x2</Word>
+      <Word>mat4x3</Word>
+      <Word>mat4x4</Word>
+      <Word>mat2x2f</Word>
+      <Word>mat2x3f</Word>
+      <Word>mat2x4f</Word>
+      <Word>mat3x2f</Word>
+      <Word>mat3x3f</Word>
+      <Word>mat3x4f</Word>
+      <Word>mat4x2f</Word>
+      <Word>mat4x3f</Word>
+      <Word>mat4x4f</Word>
+      <Word>mat2x2h</Word>
+      <Word>mat2x3h</Word>
+      <Word>mat2x4h</Word>
+      <Word>mat3x2h</Word>
+      <Word>mat3x3h</Word>
+      <Word>mat3x4h</Word>
+      <Word>mat4x2h</Word>
+      <Word>mat4x3h</Word>
+      <Word>mat4x4h</Word>
+    </Keywords>
+
+    <!-- Sampler and Texture Types -->
+    <Keywords color="Type">
+      <Word>sampler</Word>
+      <Word>sampler_comparison</Word>
+      <Word>texture_1d</Word>
+      <Word>texture_2d</Word>
+      <Word>texture_2d_array</Word>
+      <Word>texture_3d</Word>
+      <Word>texture_cube</Word>
+      <Word>texture_cube_array</Word>
+      <Word>texture_multisampled_2d</Word>
+      <Word>texture_storage_1d</Word>
+      <Word>texture_storage_2d</Word>
+      <Word>texture_storage_2d_array</Word>
+      <Word>texture_storage_3d</Word>
+      <Word>texture_depth_2d</Word>
+      <Word>texture_depth_2d_array</Word>
+      <Word>texture_depth_cube</Word>
+      <Word>texture_depth_cube_array</Word>
+      <Word>texture_depth_multisampled_2d</Word>
+      <Word>texture_external</Word>
+    </Keywords>
+
+    <!-- Other Types -->
+    <Keywords color="Type">
+      <Word>array</Word>
+      <Word>atomic</Word>
+      <Word>ptr</Word>
+    </Keywords>
+
+    <!-- Built-in Functions -->
+    <Keywords color="Function">
+      <!-- Logical -->
+      <Word>all</Word>
+      <Word>any</Word>
+      <Word>select</Word>
+      <!-- Array -->
+      <Word>arrayLength</Word>
+      <!-- Float -->
+      <Word>abs</Word>
+      <Word>acos</Word>
+      <Word>acosh</Word>
+      <Word>asin</Word>
+      <Word>asinh</Word>
+      <Word>atan</Word>
+      <Word>atanh</Word>
+      <Word>atan2</Word>
+      <Word>ceil</Word>
+      <Word>clamp</Word>
+      <Word>cos</Word>
+      <Word>cosh</Word>
+      <Word>cross</Word>
+      <Word>degrees</Word>
+      <Word>distance</Word>
+      <Word>dot</Word>
+      <Word>exp</Word>
+      <Word>exp2</Word>
+      <Word>faceForward</Word>
+      <Word>floor</Word>
+      <Word>fma</Word>
+      <Word>fract</Word>
+      <Word>frexp</Word>
+      <Word>inverseSqrt</Word>
+      <Word>ldexp</Word>
+      <Word>length</Word>
+      <Word>log</Word>
+      <Word>log2</Word>
+      <Word>max</Word>
+      <Word>min</Word>
+      <Word>mix</Word>
+      <Word>modf</Word>
+      <Word>normalize</Word>
+      <Word>pow</Word>
+      <Word>quantizeToF16</Word>
+      <Word>radians</Word>
+      <Word>reflect</Word>
+      <Word>refract</Word>
+      <Word>round</Word>
+      <Word>saturate</Word>
+      <Word>sign</Word>
+      <Word>sin</Word>
+      <Word>sinh</Word>
+      <Word>smoothstep</Word>
+      <Word>sqrt</Word>
+      <Word>step</Word>
+      <Word>tan</Word>
+      <Word>tanh</Word>
+      <Word>trunc</Word>
+      <!-- Integer -->
+      <Word>countLeadingZeros</Word>
+      <Word>countOneBits</Word>
+      <Word>countTrailingZeros</Word>
+      <Word>extractBits</Word>
+      <Word>firstLeadingBit</Word>
+      <Word>firstTrailingBit</Word>
+      <Word>insertBits</Word>
+      <Word>reverseBits</Word>
+      <!-- Matrix -->
+      <Word>determinant</Word>
+      <Word>transpose</Word>
+      <!-- Vector -->
+      <Word>dot4I8Packed</Word>
+      <Word>dot4U8Packed</Word>
+      <!-- Derivative -->
+      <Word>dpdx</Word>
+      <Word>dpdxCoarse</Word>
+      <Word>dpdxFine</Word>
+      <Word>dpdy</Word>
+      <Word>dpdyCoarse</Word>
+      <Word>dpdyFine</Word>
+      <Word>fwidth</Word>
+      <Word>fwidthCoarse</Word>
+      <Word>fwidthFine</Word>
+      <!-- Texture -->
+      <Word>textureDimensions</Word>
+      <Word>textureGather</Word>
+      <Word>textureGatherCompare</Word>
+      <Word>textureLoad</Word>
+      <Word>textureNumLayers</Word>
+      <Word>textureNumLevels</Word>
+      <Word>textureNumSamples</Word>
+      <Word>textureSample</Word>
+      <Word>textureSampleBias</Word>
+      <Word>textureSampleCompare</Word>
+      <Word>textureSampleCompareLevel</Word>
+      <Word>textureSampleGrad</Word>
+      <Word>textureSampleLevel</Word>
+      <Word>textureSampleBaseClampToEdge</Word>
+      <Word>textureStore</Word>
+      <!-- Atomic -->
+      <Word>atomicLoad</Word>
+      <Word>atomicStore</Word>
+      <Word>atomicAdd</Word>
+      <Word>atomicSub</Word>
+      <Word>atomicMax</Word>
+      <Word>atomicMin</Word>
+      <Word>atomicAnd</Word>
+      <Word>atomicOr</Word>
+      <Word>atomicXor</Word>
+      <Word>atomicExchange</Word>
+      <Word>atomicCompareExchangeWeak</Word>
+      <!-- Data Packing -->
+      <Word>pack4x8snorm</Word>
+      <Word>pack4x8unorm</Word>
+      <Word>pack2x16snorm</Word>
+      <Word>pack2x16unorm</Word>
+      <Word>pack2x16float</Word>
+      <Word>unpack4x8snorm</Word>
+      <Word>unpack4x8unorm</Word>
+      <Word>unpack2x16snorm</Word>
+      <Word>unpack2x16unorm</Word>
+      <Word>unpack2x16float</Word>
+      <!-- Synchronization -->
+      <Word>storageBarrier</Word>
+      <Word>textureBarrier</Word>
+      <Word>workgroupBarrier</Word>
+      <Word>workgroupUniformLoad</Word>
+    </Keywords>
+
+    <!-- Built-in Values -->
+    <Keywords color="BuiltIn">
+      <Word>vertex_index</Word>
+      <Word>instance_index</Word>
+      <Word>position</Word>
+      <Word>front_facing</Word>
+      <Word>frag_depth</Word>
+      <Word>local_invocation_id</Word>
+      <Word>local_invocation_index</Word>
+      <Word>global_invocation_id</Word>
+      <Word>workgroup_id</Word>
+      <Word>num_workgroups</Word>
+      <Word>sample_index</Word>
+      <Word>sample_mask</Word>
+    </Keywords>
+  </RuleSet>
+</SyntaxDefinition>

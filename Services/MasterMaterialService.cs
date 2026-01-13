@@ -21,14 +21,66 @@ public partial class MasterMaterialService : IMasterMaterialService
     };
 
     /// <summary>
+    /// Standard PlayCanvas material chunks (real PlayCanvas StandardMaterial)
+    /// </summary>
+    private static readonly List<string> StandardMaterialChunks =
+    [
+        // ===== VERTEX SHADER =====
+        "transformVS",
+        "normalVS",
+
+        // ===== FRONTEND - Material Properties =====
+        "diffusePS",
+        "normalMapPS",
+        "TBNPS",
+        "metalnessPS",
+        "glossPS",
+        "specularPS",
+        "aoPS",
+        "emissivePS",
+        "opacityPS",
+        "alphaTestPS",
+
+        // ===== BACKEND - Lighting =====
+        "viewDirPS",
+        "reflDirPS",
+        "fresnelSchlickPS",
+        "lightDiffuseLambertPS",
+        "lightSpecularBlinnPS",
+        "aoDiffuseOccPS",
+        "aoSpecOccPS",
+
+        // ===== BACKEND - Reflections =====
+        "sphericalPS",
+        "decodePS",
+        "envAtlasPS",
+        "cubeMapRotatePS",
+        "cubeMapProjectPS",
+        "envProcPS",
+        "reflectionEnvPS",
+
+        // ===== OUTPUT =====
+        "gammaPS",
+        "tonemappingAcesPS",
+        "fogPS",
+        "combinePS",
+        "outputPS",
+        "outputAlphaPS"
+    ];
+
+    /// <summary>
     /// Built-in master materials (always available)
     /// </summary>
     private static readonly List<MasterMaterial> BuiltInMasters =
     [
-        new() { Name = "pbr_opaque", Description = "Standard PBR opaque material", BlendType = "opaque", IsBuiltIn = true },
-        new() { Name = "pbr_alpha", Description = "Standard PBR with alpha blending", BlendType = "alpha", IsBuiltIn = true },
-        new() { Name = "pbr_additive", Description = "Additive blend material", BlendType = "additive", IsBuiltIn = true },
-        new() { Name = "pbr_premul", Description = "Premultiplied alpha material", BlendType = "premul", IsBuiltIn = true }
+        new()
+        {
+            Name = "standard",
+            Description = "PlayCanvas StandardMaterial - full PBR with lighting, reflections, all material properties",
+            BlendType = "opaque",
+            IsBuiltIn = true,
+            ChunkIds = [.. StandardMaterialChunks]
+        }
     ];
 
     public async Task<MasterMaterialsConfig> LoadConfigAsync(string projectFolderPath, CancellationToken ct = default)

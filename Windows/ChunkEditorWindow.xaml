@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
         mc:Ignorable="d"
         Title="Shader Chunk Editor"
         Height="600" Width="900"
@@ -42,14 +43,14 @@
 
             <TextBlock Text="Type:" Grid.Column="3" VerticalAlignment="Center" Margin="0,0,10,0"
                        Foreground="{DynamicResource ThemeForeground}"/>
-            <ComboBox x:Name="ChunkTypeComboBox" Grid.Column="4"
+            <ComboBox x:Name="TypeComboBox" Grid.Column="4"
                       ItemsSource="{Binding ChunkTypes}"
                       SelectedValue="{Binding ChunkType}"
                       VerticalContentAlignment="Center"/>
 
             <TextBlock Text="Description:" Grid.Column="6" VerticalAlignment="Center" Margin="0,0,10,0"
                        Foreground="{DynamicResource ThemeForeground}"/>
-            <TextBox Grid.Column="7"
+            <TextBox x:Name="DescriptionTextBox" Grid.Column="7"
                      Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
                      VerticalContentAlignment="Center"/>
         </Grid>
@@ -66,17 +67,16 @@
                     <TextBlock Grid.Row="0" Text="GLSL Shader Code (WebGL)"
                                Foreground="{DynamicResource ThemeForegroundDim}" Margin="5,5,5,2" FontSize="11"/>
 
-                    <TextBox x:Name="GlslEditor" Grid.Row="1"
-                             AcceptsReturn="True"
-                             AcceptsTab="True"
-                             TextWrapping="NoWrap"
+                    <avalonedit:TextEditor x:Name="GlslEditor" Grid.Row="1"
                              FontFamily="Consolas, Courier New, monospace"
                              FontSize="13"
+                             ShowLineNumbers="True"
                              VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Auto"
-                             Text="{Binding GlslCode, UpdateSourceTrigger=PropertyChanged}"
-                             SpellCheck.IsEnabled="False"
-                             Padding="5"/>
+                             Padding="5"
+                             Background="#1E1E1E"
+                             Foreground="#D4D4D4"
+                             LineNumbersForeground="#858585"/>
                 </Grid>
             </TabItem>
             <TabItem Header="WGSL">
@@ -89,17 +89,16 @@
                     <TextBlock Grid.Row="0" Text="WGSL Shader Code (WebGPU)"
                                Foreground="{DynamicResource ThemeForegroundDim}" Margin="5,5,5,2" FontSize="11"/>
 
-                    <TextBox x:Name="WgslEditor" Grid.Row="1"
-                             AcceptsReturn="True"
-                             AcceptsTab="True"
-                             TextWrapping="NoWrap"
+                    <avalonedit:TextEditor x:Name="WgslEditor" Grid.Row="1"
                              FontFamily="Consolas, Courier New, monospace"
                              FontSize="13"
+                             ShowLineNumbers="True"
                              VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Auto"
-                             Text="{Binding WgslCode, UpdateSourceTrigger=PropertyChanged}"
-                             SpellCheck.IsEnabled="False"
-                             Padding="5"/>
+                             Padding="5"
+                             Background="#1E1E1E"
+                             Foreground="#D4D4D4"
+                             LineNumbersForeground="#858585"/>
                 </Grid>
             </TabItem>
         </TabControl>
@@ -110,9 +109,9 @@
                 <TextBlock x:Name="UnsavedIndicator" Text="* Unsaved changes"
                            Foreground="Orange" VerticalAlignment="Center" Margin="0,0,20,0"
                            Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                <Button Content="Reset" Click="ResetButton_Click" Width="80" Margin="0,0,10,0"
+                <Button x:Name="ResetButton" Content="Reset" Click="ResetButton_Click" Width="80" Margin="0,0,10,0"
                         IsEnabled="{Binding HasUnsavedChanges}"/>
-                <Button Content="Save" Click="SaveButton_Click" Width="80" Margin="0,0,10,0"
+                <Button x:Name="SaveButton" Content="Save" Click="SaveButton_Click" Width="80" Margin="0,0,10,0"
                         Background="#FF4CAF50" Foreground="White"/>
                 <Button Content="Cancel" Click="CancelButton_Click" Width="80" IsCancel="True"/>
             </StackPanel>

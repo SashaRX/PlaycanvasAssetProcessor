@@ -188,7 +188,9 @@
 
         <!-- ContextMenu для строк Master Materials -->
         <ContextMenu x:Key="MasterMaterialRowContextMenu">
+            <MenuItem Header="Clone" Click="MasterMaterial_Clone_Click" FontWeight="Bold"/>
             <MenuItem Header="Edit" Click="MasterMaterial_Edit_Click"/>
+            <Separator/>
             <MenuItem Header="Delete" Click="MasterMaterial_Delete_Click"/>
         </ContextMenu>
 
@@ -933,54 +935,124 @@
 
                         <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ThemeBorder}"/>
 
-                        <!-- Right: Chunks List -->
+                        <!-- Right: Chunks for Selected Master -->
                         <Grid Grid.Column="2">
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
+                            <!-- Header -->
                             <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4,2">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Shader Chunks" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <Button Content="+ New Chunk" Command="{Binding MasterMaterialsViewModel.AddNewChunkCommand}"
-                                            Padding="8,2"/>
+                                    <TextBlock Text="for:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource ThemeForegroundDim}"/>
+                                    <TextBlock Text="{Binding MasterMaterialsViewModel.SelectedMaster.Name, FallbackValue='(select a master)'}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource ThemeAccent}"/>
                                 </StackPanel>
                             </Border>
 
-                            <DataGrid Grid.Row="1" x:Name="ChunksDataGrid"
-                                      AutoGenerateColumns="False"
-                                      ItemsSource="{Binding MasterMaterialsViewModel.Chunks}"
-                                      SelectedItem="{Binding MasterMaterialsViewModel.SelectedChunk}"
-                                      IsReadOnly="True"
-                                      CanUserAddRows="False"
-                                      RowHeight="22"
-                                      MouseDoubleClick="ChunksDataGrid_MouseDoubleClick"
-                                      Background="{DynamicResource ThemeDataGridBackground}">
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn Header="Built-in" Binding="{Binding IsBuiltIn, Mode=OneWay}" Width="55" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                                <Setter Property="ToolTip" Value="{Binding Id}"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="60"/>
-                                    <DataGridTextColumn Header="API" Binding="{Binding ApiVersion}" Width="40"/>
-                                </DataGrid.Columns>
-                                <DataGrid.RowStyle>
-                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                            <!-- Info about selected master -->
+                            <Border Grid.Row="1" Background="{DynamicResource ThemeBackground}" Padding="8,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ThemeBorder}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding MasterMaterialsViewModel.SelectedMaster.Description, FallbackValue='Select a master material to edit its chunks'}"
+                                               TextWrapping="Wrap" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="Blend:" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding MasterMaterialsViewModel.SelectedMaster.BlendType, FallbackValue='-'}" FontSize="11" FontWeight="SemiBold"/>
+                                        <TextBlock Text="  |  Chunks:" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11" Margin="8,0,4,0"/>
+                                        <TextBlock Text="{Binding MasterMaterialsViewModel.SelectedMaster.ChunkIds.Count, FallbackValue='0'}" FontSize="11" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Chunks list with checkboxes -->
+                            <ListBox Grid.Row="2" x:Name="ChunksListBox"
+                                     ItemsSource="{Binding MasterMaterialsViewModel.Chunks}"
+                                     Background="{DynamicResource ThemeDataGridBackground}"
+                                     BorderThickness="0"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.Resources>
+                                    <help:ChunkInMasterConverter x:Key="ChunkInMasterConverter"/>
+                                    <help:ChunkToggleEnabledConverter x:Key="ChunkToggleEnabledConverter"/>
+                                </ListBox.Resources>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="2,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="24"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="55"/>
+                                                <ColumnDefinition Width="40"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Checkbox to include/exclude chunk -->
+                                            <CheckBox Grid.Column="0" VerticalAlignment="Center"
+                                                      Click="ChunkCheckBox_Click"
+                                                      Tag="{Binding}"
+                                                      IsEnabled="{Binding DataContext.MasterMaterialsViewModel.SelectedMaster,
+                                                                  RelativeSource={RelativeSource AncestorType=Window},
+                                                                  Converter={StaticResource ChunkToggleEnabledConverter}}">
+                                                <CheckBox.IsChecked>
+                                                    <MultiBinding Converter="{StaticResource ChunkInMasterConverter}" Mode="OneWay">
+                                                        <Binding Path="Id"/>
+                                                        <Binding Path="DataContext.MasterMaterialsViewModel.SelectedMaster"
+                                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                    </MultiBinding>
+                                                </CheckBox.IsChecked>
+                                            </CheckBox>
+
+                                            <!-- Chunk ID -->
+                                            <TextBlock Grid.Column="1" Text="{Binding Id}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding Description}"
+                                                       MouseLeftButtonDown="ChunkLabel_MouseLeftButtonDown" Cursor="Hand">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundDim}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsBuiltIn}" Value="False">
+                                                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <!-- Type -->
+                                            <TextBlock Grid.Column="2" Text="{Binding Type}" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11"/>
+
+                                            <!-- Built-in indicator -->
+                                            <TextBlock Grid.Column="3" Text="●" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                       FontSize="8" ToolTip="Built-in chunk">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Setter Property="Foreground" Value="#FF4CAF50"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Padding" Value="4,2"/>
                                         <Setter Property="ContextMenu" Value="{StaticResource ChunkRowContextMenu}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundDim}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
                                     </Style>
-                                </DataGrid.RowStyle>
-                            </DataGrid>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
                         </Grid>
                     </Grid>
                 </TabItem>

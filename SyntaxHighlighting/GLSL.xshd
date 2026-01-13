@@ -1,0 +1,406 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="GLSL" extensions=".glsl;.vert;.frag;.geom;.tesc;.tese;.comp" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Comment" foreground="#6A9955" />
+  <Color name="String" foreground="#CE9178" />
+  <Color name="Number" foreground="#B5CEA8" />
+  <Color name="Keyword" foreground="#569CD6" fontWeight="bold" />
+  <Color name="Type" foreground="#4EC9B0" />
+  <Color name="Preprocessor" foreground="#C586C0" />
+  <Color name="Function" foreground="#DCDCAA" />
+  <Color name="Qualifier" foreground="#569CD6" />
+  <Color name="Swizzle" foreground="#9CDCFE" />
+
+  <RuleSet>
+    <!-- Comments -->
+    <Span color="Comment" begin="//" />
+    <Span color="Comment" multiline="true" begin="/\*" end="\*/" />
+
+    <!-- Preprocessor -->
+    <Span color="Preprocessor" begin="#">
+      <RuleSet>
+        <Keywords fontWeight="bold">
+          <Word>define</Word>
+          <Word>undef</Word>
+          <Word>if</Word>
+          <Word>ifdef</Word>
+          <Word>ifndef</Word>
+          <Word>else</Word>
+          <Word>elif</Word>
+          <Word>endif</Word>
+          <Word>error</Word>
+          <Word>pragma</Word>
+          <Word>extension</Word>
+          <Word>version</Word>
+          <Word>line</Word>
+          <Word>include</Word>
+        </Keywords>
+      </RuleSet>
+    </Span>
+
+    <!-- Numbers -->
+    <Rule color="Number">
+      \b0[xX][0-9a-fA-F]+[uU]?\b |
+      \b[0-9]+\.?[0-9]*([eE][-+]?[0-9]+)?[fFlL]?\b |
+      \b\.[0-9]+([eE][-+]?[0-9]+)?[fFlL]?\b
+    </Rule>
+
+    <!-- Keywords -->
+    <Keywords color="Keyword">
+      <Word>break</Word>
+      <Word>case</Word>
+      <Word>continue</Word>
+      <Word>default</Word>
+      <Word>discard</Word>
+      <Word>do</Word>
+      <Word>else</Word>
+      <Word>false</Word>
+      <Word>for</Word>
+      <Word>if</Word>
+      <Word>return</Word>
+      <Word>struct</Word>
+      <Word>switch</Word>
+      <Word>true</Word>
+      <Word>while</Word>
+      <Word>subroutine</Word>
+    </Keywords>
+
+    <!-- Storage Qualifiers -->
+    <Keywords color="Qualifier">
+      <Word>const</Word>
+      <Word>in</Word>
+      <Word>inout</Word>
+      <Word>out</Word>
+      <Word>uniform</Word>
+      <Word>varying</Word>
+      <Word>attribute</Word>
+      <Word>buffer</Word>
+      <Word>shared</Word>
+      <Word>coherent</Word>
+      <Word>volatile</Word>
+      <Word>restrict</Word>
+      <Word>readonly</Word>
+      <Word>writeonly</Word>
+      <Word>layout</Word>
+      <Word>centroid</Word>
+      <Word>flat</Word>
+      <Word>smooth</Word>
+      <Word>noperspective</Word>
+      <Word>patch</Word>
+      <Word>sample</Word>
+      <Word>invariant</Word>
+      <Word>precise</Word>
+      <Word>lowp</Word>
+      <Word>mediump</Word>
+      <Word>highp</Word>
+      <Word>precision</Word>
+    </Keywords>
+
+    <!-- Types -->
+    <Keywords color="Type">
+      <Word>void</Word>
+      <Word>bool</Word>
+      <Word>int</Word>
+      <Word>uint</Word>
+      <Word>float</Word>
+      <Word>double</Word>
+      <Word>vec2</Word>
+      <Word>vec3</Word>
+      <Word>vec4</Word>
+      <Word>dvec2</Word>
+      <Word>dvec3</Word>
+      <Word>dvec4</Word>
+      <Word>bvec2</Word>
+      <Word>bvec3</Word>
+      <Word>bvec4</Word>
+      <Word>ivec2</Word>
+      <Word>ivec3</Word>
+      <Word>ivec4</Word>
+      <Word>uvec2</Word>
+      <Word>uvec3</Word>
+      <Word>uvec4</Word>
+      <Word>mat2</Word>
+      <Word>mat3</Word>
+      <Word>mat4</Word>
+      <Word>mat2x2</Word>
+      <Word>mat2x3</Word>
+      <Word>mat2x4</Word>
+      <Word>mat3x2</Word>
+      <Word>mat3x3</Word>
+      <Word>mat3x4</Word>
+      <Word>mat4x2</Word>
+      <Word>mat4x3</Word>
+      <Word>mat4x4</Word>
+      <Word>dmat2</Word>
+      <Word>dmat3</Word>
+      <Word>dmat4</Word>
+      <Word>dmat2x2</Word>
+      <Word>dmat2x3</Word>
+      <Word>dmat2x4</Word>
+      <Word>dmat3x2</Word>
+      <Word>dmat3x3</Word>
+      <Word>dmat3x4</Word>
+      <Word>dmat4x2</Word>
+      <Word>dmat4x3</Word>
+      <Word>dmat4x4</Word>
+      <Word>sampler1D</Word>
+      <Word>sampler2D</Word>
+      <Word>sampler3D</Word>
+      <Word>samplerCube</Word>
+      <Word>sampler1DShadow</Word>
+      <Word>sampler2DShadow</Word>
+      <Word>samplerCubeShadow</Word>
+      <Word>sampler1DArray</Word>
+      <Word>sampler2DArray</Word>
+      <Word>sampler1DArrayShadow</Word>
+      <Word>sampler2DArrayShadow</Word>
+      <Word>samplerCubeArray</Word>
+      <Word>samplerCubeArrayShadow</Word>
+      <Word>isampler1D</Word>
+      <Word>isampler2D</Word>
+      <Word>isampler3D</Word>
+      <Word>isamplerCube</Word>
+      <Word>isampler1DArray</Word>
+      <Word>isampler2DArray</Word>
+      <Word>isamplerCubeArray</Word>
+      <Word>usampler1D</Word>
+      <Word>usampler2D</Word>
+      <Word>usampler3D</Word>
+      <Word>usamplerCube</Word>
+      <Word>usampler1DArray</Word>
+      <Word>usampler2DArray</Word>
+      <Word>usamplerCubeArray</Word>
+      <Word>sampler2DRect</Word>
+      <Word>sampler2DRectShadow</Word>
+      <Word>isampler2DRect</Word>
+      <Word>usampler2DRect</Word>
+      <Word>samplerBuffer</Word>
+      <Word>isamplerBuffer</Word>
+      <Word>usamplerBuffer</Word>
+      <Word>sampler2DMS</Word>
+      <Word>isampler2DMS</Word>
+      <Word>usampler2DMS</Word>
+      <Word>sampler2DMSArray</Word>
+      <Word>isampler2DMSArray</Word>
+      <Word>usampler2DMSArray</Word>
+      <Word>image1D</Word>
+      <Word>image2D</Word>
+      <Word>image3D</Word>
+      <Word>imageCube</Word>
+      <Word>image1DArray</Word>
+      <Word>image2DArray</Word>
+      <Word>imageCubeArray</Word>
+      <Word>imageBuffer</Word>
+      <Word>image2DMS</Word>
+      <Word>image2DMSArray</Word>
+      <Word>iimage1D</Word>
+      <Word>iimage2D</Word>
+      <Word>iimage3D</Word>
+      <Word>iimageCube</Word>
+      <Word>iimage1DArray</Word>
+      <Word>iimage2DArray</Word>
+      <Word>iimageCubeArray</Word>
+      <Word>iimageBuffer</Word>
+      <Word>iimage2DMS</Word>
+      <Word>iimage2DMSArray</Word>
+      <Word>uimage1D</Word>
+      <Word>uimage2D</Word>
+      <Word>uimage3D</Word>
+      <Word>uimageCube</Word>
+      <Word>uimage1DArray</Word>
+      <Word>uimage2DArray</Word>
+      <Word>uimageCubeArray</Word>
+      <Word>uimageBuffer</Word>
+      <Word>uimage2DMS</Word>
+      <Word>uimage2DMSArray</Word>
+      <Word>atomic_uint</Word>
+    </Keywords>
+
+    <!-- Built-in Functions -->
+    <Keywords color="Function">
+      <!-- Angle and Trigonometry -->
+      <Word>radians</Word>
+      <Word>degrees</Word>
+      <Word>sin</Word>
+      <Word>cos</Word>
+      <Word>tan</Word>
+      <Word>asin</Word>
+      <Word>acos</Word>
+      <Word>atan</Word>
+      <Word>sinh</Word>
+      <Word>cosh</Word>
+      <Word>tanh</Word>
+      <Word>asinh</Word>
+      <Word>acosh</Word>
+      <Word>atanh</Word>
+      <!-- Exponential -->
+      <Word>pow</Word>
+      <Word>exp</Word>
+      <Word>log</Word>
+      <Word>exp2</Word>
+      <Word>log2</Word>
+      <Word>sqrt</Word>
+      <Word>inversesqrt</Word>
+      <!-- Common -->
+      <Word>abs</Word>
+      <Word>sign</Word>
+      <Word>floor</Word>
+      <Word>trunc</Word>
+      <Word>round</Word>
+      <Word>roundEven</Word>
+      <Word>ceil</Word>
+      <Word>fract</Word>
+      <Word>mod</Word>
+      <Word>modf</Word>
+      <Word>min</Word>
+      <Word>max</Word>
+      <Word>clamp</Word>
+      <Word>mix</Word>
+      <Word>step</Word>
+      <Word>smoothstep</Word>
+      <Word>isnan</Word>
+      <Word>isinf</Word>
+      <Word>floatBitsToInt</Word>
+      <Word>floatBitsToUint</Word>
+      <Word>intBitsToFloat</Word>
+      <Word>uintBitsToFloat</Word>
+      <Word>fma</Word>
+      <Word>frexp</Word>
+      <Word>ldexp</Word>
+      <!-- Geometric -->
+      <Word>length</Word>
+      <Word>distance</Word>
+      <Word>dot</Word>
+      <Word>cross</Word>
+      <Word>normalize</Word>
+      <Word>faceforward</Word>
+      <Word>reflect</Word>
+      <Word>refract</Word>
+      <!-- Matrix -->
+      <Word>matrixCompMult</Word>
+      <Word>outerProduct</Word>
+      <Word>transpose</Word>
+      <Word>determinant</Word>
+      <Word>inverse</Word>
+      <!-- Vector Relational -->
+      <Word>lessThan</Word>
+      <Word>lessThanEqual</Word>
+      <Word>greaterThan</Word>
+      <Word>greaterThanEqual</Word>
+      <Word>equal</Word>
+      <Word>notEqual</Word>
+      <Word>any</Word>
+      <Word>all</Word>
+      <Word>not</Word>
+      <!-- Texture -->
+      <Word>texture</Word>
+      <Word>textureSize</Word>
+      <Word>textureQueryLod</Word>
+      <Word>textureQueryLevels</Word>
+      <Word>textureSamples</Word>
+      <Word>texelFetch</Word>
+      <Word>texelFetchOffset</Word>
+      <Word>textureProj</Word>
+      <Word>textureLod</Word>
+      <Word>textureOffset</Word>
+      <Word>textureProjOffset</Word>
+      <Word>textureLodOffset</Word>
+      <Word>textureProjLod</Word>
+      <Word>textureProjLodOffset</Word>
+      <Word>textureGrad</Word>
+      <Word>textureGradOffset</Word>
+      <Word>textureProjGrad</Word>
+      <Word>textureProjGradOffset</Word>
+      <Word>textureGather</Word>
+      <Word>textureGatherOffset</Word>
+      <Word>textureGatherOffsets</Word>
+      <Word>texture2D</Word>
+      <Word>texture2DProj</Word>
+      <Word>texture2DLod</Word>
+      <Word>texture2DProjLod</Word>
+      <Word>textureCube</Word>
+      <Word>textureCubeLod</Word>
+      <!-- Fragment -->
+      <Word>dFdx</Word>
+      <Word>dFdy</Word>
+      <Word>dFdxFine</Word>
+      <Word>dFdyFine</Word>
+      <Word>dFdxCoarse</Word>
+      <Word>dFdyCoarse</Word>
+      <Word>fwidth</Word>
+      <Word>fwidthFine</Word>
+      <Word>fwidthCoarse</Word>
+      <!-- Noise (deprecated but still used) -->
+      <Word>noise1</Word>
+      <Word>noise2</Word>
+      <Word>noise3</Word>
+      <Word>noise4</Word>
+      <!-- Integer -->
+      <Word>bitfieldExtract</Word>
+      <Word>bitfieldInsert</Word>
+      <Word>bitfieldReverse</Word>
+      <Word>bitCount</Word>
+      <Word>findLSB</Word>
+      <Word>findMSB</Word>
+      <Word>uaddCarry</Word>
+      <Word>usubBorrow</Word>
+      <Word>umulExtended</Word>
+      <Word>imulExtended</Word>
+      <!-- Pack/Unpack -->
+      <Word>packUnorm2x16</Word>
+      <Word>packSnorm2x16</Word>
+      <Word>packUnorm4x8</Word>
+      <Word>packSnorm4x8</Word>
+      <Word>unpackUnorm2x16</Word>
+      <Word>unpackSnorm2x16</Word>
+      <Word>unpackUnorm4x8</Word>
+      <Word>unpackSnorm4x8</Word>
+      <Word>packHalf2x16</Word>
+      <Word>unpackHalf2x16</Word>
+      <Word>packDouble2x32</Word>
+      <Word>unpackDouble2x32</Word>
+      <!-- Barrier -->
+      <Word>barrier</Word>
+      <Word>memoryBarrier</Word>
+      <Word>memoryBarrierAtomicCounter</Word>
+      <Word>memoryBarrierBuffer</Word>
+      <Word>memoryBarrierShared</Word>
+      <Word>memoryBarrierImage</Word>
+      <Word>groupMemoryBarrier</Word>
+      <!-- Atomic -->
+      <Word>atomicCounterIncrement</Word>
+      <Word>atomicCounterDecrement</Word>
+      <Word>atomicCounter</Word>
+      <Word>atomicAdd</Word>
+      <Word>atomicMin</Word>
+      <Word>atomicMax</Word>
+      <Word>atomicAnd</Word>
+      <Word>atomicOr</Word>
+      <Word>atomicXor</Word>
+      <Word>atomicExchange</Word>
+      <Word>atomicCompSwap</Word>
+      <!-- Image -->
+      <Word>imageSize</Word>
+      <Word>imageSamples</Word>
+      <Word>imageLoad</Word>
+      <Word>imageStore</Word>
+      <Word>imageAtomicAdd</Word>
+      <Word>imageAtomicMin</Word>
+      <Word>imageAtomicMax</Word>
+      <Word>imageAtomicAnd</Word>
+      <Word>imageAtomicOr</Word>
+      <Word>imageAtomicXor</Word>
+      <Word>imageAtomicExchange</Word>
+      <Word>imageAtomicCompSwap</Word>
+      <!-- Emit -->
+      <Word>EmitStreamVertex</Word>
+      <Word>EndStreamPrimitive</Word>
+      <Word>EmitVertex</Word>
+      <Word>EndPrimitive</Word>
+    </Keywords>
+
+    <!-- Built-in Variables -->
+    <Rule color="Qualifier">
+      \bgl_[A-Za-z_]+\b
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

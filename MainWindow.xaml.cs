@@ -5096,9 +5096,41 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
-        private void ChunksDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
-            if (ChunksDataGrid.SelectedItem is MasterMaterials.Models.ShaderChunk chunk) {
+        private void ChunkCheckBox_Click(object sender, RoutedEventArgs e) {
+            if (sender is not CheckBox checkBox) return;
+            if (checkBox.Tag is not MasterMaterials.Models.ShaderChunk chunk) return;
+
+            var selectedMaster = viewModel.MasterMaterialsViewModel.SelectedMaster;
+            if (selectedMaster == null || selectedMaster.IsBuiltIn) return;
+
+            if (checkBox.IsChecked == true) {
+                // Add chunk to master
+                viewModel.MasterMaterialsViewModel.AddChunkToMaster(selectedMaster, chunk.Id);
+                logger.Info($"Added chunk '{chunk.Id}' to master '{selectedMaster.Name}'");
+            } else {
+                // Remove chunk from master
+                viewModel.MasterMaterialsViewModel.RemoveChunkFromMaster(selectedMaster, chunk.Id);
+                logger.Info($"Removed chunk '{chunk.Id}' from master '{selectedMaster.Name}'");
+            }
+
+            // Force refresh the ListBox to update chunk count display
+            ChunksListBox.Items.Refresh();
+        }
+
+        private void ChunkLabel_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            if (sender is not TextBlock textBlock) return;
+            if (textBlock.DataContext is not MasterMaterials.Models.ShaderChunk chunk) return;
+
+            // Double-click to edit
+            if (e.ClickCount == 2) {
                 OpenChunkEditor(chunk);
+                e.Handled = true;
+            }
+        }
+
+        private void MasterMaterial_Clone_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem && menuItem.DataContext is MasterMaterials.Models.MasterMaterial master) {
+                viewModel.MasterMaterialsViewModel.CloneMasterCommand.Execute(master);
             }
         }
 

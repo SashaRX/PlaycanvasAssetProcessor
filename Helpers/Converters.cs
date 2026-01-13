@@ -277,4 +277,44 @@ namespace AssetProcessor.Helpers {
         }
     }
 
+    /// <summary>
+    /// MultiValueConverter to check if a chunk is included in the selected master material.
+    /// Values: [0] = ChunkId (string), [1] = SelectedMaster (MasterMaterial)
+    /// Returns: true if chunk is in master's ChunkIds list
+    /// </summary>
+    public class ChunkInMasterConverter : IMultiValueConverter {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) {
+            if (values.Length < 2)
+                return false;
+
+            if (values[0] is not string chunkId)
+                return false;
+
+            if (values[1] is not MasterMaterials.Models.MasterMaterial master)
+                return false;
+
+            return master.ChunkIds.Contains(chunkId);
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Converter to check if chunk toggle is enabled (master is not built-in)
+    /// </summary>
+    public class ChunkToggleEnabledConverter : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            if (value is MasterMaterials.Models.MasterMaterial master) {
+                return !master.IsBuiltIn;
+            }
+            return false;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
 }

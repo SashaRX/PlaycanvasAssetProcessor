@@ -55,7 +55,7 @@ public sealed class LogService : ILogService, IDisposable {
         // Group writes by file for efficiency
         var pendingWrites = new Dictionary<string, List<string>>();
 
-        while (!disposed || !logQueue.IsCompleted) {
+        while (!disposed) {
             try {
                 // Wait for entries with timeout to allow periodic flushing
                 if (logQueue.TryTake(out var entry, TimeSpan.FromMilliseconds(100))) {

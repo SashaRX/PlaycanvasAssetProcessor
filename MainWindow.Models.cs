@@ -303,14 +303,14 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Экспорт выбранных моделей со всеми связанными ресурсами
+        /// Export all marked assets (models with related materials and textures)
         /// </summary>
-        private async void ExportModelsButton_Click(object sender, RoutedEventArgs e) {
+        private async void ExportAssetsButton_Click(object sender, RoutedEventArgs e) {
             var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
 
             if (!modelsToExport.Any()) {
                 MessageBox.Show(
-                    "Выберите модели для экспорта (отметьте чекбокс в колонке Export)",
+                    "No assets marked for export.\nUse 'Select' to mark models and their related assets.",
                     "Export",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -350,8 +350,8 @@ namespace AssetProcessor {
             bool generateLODs = GenerateLODsCheckBox.IsChecked ?? true;
 
             try {
-                ExportModelsButton.IsEnabled = false;
-                ExportModelsButton.Content = "Exporting...";
+                ExportAssetsButton.IsEnabled = false;
+                ExportAssetsButton.Content = "Exporting...";
 
                 var pipeline = new Export.ModelExportPipeline(
                     projectName,
@@ -394,7 +394,7 @@ namespace AssetProcessor {
                         currentModel++;
                         var progressPercent = (double)currentModel / totalModels * 100;
                         ProgressBar.Value = progressPercent;
-                        ExportModelsButton.Content = $"Export {currentModel}/{totalModels}";
+                        ExportAssetsButton.Content = $"Export {currentModel}/{totalModels}";
 
                         logger.Info($"Exporting model: {model.Name} ({currentModel}/{totalModels})");
 
@@ -447,8 +447,8 @@ namespace AssetProcessor {
                 logger.Error(ex, "Export failed");
                 MessageBox.Show($"Export failed: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                ExportModelsButton.IsEnabled = true;
-                ExportModelsButton.Content = "Export";
+                ExportAssetsButton.IsEnabled = true;
+                ExportAssetsButton.Content = "Export";
                 ProgressBar.Value = 0;
             }
         }
@@ -560,46 +560,144 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Помечает связанные материалы и текстуры для экспорта
+        /// Smart selection: marks selected assets and their related dependencies for export.
+        /// - Models: marks related materials and their textures
+        /// - Materials: marks related textures
+        /// - Textures: marks only the selected textures
         /// </summary>
-        private void MarkRelatedButton_Click(object sender, RoutedEventArgs e) {
-            logService.LogInfo("[MarkRelatedButton_Click] Button clicked");
-            var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
-            logService.LogInfo($"[MarkRelatedButton_Click] Models to export: {modelsToExport.Count}");
+        private void SelectRelatedButton_Click(object sender, RoutedEventArgs e) {
+            logService.LogInfo("[SelectRelatedButton_Click] Button clicked");
 
-            if (!modelsToExport.Any()) {
-                MessageBox.Show(
-                    "Сначала отметьте модели для экспорта",
-                    "Mark Related",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                return;
+            int modelsMarked = 0;
+            int materialsMarked = 0;
+            int texturesMarked = 0;
+
+            // Get current tab to determine selection context
+            var currentTab = tabControl.SelectedItem as TabItem;
+            var tabHeader = currentTab?.Header?.ToString() ?? "";
+
+            switch (tabHeader) {
+                case "Models":
+                    // Mark selected models in DataGrid
+                    var selectedModels = ModelsDataGrid.SelectedItems.Cast<ModelResource>().ToList();
+                    if (!selectedModels.Any()) {
+                        MessageBox.Show(
+                            "Select models in the table first",
+                            "Select",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        return;
+                    }
+
+                    foreach (var model in selectedModels) {
+                        if (!model.ExportToServer) {
+                            model.ExportToServer = true;
+                            modelsMarked++;
+                        }
+                    }
+
+                    // Find and mark related materials and textures
+                    var (relatedMaterials, relatedTextures) = FindRelatedAssets(selectedModels);
+                    foreach (var material in relatedMaterials) {
+                        if (!material.ExportToServer) {
+                            material.ExportToServer = true;
+                            materialsMarked++;
+                        }
+                    }
+                    foreach (var texture in relatedTextures) {
+                        if (!texture.ExportToServer) {
+                            texture.ExportToServer = true;
+                            texturesMarked++;
+                        }
+                    }
+                    break;
+
+                case "Materials":
+                    // Mark selected materials and their textures
+                    var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
+                    if (!selectedMaterials.Any()) {
+                        MessageBox.Show(
+                            "Select materials in the table first",
+                            "Select",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        return;
+                    }
+
+                    foreach (var material in selectedMaterials) {
+                        if (!material.ExportToServer) {
+                            material.ExportToServer = true;
+                            materialsMarked++;
+                        }
+
+                        // Find textures for this material
+                        var textureIds = new List<int?> {
+                            material.DiffuseMapId,
+                            material.NormalMapId,
+                            material.SpecularMapId,
+                            material.GlossMapId,
+                            material.MetalnessMapId,
+                            material.AOMapId,
+                            material.EmissiveMapId,
+                            material.OpacityMapId
+                        };
+
+                        foreach (var id in textureIds.Where(id => id.HasValue)) {
+                            var texture = viewModel.Textures.FirstOrDefault(t => t.ID == id!.Value);
+                            if (texture != null && !texture.ExportToServer) {
+                                texture.ExportToServer = true;
+                                texturesMarked++;
+                            }
+                        }
+                    }
+                    break;
+
+                case "Textures":
+                    // Mark only selected textures
+                    var selectedTextures = TexturesDataGrid.SelectedItems.Cast<TextureResource>().ToList();
+                    if (!selectedTextures.Any()) {
+                        MessageBox.Show(
+                            "Select textures in the table first",
+                            "Select",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        return;
+                    }
+
+                    foreach (var texture in selectedTextures) {
+                        if (!texture.ExportToServer) {
+                            texture.ExportToServer = true;
+                            texturesMarked++;
+                        }
+                    }
+                    break;
+
+                default:
+                    MessageBox.Show(
+                        "Switch to Models, Materials, or Textures tab to select assets",
+                        "Select",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
             }
 
-            // Находим связанные материалы и текстуры
-            var (relatedMaterials, relatedTextures) = FindRelatedAssets(modelsToExport);
+            UpdateExportCounts();
 
-            // Помечаем их для экспорта
-            foreach (var material in relatedMaterials) {
-                material.ExportToServer = true;
+            // Build result message
+            var markedParts = new List<string>();
+            if (modelsMarked > 0) markedParts.Add($"{modelsMarked} models");
+            if (materialsMarked > 0) markedParts.Add($"{materialsMarked} materials");
+            if (texturesMarked > 0) markedParts.Add($"{texturesMarked} textures");
+
+            if (markedParts.Any()) {
+                logService.LogInfo($"[SelectRelatedButton_Click] Marked: {string.Join(", ", markedParts)}");
+            } else {
+                logService.LogInfo("[SelectRelatedButton_Click] All selected assets already marked");
             }
-
-            foreach (var texture in relatedTextures) {
-                texture.ExportToServer = true;
-            }
-
-            UpdateModelExportCounts();
-            UpdateSelectedTexturesCount();
-
-            MessageBox.Show(
-                $"Отмечено для экспорта:\n\n{relatedMaterials.Count} материалов\n{relatedTextures.Count} текстур",
-                "Mark Related",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         }
 
         /// <summary>
-        /// Очищает все отметки экспорта
+        /// Clears all export marks from all asset types
         /// </summary>
         private void ClearExportMarksButton_Click(object sender, RoutedEventArgs e) {
             foreach (var model in viewModel.Models) {
@@ -614,8 +712,8 @@ namespace AssetProcessor {
                 texture.ExportToServer = false;
             }
 
-            UpdateModelExportCounts();
-            UpdateSelectedTexturesCount();
+            UpdateExportCounts();
+            logService.LogInfo("[ClearExportMarksButton_Click] All export marks cleared");
         }
 
         /// <summary>
@@ -750,21 +848,6 @@ namespace AssetProcessor {
                 UploadToCloudButton.IsEnabled = true;
                 UploadToCloudButton.Content = "Upload to Cloud";
                 ProgressBar.Value = 0;
-            }
-        }
-
-        /// <summary>
-        /// Обновляет счётчики в панели экспорта
-        /// </summary>
-        private void UpdateModelExportCounts() {
-            var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
-            SelectedModelsCountText.Text = $"{modelsToExport.Count} models";
-
-            if (modelsToExport.Any()) {
-                var (relatedMaterials, relatedTextures) = FindRelatedAssets(modelsToExport);
-                RelatedAssetsCountText.Text = $"{relatedMaterials.Count} materials, {relatedTextures.Count} textures";
-            } else {
-                RelatedAssetsCountText.Text = "0 materials, 0 textures";
             }
         }
 

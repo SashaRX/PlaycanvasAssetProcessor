@@ -618,38 +618,35 @@ namespace AssetProcessor {
 
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Guard against early calls during initialization
-            if (!this.IsLoaded || TextureOperationsGroupBox == null) return;
+            if (!this.IsLoaded || UnifiedExportGroupBox == null) return;
 
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
                         SetRightPanelVisibility(true);
                         ShowTextureViewer();
-                        TextureOperationsGroupBox.Visibility = Visibility.Visible;
-                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        UpdateExportCounts();
+                        TextureToolsPanel.Visibility = Visibility.Visible;
                         break;
                     case "Models":
                         SetRightPanelVisibility(true);
                         ShowModelViewer();
-                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
-                        ModelExportGroupBox.Visibility = Visibility.Visible;
-                        UpdateModelExportCounts();
+                        UpdateExportCounts();
+                        TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Materials":
                         SetRightPanelVisibility(true);
                         ShowMaterialViewer();
-                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
-                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        UpdateExportCounts();
+                        TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Server":
                         ShowServerFileInfo();
-                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
-                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Logs":
                         SetRightPanelVisibility(false);
-                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
-                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                 }
             }
@@ -698,7 +695,7 @@ namespace AssetProcessor {
 
         private void TexturesDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Update selection count and command state (lightweight, UI-only)
-            UpdateSelectedTexturesCount();
+            UpdateExportCounts();
             viewModel.SelectedTexture = TexturesDataGrid.SelectedItem as TextureResource;
             viewModel.ProcessTexturesCommand.NotifyCanExecuteChanged();
 
@@ -4500,19 +4497,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
-        private void UpdateSelectedTexturesCount() {
-            int selectedCount = TexturesDataGrid.SelectedItems.Count;
-            int markedCount = viewModel.Textures.Count(t => t.ExportToServer);
+        /// <summary>
+        /// Updates the unified export panel counts for all asset types
+        /// </summary>
+        private void UpdateExportCounts() {
+            int markedModels = viewModel.Models.Count(m => m.ExportToServer);
+            int markedMaterials = viewModel.Materials.Count(m => m.ExportToServer);
+            int markedTextures = viewModel.Textures.Count(t => t.ExportToServer);
 
-            if (selectedCount > 0) {
-                SelectedTexturesCountText.Text = selectedCount == 1
-                    ? "1 texture"
-                    : $"{selectedCount} textures";
-            } else if (markedCount > 0) {
-                SelectedTexturesCountText.Text = $"{markedCount} marked";
-            } else {
-                SelectedTexturesCountText.Text = "0 textures";
-            }
+            MarkedModelsCountText.Text = markedModels.ToString();
+            MarkedMaterialsCountText.Text = markedMaterials.ToString();
+            MarkedTexturesCountText.Text = markedTextures.ToString();
         }
 
         #region ORMTextureViewModel Event Handlers

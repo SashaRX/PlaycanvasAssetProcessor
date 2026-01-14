@@ -672,8 +672,7 @@ namespace AssetProcessor {
                     case "Master Materials":
                         SetRightPanelVisibility(true);
                         ShowChunkSlotsViewer();
-                        TextureOperationsGroupBox.Visibility = Visibility.Collapsed;
-                        ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                        TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Server":
                         ShowServerFileInfo();

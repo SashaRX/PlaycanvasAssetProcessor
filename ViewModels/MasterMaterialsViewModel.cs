@@ -248,7 +248,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddNewMaster()
+    private async Task AddNewMasterAsync()
     {
         var index = MasterMaterials.Count(m => !m.IsBuiltIn) + 1;
         var newMaster = new MasterMaterial
@@ -266,6 +266,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         SelectedMaster = newMaster;
         HasUnsavedChanges = true;
         EditMasterRequested?.Invoke(this, newMaster);
+
+        // Auto-save
+        await SaveConfigAsync();
     }
 
     [RelayCommand]
@@ -322,7 +325,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void DeleteMaster(MasterMaterial? master)
+    private async Task DeleteMasterAsync(MasterMaterial? master)
     {
         if (master == null) return;
 
@@ -335,6 +338,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         MasterMaterials.Remove(master);
         HasUnsavedChanges = true;
         StatusMessage = $"Deleted master material: {master.Name}";
+
+        // Auto-save
+        await SaveConfigAsync();
     }
 
     [RelayCommand]
@@ -482,6 +488,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         }
 
         HasUnsavedChanges = true;
+
+        // Auto-save
+        _ = SaveConfigAsync();
     }
 
     /// <summary>
@@ -495,6 +504,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         {
             master.ChunkIds.Add(chunkId);
             HasUnsavedChanges = true;
+
+            // Auto-save
+            _ = SaveConfigAsync();
         }
     }
 
@@ -507,6 +519,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
 
         master.ChunkIds.Remove(chunkId);
         HasUnsavedChanges = true;
+
+        // Auto-save
+        _ = SaveConfigAsync();
     }
 
     /// <summary>
@@ -584,6 +599,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
                 SelectedChunk = chunk;
             }
         }
+
+        // Auto-save
+        _ = SaveConfigAsync();
     }
 
     /// <summary>
@@ -595,5 +613,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
 
         SelectedMaster.SetSlotEnabled(slotId, enabled);
         HasUnsavedChanges = true;
+
+        // Auto-save
+        _ = SaveConfigAsync();
     }
 }

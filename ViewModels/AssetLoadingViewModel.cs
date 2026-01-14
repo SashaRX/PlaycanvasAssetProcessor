@@ -122,7 +122,49 @@ public partial class AssetLoadingViewModel : ObservableObject {
                 return;
             }
 
-            // Raise event with loaded assets
+            logService.LogInfo($"Loaded {result.Textures.Count} textures, {result.Models.Count} models, {result.Materials.Count} materials");
+
+            // Process ORM textures BEFORE sending to UI (so SubGroupName is already set)
+            LoadingStatus = "Detecting ORM textures...";
+            var ormResult = await Task.Run(() =>
+                DetectORMTextures(request.ProjectFolderPath, result.Textures, request.ProjectId), ct).ConfigureAwait(false);
+
+            // Apply ORM associations to textures (sets SubGroupName)
+            foreach (var (texture, subGroupName, orm) in ormResult.Associations) {
+                texture.SubGroupName = subGroupName;
+                texture.ParentORMTexture = orm;
+            }
+
+            LoadingStatus = "Generating virtual ORM textures...";
+            var virtualOrmResult = await Task.Run(() =>
+                GenerateVirtualORMTextures(result.Textures, request.ProjectId), ct).ConfigureAwait(false);
+
+            // Apply virtual ORM associations to textures (sets SubGroupName)
+            foreach (var (texture, subGroupName, orm) in virtualOrmResult.Associations) {
+                texture.SubGroupName = subGroupName;
+                texture.ParentORMTexture = orm;
+            }
+
+            // Restore sources for virtual ORMs
+            var texturesList = result.Textures.ToList();
+            foreach (var orm in virtualOrmResult.GeneratedORMs) {
+                orm.RestoreSources(texturesList);
+            }
+
+            LoadingStatus = "Restoring upload states...";
+            var uploadResult = await Task.Run(async () =>
+                await RestoreUploadStatesAsync(result.Textures, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+
+            // Apply upload states
+            foreach (var (texture, status, hash, url, uploadedAt) in uploadResult.RestoredTextures) {
+                texture.UploadStatus = status;
+                texture.UploadedHash = hash;
+                texture.RemoteUrl = url;
+                texture.LastUploadedAt = uploadedAt;
+            }
+
+            // NOW send to UI with all data already prepared (SubGroupName set, upload states restored)
+            LoadingStatus = "Updating UI...";
             AssetsLoaded?.Invoke(this, new AssetsLoadedEventArgs(
                 result.Textures,
                 result.Models,
@@ -130,26 +172,13 @@ public partial class AssetLoadingViewModel : ObservableObject {
                 result.FolderPaths
             ));
 
-            logService.LogInfo($"Loaded {result.Textures.Count} textures, {result.Models.Count} models, {result.Materials.Count} materials");
-
-            // Post-processing on background thread
-            LoadingStatus = "Detecting ORM textures...";
-            var ormResult = await Task.Run(() =>
-                DetectORMTextures(request.ProjectFolderPath, result.Textures, request.ProjectId), ct).ConfigureAwait(false);
+            // Fire additional events for any listeners that need ORM info
             if (ormResult.DetectedCount > 0) {
                 ORMTexturesDetected?.Invoke(this, ormResult);
             }
-
-            LoadingStatus = "Generating virtual ORM textures...";
-            var virtualOrmResult = await Task.Run(() =>
-                GenerateVirtualORMTextures(result.Textures, request.ProjectId), ct).ConfigureAwait(false);
             if (virtualOrmResult.GeneratedCount > 0) {
                 VirtualORMTexturesGenerated?.Invoke(this, virtualOrmResult);
             }
-
-            LoadingStatus = "Restoring upload states...";
-            var uploadResult = await Task.Run(async () =>
-                await RestoreUploadStatesAsync(result.Textures, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
             if (uploadResult.RestoredCount > 0) {
                 UploadStatesRestored?.Invoke(this, uploadResult);
             }

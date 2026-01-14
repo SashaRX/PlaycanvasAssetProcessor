@@ -2174,19 +2174,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Skip grouping logic if ItemsSource is not yet set (during InitializeComponent)
             if (TexturesDataGrid?.ItemsSource == null) return;
 
+            ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+            if (view == null) return;
+
             if (GroupTexturesCheckBox.IsChecked == true) {
-                ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                if (view != null && view.CanGroup) {
+                if (view.CanGroup) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
                     // Второй уровень группировки для ORM подгрупп (ao/gloss/metallic/height под og/ogm/ogmh)
                     view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
                 }
             } else {
-                ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                if (view != null) {
-                    view.GroupDescriptions.Clear();
-                }
+                view.GroupDescriptions.Clear();
             }
         }
 
@@ -2200,12 +2199,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// Called after loading assets to apply default grouping.
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
+            ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+            if (view == null || !view.CanGroup) return;
+
             if (GroupTexturesCheckBox.IsChecked == true) {
-                ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                if (view != null && view.CanGroup) {
+                // Only modify if not already grouped correctly
+                if (view.GroupDescriptions.Count != 2 ||
+                    (view.GroupDescriptions[0] as PropertyGroupDescription)?.PropertyName != "GroupName") {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
                     view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
+                }
+            } else {
+                if (view.GroupDescriptions.Count > 0) {
+                    view.GroupDescriptions.Clear();
                 }
             }
         }
@@ -4666,16 +4673,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
-            // Temporarily hide DataGrids to prevent costly re-renders during bulk updates
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, () => {
+            // Single Dispatcher call to handle all UI updates atomically
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // Hide DataGrids during updates
                 TexturesDataGrid.Visibility = Visibility.Hidden;
                 ModelsDataGrid.Visibility = Visibility.Hidden;
                 MaterialsDataGrid.Visibility = Visibility.Hidden;
-            });
 
-            // Use BeginInvoke with Background priority to not block UI thread
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                // Batch update: assign new collections instead of Add() loops
+                // Batch update: assign new collections
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
@@ -4690,28 +4695,26 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update folder paths
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);
 
-                // Post-processing UI updates
+                // Recalculate indices
                 viewModel.ProgressText = "Recalculating indices...";
                 RecalculateIndices();
-            });
 
-            // Defer grouping and show DataGrids after all data is ready
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                // Apply grouping with DeferRefresh
                 viewModel.ProgressText = "Applying grouping...";
-                ApplyTextureGroupingIfEnabled();
+                var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                using (view?.DeferRefresh()) {
+                    ApplyTextureGroupingIfEnabled();
+                }
 
+                // Show DataGrids
                 viewModel.ProgressText = "Rendering...";
-
-                // Show DataGrids - this triggers render
                 TexturesDataGrid.Visibility = Visibility.Visible;
                 ModelsDataGrid.Visibility = Visibility.Visible;
                 MaterialsDataGrid.Visibility = Visibility.Visible;
-            });
 
-            // Update "Ready" status after render completes (lowest priority = after all UI work)
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => {
+                // Update ready status
                 viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
-                viewModel.ProgressValue = viewModel.ProgressMaximum; // Fill progress bar
+                viewModel.ProgressValue = viewModel.ProgressMaximum;
             });
         }
 
@@ -4728,69 +4731,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {
-            logService.LogInfo($"[OnORMTexturesDetected] Detected {e.DetectedCount} ORM textures");
-
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                // ORMs are NOT added to collection - they serve as group headers (SubGroupName) only
-                // The ORM settings are accessible via component textures' ParentORMTexture property
-
-                // Apply associations to textures
-                foreach (var (texture, subGroupName, orm) in e.Associations) {
-                    texture.SubGroupName = subGroupName;
-                    texture.ParentORMTexture = orm;
-                }
-
-                // Recalculate UI
-                if (e.DetectedCount > 0) {
-                    RecalculateIndices();
-                    DeferUpdateLayout();
-                }
-            });
+            logService.LogInfo($"[OnORMTexturesDetected] Detected {e.DetectedCount} ORM textures, {e.Associations.Count} associations");
+            // SubGroupName and ParentORMTexture are already set in AssetLoadingViewModel before AssetsLoaded
+            // This event is for informational purposes only
         }
 
         private void OnVirtualORMTexturesGenerated(object? sender, VirtualORMTexturesGeneratedEventArgs e) {
-            logService.LogInfo($"[OnVirtualORMTexturesGenerated] Generated {e.GeneratedCount} virtual ORM textures");
-
-            // First pass: apply associations (fast, doesn't need UI)
-            foreach (var (texture, subGroupName, orm) in e.Associations) {
-                texture.SubGroupName = subGroupName;
-                texture.ParentORMTexture = orm;
-            }
-
-            // Restore sources (fast)
-            var texturesList = viewModel.Textures.OfType<TextureResource>().ToList();
-            foreach (var orm in e.GeneratedORMs) {
-                orm.RestoreSources(texturesList);
-            }
-
-            // Schedule UI updates with lower priority to not block
-            if (e.GeneratedCount > 0) {
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                    RecalculateIndices();
-                });
-
-                // Defer grouping to allow UI to breathe
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                    ApplyTextureGroupingIfEnabled();
-                    // Refresh view after grouping
-                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                    view?.Refresh();
-                });
-            }
+            logService.LogInfo($"[OnVirtualORMTexturesGenerated] Generated {e.GeneratedCount} virtual ORM textures, {e.Associations.Count} associations");
+            // SubGroupName, ParentORMTexture and sources are already set in AssetLoadingViewModel before AssetsLoaded
+            // This event is for informational purposes only
         }
 
         private void OnUploadStatesRestored(object? sender, UploadStatesRestoredEventArgs e) {
             logService.LogInfo($"[OnUploadStatesRestored] Restored {e.RestoredCount} upload states");
-
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                // Apply restored states to textures
-                foreach (var (texture, status, hash, url, uploadedAt) in e.RestoredTextures) {
-                    texture.UploadStatus = status;
-                    texture.UploadedHash = hash;
-                    texture.RemoteUrl = url;
-                    texture.LastUploadedAt = uploadedAt;
-                }
-            });
+            // Upload states are already applied in AssetLoadingViewModel before AssetsLoaded
+            // This event is for informational purposes only
         }
 
         private void OnAssetLoadingError(object? sender, AssetLoadErrorEventArgs e) {

@@ -74,10 +74,12 @@ namespace AssetProcessor {
             // Initialize dark theme checkbox state
             InitializeDarkThemeCheckBox();
 
-            // Initialize bottom panel visibility based on current tab (Textures is default)
+            // Initialize export counts for the unified panel
+            UpdateExportCounts();
+
+            // Show texture tools panel if starting on Textures tab
             if (tabControl.SelectedItem is TabItem selectedTab && selectedTab.Header?.ToString() == "Textures") {
-                TextureOperationsGroupBox.Visibility = Visibility.Visible;
-                ModelExportGroupBox.Visibility = Visibility.Collapsed;
+                TextureToolsPanel.Visibility = Visibility.Visible;
             }
         }
 

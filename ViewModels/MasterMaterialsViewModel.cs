@@ -537,6 +537,23 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     private void RebuildChunkSlotCategories()
     {
+        // Use Dispatcher to avoid virtualization issues during layout
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher != null)
+        {
+            dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                new Action(RebuildChunkSlotCategoriesInternal));
+        }
+        else
+        {
+            // Fallback for design-time or tests
+            RebuildChunkSlotCategoriesInternal();
+        }
+    }
+
+    private void RebuildChunkSlotCategoriesInternal()
+    {
         ChunkSlotCategories.Clear();
 
         if (SelectedMaster == null)

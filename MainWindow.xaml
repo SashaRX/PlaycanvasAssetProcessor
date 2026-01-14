@@ -35,6 +35,8 @@
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
         <help:InverseBoolConverter x:Key="InverseBoolConverter" />
+        <help:SafeFirstItemPropertyConverter x:Key="SafeFirstItemPropertyConverter" />
+        <help:CollectionHasItemsToVisibilityConverter x:Key="CollectionHasItemsToVisibilityConverter" />
 
         <!-- Right panel expanders style (larger font than panel compact style) -->
         <Style x:Key="RightPanelExpanderStyle" TargetType="Expander" BasedOn="{StaticResource CompactExpanderStyle}">
@@ -485,7 +487,7 @@
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
-                                VirtualizingPanel.ScrollUnit="Item"
+                                VirtualizingPanel.ScrollUnit="Pixel"
                                 VirtualizingPanel.CacheLength="20"
                                 VirtualizingPanel.CacheLengthUnit="Item"
                                 EnableRowVirtualization="True"
@@ -631,13 +633,36 @@
                                                                             <!-- Разделитель -->
                                                                             <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
                                                                             <!-- Разрешение -->
-                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Resolution, Converter={StaticResource ResolutionConverter}, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <TextBlock FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"
+                                                                                       Visibility="{Binding Items.Count, Converter={StaticResource CollectionHasItemsToVisibilityConverter}}">
+                                                                                <TextBlock.Text>
+                                                                                    <Binding Path="Items" Converter="{StaticResource SafeFirstItemPropertyConverter}" ConverterParameter="ParentORMTexture.Resolution" FallbackValue="-">
+                                                                                        <Binding.TargetNullValue>-</Binding.TargetNullValue>
+                                                                                    </Binding>
+                                                                                </TextBlock.Text>
+                                                                            </TextBlock>
                                                                             <!-- Размер -->
-                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
-                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.CompressedSize, Converter={StaticResource SizeConverter}, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"
+                                                                                       Visibility="{Binding Items.Count, Converter={StaticResource CollectionHasItemsToVisibilityConverter}}"/>
+                                                                            <TextBlock FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"
+                                                                                       Visibility="{Binding Items.Count, Converter={StaticResource CollectionHasItemsToVisibilityConverter}}">
+                                                                                <TextBlock.Text>
+                                                                                    <Binding Path="Items" Converter="{StaticResource SafeFirstItemPropertyConverter}" ConverterParameter="ParentORMTexture.CompressedSize" FallbackValue="-">
+                                                                                        <Binding.TargetNullValue>-</Binding.TargetNullValue>
+                                                                                    </Binding>
+                                                                                </TextBlock.Text>
+                                                                            </TextBlock>
                                                                             <!-- Статус -->
-                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"/>
-                                                                            <TextBlock Text="{Binding Items[0].ParentORMTexture.Status, FallbackValue='-'}" FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text=" | " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" VerticalAlignment="Center"
+                                                                                       Visibility="{Binding Items.Count, Converter={StaticResource CollectionHasItemsToVisibilityConverter}}"/>
+                                                                            <TextBlock FontSize="10" Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center"
+                                                                                       Visibility="{Binding Items.Count, Converter={StaticResource CollectionHasItemsToVisibilityConverter}}">
+                                                                                <TextBlock.Text>
+                                                                                    <Binding Path="Items" Converter="{StaticResource SafeFirstItemPropertyConverter}" ConverterParameter="ParentORMTexture.Status" FallbackValue="-">
+                                                                                        <Binding.TargetNullValue>-</Binding.TargetNullValue>
+                                                                                    </Binding>
+                                                                                </TextBlock.Text>
+                                                                            </TextBlock>
                                                                         </StackPanel>
                                                                     </Border>
                                                                     <!-- Содержимое подгруппы -->

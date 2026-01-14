@@ -317,4 +317,97 @@ namespace AssetProcessor.Helpers {
         }
     }
 
+    /// <summary>
+    /// Safely extracts a property from the first item of a collection.
+    /// Parameter specifies the property path (e.g., "ParentORMTexture.Resolution").
+    /// Also applies formatting for Resolution (int[]) and Size (int/long) values.
+    /// Returns null if collection is empty.
+    /// </summary>
+    public class SafeFirstItemPropertyConverter : IValueConverter {
+        public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            try {
+                // Try to get first item from various collection types
+                object? firstItem = null;
+
+                if (value is System.Collections.IList list) {
+                    if (list.Count == 0) return null;
+                    firstItem = list[0];
+                } else if (value is System.Collections.IEnumerable enumerable) {
+                    var enumerator = enumerable.GetEnumerator();
+                    if (!enumerator.MoveNext()) return null;
+                    firstItem = enumerator.Current;
+                } else {
+                    return null;
+                }
+
+                if (firstItem == null)
+                    return null;
+
+                // Navigate property path
+                if (parameter is string propertyPath) {
+                    object? current = firstItem;
+                    string lastPropName = "";
+                    foreach (var propName in propertyPath.Split('.')) {
+                        if (current == null)
+                            return null;
+
+                        var prop = current.GetType().GetProperty(propName);
+                        if (prop == null)
+                            return null;
+
+                        current = prop.GetValue(current);
+                        lastPropName = propName;
+                    }
+
+                    // Apply formatting based on property name
+                    if (lastPropName.Equals("Resolution", StringComparison.OrdinalIgnoreCase)) {
+                        if (current is int[] resolution && resolution.Length == 2) {
+                            return $"{resolution[0]}x{resolution[1]}";
+                        }
+                        return "0x0";
+                    }
+
+                    if (lastPropName.Equals("CompressedSize", StringComparison.OrdinalIgnoreCase) ||
+                        lastPropName.Equals("Size", StringComparison.OrdinalIgnoreCase)) {
+                        return SizeConverter.Convert(current ?? 0);
+                    }
+
+                    return current;
+                }
+
+                return firstItem;
+            } catch {
+                // Silently handle any exceptions (race conditions, etc.)
+                return null;
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Checks if a collection has items. Returns Visibility.Visible if count > 0, otherwise Collapsed.
+    /// </summary>
+    public class CollectionHasItemsToVisibilityConverter : IValueConverter {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
+            try {
+                if (value is System.Collections.ICollection collection) {
+                    return collection.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                }
+                if (value is int count) {
+                    return count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                }
+            } catch {
+                // Silently handle exceptions
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
+            throw new NotImplementedException();
+        }
+    }
+
 }

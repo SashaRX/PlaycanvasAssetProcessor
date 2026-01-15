@@ -1565,8 +1565,6 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Master:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
                                 <ComboBox x:Name="MaterialMasterComboBox" Grid.Column="1"
-                                          DisplayMemberPath="Name"
-                                          SelectedValuePath="Name"
                                           SelectionChanged="MaterialMasterComboBox_SelectionChanged"
                                           MinWidth="150"/>
                             </Grid>

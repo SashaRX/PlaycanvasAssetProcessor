@@ -2925,7 +2925,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Skip if we're programmatically updating the ComboBox
             if (_isUpdatingMasterComboBox) return;
-            if (MaterialMasterComboBox.SelectedValue is not string masterName) return;
+            if (MaterialMasterComboBox.SelectedItem is not string masterName) return;
 
             // Apply to ALL selected materials (group assignment)
             var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
@@ -3009,23 +3009,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 try {
                     var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
 
-                    // Only set ItemsSource once
-                    if (MaterialMasterComboBox.ItemsSource == null || MaterialMasterComboBox.ItemsSource != masters) {
-                        MaterialMasterComboBox.ItemsSource = masters;
-                    }
+                    // Populate with master names as simple strings (not objects)
+                    var masterNames = masters.Select(m => m.Name).ToList();
+                    MaterialMasterComboBox.ItemsSource = masterNames;
 
-                    // Find and select the master material by name
+                    // Select by name directly
                     var masterName = selectedMaterial.MasterMaterialName;
-
-                    if (!string.IsNullOrEmpty(masterName)) {
-                        var masterItem = masters.FirstOrDefault(m => m.Name == masterName);
-                        MaterialMasterComboBox.SelectedItem = masterItem;
+                    if (!string.IsNullOrEmpty(masterName) && masterNames.Contains(masterName)) {
+                        MaterialMasterComboBox.SelectedItem = masterName;
                     } else {
-                        MaterialMasterComboBox.SelectedItem = null;
+                        MaterialMasterComboBox.SelectedIndex = -1;
                     }
-
-                    // Force UI update
-                    MaterialMasterComboBox.UpdateLayout();
                 } finally {
                     _isUpdatingMasterComboBox = false;
                 }

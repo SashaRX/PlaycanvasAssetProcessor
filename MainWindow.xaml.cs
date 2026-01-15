@@ -3009,18 +3009,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 try {
                     // Ensure ItemsSource is set
                     var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
-                    if (MaterialMasterComboBox.ItemsSource != masters) {
-                        MaterialMasterComboBox.ItemsSource = masters;
-                    }
+                    MaterialMasterComboBox.ItemsSource = masters;
 
                     // Find and select the master material by name
                     var masterName = selectedMaterial.MasterMaterialName;
+                    logger.Info($"MaterialsDataGrid_SelectionChanged: material={selectedMaterial.Name}, masterName='{masterName}', masters.Count={masters.Count}");
+
                     if (!string.IsNullOrEmpty(masterName)) {
                         var masterItem = masters.FirstOrDefault(m => m.Name == masterName);
+                        logger.Info($"MaterialsDataGrid_SelectionChanged: masterItem found={masterItem != null}");
                         MaterialMasterComboBox.SelectedItem = masterItem;
                     } else {
                         MaterialMasterComboBox.SelectedItem = null;
                     }
+
+                    logger.Info($"MaterialsDataGrid_SelectionChanged: ComboBox.SelectedItem={MaterialMasterComboBox.SelectedItem}, Text='{MaterialMasterComboBox.Text}'");
                 } finally {
                     _isUpdatingMasterComboBox = false;
                 }

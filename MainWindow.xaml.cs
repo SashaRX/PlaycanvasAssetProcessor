@@ -3007,11 +3007,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update right panel Master ComboBox (with flag to prevent SelectionChanged firing)
                 _isUpdatingMasterComboBox = true;
                 try {
+                    // Ensure ItemsSource is set (binding may not work reliably)
+                    var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
+                    if (MaterialMasterComboBox.ItemsSource != masters) {
+                        MaterialMasterComboBox.ItemsSource = masters;
+                    }
+
+                    // Find and select the master material by name
                     var masterName = selectedMaterial.MasterMaterialName;
-                    var itemsCount = MaterialMasterComboBox.Items.Count;
-                    logger.Info($"MaterialsDataGrid_SelectionChanged: material={selectedMaterial.Name}, masterName='{masterName}', comboBox items={itemsCount}");
-                    MaterialMasterComboBox.SelectedValue = masterName;
-                    logger.Info($"MaterialsDataGrid_SelectionChanged: after set, SelectedValue='{MaterialMasterComboBox.SelectedValue}'");
+                    if (!string.IsNullOrEmpty(masterName)) {
+                        var masterItem = masters.FirstOrDefault(m => m.Name == masterName);
+                        MaterialMasterComboBox.SelectedItem = masterItem;
+                    } else {
+                        MaterialMasterComboBox.SelectedItem = null;
+                    }
                 } finally {
                     _isUpdatingMasterComboBox = false;
                 }

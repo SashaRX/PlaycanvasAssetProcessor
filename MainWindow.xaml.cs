@@ -2684,8 +2684,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
                 MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
 
-                // Master Material ComboBox
-                MaterialMasterComboBox.SelectedValue = parameters.MasterMaterialName;
+                // Master Material ComboBox - update with proper ItemsSource
+                UpdateMasterMaterialComboBox(parameters.MasterMaterialName);
 
                 // Texture hyperlinks and previews
                 UpdateTextureHyperlink(MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);
@@ -2922,6 +2922,38 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
+        /// <summary>
+        /// Centralized helper to update the MaterialMasterComboBox with proper ItemsSource and selection.
+        /// Ensures ItemsSource is set before selection to prevent WPF binding issues.
+        /// </summary>
+        private void UpdateMasterMaterialComboBox(string? masterName) {
+            _isUpdatingMasterComboBox = true;
+            try {
+                // Always populate ItemsSource first with master names as strings
+                var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
+                var masterNames = masters.Select(m => m.Name).ToList();
+
+                logger.Info($"UpdateMasterMaterialComboBox: masterNames count={masterNames.Count}, selecting='{masterName}'");
+
+                // Set ItemsSource (will clear selection)
+                MaterialMasterComboBox.ItemsSource = masterNames;
+
+                // Now set selection
+                if (!string.IsNullOrEmpty(masterName) && masterNames.Contains(masterName)) {
+                    MaterialMasterComboBox.SelectedItem = masterName;
+                    logger.Info($"UpdateMasterMaterialComboBox: SelectedItem set to '{masterName}', SelectedIndex={MaterialMasterComboBox.SelectedIndex}");
+                } else {
+                    MaterialMasterComboBox.SelectedIndex = -1;
+                    logger.Info($"UpdateMasterMaterialComboBox: Cleared selection (masterName='{masterName}' not found)");
+                }
+
+                // Force layout update to ensure visual refresh
+                MaterialMasterComboBox.UpdateLayout();
+            } finally {
+                _isUpdatingMasterComboBox = false;
+            }
+        }
+
         private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Skip if we're programmatically updating the ComboBox
             if (_isUpdatingMasterComboBox) return;
@@ -3000,29 +3032,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            logger.Info($"MaterialsDataGrid_SelectionChanged CALLED, SelectedItem={MaterialsDataGrid.SelectedItem?.GetType().Name ?? "null"}");
+
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                logger.Info($"MaterialsDataGrid_SelectionChanged: processing material={selectedMaterial.Name}, MasterMaterialName='{selectedMaterial.MasterMaterialName}'");
+
                 // Update MainViewModel's selected material for filtering
                 viewModel.SelectedMaterial = selectedMaterial;
 
-                // Update right panel Master ComboBox (with flag to prevent SelectionChanged firing)
-                _isUpdatingMasterComboBox = true;
-                try {
-                    var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
-
-                    // Populate with master names as simple strings (not objects)
-                    var masterNames = masters.Select(m => m.Name).ToList();
-                    MaterialMasterComboBox.ItemsSource = masterNames;
-
-                    // Select by name directly
-                    var masterName = selectedMaterial.MasterMaterialName;
-                    if (!string.IsNullOrEmpty(masterName) && masterNames.Contains(masterName)) {
-                        MaterialMasterComboBox.SelectedItem = masterName;
-                    } else {
-                        MaterialMasterComboBox.SelectedIndex = -1;
-                    }
-                } finally {
-                    _isUpdatingMasterComboBox = false;
-                }
+                // Update right panel Master ComboBox using centralized helper
+                UpdateMasterMaterialComboBox(selectedMaterial.MasterMaterialName);
 
                 // Delegate to MaterialSelectionViewModel for parameter loading
                 await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);

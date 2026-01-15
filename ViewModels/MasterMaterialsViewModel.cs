@@ -22,6 +22,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
 
     // Debounce mechanism for auto-save
     private CancellationTokenSource? _saveDebounceTokenSource;
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
     private const int SaveDebounceDelayMs = 300;
 
     [ObservableProperty]
@@ -209,14 +210,27 @@ public partial class MasterMaterialsViewModel : ObservableObject
         _saveDebounceTokenSource = new CancellationTokenSource();
         var token = _saveDebounceTokenSource.Token;
 
+        // Start debounce timer
         Task.Run(async () =>
         {
             try
             {
                 await Task.Delay(SaveDebounceDelayMs, token);
-                if (!token.IsCancellationRequested)
+                if (token.IsCancellationRequested) return;
+
+                // Marshal back to UI thread for the actual save
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null)
                 {
-                    await SaveConfigAsync(token);
+                    await dispatcher.InvokeAsync(async () =>
+                    {
+                        await SaveConfigInternalAsync(token);
+                    });
+                }
+                else
+                {
+                    // Fallback for tests/design-time
+                    await SaveConfigInternalAsync(token);
                 }
             }
             catch (OperationCanceledException)
@@ -229,6 +243,27 @@ public partial class MasterMaterialsViewModel : ObservableObject
                 Logger.Error(ex, "Debounced auto-save failed");
             }
         }, token);
+    }
+
+    /// <summary>
+    /// Internal save method with locking to prevent concurrent saves
+    /// </summary>
+    private async Task SaveConfigInternalAsync(CancellationToken ct)
+    {
+        if (!await _saveLock.WaitAsync(0, ct))
+        {
+            // Another save is in progress, skip this one
+            return;
+        }
+
+        try
+        {
+            await SaveConfigAsync(ct);
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
     }
 
     [RelayCommand]
@@ -246,7 +281,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         try
         {
             // Update config from observable collections (excluding built-ins)
-            _config.Masters = MasterMaterials.Where(m => !m.IsBuiltIn).ToList();
+            var mastersToSave = MasterMaterials.Where(m => !m.IsBuiltIn).ToList();
+            _config.Masters = mastersToSave;
+            Logger.Debug($"Saving {mastersToSave.Count} custom masters, {_config.MaterialInstanceMappings.Count} material mappings");
 
             // Only save custom chunks (not built-in ones)
             var customChunks = Chunks.Where(c => !c.IsBuiltIn).ToList();
@@ -547,8 +584,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
             master.ChunkIds.Add(chunkId);
             HasUnsavedChanges = true;
 
-            // Auto-save
-            _ = SaveConfigAsync();
+            // Auto-save (debounced)
+            ScheduleDebouncedSave();
         }
     }
 

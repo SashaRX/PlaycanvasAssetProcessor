@@ -873,23 +873,26 @@
                             <DataGridTemplateColumn Header="Master" Width="1.5*" MinWidth="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                  SelectedValuePath="Name"
-                                                  SelectedValue="{Binding MasterMaterialName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                  IsEditable="False"
-                                                  BorderThickness="0"
-                                                  Background="Transparent"
-                                                  HorizontalContentAlignment="Stretch"
-                                                  ToolTip="{Binding MasterMaterialName}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding Name}"
-                                                               MaxWidth="300"/>
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                                        <Grid ToolTip="{Binding MasterMaterialName}">
+                                            <ComboBox ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      DisplayMemberPath="Name"
+                                                      SelectedValuePath="Name"
+                                                      SelectedValue="{Binding MasterMaterialName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEditable="True"
+                                                      IsReadOnly="True"
+                                                      BorderThickness="0"
+                                                      Background="Transparent"
+                                                      HorizontalContentAlignment="Stretch">
+                                                <ComboBox.Resources>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                        <Setter Property="IsReadOnly" Value="True"/>
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                    </Style>
+                                                </ComboBox.Resources>
+                                            </ComboBox>
+                                        </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

@@ -826,7 +826,7 @@
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
                               Background="{DynamicResource ThemeDataGridBackground}"
-                              RowHeight="24"
+                              RowHeight="16"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               VirtualizingPanel.ScrollUnit="Pixel"

@@ -490,11 +490,14 @@
                                 CanUserReorderColumns="True"
                                 Background="{DynamicResource ThemeDataGridBackground}"
                                 RowHeight="16"
-                                VirtualizingPanel.IsVirtualizing="False"
-                                VirtualizingPanel.IsVirtualizingWhenGrouping="False"
-                                EnableRowVirtualization="False"
+                                VirtualizingPanel.IsVirtualizing="True"
+                                VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                                VirtualizingPanel.VirtualizationMode="Standard"
+                                VirtualizingPanel.ScrollUnit="Pixel"
+                                EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
-                                ScrollViewer.CanContentScroll="False"
+                                ScrollViewer.CanContentScroll="True"
+                                ScrollViewer.IsDeferredScrollingEnabled="True"
                                 HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"

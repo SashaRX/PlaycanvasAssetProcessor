@@ -3018,6 +3018,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update MainViewModel's selected material for filtering
                 viewModel.SelectedMaterial = selectedMaterial;
 
+                // Sync right panel Master ComboBox with selected material
+                MaterialMasterComboBox.SelectedValue = selectedMaterial.MasterMaterialName;
+
                 // Delegate to MaterialSelectionViewModel for parameter loading
                 // The ViewModel will raise MaterialParametersLoaded event which triggers DisplayMaterialParameters
                 await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);

@@ -3000,30 +3000,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            logger.Info($"MaterialsDataGrid_SelectionChanged: SelectedItem type={MaterialsDataGrid.SelectedItem?.GetType().Name ?? "null"}");
-
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                logger.Info($"MaterialsDataGrid_SelectionChanged: processing {selectedMaterial.Name}");
-
                 // Update MainViewModel's selected material for filtering
                 viewModel.SelectedMaterial = selectedMaterial;
 
                 // Update right panel Master ComboBox (with flag to prevent SelectionChanged firing)
                 _isUpdatingMasterComboBox = true;
                 try {
-                    // Ensure ItemsSource is set (binding may not work reliably)
+                    // Ensure ItemsSource is set
                     var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
-                    logger.Info($"MaterialsDataGrid_SelectionChanged: masters count={masters.Count}");
                     if (MaterialMasterComboBox.ItemsSource != masters) {
                         MaterialMasterComboBox.ItemsSource = masters;
                     }
 
                     // Find and select the master material by name
                     var masterName = selectedMaterial.MasterMaterialName;
-                    logger.Info($"MaterialsDataGrid_SelectionChanged: masterName='{masterName}'");
                     if (!string.IsNullOrEmpty(masterName)) {
                         var masterItem = masters.FirstOrDefault(m => m.Name == masterName);
-                        logger.Info($"MaterialsDataGrid_SelectionChanged: found masterItem={masterItem?.Name ?? "null"}");
                         MaterialMasterComboBox.SelectedItem = masterItem;
                     } else {
                         MaterialMasterComboBox.SelectedItem = null;
@@ -3869,17 +3862,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                // Try to load local assets first
+                // Initialize Master Materials context BEFORE loading assets
+                // so config is ready when OnAssetsLoaded calls SyncMaterialMasterMappings
+                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
+                    logger.Info("SmartLoadAssets: Initializing Master Materials context");
+                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                    logger.Info("SmartLoadAssets: Master Materials context initialized");
+                }
+
+                // Try to load local assets
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
                 if (assetsLoaded) {
-                    // Initialize Master Materials context (sync happens later in OnAssetsLoaded when materials are populated)
-                    if (!string.IsNullOrEmpty(ProjectFolderPath)) {
-                        logger.Info("SmartLoadAssets: Initializing Master Materials context");
-                        await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                        logger.Info("SmartLoadAssets: Master Materials context initialized");
-                    }
-
                     // Local assets loaded, now check for server updates
                     string? apiKey = GetDecryptedApiKey();
                     if (string.IsNullOrEmpty(apiKey)) {

@@ -59,6 +59,7 @@ namespace AssetProcessor {
         private readonly SemaphoreSlim downloadSemaphore;
         private bool? isViewerVisible = true;
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
+        private bool _isUpdatingMasterComboBox = false; // Flag to prevent recursive master combobox updates
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
         private readonly IHistogramCoordinator histogramCoordinator;
@@ -2922,6 +2923,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Skip if we're programmatically updating the ComboBox
+            if (_isUpdatingMasterComboBox) return;
             if (MaterialMasterComboBox.SelectedValue is not string masterName) return;
 
             // Apply to ALL selected materials (group assignment)
@@ -2932,28 +2935,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             foreach (var material in selectedMaterials) {
                 material.MasterMaterialName = masterName;
-                // Directly call SetMasterForMaterial since PropertyChanged handlers
-                // might not be subscribed yet (Materials are loaded asynchronously)
                 viewModel.MasterMaterialsViewModel.SetMasterForMaterial(material.ID, masterName);
             }
-        }
 
-        /// <summary>
-        /// Handles master material selection in the DataGrid ComboBox
-        /// </summary>
-        private void DataGridMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (sender is not ComboBox comboBox) return;
-            if (comboBox.DataContext is not MaterialResource material) return;
-            if (comboBox.SelectedValue is not string masterName) return;
-
-            logger.Info($"DataGridMasterComboBox_SelectionChanged: material={material.Name} (ID={material.ID}), masterName={masterName}");
-
-            // Explicitly set the property
-            material.MasterMaterialName = masterName;
-
-            // Directly call SetMasterForMaterial since PropertyChanged handlers
-            // might not be subscribed yet (Materials are loaded asynchronously)
-            viewModel.MasterMaterialsViewModel.SetMasterForMaterial(material.ID, masterName);
+            // Refresh DataGrid to show updated values
+            MaterialsDataGrid.Items.Refresh();
         }
 
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
@@ -3016,11 +3002,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                 // Update MainViewModel's selected material for filtering
-                // This also updates right panel Master ComboBox via binding
                 viewModel.SelectedMaterial = selectedMaterial;
 
+                // Update right panel Master ComboBox (with flag to prevent SelectionChanged firing)
+                _isUpdatingMasterComboBox = true;
+                try {
+                    MaterialMasterComboBox.SelectedValue = selectedMaterial.MasterMaterialName;
+                } finally {
+                    _isUpdatingMasterComboBox = false;
+                }
+
                 // Delegate to MaterialSelectionViewModel for parameter loading
-                // The ViewModel will raise MaterialParametersLoaded event which triggers DisplayMaterialParameters
                 await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
             }
         }

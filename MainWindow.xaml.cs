@@ -3016,10 +3016,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                 // Update MainViewModel's selected material for filtering
+                // This also updates right panel Master ComboBox via binding
                 viewModel.SelectedMaterial = selectedMaterial;
-
-                // Sync right panel Master ComboBox with selected material
-                MaterialMasterComboBox.SelectedValue = selectedMaterial.MasterMaterialName;
 
                 // Delegate to MaterialSelectionViewModel for parameter loading
                 // The ViewModel will raise MaterialParametersLoaded event which triggers DisplayMaterialParameters
@@ -3478,11 +3476,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info("CheckProjectState: Loading local assets...");
                 await LoadAssetsFromJsonFileAsync();
 
-                // Initialize Master Materials context and sync material mappings
+                // Initialize Master Materials context (sync happens in OnAssetsLoaded when materials are populated)
                 if (!string.IsNullOrEmpty(ProjectFolderPath))
                 {
                     await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                    viewModel.SyncMaterialMasterMappings();
                 }
 
                 logService.LogInfo("Checking for updates...");
@@ -3864,11 +3861,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
                 if (assetsLoaded) {
-                    // Initialize Master Materials context and sync material mappings
+                    // Initialize Master Materials context (sync happens later in OnAssetsLoaded when materials are populated)
                     if (!string.IsNullOrEmpty(ProjectFolderPath)) {
                         logger.Info("SmartLoadAssets: Initializing Master Materials context");
                         await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                        viewModel.SyncMaterialMasterMappings();
                         logger.Info("SmartLoadAssets: Master Materials context initialized");
                     }
 
@@ -4730,6 +4726,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 allAssets.AddRange(e.Models);
                 allAssets.AddRange(e.Materials);
                 viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+
+                // Sync Master Material mappings now that materials are populated
+                logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");
+                viewModel.SyncMaterialMasterMappings();
 
                 // Update folder paths
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);

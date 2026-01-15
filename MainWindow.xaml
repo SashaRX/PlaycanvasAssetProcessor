@@ -870,7 +870,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTemplateColumn Header="Master" Width="150" MinWidth="100">
+                            <DataGridTemplateColumn Header="Master" Width="180" MinWidth="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <ComboBox ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -881,6 +881,9 @@
                                                   IsEditable="False"
                                                   BorderThickness="0"
                                                   Background="Transparent"
+                                                  HorizontalAlignment="Stretch"
+                                                  HorizontalContentAlignment="Left"
+                                                  Padding="4,2"
                                                   ToolTip="{Binding MasterMaterialName}"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -1575,6 +1578,7 @@
                                           ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
                                           DisplayMemberPath="Name"
                                           SelectedValuePath="Name"
+                                          SelectedValue="{Binding DataContext.SelectedMaterial.MasterMaterialName, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
                                           SelectionChanged="MaterialMasterComboBox_SelectionChanged"
                                           MinWidth="150"/>
                             </Grid>

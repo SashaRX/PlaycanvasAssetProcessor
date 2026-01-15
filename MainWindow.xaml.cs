@@ -2922,8 +2922,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (MaterialsDataGrid.SelectedItem is MaterialResource material &&
-                MaterialMasterComboBox.SelectedValue is string masterName) {
+            if (MaterialMasterComboBox.SelectedValue is not string masterName) return;
+
+            // Apply to ALL selected materials (group assignment)
+            var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
+            if (selectedMaterials.Count == 0) return;
+
+            logger.Info($"MaterialMasterComboBox_SelectionChanged: Applying master '{masterName}' to {selectedMaterials.Count} materials");
+
+            foreach (var material in selectedMaterials) {
                 material.MasterMaterialName = masterName;
                 // Directly call SetMasterForMaterial since PropertyChanged handlers
                 // might not be subscribed yet (Materials are loaded asynchronously)

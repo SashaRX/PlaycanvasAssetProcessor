@@ -878,20 +878,10 @@
                                                       DisplayMemberPath="Name"
                                                       SelectedValuePath="Name"
                                                       SelectedValue="{Binding MasterMaterialName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                      IsEditable="True"
-                                                      IsReadOnly="True"
+                                                      IsEditable="False"
                                                       BorderThickness="0"
                                                       Background="Transparent"
-                                                      HorizontalContentAlignment="Stretch">
-                                                <ComboBox.Resources>
-                                                    <Style TargetType="TextBox">
-                                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                                        <Setter Property="IsReadOnly" Value="True"/>
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                        <Setter Property="BorderThickness" Value="0"/>
-                                                    </Style>
-                                                </ComboBox.Resources>
-                                            </ComboBox>
+                                                      HorizontalContentAlignment="Stretch"/>
                                         </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

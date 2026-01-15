@@ -121,6 +121,9 @@ public partial class MasterMaterialService : IMasterMaterialService
         var configPath = GetConfigPath(projectFolderPath);
         var directory = Path.GetDirectoryName(configPath);
 
+        Logger.Info($"SaveConfigAsync: Saving to {configPath}");
+        Logger.Info($"SaveConfigAsync: {config.Masters.Count} masters, {config.MaterialInstanceMappings.Count} mappings");
+
         if (!string.IsNullOrEmpty(directory))
         {
             Directory.CreateDirectory(directory);
@@ -128,7 +131,7 @@ public partial class MasterMaterialService : IMasterMaterialService
 
         var json = JsonSerializer.Serialize(config, JsonOptions);
         await File.WriteAllTextAsync(configPath, json, ct);
-        Logger.Info($"Saved MasterMaterials config to {configPath}");
+        Logger.Info($"SaveConfigAsync: Successfully wrote {json.Length} bytes to {configPath}");
     }
 
     public IEnumerable<MasterMaterial> GetAllMasters(MasterMaterialsConfig config)

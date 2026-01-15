@@ -59,6 +59,7 @@ namespace AssetProcessor {
         private readonly SemaphoreSlim downloadSemaphore;
         private bool? isViewerVisible = true;
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
+        private bool _isUpdatingMasterComboBox = false; // Flag to prevent recursive master combobox updates
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly IPlayCanvasService playCanvasService;
         private readonly IHistogramCoordinator histogramCoordinator;
@@ -2699,8 +2700,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
                 MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
 
-                // Master Material ComboBox
-                MaterialMasterComboBox.SelectedValue = parameters.MasterMaterialName;
+                // NOTE: Do NOT update MaterialMasterComboBox here!
+                // The MasterMaterialName is stored in config.json, not in material JSON files.
+                // MaterialsDataGrid_SelectionChanged already handles ComboBox update using
+                // the material from DataGrid which has the correct MasterMaterialName.
 
                 // Texture hyperlinks and previews
                 UpdateTextureHyperlink(MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);
@@ -2937,11 +2940,56 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
-        private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (MaterialsDataGrid.SelectedItem is MaterialResource material &&
-                MaterialMasterComboBox.SelectedValue is string masterName) {
-                material.MasterMaterialName = masterName;
+        /// <summary>
+        /// Centralized helper to update the MaterialMasterComboBox with proper ItemsSource and selection.
+        /// Ensures ItemsSource is set before selection to prevent WPF binding issues.
+        /// </summary>
+        private void UpdateMasterMaterialComboBox(string? masterName) {
+            _isUpdatingMasterComboBox = true;
+            try {
+                // Always populate ItemsSource first with master names as strings
+                var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
+                var masterNames = masters.Select(m => m.Name).ToList();
+
+                logger.Info($"UpdateMasterMaterialComboBox: masterNames count={masterNames.Count}, selecting='{masterName}'");
+
+                // Set ItemsSource (will clear selection)
+                MaterialMasterComboBox.ItemsSource = masterNames;
+
+                // Now set selection
+                if (!string.IsNullOrEmpty(masterName) && masterNames.Contains(masterName)) {
+                    MaterialMasterComboBox.SelectedItem = masterName;
+                    logger.Info($"UpdateMasterMaterialComboBox: SelectedItem set to '{masterName}', SelectedIndex={MaterialMasterComboBox.SelectedIndex}");
+                } else {
+                    MaterialMasterComboBox.SelectedIndex = -1;
+                    logger.Info($"UpdateMasterMaterialComboBox: Cleared selection (masterName='{masterName}' not found)");
+                }
+
+                // Force layout update to ensure visual refresh
+                MaterialMasterComboBox.UpdateLayout();
+            } finally {
+                _isUpdatingMasterComboBox = false;
             }
+        }
+
+        private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            // Skip if we're programmatically updating the ComboBox
+            if (_isUpdatingMasterComboBox) return;
+            if (MaterialMasterComboBox.SelectedItem is not string masterName) return;
+
+            // Apply to ALL selected materials (group assignment)
+            var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
+            if (selectedMaterials.Count == 0) return;
+
+            logger.Info($"MaterialMasterComboBox_SelectionChanged: Applying master '{masterName}' to {selectedMaterials.Count} materials");
+
+            foreach (var material in selectedMaterials) {
+                material.MasterMaterialName = masterName;
+                viewModel.MasterMaterialsViewModel.SetMasterForMaterial(material.ID, masterName);
+            }
+
+            // Refresh DataGrid to show updated values
+            MaterialsDataGrid.Items.Refresh();
         }
 
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
@@ -3002,12 +3050,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            logger.Info($"MaterialsDataGrid_SelectionChanged CALLED, SelectedItem={MaterialsDataGrid.SelectedItem?.GetType().Name ?? "null"}");
+
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                logger.Info($"MaterialsDataGrid_SelectionChanged: processing material={selectedMaterial.Name}, MasterMaterialName='{selectedMaterial.MasterMaterialName}'");
+
                 // Update MainViewModel's selected material for filtering
                 viewModel.SelectedMaterial = selectedMaterial;
 
+                // Update right panel Master ComboBox using centralized helper
+                UpdateMasterMaterialComboBox(selectedMaterial.MasterMaterialName);
+
                 // Delegate to MaterialSelectionViewModel for parameter loading
-                // The ViewModel will raise MaterialParametersLoaded event which triggers DisplayMaterialParameters
                 await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
             }
         }
@@ -3463,11 +3517,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info("CheckProjectState: Loading local assets...");
                 await LoadAssetsFromJsonFileAsync();
 
-                // Initialize Master Materials context and sync material mappings
+                // Initialize Master Materials context (sync happens in OnAssetsLoaded when materials are populated)
                 if (!string.IsNullOrEmpty(ProjectFolderPath))
                 {
                     await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                    viewModel.SyncMaterialMasterMappings();
                 }
 
                 logService.LogInfo("Checking for updates...");
@@ -3845,7 +3898,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                // Try to load local assets first
+                // Initialize Master Materials context BEFORE loading assets
+                // so config is ready when OnAssetsLoaded calls SyncMaterialMasterMappings
+                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
+                    logger.Info("SmartLoadAssets: Initializing Master Materials context");
+                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                    logger.Info("SmartLoadAssets: Master Materials context initialized");
+                }
+
+                // Try to load local assets
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
                 if (assetsLoaded) {
@@ -4710,6 +4771,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 allAssets.AddRange(e.Models);
                 allAssets.AddRange(e.Materials);
                 viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+
+                // Sync Master Material mappings now that materials are populated
+                logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");
+                viewModel.SyncMaterialMasterMappings();
 
                 // Update folder paths
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);

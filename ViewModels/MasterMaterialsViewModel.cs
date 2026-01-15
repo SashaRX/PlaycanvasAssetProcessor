@@ -20,6 +20,11 @@ public partial class MasterMaterialsViewModel : ObservableObject
     private string? _projectFolderPath;
     private MasterMaterialsConfig? _config;
 
+    // Debounce mechanism for auto-save
+    private CancellationTokenSource? _saveDebounceTokenSource;
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
+    private const int SaveDebounceDelayMs = 300;
+
     [ObservableProperty]
     private ObservableCollection<MasterMaterial> masterMaterials = [];
 
@@ -107,8 +112,10 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     public async Task SetProjectContextAsync(string projectFolderPath, CancellationToken ct = default)
     {
+        Logger.Info($"SetProjectContextAsync called with path: {projectFolderPath}");
         _projectFolderPath = projectFolderPath;
         await LoadConfigAsync(ct);
+        Logger.Info($"SetProjectContextAsync completed. _config is {(_config == null ? "NULL" : "initialized")}");
     }
 
     /// <summary>
@@ -139,7 +146,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         IsLoading = true;
         try
         {
+            Logger.Info($"LoadConfigAsync: Loading config from {_projectFolderPath}");
             _config = await _masterMaterialService.LoadConfigAsync(_projectFolderPath, ct);
+            Logger.Info($"LoadConfigAsync: _config loaded, {_config.Masters.Count} custom masters, {_config.MaterialInstanceMappings.Count} mappings");
 
             // Clear and reload master materials (built-in + custom)
             MasterMaterials.Clear();
@@ -204,6 +213,72 @@ public partial class MasterMaterialsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Schedules a debounced save operation. Multiple rapid calls will be coalesced.
+    /// </summary>
+    private void ScheduleDebouncedSave()
+    {
+        _saveDebounceTokenSource?.Cancel();
+        _saveDebounceTokenSource = new CancellationTokenSource();
+        var token = _saveDebounceTokenSource.Token;
+
+        // Start debounce timer
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SaveDebounceDelayMs, token);
+                if (token.IsCancellationRequested) return;
+
+                // Marshal back to UI thread for the actual save
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null)
+                {
+                    // IMPORTANT: Double await - first for DispatcherOperation, second for the inner Task
+                    var innerTask = await dispatcher.InvokeAsync(() => SaveConfigInternalAsync(token));
+                    await innerTask;
+                }
+                else
+                {
+                    // Fallback for tests/design-time
+                    await SaveConfigInternalAsync(token);
+                }
+
+                Logger.Info("Debounced auto-save completed successfully");
+            }
+            catch (OperationCanceledException)
+            {
+                // Debounce cancelled - this is normal
+            }
+            catch (Exception ex)
+            {
+                _logService.LogError($"Debounced auto-save failed: {ex.Message}");
+                Logger.Error(ex, "Debounced auto-save failed");
+            }
+        }, token);
+    }
+
+    /// <summary>
+    /// Internal save method with locking to prevent concurrent saves
+    /// </summary>
+    private async Task SaveConfigInternalAsync(CancellationToken ct)
+    {
+        if (!await _saveLock.WaitAsync(0, ct))
+        {
+            // Another save is in progress, skip this one
+            return;
+        }
+
+        try
+        {
+            await SaveConfigAsync(ct);
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
+    }
+
     [RelayCommand]
     private async Task SaveConfigAsync(CancellationToken ct = default)
     {
@@ -228,7 +303,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         try
         {
             // Update config from observable collections (excluding built-ins)
-            _config.Masters = MasterMaterials.Where(m => !m.IsBuiltIn).ToList();
+            var mastersToSave = MasterMaterials.Where(m => !m.IsBuiltIn).ToList();
+            _config.Masters = mastersToSave;
+            Logger.Debug($"Saving {mastersToSave.Count} custom masters, {_config.MaterialInstanceMappings.Count} material mappings");
 
             // Only save custom chunks (not built-in ones)
             var customChunks = Chunks.Where(c => !c.IsBuiltIn).ToList();
@@ -324,13 +401,18 @@ public partial class MasterMaterialsViewModel : ObservableObject
             Description = $"Clone of {master.Name}",
             BlendType = master.BlendType,
             IsBuiltIn = false,
+            BaseMaterialId = master.BaseMaterialId, // Copy base material reference
             ChunkIds = [.. master.ChunkIds], // Copy all chunk IDs
             SlotAssignments = master.SlotAssignments?.Select(a => new ChunkSlotAssignment
             {
                 SlotId = a.SlotId,
                 ChunkId = a.ChunkId,
                 Enabled = a.Enabled
-            }).ToList()
+            }).ToList(),
+            // Deep copy default parameters
+            DefaultParams = master.DefaultParams != null
+                ? new Dictionary<string, object>(master.DefaultParams)
+                : null
         };
 
         MasterMaterials.Add(clonedMaster);
@@ -340,7 +422,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         _logService.LogInfo(StatusMessage);
 
         // Auto-save after cloning
+        Logger.Info($"CloneMasterAsync: About to save. _config={(_config == null ? "NULL" : "exists")}, _projectFolderPath={_projectFolderPath ?? "null"}");
         await SaveConfigAsync();
+        Logger.Info($"CloneMasterAsync: SaveConfigAsync completed");
     }
 
     [RelayCommand]
@@ -536,16 +620,18 @@ public partial class MasterMaterialsViewModel : ObservableObject
         if (string.IsNullOrEmpty(masterName))
         {
             _masterMaterialService.RemoveMaterialMaster(_config, materialId);
+            Logger.Info($"Removed master mapping for material {materialId}");
         }
         else
         {
             _masterMaterialService.SetMaterialMaster(_config, materialId, masterName);
+            Logger.Info($"Set master mapping: material {materialId} -> {masterName}");
         }
 
         HasUnsavedChanges = true;
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
@@ -590,8 +676,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
             master.ChunkIds.Add(chunkId);
             HasUnsavedChanges = true;
 
-            // Auto-save
-            _ = SaveConfigAsync();
+            // Auto-save (debounced)
+            ScheduleDebouncedSave();
         }
     }
 
@@ -605,8 +691,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
         master.ChunkIds.Remove(chunkId);
         HasUnsavedChanges = true;
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
@@ -702,8 +788,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
             }
         }
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
@@ -716,7 +802,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
         SelectedMaster.SetSlotEnabled(slotId, enabled);
         HasUnsavedChanges = true;
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 }

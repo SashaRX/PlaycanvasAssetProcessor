@@ -832,7 +832,10 @@ namespace AssetProcessor.ViewModels {
         /// Call this after both materials and MasterMaterialsConfig are loaded
         /// </summary>
         public void SyncMaterialMasterMappings() {
+            logger.Info($"SyncMaterialMasterMappings called. Materials count: {Materials?.Count ?? 0}, Config exists: {masterMaterialsViewModel.Config != null}");
+
             if (Materials == null || Materials.Count == 0) {
+                logger.Warn("SyncMaterialMasterMappings: No materials to sync!");
                 return;
             }
 

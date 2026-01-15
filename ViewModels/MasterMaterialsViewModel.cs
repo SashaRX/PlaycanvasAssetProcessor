@@ -405,7 +405,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         _logService.LogInfo(StatusMessage);
 
         // Auto-save after cloning
+        Logger.Info($"CloneMasterAsync: About to save. _config={(_config == null ? "NULL" : "exists")}, _projectFolderPath={_projectFolderPath ?? "null"}");
         await SaveConfigAsync();
+        Logger.Info($"CloneMasterAsync: SaveConfigAsync completed");
     }
 
     [RelayCommand]

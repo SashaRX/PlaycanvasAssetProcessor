@@ -2928,6 +2928,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
+        /// <summary>
+        /// Handles master material selection in the DataGrid ComboBox
+        /// </summary>
+        private void DataGridMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (sender is not ComboBox comboBox) return;
+            if (comboBox.DataContext is not MaterialResource material) return;
+            if (comboBox.SelectedValue is not string masterName) return;
+
+            logger.Info($"DataGridMasterComboBox_SelectionChanged: material={material.Name} (ID={material.ID}), masterName={masterName}");
+
+            // Explicitly set the property to ensure PropertyChanged fires
+            material.MasterMaterialName = masterName;
+        }
+
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             if (sender is not System.Windows.Controls.Image image) {
                 logger.Warn("TexturePreview_MouseLeftButtonUp ������ ������������ ���� {SenderType}, �������� Image.", sender.GetType().FullName);

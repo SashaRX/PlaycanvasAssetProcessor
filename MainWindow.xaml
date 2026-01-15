@@ -878,6 +878,7 @@
                                                       DisplayMemberPath="Name"
                                                       SelectedValuePath="Name"
                                                       SelectedValue="{Binding MasterMaterialName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      SelectionChanged="DataGridMasterComboBox_SelectionChanged"
                                                       IsEditable="False"
                                                       BorderThickness="0"
                                                       Background="Transparent"

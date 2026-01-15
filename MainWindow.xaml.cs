@@ -3007,23 +3007,25 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update right panel Master ComboBox (with flag to prevent SelectionChanged firing)
                 _isUpdatingMasterComboBox = true;
                 try {
-                    // Ensure ItemsSource is set
                     var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
-                    MaterialMasterComboBox.ItemsSource = masters;
+
+                    // Only set ItemsSource once
+                    if (MaterialMasterComboBox.ItemsSource == null || MaterialMasterComboBox.ItemsSource != masters) {
+                        MaterialMasterComboBox.ItemsSource = masters;
+                    }
 
                     // Find and select the master material by name
                     var masterName = selectedMaterial.MasterMaterialName;
-                    logger.Info($"MaterialsDataGrid_SelectionChanged: material={selectedMaterial.Name}, masterName='{masterName}', masters.Count={masters.Count}");
 
                     if (!string.IsNullOrEmpty(masterName)) {
                         var masterItem = masters.FirstOrDefault(m => m.Name == masterName);
-                        logger.Info($"MaterialsDataGrid_SelectionChanged: masterItem found={masterItem != null}");
                         MaterialMasterComboBox.SelectedItem = masterItem;
                     } else {
                         MaterialMasterComboBox.SelectedItem = null;
                     }
 
-                    logger.Info($"MaterialsDataGrid_SelectionChanged: ComboBox.SelectedItem={MaterialMasterComboBox.SelectedItem}, Text='{MaterialMasterComboBox.Text}'");
+                    // Force UI update
+                    MaterialMasterComboBox.UpdateLayout();
                 } finally {
                     _isUpdatingMasterComboBox = false;
                 }

@@ -2925,6 +2925,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (MaterialsDataGrid.SelectedItem is MaterialResource material &&
                 MaterialMasterComboBox.SelectedValue is string masterName) {
                 material.MasterMaterialName = masterName;
+                // Directly call SetMasterForMaterial since PropertyChanged handlers
+                // might not be subscribed yet (Materials are loaded asynchronously)
+                viewModel.MasterMaterialsViewModel.SetMasterForMaterial(material.ID, masterName);
             }
         }
 
@@ -2938,8 +2941,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             logger.Info($"DataGridMasterComboBox_SelectionChanged: material={material.Name} (ID={material.ID}), masterName={masterName}");
 
-            // Explicitly set the property to ensure PropertyChanged fires
+            // Explicitly set the property
             material.MasterMaterialName = masterName;
+
+            // Directly call SetMasterForMaterial since PropertyChanged handlers
+            // might not be subscribed yet (Materials are loaded asynchronously)
+            viewModel.MasterMaterialsViewModel.SetMasterForMaterial(material.ID, masterName);
         }
 
         private void TexturePreview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {

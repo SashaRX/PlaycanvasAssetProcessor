@@ -2684,8 +2684,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
                 MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
 
-                // Master Material ComboBox - update with proper ItemsSource
-                UpdateMasterMaterialComboBox(parameters.MasterMaterialName);
+                // NOTE: Do NOT update MaterialMasterComboBox here!
+                // The MasterMaterialName is stored in config.json, not in material JSON files.
+                // MaterialsDataGrid_SelectionChanged already handles ComboBox update using
+                // the material from DataGrid which has the correct MasterMaterialName.
 
                 // Texture hyperlinks and previews
                 UpdateTextureHyperlink(MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);

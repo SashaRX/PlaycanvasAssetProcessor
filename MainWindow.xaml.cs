@@ -2178,6 +2178,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
+                // Disable virtualization for stable scrollbar with grouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, false);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, false);
+
                 if (view.CanGroup) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
@@ -2186,6 +2190,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
             } else {
                 view.GroupDescriptions.Clear();
+
+                // Enable virtualization for performance without grouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
         }
 
@@ -2203,6 +2211,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null || !view.CanGroup) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
+                // Disable virtualization for stable scrollbar with grouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, false);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, false);
+
                 // Only modify if not already grouped correctly
                 if (view.GroupDescriptions.Count != 2 ||
                     (view.GroupDescriptions[0] as PropertyGroupDescription)?.PropertyName != "GroupName") {
@@ -2214,6 +2226,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 if (view.GroupDescriptions.Count > 0) {
                     view.GroupDescriptions.Clear();
                 }
+
+                // Enable virtualization for performance without grouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
         }
 
@@ -4685,6 +4701,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
 
+                // Sync master material mappings from config to materials
+                viewModel.SyncMaterialMasterMappings();
+
                 // Build combined Assets collection
                 var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
                 allAssets.AddRange(e.Textures);
@@ -4796,6 +4815,67 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void CreateORMButton_Click(object sender, RoutedEventArgs e) {
             // Delegate to ViewModel
             viewModel.ORMTexture.CreateEmptyORMCommand.Execute(viewModel.Textures);
+        }
+
+        // Master Material assignment handlers
+        private void SetMasterForSelectedMaterials_Click(object sender, RoutedEventArgs e) {
+            if (sender is MenuItem menuItem) {
+                string? masterName = menuItem.Tag as string;
+                if (string.IsNullOrEmpty(masterName)) masterName = null;
+
+                // Get selected materials
+                var selectedMaterials = MaterialsDataGrid.SelectedItems
+                    .OfType<MaterialResource>()
+                    .ToList();
+
+                if (selectedMaterials.Count == 0) return;
+
+                // Set master for all selected materials
+                var materialIds = selectedMaterials.Select(m => m.ID).ToList();
+                viewModel.MasterMaterialsViewModel.SetMasterForMaterials(materialIds, masterName);
+
+                // Update UI
+                foreach (var material in selectedMaterials) {
+                    material.MasterMaterialName = masterName;
+                }
+
+                logService.LogInfo($"Set master '{masterName ?? "(none)"}' for {selectedMaterials.Count} materials");
+            }
+        }
+
+        private void MaterialRowContextMenu_Opened(object sender, RoutedEventArgs e) {
+            if (sender is ContextMenu contextMenu) {
+                // Find "Set Master Material" menu item
+                var setMasterMenuItem = contextMenu.Items
+                    .OfType<MenuItem>()
+                    .FirstOrDefault(m => m.Header?.ToString() == "Set Master Material");
+
+                if (setMasterMenuItem != null) {
+                    setMasterMenuItem.Items.Clear();
+
+                    // Add "(None)" option
+                    var noneItem = new MenuItem {
+                        Header = "(None)",
+                        Tag = ""
+                    };
+                    noneItem.Click += SetMasterForSelectedMaterials_Click;
+                    setMasterMenuItem.Items.Add(noneItem);
+
+                    // Add separator
+                    setMasterMenuItem.Items.Add(new Separator());
+
+                    // Add all master materials
+                    foreach (var master in viewModel.MasterMaterialsViewModel.MasterMaterials) {
+                        var masterItem = new MenuItem {
+                            Header = master.Name,
+                            Tag = master.Name,
+                            FontWeight = master.IsBuiltIn ? System.Windows.FontWeights.Normal : System.Windows.FontWeights.Bold
+                        };
+                        masterItem.Click += SetMasterForSelectedMaterials_Click;
+                        setMasterMenuItem.Items.Add(masterItem);
+                    }
+                }
+            }
         }
 
         // ORM from Material handlers

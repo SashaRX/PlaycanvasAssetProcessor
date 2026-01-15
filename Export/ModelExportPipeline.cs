@@ -910,10 +910,15 @@ public class ModelExportPipeline {
         Dictionary<int, ORMExportResult> ormResults,
         ExportOptions options) {
 
-        // 1. Приоритет: MasterMaterialName из UI выбора
+        // Приоритет определения master материала:
+        // 1. MasterMaterialName из UI выбора (индивидуально для материала)
+        // 2. DefaultMasterMaterial из options (глобальный default)
+        // 3. Fallback по blendType
         string masterName;
         if (!string.IsNullOrEmpty(material.MasterMaterialName)) {
             masterName = material.MasterMaterialName;
+        } else if (!string.IsNullOrEmpty(options.DefaultMasterMaterial)) {
+            masterName = options.DefaultMasterMaterial;
         } else {
             // Определяем master материал по blendType
             masterName = material.BlendType switch {
@@ -1110,14 +1115,19 @@ public class ModelExportPipeline {
         foreach (var material in materials) {
             var masterName = material.MasterMaterialName;
             if (string.IsNullOrEmpty(masterName)) {
-                // Fallback to blendType
-                masterName = material.BlendType switch {
-                    "0" or "NONE" => "pbr_opaque",
-                    "1" or "NORMAL" => "pbr_alpha",
-                    "2" or "ADDITIVE" => "pbr_additive",
-                    "3" or "PREMULTIPLIED" => "pbr_premul",
-                    _ => "pbr_opaque"
-                };
+                // Используем DefaultMasterMaterial из options если задан
+                if (!string.IsNullOrEmpty(options.DefaultMasterMaterial)) {
+                    masterName = options.DefaultMasterMaterial;
+                } else {
+                    // Fallback to blendType
+                    masterName = material.BlendType switch {
+                        "0" or "NONE" => "pbr_opaque",
+                        "1" or "NORMAL" => "pbr_alpha",
+                        "2" or "ADDITIVE" => "pbr_additive",
+                        "3" or "PREMULTIPLIED" => "pbr_premul",
+                        _ => "pbr_opaque"
+                    };
+                }
             }
 
             var master = options.MasterMaterialsConfig.Masters
@@ -1301,6 +1311,12 @@ public class ExportOptions {
     /// Путь к папке проекта для загрузки chunks файлов
     /// </summary>
     public string? ProjectFolderPath { get; set; }
+
+    /// <summary>
+    /// Default master material для материалов без явного назначения
+    /// Используется если MasterMaterialName не задан
+    /// </summary>
+    public string? DefaultMasterMaterial { get; set; }
 }
 
 public class ExportProgress {

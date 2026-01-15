@@ -30,4 +30,10 @@ public class MasterMaterialsConfig
     /// </summary>
     [JsonPropertyName("materialInstanceMappings")]
     public Dictionary<int, string> MaterialInstanceMappings { get; set; } = [];
+
+    /// <summary>
+    /// Default master material name applied to materials without explicit mapping
+    /// </summary>
+    [JsonPropertyName("defaultMasterMaterial")]
+    public string? DefaultMasterMaterial { get; set; }
 }

@@ -179,10 +179,18 @@ public partial class MasterMaterialsViewModel : ObservableObject
             }
 
             HasUnsavedChanges = false;
+
+            // Notify UI about loaded default master material
+            OnPropertyChanged(nameof(DefaultMasterMaterial));
+
             int builtInCount = Chunks.Count(c => c.IsBuiltIn);
             int customCount = Chunks.Count - builtInCount;
             StatusMessage = $"Loaded {MasterMaterials.Count} masters, {builtInCount} built-in chunks, {customCount} custom chunks";
             _logService.LogInfo(StatusMessage);
+            if (!string.IsNullOrEmpty(_config?.DefaultMasterMaterial))
+            {
+                _logService.LogInfo($"Default master material: {_config.DefaultMasterMaterial}");
+            }
         }
         catch (Exception ex)
         {
@@ -199,9 +207,20 @@ public partial class MasterMaterialsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveConfigAsync(CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(_projectFolderPath) || _config == null)
+        if (string.IsNullOrEmpty(_projectFolderPath))
         {
-            StatusMessage = "Cannot save: no project folder or config";
+            var msg = "Cannot save master materials config: no project selected. Select a project first.";
+            StatusMessage = msg;
+            Logger.Warn(msg);
+            _logService.LogWarn(msg);
+            return;
+        }
+
+        if (_config == null)
+        {
+            var msg = "Cannot save master materials config: config is null";
+            StatusMessage = msg;
+            Logger.Warn(msg);
             return;
         }
 
@@ -464,9 +483,44 @@ public partial class MasterMaterialsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets the master material name for a given PlayCanvas material ID
+    /// Gets or sets the default master material name for materials without explicit mapping
+    /// </summary>
+    public string? DefaultMasterMaterial
+    {
+        get => _config?.DefaultMasterMaterial;
+        set
+        {
+            // Создаём config если его нет
+            _config ??= new MasterMaterialsConfig();
+
+            if (_config.DefaultMasterMaterial != value)
+            {
+                _config.DefaultMasterMaterial = value;
+                OnPropertyChanged(nameof(DefaultMasterMaterial));
+                HasUnsavedChanges = true;
+                _ = SaveConfigAsync();
+                _logService.LogInfo($"Default master material set to: {value ?? "(none)"}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the master material name for a given PlayCanvas material ID.
+    /// Returns explicit mapping if exists, otherwise returns default master material.
     /// </summary>
     public string? GetMasterNameForMaterial(int materialId)
+    {
+        if (_config?.MaterialInstanceMappings.TryGetValue(materialId, out var name) == true)
+            return name;
+
+        // Return default if no explicit mapping
+        return _config?.DefaultMasterMaterial;
+    }
+
+    /// <summary>
+    /// Gets the explicit master material name for a material (ignoring default)
+    /// </summary>
+    public string? GetExplicitMasterNameForMaterial(int materialId)
     {
         return _config?.MaterialInstanceMappings.TryGetValue(materialId, out var name) == true ? name : null;
     }
@@ -476,7 +530,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     public void SetMasterForMaterial(int materialId, string? masterName)
     {
-        if (_config == null) return;
+        // Создаём config если его нет
+        _config ??= new MasterMaterialsConfig();
 
         if (string.IsNullOrEmpty(masterName))
         {
@@ -491,6 +546,36 @@ public partial class MasterMaterialsViewModel : ObservableObject
 
         // Auto-save
         _ = SaveConfigAsync();
+    }
+
+    /// <summary>
+    /// Sets the master material for multiple PlayCanvas materials at once
+    /// </summary>
+    public void SetMasterForMaterials(IEnumerable<int> materialIds, string? masterName)
+    {
+        // Создаём config если его нет
+        _config ??= new MasterMaterialsConfig();
+
+        int count = 0;
+        foreach (var materialId in materialIds)
+        {
+            if (string.IsNullOrEmpty(masterName))
+            {
+                _masterMaterialService.RemoveMaterialMaster(_config, materialId);
+            }
+            else
+            {
+                _masterMaterialService.SetMaterialMaster(_config, materialId, masterName);
+            }
+            count++;
+        }
+
+        if (count > 0)
+        {
+            HasUnsavedChanges = true;
+            _ = SaveConfigAsync();
+            _logService.LogInfo($"Set master '{masterName ?? "(none)"}' for {count} materials");
+        }
     }
 
     /// <summary>

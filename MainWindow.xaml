@@ -826,7 +826,7 @@
                               CanUserResizeColumns="True"
                               CanUserReorderColumns="True"
                               Background="{DynamicResource ThemeDataGridBackground}"
-                              RowHeight="16"
+                              RowHeight="24"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
                               VirtualizingPanel.ScrollUnit="Pixel"
@@ -881,9 +881,9 @@
                                                   IsEditable="False"
                                                   BorderThickness="0"
                                                   Background="Transparent"
-                                                  HorizontalAlignment="Stretch"
-                                                  HorizontalContentAlignment="Left"
-                                                  Padding="4,2"
+                                                  VerticalContentAlignment="Center"
+                                                  Padding="4,0"
+                                                  Margin="0"
                                                   ToolTip="{Binding MasterMaterialName}"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

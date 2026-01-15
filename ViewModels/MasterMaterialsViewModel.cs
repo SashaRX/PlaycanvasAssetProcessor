@@ -112,8 +112,10 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     public async Task SetProjectContextAsync(string projectFolderPath, CancellationToken ct = default)
     {
+        Logger.Info($"SetProjectContextAsync called with path: {projectFolderPath}");
         _projectFolderPath = projectFolderPath;
         await LoadConfigAsync(ct);
+        Logger.Info($"SetProjectContextAsync completed. _config is {(_config == null ? "NULL" : "initialized")}");
     }
 
     /// <summary>
@@ -144,7 +146,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
         IsLoading = true;
         try
         {
+            Logger.Info($"LoadConfigAsync: Loading config from {_projectFolderPath}");
             _config = await _masterMaterialService.LoadConfigAsync(_projectFolderPath, ct);
+            Logger.Info($"LoadConfigAsync: _config loaded, {_config.Masters.Count} custom masters, {_config.MaterialInstanceMappings.Count} mappings");
 
             // Clear and reload master materials (built-in + custom)
             MasterMaterials.Clear();
@@ -555,15 +559,26 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     public void SetMasterForMaterial(int materialId, string? masterName)
     {
-        if (_config == null) return;
+        Logger.Info($"SetMasterForMaterial called: materialId={materialId}, masterName={masterName}, _config={((_config == null) ? "NULL" : "exists")}, _projectFolderPath={_projectFolderPath ?? "null"}");
+
+        if (_config == null)
+        {
+            var msg = $"SetMasterForMaterial FAILED: _config is null! Cannot save mapping for material {materialId} -> {masterName}";
+            _logService.LogError(msg);
+            Logger.Error(msg);
+            StatusMessage = msg;
+            return;
+        }
 
         if (string.IsNullOrEmpty(masterName))
         {
             _masterMaterialService.RemoveMaterialMaster(_config, materialId);
+            Logger.Info($"Removed master mapping for material {materialId}");
         }
         else
         {
             _masterMaterialService.SetMaterialMaster(_config, materialId, masterName);
+            Logger.Info($"Set master mapping: material {materialId} -> {masterName}");
         }
 
         HasUnsavedChanges = true;

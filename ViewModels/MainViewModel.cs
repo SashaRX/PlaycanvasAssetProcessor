@@ -825,15 +825,20 @@ namespace AssetProcessor.ViewModels {
         /// Call this after both materials and MasterMaterialsConfig are loaded
         /// </summary>
         public void SyncMaterialMasterMappings() {
+            logger.Info($"SyncMaterialMasterMappings called. Materials count: {Materials?.Count ?? 0}, Config exists: {masterMaterialsViewModel.Config != null}");
+
             if (Materials == null || Materials.Count == 0) {
+                logger.Warn("SyncMaterialMasterMappings: No materials to sync!");
                 return;
             }
 
+            int mappedCount = 0;
             foreach (var material in Materials) {
                 // Apply mapping from config to material
                 var masterName = masterMaterialsViewModel.GetMasterNameForMaterial(material.ID);
                 if (!string.IsNullOrEmpty(masterName)) {
                     material.MasterMaterialName = masterName;
+                    mappedCount++;
                 }
 
                 // Subscribe to changes on this material
@@ -841,7 +846,7 @@ namespace AssetProcessor.ViewModels {
                 material.PropertyChanged += Material_PropertyChanged;
             }
 
-            logger.Info($"Synced master material mappings for {Materials.Count} materials");
+            logger.Info($"SyncMaterialMasterMappings: Subscribed PropertyChanged for {Materials.Count} materials, restored {mappedCount} mappings");
         }
 
         /// <summary>

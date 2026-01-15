@@ -3000,7 +3000,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            logger.Info($"MaterialsDataGrid_SelectionChanged: SelectedItem type={MaterialsDataGrid.SelectedItem?.GetType().Name ?? "null"}");
+
             if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                logger.Info($"MaterialsDataGrid_SelectionChanged: processing {selectedMaterial.Name}");
+
                 // Update MainViewModel's selected material for filtering
                 viewModel.SelectedMaterial = selectedMaterial;
 
@@ -3009,14 +3013,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 try {
                     // Ensure ItemsSource is set (binding may not work reliably)
                     var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
+                    logger.Info($"MaterialsDataGrid_SelectionChanged: masters count={masters.Count}");
                     if (MaterialMasterComboBox.ItemsSource != masters) {
                         MaterialMasterComboBox.ItemsSource = masters;
                     }
 
                     // Find and select the master material by name
                     var masterName = selectedMaterial.MasterMaterialName;
+                    logger.Info($"MaterialsDataGrid_SelectionChanged: masterName='{masterName}'");
                     if (!string.IsNullOrEmpty(masterName)) {
                         var masterItem = masters.FirstOrDefault(m => m.Name == masterName);
+                        logger.Info($"MaterialsDataGrid_SelectionChanged: found masterItem={masterItem?.Name ?? "null"}");
                         MaterialMasterComboBox.SelectedItem = masterItem;
                     } else {
                         MaterialMasterComboBox.SelectedItem = null;

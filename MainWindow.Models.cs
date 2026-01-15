@@ -368,6 +368,9 @@ namespace AssetProcessor {
                     projectId = pid;
                 }
 
+                // Получаем MasterMaterialsConfig для экспорта chunks и DefaultMasterMaterial
+                var masterMaterialsConfig = viewModel.MasterMaterialsViewModel.Config;
+
                 var options = new Export.ExportOptions {
                     ProjectId = projectId,
                     ConvertModel = true,
@@ -377,7 +380,10 @@ namespace AssetProcessor {
                     GenerateLODs = generateLODs,
                     TextureQuality = 128,
                     ApplyToksvig = true,
-                    UseSavedTextureSettings = true // Использовать настройки текстур из ResourceSettingsService
+                    UseSavedTextureSettings = true, // Использовать настройки текстур из ResourceSettingsService
+                    MasterMaterialsConfig = masterMaterialsConfig,
+                    ProjectFolderPath = viewModel.MasterMaterialsViewModel.ProjectFolderPath,
+                    DefaultMasterMaterial = masterMaterialsConfig?.DefaultMasterMaterial
                 };
 
                 int successCount = 0;

@@ -127,7 +127,12 @@ public class MaterialJsonGenerator {
             return material.MasterMaterialName;
         }
 
-        // 2. Проверяем кастомный маппинг по имени
+        // 2. Default master material из конфига
+        if (!string.IsNullOrEmpty(options.DefaultMasterMaterial)) {
+            return options.DefaultMasterMaterial;
+        }
+
+        // 3. Проверяем кастомный маппинг по имени
         if (options.CustomMasterMappings != null && !string.IsNullOrEmpty(material.Name)) {
             foreach (var (pattern, master) in options.CustomMasterMappings) {
                 if (material.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase)) {
@@ -136,7 +141,7 @@ public class MaterialJsonGenerator {
             }
         }
 
-        // 3. Определяем по blendType
+        // 4. Определяем по blendType
         if (!string.IsNullOrEmpty(material.BlendType)) {
             if (BlendTypeToMaster.TryGetValue(material.BlendType, out var master)) {
                 return master;
@@ -367,4 +372,9 @@ public class MaterialJsonOptions {
     /// По умолчанию: "chunks"
     /// </summary>
     public string ChunksBasePath { get; set; } = "chunks";
+
+    /// <summary>
+    /// Default master material для материалов без явного назначения
+    /// </summary>
+    public string? DefaultMasterMaterial { get; set; }
 }

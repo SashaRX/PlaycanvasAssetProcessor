@@ -388,6 +388,13 @@ namespace AssetProcessor.ViewModels {
             SelectedProjectId = selectedProject.Value.Key;
             projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject.Value);
 
+            // Set project context for MasterMaterials so config can be saved
+            var projectFolderPath = projectSelectionService.ProjectFolderPath;
+            if (!string.IsNullOrEmpty(projectFolderPath)) {
+                await masterMaterialsViewModel.SetProjectContextAsync(projectFolderPath);
+                logger.Info($"Set MasterMaterials project context: {projectFolderPath}");
+            }
+
             try {
                 await LoadBranchesAsync(CancellationToken.None);
             } catch (Exception ex) {
@@ -832,21 +839,23 @@ namespace AssetProcessor.ViewModels {
                 return;
             }
 
-            int mappedCount = 0;
+            int syncedCount = 0;
             foreach (var material in Materials) {
-                // Apply mapping from config to material
-                var masterName = masterMaterialsViewModel.GetMasterNameForMaterial(material.ID);
+                // Unsubscribe first to avoid triggering save during initial sync
+                material.PropertyChanged -= Material_PropertyChanged;
+
+                // Apply EXPLICIT mapping from config to material (not default!)
+                var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
                 if (!string.IsNullOrEmpty(masterName)) {
                     material.MasterMaterialName = masterName;
-                    mappedCount++;
+                    syncedCount++;
                 }
 
-                // Subscribe to changes on this material
-                material.PropertyChanged -= Material_PropertyChanged;
+                // Now subscribe to future changes
                 material.PropertyChanged += Material_PropertyChanged;
             }
 
-            logger.Info($"SyncMaterialMasterMappings: Subscribed PropertyChanged for {Materials.Count} materials, restored {mappedCount} mappings");
+            logger.Info($"Synced {syncedCount} explicit master material mappings for {Materials.Count} materials");
         }
 
         /// <summary>

@@ -3847,6 +3847,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
                 if (assetsLoaded) {
+                    // Initialize Master Materials context and sync material mappings
+                    if (!string.IsNullOrEmpty(ProjectFolderPath)) {
+                        logger.Info("SmartLoadAssets: Initializing Master Materials context");
+                        await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                        viewModel.SyncMaterialMasterMappings();
+                        logger.Info("SmartLoadAssets: Master Materials context initialized");
+                    }
+
                     // Local assets loaded, now check for server updates
                     string? apiKey = GetDecryptedApiKey();
                     if (string.IsNullOrEmpty(apiKey)) {

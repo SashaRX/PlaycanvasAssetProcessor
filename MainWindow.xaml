@@ -870,17 +870,25 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTemplateColumn Header="Master" Width="120" MinWidth="80">
+                            <DataGridTemplateColumn Header="Master" Width="140" MinWidth="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <ComboBox ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                  DisplayMemberPath="Name"
                                                   SelectedValuePath="Name"
                                                   SelectedValue="{Binding MasterMaterialName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                   IsEditable="False"
                                                   BorderThickness="0"
                                                   Background="Transparent"
-                                                  MinWidth="100"/>
+                                                  MinWidth="100"
+                                                  ToolTip="{Binding MasterMaterialName}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Name}"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

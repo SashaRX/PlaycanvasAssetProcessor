@@ -305,13 +305,18 @@ public partial class MasterMaterialsViewModel : ObservableObject
             Description = $"Clone of {master.Name}",
             BlendType = master.BlendType,
             IsBuiltIn = false,
+            BaseMaterialId = master.BaseMaterialId, // Copy base material reference
             ChunkIds = [.. master.ChunkIds], // Copy all chunk IDs
             SlotAssignments = master.SlotAssignments?.Select(a => new ChunkSlotAssignment
             {
                 SlotId = a.SlotId,
                 ChunkId = a.ChunkId,
                 Enabled = a.Enabled
-            }).ToList()
+            }).ToList(),
+            // Deep copy default parameters
+            DefaultParams = master.DefaultParams != null
+                ? new Dictionary<string, object>(master.DefaultParams)
+                : null
         };
 
         MasterMaterials.Add(clonedMaster);

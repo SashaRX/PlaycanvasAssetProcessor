@@ -238,7 +238,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
         {
             var msg = $"Cannot save: projectFolder={_projectFolderPath ?? "null"}, config={(_config == null ? "null" : "exists")}";
             StatusMessage = msg;
-            _logService.LogWarning(msg);
+            _logService.LogWarn(msg);
             return;
         }
 

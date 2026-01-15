@@ -226,16 +226,17 @@ public partial class MasterMaterialsViewModel : ObservableObject
                 var dispatcher = System.Windows.Application.Current?.Dispatcher;
                 if (dispatcher != null)
                 {
-                    await dispatcher.InvokeAsync(async () =>
-                    {
-                        await SaveConfigInternalAsync(token);
-                    });
+                    // IMPORTANT: Double await - first for DispatcherOperation, second for the inner Task
+                    var innerTask = await dispatcher.InvokeAsync(() => SaveConfigInternalAsync(token));
+                    await innerTask;
                 }
                 else
                 {
                     // Fallback for tests/design-time
                     await SaveConfigInternalAsync(token);
                 }
+
+                Logger.Info("Debounced auto-save completed successfully");
             }
             catch (OperationCanceledException)
             {

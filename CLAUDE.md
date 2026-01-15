@@ -38,6 +38,27 @@ dotnet publish AssetProcessor.csproj --configuration Release --runtime win-x64 -
 # bin/Release/net9.0-windows10.0.26100.0/win-x64/TexTool.exe
 ```
 
+### Running Tests
+
+```bash
+# Run all tests
+dotnet test TexTool.sln
+
+# Run tests with verbose output
+dotnet test TexTool.sln --logger "console;verbosity=detailed"
+
+# Run specific test class
+dotnet test TexTool.sln --filter "FullyQualifiedName~MainViewModelTests"
+
+# Run tests with coverage (requires coverlet)
+dotnet test TexTool.sln --collect:"XPlat Code Coverage"
+```
+
+Test project: `AssetProcessor.Tests/`
+- **Framework**: xUnit 2.9.0
+- **Mocking**: System.IO.Abstractions.TestingHelpers for file system
+- **Coverage**: coverlet.collector
+
 ### Build Optimizations
 
 Release сборка оптимизирована для уменьшения размера дистрибутива:

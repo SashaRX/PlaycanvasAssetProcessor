@@ -390,6 +390,21 @@ GHSA-rxmq-m78w-7wmc (уровень серьезности: средний)
 2. Нажмите F5 или Debug → Start Debugging
 3. Для отладки без запуска: Ctrl+F5
 
+### Запуск тестов
+
+```bash
+# Запуск всех тестов
+dotnet test TexTool.sln
+
+# Подробный вывод
+dotnet test TexTool.sln --logger "console;verbosity=detailed"
+
+# Фильтрация по имени класса
+dotnet test TexTool.sln --filter "FullyQualifiedName~MainViewModelTests"
+```
+
+Тесты находятся в `AssetProcessor.Tests/` (xUnit 2.9.0, 245+ тестов).
+
 ### Добавление новых зависимостей
 
 ```bash
@@ -430,7 +445,7 @@ dotnet add package PackageName --version X.Y.Z
 - [ ] Поддержка HDR форматов (.hdr, .exr) в TextureViewer
 - [ ] Система плагинов для кастомных обработчиков
 - [ ] CI/CD pipeline через GitHub Actions
-- [ ] Unit и integration тесты
+- [x] Unit и integration тесты (xUnit, 245+ тестов)
 
 ---
 

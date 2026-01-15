@@ -20,6 +20,10 @@ public partial class MasterMaterialsViewModel : ObservableObject
     private string? _projectFolderPath;
     private MasterMaterialsConfig? _config;
 
+    // Debounce mechanism for auto-save
+    private CancellationTokenSource? _saveDebounceTokenSource;
+    private const int SaveDebounceDelayMs = 300;
+
     [ObservableProperty]
     private ObservableCollection<MasterMaterial> masterMaterials = [];
 
@@ -196,12 +200,45 @@ public partial class MasterMaterialsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Schedules a debounced save operation. Multiple rapid calls will be coalesced.
+    /// </summary>
+    private void ScheduleDebouncedSave()
+    {
+        _saveDebounceTokenSource?.Cancel();
+        _saveDebounceTokenSource = new CancellationTokenSource();
+        var token = _saveDebounceTokenSource.Token;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SaveDebounceDelayMs, token);
+                if (!token.IsCancellationRequested)
+                {
+                    await SaveConfigAsync(token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Debounce cancelled - this is normal
+            }
+            catch (Exception ex)
+            {
+                _logService.LogError($"Debounced auto-save failed: {ex.Message}");
+                Logger.Error(ex, "Debounced auto-save failed");
+            }
+        }, token);
+    }
+
     [RelayCommand]
     private async Task SaveConfigAsync(CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(_projectFolderPath) || _config == null)
         {
-            StatusMessage = "Cannot save: no project folder or config";
+            var msg = $"Cannot save: projectFolder={_projectFolderPath ?? "null"}, config={(_config == null ? "null" : "exists")}";
+            StatusMessage = msg;
+            _logService.LogWarning(msg);
             return;
         }
 
@@ -494,8 +531,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
 
         HasUnsavedChanges = true;
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
@@ -525,8 +562,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
         master.ChunkIds.Remove(chunkId);
         HasUnsavedChanges = true;
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
@@ -622,8 +659,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
             }
         }
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
@@ -636,7 +673,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
         SelectedMaster.SetSlotEnabled(slotId, enabled);
         HasUnsavedChanges = true;
 
-        // Auto-save
-        _ = SaveConfigAsync();
+        // Auto-save (debounced)
+        ScheduleDebouncedSave();
     }
 }

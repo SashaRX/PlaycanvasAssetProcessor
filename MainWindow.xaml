@@ -870,7 +870,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTemplateColumn Header="Master" Width="140" MinWidth="100">
+                            <DataGridTemplateColumn Header="Master" Width="1.5*" MinWidth="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <ComboBox ItemsSource="{Binding DataContext.MasterMaterialsViewModel.MasterMaterials, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -879,13 +879,14 @@
                                                   IsEditable="False"
                                                   BorderThickness="0"
                                                   Background="Transparent"
-                                                  MinWidth="100"
+                                                  HorizontalContentAlignment="Stretch"
                                                   ToolTip="{Binding MasterMaterialName}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding Name}"
                                                                TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding Name}"/>
+                                                               ToolTip="{Binding Name}"
+                                                               MaxWidth="300"/>
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>

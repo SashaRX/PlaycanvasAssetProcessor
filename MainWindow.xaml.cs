@@ -4584,7 +4584,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     })
                 );
 
-                // Обновляем статусы текстур
+                // Обновляем статусы текстур и сохраняем в БД
                 foreach (var item in selectedTextures) {
                     var uploadResult = result.Results.FirstOrDefault(r => r.LocalPath == item.Ktx2Path);
                     if (uploadResult?.Success == true) {
@@ -4592,6 +4592,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         item.Texture.RemoteUrl = uploadResult.CdnUrl;
                         item.Texture.UploadedHash = uploadResult.ContentSha1;
                         item.Texture.LastUploadedAt = DateTime.UtcNow;
+
+                        // Сохраняем в БД для персистентности между сессиями
+                        var remotePath = $"{projectName}/textures/{System.IO.Path.GetFileName(item.Ktx2Path)}";
+                        await uploadStateService.SaveUploadAsync(new Data.UploadRecord {
+                            LocalPath = item.Ktx2Path,
+                            RemotePath = remotePath,
+                            ContentSha1 = uploadResult.ContentSha1 ?? "",
+                            ContentLength = new System.IO.FileInfo(item.Ktx2Path).Length,
+                            UploadedAt = DateTime.UtcNow,
+                            CdnUrl = uploadResult.CdnUrl ?? "",
+                            Status = "Uploaded",
+                            FileId = uploadResult.FileId,
+                            ProjectName = projectName
+                        });
                     }
                 }
 

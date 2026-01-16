@@ -307,23 +307,13 @@ namespace AssetProcessor {
         /// </summary>
         private async void ExportAssetsButton_Click(object sender, RoutedEventArgs e) {
             var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
+            var materialsToExport = viewModel.Materials.Where(m => m.ExportToServer).ToList();
+            var texturesToExport = viewModel.Textures.Where(t => t.ExportToServer).ToList();
 
-            if (!modelsToExport.Any()) {
-                // Check if there are other assets marked but no models
-                var markedMaterials = viewModel.Materials.Count(m => m.ExportToServer);
-                var markedTextures = viewModel.Textures.Count(t => t.ExportToServer);
-
-                string message;
-                if (markedMaterials > 0 || markedTextures > 0) {
-                    message = $"No models marked for export.\n\n" +
-                              $"Currently marked: {markedMaterials} materials, {markedTextures} textures\n\n" +
-                              $"The export requires at least one model. Go to the Models tab, select models, " +
-                              $"and click 'Select' to mark them with related assets.";
-                } else {
-                    message = "No assets marked for export.\nUse 'Select' to mark models and their related assets.";
-                }
-
-                MessageBox.Show(message, "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+            // Проверяем что есть хоть что-то для экспорта
+            if (!modelsToExport.Any() && !materialsToExport.Any() && !texturesToExport.Any()) {
+                MessageBox.Show("No assets marked for export.\nUse 'Select' to mark models, materials, or textures for export.",
+                    "Export", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -371,6 +361,13 @@ namespace AssetProcessor {
                     ktxPath: ktxPath
                 );
 
+                // Подписываемся на детальный прогресс экспорта
+                pipeline.ProgressChanged += progress => {
+                    Dispatcher.Invoke(() => {
+                        ProgressTextBlock.Text = progress.ShortStatus;
+                    });
+                };
+
                 // Получаем ProjectId для загрузки сохранённых настроек ресурсов
                 int projectId = 0;
                 if (!string.IsNullOrEmpty(viewModel.SelectedProjectId) &&
@@ -398,21 +395,50 @@ namespace AssetProcessor {
 
                 int successCount = 0;
                 int failCount = 0;
-                int totalModels = modelsToExport.Count;
-                int currentModel = 0;
+
+                // Считаем общее количество элементов для экспорта
+                // Материалы, связанные с моделями, не экспортируются отдельно
+                var modelMaterialIds = new HashSet<int>();
+                foreach (var model in modelsToExport) {
+                    var modelMaterials = viewModel.Materials.Where(m =>
+                        m.Parent == model.Parent ||
+                        (model.Name != null && m.Name != null && m.Name.StartsWith(model.Name.Split('_')[0], StringComparison.OrdinalIgnoreCase)));
+                    foreach (var mat in modelMaterials) {
+                        modelMaterialIds.Add(mat.ID);
+                    }
+                }
+
+                // Материалы без моделей (standalone)
+                var standaloneMaterials = materialsToExport.Where(m => !modelMaterialIds.Contains(m.ID)).ToList();
+
+                // Текстуры без материалов (standalone)
+                var allMaterialTextureIds = new HashSet<int>();
+                foreach (var mat in materialsToExport) {
+                    if (mat.DiffuseMapId.HasValue) allMaterialTextureIds.Add(mat.DiffuseMapId.Value);
+                    if (mat.NormalMapId.HasValue) allMaterialTextureIds.Add(mat.NormalMapId.Value);
+                    if (mat.AOMapId.HasValue) allMaterialTextureIds.Add(mat.AOMapId.Value);
+                    if (mat.GlossMapId.HasValue) allMaterialTextureIds.Add(mat.GlossMapId.Value);
+                    if (mat.MetalnessMapId.HasValue) allMaterialTextureIds.Add(mat.MetalnessMapId.Value);
+                    if (mat.EmissiveMapId.HasValue) allMaterialTextureIds.Add(mat.EmissiveMapId.Value);
+                }
+                var standaloneTextures = texturesToExport.Where(t => !allMaterialTextureIds.Contains(t.ID)).ToList();
+
+                int totalItems = modelsToExport.Count + standaloneMaterials.Count + standaloneTextures.Count;
+                int currentItem = 0;
 
                 // Инициализируем прогресс
                 ProgressBar.Value = 0;
                 ProgressBar.Maximum = 100;
 
+                // 1. Экспортируем модели (с их материалами и текстурами)
                 foreach (var model in modelsToExport) {
                     try {
-                        currentModel++;
-                        var progressPercent = (double)currentModel / totalModels * 100;
+                        currentItem++;
+                        var progressPercent = (double)currentItem / totalItems * 100;
                         ProgressBar.Value = progressPercent;
-                        ExportAssetsButton.Content = $"Export {currentModel}/{totalModels}";
+                        ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
-                        logger.Info($"Exporting model: {model.Name} ({currentModel}/{totalModels})");
+                        logger.Info($"Exporting model: {model.Name} ({currentItem}/{totalItems})");
 
                         var result = await pipeline.ExportModelAsync(
                             model,
@@ -432,6 +458,65 @@ namespace AssetProcessor {
                     } catch (Exception ex) {
                         failCount++;
                         logger.Error(ex, $"Export exception for {model.Name}");
+                    }
+                }
+
+                // 2. Экспортируем материалы без моделей
+                foreach (var material in standaloneMaterials) {
+                    try {
+                        currentItem++;
+                        var progressPercent = (double)currentItem / totalItems * 100;
+                        ProgressBar.Value = progressPercent;
+                        ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+
+                        logger.Info($"Exporting material: {material.Name} ({currentItem}/{totalItems})");
+
+                        var result = await pipeline.ExportMaterialAsync(
+                            material,
+                            viewModel.Textures,
+                            folderPaths,
+                            options
+                        );
+
+                        if (result.Success) {
+                            successCount++;
+                            logger.Info($"Export OK: {material.Name} -> {result.ExportPath}");
+                        } else {
+                            failCount++;
+                            logger.Error($"Export FAILED: {material.Name} - {result.ErrorMessage}");
+                        }
+                    } catch (Exception ex) {
+                        failCount++;
+                        logger.Error(ex, $"Export exception for {material.Name}");
+                    }
+                }
+
+                // 3. Экспортируем текстуры без материалов
+                foreach (var texture in standaloneTextures) {
+                    try {
+                        currentItem++;
+                        var progressPercent = (double)currentItem / totalItems * 100;
+                        ProgressBar.Value = progressPercent;
+                        ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+
+                        logger.Info($"Exporting texture: {texture.Name} ({currentItem}/{totalItems})");
+
+                        var result = await pipeline.ExportTextureAsync(
+                            texture,
+                            folderPaths,
+                            options
+                        );
+
+                        if (result.Success) {
+                            successCount++;
+                            logger.Info($"Export OK: {texture.Name} -> {result.ExportPath}");
+                        } else {
+                            failCount++;
+                            logger.Error($"Export FAILED: {texture.Name} - {result.ErrorMessage}");
+                        }
+                    } catch (Exception ex) {
+                        failCount++;
+                        logger.Error(ex, $"Export exception for {texture.Name}");
                     }
                 }
 
@@ -466,6 +551,7 @@ namespace AssetProcessor {
                 ExportAssetsButton.IsEnabled = true;
                 ExportAssetsButton.Content = "Export";
                 ProgressBar.Value = 0;
+                ProgressTextBlock.Text = "";
             }
         }
 
@@ -512,6 +598,8 @@ namespace AssetProcessor {
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
                             ProgressBar.Value = p.PercentComplete * 0.9; // 90% for content
+                            var fileName = System.IO.Path.GetFileName(p.CurrentFile);
+                            ProgressTextBlock.Text = $"Upload: {fileName} ({p.CurrentFileIndex}/{p.TotalFiles})";
                         });
                     })
                 );
@@ -550,6 +638,9 @@ namespace AssetProcessor {
                             logger.Warn(ex, "Failed to upload mapping.json");
                         }
                     }
+
+                    // Сохраняем записи о загрузке и обновляем статусы ресурсов
+                    await SaveUploadRecordsAndUpdateStatusesAsync(result, serverPath, projectName, uploadStateService);
                 }
 
                 Dispatcher.Invoke(() => { ProgressBar.Value = 100; });
@@ -572,6 +663,7 @@ namespace AssetProcessor {
                 UploadToCloudButton.IsEnabled = true;
                 UploadToCloudButton.Content = "Upload to Cloud";
                 ProgressBar.Value = 0;
+                ProgressTextBlock.Text = "";
             }
         }
 
@@ -813,6 +905,8 @@ namespace AssetProcessor {
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
                             ProgressBar.Value = p.PercentComplete * 0.9; // 90% for content
+                            var fileName = System.IO.Path.GetFileName(p.CurrentFile);
+                            ProgressTextBlock.Text = $"Upload: {fileName} ({p.CurrentFileIndex}/{p.TotalFiles})";
                         });
                     })
                 );
@@ -851,6 +945,9 @@ namespace AssetProcessor {
                             logger.Warn(ex, "Failed to upload mapping.json");
                         }
                     }
+
+                    // Сохраняем записи о загрузке и обновляем статусы ресурсов
+                    await SaveUploadRecordsAndUpdateStatusesAsync(result, serverPath, projectName, uploadStateService);
                 }
 
                 Dispatcher.Invoke(() => { ProgressBar.Value = 100; });
@@ -873,6 +970,7 @@ namespace AssetProcessor {
                 UploadToCloudButton.IsEnabled = true;
                 UploadToCloudButton.Content = "Upload to Cloud";
                 ProgressBar.Value = 0;
+                ProgressTextBlock.Text = "";
             }
         }
 
@@ -964,6 +1062,157 @@ namespace AssetProcessor {
                 }
             }
             return baseName;
+        }
+
+        /// <summary>
+        /// Сохраняет записи о загрузке и обновляет статусы ресурсов в UI
+        /// </summary>
+        private async Task SaveUploadRecordsAndUpdateStatusesAsync(
+            Upload.B2BatchUploadResult uploadResult,
+            string serverPath,
+            string projectName,
+            Data.UploadStateService uploadStateService) {
+
+            logger.Info($"[SaveUploadRecords] Starting. ServerPath: {serverPath}, Project: {projectName}, Results: {uploadResult.Results.Count}");
+
+            // Читаем mapping.json для получения ResourceId
+            var mappingPath = Path.Combine(serverPath, "mapping.json");
+            if (!File.Exists(mappingPath)) {
+                logger.Warn($"[SaveUploadRecords] mapping.json not found at: {mappingPath}");
+                return;
+            }
+
+            Export.MappingData? mapping;
+            try {
+                var json = await File.ReadAllTextAsync(mappingPath);
+                mapping = Newtonsoft.Json.JsonConvert.DeserializeObject<Export.MappingData>(json);
+                logger.Info($"[SaveUploadRecords] Loaded mapping.json: Models={mapping?.Models?.Count ?? 0}, Materials={mapping?.Materials?.Count ?? 0}, Textures={mapping?.Textures?.Count ?? 0}");
+            } catch (Exception ex) {
+                logger.Error(ex, $"[SaveUploadRecords] Failed to parse mapping.json: {mappingPath}");
+                return;
+            }
+
+            if (mapping == null) {
+                logger.Warn("[SaveUploadRecords] mapping is null after deserialization");
+                return;
+            }
+
+            // Строим обратный индекс: relativePath -> (resourceId, resourceType)
+            var pathToResource = new Dictionary<string, (int ResourceId, string ResourceType)>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var (idStr, entry) in mapping.Models) {
+                if (int.TryParse(idStr, out var id) && !string.IsNullOrEmpty(entry.Path)) {
+                    pathToResource[entry.Path] = (id, "Model");
+                    logger.Debug($"[SaveUploadRecords] Model {id}: {entry.Path}");
+                    foreach (var lod in entry.Lods) {
+                        if (!string.IsNullOrEmpty(lod.File)) {
+                            pathToResource[lod.File] = (id, "Model");
+                            logger.Debug($"[SaveUploadRecords] Model LOD {id}: {lod.File}");
+                        }
+                    }
+                }
+            }
+
+            foreach (var (idStr, path) in mapping.Materials) {
+                if (int.TryParse(idStr, out var id) && !string.IsNullOrEmpty(path)) {
+                    pathToResource[path] = (id, "Material");
+                    logger.Debug($"[SaveUploadRecords] Material {id}: {path}");
+                }
+            }
+
+            foreach (var (idStr, path) in mapping.Textures) {
+                if (int.TryParse(idStr, out var id) && !string.IsNullOrEmpty(path)) {
+                    pathToResource[path] = (id, "Texture");
+                    logger.Debug($"[SaveUploadRecords] Texture {id}: {path}");
+                }
+            }
+
+            logger.Info($"[SaveUploadRecords] Built path index with {pathToResource.Count} entries");
+
+            // Сохраняем записи о загрузке с ResourceId
+            var uploadedResourceIds = new Dictionary<string, HashSet<int>> {
+                ["Model"] = new(),
+                ["Material"] = new(),
+                ["Texture"] = new()
+            };
+
+            int savedCount = 0;
+            int matchedCount = 0;
+
+            foreach (var fileResult in uploadResult.Results.Where(r => r.Success || r.Skipped)) {
+                var remotePath = fileResult.RemotePath;
+                var assetsIndex = remotePath.IndexOf("assets/", StringComparison.OrdinalIgnoreCase);
+                var relativePath = assetsIndex >= 0 ? remotePath.Substring(assetsIndex) : remotePath;
+
+                int? resourceId = null;
+                string? resourceType = null;
+
+                if (pathToResource.TryGetValue(relativePath, out var resourceInfo)) {
+                    resourceId = resourceInfo.ResourceId;
+                    resourceType = resourceInfo.ResourceType;
+                    matchedCount++;
+                    logger.Debug($"[SaveUploadRecords] Matched: {relativePath} -> {resourceType} {resourceId}");
+                } else {
+                    logger.Debug($"[SaveUploadRecords] No match for: {relativePath}");
+                }
+
+                // Сохраняем запись в SQLite
+                var record = new Data.UploadRecord {
+                    LocalPath = fileResult.LocalPath ?? "",
+                    RemotePath = remotePath,
+                    ContentSha1 = fileResult.ContentSha1 ?? "",
+                    ContentLength = fileResult.ContentLength,
+                    UploadedAt = DateTime.UtcNow,
+                    CdnUrl = fileResult.CdnUrl ?? "",
+                    Status = "Uploaded",
+                    FileId = fileResult.FileId,
+                    ProjectName = projectName,
+                    ResourceId = resourceId,
+                    ResourceType = resourceType
+                };
+
+                try {
+                    await uploadStateService.SaveUploadAsync(record);
+                    savedCount++;
+                } catch (Exception ex) {
+                    logger.Error(ex, $"[SaveUploadRecords] Failed to save record for: {remotePath}");
+                }
+
+                if (resourceId.HasValue && resourceType != null) {
+                    uploadedResourceIds[resourceType].Add(resourceId.Value);
+                }
+            }
+
+            logger.Info($"[SaveUploadRecords] Saved {savedCount} records, matched {matchedCount} to resources");
+
+            // Обновляем статусы ресурсов в UI
+            Dispatcher.Invoke(() => {
+                foreach (var modelId in uploadedResourceIds["Model"]) {
+                    var model = viewModel.Models.FirstOrDefault(m => m.ID == modelId);
+                    if (model != null) {
+                        model.UploadStatus = "Uploaded";
+                        model.LastUploadedAt = DateTime.UtcNow;
+                    }
+                }
+
+                foreach (var materialId in uploadedResourceIds["Material"]) {
+                    var material = viewModel.Materials.FirstOrDefault(m => m.ID == materialId);
+                    if (material != null) {
+                        material.UploadStatus = "Uploaded";
+                        material.LastUploadedAt = DateTime.UtcNow;
+                    }
+                }
+
+                foreach (var textureId in uploadedResourceIds["Texture"]) {
+                    var texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId);
+                    if (texture != null) {
+                        texture.UploadStatus = "Uploaded";
+                        texture.LastUploadedAt = DateTime.UtcNow;
+                    }
+                }
+            });
+
+            logger.Info($"[SaveUploadRecords] Updated UI statuses: {uploadedResourceIds["Model"].Count} models, {uploadedResourceIds["Material"].Count} materials, {uploadedResourceIds["Texture"].Count} textures");
         }
 
         /// <summary>

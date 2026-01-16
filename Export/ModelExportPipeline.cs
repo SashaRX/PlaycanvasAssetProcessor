@@ -87,7 +87,7 @@ public class ModelExportPipeline {
         };
 
         try {
-            ReportProgress($"Starting export: {model.Name}", 0);
+            ReportProgress("Export", "Starting", 0, model.Name);
 
             // 1. Определяем путь экспорта из иерархии PlayCanvas
             var modelFolderPath = GetResourceFolderPath(model, folderPaths);
@@ -98,7 +98,7 @@ public class ModelExportPipeline {
             Logger.Info($"Export path: {exportPath}");
 
             // 2. Находим материалы, принадлежащие этой модели
-            ReportProgress("Finding materials...", 10);
+            ReportProgress("Search", "Finding materials", 10, model.Name);
             var modelMaterials = FindMaterialsForModel(model, allMaterials, folderPaths);
             result.MaterialCount = modelMaterials.Count;
             Logger.Info($"Found {modelMaterials.Count} materials for model {model.Name} (Parent={model.Parent})");
@@ -109,7 +109,7 @@ public class ModelExportPipeline {
             }
 
             // 3. Собираем все текстуры из материалов
-            ReportProgress("Collecting textures...", 20);
+            ReportProgress("Search", "Collecting textures", 15, model.Name);
             var textureIds = CollectTextureIds(modelMaterials);
             Logger.Info($"Texture IDs from materials: [{string.Join(", ", textureIds)}]");
 
@@ -130,10 +130,10 @@ public class ModelExportPipeline {
             // 5. Генерируем ORM packed текстуры
             var ormResults = new Dictionary<int, ORMExportResult>(); // MaterialId -> ORM result
             var packedTextureIds = new HashSet<int>(); // Текстуры, включённые в ORM
-            if (options.GenerateORMTextures) {
-                ReportProgress("Generating ORM packed textures...", 30);
+            if (options.GenerateORMTextures && modelMaterials.Count > 0) {
+                ReportProgress("ORM", "Generating packed textures", 20, null, 0, modelMaterials.Count);
                 (ormResults, packedTextureIds) = await GenerateORMTexturesAsync(
-                    modelMaterials, modelTextures, texturesDir, options, cancellationToken);
+                    modelMaterials, modelTextures, texturesDir, options, cancellationToken, 20, 25);
                 result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
                 Logger.Info($"ORM packed {packedTextureIds.Count} textures into {ormResults.Count} ORM files");
             }
@@ -141,16 +141,18 @@ public class ModelExportPipeline {
             // 6. Конвертируем обычные текстуры в KTX2 (пропускаем те, что уже в ORM)
             var texturePathMap = new Dictionary<int, string>(); // TextureId -> relative path
             if (options.ConvertTextures) {
-                ReportProgress("Converting textures to KTX2...", 50);
                 var texturesToConvert = modelTextures.Where(t => !packedTextureIds.Contains(t.ID)).ToList();
-                Logger.Info($"Converting {texturesToConvert.Count} textures (skipping {packedTextureIds.Count} packed in ORM)");
-                texturePathMap = await ConvertTexturesToKTX2Async(
-                    texturesToConvert, texturesDir, exportPath, options, cancellationToken);
-                result.ConvertedTextures.AddRange(texturePathMap.Values);
+                if (texturesToConvert.Count > 0) {
+                    ReportProgress("KTX2", "Converting textures", 45, null, 0, texturesToConvert.Count);
+                    Logger.Info($"Converting {texturesToConvert.Count} textures (skipping {packedTextureIds.Count} packed in ORM)");
+                    texturePathMap = await ConvertTexturesToKTX2Async(
+                        texturesToConvert, texturesDir, exportPath, options, cancellationToken, 45, 25);
+                    result.ConvertedTextures.AddRange(texturePathMap.Values);
+                }
             }
 
             // 7. Генерируем material JSON файлы и обновляем глобальный mapping.json
-            ReportProgress("Generating material files...", 70);
+            ReportProgress("JSON", "Generating material files", 70, model.Name);
             var modelFileName = GetSafeFileName(model.Name ?? $"model_{model.ID}");
             var materialIds = new List<int>();
 
@@ -203,7 +205,7 @@ public class ModelExportPipeline {
 
             // 8. Конвертируем модель в GLB + LOD
             if (options.ConvertModel && !string.IsNullOrEmpty(model.Path) && File.Exists(model.Path)) {
-                ReportProgress("Converting model to GLB...", 85);
+                ReportProgress("GLB", "Converting FBX to GLB", 85, model.Name);
                 var glbResult = await ConvertModelToGLBAsync(model, exportPath, options, cancellationToken);
 
                 if (string.IsNullOrEmpty(glbResult.MainModelPath)) {
@@ -217,10 +219,14 @@ public class ModelExportPipeline {
 
                 result.ConvertedModelPath = glbResult.MainModelPath;
                 result.LODPaths.AddRange(glbResult.LODPaths);
+
+                if (options.GenerateLODs && glbResult.LODPaths.Count > 0) {
+                    ReportProgress("LOD", "Generated LODs", 95, model.Name, glbResult.LODPaths.Count, glbResult.LODPaths.Count);
+                }
             }
 
             result.Success = true;
-            ReportProgress($"Export completed: {model.Name}", 100);
+            ReportProgress("Done", "Export completed", 100, model.Name);
 
         } catch (OperationCanceledException) {
             result.Success = false;
@@ -322,7 +328,9 @@ public class ModelExportPipeline {
         List<TextureResource> textures,
         string outputDir,
         ExportOptions options,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        int basePercentage = 30,
+        int percentageRange = 20) {
 
         Logger.Info($"=== GenerateORMTexturesAsync START ===");
         Logger.Info($"  Materials count: {materials.Count}");
@@ -332,9 +340,15 @@ public class ModelExportPipeline {
         var results = new Dictionary<int, ORMExportResult>();
         var packedTextureIds = new HashSet<int>(); // Текстуры, которые были упакованы
         var textureDict = textures.ToDictionary(t => t.ID);
+        var totalMaterials = materials.Count;
 
-        foreach (var material in materials) {
+        for (int matIndex = 0; matIndex < materials.Count; matIndex++) {
+            var material = materials[matIndex];
             cancellationToken.ThrowIfCancellationRequested();
+
+            // Report progress
+            var subProgress = basePercentage + (int)((double)matIndex / totalMaterials * percentageRange);
+            ReportProgress("ORM", "Packing channels", subProgress, material.Name, matIndex + 1, totalMaterials);
 
             Logger.Info($"--- Processing material: {material.Name} (ID={material.ID}) ---");
             Logger.Info($"  AOMapId: {material.AOMapId}, GlossMapId: {material.GlossMapId}, MetalnessMapId: {material.MetalnessMapId}");
@@ -534,12 +548,20 @@ public class ModelExportPipeline {
         string texturesDir,
         string exportPath,
         ExportOptions options,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        int basePercentage = 50,
+        int percentageRange = 20) {
 
         var results = new Dictionary<int, string>();
+        var totalTextures = textures.Count;
 
-        foreach (var texture in textures) {
+        for (int i = 0; i < textures.Count; i++) {
+            var texture = textures[i];
             cancellationToken.ThrowIfCancellationRequested();
+
+            // Report progress for this texture
+            var subProgress = basePercentage + (int)((double)i / totalTextures * percentageRange);
+            ReportProgress("KTX2", "Converting texture", subProgress, texture.Name, i + 1, totalTextures);
 
             if (string.IsNullOrEmpty(texture.Path) || !File.Exists(texture.Path)) {
                 Logger.Warn($"Texture file not found: {texture.Name} ({texture.Path})");
@@ -1267,6 +1289,227 @@ public class ModelExportPipeline {
         await File.WriteAllTextAsync(mappingPath, mappingJson, cancellationToken);
     }
 
+    #endregion
+
+    #region Standalone Export Methods
+
+    /// <summary>
+    /// Экспортирует материалы без привязки к модели
+    /// </summary>
+    public async Task<MaterialExportResult> ExportMaterialAsync(
+        MaterialResource material,
+        IEnumerable<TextureResource> allTextures,
+        IReadOnlyDictionary<int, string> folderPaths,
+        ExportOptions options,
+        CancellationToken cancellationToken = default) {
+
+        var result = new MaterialExportResult {
+            MaterialId = material.ID,
+            MaterialName = material.Name ?? $"material_{material.ID}"
+        };
+
+        try {
+            ReportProgress($"Exporting material: {material.Name}", 0);
+
+            // Определяем путь экспорта из иерархии PlayCanvas
+            var materialFolderPath = GetResourceFolderPath(material, folderPaths);
+            var exportPath = Path.Combine(GetContentBasePath(), materialFolderPath);
+            result.ExportPath = exportPath;
+
+            Directory.CreateDirectory(exportPath);
+            Logger.Info($"Material export path: {exportPath}");
+
+            // Собираем текстуры материала
+            ReportProgress("Collecting textures...", 20);
+            var textureIds = CollectTextureIds(new[] { material });
+            var materialTextures = allTextures.Where(t => textureIds.Contains(t.ID)).ToList();
+            result.TextureCount = materialTextures.Count;
+
+            // Создаём директорию textures
+            var texturesDir = Path.Combine(exportPath, "textures");
+            Directory.CreateDirectory(texturesDir);
+
+            // Генерируем ORM packed текстуры
+            var ormResults = new Dictionary<int, ORMExportResult>();
+            var packedTextureIds = new HashSet<int>();
+            if (options.GenerateORMTextures) {
+                ReportProgress("Generating ORM packed textures...", 30);
+                (ormResults, packedTextureIds) = await GenerateORMTexturesAsync(
+                    new List<MaterialResource> { material }, materialTextures, texturesDir, options, cancellationToken);
+                result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
+            }
+
+            // Конвертируем текстуры в KTX2
+            var texturePathMap = new Dictionary<int, string>();
+            if (options.ConvertTextures) {
+                ReportProgress("Converting textures to KTX2...", 50);
+                var texturesToConvert = materialTextures.Where(t => !packedTextureIds.Contains(t.ID)).ToList();
+                texturePathMap = await ConvertTexturesToKTX2Async(
+                    texturesToConvert, texturesDir, exportPath, options, cancellationToken);
+                result.ConvertedTextures.AddRange(texturePathMap.Values);
+            }
+
+            // Генерируем material JSON
+            ReportProgress("Generating material JSON...", 70);
+            var materialJson = GenerateMaterialJsonWithIds(material, ormResults, options);
+            var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
+            var matPath = Path.Combine(exportPath, matFileName);
+
+            var json = JsonSerializer.Serialize(materialJson, new JsonSerializerOptions {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+            await File.WriteAllTextAsync(matPath, json, cancellationToken);
+            result.GeneratedMaterialJson = matPath;
+            Logger.Info($"Generated material JSON: {matPath}");
+
+            // Обновляем mapping.json
+            await UpdateMappingForMaterialAsync(material, materialFolderPath, texturePathMap, ormResults, options, cancellationToken);
+            Logger.Info($"Updated global mapping: {GetMappingPath()}");
+
+            result.Success = true;
+            ReportProgress($"Material export completed: {material.Name}", 100);
+
+        } catch (OperationCanceledException) {
+            result.Success = false;
+            result.ErrorMessage = "Export cancelled";
+        } catch (Exception ex) {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            Logger.Error(ex, $"Failed to export material {material.Name}");
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Экспортирует текстуры без привязки к материалу или модели
+    /// </summary>
+    public async Task<TextureExportResult> ExportTextureAsync(
+        TextureResource texture,
+        IReadOnlyDictionary<int, string> folderPaths,
+        ExportOptions options,
+        CancellationToken cancellationToken = default) {
+
+        var result = new TextureExportResult {
+            TextureId = texture.ID,
+            TextureName = texture.Name ?? $"texture_{texture.ID}"
+        };
+
+        try {
+            ReportProgress($"Exporting texture: {texture.Name}", 0);
+
+            // Определяем путь экспорта
+            var textureFolderPath = GetResourceFolderPath(texture, folderPaths);
+            var exportPath = Path.Combine(GetContentBasePath(), textureFolderPath);
+            var texturesDir = Path.Combine(exportPath, "textures");
+            Directory.CreateDirectory(texturesDir);
+            result.ExportPath = texturesDir;
+
+            Logger.Info($"Texture export path: {texturesDir}");
+
+            // Конвертируем текстуру
+            if (options.ConvertTextures && !string.IsNullOrEmpty(texture.Path) && File.Exists(texture.Path)) {
+                ReportProgress("Converting texture to KTX2...", 50);
+                var texturePathMap = await ConvertTexturesToKTX2Async(
+                    new List<TextureResource> { texture }, texturesDir, exportPath, options, cancellationToken);
+
+                if (texturePathMap.TryGetValue(texture.ID, out var outputPath)) {
+                    result.ConvertedTexturePath = outputPath;
+                }
+
+                // Обновляем mapping.json
+                await UpdateMappingForTextureAsync(texture, textureFolderPath, texturePathMap, cancellationToken);
+            }
+
+            result.Success = true;
+            ReportProgress($"Texture export completed: {texture.Name}", 100);
+
+        } catch (OperationCanceledException) {
+            result.Success = false;
+            result.ErrorMessage = "Export cancelled";
+        } catch (Exception ex) {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            Logger.Error(ex, $"Failed to export texture {texture.Name}");
+        }
+
+        return result;
+    }
+
+    private async Task UpdateMappingForMaterialAsync(
+        MaterialResource material,
+        string materialFolderPath,
+        Dictionary<int, string> texturePathMap,
+        Dictionary<int, ORMExportResult> ormResults,
+        ExportOptions options,
+        CancellationToken cancellationToken) {
+
+        var mappingPath = GetMappingPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(mappingPath)!);
+
+        var existingMapping = await LoadOrCreateMappingAsync(mappingPath, cancellationToken);
+        var assetsContentPath = "assets/content";
+        var matRelativePath = $"{assetsContentPath}/{materialFolderPath}";
+
+        // Добавляем материал
+        var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
+        existingMapping.Materials[material.ID.ToString()] = $"{matRelativePath}/{matFileName}";
+
+        // Добавляем текстуры
+        foreach (var (texId, relPath) in texturePathMap) {
+            existingMapping.Textures[texId.ToString()] = $"{matRelativePath}/{relPath}";
+        }
+
+        // Добавляем ORM текстуры
+        foreach (var (matId, orm) in ormResults) {
+            var ormKey = (-matId).ToString();
+            existingMapping.Textures[ormKey] = $"{matRelativePath}/textures/{Path.GetFileName(orm.OutputPath)}";
+        }
+
+        var mappingJson = JsonSerializer.Serialize(existingMapping, new JsonSerializerOptions {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        await File.WriteAllTextAsync(mappingPath, mappingJson, cancellationToken);
+    }
+
+    private async Task UpdateMappingForTextureAsync(
+        TextureResource texture,
+        string textureFolderPath,
+        Dictionary<int, string> texturePathMap,
+        CancellationToken cancellationToken) {
+
+        var mappingPath = GetMappingPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(mappingPath)!);
+
+        var existingMapping = await LoadOrCreateMappingAsync(mappingPath, cancellationToken);
+        var assetsContentPath = "assets/content";
+
+        foreach (var (texId, relPath) in texturePathMap) {
+            existingMapping.Textures[texId.ToString()] = $"{assetsContentPath}/{textureFolderPath}/{relPath}";
+        }
+
+        var mappingJson = JsonSerializer.Serialize(existingMapping, new JsonSerializerOptions {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        await File.WriteAllTextAsync(mappingPath, mappingJson, cancellationToken);
+    }
+
+    private async Task<MappingData> LoadOrCreateMappingAsync(string mappingPath, CancellationToken cancellationToken) {
+        if (File.Exists(mappingPath)) {
+            var existingJson = await File.ReadAllTextAsync(mappingPath, cancellationToken);
+            return JsonSerializer.Deserialize<MappingData>(existingJson, new JsonSerializerOptions {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }) ?? new MappingData();
+        }
+        return new MappingData();
+    }
+
+    #endregion
+
     private void ReportProgress(string message, int percentage) {
         Logger.Info($"[{percentage}%] {message}");
         ProgressChanged?.Invoke(new ExportProgress {
@@ -1275,7 +1518,23 @@ public class ModelExportPipeline {
         });
     }
 
-    #endregion
+    private void ReportProgress(string phase, string message, int percentage, string? currentItem = null, int currentIndex = 0, int totalItems = 0) {
+        var fullMessage = string.IsNullOrEmpty(currentItem)
+            ? $"{phase}: {message}"
+            : totalItems > 0
+                ? $"{phase}: {message} - {currentItem} ({currentIndex}/{totalItems})"
+                : $"{phase}: {message} - {currentItem}";
+
+        Logger.Info($"[{percentage}%] {fullMessage}");
+        ProgressChanged?.Invoke(new ExportProgress {
+            Message = message,
+            Percentage = percentage,
+            Phase = phase,
+            CurrentItem = currentItem,
+            CurrentIndex = currentIndex,
+            TotalItems = totalItems
+        });
+    }
 }
 
 #region Supporting Classes
@@ -1322,6 +1581,35 @@ public class ExportOptions {
 public class ExportProgress {
     public string Message { get; set; } = "";
     public int Percentage { get; set; }
+
+    /// <summary>
+    /// Фаза обработки (Finding, Converting, Generating, Uploading, etc.)
+    /// </summary>
+    public string Phase { get; set; } = "";
+
+    /// <summary>
+    /// Текущий обрабатываемый файл/ресурс
+    /// </summary>
+    public string? CurrentItem { get; set; }
+
+    /// <summary>
+    /// Номер текущего элемента в пакете
+    /// </summary>
+    public int CurrentIndex { get; set; }
+
+    /// <summary>
+    /// Общее количество элементов в пакете
+    /// </summary>
+    public int TotalItems { get; set; }
+
+    /// <summary>
+    /// Краткое описание для UI
+    /// </summary>
+    public string ShortStatus => string.IsNullOrEmpty(CurrentItem)
+        ? Message
+        : TotalItems > 0
+            ? $"{Phase}: {CurrentItem} ({CurrentIndex}/{TotalItems})"
+            : $"{Phase}: {CurrentItem}";
 }
 
 public class ModelExportResult {
@@ -1340,6 +1628,28 @@ public class ModelExportResult {
     public List<string> GeneratedMaterialJsons { get; set; } = new();
     public List<string> ConvertedTextures { get; set; } = new();
     public List<string> GeneratedORMTextures { get; set; } = new();
+}
+
+public class MaterialExportResult {
+    public int MaterialId { get; set; }
+    public string MaterialName { get; set; } = "";
+    public string? ExportPath { get; set; }
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+
+    public int TextureCount { get; set; }
+    public string? GeneratedMaterialJson { get; set; }
+    public List<string> ConvertedTextures { get; set; } = new();
+    public List<string> GeneratedORMTextures { get; set; } = new();
+}
+
+public class TextureExportResult {
+    public int TextureId { get; set; }
+    public string TextureName { get; set; } = "";
+    public string? ExportPath { get; set; }
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+    public string? ConvertedTexturePath { get; set; }
 }
 
 public class GLBConversionResult {

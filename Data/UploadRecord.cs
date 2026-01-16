@@ -59,5 +59,15 @@ namespace AssetProcessor.Data {
         /// Сообщение об ошибке (если Status = Failed)
         /// </summary>
         public string? ErrorMessage { get; set; }
+
+        /// <summary>
+        /// PlayCanvas Resource ID (для связи с ресурсами в UI)
+        /// </summary>
+        public int? ResourceId { get; set; }
+
+        /// <summary>
+        /// Тип ресурса: Model, Material, Texture
+        /// </summary>
+        public string? ResourceType { get; set; }
     }
 }

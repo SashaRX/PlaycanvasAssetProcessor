@@ -51,6 +51,8 @@ namespace AssetProcessor.Data {
                         file_id TEXT,
                         project_name TEXT,
                         error_message TEXT,
+                        resource_id INTEGER,
+                        resource_type TEXT,
                         UNIQUE(local_path)
                     );
 
@@ -58,10 +60,23 @@ namespace AssetProcessor.Data {
                     CREATE INDEX IF NOT EXISTS idx_remote_path ON upload_history(remote_path);
                     CREATE INDEX IF NOT EXISTS idx_project_name ON upload_history(project_name);
                     CREATE INDEX IF NOT EXISTS idx_content_sha1 ON upload_history(content_sha1);
+                    CREATE INDEX IF NOT EXISTS idx_resource_id ON upload_history(resource_id);
                 ";
 
                 await using var command = new SqliteCommand(createTableSql, connection);
                 await command.ExecuteNonQueryAsync(ct);
+
+                // Миграция: добавить колонки resource_id и resource_type если их нет
+                var migrationSql = @"
+                    ALTER TABLE upload_history ADD COLUMN resource_id INTEGER;
+                    ALTER TABLE upload_history ADD COLUMN resource_type TEXT;
+                ";
+                try {
+                    await using var migrationCmd = new SqliteCommand(migrationSql, connection);
+                    await migrationCmd.ExecuteNonQueryAsync(ct);
+                } catch (SqliteException) {
+                    // Колонки уже существуют - игнорируем
+                }
 
                 _isInitialized = true;
             } catch (Exception) {
@@ -80,9 +95,9 @@ namespace AssetProcessor.Data {
             // Use INSERT OR REPLACE to handle duplicates
             var sql = @"
                 INSERT OR REPLACE INTO upload_history
-                (local_path, remote_path, content_sha1, content_length, uploaded_at, cdn_url, status, file_id, project_name, error_message)
+                (local_path, remote_path, content_sha1, content_length, uploaded_at, cdn_url, status, file_id, project_name, error_message, resource_id, resource_type)
                 VALUES
-                (@localPath, @remotePath, @contentSha1, @contentLength, @uploadedAt, @cdnUrl, @status, @fileId, @projectName, @errorMessage);
+                (@localPath, @remotePath, @contentSha1, @contentLength, @uploadedAt, @cdnUrl, @status, @fileId, @projectName, @errorMessage, @resourceId, @resourceType);
                 SELECT last_insert_rowid();
             ";
 
@@ -97,6 +112,8 @@ namespace AssetProcessor.Data {
             command.Parameters.AddWithValue("@fileId", (object?)record.FileId ?? DBNull.Value);
             command.Parameters.AddWithValue("@projectName", (object?)record.ProjectName ?? DBNull.Value);
             command.Parameters.AddWithValue("@errorMessage", (object?)record.ErrorMessage ?? DBNull.Value);
+            command.Parameters.AddWithValue("@resourceId", (object?)record.ResourceId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@resourceType", (object?)record.ResourceType ?? DBNull.Value);
 
             var result = await command.ExecuteScalarAsync(ct);
             var id = Convert.ToInt64(result);
@@ -120,7 +137,9 @@ namespace AssetProcessor.Data {
                     status = @status,
                     file_id = @fileId,
                     project_name = @projectName,
-                    error_message = @errorMessage
+                    error_message = @errorMessage,
+                    resource_id = @resourceId,
+                    resource_type = @resourceType
                 WHERE id = @id
             ";
 
@@ -135,6 +154,8 @@ namespace AssetProcessor.Data {
             command.Parameters.AddWithValue("@fileId", (object?)record.FileId ?? DBNull.Value);
             command.Parameters.AddWithValue("@projectName", (object?)record.ProjectName ?? DBNull.Value);
             command.Parameters.AddWithValue("@errorMessage", (object?)record.ErrorMessage ?? DBNull.Value);
+            command.Parameters.AddWithValue("@resourceId", (object?)record.ResourceId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@resourceType", (object?)record.ResourceType ?? DBNull.Value);
 
             await command.ExecuteNonQueryAsync(ct);
         }
@@ -293,6 +314,9 @@ namespace AssetProcessor.Data {
         }
 
         private static UploadRecord ReadRecord(SqliteDataReader reader) {
+            var resourceIdOrdinal = TryGetOrdinal(reader, "resource_id");
+            var resourceTypeOrdinal = TryGetOrdinal(reader, "resource_type");
+
             return new UploadRecord {
                 Id = reader.GetInt64(reader.GetOrdinal("id")),
                 LocalPath = reader.GetString(reader.GetOrdinal("local_path")),
@@ -304,8 +328,63 @@ namespace AssetProcessor.Data {
                 Status = reader.GetString(reader.GetOrdinal("status")),
                 FileId = reader.IsDBNull(reader.GetOrdinal("file_id")) ? null : reader.GetString(reader.GetOrdinal("file_id")),
                 ProjectName = reader.IsDBNull(reader.GetOrdinal("project_name")) ? null : reader.GetString(reader.GetOrdinal("project_name")),
-                ErrorMessage = reader.IsDBNull(reader.GetOrdinal("error_message")) ? null : reader.GetString(reader.GetOrdinal("error_message"))
+                ErrorMessage = reader.IsDBNull(reader.GetOrdinal("error_message")) ? null : reader.GetString(reader.GetOrdinal("error_message")),
+                ResourceId = resourceIdOrdinal >= 0 && !reader.IsDBNull(resourceIdOrdinal) ? reader.GetInt32(resourceIdOrdinal) : null,
+                ResourceType = resourceTypeOrdinal >= 0 && !reader.IsDBNull(resourceTypeOrdinal) ? reader.GetString(resourceTypeOrdinal) : null
             };
+        }
+
+        private static int TryGetOrdinal(SqliteDataReader reader, string columnName) {
+            try {
+                return reader.GetOrdinal(columnName);
+            } catch (ArgumentOutOfRangeException) {
+                return -1;
+            }
+        }
+
+        public async Task<UploadRecord?> GetByResourceIdAsync(int resourceId, string resourceType, CancellationToken ct = default) {
+            await EnsureInitializedAsync(ct);
+
+            await using var connection = new SqliteConnection(_connectionString);
+            await connection.OpenAsync(ct);
+
+            var sql = "SELECT * FROM upload_history WHERE resource_id = @resourceId AND resource_type = @resourceType ORDER BY uploaded_at DESC LIMIT 1";
+            await using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@resourceId", resourceId);
+            command.Parameters.AddWithValue("@resourceType", resourceType);
+
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            if (await reader.ReadAsync(ct)) {
+                return ReadRecord(reader);
+            }
+            return null;
+        }
+
+        public async Task<IReadOnlyList<UploadRecord>> GetByResourceIdsAsync(IEnumerable<int> resourceIds, string resourceType, CancellationToken ct = default) {
+            await EnsureInitializedAsync(ct);
+
+            var idList = resourceIds.ToList();
+            if (idList.Count == 0) return Array.Empty<UploadRecord>();
+
+            await using var connection = new SqliteConnection(_connectionString);
+            await connection.OpenAsync(ct);
+
+            // Используем параметры для безопасности
+            var parameters = string.Join(",", idList.Select((_, i) => $"@id{i}"));
+            var sql = $"SELECT * FROM upload_history WHERE resource_id IN ({parameters}) AND resource_type = @resourceType ORDER BY uploaded_at DESC";
+            await using var command = new SqliteCommand(sql, connection);
+
+            for (int i = 0; i < idList.Count; i++) {
+                command.Parameters.AddWithValue($"@id{i}", idList[i]);
+            }
+            command.Parameters.AddWithValue("@resourceType", resourceType);
+
+            var records = new List<UploadRecord>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct)) {
+                records.Add(ReadRecord(reader));
+            }
+            return records;
         }
 
         public void Dispose() {

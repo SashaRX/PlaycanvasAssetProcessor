@@ -65,6 +65,14 @@ public class ConnectionStateService : IConnectionStateService {
         }
     }
 
+    /// <summary>
+    /// Статусы, указывающие что файл отсутствует или повреждён и требует загрузки.
+    /// Должен соответствовать AssetDownloadCoordinator.DownloadableStatuses.
+    /// </summary>
+    private static readonly HashSet<string> DownloadableStatuses = new(
+        ["On Server", "Missing", "Error", "Size Mismatch", "Hash ERROR", "Corrupted", "Empty File"],
+        StringComparer.OrdinalIgnoreCase);
+
     public bool HasMissingFiles<TTexture, TModel, TMaterial>(
         IEnumerable<TTexture> textures,
         IEnumerable<TModel> models,
@@ -73,22 +81,13 @@ public class ConnectionStateService : IConnectionStateService {
         where TModel : BaseResource
         where TMaterial : BaseResource {
         // Проверяем текстуры
-        bool hasMissingTextures = textures.Any(t =>
-            t.Status == "On Server" ||
-            t.Status == "Missing" ||
-            t.Status == "Error");
+        bool hasMissingTextures = textures.Any(t => NeedsDownload(t.Status));
 
         // Проверяем модели
-        bool hasMissingModels = models.Any(m =>
-            m.Status == "On Server" ||
-            m.Status == "Missing" ||
-            m.Status == "Error");
+        bool hasMissingModels = models.Any(m => NeedsDownload(m.Status));
 
         // Проверяем материалы
-        bool hasMissingMaterials = materials.Any(m =>
-            m.Status == "On Server" ||
-            m.Status == "Missing" ||
-            m.Status == "Error");
+        bool hasMissingMaterials = materials.Any(m => NeedsDownload(m.Status));
 
         bool hasMissing = hasMissingTextures || hasMissingModels || hasMissingMaterials;
 
@@ -97,6 +96,14 @@ public class ConnectionStateService : IConnectionStateService {
         }
 
         return hasMissing;
+    }
+
+    /// <summary>
+    /// Проверяет, требует ли статус загрузки файла.
+    /// </summary>
+    private static bool NeedsDownload(string? status) {
+        if (string.IsNullOrEmpty(status)) return true;
+        return DownloadableStatuses.Contains(status);
     }
 
     public ConnectionState DetermineState(bool hasUpdates, bool hasMissingFiles) {

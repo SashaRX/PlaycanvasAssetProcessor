@@ -72,5 +72,15 @@ namespace AssetProcessor.Data {
         /// Очищает все записи
         /// </summary>
         Task ClearAllAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Получает запись по PlayCanvas ResourceId и типу ресурса
+        /// </summary>
+        Task<UploadRecord?> GetByResourceIdAsync(int resourceId, string resourceType, CancellationToken ct = default);
+
+        /// <summary>
+        /// Получает записи для нескольких ресурсов по ResourceId и типу
+        /// </summary>
+        Task<IReadOnlyList<UploadRecord>> GetByResourceIdsAsync(IEnumerable<int> resourceIds, string resourceType, CancellationToken ct = default);
     }
 }

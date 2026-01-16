@@ -323,25 +323,46 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
     /// Восстанавливает состояние загрузки для ресурса из базы данных
     /// </summary>
     public async Task RestoreUploadStateAsync(BaseResource resource, CancellationToken ct = default) {
-        if (string.IsNullOrEmpty(resource.Path)) return;
-
         try {
-            var record = await _uploadStateService.GetByLocalPathAsync(resource.Path, ct);
+            UploadRecord? record = null;
+
+            // Сначала пробуем найти по ResourceId (новый способ)
+            var resourceType = GetResourceType(resource);
+            if (resourceType != null) {
+                record = await _uploadStateService.GetByResourceIdAsync(resource.ID, resourceType, ct);
+            }
+
+            // Если не нашли по ResourceId, пробуем по локальному пути (старый способ)
+            if (record == null && !string.IsNullOrEmpty(resource.Path)) {
+                record = await _uploadStateService.GetByLocalPathAsync(resource.Path, ct);
+            }
+
             if (record != null && record.Status == "Uploaded") {
                 resource.UploadedHash = record.ContentSha1;
                 resource.RemoteUrl = record.CdnUrl;
                 resource.LastUploadedAt = record.UploadedAt;
                 resource.UploadStatus = "Uploaded";
 
-                // Check if file has changed since last upload
-                var currentHash = ComputeFileHash(resource.Path);
-                if (!string.Equals(currentHash, record.ContentSha1, StringComparison.OrdinalIgnoreCase)) {
-                    resource.UploadStatus = "Outdated";
+                // Check if file has changed since last upload (only if we have a local file)
+                if (!string.IsNullOrEmpty(resource.Path) && File.Exists(resource.Path)) {
+                    var currentHash = ComputeFileHash(resource.Path);
+                    if (!string.Equals(currentHash, record.ContentSha1, StringComparison.OrdinalIgnoreCase)) {
+                        resource.UploadStatus = "Outdated";
+                    }
                 }
             }
         } catch (Exception ex) {
-            Logger.Warn(ex, $"Failed to restore upload state for {resource.Path}");
+            Logger.Warn(ex, $"Failed to restore upload state for resource {resource.ID}");
         }
+    }
+
+    private static string? GetResourceType(BaseResource resource) {
+        return resource switch {
+            Resources.ModelResource => "Model",
+            Resources.MaterialResource => "Material",
+            Resources.TextureResource => "Texture",
+            _ => null
+        };
     }
 
     /// <summary>

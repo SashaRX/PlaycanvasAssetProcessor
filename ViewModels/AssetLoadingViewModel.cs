@@ -153,14 +153,30 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
             LoadingStatus = "Restoring upload states...";
             var uploadResult = await Task.Run(async () =>
-                await RestoreUploadStatesAsync(result.Textures, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+                await RestoreUploadStatesAsync(result.Textures, result.Models, result.Materials, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
 
-            // Apply upload states
+            // Apply upload states for textures
             foreach (var (texture, status, hash, url, uploadedAt) in uploadResult.RestoredTextures) {
                 texture.UploadStatus = status;
                 texture.UploadedHash = hash;
                 texture.RemoteUrl = url;
                 texture.LastUploadedAt = uploadedAt;
+            }
+
+            // Apply upload states for models
+            foreach (var (model, status, hash, url, uploadedAt) in uploadResult.RestoredModels) {
+                model.UploadStatus = status;
+                model.UploadedHash = hash;
+                model.RemoteUrl = url;
+                model.LastUploadedAt = uploadedAt;
+            }
+
+            // Apply upload states for materials
+            foreach (var (material, status, hash, url, uploadedAt) in uploadResult.RestoredMaterials) {
+                material.UploadStatus = status;
+                material.UploadedHash = hash;
+                material.RemoteUrl = url;
+                material.LastUploadedAt = uploadedAt;
             }
 
             // NOW send to UI with all data already prepared (SubGroupName set, upload states restored)
@@ -403,42 +419,89 @@ public partial class AssetLoadingViewModel : ObservableObject {
     }
 
     /// <summary>
-    /// Restores upload states from database.
+    /// Restores upload states from database for all resource types.
     /// </summary>
     private async Task<UploadStatesRestoredEventArgs> RestoreUploadStatesAsync(
         IReadOnlyList<TextureResource> textures,
+        IReadOnlyList<ModelResource> models,
+        IReadOnlyList<MaterialResource> materials,
         CancellationToken ct) {
 
         var restoredTextures = new List<(TextureResource texture, string status, string? hash, string? url, DateTime? uploadedAt)>();
+        var restoredModels = new List<(ModelResource model, string status, string? hash, string? url, DateTime? uploadedAt)>();
+        var restoredMaterials = new List<(MaterialResource material, string status, string? hash, string? url, DateTime? uploadedAt)>();
 
         try {
             using var uploadStateService = new Data.UploadStateService();
             await uploadStateService.InitializeAsync();
 
+            // Restore textures
             foreach (var texture in textures) {
                 ct.ThrowIfCancellationRequested();
 
-                if (string.IsNullOrEmpty(texture.Path)) continue;
+                var record = await uploadStateService.GetByResourceIdAsync(texture.ID, "Texture");
 
-                var ktx2Path = Path.ChangeExtension(texture.Path, ".ktx2");
-                if (string.IsNullOrEmpty(ktx2Path) || !File.Exists(ktx2Path)) continue;
+                // Fallback: try by local path (legacy)
+                if (record == null && !string.IsNullOrEmpty(texture.Path)) {
+                    var ktx2Path = Path.ChangeExtension(texture.Path, ".ktx2");
+                    if (!string.IsNullOrEmpty(ktx2Path) && File.Exists(ktx2Path)) {
+                        record = await uploadStateService.GetByLocalPathAsync(ktx2Path);
+                    }
+                }
 
-                var record = await uploadStateService.GetByLocalPathAsync(ktx2Path);
                 if (record != null && record.Status == "Uploaded") {
-                    // Check if file has changed since last upload
-                    using var stream = File.OpenRead(ktx2Path);
-                    var currentHash = Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(stream)).ToLowerInvariant();
+                    string status = "Uploaded";
 
-                    string status = string.Equals(currentHash, record.ContentSha1, StringComparison.OrdinalIgnoreCase)
-                        ? "Uploaded"
-                        : "Outdated";
+                    // Check if file changed since upload
+                    if (!string.IsNullOrEmpty(texture.Path)) {
+                        var ktx2Path = Path.ChangeExtension(texture.Path, ".ktx2");
+                        if (!string.IsNullOrEmpty(ktx2Path) && File.Exists(ktx2Path)) {
+                            status = CheckFileHashStatus(ktx2Path, record.ContentSha1);
+                        }
+                    }
 
                     restoredTextures.Add((texture, status, record.ContentSha1, record.CdnUrl, record.UploadedAt));
                 }
             }
 
-            if (restoredTextures.Count > 0) {
-                logService.LogInfo($"Restored upload state for {restoredTextures.Count} textures");
+            // Restore models
+            foreach (var model in models) {
+                ct.ThrowIfCancellationRequested();
+
+                var record = await uploadStateService.GetByResourceIdAsync(model.ID, "Model");
+
+                if (record != null && record.Status == "Uploaded") {
+                    string status = "Uploaded";
+
+                    // Check if GLB file changed since upload
+                    if (!string.IsNullOrEmpty(record.LocalPath) && File.Exists(record.LocalPath)) {
+                        status = CheckFileHashStatus(record.LocalPath, record.ContentSha1);
+                    }
+
+                    restoredModels.Add((model, status, record.ContentSha1, record.CdnUrl, record.UploadedAt));
+                }
+            }
+
+            // Restore materials
+            foreach (var material in materials) {
+                ct.ThrowIfCancellationRequested();
+
+                var record = await uploadStateService.GetByResourceIdAsync(material.ID, "Material");
+
+                if (record != null && record.Status == "Uploaded") {
+                    string status = "Uploaded";
+
+                    // Check if material JSON changed since upload
+                    if (!string.IsNullOrEmpty(record.LocalPath) && File.Exists(record.LocalPath)) {
+                        status = CheckFileHashStatus(record.LocalPath, record.ContentSha1);
+                    }
+
+                    restoredMaterials.Add((material, status, record.ContentSha1, record.CdnUrl, record.UploadedAt));
+                }
+            }
+
+            if (restoredTextures.Count > 0 || restoredModels.Count > 0 || restoredMaterials.Count > 0) {
+                logService.LogInfo($"Restored upload states: {restoredTextures.Count} textures, {restoredModels.Count} models, {restoredMaterials.Count} materials");
             }
 
         } catch (OperationCanceledException) {
@@ -447,7 +510,26 @@ public partial class AssetLoadingViewModel : ObservableObject {
             logService.LogWarn($"Failed to restore upload states: {ex.Message}");
         }
 
-        return new UploadStatesRestoredEventArgs(restoredTextures);
+        return new UploadStatesRestoredEventArgs(restoredTextures, restoredModels, restoredMaterials);
+    }
+
+    /// <summary>
+    /// Checks if file hash matches the uploaded hash.
+    /// </summary>
+    private static string CheckFileHashStatus(string filePath, string? uploadedHash) {
+        if (string.IsNullOrEmpty(uploadedHash)) {
+            return "Uploaded";
+        }
+
+        try {
+            using var stream = File.OpenRead(filePath);
+            var currentHash = Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(stream)).ToLowerInvariant();
+            return string.Equals(currentHash, uploadedHash, StringComparison.OrdinalIgnoreCase)
+                ? "Uploaded"
+                : "Outdated";
+        } catch {
+            return "Uploaded"; // If can't check, assume OK
+        }
     }
 
     /// <summary>
@@ -579,11 +661,17 @@ public class VirtualORMTexturesGeneratedEventArgs : EventArgs {
 /// </summary>
 public class UploadStatesRestoredEventArgs : EventArgs {
     public IReadOnlyList<(TextureResource texture, string status, string? hash, string? url, DateTime? uploadedAt)> RestoredTextures { get; }
-    public int RestoredCount => RestoredTextures.Count;
+    public IReadOnlyList<(ModelResource model, string status, string? hash, string? url, DateTime? uploadedAt)> RestoredModels { get; }
+    public IReadOnlyList<(MaterialResource material, string status, string? hash, string? url, DateTime? uploadedAt)> RestoredMaterials { get; }
+    public int RestoredCount => RestoredTextures.Count + RestoredModels.Count + RestoredMaterials.Count;
 
     public UploadStatesRestoredEventArgs(
-        IReadOnlyList<(TextureResource, string, string?, string?, DateTime?)> restoredTextures) {
+        IReadOnlyList<(TextureResource, string, string?, string?, DateTime?)> restoredTextures,
+        IReadOnlyList<(ModelResource, string, string?, string?, DateTime?)>? restoredModels = null,
+        IReadOnlyList<(MaterialResource, string, string?, string?, DateTime?)>? restoredMaterials = null) {
         RestoredTextures = restoredTextures;
+        RestoredModels = restoredModels ?? Array.Empty<(ModelResource, string, string?, string?, DateTime?)>();
+        RestoredMaterials = restoredMaterials ?? Array.Empty<(MaterialResource, string, string?, string?, DateTime?)>();
     }
 }
 

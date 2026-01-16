@@ -112,7 +112,8 @@
       "Bash(dotnet add:*)",
       "Bash(git rev-parse:*)",
       "Bash(git stash:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(dotnet nuget:*)"
     ],
     "deny": [],
     "ask": []

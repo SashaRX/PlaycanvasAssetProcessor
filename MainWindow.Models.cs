@@ -309,11 +309,21 @@ namespace AssetProcessor {
             var modelsToExport = viewModel.Models.Where(m => m.ExportToServer).ToList();
 
             if (!modelsToExport.Any()) {
-                MessageBox.Show(
-                    "No assets marked for export.\nUse 'Select' to mark models and their related assets.",
-                    "Export",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                // Check if there are other assets marked but no models
+                var markedMaterials = viewModel.Materials.Count(m => m.ExportToServer);
+                var markedTextures = viewModel.Textures.Count(t => t.ExportToServer);
+
+                string message;
+                if (markedMaterials > 0 || markedTextures > 0) {
+                    message = $"No models marked for export.\n\n" +
+                              $"Currently marked: {markedMaterials} materials, {markedTextures} textures\n\n" +
+                              $"The export requires at least one model. Go to the Models tab, select models, " +
+                              $"and click 'Select' to mark them with related assets.";
+                } else {
+                    message = "No assets marked for export.\nUse 'Select' to mark models and their related assets.";
+                }
+
+                MessageBox.Show(message, "Export", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -619,7 +629,7 @@ namespace AssetProcessor {
                     break;
 
                 case "Materials":
-                    // Mark selected materials and their textures
+                    // Mark selected materials, their textures, and related models
                     var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
                     if (!selectedMaterials.Any()) {
                         MessageBox.Show(
@@ -628,6 +638,15 @@ namespace AssetProcessor {
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
                         return;
+                    }
+
+                    // Find and mark related models (reverse lookup)
+                    var relatedModelsForMaterials = FindRelatedModels(selectedMaterials);
+                    foreach (var model in relatedModelsForMaterials) {
+                        if (!model.ExportToServer) {
+                            model.ExportToServer = true;
+                            modelsMarked++;
+                        }
                     }
 
                     foreach (var material in selectedMaterials) {
@@ -945,6 +964,59 @@ namespace AssetProcessor {
                 }
             }
             return baseName;
+        }
+
+        /// <summary>
+        /// Находит модели, связанные с материалами (обратный поиск)
+        /// Использует ту же логику, что и FindRelatedAssets, но в обратном направлении
+        /// </summary>
+        private List<ModelResource> FindRelatedModels(List<MaterialResource> materials) {
+            var relatedModels = new HashSet<ModelResource>();
+
+            logService.LogInfo($"[FindRelatedModels] Processing {materials.Count} materials to find related models");
+
+            foreach (var material in materials) {
+                // Получаем путь папки материала
+                string? materialFolderPath = null;
+                if (material.Parent.HasValue && material.Parent.Value != 0) {
+                    folderPaths.TryGetValue(material.Parent.Value, out materialFolderPath);
+                }
+
+                var materialBaseName = ExtractBaseName(material.Name);
+
+                foreach (var model in viewModel.Models) {
+                    bool isRelated = false;
+
+                    // По Parent ID - модели в той же папке
+                    if (material.Parent.HasValue && model.Parent == material.Parent) {
+                        isRelated = true;
+                    }
+                    // По пути папки - модель в родительской папке материала
+                    else if (!string.IsNullOrEmpty(materialFolderPath) && model.Parent.HasValue) {
+                        if (folderPaths.TryGetValue(model.Parent.Value, out var modelFolderPath)) {
+                            // Материал в подпапке модели
+                            if (materialFolderPath.StartsWith(modelFolderPath, StringComparison.OrdinalIgnoreCase)) {
+                                isRelated = true;
+                            }
+                        }
+                    }
+                    // По имени
+                    else if (!string.IsNullOrEmpty(materialBaseName) && !string.IsNullOrEmpty(model.Name)) {
+                        var modelBaseName = ExtractBaseName(model.Name);
+                        if (materialBaseName.StartsWith(modelBaseName, StringComparison.OrdinalIgnoreCase) ||
+                            modelBaseName.StartsWith(materialBaseName, StringComparison.OrdinalIgnoreCase)) {
+                            isRelated = true;
+                        }
+                    }
+
+                    if (isRelated) {
+                        relatedModels.Add(model);
+                        logService.LogInfo($"[FindRelatedModels] Found related model: {model.Name} for material: {material.Name}");
+                    }
+                }
+            }
+
+            return relatedModels.ToList();
         }
     }
 }

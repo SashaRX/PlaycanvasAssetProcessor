@@ -39,7 +39,7 @@ namespace AssetProcessor.ViewModels {
         private int _processingProgress;
 
         [ObservableProperty]
-        private string _fbx2glTFPath = "FBX2glTF-windows-x64.exe";
+        private string _fbx2glTFPath = "FBX2glTF-windows-x86_64.exe";
 
         [ObservableProperty]
         private string _gltfPackPath = "gltfpack.exe";

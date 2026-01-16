@@ -139,6 +139,28 @@
     </None>
   </ItemGroup>
 
+  <!-- Автоматическое скачивание FBX2glTF (Godot fork) при сборке -->
+  <PropertyGroup>
+    <FBX2glTFVersion>0.13.1</FBX2glTFVersion>
+    <FBX2glTFFileName>FBX2glTF-windows-x86_64.exe</FBX2glTFFileName>
+    <FBX2glTFZipName>FBX2glTF-windows-x86_64.zip</FBX2glTFZipName>
+    <FBX2glTFPath>$(ProjectDir)Tools\$(FBX2glTFFileName)</FBX2glTFPath>
+    <FBX2glTFZipPath>$(ProjectDir)Tools\$(FBX2glTFZipName)</FBX2glTFZipPath>
+    <FBX2glTFUrl>https://github.com/godotengine/FBX2glTF/releases/download/v$(FBX2glTFVersion)/$(FBX2glTFZipName)</FBX2glTFUrl>
+  </PropertyGroup>
+
+  <Target Name="DownloadFBX2glTF" BeforeTargets="PrepareForBuild" Condition="!Exists('$(FBX2glTFPath)')">
+    <Message Text="FBX2glTF not found. Downloading from GitHub (Godot fork)..." Importance="high" />
+    <MakeDir Directories="$(ProjectDir)Tools" Condition="!Exists('$(ProjectDir)Tools')" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '$(FBX2glTFUrl)' -OutFile '$(FBX2glTFZipPath)'; Expand-Archive -Path '$(FBX2glTFZipPath)' -DestinationPath '$(ProjectDir)Tools' -Force; Move-Item -Path '$(ProjectDir)Tools\FBX2glTF-windows-x86_64\$(FBX2glTFFileName)' -Destination '$(FBX2glTFPath)' -Force; Remove-Item '$(ProjectDir)Tools\FBX2glTF-windows-x86_64' -Recurse -Force; Remove-Item '$(FBX2glTFZipPath)' -Force -ErrorAction SilentlyContinue&quot;" />
+    <Message Text="FBX2glTF downloaded and extracted to $(FBX2glTFPath)" Importance="high" />
+  </Target>
+
+  <!-- Копирование FBX2glTF в output директорию после сборки -->
+  <Target Name="CopyFBX2glTF" AfterTargets="Build" Condition="Exists('$(FBX2glTFPath)')">
+    <Copy SourceFiles="$(FBX2glTFPath)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
   <!-- Оставляем только английские и русские ресурсы после публикации -->
   <ItemGroup Condition="'$(PublishDir)' != ''">
     <SatelliteDirectoriesToDelete Include="$(PublishDir)??\" Exclude="$(PublishDir)en\;$(PublishDir)ru\" />

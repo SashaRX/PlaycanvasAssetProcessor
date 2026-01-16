@@ -349,7 +349,7 @@ namespace AssetProcessor {
             // Загружаем настройки конвертации моделей для FBX2glTF и gltfpack
             var modelSettings = ModelConversionSettingsManager.LoadSettings();
             var fbx2glTFPath = string.IsNullOrWhiteSpace(modelSettings.FBX2glTFExecutablePath)
-                ? "FBX2glTF-windows-x64.exe"
+                ? "FBX2glTF-windows-x86_64.exe"
                 : modelSettings.FBX2glTFExecutablePath;
             var gltfPackPath = string.IsNullOrWhiteSpace(modelSettings.GltfPackExecutablePath)
                 ? "gltfpack.exe"

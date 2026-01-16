@@ -47,13 +47,14 @@ ModelConversion/
 # Или оригинальную версию (устаревшая)
 # https://github.com/facebookincubator/FBX2glTF/releases
 
-# Поместить FBX2glTF-windows-x64.exe в удобное место
+# Поместить FBX2glTF-windows-x86_64.exe в удобное место
 # Путь можно указать в GUI через кнопку "Browse..."
+# При сборке проекта FBX2glTF скачивается автоматически в папку Tools/
 ```
 
 **Проверка:**
 ```bash
-FBX2glTF-windows-x64.exe --help
+FBX2glTF-windows-x86_64.exe --help
 ```
 
 **Примечание:** Godot FBX2glTF совместим с оригинальной версией по параметрам командной строки.
@@ -173,7 +174,7 @@ var result = await pipeline.ConvertAsync("model.gltf", outputDir, settings);
 
 В верхней панели окна конвертации:
 
-1. **FBX2glTF**: Укажите путь к `FBX2glTF-windows-x64.exe`
+1. **FBX2glTF**: Укажите путь к `FBX2glTF-windows-x86_64.exe`
    - Введите путь вручную или нажмите **Browse...** для выбора файла
    - Рекомендуется: Godot FBX2glTF (см. раздел "Установка инструментов")
 
@@ -309,7 +310,7 @@ using AssetProcessor.ModelConversion.Pipeline;
 
 // Создаём пайплайн
 var pipeline = new ModelConversionPipeline(
-    fbx2glTFPath: @"C:\Tools\FBX2glTF-windows-x64.exe",
+    fbx2glTFPath: @"C:\Tools\FBX2glTF-windows-x86_64.exe",
     gltfPackPath: @"C:\Tools\gltfpack.exe"
 );
 

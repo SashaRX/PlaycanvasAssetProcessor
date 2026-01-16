@@ -281,7 +281,7 @@ namespace AssetProcessor.ModelConversion.Settings {
         /// <summary>
         /// Путь к FBX2glTF.exe
         /// </summary>
-        public string FBX2glTFExecutablePath { get; set; } = "FBX2glTF-windows-x64.exe";
+        public string FBX2glTFExecutablePath { get; set; } = "FBX2glTF-windows-x86_64.exe";
 
         /// <summary>
         /// Путь к gltfpack.exe

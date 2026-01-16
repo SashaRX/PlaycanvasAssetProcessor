@@ -5134,7 +5134,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Load FBX2glTF and gltfpack paths from global settings
                 var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
                 var fbx2glTFPath = string.IsNullOrWhiteSpace(modelConversionSettings.FBX2glTFExecutablePath)
-                    ? "FBX2glTF-windows-x64.exe"
+                    ? "FBX2glTF-windows-x86_64.exe"
                     : modelConversionSettings.FBX2glTFExecutablePath;
                 var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
                     ? "gltfpack.exe"

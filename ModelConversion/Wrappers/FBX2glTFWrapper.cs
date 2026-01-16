@@ -12,10 +12,32 @@ namespace AssetProcessor.ModelConversion.Wrappers {
     /// </summary>
     public class FBX2glTFWrapper {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private const string DefaultExecutableName = "FBX2glTF-windows-x86_64.exe";
         private readonly string _executablePath;
 
         public FBX2glTFWrapper(string? executablePath = null) {
-            _executablePath = executablePath ?? "FBX2glTF-windows-x64.exe";
+            _executablePath = ResolveExecutablePath(executablePath);
+        }
+
+        /// <summary>
+        /// Определяет путь к исполняемому файлу FBX2glTF
+        /// </summary>
+        private static string ResolveExecutablePath(string? providedPath) {
+            // Если путь указан явно и файл существует - используем его
+            if (!string.IsNullOrWhiteSpace(providedPath) && File.Exists(providedPath)) {
+                return providedPath;
+            }
+
+            // Ищем рядом с exe приложения
+            var appDir = AppDomain.CurrentDomain.BaseDirectory;
+            var localPath = Path.Combine(appDir, DefaultExecutableName);
+            if (File.Exists(localPath)) {
+                Logger.Info($"Found FBX2glTF in application directory: {localPath}");
+                return localPath;
+            }
+
+            // Возвращаем указанный путь или дефолтное имя (для поиска в PATH)
+            return providedPath ?? DefaultExecutableName;
         }
 
         /// <summary>

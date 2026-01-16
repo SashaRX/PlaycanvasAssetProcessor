@@ -429,7 +429,7 @@ namespace AssetProcessor {
             }
 
             try {
-                var path = string.IsNullOrWhiteSpace(FBX2glTFExecutableBox.Text) ? "FBX2glTF-windows-x64.exe" : FBX2glTFExecutableBox.Text;
+                var path = string.IsNullOrWhiteSpace(FBX2glTFExecutableBox.Text) ? "FBX2glTF-windows-x86_64.exe" : FBX2glTFExecutableBox.Text;
 
                 ProcessStartInfo startInfo = new() {
                     FileName = path,

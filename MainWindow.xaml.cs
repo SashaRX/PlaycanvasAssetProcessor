@@ -4585,8 +4585,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 );
 
                 // Обновляем статусы текстур и сохраняем в БД
+                logger.Debug($"Results count: {result.Results.Count}, selectedTextures count: {selectedTextures.Count}");
                 foreach (var item in selectedTextures) {
-                    var uploadResult = result.Results.FirstOrDefault(r => r.LocalPath == item.Ktx2Path);
+                    logger.Debug($"Looking for path: '{item.Ktx2Path}'");
+                    foreach (var r in result.Results) {
+                        logger.Debug($"  Result path: '{r.LocalPath}' Success={r.Success} Skipped={r.Skipped}");
+                    }
+                    var uploadResult = result.Results.FirstOrDefault(r =>
+                        string.Equals(r.LocalPath, item.Ktx2Path, StringComparison.OrdinalIgnoreCase));
+                    logger.Debug($"uploadResult found: {uploadResult != null}, Success: {uploadResult?.Success}");
                     if (uploadResult?.Success == true) {
                         item.Texture.UploadStatus = "Uploaded";
                         item.Texture.RemoteUrl = uploadResult.CdnUrl;

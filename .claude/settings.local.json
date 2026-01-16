@@ -111,7 +111,8 @@
       "WebFetch(domain:api.github.com)",
       "Bash(dotnet add:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []

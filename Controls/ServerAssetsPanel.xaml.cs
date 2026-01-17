@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using AssetProcessor.Helpers;
 using AssetProcessor.Settings;
 using AssetProcessor.Upload;
 using AssetProcessor.ViewModels;
@@ -556,8 +557,11 @@ namespace AssetProcessor.Controls {
             }
 
             if (!string.IsNullOrEmpty(selectedAsset.CdnUrl)) {
-                Clipboard.SetText(selectedAsset.CdnUrl);
-                StatusText.Text = $"Copied: {selectedAsset.CdnUrl}";
+                if (ClipboardHelper.SetText(selectedAsset.CdnUrl)) {
+                    StatusText.Text = $"Copied: {selectedAsset.CdnUrl}";
+                } else {
+                    StatusText.Text = "Failed to copy to clipboard. Try again.";
+                }
             } else {
                 StatusText.Text = "No CDN URL available for this file.";
             }

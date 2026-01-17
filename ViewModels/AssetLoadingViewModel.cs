@@ -1,7 +1,9 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
+using AssetProcessor.Settings;
 using AssetProcessor.TextureConversion.Core;
+using AssetProcessor.Upload;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NLog;
@@ -72,6 +74,11 @@ public partial class AssetLoadingViewModel : ObservableObject {
     /// Raised when an error occurs during loading.
     /// </summary>
     public event EventHandler<AssetLoadErrorEventArgs>? ErrorOccurred;
+
+    /// <summary>
+    /// Raised when B2 verification completes (background check).
+    /// </summary>
+    public event EventHandler<B2VerificationCompletedEventArgs>? B2VerificationCompleted;
 
     #endregion
 
@@ -201,6 +208,9 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
             LoadingStatus = "Loading complete";
             logService.LogInfo("=== AssetLoadingViewModel.LoadAssetsAsync COMPLETED ===");
+
+            // Start background B2 verification (fire and forget)
+            _ = VerifyB2StatusInBackgroundAsync(result.Textures, result.Models, result.Materials, request.ProjectName);
 
         } catch (OperationCanceledException) {
             logService.LogInfo("Asset loading cancelled");
@@ -533,6 +543,121 @@ public partial class AssetLoadingViewModel : ObservableObject {
     }
 
     /// <summary>
+    /// Verifies B2 upload status in background by checking if files exist on server.
+    /// Updates resources that are marked as "Uploaded" but not found on B2.
+    /// </summary>
+    private async Task VerifyB2StatusInBackgroundAsync(
+        IReadOnlyList<TextureResource> textures,
+        IReadOnlyList<ModelResource> models,
+        IReadOnlyList<MaterialResource> materials,
+        string projectName) {
+
+        // Skip if B2 is not configured
+        if (string.IsNullOrEmpty(AppSettings.Default.B2KeyId) ||
+            string.IsNullOrEmpty(AppSettings.Default.B2BucketName)) {
+            logger.Debug("B2 verification skipped - not configured");
+            return;
+        }
+
+        try {
+            logService.LogInfo("Starting background B2 verification...");
+
+            // Collect all resources with "Uploaded" status
+            var uploadedResources = new List<BaseResource>();
+            uploadedResources.AddRange(textures.Where(t => t.UploadStatus == "Uploaded"));
+            uploadedResources.AddRange(models.Where(m => m.UploadStatus == "Uploaded"));
+            uploadedResources.AddRange(materials.Where(m => m.UploadStatus == "Uploaded"));
+
+            if (uploadedResources.Count == 0) {
+                logger.Debug("B2 verification skipped - no uploaded resources");
+                return;
+            }
+
+            // Get B2 credentials
+            if (!AppSettings.Default.TryGetDecryptedB2ApplicationKey(out var appKey) || string.IsNullOrEmpty(appKey)) {
+                logger.Warn("B2 verification failed - could not decrypt application key");
+                B2VerificationCompleted?.Invoke(this, B2VerificationCompletedEventArgs.Failed("Could not decrypt B2 key"));
+                return;
+            }
+
+            using var b2Service = new B2UploadService();
+            var settings = new B2UploadSettings {
+                KeyId = AppSettings.Default.B2KeyId,
+                ApplicationKey = appKey,
+                BucketName = AppSettings.Default.B2BucketName,
+                BucketId = AppSettings.Default.B2BucketId,
+                PathPrefix = AppSettings.Default.B2PathPrefix
+            };
+
+            if (!await b2Service.AuthorizeAsync(settings)) {
+                logger.Warn("B2 verification failed - authorization failed");
+                B2VerificationCompleted?.Invoke(this, B2VerificationCompletedEventArgs.Failed("B2 authorization failed"));
+                return;
+            }
+
+            // List all files from B2 for this project
+            var b2Files = await b2Service.ListFilesAsync(projectName, 10000);
+            var b2FilePaths = new HashSet<string>(b2Files.Select(f => f.FileName), StringComparer.OrdinalIgnoreCase);
+
+            var notFoundOnServer = new List<BaseResource>();
+            int verifiedCount = 0;
+
+            foreach (var resource in uploadedResources) {
+                if (string.IsNullOrEmpty(resource.RemoteUrl)) continue;
+
+                // Extract remote path from URL
+                var remotePath = ExtractRemotePathFromUrl(resource.RemoteUrl, projectName);
+                if (string.IsNullOrEmpty(remotePath)) continue;
+
+                if (b2FilePaths.Contains(remotePath)) {
+                    verifiedCount++;
+                } else {
+                    // File not found on B2 - update status
+                    resource.UploadStatus = "Not on Server";
+                    notFoundOnServer.Add(resource);
+                    logger.Debug($"B2 verification: {resource.Name} not found at {remotePath}");
+                }
+            }
+
+            if (notFoundOnServer.Count > 0) {
+                logService.LogWarn($"B2 verification: {notFoundOnServer.Count} files not found on server");
+            } else {
+                logService.LogInfo($"B2 verification complete: {verifiedCount} files verified");
+            }
+
+            B2VerificationCompleted?.Invoke(this, new B2VerificationCompletedEventArgs(
+                notFoundOnServer,
+                verifiedCount,
+                uploadedResources.Count));
+
+        } catch (Exception ex) {
+            logger.Error(ex, "B2 verification failed");
+            B2VerificationCompleted?.Invoke(this, B2VerificationCompletedEventArgs.Failed(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Extracts remote path from CDN URL.
+    /// </summary>
+    private static string? ExtractRemotePathFromUrl(string cdnUrl, string projectName) {
+        if (string.IsNullOrEmpty(cdnUrl)) return null;
+
+        try {
+            var uri = new Uri(cdnUrl);
+            var path = uri.AbsolutePath.TrimStart('/');
+
+            // If path doesn't start with project name, prepend it
+            if (!path.StartsWith(projectName, StringComparison.OrdinalIgnoreCase)) {
+                return $"{projectName}/{path}";
+            }
+
+            return path;
+        } catch {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Finds a texture by pattern in the specified directory.
     /// </summary>
     private static TextureResource? FindTextureByPattern(
@@ -685,6 +810,52 @@ public class AssetLoadErrorEventArgs : EventArgs {
     public AssetLoadErrorEventArgs(string title, string message) {
         Title = title;
         Message = message;
+    }
+}
+
+/// <summary>
+/// Event args for B2 verification completion
+/// </summary>
+public class B2VerificationCompletedEventArgs : EventArgs {
+    /// <summary>
+    /// Resources that were marked as uploaded but not found on B2
+    /// </summary>
+    public IReadOnlyList<BaseResource> NotFoundOnServer { get; }
+
+    /// <summary>
+    /// Resources verified as present on B2
+    /// </summary>
+    public int VerifiedCount { get; }
+
+    /// <summary>
+    /// Total resources checked
+    /// </summary>
+    public int TotalChecked { get; }
+
+    /// <summary>
+    /// Error message if verification failed
+    /// </summary>
+    public string? ErrorMessage { get; }
+
+    public bool Success => string.IsNullOrEmpty(ErrorMessage);
+
+    public B2VerificationCompletedEventArgs(
+        IReadOnlyList<BaseResource> notFoundOnServer,
+        int verifiedCount,
+        int totalChecked,
+        string? errorMessage = null) {
+        NotFoundOnServer = notFoundOnServer;
+        VerifiedCount = verifiedCount;
+        TotalChecked = totalChecked;
+        ErrorMessage = errorMessage;
+    }
+
+    public static B2VerificationCompletedEventArgs Failed(string errorMessage) {
+        return new B2VerificationCompletedEventArgs(
+            Array.Empty<BaseResource>(),
+            0,
+            0,
+            errorMessage);
     }
 }
 

@@ -204,6 +204,7 @@ namespace AssetProcessor {
             viewModel.AssetLoading.ORMTexturesDetected += OnORMTexturesDetected;
             viewModel.AssetLoading.VirtualORMTexturesGenerated += OnVirtualORMTexturesGenerated;
             viewModel.AssetLoading.UploadStatesRestored += OnUploadStatesRestored;
+            viewModel.AssetLoading.B2VerificationCompleted += OnB2VerificationCompleted;
             viewModel.AssetLoading.ErrorOccurred += OnAssetLoadingError;
 
             // Subscribe to MaterialSelectionViewModel events
@@ -438,8 +439,9 @@ namespace AssetProcessor {
 
         private void CopyServerUrlButton_Click(object sender, RoutedEventArgs e) {
             if (_selectedServerAsset != null && !string.IsNullOrEmpty(_selectedServerAsset.CdnUrl)) {
-                Clipboard.SetText(_selectedServerAsset.CdnUrl);
-                logService.LogInfo($"Copied CDN URL: {_selectedServerAsset.CdnUrl}");
+                if (Helpers.ClipboardHelper.SetText(_selectedServerAsset.CdnUrl)) {
+                    logService.LogInfo($"Copied CDN URL: {_selectedServerAsset.CdnUrl}");
+                }
             }
         }
 
@@ -4853,6 +4855,26 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // This event is for informational purposes only
         }
 
+        private void OnB2VerificationCompleted(object? sender, B2VerificationCompletedEventArgs e) {
+            Dispatcher.Invoke(() => {
+                if (!e.Success) {
+                    logService.LogWarn($"[B2 Verification] Failed: {e.ErrorMessage}");
+                    return;
+                }
+
+                if (e.NotFoundOnServer.Count > 0) {
+                    logService.LogWarn($"[B2 Verification] {e.NotFoundOnServer.Count} files not found on server (status updated to 'Not on Server')");
+
+                    // Refresh DataGrids to show updated status
+                    TexturesDataGrid.Items.Refresh();
+                    ModelsDataGrid.Items.Refresh();
+                    MaterialsDataGrid.Items.Refresh();
+                } else {
+                    logService.LogInfo($"[B2 Verification] All {e.VerifiedCount} uploaded files verified on server");
+                }
+            });
+        }
+
         private void OnAssetLoadingError(object? sender, AssetLoadErrorEventArgs e) {
             logService.LogError($"[OnAssetLoadingError] {e.Title}: {e.Message}");
             MessageBox.Show(e.Message, e.Title, MessageBoxButton.OK, MessageBoxImage.Error);
@@ -5084,12 +5106,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private void CopyTexturePath_Click(object sender, RoutedEventArgs e) {
             if (TexturesDataGrid.SelectedItem is TextureResource texture && !string.IsNullOrEmpty(texture.Path)) {
-                try {
-                    System.Windows.Clipboard.SetText(texture.Path);
-                    MessageBox.Show("Path copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                } catch (Exception ex) {
-                    MessageBox.Show($"Failed to copy path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                Helpers.ClipboardHelper.SetTextWithFeedback(texture.Path);
             }
         }
 
@@ -5188,15 +5205,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void CopyModelPath_Click(object sender, RoutedEventArgs e) {
-            if (ModelsDataGrid.SelectedItem is ModelResource model) {
-                if (!string.IsNullOrEmpty(model.Path)) {
-                    try {
-                        Clipboard.SetText(model.Path);
-                        MessageBox.Show($"Path copied to clipboard:\n{model.Path}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    } catch (Exception ex) {
-                        MessageBox.Show($"Failed to copy path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
+            if (ModelsDataGrid.SelectedItem is ModelResource model && !string.IsNullOrEmpty(model.Path)) {
+                Helpers.ClipboardHelper.SetTextWithFeedback(model.Path);
             }
         }
 

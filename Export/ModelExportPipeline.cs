@@ -1309,7 +1309,7 @@ public class ModelExportPipeline {
         };
 
         try {
-            ReportProgress($"Exporting material: {material.Name}", 0);
+            ReportProgress("Material", "Exporting", 0, material.Name);
 
             // Определяем путь экспорта из иерархии PlayCanvas
             var materialFolderPath = GetResourceFolderPath(material, folderPaths);
@@ -1319,38 +1319,44 @@ public class ModelExportPipeline {
             Directory.CreateDirectory(exportPath);
             Logger.Info($"Material export path: {exportPath}");
 
-            // Собираем текстуры материала
-            ReportProgress("Collecting textures...", 20);
-            var textureIds = CollectTextureIds(new[] { material });
-            var materialTextures = allTextures.Where(t => textureIds.Contains(t.ID)).ToList();
-            result.TextureCount = materialTextures.Count;
-
-            // Создаём директорию textures
-            var texturesDir = Path.Combine(exportPath, "textures");
-            Directory.CreateDirectory(texturesDir);
-
-            // Генерируем ORM packed текстуры
             var ormResults = new Dictionary<int, ORMExportResult>();
-            var packedTextureIds = new HashSet<int>();
-            if (options.GenerateORMTextures) {
-                ReportProgress("Generating ORM packed textures...", 30);
-                (ormResults, packedTextureIds) = await GenerateORMTexturesAsync(
-                    new List<MaterialResource> { material }, materialTextures, texturesDir, options, cancellationToken);
-                result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
-            }
-
-            // Конвертируем текстуры в KTX2
             var texturePathMap = new Dictionary<int, string>();
-            if (options.ConvertTextures) {
-                ReportProgress("Converting textures to KTX2...", 50);
-                var texturesToConvert = materialTextures.Where(t => !packedTextureIds.Contains(t.ID)).ToList();
-                texturePathMap = await ConvertTexturesToKTX2Async(
-                    texturesToConvert, texturesDir, exportPath, options, cancellationToken);
-                result.ConvertedTextures.AddRange(texturePathMap.Values);
+
+            // Если MaterialJsonOnly - пропускаем все текстуры, экспортируем только JSON
+            if (!options.MaterialJsonOnly) {
+                // Собираем текстуры материала
+                ReportProgress("Search", "Collecting textures", 20, material.Name);
+                var textureIds = CollectTextureIds(new[] { material });
+                var materialTextures = allTextures.Where(t => textureIds.Contains(t.ID)).ToList();
+                result.TextureCount = materialTextures.Count;
+
+                // Создаём директорию textures
+                var texturesDir = Path.Combine(exportPath, "textures");
+                Directory.CreateDirectory(texturesDir);
+
+                // Генерируем ORM packed текстуры
+                var packedTextureIds = new HashSet<int>();
+                if (options.GenerateORMTextures) {
+                    ReportProgress("ORM", "Generating packed textures", 30, material.Name);
+                    (ormResults, packedTextureIds) = await GenerateORMTexturesAsync(
+                        new List<MaterialResource> { material }, materialTextures, texturesDir, options, cancellationToken);
+                    result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
+                }
+
+                // Конвертируем текстуры в KTX2
+                if (options.ConvertTextures) {
+                    ReportProgress("KTX2", "Converting textures", 50, material.Name);
+                    var texturesToConvert = materialTextures.Where(t => !packedTextureIds.Contains(t.ID)).ToList();
+                    texturePathMap = await ConvertTexturesToKTX2Async(
+                        texturesToConvert, texturesDir, exportPath, options, cancellationToken);
+                    result.ConvertedTextures.AddRange(texturePathMap.Values);
+                }
+            } else {
+                Logger.Info($"MaterialJsonOnly mode - skipping textures for {material.Name}");
             }
 
             // Генерируем material JSON
-            ReportProgress("Generating material JSON...", 70);
+            ReportProgress("JSON", "Generating material file", 70, material.Name);
             var materialJson = GenerateMaterialJsonWithIds(material, ormResults, options);
             var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
             var matPath = Path.Combine(exportPath, matFileName);
@@ -1550,6 +1556,12 @@ public class ExportOptions {
     public bool GenerateORMTextures { get; set; } = true;
     public bool UsePackedTextures { get; set; } = true;
     public bool GenerateLODs { get; set; } = true;
+
+    /// <summary>
+    /// Экспортировать только JSON материала без связанных текстур.
+    /// Используется когда пользователь выбрал только материалы без "Select Related".
+    /// </summary>
+    public bool MaterialJsonOnly { get; set; } = false;
     public int LODLevels { get; set; } = 2;
     public int TextureQuality { get; set; } = 128;
     public bool ApplyToksvig { get; set; } = true;

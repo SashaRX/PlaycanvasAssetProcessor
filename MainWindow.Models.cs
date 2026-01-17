@@ -396,6 +396,9 @@ namespace AssetProcessor {
                 int successCount = 0;
                 int failCount = 0;
 
+                // Собираем пути экспортированных файлов для точечной загрузки
+                var exportedFiles = new List<string>();
+
                 // Считаем общее количество элементов для экспорта
                 // Материалы, связанные с моделями, не экспортируются отдельно
                 var modelMaterialIds = new HashSet<int>();
@@ -451,6 +454,14 @@ namespace AssetProcessor {
                         if (result.Success) {
                             successCount++;
                             logger.Info($"Export OK: {model.Name} -> {result.ExportPath}");
+
+                            // Собираем пути экспортированных файлов
+                            if (!string.IsNullOrEmpty(result.ExportPath)) exportedFiles.Add(result.ExportPath);
+                            if (!string.IsNullOrEmpty(result.ConvertedModelPath)) exportedFiles.Add(result.ConvertedModelPath);
+                            exportedFiles.AddRange(result.LODPaths.Where(p => !string.IsNullOrEmpty(p)));
+                            exportedFiles.AddRange(result.GeneratedMaterialJsons.Where(p => !string.IsNullOrEmpty(p)));
+                            exportedFiles.AddRange(result.ConvertedTextures.Where(p => !string.IsNullOrEmpty(p)));
+                            exportedFiles.AddRange(result.GeneratedORMTextures.Where(p => !string.IsNullOrEmpty(p)));
                         } else {
                             failCount++;
                             logger.Error($"Export FAILED: {model.Name} - {result.ErrorMessage}");
@@ -461,7 +472,20 @@ namespace AssetProcessor {
                     }
                 }
 
-                // 2. Экспортируем материалы без моделей
+                // 2. Экспортируем материалы без моделей (только JSON, без текстур)
+                // Создаём опции для standalone материалов - только JSON
+                var materialOnlyOptions = new Export.ExportOptions {
+                    ProjectId = projectId,
+                    ConvertModel = false,
+                    ConvertTextures = false,
+                    GenerateORMTextures = false,
+                    MaterialJsonOnly = true, // Только JSON материала!
+                    UseSavedTextureSettings = true,
+                    MasterMaterialsConfig = masterMaterialsConfig,
+                    ProjectFolderPath = viewModel.MasterMaterialsViewModel.ProjectFolderPath,
+                    DefaultMasterMaterial = masterMaterialsConfig?.DefaultMasterMaterial
+                };
+
                 foreach (var material in standaloneMaterials) {
                     try {
                         currentItem++;
@@ -469,18 +493,23 @@ namespace AssetProcessor {
                         ProgressBar.Value = progressPercent;
                         ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
-                        logger.Info($"Exporting material: {material.Name} ({currentItem}/{totalItems})");
+                        logger.Info($"Exporting material (JSON only): {material.Name} ({currentItem}/{totalItems})");
 
                         var result = await pipeline.ExportMaterialAsync(
                             material,
                             viewModel.Textures,
                             folderPaths,
-                            options
+                            materialOnlyOptions
                         );
 
                         if (result.Success) {
                             successCount++;
                             logger.Info($"Export OK: {material.Name} -> {result.ExportPath}");
+
+                            // Собираем пути экспортированных файлов
+                            if (!string.IsNullOrEmpty(result.ExportPath)) exportedFiles.Add(result.ExportPath);
+                            exportedFiles.AddRange(result.ConvertedTextures.Where(p => !string.IsNullOrEmpty(p)));
+                            exportedFiles.AddRange(result.GeneratedORMTextures.Where(p => !string.IsNullOrEmpty(p)));
                         } else {
                             failCount++;
                             logger.Error($"Export FAILED: {material.Name} - {result.ErrorMessage}");
@@ -510,6 +539,9 @@ namespace AssetProcessor {
                         if (result.Success) {
                             successCount++;
                             logger.Info($"Export OK: {texture.Name} -> {result.ExportPath}");
+
+                            // Собираем пути экспортированных файлов
+                            if (!string.IsNullOrEmpty(result.ConvertedTexturePath)) exportedFiles.Add(result.ConvertedTexturePath);
                         } else {
                             failCount++;
                             logger.Error($"Export FAILED: {texture.Name} - {result.ErrorMessage}");
@@ -521,6 +553,7 @@ namespace AssetProcessor {
                 }
 
                 ProgressBar.Value = 100;
+                logger.Info($"Total exported files: {exportedFiles.Count}");
 
                 var exportMessage = $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}";
 
@@ -533,8 +566,8 @@ namespace AssetProcessor {
                         MessageBoxImage.Question);
 
                     if (shouldUpload == MessageBoxResult.Yes) {
-                        // Trigger upload
-                        await AutoUploadAfterExportAsync(pipeline.GetContentBasePath());
+                        // Trigger upload - только экспортированных файлов!
+                        await AutoUploadAfterExportAsync(pipeline.GetContentBasePath(), exportedFiles);
                     }
                 } else {
                     MessageBox.Show(
@@ -556,9 +589,9 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Автоматическая загрузка после экспорта
+        /// Автоматическая загрузка после экспорта - ТОЛЬКО указанных файлов!
         /// </summary>
-        private async Task AutoUploadAfterExportAsync(string contentPath) {
+        private async Task AutoUploadAfterExportAsync(string contentPath, List<string> exportedFiles) {
             var projectName = ProjectName ?? "UnknownProject";
 
             // Проверяем настройки B2
@@ -569,6 +602,16 @@ namespace AssetProcessor {
                     "Upload Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
+                return;
+            }
+
+            // Если нет файлов для загрузки
+            if (exportedFiles.Count == 0) {
+                MessageBox.Show(
+                    "No files to upload.",
+                    "Upload",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
@@ -590,11 +633,35 @@ namespace AssetProcessor {
                     return;
                 }
 
-                var result = await b2Service.UploadDirectoryAsync(
-                    contentPath,
-                    projectName,
-                    "*",
-                    recursive: true,
+                // Строим пары (локальный путь, удаленный путь) ТОЛЬКО для экспортированных файлов
+                var serverPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(contentPath)); // assets/content -> server
+                var filePairs = new List<(string LocalPath, string RemotePath)>();
+
+                foreach (var localPath in exportedFiles) {
+                    if (!System.IO.File.Exists(localPath)) {
+                        logger.Warn($"Exported file not found: {localPath}");
+                        continue;
+                    }
+
+                    // Строим удалённый путь относительно server/
+                    string remotePath;
+                    if (!string.IsNullOrEmpty(serverPath) && localPath.StartsWith(serverPath, StringComparison.OrdinalIgnoreCase)) {
+                        var relativePath = localPath.Substring(serverPath.Length).TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                        remotePath = $"{projectName}/{relativePath.Replace('\\', '/')}";
+                    } else {
+                        // Fallback: просто имя файла
+                        remotePath = $"{projectName}/{System.IO.Path.GetFileName(localPath)}";
+                    }
+
+                    filePairs.Add((localPath, remotePath));
+                    logger.Info($"Will upload: {localPath} -> {remotePath}");
+                }
+
+                logger.Info($"Uploading {filePairs.Count} files (from {exportedFiles.Count} exported)");
+
+                // Загружаем ТОЛЬКО экспортированные файлы
+                var result = await b2Service.UploadBatchAsync(
+                    filePairs,
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
                             ProgressBar.Value = p.PercentComplete * 0.9; // 90% for content
@@ -606,7 +673,6 @@ namespace AssetProcessor {
 
                 // Upload mapping.json separately (it's in server/, not in content/)
                 int mappingUploaded = 0;
-                var serverPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(contentPath)); // Go up from assets/content to server
                 if (!string.IsNullOrEmpty(serverPath)) {
                     var mappingPath = System.IO.Path.Combine(serverPath, "mapping.json");
                     if (System.IO.File.Exists(mappingPath)) {
@@ -647,6 +713,7 @@ namespace AssetProcessor {
 
                 MessageBox.Show(
                     $"Upload completed!\n\n" +
+                    $"Files to upload: {filePairs.Count}\n" +
                     $"Uploaded: {result.SuccessCount + mappingUploaded}\n" +
                     $"Skipped (already exists): {result.SkippedCount}\n" +
                     $"Failed: {result.FailedCount}\n" +

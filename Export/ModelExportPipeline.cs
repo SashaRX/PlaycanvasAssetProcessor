@@ -188,7 +188,8 @@ public class ModelExportPipeline {
 
             // 7.5 Генерируем consolidated chunks файлы для master materials с chunks
             if (options.MasterMaterialsConfig != null && !string.IsNullOrEmpty(options.ProjectFolderPath)) {
-                await GenerateChunksFilesAsync(modelMaterials, exportPath, options, cancellationToken);
+                var chunksFiles = await GenerateChunksFilesAsync(modelMaterials, exportPath, options, cancellationToken);
+                result.GeneratedChunksFiles.AddRange(chunksFiles);
             }
 
             // Генерируем JSON файл модели с LODs и материалами
@@ -1122,14 +1123,17 @@ public class ModelExportPipeline {
     /// <summary>
     /// Генерирует consolidated chunks файлы для master materials, используемых материалами
     /// </summary>
-    private async Task GenerateChunksFilesAsync(
+    /// <returns>Список путей к сгенерированным chunks файлам</returns>
+    private async Task<List<string>> GenerateChunksFilesAsync(
         List<MaterialResource> materials,
         string exportPath,
         ExportOptions options,
         CancellationToken cancellationToken) {
 
+        var generatedFiles = new List<string>();
+
         if (options.MasterMaterialsConfig == null || string.IsNullOrEmpty(options.ProjectFolderPath)) {
-            return;
+            return generatedFiles;
         }
 
         // Собираем уникальные master names с chunks
@@ -1160,7 +1164,7 @@ public class ModelExportPipeline {
         }
 
         if (masterNamesWithChunks.Count == 0) {
-            return;
+            return generatedFiles;
         }
 
         // Создаём папку chunks
@@ -1178,8 +1182,11 @@ public class ModelExportPipeline {
 
             var outputPath = Path.Combine(chunksDir, $"{masterName}_chunks.mjs");
             await File.WriteAllTextAsync(outputPath, consolidatedMjs, cancellationToken);
+            generatedFiles.Add(outputPath);
             Logger.Info($"Generated chunks file: {outputPath}");
         }
+
+        return generatedFiles;
     }
 
     private float[]? NormalizeColor(List<float>? color) {
@@ -1640,6 +1647,7 @@ public class ModelExportResult {
     public List<string> GeneratedMaterialJsons { get; set; } = new();
     public List<string> ConvertedTextures { get; set; } = new();
     public List<string> GeneratedORMTextures { get; set; } = new();
+    public List<string> GeneratedChunksFiles { get; set; } = new();
 }
 
 public class MaterialExportResult {

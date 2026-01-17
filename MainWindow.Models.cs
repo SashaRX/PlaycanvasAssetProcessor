@@ -455,13 +455,14 @@ namespace AssetProcessor {
                             successCount++;
                             logger.Info($"Export OK: {model.Name} -> {result.ExportPath}");
 
-                            // Собираем пути экспортированных файлов
-                            if (!string.IsNullOrEmpty(result.ExportPath)) exportedFiles.Add(result.ExportPath);
+                            // Собираем пути экспортированных файлов (ТОЛЬКО файлы, не папки!)
                             if (!string.IsNullOrEmpty(result.ConvertedModelPath)) exportedFiles.Add(result.ConvertedModelPath);
+                            if (!string.IsNullOrEmpty(result.GeneratedModelJson)) exportedFiles.Add(result.GeneratedModelJson);
                             exportedFiles.AddRange(result.LODPaths.Where(p => !string.IsNullOrEmpty(p)));
                             exportedFiles.AddRange(result.GeneratedMaterialJsons.Where(p => !string.IsNullOrEmpty(p)));
                             exportedFiles.AddRange(result.ConvertedTextures.Where(p => !string.IsNullOrEmpty(p)));
                             exportedFiles.AddRange(result.GeneratedORMTextures.Where(p => !string.IsNullOrEmpty(p)));
+                            exportedFiles.AddRange(result.GeneratedChunksFiles.Where(p => !string.IsNullOrEmpty(p)));
                         } else {
                             failCount++;
                             logger.Error($"Export FAILED: {model.Name} - {result.ErrorMessage}");
@@ -504,10 +505,11 @@ namespace AssetProcessor {
 
                         if (result.Success) {
                             successCount++;
-                            logger.Info($"Export OK: {material.Name} -> {result.ExportPath}");
+                            logger.Info($"Export OK: {material.Name} -> {result.GeneratedMaterialJson}");
 
                             // Собираем пути экспортированных файлов
-                            if (!string.IsNullOrEmpty(result.ExportPath)) exportedFiles.Add(result.ExportPath);
+                            // ВАЖНО: GeneratedMaterialJson - это путь к JSON файлу, ExportPath - это папка!
+                            if (!string.IsNullOrEmpty(result.GeneratedMaterialJson)) exportedFiles.Add(result.GeneratedMaterialJson);
                             exportedFiles.AddRange(result.ConvertedTextures.Where(p => !string.IsNullOrEmpty(p)));
                             exportedFiles.AddRange(result.GeneratedORMTextures.Where(p => !string.IsNullOrEmpty(p)));
                         } else {

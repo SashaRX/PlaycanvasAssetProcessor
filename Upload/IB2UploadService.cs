@@ -81,6 +81,18 @@ public interface IB2UploadService {
     Task<bool> DeleteFileAsync(string remotePath, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Удаление папки (всех файлов с указанным префиксом)
+    /// </summary>
+    /// <param name="folderPath">Путь к папке в bucket</param>
+    /// <param name="progress">Прогресс удаления</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Количество удалённых и failed файлов</returns>
+    Task<(int deleted, int failed)> DeleteFolderAsync(
+        string folderPath,
+        IProgress<(int current, int total, string fileName)>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Получение списка файлов в директории
     /// </summary>
     /// <param name="prefix">Префикс пути</param>

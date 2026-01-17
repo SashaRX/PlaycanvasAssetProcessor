@@ -113,7 +113,9 @@
       "Bash(git rev-parse:*)",
       "Bash(git stash:*)",
       "Bash(sqlite3:*)",
-      "Bash(dotnet nuget:*)"
+      "Bash(dotnet nuget:*)",
+      "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml\")",
+      "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml.cs\")"
     ],
     "deny": [],
     "ask": []

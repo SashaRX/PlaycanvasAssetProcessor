@@ -399,6 +399,72 @@ public class B2UploadService : IB2UploadService, IDisposable {
         }
     }
 
+    /// <summary>
+    /// Удаляет папку (все файлы с указанным префиксом) на B2
+    /// </summary>
+    public async Task<(int deleted, int failed)> DeleteFolderAsync(
+        string folderPath,
+        IProgress<(int current, int total, string fileName)>? progress = null,
+        CancellationToken cancellationToken = default) {
+
+        int deleted = 0;
+        int failed = 0;
+
+        try {
+            // Получаем список всех файлов в папке
+            var files = await ListFilesAsync(folderPath, 10000, cancellationToken).ConfigureAwait(false);
+
+            if (files.Count == 0) {
+                Logger.Info($"No files found in folder: {folderPath}");
+                return (0, 0);
+            }
+
+            Logger.Info($"Deleting {files.Count} files from folder: {folderPath}");
+
+            for (int i = 0; i < files.Count; i++) {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var file = files[i];
+                progress?.Report((i + 1, files.Count, file.FileName));
+
+                try {
+                    var requestBody = new {
+                        fileId = file.FileId,
+                        fileName = file.FileName
+                    };
+
+                    var request = new HttpRequestMessage(HttpMethod.Post,
+                        $"{_authResponse!.ApiUrl}/b2api/v2/b2_delete_file_version");
+                    request.Headers.TryAddWithoutValidation("Authorization", _authResponse.AuthorizationToken);
+                    request.Content = new StringContent(
+                        JsonSerializer.Serialize(requestBody, JsonOptions),
+                        Encoding.UTF8,
+                        "application/json");
+
+                    var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+                    if (response.IsSuccessStatusCode) {
+                        deleted++;
+                        Logger.Debug($"Deleted: {file.FileName}");
+                    } else {
+                        failed++;
+                        Logger.Warn($"Failed to delete: {file.FileName}");
+                    }
+                } catch (Exception ex) {
+                    failed++;
+                    Logger.Warn(ex, $"Error deleting: {file.FileName}");
+                }
+            }
+
+            Logger.Info($"Folder deletion complete: {deleted} deleted, {failed} failed");
+
+        } catch (Exception ex) {
+            Logger.Error(ex, $"Failed to delete folder: {folderPath}");
+        }
+
+        return (deleted, failed);
+    }
+
     public async Task<IReadOnlyList<B2FileInfo>> ListFilesAsync(
         string prefix,
         int maxCount = 1000,

@@ -110,6 +110,12 @@
                             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
                         </Style>
                     </TreeView.ItemContainerStyle>
+                    <TreeView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Delete Folder" Click="DeleteFolderMenuItem_Click"
+                                      ToolTip="Delete selected folder and all its files from server"/>
+                        </ContextMenu>
+                    </TreeView.ContextMenu>
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <StackPanel Orientation="Horizontal" Margin="2">

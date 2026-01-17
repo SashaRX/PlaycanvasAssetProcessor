@@ -409,6 +409,9 @@ public class B2UploadServiceTests {
         public Task<IReadOnlyList<B2FileInfo>> ListFilesAsync(string prefix, int maxCount = 1000, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
+        public Task<(int deleted, int failed)> DeleteFolderAsync(string folderPath, IProgress<(int current, int total, string fileName)>? progress = null, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
         public void Dispose() {
             // HttpClient is managed externally
         }

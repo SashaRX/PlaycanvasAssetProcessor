@@ -245,22 +245,12 @@ public class ModelExportPipeline {
     #region Private Methods
 
     private string GetResourceFolderPath(BaseResource resource, IReadOnlyDictionary<int, string> folderPaths) {
-        // Строим путь из иерархии папок PlayCanvas
-        if (resource.Parent.HasValue && resource.Parent.Value != 0) {
-            if (folderPaths.TryGetValue(resource.Parent.Value, out var path)) {
-                var sanitized = SanitizePath(path);
-                // Убираем префикс content/ если он есть (уже добавлен в GetContentBasePath)
-                if (sanitized.StartsWith("content/", StringComparison.OrdinalIgnoreCase)) {
-                    sanitized = sanitized.Substring(8);
-                } else if (sanitized.StartsWith("content\\", StringComparison.OrdinalIgnoreCase)) {
-                    sanitized = sanitized.Substring(8);
-                }
-                return sanitized;
-            }
-        }
-
-        // Если нет parent, используем имя ресурса как папку
-        return Path.Combine("models", SanitizePath(resource.Name ?? $"unknown_{resource.ID}"));
+        // Точное расположение из оригинального пути файла
+        // Структура: {projectsRoot}/{projectName}/assets/{folderPath}/{fileName}
+        var dir = Path.GetDirectoryName(resource.Path)!;
+        var normalizedDir = dir.Replace('\\', '/');
+        var assetsIndex = normalizedDir.IndexOf("/assets/", StringComparison.OrdinalIgnoreCase);
+        return normalizedDir.Substring(assetsIndex + 8);
     }
 
     private List<MaterialResource> FindMaterialsForModel(

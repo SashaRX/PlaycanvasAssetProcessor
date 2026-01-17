@@ -449,6 +449,102 @@ namespace AssetProcessor.Controls {
         }
 
         /// <summary>
+        /// Удаляет выбранную папку и все файлы в ней с сервера
+        /// </summary>
+        private async void DeleteFolderMenuItem_Click(object sender, RoutedEventArgs e) {
+            if (_selectedFolder == null) {
+                MessageBox.Show("Select a folder to delete.", "Delete Folder", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Count all files recursively
+            int fileCount = CountFilesRecursive(_selectedFolder);
+            if (fileCount == 0) {
+                MessageBox.Show("Selected folder is empty.", "Delete Folder", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete folder '{_selectedFolder.Name}' and all {fileCount} file(s) in it from the server?\n\nThis action cannot be undone.",
+                "Confirm Delete Folder",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try {
+                StatusText.Text = $"Deleting folder {_selectedFolder.Name}...";
+
+                using var b2Service = new B2UploadService();
+
+                if (!AppSettings.Default.TryGetDecryptedB2ApplicationKey(out var appKey) || string.IsNullOrEmpty(appKey)) {
+                    StatusText.Text = "Failed to decrypt B2 application key.";
+                    return;
+                }
+
+                var settings = new B2UploadSettings {
+                    KeyId = AppSettings.Default.B2KeyId,
+                    ApplicationKey = appKey,
+                    BucketName = AppSettings.Default.B2BucketName,
+                    BucketId = AppSettings.Default.B2BucketId
+                };
+
+                await b2Service.AuthorizeAsync(settings);
+
+                // Get folder path (prefix for B2)
+                var folderPath = _selectedFolder.FullPath;
+
+                var progress = new Progress<(int current, int total, string fileName)>(p => {
+                    StatusText.Text = $"Deleting {p.current}/{p.total}: {p.fileName}";
+                });
+
+                var (deleted, failed) = await b2Service.DeleteFolderAsync(folderPath, progress);
+
+                // Remove files from local collections
+                RemoveFolderFilesRecursive(_selectedFolder);
+
+                // Rebuild tree
+                if (_allAssets.Any()) {
+                    _rootNode = ServerFolderNode.BuildTree(_filteredAssets, _projectName ?? "Server");
+                    FolderTreeView.ItemsSource = new[] { _rootNode };
+                } else {
+                    FolderTreeView.ItemsSource = null;
+                }
+
+                _selectedFolder = null;
+                UpdateViewMode();
+
+                StatusText.Text = $"Deleted {deleted} files, {failed} failed";
+                UpdateFileCount();
+
+                Logger.Info($"Deleted folder '{folderPath}': {deleted} files deleted, {failed} failed");
+
+            } catch (Exception ex) {
+                Logger.Error(ex, $"Failed to delete folder: {_selectedFolder?.Name}");
+                StatusText.Text = $"Error: {ex.Message}";
+            }
+        }
+
+        private int CountFilesRecursive(ServerFolderNode folder) {
+            int count = folder.Files.Count;
+            foreach (var child in folder.Children) {
+                count += CountFilesRecursive(child);
+            }
+            return count;
+        }
+
+        private void RemoveFolderFilesRecursive(ServerFolderNode folder) {
+            foreach (var file in folder.Files.ToList()) {
+                _allAssets.Remove(file);
+                _filteredAssets.Remove(file);
+                _displayedAssets.Remove(file);
+            }
+            foreach (var child in folder.Children) {
+                RemoveFolderFilesRecursive(child);
+            }
+        }
+
+        /// <summary>
         /// Копирует CDN URL выбранного файла в буфер обмена
         /// </summary>
         private void CopyUrlButton_Click(object sender, RoutedEventArgs e) {

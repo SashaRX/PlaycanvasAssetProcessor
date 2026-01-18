@@ -167,3 +167,37 @@
 10.01.26 13:39:33: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
 10.01.26 13:39:33: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=True
 10.01.26 13:39:33: [SelectionChanged] COMPLETE
+18.01.26 03:38:41: [SelectionChanged] Before TryLoadGlbLodAsync
+18.01.26 03:38:41: TryLoadGlbLodAsync START
+18.01.26 03:38:41: Loading albedo texture
+18.01.26 03:38:41: Albedo texture done
+18.01.26 03:38:41: Finding GLB LOD files
+18.01.26 03:38:41: Found 4 files
+18.01.26 03:38:41: Showing LOD UI
+18.01.26 03:38:41: LOD UI shown
+18.01.26 03:38:41: Creating/checking SharpGlbLoader
+18.01.26 03:38:41: SharpGlbLoader ready
+18.01.26 03:38:41: Getting LOD file paths
+18.01.26 03:38:41: Got 4 LOD paths
+18.01.26 03:38:41: Starting Task.Run for 4 LODs
+18.01.26 03:38:41: Loading LOD0
+18.01.26 03:38:41: Calling LoadGlb for LOD0
+18.01.26 03:38:41: LoadGlb done for LOD0, Success=False
+18.01.26 03:38:41: Loading LOD1
+18.01.26 03:38:41: Calling LoadGlb for LOD1
+18.01.26 03:38:41: LoadGlb done for LOD1, Success=False
+18.01.26 03:38:41: Loading LOD2
+18.01.26 03:38:41: Calling LoadGlb for LOD2
+18.01.26 03:38:41: LoadGlb done for LOD2, Success=False
+18.01.26 03:38:41: Loading LOD3
+18.01.26 03:38:41: Calling LoadGlb for LOD3
+18.01.26 03:38:41: LoadGlb done for LOD3, Success=False
+18.01.26 03:38:41: Task.Run loop complete
+18.01.26 03:38:41: Task.Run await complete
+18.01.26 03:38:41: Entering Dispatcher.InvokeAsync
+18.01.26 03:38:41: Inside Dispatcher.InvokeAsync
+18.01.26 03:38:41: After Dispatcher.InvokeAsync await - returning from TryLoadGlbLodAsync
+18.01.26 03:38:41: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive=False
+18.01.26 03:38:41: [SelectionChanged] Loading FBX model
+18.01.26 03:38:41: [SelectionChanged] FBX loaded
+18.01.26 03:38:41: [SelectionChanged] COMPLETE

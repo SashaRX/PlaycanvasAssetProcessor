@@ -115,7 +115,9 @@
       "Bash(sqlite3:*)",
       "Bash(dotnet nuget:*)",
       "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml\")",
-      "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml.cs\")"
+      "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml.cs\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" -Recurse -Name \"*.txt\" -ErrorAction SilentlyContinue)",
+      "Bash(Where-Object { $_ -match \"log|file\" })"
     ],
     "deny": [],
     "ask": []

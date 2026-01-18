@@ -67,15 +67,33 @@ namespace AssetProcessor.Data {
                 await command.ExecuteNonQueryAsync(ct);
 
                 // Миграция: добавить колонки resource_id и resource_type если их нет
-                var migrationSql = @"
-                    ALTER TABLE upload_history ADD COLUMN resource_id INTEGER;
-                    ALTER TABLE upload_history ADD COLUMN resource_type TEXT;
-                ";
+                // Проверяем существование колонок через PRAGMA table_info
+                var columnCheckSql = "PRAGMA table_info(upload_history);";
+                var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                await using (var checkCmd = new SqliteCommand(columnCheckSql, connection)) {
+                    await using var reader = await checkCmd.ExecuteReaderAsync(ct);
+                    while (await reader.ReadAsync(ct)) {
+                        existingColumns.Add(reader.GetString(1)); // column name is at index 1
+                    }
+                }
+
+                // Добавляем колонки только если их нет
+                if (!existingColumns.Contains("resource_id")) {
+                    await using var migrationCmd1 = new SqliteCommand("ALTER TABLE upload_history ADD COLUMN resource_id INTEGER;", connection);
+                    await migrationCmd1.ExecuteNonQueryAsync(ct);
+                }
+
+                if (!existingColumns.Contains("resource_type")) {
+                    await using var migrationCmd2 = new SqliteCommand("ALTER TABLE upload_history ADD COLUMN resource_type TEXT;", connection);
+                    await migrationCmd2.ExecuteNonQueryAsync(ct);
+                }
+
+                // Создаём индекс если его нет
                 try {
-                    await using var migrationCmd = new SqliteCommand(migrationSql, connection);
-                    await migrationCmd.ExecuteNonQueryAsync(ct);
+                    await using var indexCmd = new SqliteCommand("CREATE INDEX IF NOT EXISTS idx_resource_id ON upload_history(resource_id);", connection);
+                    await indexCmd.ExecuteNonQueryAsync(ct);
                 } catch (SqliteException) {
-                    // Колонки уже существуют - игнорируем
+                    // Индекс уже существует - игнорируем
                 }
 
                 _isInitialized = true;

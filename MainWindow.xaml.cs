@@ -94,6 +94,7 @@ namespace AssetProcessor {
         private readonly ConcurrentDictionary<string, object> texturesBeingChecked = new(StringComparer.OrdinalIgnoreCase); // ������������ �������, ��� ������� ��� �������� �������� CompressedSize
         private readonly Dictionary<(DataGrid, string), ListSortDirection> _sortDirections = new(); // Track sort directions per DataGrid+column
         private string? selectedORMSubGroupName; // Имя выбранной ORM подгруппы для визуального выделения
+        private List<string> _lastExportedFiles = new(); // Последние экспортированные файлы для upload
 
         // Chunk Editor state
         private static IHighlightingDefinition? _glslHighlighting;

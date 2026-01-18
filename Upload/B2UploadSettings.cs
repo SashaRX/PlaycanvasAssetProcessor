@@ -68,10 +68,17 @@ public class B2UploadSettings {
     /// Построить полный путь для файла в bucket
     /// </summary>
     public string BuildFullPath(string relativePath) {
+        var normalizedPath = relativePath.TrimStart('/');
         if (string.IsNullOrEmpty(PathPrefix)) {
-            return relativePath.TrimStart('/');
+            return normalizedPath;
         }
-        return $"{PathPrefix.TrimEnd('/')}/{relativePath.TrimStart('/')}";
+        var normalizedPrefix = PathPrefix.TrimEnd('/');
+        // Не добавляем prefix если путь уже начинается с него (избегаем content/content/...)
+        if (normalizedPath.StartsWith(normalizedPrefix + "/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath.Equals(normalizedPrefix, StringComparison.OrdinalIgnoreCase)) {
+            return normalizedPath;
+        }
+        return $"{normalizedPrefix}/{normalizedPath}";
     }
 
     /// <summary>

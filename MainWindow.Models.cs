@@ -555,6 +555,9 @@ namespace AssetProcessor {
                 ProgressBar.Value = 100;
                 logger.Info($"Total exported files: {exportedFiles.Count}");
 
+                // Сохраняем список экспортированных файлов для последующей загрузки кнопкой Upload
+                _lastExportedFiles = new List<string>(exportedFiles);
+
                 var exportMessage = $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}";
 
                 // Auto-upload if enabled and export was successful
@@ -644,13 +647,19 @@ namespace AssetProcessor {
                     }
 
                     // Строим удалённый путь относительно server/
+                    // Локальный путь: server/assets/content/models/...
+                    // Удалённый путь: content/models/... (без assets/)
                     string remotePath;
                     if (!string.IsNullOrEmpty(serverPath) && localPath.StartsWith(serverPath, StringComparison.OrdinalIgnoreCase)) {
-                        var relativePath = localPath.Substring(serverPath.Length).TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
-                        remotePath = $"{projectName}/{relativePath.Replace('\\', '/')}";
+                        var relativePath = localPath.Substring(serverPath.Length).TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar).Replace('\\', '/');
+                        // Убираем assets/ prefix - удалённый путь должен быть content/models/...
+                        if (relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
+                            relativePath = relativePath.Substring("assets/".Length);
+                        }
+                        remotePath = relativePath;
                     } else {
-                        // Fallback: просто имя файла
-                        remotePath = $"{projectName}/{System.IO.Path.GetFileName(localPath)}";
+                        // Fallback: файл под content/
+                        remotePath = $"content/{System.IO.Path.GetFileName(localPath)}";
                     }
 
                     filePairs.Add((localPath, remotePath));
@@ -679,7 +688,7 @@ namespace AssetProcessor {
                         try {
                             var mappingResult = await b2Service.UploadFileAsync(
                                 mappingPath,
-                                $"{projectName}/mapping.json",
+                                "mapping.json",
                                 null
                             );
                             if (mappingResult.Success) {
@@ -689,7 +698,7 @@ namespace AssetProcessor {
                                 // Save to persistence
                                 var mappingRecord = new Data.UploadRecord {
                                     LocalPath = mappingPath,
-                                    RemotePath = $"{projectName}/mapping.json",
+                                    RemotePath = "mapping.json",
                                     ContentSha1 = mappingResult.ContentSha1 ?? "",
                                     ContentLength = mappingResult.ContentLength,
                                     UploadedAt = DateTime.UtcNow,
@@ -873,6 +882,7 @@ namespace AssetProcessor {
 
         /// <summary>
         /// Загрузка экспортированных ресурсов на Backblaze B2
+        /// Загружает ТОЛЬКО файлы из последнего экспорта (_lastExportedFiles)
         /// </summary>
         private async void UploadToCloudButton_Click(object sender, RoutedEventArgs e) {
             var projectName = ProjectName ?? "UnknownProject";
@@ -898,15 +908,20 @@ namespace AssetProcessor {
                 return;
             }
 
-            var contentPath = Path.Combine(outputPath, projectName, "server", "assets", "content");
-            if (!Directory.Exists(contentPath)) {
+            // Проверяем есть ли файлы для загрузки из последнего экспорта
+            if (_lastExportedFiles.Count == 0) {
                 MessageBox.Show(
-                    $"Export folder not found: {contentPath}\n\nPlease export models first.",
+                    "No files to upload.\n\nPlease export assets first, then click Upload.",
                     "Upload Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
             }
+
+            var contentPath = Path.Combine(outputPath, projectName, "server", "assets", "content");
+            var serverPath = Path.Combine(outputPath, projectName, "server");
+
+            logger.Info($"Upload starting: {_lastExportedFiles.Count} files from last export");
 
             try {
                 UploadToCloudButton.IsEnabled = false;
@@ -915,13 +930,6 @@ namespace AssetProcessor {
                 using var b2Service = new B2UploadService();
                 using var uploadStateService = new Data.UploadStateService();
                 var uploadCoordinator = new AssetUploadCoordinator(b2Service, uploadStateService);
-
-                // Подписываемся на события прогресса
-                uploadCoordinator.UploadProgressChanged += (s, args) => {
-                    Dispatcher.Invoke(() => {
-                        ProgressBar.Value = args.OverallProgress;
-                    });
-                };
 
                 // Инициализируем сервис
                 var initialized = await uploadCoordinator.InitializeAsync();
@@ -934,12 +942,40 @@ namespace AssetProcessor {
                     return;
                 }
 
-                // Загружаем всю папку content
-                var result = await b2Service.UploadDirectoryAsync(
-                    contentPath,
-                    projectName,
-                    "*",
-                    recursive: true,
+                // Строим пары (локальный путь, удаленный путь) ТОЛЬКО для экспортированных файлов
+                var filePairs = new List<(string LocalPath, string RemotePath)>();
+
+                foreach (var localPath in _lastExportedFiles) {
+                    if (!System.IO.File.Exists(localPath)) {
+                        logger.Warn($"Exported file not found: {localPath}");
+                        continue;
+                    }
+
+                    // Строим удалённый путь относительно server/
+                    // Локальный путь: server/assets/content/models/...
+                    // Удалённый путь: content/models/... (без assets/)
+                    string remotePath;
+                    if (localPath.StartsWith(serverPath, StringComparison.OrdinalIgnoreCase)) {
+                        var relativePath = localPath.Substring(serverPath.Length).TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar).Replace('\\', '/');
+                        // Убираем assets/ prefix - удалённый путь должен быть content/models/...
+                        if (relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase)) {
+                            relativePath = relativePath.Substring("assets/".Length);
+                        }
+                        remotePath = relativePath;
+                    } else {
+                        // Fallback: файл под content/
+                        remotePath = $"content/{System.IO.Path.GetFileName(localPath)}";
+                    }
+
+                    filePairs.Add((localPath, remotePath));
+                    logger.Info($"Will upload: {localPath} -> {remotePath}");
+                }
+
+                logger.Info($"Uploading {filePairs.Count} files (from {_lastExportedFiles.Count} exported)");
+
+                // Загружаем ТОЛЬКО экспортированные файлы
+                var result = await b2Service.UploadBatchAsync(
+                    filePairs,
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
                             ProgressBar.Value = p.PercentComplete * 0.9; // 90% for content
@@ -951,14 +987,13 @@ namespace AssetProcessor {
 
                 // Upload mapping.json separately (it's in server/, not in content/)
                 int mappingUploaded = 0;
-                var serverPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(contentPath)); // Go up from assets/content to server
                 if (!string.IsNullOrEmpty(serverPath)) {
                     var mappingPath = System.IO.Path.Combine(serverPath, "mapping.json");
                     if (System.IO.File.Exists(mappingPath)) {
                         try {
                             var mappingResult = await b2Service.UploadFileAsync(
                                 mappingPath,
-                                $"{projectName}/mapping.json",
+                                "mapping.json",
                                 null
                             );
                             if (mappingResult.Success) {
@@ -968,7 +1003,7 @@ namespace AssetProcessor {
                                 // Save to persistence
                                 var mappingRecord = new Data.UploadRecord {
                                     LocalPath = mappingPath,
-                                    RemotePath = $"{projectName}/mapping.json",
+                                    RemotePath = "mapping.json",
                                     ContentSha1 = mappingResult.ContentSha1 ?? "",
                                     ContentLength = mappingResult.ContentLength,
                                     UploadedAt = DateTime.UtcNow,

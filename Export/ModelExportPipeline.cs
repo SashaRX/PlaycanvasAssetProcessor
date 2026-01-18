@@ -245,12 +245,43 @@ public class ModelExportPipeline {
     #region Private Methods
 
     private string GetResourceFolderPath(BaseResource resource, IReadOnlyDictionary<int, string> folderPaths) {
-        // Точное расположение из оригинального пути файла
-        // Структура: {projectsRoot}/{projectName}/assets/{folderPath}/{fileName}
-        var dir = Path.GetDirectoryName(resource.Path)!;
-        var normalizedDir = dir.Replace('\\', '/');
-        var assetsIndex = normalizedDir.IndexOf("/assets/", StringComparison.OrdinalIgnoreCase);
-        return normalizedDir.Substring(assetsIndex + 8);
+        // Используем ТОЛЬКО путь из resource.Path - та же структура что и оригинал
+        if (!string.IsNullOrEmpty(resource.Path)) {
+            var dir = Path.GetDirectoryName(resource.Path)!;
+            // Нормализуем к forward slash для поиска
+            var normalizedDir = dir.Replace('\\', '/');
+
+            string result = "";
+
+            // Ищем /assets/content/ в пути -> оставляем только models/props/...
+            var assetsContentIndex = normalizedDir.IndexOf("/assets/content/", StringComparison.OrdinalIgnoreCase);
+            if (assetsContentIndex >= 0) {
+                result = normalizedDir.Substring(assetsContentIndex + 16); // +16 = "/assets/content/"
+            } else {
+                // Fallback: ищем /server/content/ (старая структура экспорта)
+                var serverContentIndex = normalizedDir.IndexOf("/server/content/", StringComparison.OrdinalIgnoreCase);
+                if (serverContentIndex >= 0) {
+                    result = normalizedDir.Substring(serverContentIndex + 16); // +16 = "/server/content/"
+                } else {
+                    // Fallback: ищем /content/ (общий случай)
+                    var contentIndex = normalizedDir.IndexOf("/content/", StringComparison.OrdinalIgnoreCase);
+                    if (contentIndex >= 0) {
+                        result = normalizedDir.Substring(contentIndex + 9); // +9 = "/content/"
+                    } else {
+                        // Fallback: ищем /assets/
+                        var assetsIndex = normalizedDir.IndexOf("/assets/", StringComparison.OrdinalIgnoreCase);
+                        if (assetsIndex >= 0) {
+                            result = normalizedDir.Substring(assetsIndex + 8);
+                        }
+                    }
+                }
+            }
+
+            // Нормализуем к платформенному разделителю для Path.Combine
+            return result.Replace('/', Path.DirectorySeparatorChar);
+        }
+
+        return "";
     }
 
     private List<MaterialResource> FindMaterialsForModel(
@@ -1308,7 +1339,7 @@ public class ModelExportPipeline {
         try {
             ReportProgress("Material", "Exporting", 0, material.Name);
 
-            // Определяем путь экспорта из иерархии PlayCanvas
+            // Определяем путь экспорта - та же структура что и в оригинале
             var materialFolderPath = GetResourceFolderPath(material, folderPaths);
             var exportPath = Path.Combine(GetContentBasePath(), materialFolderPath);
             result.ExportPath = exportPath;

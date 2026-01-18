@@ -507,11 +507,9 @@ namespace AssetProcessor {
                             successCount++;
                             logger.Info($"Export OK: {material.Name} -> {result.GeneratedMaterialJson}");
 
-                            // Собираем пути экспортированных файлов
-                            // ВАЖНО: GeneratedMaterialJson - это путь к JSON файлу, ExportPath - это папка!
+                            // Собираем ТОЛЬКО JSON материала (MaterialJsonOnly = true)
                             if (!string.IsNullOrEmpty(result.GeneratedMaterialJson)) exportedFiles.Add(result.GeneratedMaterialJson);
-                            exportedFiles.AddRange(result.ConvertedTextures.Where(p => !string.IsNullOrEmpty(p)));
-                            exportedFiles.AddRange(result.GeneratedORMTextures.Where(p => !string.IsNullOrEmpty(p)));
+                            // НЕ добавляем текстуры - они экспортируются отдельно если выбраны
                         } else {
                             failCount++;
                             logger.Error($"Export FAILED: {material.Name} - {result.ErrorMessage}");
@@ -790,7 +788,7 @@ namespace AssetProcessor {
                     break;
 
                 case "Materials":
-                    // Mark selected materials, their textures, and related models
+                    // Mark ONLY selected materials (no related models or textures)
                     var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
                     if (!selectedMaterials.Any()) {
                         MessageBox.Show(
@@ -801,39 +799,10 @@ namespace AssetProcessor {
                         return;
                     }
 
-                    // Find and mark related models (reverse lookup)
-                    var relatedModelsForMaterials = FindRelatedModels(selectedMaterials);
-                    foreach (var model in relatedModelsForMaterials) {
-                        if (!model.ExportToServer) {
-                            model.ExportToServer = true;
-                            modelsMarked++;
-                        }
-                    }
-
                     foreach (var material in selectedMaterials) {
                         if (!material.ExportToServer) {
                             material.ExportToServer = true;
                             materialsMarked++;
-                        }
-
-                        // Find textures for this material
-                        var textureIds = new List<int?> {
-                            material.DiffuseMapId,
-                            material.NormalMapId,
-                            material.SpecularMapId,
-                            material.GlossMapId,
-                            material.MetalnessMapId,
-                            material.AOMapId,
-                            material.EmissiveMapId,
-                            material.OpacityMapId
-                        };
-
-                        foreach (var id in textureIds.Where(id => id.HasValue)) {
-                            var texture = viewModel.Textures.FirstOrDefault(t => t.ID == id!.Value);
-                            if (texture != null && !texture.ExportToServer) {
-                                texture.ExportToServer = true;
-                                texturesMarked++;
-                            }
                         }
                     }
                     break;
@@ -1198,8 +1167,8 @@ namespace AssetProcessor {
 
             logger.Info($"[SaveUploadRecords] Built path index with {pathToResource.Count} entries");
 
-            // Сохраняем записи о загрузке с ResourceId
-            var uploadedResourceIds = new Dictionary<string, HashSet<int>> {
+            // Сохраняем записи о загрузке с ResourceId и дополнительной информацией
+            var uploadedResources = new Dictionary<string, Dictionary<int, (string CdnUrl, string Hash)>> {
                 ["Model"] = new(),
                 ["Material"] = new(),
                 ["Texture"] = new()
@@ -1248,7 +1217,7 @@ namespace AssetProcessor {
                 }
 
                 if (resourceId.HasValue && resourceType != null) {
-                    uploadedResourceIds[resourceType].Add(resourceId.Value);
+                    uploadedResources[resourceType][resourceId.Value] = (fileResult.CdnUrl ?? "", fileResult.ContentSha1 ?? "");
                 }
             }
 
@@ -1256,32 +1225,38 @@ namespace AssetProcessor {
 
             // Обновляем статусы ресурсов в UI
             Dispatcher.Invoke(() => {
-                foreach (var modelId in uploadedResourceIds["Model"]) {
+                foreach (var (modelId, info) in uploadedResources["Model"]) {
                     var model = viewModel.Models.FirstOrDefault(m => m.ID == modelId);
                     if (model != null) {
                         model.UploadStatus = "Uploaded";
                         model.LastUploadedAt = DateTime.UtcNow;
+                        model.RemoteUrl = info.CdnUrl;
+                        model.UploadedHash = info.Hash;
                     }
                 }
 
-                foreach (var materialId in uploadedResourceIds["Material"]) {
+                foreach (var (materialId, info) in uploadedResources["Material"]) {
                     var material = viewModel.Materials.FirstOrDefault(m => m.ID == materialId);
                     if (material != null) {
                         material.UploadStatus = "Uploaded";
                         material.LastUploadedAt = DateTime.UtcNow;
+                        material.RemoteUrl = info.CdnUrl;
+                        material.UploadedHash = info.Hash;
                     }
                 }
 
-                foreach (var textureId in uploadedResourceIds["Texture"]) {
+                foreach (var (textureId, info) in uploadedResources["Texture"]) {
                     var texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId);
                     if (texture != null) {
                         texture.UploadStatus = "Uploaded";
                         texture.LastUploadedAt = DateTime.UtcNow;
+                        texture.RemoteUrl = info.CdnUrl;
+                        texture.UploadedHash = info.Hash;
                     }
                 }
             });
 
-            logger.Info($"[SaveUploadRecords] Updated UI statuses: {uploadedResourceIds["Model"].Count} models, {uploadedResourceIds["Material"].Count} materials, {uploadedResourceIds["Texture"].Count} textures");
+            logger.Info($"[SaveUploadRecords] Updated UI statuses: {uploadedResources["Model"].Count} models, {uploadedResources["Material"].Count} materials, {uploadedResources["Texture"].Count} textures");
         }
 
         /// <summary>

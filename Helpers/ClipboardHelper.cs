@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows;
 
 namespace AssetProcessor.Helpers {
@@ -8,22 +7,21 @@ namespace AssetProcessor.Helpers {
     /// Helper for clipboard operations with retry logic to handle CLIPBRD_E_CANT_OPEN errors
     /// </summary>
     public static class ClipboardHelper {
-        private const int MaxRetries = 10;
-        private const int RetryDelayMs = 50;
+        private const int MaxRetries = 3;
 
         /// <summary>
-        /// Sets text to clipboard with retry logic for when clipboard is locked
+        /// Sets text to clipboard with retry logic for when clipboard is locked.
         /// </summary>
         public static bool SetText(string text) {
             for (int i = 0; i < MaxRetries; i++) {
                 try {
-                    Clipboard.SetText(text);
+                    // Use SetText directly - simpler and doesn't call OleFlushClipboard
+                    Clipboard.SetText(text, TextDataFormat.UnicodeText);
                     return true;
-                } catch (COMException ex) when (ex.ErrorCode == unchecked((int)0x800401D0)) {
-                    // CLIPBRD_E_CANT_OPEN - clipboard is locked by another app
-                    if (i < MaxRetries - 1) {
-                        Thread.Sleep(RetryDelayMs);
-                    }
+                } catch (COMException) {
+                    // Clipboard locked - retry
+                } catch (Exception) {
+                    // Other error - retry
                 }
             }
             return false;
@@ -33,9 +31,7 @@ namespace AssetProcessor.Helpers {
         /// Sets text to clipboard with retry, shows message on failure
         /// </summary>
         public static void SetTextWithFeedback(string text, string successMessage = "Copied to clipboard") {
-            if (SetText(text)) {
-                // Success - caller can show their own message if needed
-            } else {
+            if (!SetText(text)) {
                 MessageBox.Show(
                     "Failed to copy to clipboard. Please try again.",
                     "Clipboard Error",

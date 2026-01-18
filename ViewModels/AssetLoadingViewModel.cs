@@ -597,25 +597,43 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
             // List all files from B2 for this project
             var b2Files = await b2Service.ListFilesAsync(projectName, 10000);
-            var b2FilePaths = new HashSet<string>(b2Files.Select(f => f.FileName), StringComparer.OrdinalIgnoreCase);
+            // Normalize paths - B2 might return URL-encoded or plain paths
+            var b2FilePaths = new HashSet<string>(
+                b2Files.Select(f => Uri.UnescapeDataString(f.FileName)),
+                StringComparer.OrdinalIgnoreCase);
 
             var notFoundOnServer = new List<BaseResource>();
             int verifiedCount = 0;
 
-            foreach (var resource in uploadedResources) {
-                if (string.IsNullOrEmpty(resource.RemoteUrl)) continue;
+            // Log B2 files for debugging
+            logger.Info($"B2 verification: Found {b2FilePaths.Count} files on server");
+            foreach (var path in b2FilePaths.Take(10)) {
+                logger.Debug($"B2 file: {path}");
+            }
 
-                // Extract remote path from URL
+            foreach (var resource in uploadedResources) {
+                if (string.IsNullOrEmpty(resource.RemoteUrl)) {
+                    logger.Debug($"B2 verification: {resource.Name} has no RemoteUrl, skipping");
+                    continue;
+                }
+
+                // Extract remote path from URL (already decoded)
                 var remotePath = ExtractRemotePathFromUrl(resource.RemoteUrl, projectName);
-                if (string.IsNullOrEmpty(remotePath)) continue;
+                if (string.IsNullOrEmpty(remotePath)) {
+                    logger.Warn($"B2 verification: {resource.Name} - failed to extract path from URL: {resource.RemoteUrl}");
+                    continue;
+                }
+
+                logger.Debug($"B2 verification: Checking {resource.Name}, path: {remotePath}");
 
                 if (b2FilePaths.Contains(remotePath)) {
                     verifiedCount++;
+                    logger.Debug($"B2 verification: {resource.Name} VERIFIED at {remotePath}");
                 } else {
                     // File not found on B2 - update status
                     resource.UploadStatus = "Not on Server";
                     notFoundOnServer.Add(resource);
-                    logger.Debug($"B2 verification: {resource.Name} not found at {remotePath}");
+                    logger.Warn($"B2 verification: {resource.Name} NOT FOUND. Expected: {remotePath}");
                 }
             }
 
@@ -637,14 +655,18 @@ public partial class AssetLoadingViewModel : ObservableObject {
     }
 
     /// <summary>
-    /// Extracts remote path from CDN URL.
+    /// Extracts remote path from CDN URL and decodes it.
     /// </summary>
     private static string? ExtractRemotePathFromUrl(string cdnUrl, string projectName) {
         if (string.IsNullOrEmpty(cdnUrl)) return null;
 
         try {
             var uri = new Uri(cdnUrl);
+            // AbsolutePath is already URL-decoded
             var path = uri.AbsolutePath.TrimStart('/');
+
+            // Double-decode in case of double encoding
+            path = Uri.UnescapeDataString(path);
 
             // If path doesn't start with project name, prepend it
             if (!path.StartsWith(projectName, StringComparison.OrdinalIgnoreCase)) {

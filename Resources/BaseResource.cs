@@ -48,6 +48,8 @@ namespace AssetProcessor.Resources {
                     OnPropertyChanged(nameof(UploadStatus));
                     OnPropertyChanged(nameof(UploadStatusOrProgress));
                     OnPropertyChanged(nameof(UploadStatusColor));
+                    OnPropertyChanged(nameof(StatusOrProgress));
+                    OnPropertyChanged(nameof(EffectiveStatus));
                 }
             }
         }
@@ -125,11 +127,12 @@ namespace AssetProcessor.Resources {
         /// Цвет статуса загрузки для отображения в UI
         /// </summary>
         public Brush UploadStatusColor => UploadStatus switch {
-            "Uploaded" => Brushes.Green,
-            "Uploading" => Brushes.DodgerBlue,
-            "Queued" => Brushes.Gray,
-            "Upload Failed" => Brushes.Red,
-            "Upload Outdated" => Brushes.Orange,
+            "Uploaded" => Brushes.MediumSeaGreen,
+            "Uploading" => Brushes.Gold,
+            "Queued" => Brushes.LightGray,
+            "Upload Failed" => Brushes.Salmon,
+            "Outdated" => Brushes.Orange,
+            "Not on Server" => Brushes.LightCoral,
             _ => Brushes.Transparent
         };
 
@@ -190,8 +193,29 @@ namespace AssetProcessor.Resources {
 
         public string? StatusOrProgress {
             get {
+                // Приоритет: Upload статусы > Process > Download
+                // Uploaded > Uploading > Upload Failed > Outdated > Processed > Downloaded > Downloading > On Server
+                if (!string.IsNullOrEmpty(UploadStatus)) {
+                    if (UploadStatus == "Uploading" && UploadProgress > 0) {
+                        return $"↑{UploadProgress:F0}%";
+                    }
+                    return UploadStatus;
+                }
                 if (Status == "Downloading") {
                     return $"{DownloadProgress:F0}%";
+                }
+                return Status;
+            }
+        }
+
+        /// <summary>
+        /// Эффективный статус для определения цвета фона (без прогресса)
+        /// </summary>
+        public string? EffectiveStatus {
+            get {
+                // Приоритет: Upload статусы > Process > Download
+                if (!string.IsNullOrEmpty(UploadStatus)) {
+                    return UploadStatus;
                 }
                 return Status;
             }

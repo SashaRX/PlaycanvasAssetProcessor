@@ -222,6 +222,8 @@ namespace AssetProcessor {
             this.Loaded += (s, e) => {
                 ServerAssetsPanel.SelectionChanged += (sender, asset) => UpdateServerFileInfo(asset);
                 ServerAssetsPanel.NavigateToResourceRequested += OnNavigateToResourceRequested;
+                ServerAssetsPanel.FilesDeleted += OnServerFilesDeleted;
+                ServerAssetsPanel.ServerAssetsRefreshed += OnServerAssetsRefreshed;
 
                 // Initialize chunk code editor
                 InitializeChunkCodeEditor();
@@ -599,6 +601,189 @@ namespace AssetProcessor {
             }
 
             logger.Debug($"[Navigation] Resource not found: {fileName}");
+        }
+
+        /// <summary>
+        /// Обработчик события удаления файлов с сервера - сбрасывает статусы ресурсов
+        /// </summary>
+        private void OnServerFilesDeleted(List<string> deletedPaths) {
+            if (deletedPaths == null || deletedPaths.Count == 0) return;
+
+            // Нормализуем пути для сравнения
+            var normalizedPaths = deletedPaths
+                .Select(p => p.Replace('\\', '/').ToLowerInvariant())
+                .ToHashSet();
+
+            // Сбрасываем статусы текстур
+            foreach (var texture in viewModel.Textures) {
+                if (!string.IsNullOrEmpty(texture.RemoteUrl)) {
+                    // Извлекаем относительный путь из RemoteUrl (убираем базовый CDN URL)
+                    var remotePath = ExtractRelativePathFromUrl(texture.RemoteUrl);
+                    if (remotePath != null && normalizedPaths.Contains(remotePath.ToLowerInvariant())) {
+                        texture.UploadStatus = null;
+                        texture.UploadedHash = null;
+                        texture.RemoteUrl = null;
+                        texture.LastUploadedAt = null;
+                    }
+                }
+            }
+
+            // Сбрасываем статусы материалов
+            foreach (var material in viewModel.Materials) {
+                if (!string.IsNullOrEmpty(material.RemoteUrl)) {
+                    var remotePath = ExtractRelativePathFromUrl(material.RemoteUrl);
+                    if (remotePath != null && normalizedPaths.Contains(remotePath.ToLowerInvariant())) {
+                        material.UploadStatus = null;
+                        material.UploadedHash = null;
+                        material.RemoteUrl = null;
+                        material.LastUploadedAt = null;
+                    }
+                }
+            }
+
+            // Сбрасываем статусы моделей
+            foreach (var model in viewModel.Models) {
+                if (!string.IsNullOrEmpty(model.RemoteUrl)) {
+                    var remotePath = ExtractRelativePathFromUrl(model.RemoteUrl);
+                    if (remotePath != null && normalizedPaths.Contains(remotePath.ToLowerInvariant())) {
+                        model.UploadStatus = null;
+                        model.UploadedHash = null;
+                        model.RemoteUrl = null;
+                        model.LastUploadedAt = null;
+                    }
+                }
+            }
+
+            logger.Info($"Reset upload status for resources matching {deletedPaths.Count} deleted server paths");
+        }
+
+        /// <summary>
+        /// Извлекает относительный путь из полного CDN URL
+        /// </summary>
+        private string? ExtractRelativePathFromUrl(string url) {
+            if (string.IsNullOrEmpty(url)) return null;
+
+            // CDN URL обычно имеет формат: https://cdn.example.com/bucket/path/to/file.ext
+            // или просто путь: content/path/to/file.ext
+            try {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri)) {
+                    // Убираем начальный слэш из пути
+                    return uri.AbsolutePath.TrimStart('/');
+                }
+                // Если это уже относительный путь
+                return url.Replace('\\', '/').TrimStart('/');
+            } catch {
+                return url.Replace('\\', '/').TrimStart('/');
+            }
+        }
+
+        /// <summary>
+        /// Обработчик события обновления списка файлов на сервере - верифицирует статусы ресурсов
+        /// </summary>
+        private void OnServerAssetsRefreshed(HashSet<string> serverPaths) {
+            if (serverPaths == null || serverPaths.Count == 0) {
+                // Сервер пустой - сбрасываем все upload статусы
+                ResetAllUploadStatuses();
+                return;
+            }
+
+            int verified = 0;
+            int notFound = 0;
+
+            // Проверяем текстуры
+            foreach (var texture in viewModel.Textures) {
+                if (texture.UploadStatus == "Uploaded" && !string.IsNullOrEmpty(texture.RemoteUrl)) {
+                    var remotePath = ExtractRelativePathFromUrl(texture.RemoteUrl);
+                    if (remotePath != null && serverPaths.Contains(remotePath)) {
+                        verified++;
+                    } else {
+                        texture.UploadStatus = null;
+                        texture.UploadedHash = null;
+                        texture.RemoteUrl = null;
+                        texture.LastUploadedAt = null;
+                        notFound++;
+                    }
+                }
+            }
+
+            // Проверяем материалы
+            foreach (var material in viewModel.Materials) {
+                if (material.UploadStatus == "Uploaded" && !string.IsNullOrEmpty(material.RemoteUrl)) {
+                    var remotePath = ExtractRelativePathFromUrl(material.RemoteUrl);
+                    if (remotePath != null && serverPaths.Contains(remotePath)) {
+                        verified++;
+                    } else {
+                        material.UploadStatus = null;
+                        material.UploadedHash = null;
+                        material.RemoteUrl = null;
+                        material.LastUploadedAt = null;
+                        notFound++;
+                    }
+                }
+            }
+
+            // Проверяем модели
+            foreach (var model in viewModel.Models) {
+                if (model.UploadStatus == "Uploaded" && !string.IsNullOrEmpty(model.RemoteUrl)) {
+                    var remotePath = ExtractRelativePathFromUrl(model.RemoteUrl);
+                    if (remotePath != null && serverPaths.Contains(remotePath)) {
+                        verified++;
+                    } else {
+                        model.UploadStatus = null;
+                        model.UploadedHash = null;
+                        model.RemoteUrl = null;
+                        model.LastUploadedAt = null;
+                        notFound++;
+                    }
+                }
+            }
+
+            if (notFound > 0) {
+                logger.Info($"Server status verification: {verified} verified, {notFound} not found (status reset)");
+            } else if (verified > 0) {
+                logger.Info($"Server status verification: {verified} files verified");
+            }
+        }
+
+        /// <summary>
+        /// Сбрасывает все upload статусы (когда сервер пустой)
+        /// </summary>
+        private void ResetAllUploadStatuses() {
+            int reset = 0;
+
+            foreach (var texture in viewModel.Textures) {
+                if (!string.IsNullOrEmpty(texture.UploadStatus)) {
+                    texture.UploadStatus = null;
+                    texture.UploadedHash = null;
+                    texture.RemoteUrl = null;
+                    texture.LastUploadedAt = null;
+                    reset++;
+                }
+            }
+
+            foreach (var material in viewModel.Materials) {
+                if (!string.IsNullOrEmpty(material.UploadStatus)) {
+                    material.UploadStatus = null;
+                    material.UploadedHash = null;
+                    material.RemoteUrl = null;
+                    material.LastUploadedAt = null;
+                    reset++;
+                }
+            }
+
+            foreach (var model in viewModel.Models) {
+                if (!string.IsNullOrEmpty(model.UploadStatus)) {
+                    model.UploadStatus = null;
+                    model.UploadedHash = null;
+                    model.RemoteUrl = null;
+                    model.LastUploadedAt = null;
+                    reset++;
+                }
+            }
+
+            if (reset > 0) {
+                logger.Info($"Server empty - reset {reset} upload statuses");
+            }
         }
 
         private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {
@@ -4823,6 +5008,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update ready status
                 viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
+
+                // Auto-refresh server assets to verify upload statuses
+                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
             });
         }
 

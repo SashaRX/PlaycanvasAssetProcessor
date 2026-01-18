@@ -35,6 +35,18 @@ namespace AssetProcessor.Controls {
         private ServerFolderNode? _rootNode;
         private ServerFolderNode? _selectedFolder;
 
+        /// <summary>
+        /// Событие, вызываемое при удалении файлов с сервера.
+        /// Передаёт список удалённых путей (RemotePath).
+        /// </summary>
+        public event Action<List<string>>? FilesDeleted;
+
+        /// <summary>
+        /// Событие, вызываемое после загрузки списка файлов с сервера.
+        /// Передаёт HashSet путей всех файлов на сервере.
+        /// </summary>
+        public event Action<HashSet<string>>? ServerAssetsRefreshed;
+
         public ServerAssetsPanel() {
             InitializeComponent();
             ServerAssetsDataGrid.ItemsSource = _displayedAssets;
@@ -211,6 +223,10 @@ namespace AssetProcessor.Controls {
                 StatusText.Text = $"Loaded {_allAssets.Count} files from server";
 
                 Logger.Info($"Loaded {_allAssets.Count} files from B2, total size: {totalSizeMB:F2} MB");
+
+                // Notify about server files for status verification
+                var serverPaths = new HashSet<string>(_allAssets.Select(a => a.RemotePath), StringComparer.OrdinalIgnoreCase);
+                ServerAssetsRefreshed?.Invoke(serverPaths);
 
             } catch (OperationCanceledException) {
                 StatusText.Text = "Refresh cancelled";
@@ -414,11 +430,13 @@ namespace AssetProcessor.Controls {
 
                 int deleted = 0;
                 int failed = 0;
+                var deletedPaths = new List<string>();
 
                 foreach (var asset in selectedAssets) {
                     try {
                         var success = await b2Service.DeleteFileAsync(asset.RemotePath);
                         if (success) {
+                            deletedPaths.Add(asset.RemotePath);
                             _allAssets.Remove(asset);
                             _filteredAssets.Remove(asset);
                             _displayedAssets.Remove(asset);
@@ -430,6 +448,11 @@ namespace AssetProcessor.Controls {
                         Logger.Warn(ex, $"Failed to delete file: {asset.RemotePath}");
                         failed++;
                     }
+                }
+
+                // Notify about deleted files for status update
+                if (deletedPaths.Count > 0) {
+                    FilesDeleted?.Invoke(deletedPaths);
                 }
 
                 // Rebuild tree
@@ -476,6 +499,9 @@ namespace AssetProcessor.Controls {
             try {
                 StatusText.Text = $"Deleting folder {_selectedFolder.Name}...";
 
+                // Collect all file paths before deletion for status update
+                var deletedPaths = CollectFolderPathsRecursive(_selectedFolder);
+
                 using var b2Service = new B2UploadService();
 
                 if (!AppSettings.Default.TryGetDecryptedB2ApplicationKey(out var appKey) || string.IsNullOrEmpty(appKey)) {
@@ -503,6 +529,11 @@ namespace AssetProcessor.Controls {
 
                 // Remove files from local collections
                 RemoveFolderFilesRecursive(_selectedFolder);
+
+                // Notify about deleted files for status update
+                if (deletedPaths.Count > 0) {
+                    FilesDeleted?.Invoke(deletedPaths);
+                }
 
                 // Rebuild tree
                 if (_allAssets.Any()) {
@@ -543,6 +574,17 @@ namespace AssetProcessor.Controls {
             foreach (var child in folder.Children) {
                 RemoveFolderFilesRecursive(child);
             }
+        }
+
+        private List<string> CollectFolderPathsRecursive(ServerFolderNode folder) {
+            var paths = new List<string>();
+            foreach (var file in folder.Files) {
+                paths.Add(file.RemotePath);
+            }
+            foreach (var child in folder.Children) {
+                paths.AddRange(CollectFolderPathsRecursive(child));
+            }
+            return paths;
         }
 
         /// <summary>

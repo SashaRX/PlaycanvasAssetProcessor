@@ -31,7 +31,7 @@
         <help:ResolutionConverter x:Key="ResolutionConverter" />
         <help:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
         <help:StatusToVisibilityInverseConverter x:Key="StatusToVisibilityInverseConverter" />
-        <help:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter" />
+        <help:StatusToForegroundConverter x:Key="StatusToForegroundConverter" />
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
         <help:InverseBoolConverter x:Key="InverseBoolConverter" />
@@ -129,7 +129,6 @@
                 <MenuItem Header="Mipmaps" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Mipmaps"/>
                 <MenuItem Header="Preset" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Preset"/>
                 <MenuItem Header="Status" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Status"/>
-                <MenuItem Header="Upload" IsCheckable="True" IsChecked="True" Click="TextureColumnVisibility_Click" Tag="Upload"/>
             </MenuItem>
         </ContextMenu>
 
@@ -556,25 +555,16 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
+                                <DataGridTemplateColumn Header="Status" Width="90" MinWidth="70" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
-                                                <ProgressBar MinWidth="100" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForeground}"/>
+                                                <ProgressBar MinWidth="60" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                                <TextBlock Text="{Binding StatusOrProgress}"
+                                                           Foreground="{Binding EffectiveStatus, Converter={StaticResource StatusToForegroundConverter}}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"/>
                                             </Grid>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Upload" Width="70" MinWidth="50" SortMemberPath="UploadStatus">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding UploadStatusOrProgress}"
-                                                       Foreground="{Binding UploadStatusColor}"
-                                                       FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       ToolTip="{Binding RemoteUrl}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -788,12 +778,15 @@
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, Converter={StaticResource SizeConverter}}" Width="55" MinWidth="45" SortMemberPath="Size"/>
                                 <DataGridTextColumn Header="UV Channels" Binding="{Binding UVChannels}" Width="80" MinWidth="50"/>
                                 <DataGridTextColumn Header="Extension" Binding="{Binding Extension}" Width="65" MinWidth="40"/>
-                                <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
+                                <DataGridTemplateColumn Header="Status" Width="90" MinWidth="70" SortMemberPath="Status">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
-                                                <ProgressBar MinWidth="80" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForeground}"/>
+                                                <ProgressBar MinWidth="60" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                                <TextBlock Text="{Binding StatusOrProgress}"
+                                                           Foreground="{Binding EffectiveStatus, Converter={StaticResource StatusToForegroundConverter}}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"/>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -898,12 +891,15 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTemplateColumn Header="Status" Width="1.5*" MinWidth="80" SortMemberPath="Status">
+                            <DataGridTemplateColumn Header="Status" Width="90" MinWidth="70" SortMemberPath="Status">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid>
-                                            <ProgressBar MinWidth="80" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
-                                            <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForeground}"/>
+                                            <ProgressBar MinWidth="60" Width="auto" Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                            <TextBlock Text="{Binding StatusOrProgress}"
+                                                       Foreground="{Binding EffectiveStatus, Converter={StaticResource StatusToForegroundConverter}}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       FontWeight="SemiBold"/>
                                         </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

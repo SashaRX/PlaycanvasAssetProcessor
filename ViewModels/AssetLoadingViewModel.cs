@@ -1,3 +1,4 @@
+using AssetProcessor.Export;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using AssetProcessor.Services.Models;
@@ -185,6 +186,12 @@ public partial class AssetLoadingViewModel : ObservableObject {
                 material.RemoteUrl = url;
                 material.LastUploadedAt = uploadedAt;
             }
+
+            // Scan server folder for already exported files
+            LoadingStatus = "Scanning exported files...";
+            await Task.Run(() => {
+                ScanExportedFiles(request.ProjectFolderPath, request.ProjectName, result.Textures, result.Models, result.Materials);
+            }, ct).ConfigureAwait(false);
 
             // NOW send to UI with all data already prepared (SubGroupName set, upload states restored)
             LoadingStatus = "Updating UI...";
@@ -539,6 +546,68 @@ public partial class AssetLoadingViewModel : ObservableObject {
                 : "Outdated";
         } catch {
             return "Uploaded"; // If can't check, assume OK
+        }
+    }
+
+    /// <summary>
+    /// Scans the server folder for already exported files and marks resources as "Processed".
+    /// </summary>
+    private void ScanExportedFiles(
+        string projectFolderPath,
+        string projectName,
+        IReadOnlyList<TextureResource> textures,
+        IReadOnlyList<ModelResource> models,
+        IReadOnlyList<MaterialResource> materials) {
+
+        try {
+            // projectFolderPath уже включает имя проекта: {base}/{projectName}
+            var serverPath = Path.Combine(projectFolderPath, "server");
+            var mappingPath = Path.Combine(serverPath, "mapping.json");
+
+            logger.Debug($"Scanning for exported files: {mappingPath}");
+
+            if (!File.Exists(mappingPath)) {
+                logger.Debug($"No mapping.json found at {mappingPath}");
+                return;
+            }
+
+            var mappingJson = File.ReadAllText(mappingPath);
+            var mapping = System.Text.Json.JsonSerializer.Deserialize<MappingData>(mappingJson, new System.Text.Json.JsonSerializerOptions {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (mapping == null) return;
+
+            int processedCount = 0;
+
+            // Mark models as Processed if they exist in mapping
+            foreach (var model in models) {
+                if (mapping.Models.ContainsKey(model.ID.ToString())) {
+                    model.Status = "Processed";
+                    processedCount++;
+                }
+            }
+
+            // Mark materials as Processed if they exist in mapping
+            foreach (var material in materials) {
+                if (mapping.Materials.ContainsKey(material.ID.ToString())) {
+                    material.Status = "Processed";
+                    processedCount++;
+                }
+            }
+
+            // Mark textures as Processed if they exist in mapping
+            foreach (var texture in textures) {
+                if (mapping.Textures.ContainsKey(texture.ID.ToString())) {
+                    texture.Status = "Processed";
+                    processedCount++;
+                }
+            }
+
+            logService.LogInfo($"Scanned exported files: {processedCount} resources marked as Processed");
+
+        } catch (Exception ex) {
+            logService.LogWarn($"Failed to scan exported files: {ex.Message}");
         }
     }
 

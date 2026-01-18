@@ -455,6 +455,19 @@ namespace AssetProcessor {
                             successCount++;
                             logger.Info($"Export OK: {model.Name} -> {result.ExportPath}");
 
+                            // Помечаем исходные ресурсы как обработанные (через Dispatcher для UI)
+                            Dispatcher.Invoke(() => {
+                                model.Status = "Processed";
+                                foreach (var matId in result.ProcessedMaterialIds) {
+                                    var mat = viewModel.Materials.FirstOrDefault(m => m.ID == matId);
+                                    if (mat != null) mat.Status = "Processed";
+                                }
+                                foreach (var texId in result.ProcessedTextureIds) {
+                                    var tex = viewModel.Textures.FirstOrDefault(t => t.ID == texId);
+                                    if (tex != null) tex.Status = "Processed";
+                                }
+                            });
+
                             // Собираем пути экспортированных файлов (ТОЛЬКО файлы, не папки!)
                             if (!string.IsNullOrEmpty(result.ConvertedModelPath)) exportedFiles.Add(result.ConvertedModelPath);
                             if (!string.IsNullOrEmpty(result.GeneratedModelJson)) exportedFiles.Add(result.GeneratedModelJson);
@@ -507,6 +520,11 @@ namespace AssetProcessor {
                             successCount++;
                             logger.Info($"Export OK: {material.Name} -> {result.GeneratedMaterialJson}");
 
+                            // Помечаем материал как обработанный
+                            Dispatcher.Invoke(() => {
+                                material.Status = "Processed";
+                            });
+
                             // Собираем ТОЛЬКО JSON материала (MaterialJsonOnly = true)
                             if (!string.IsNullOrEmpty(result.GeneratedMaterialJson)) exportedFiles.Add(result.GeneratedMaterialJson);
                             // НЕ добавляем текстуры - они экспортируются отдельно если выбраны
@@ -539,6 +557,11 @@ namespace AssetProcessor {
                         if (result.Success) {
                             successCount++;
                             logger.Info($"Export OK: {texture.Name} -> {result.ExportPath}");
+
+                            // Помечаем текстуру как обработанную
+                            Dispatcher.Invoke(() => {
+                                texture.Status = "Processed";
+                            });
 
                             // Собираем пути экспортированных файлов
                             if (!string.IsNullOrEmpty(result.ConvertedTexturePath)) exportedFiles.Add(result.ConvertedTexturePath);
@@ -1173,14 +1196,19 @@ namespace AssetProcessor {
             // Строим обратный индекс: relativePath -> (resourceId, resourceType)
             var pathToResource = new Dictionary<string, (int ResourceId, string ResourceType)>(StringComparer.OrdinalIgnoreCase);
 
+            // Нормализуем пути (заменяем \ на / и убираем двойные слэши)
+            string NormalizePath(string p) => p.Replace('\\', '/').Replace("//", "/");
+
             foreach (var (idStr, entry) in mapping.Models) {
                 if (int.TryParse(idStr, out var id) && !string.IsNullOrEmpty(entry.Path)) {
-                    pathToResource[entry.Path] = (id, "Model");
-                    logger.Debug($"[SaveUploadRecords] Model {id}: {entry.Path}");
+                    var normalizedPath = NormalizePath(entry.Path);
+                    pathToResource[normalizedPath] = (id, "Model");
+                    logger.Debug($"[SaveUploadRecords] Model {id}: {normalizedPath}");
                     foreach (var lod in entry.Lods) {
                         if (!string.IsNullOrEmpty(lod.File)) {
-                            pathToResource[lod.File] = (id, "Model");
-                            logger.Debug($"[SaveUploadRecords] Model LOD {id}: {lod.File}");
+                            var lodPath = NormalizePath(lod.File);
+                            pathToResource[lodPath] = (id, "Model");
+                            logger.Debug($"[SaveUploadRecords] Model LOD {id}: {lodPath}");
                         }
                     }
                 }
@@ -1188,15 +1216,17 @@ namespace AssetProcessor {
 
             foreach (var (idStr, path) in mapping.Materials) {
                 if (int.TryParse(idStr, out var id) && !string.IsNullOrEmpty(path)) {
-                    pathToResource[path] = (id, "Material");
-                    logger.Debug($"[SaveUploadRecords] Material {id}: {path}");
+                    var normalizedPath = NormalizePath(path);
+                    pathToResource[normalizedPath] = (id, "Material");
+                    logger.Debug($"[SaveUploadRecords] Material {id}: {normalizedPath}");
                 }
             }
 
             foreach (var (idStr, path) in mapping.Textures) {
                 if (int.TryParse(idStr, out var id) && !string.IsNullOrEmpty(path)) {
-                    pathToResource[path] = (id, "Texture");
-                    logger.Debug($"[SaveUploadRecords] Texture {id}: {path}");
+                    var normalizedPath = NormalizePath(path);
+                    pathToResource[normalizedPath] = (id, "Texture");
+                    logger.Debug($"[SaveUploadRecords] Texture {id}: {normalizedPath}");
                 }
             }
 
@@ -1213,20 +1243,35 @@ namespace AssetProcessor {
             int matchedCount = 0;
 
             foreach (var fileResult in uploadResult.Results.Where(r => r.Success || r.Skipped)) {
-                var remotePath = fileResult.RemotePath;
-                var assetsIndex = remotePath.IndexOf("assets/", StringComparison.OrdinalIgnoreCase);
-                var relativePath = assetsIndex >= 0 ? remotePath.Substring(assetsIndex) : remotePath;
+                var remotePath = fileResult.RemotePath?.Replace('\\', '/') ?? "";
+
+                // Нормализуем путь для сопоставления с mapping.json
+                // Remote path: content/models/... -> mapping.json: assets/content/models/...
+                var relativePath = remotePath;
+                if (relativePath.StartsWith("content/", StringComparison.OrdinalIgnoreCase)) {
+                    relativePath = "assets/" + relativePath;
+                }
 
                 int? resourceId = null;
                 string? resourceType = null;
 
+                // Пробуем найти прямое совпадение
                 if (pathToResource.TryGetValue(relativePath, out var resourceInfo)) {
                     resourceId = resourceInfo.ResourceId;
                     resourceType = resourceInfo.ResourceType;
                     matchedCount++;
                     logger.Debug($"[SaveUploadRecords] Matched: {relativePath} -> {resourceType} {resourceId}");
                 } else {
-                    logger.Debug($"[SaveUploadRecords] No match for: {relativePath}");
+                    // Пробуем без assets/ prefix
+                    var withoutAssets = remotePath;
+                    if (pathToResource.TryGetValue(withoutAssets, out resourceInfo)) {
+                        resourceId = resourceInfo.ResourceId;
+                        resourceType = resourceInfo.ResourceType;
+                        matchedCount++;
+                        logger.Debug($"[SaveUploadRecords] Matched (no prefix): {withoutAssets} -> {resourceType} {resourceId}");
+                    } else {
+                        logger.Debug($"[SaveUploadRecords] No match for: {relativePath} or {remotePath}");
+                    }
                 }
 
                 // Сохраняем запись в SQLite

@@ -107,21 +107,59 @@ namespace AssetProcessor.Helpers {
         }
     }
 
-    public class StatusToBackgroundConverter : IValueConverter {
+    /// <summary>
+    /// Converts status to foreground color for text display.
+    /// Colors are chosen to be visible on both light and dark themes.
+    /// </summary>
+    public class StatusToForegroundConverter : IValueConverter {
+        // Colors visible on both light and dark backgrounds
+        private static readonly SolidColorBrush SuccessGreen = new(Color.FromRgb(34, 197, 94));      // #22C55E - bright green
+        private static readonly SolidColorBrush DownloadBlue = new(Color.FromRgb(59, 130, 246));     // #3B82F6 - bright blue
+        private static readonly SolidColorBrush ProcessedCyan = new(Color.FromRgb(6, 182, 212));     // #06B6D4 - cyan/teal
+        private static readonly SolidColorBrush WarningOrange = new(Color.FromRgb(249, 115, 22));    // #F97316 - orange
+        private static readonly SolidColorBrush ErrorRed = new(Color.FromRgb(239, 68, 68));          // #EF4444 - red
+        private static readonly SolidColorBrush NeutralGray = new(Color.FromRgb(156, 163, 175));     // #9CA3AF - gray
+        private static readonly SolidColorBrush UploadingYellow = new(Color.FromRgb(234, 179, 8));   // #EAB308 - yellow
+
+        static StatusToForegroundConverter() {
+            // Freeze brushes for performance
+            SuccessGreen.Freeze();
+            DownloadBlue.Freeze();
+            ProcessedCyan.Freeze();
+            WarningOrange.Freeze();
+            ErrorRed.Freeze();
+            NeutralGray.Freeze();
+            UploadingYellow.Freeze();
+        }
+
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             if (value == null)
-                return Brushes.Transparent;
+                return NeutralGray;
 
             string? status = value.ToString();
 
             return status switch {
-                "Error" => Brushes.Red,
-                "Downloaded" => Brushes.LightGreen,
-                "Empty File" => Brushes.Yellow,
-                "Corrupted" => Brushes.Orange,
-                "Size Mismatch" => Brushes.Pink,
-                "Downloading" => Brushes.Transparent,
-                _ => Brushes.Transparent,
+                // Download statuses
+                "On Server" => NeutralGray,
+                "Downloaded" => DownloadBlue,
+                "Downloading" => DownloadBlue,
+                // Process/Export statuses
+                "Processed" => ProcessedCyan,
+                "Converted" => ProcessedCyan,
+                // Upload statuses
+                "Queued" => NeutralGray,
+                "Uploading" => UploadingYellow,
+                "Uploaded" => SuccessGreen,
+                "Upload Failed" => ErrorRed,
+                "Outdated" => WarningOrange,
+                "Not on Server" => WarningOrange,
+                // Error statuses
+                "Error" => ErrorRed,
+                "Hash ERROR" => ErrorRed,
+                "Empty File" => WarningOrange,
+                "Corrupted" => ErrorRed,
+                "Size Mismatch" => WarningOrange,
+                _ => NeutralGray,
             };
         }
 

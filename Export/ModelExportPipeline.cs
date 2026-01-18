@@ -164,7 +164,7 @@ public class ModelExportPipeline {
             foreach (var material in modelMaterials) {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var materialJson = GenerateMaterialJsonWithIds(material, ormResults, options);
+                var materialJson = GenerateMaterialJsonWithPaths(material, texturePathMap, ormResults, options);
                 var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
                 var matPath = Path.Combine(exportPath, matFileName);
 
@@ -225,6 +225,10 @@ public class ModelExportPipeline {
                     ReportProgress("LOD", "Generated LODs", 95, model.Name, glbResult.LODPaths.Count, glbResult.LODPaths.Count);
                 }
             }
+
+            // Сохраняем IDs обработанных ресурсов для обновления статусов
+            result.ProcessedMaterialIds.AddRange(modelMaterials.Select(m => m.ID));
+            result.ProcessedTextureIds.AddRange(modelTextures.Select(t => t.ID));
 
             result.Success = true;
             ReportProgress("Done", "Export completed", 100, model.Name);
@@ -947,10 +951,11 @@ public class ModelExportPipeline {
     }
 
     /// <summary>
-    /// Генерирует материал JSON с ID текстур и путями для ORM
+    /// Генерирует материал JSON с путями текстур
     /// </summary>
-    private object GenerateMaterialJsonWithIds(
+    private object GenerateMaterialJsonWithPaths(
         MaterialResource material,
+        Dictionary<int, string> texturePathMap,
         Dictionary<int, ORMExportResult> ormResults,
         ExportOptions options) {
 
@@ -986,39 +991,38 @@ public class ModelExportPipeline {
 
         var textures = new Dictionary<string, object>();
 
-        // Стандартные текстуры - просто ID
-        if (material.DiffuseMapId.HasValue)
-            textures["diffuseMap"] = material.DiffuseMapId.Value;
+        // Стандартные текстуры - пути
+        if (material.DiffuseMapId.HasValue && texturePathMap.TryGetValue(material.DiffuseMapId.Value, out var diffusePath))
+            textures["diffuseMap"] = diffusePath;
 
-        if (material.NormalMapId.HasValue)
-            textures["normalMap"] = material.NormalMapId.Value;
+        if (material.NormalMapId.HasValue && texturePathMap.TryGetValue(material.NormalMapId.Value, out var normalPath))
+            textures["normalMap"] = normalPath;
 
-        if (material.EmissiveMapId.HasValue)
-            textures["emissiveMap"] = material.EmissiveMapId.Value;
+        if (material.EmissiveMapId.HasValue && texturePathMap.TryGetValue(material.EmissiveMapId.Value, out var emissivePath))
+            textures["emissiveMap"] = emissivePath;
 
-        if (material.OpacityMapId.HasValue)
-            textures["opacityMap"] = material.OpacityMapId.Value;
+        if (material.OpacityMapId.HasValue && texturePathMap.TryGetValue(material.OpacityMapId.Value, out var opacityPath))
+            textures["opacityMap"] = opacityPath;
 
-        // ORM packed текстуры - путь (т.к. создан нами, не PlayCanvas)
+        // ORM packed текстуры - путь
         if (options.UsePackedTextures && ormResults.TryGetValue(material.ID, out var ormResult)) {
             var ormKey = ormResult.PackingMode switch {
-                ChannelPackingMode.OG => "_og",
-                ChannelPackingMode.OGM => "_ogm",
-                ChannelPackingMode.OGMH => "_ogmh",
-                _ => "_ogm"
+                ChannelPackingMode.OG => "ogMap",
+                ChannelPackingMode.OGM => "ogmMap",
+                ChannelPackingMode.OGMH => "ogmhMap",
+                _ => "ogmMap"
             };
-            // Используем относительный путь вместо ID
             textures[ormKey] = ormResult.RelativePath;
         } else {
-            // Отдельные текстуры - формат { "asset": id }
-            if (material.AOMapId.HasValue)
-                textures["aoMap"] = new { asset = material.AOMapId.Value };
+            // Отдельные текстуры - пути
+            if (material.AOMapId.HasValue && texturePathMap.TryGetValue(material.AOMapId.Value, out var aoPath))
+                textures["aoMap"] = aoPath;
 
-            if (material.GlossMapId.HasValue)
-                textures["glossMap"] = new { asset = material.GlossMapId.Value };
+            if (material.GlossMapId.HasValue && texturePathMap.TryGetValue(material.GlossMapId.Value, out var glossPath))
+                textures["glossMap"] = glossPath;
 
-            if (material.MetalnessMapId.HasValue)
-                textures["metalnessMap"] = new { asset = material.MetalnessMapId.Value };
+            if (material.MetalnessMapId.HasValue && texturePathMap.TryGetValue(material.MetalnessMapId.Value, out var metalPath))
+                textures["metalnessMap"] = metalPath;
         }
 
         // Собираем параметры материала
@@ -1385,7 +1389,7 @@ public class ModelExportPipeline {
 
             // Генерируем material JSON
             ReportProgress("JSON", "Generating material file", 70, material.Name);
-            var materialJson = GenerateMaterialJsonWithIds(material, ormResults, options);
+            var materialJson = GenerateMaterialJsonWithPaths(material, texturePathMap, ormResults, options);
             var matFileName = GetSafeFileName(material.Name ?? $"mat_{material.ID}") + ".json";
             var matPath = Path.Combine(exportPath, matFileName);
 
@@ -1669,6 +1673,16 @@ public class ModelExportResult {
     public List<string> ConvertedTextures { get; set; } = new();
     public List<string> GeneratedORMTextures { get; set; } = new();
     public List<string> GeneratedChunksFiles { get; set; } = new();
+
+    /// <summary>
+    /// IDs материалов, которые были обработаны при экспорте
+    /// </summary>
+    public List<int> ProcessedMaterialIds { get; set; } = new();
+
+    /// <summary>
+    /// IDs текстур, которые были обработаны при экспорте
+    /// </summary>
+    public List<int> ProcessedTextureIds { get; set; } = new();
 }
 
 public class MaterialExportResult {

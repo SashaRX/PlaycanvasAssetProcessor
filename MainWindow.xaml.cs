@@ -5271,6 +5271,107 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
+        private void OpenProcessedFolder_Click(object sender, RoutedEventArgs e) {
+            if (TexturesDataGrid.SelectedItem is TextureResource texture) {
+                var processedPath = FindProcessedTexturePath(texture);
+                if (!string.IsNullOrEmpty(processedPath)) {
+                    OpenFileInExplorer(processedPath);
+                } else {
+                    MessageBox.Show("Processed file not found. Export the model first.", "Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+        }
+
+        private void OpenModelProcessedFolder_Click(object sender, RoutedEventArgs e) {
+            if (ModelsDataGrid.SelectedItem is ModelResource model) {
+                var processedPath = FindProcessedModelPath(model);
+                if (!string.IsNullOrEmpty(processedPath)) {
+                    OpenFileInExplorer(processedPath);
+                } else {
+                    MessageBox.Show("Processed file not found. Export the model first.", "Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+        }
+
+        private void OpenMaterialSourceFolder_Click(object sender, RoutedEventArgs e) {
+            if (MaterialsDataGrid.SelectedItem is MaterialResource material && !string.IsNullOrEmpty(material.Path)) {
+                OpenFileInExplorer(material.Path);
+            }
+        }
+
+        private void OpenMaterialProcessedFolder_Click(object sender, RoutedEventArgs e) {
+            if (MaterialsDataGrid.SelectedItem is MaterialResource material) {
+                var processedPath = FindProcessedMaterialPath(material);
+                if (!string.IsNullOrEmpty(processedPath)) {
+                    OpenFileInExplorer(processedPath);
+                } else {
+                    MessageBox.Show("Processed file not found. Export the model first.", "Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Finds the processed KTX2 file path for a texture
+        /// </summary>
+        private string? FindProcessedTexturePath(TextureResource texture) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) return null;
+
+            var serverContentPath = Path.Combine(ProjectFolderPath, "server", "assets", "content");
+            if (!Directory.Exists(serverContentPath)) return null;
+
+            // Try to find KTX2 file by texture name
+            var textureName = Path.GetFileNameWithoutExtension(texture.Path ?? texture.Name);
+            if (string.IsNullOrEmpty(textureName)) return null;
+
+            // Search for matching KTX2 file
+            var ktx2Files = Directory.GetFiles(serverContentPath, $"{textureName}.ktx2", SearchOption.AllDirectories);
+            if (ktx2Files.Length > 0) return ktx2Files[0];
+
+            // Also try with _lod0 suffix (for some textures)
+            ktx2Files = Directory.GetFiles(serverContentPath, $"{textureName}_*.ktx2", SearchOption.AllDirectories);
+            if (ktx2Files.Length > 0) return ktx2Files[0];
+
+            return null;
+        }
+
+        /// <summary>
+        /// Finds the processed GLB file path for a model
+        /// </summary>
+        private string? FindProcessedModelPath(ModelResource model) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) return null;
+
+            var serverContentPath = Path.Combine(ProjectFolderPath, "server", "assets", "content");
+            if (!Directory.Exists(serverContentPath)) return null;
+
+            var modelName = Path.GetFileNameWithoutExtension(model.Path ?? model.Name);
+            if (string.IsNullOrEmpty(modelName)) return null;
+
+            // Search for GLB files
+            var glbFiles = Directory.GetFiles(serverContentPath, $"{modelName}*.glb", SearchOption.AllDirectories);
+            if (glbFiles.Length > 0) return glbFiles[0];
+
+            return null;
+        }
+
+        /// <summary>
+        /// Finds the processed JSON file path for a material
+        /// </summary>
+        private string? FindProcessedMaterialPath(MaterialResource material) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) return null;
+
+            var serverContentPath = Path.Combine(ProjectFolderPath, "server", "assets", "content");
+            if (!Directory.Exists(serverContentPath)) return null;
+
+            var materialName = material.Name;
+            if (string.IsNullOrEmpty(materialName)) return null;
+
+            // Search for JSON files
+            var jsonFiles = Directory.GetFiles(serverContentPath, $"{materialName}.json", SearchOption.AllDirectories);
+            if (jsonFiles.Length > 0) return jsonFiles[0];
+
+            return null;
+        }
+
         /// <summary>
         /// Opens Windows Explorer and selects the specified file.
         /// </summary>

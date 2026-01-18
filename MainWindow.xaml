@@ -139,7 +139,8 @@
             <Separator/>
             <MenuItem Header="Delete ORM Texture" Click="DeleteORMFromList_Click"/>
             <Separator/>
-            <MenuItem Header="Open File Location" Click="OpenFileLocation_Click"/>
+            <MenuItem Header="Open Source Folder" Click="OpenFileLocation_Click"/>
+            <MenuItem Header="Open Processed Folder" Click="OpenProcessedFolder_Click"/>
             <MenuItem Header="Copy Path" Click="CopyTexturePath_Click"/>
             <Separator/>
             <MenuItem Header="Refresh Preview" Click="RefreshPreview_Click"/>
@@ -149,7 +150,8 @@
         <ContextMenu x:Key="ModelRowContextMenu">
             <MenuItem Header="Process Model" Click="ProcessSelectedModel_Click"/>
             <Separator/>
-            <MenuItem Header="Open File Location" Click="OpenModelFileLocation_Click"/>
+            <MenuItem Header="Open Source Folder" Click="OpenModelFileLocation_Click"/>
+            <MenuItem Header="Open Processed Folder" Click="OpenModelProcessedFolder_Click"/>
             <MenuItem Header="Copy Path" Click="CopyModelPath_Click"/>
             <Separator/>
             <MenuItem Header="Refresh Preview" Click="RefreshModelPreview_Click"/>
@@ -179,6 +181,9 @@
             <MenuItem Header="Create ORM for All Materials" Click="CreateORMForAllMaterials_Click"/>
             <Separator/>
             <MenuItem Header="Delete ORM Texture" Click="DeleteORMTexture_Click"/>
+            <Separator/>
+            <MenuItem Header="Open Source Folder" Click="OpenMaterialSourceFolder_Click"/>
+            <MenuItem Header="Open Processed Folder" Click="OpenMaterialProcessedFolder_Click"/>
         </ContextMenu>
 
         <!-- ContextMenu для заголовков колонок материалов -->

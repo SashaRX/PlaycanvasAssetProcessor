@@ -5004,22 +5004,34 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 TexturesDataGrid.Visibility = Visibility.Hidden;
                 ModelsDataGrid.Visibility = Visibility.Hidden;
                 MaterialsDataGrid.Visibility = Visibility.Hidden;
+                logger.Info("[ApplyAssetsToUI] DataGrids hidden");
 
                 // Batch update: assign new collections
+                logger.Info("[ApplyAssetsToUI] Assigning Textures collection...");
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+                logger.Info("[ApplyAssetsToUI] Textures assigned");
+
+                logger.Info("[ApplyAssetsToUI] Assigning Models collection...");
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+                logger.Info("[ApplyAssetsToUI] Models assigned");
+
+                logger.Info("[ApplyAssetsToUI] Assigning Materials collection...");
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+                logger.Info("[ApplyAssetsToUI] Materials assigned");
 
                 // Build combined Assets collection
                 var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
                 allAssets.AddRange(e.Textures);
                 allAssets.AddRange(e.Models);
                 allAssets.AddRange(e.Materials);
+                logger.Info("[ApplyAssetsToUI] Assigning Assets collection...");
                 viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+                logger.Info("[ApplyAssetsToUI] Assets assigned");
 
                 // Sync Master Material mappings now that materials are populated
                 logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");
                 viewModel.SyncMaterialMasterMappings();
+                logger.Info("[ApplyAssetsToUI] SyncMaterialMasterMappings done");
 
                 // Update folder paths
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);

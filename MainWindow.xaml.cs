@@ -5000,11 +5000,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 logger.Info($"[ApplyAssetsToUI] Starting UI update for {e.Textures.Count} textures");
 
-                // Hide DataGrids during updates
-                TexturesDataGrid.Visibility = Visibility.Hidden;
-                ModelsDataGrid.Visibility = Visibility.Hidden;
-                MaterialsDataGrid.Visibility = Visibility.Hidden;
-                logger.Info("[ApplyAssetsToUI] DataGrids hidden");
+                // Use Collapsed instead of Hidden - Collapsed removes element from visual tree entirely
+                // Hidden still keeps element in tree and may trigger binding updates
+                TexturesDataGrid.Visibility = Visibility.Collapsed;
+                ModelsDataGrid.Visibility = Visibility.Collapsed;
+                MaterialsDataGrid.Visibility = Visibility.Collapsed;
+                logger.Info("[ApplyAssetsToUI] DataGrids collapsed");
 
                 // Batch update: assign new collections
                 logger.Info("[ApplyAssetsToUI] Assigning Textures collection...");

@@ -515,7 +515,7 @@
                                 RowHeight="16"
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.IsVirtualizingWhenGrouping="True"
-                                VirtualizingPanel.VirtualizationMode="Standard"
+                                VirtualizingPanel.VirtualizationMode="Recycling"
                                 VirtualizingPanel.ScrollUnit="Pixel"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"

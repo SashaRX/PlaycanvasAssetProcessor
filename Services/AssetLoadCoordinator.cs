@@ -18,6 +18,9 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
     // Semaphore to limit concurrent asset processing
     private readonly SemaphoreSlim processSemaphore = new(32);
 
+    // Throttle progress reporting to avoid flooding UI thread
+    private int _lastReportedProgress = -1;
+
     public AssetLoadCoordinator(
         IProjectAssetService projectAssetService,
         IAssetResourceService assetResourceService,
@@ -71,6 +74,7 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
 
             int totalAssets = supportedAssets.Count;
             int processedCount = 0;
+            _lastReportedProgress = -1;  // Reset throttle counter
 
             // Report initial progress
             progress?.Report(new AssetLoadProgress(0, totalAssets));
@@ -109,7 +113,12 @@ public sealed class AssetLoadCoordinator : IAssetLoadCoordinator {
                         }
 
                         int current = Interlocked.Increment(ref processedCount);
-                        progress?.Report(new AssetLoadProgress(current, totalAssets, assetName));
+                        // Throttle progress: only report every 5% to avoid flooding UI thread
+                        int percentComplete = totalAssets > 0 ? (current * 100) / totalAssets : 0;
+                        int lastPercent = Interlocked.Exchange(ref _lastReportedProgress, percentComplete);
+                        if (percentComplete > lastPercent && (percentComplete % 5 == 0 || current == totalAssets)) {
+                            progress?.Report(new AssetLoadProgress(current, totalAssets, assetName));
+                        }
                     } finally {
                         processSemaphore.Release();
                     }

@@ -4961,8 +4961,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private volatile bool _isWindowActive = true;
 
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
-            // Note: Deferral disabled - was causing freezes. Just apply immediately.
-            // The D3D11 render loop already checks _isWindowActive to prevent GPU conflicts.
+            // Check if window is active - if not, defer loading to prevent UI freeze
+            if (!_isWindowActive) {
+                logger.Info("[OnAssetsLoaded] Window inactive, deferring asset loading");
+                _pendingAssetsData = e;
+                return;
+            }
+
             ApplyAssetsToUI(e);
         }
 
@@ -4970,8 +4975,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
-            // Single Dispatcher call to handle all UI updates atomically
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+            // Use Normal priority instead of Background to prevent freezes when window regains focus
+            // Background priority can be starved and cause accumulated updates to execute all at once
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 // Hide DataGrids during updates
                 TexturesDataGrid.Visibility = Visibility.Hidden;
                 ModelsDataGrid.Visibility = Visibility.Hidden;
@@ -4981,9 +4987,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
-
-                // Sync master material mappings from config to materials
-                viewModel.SyncMaterialMasterMappings();
 
                 // Build combined Assets collection
                 var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
@@ -5056,7 +5059,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OnB2VerificationCompleted(object? sender, B2VerificationCompletedEventArgs e) {
-            Dispatcher.Invoke(() => {
+            // Use BeginInvoke instead of Invoke to prevent potential deadlock
+            // when this is called from background thread while UI thread is processing ApplyAssetsToUI
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 if (!e.Success) {
                     logService.LogWarn($"[B2 Verification] Failed: {e.ErrorMessage}");
                     return;
@@ -5085,7 +5090,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         #region MaterialSelectionViewModel Event Handlers
 
         private void OnMaterialParametersLoaded(object? sender, MaterialParametersLoadedEventArgs e) {
-            Dispatcher.Invoke(() => {
+            // Use BeginInvoke to prevent potential deadlock when called from background thread
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 DisplayMaterialParameters(e.Material);
             });
         }

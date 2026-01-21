@@ -144,6 +144,14 @@ namespace AssetProcessor {
                             // Apply any deferred resize
                             D3D11TextureViewer?.ApplyPendingResize();
 
+                            // Apply pending assets data that was deferred when window was inactive
+                            if (_pendingAssetsData != null) {
+                                logger.Info("[AltTab] Applying deferred assets data");
+                                var pendingData = _pendingAssetsData;
+                                _pendingAssetsData = null;
+                                ApplyAssetsToUI(pendingData);
+                            }
+
                             logger.Info("[AltTab] Render ENABLED after 2s stable focus");
                         }
                     });

@@ -5091,20 +5091,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             logger.Info("[ShowDataGridsAndApplyGrouping] UI update completed, scheduling deferred grouping");
 
-            // Apply grouping DEFERRED to avoid blocking UI
-            // This allows the DataGrid to render first, then apply grouping in next frame
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                if (!_isWindowActive) {
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
-                    return;
-                }
-                logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
-                var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                using (view?.DeferRefresh()) {
-                    ApplyTextureGroupingIfEnabled();
-                }
-                logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
-            });
+            // TEMPORARILY DISABLED: Apply grouping DEFERRED to avoid blocking UI
+            // Testing if grouping is the cause of freeze
+            // Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+            //     if (!_isWindowActive) {
+            //         logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
+            //         return;
+            //     }
+            //     logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
+            //     var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+            //     using (view?.DeferRefresh()) {
+            //         ApplyTextureGroupingIfEnabled();
+            //     }
+            //     logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
+            // });
+            logger.Info("[ShowDataGridsAndApplyGrouping] Grouping DISABLED for testing");
         }
 
         /// <summary>

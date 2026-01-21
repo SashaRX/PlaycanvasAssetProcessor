@@ -840,25 +840,32 @@ namespace AssetProcessor.ViewModels {
 
         /// <summary>
         /// Syncs material-to-master mappings from MasterMaterialsConfig to MaterialResource.MasterMaterialName
-        /// Call this after both materials and MasterMaterialsConfig are loaded
+        /// Call this after both materials and MasterMaterialsConfig are loaded.
+        /// Uses silent setter to avoid triggering PropertyChanged during batch operation.
         /// </summary>
         public void SyncMaterialMasterMappings() {
-            logger.Info($"SyncMaterialMasterMappings called. Materials count: {Materials?.Count ?? 0}, Config exists: {masterMaterialsViewModel.Config != null}");
+            logger.Info($"[SyncMaterialMasterMappings] Starting. Materials count: {Materials?.Count ?? 0}, Config exists: {masterMaterialsViewModel.Config != null}");
 
             if (Materials == null || Materials.Count == 0) {
-                logger.Warn("SyncMaterialMasterMappings: No materials to sync!");
+                logger.Warn("[SyncMaterialMasterMappings] No materials to sync!");
                 return;
             }
 
             int syncedCount = 0;
+            int processedCount = 0;
+            logger.Info("[SyncMaterialMasterMappings] Starting foreach loop...");
+
             foreach (var material in Materials) {
+                processedCount++;
+
                 // Unsubscribe first to avoid triggering save during initial sync
                 material.PropertyChanged -= Material_PropertyChanged;
 
                 // Apply EXPLICIT mapping from config to material (not default!)
+                // Use silent setter to avoid triggering PropertyChanged
                 var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
                 if (!string.IsNullOrEmpty(masterName)) {
-                    material.MasterMaterialName = masterName;
+                    material.SetMasterMaterialNameSilent(masterName);
                     syncedCount++;
                 }
 
@@ -866,7 +873,7 @@ namespace AssetProcessor.ViewModels {
                 material.PropertyChanged += Material_PropertyChanged;
             }
 
-            logger.Info($"Synced {syncedCount} explicit master material mappings for {Materials.Count} materials");
+            logger.Info($"[SyncMaterialMasterMappings] Loop done. Processed {processedCount}, synced {syncedCount}");
         }
 
         /// <summary>

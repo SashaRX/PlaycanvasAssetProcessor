@@ -85,5 +85,13 @@ namespace AssetProcessor.Resources {
                 }
             }
         }
+
+        /// <summary>
+        /// Sets MasterMaterialName without triggering PropertyChanged.
+        /// Used for batch updates during initial sync to avoid UI freeze.
+        /// </summary>
+        public void SetMasterMaterialNameSilent(string? value) {
+            masterMaterialName = value;
+        }
     }
 }

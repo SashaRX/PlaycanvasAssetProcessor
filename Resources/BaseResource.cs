@@ -153,6 +153,14 @@ namespace AssetProcessor.Resources {
             }
         }
 
+        /// <summary>
+        /// Sets index without triggering PropertyChanged.
+        /// Used for batch updates to avoid UI freeze.
+        /// </summary>
+        public void SetIndexSilent(int value) {
+            index = value;
+        }
+
         public string? Name {
             get => name;
             set {

@@ -5084,11 +5084,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logger.Info("[ShowDataGridsAndApplyGrouping] Showing DataGrids...");
             viewModel.ProgressText = "Rendering...";
 
-            // TEMP TEST: Don't show DataGrids to confirm they cause the freeze
-            // TexturesDataGrid.Visibility = Visibility.Visible;
-            // ModelsDataGrid.Visibility = Visibility.Visible;
-            // MaterialsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visibility SKIPPED for testing");
+            // Show DataGrids - now safe because RecalculateIndices uses silent updates
+            TexturesDataGrid.Visibility = Visibility.Visible;
+            ModelsDataGrid.Visibility = Visibility.Visible;
+            MaterialsDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visible");
 
             // Update ready status
             viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
@@ -5096,21 +5096,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             logger.Info("[ShowDataGridsAndApplyGrouping] UI update completed, scheduling deferred grouping");
 
-            // TEMPORARILY DISABLED: Apply grouping DEFERRED to avoid blocking UI
-            // Testing if grouping is the cause of freeze
-            // Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-            //     if (!_isWindowActive) {
-            //         logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
-            //         return;
-            //     }
-            //     logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
-            //     var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            //     using (view?.DeferRefresh()) {
-            //         ApplyTextureGroupingIfEnabled();
-            //     }
-            //     logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
-            // });
-            logger.Info("[ShowDataGridsAndApplyGrouping] Grouping DISABLED for testing");
+            // Apply grouping DEFERRED to avoid blocking UI during initial render
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                if (!_isWindowActive) {
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
+                    return;
+                }
+                logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
+                ApplyTextureGroupingIfEnabled();
+                logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
+            });
         }
 
         /// <summary>

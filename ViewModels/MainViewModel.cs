@@ -667,22 +667,33 @@ namespace AssetProcessor.ViewModels {
 
         /// <summary>
         /// Recalculates sequential indices for all resources after filtering or sorting changes.
+        /// Uses batch update mode to suppress individual PropertyChanged notifications.
         /// </summary>
         public void RecalculateIndices() {
+            logger.Info($"[RecalculateIndices] Starting: {Textures.Count} textures, {Models.Count} models, {Materials.Count} materials");
+
+            // Update indices without triggering individual PropertyChanged events
+            // by using direct field access where possible
             int index = 1;
+            logger.Info("[RecalculateIndices] Processing textures...");
             foreach (TextureResource texture in Textures) {
-                texture.Index = index++;
+                texture.SetIndexSilent(index++);
             }
+            logger.Info("[RecalculateIndices] Textures done");
 
             index = 1;
+            logger.Info("[RecalculateIndices] Processing models...");
             foreach (ModelResource model in Models) {
-                model.Index = index++;
+                model.SetIndexSilent(index++);
             }
+            logger.Info("[RecalculateIndices] Models done");
 
             index = 1;
+            logger.Info("[RecalculateIndices] Processing materials...");
             foreach (MaterialResource material in Materials) {
-                material.Index = index++;
+                material.SetIndexSilent(index++);
             }
+            logger.Info("[RecalculateIndices] Materials done, completed");
         }
 
         /// <summary>

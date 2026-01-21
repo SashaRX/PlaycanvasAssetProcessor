@@ -5021,27 +5021,39 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);
 
                 // Recalculate indices
+                logger.Info("[ApplyAssetsToUI] Recalculating indices...");
                 viewModel.ProgressText = "Recalculating indices...";
                 RecalculateIndices();
+                logger.Info("[ApplyAssetsToUI] Indices done");
 
-                // Apply grouping with DeferRefresh
-                viewModel.ProgressText = "Applying grouping...";
-                var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                using (view?.DeferRefresh()) {
-                    ApplyTextureGroupingIfEnabled();
-                }
-
-                // Show DataGrids
+                // Show DataGrids FIRST without grouping to avoid freeze
+                logger.Info("[ApplyAssetsToUI] Showing DataGrids...");
                 viewModel.ProgressText = "Rendering...";
                 TexturesDataGrid.Visibility = Visibility.Visible;
                 ModelsDataGrid.Visibility = Visibility.Visible;
                 MaterialsDataGrid.Visibility = Visibility.Visible;
+                logger.Info("[ApplyAssetsToUI] DataGrids visible");
 
                 // Update ready status
                 viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
 
-                logger.Info("[ApplyAssetsToUI] UI update completed");
+                logger.Info("[ApplyAssetsToUI] UI update completed, scheduling deferred grouping");
+
+                // Apply grouping DEFERRED to avoid blocking UI
+                // This allows the DataGrid to render first, then apply grouping in next frame
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    if (!_isWindowActive) {
+                        logger.Info("[ApplyAssetsToUI] Deferred grouping skipped - window inactive");
+                        return;
+                    }
+                    logger.Info("[ApplyAssetsToUI] Applying deferred grouping...");
+                    var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                    using (view?.DeferRefresh()) {
+                        ApplyTextureGroupingIfEnabled();
+                    }
+                    logger.Info("[ApplyAssetsToUI] Deferred grouping done");
+                });
 
                 // Auto-refresh server assets to verify upload statuses
                 _ = ServerAssetsPanel.RefreshServerAssetsAsync();

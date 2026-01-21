@@ -5084,10 +5084,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logger.Info("[ShowDataGridsAndApplyGrouping] Showing DataGrids...");
             viewModel.ProgressText = "Rendering...";
 
-            TexturesDataGrid.Visibility = Visibility.Visible;
-            ModelsDataGrid.Visibility = Visibility.Visible;
-            MaterialsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visible");
+            // TEMP TEST: Don't show DataGrids to confirm they cause the freeze
+            // TexturesDataGrid.Visibility = Visibility.Visible;
+            // ModelsDataGrid.Visibility = Visibility.Visible;
+            // MaterialsDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visibility SKIPPED for testing");
 
             // Update ready status
             viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";

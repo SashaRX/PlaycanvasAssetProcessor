@@ -4978,6 +4978,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Use Normal priority instead of Background to prevent freezes when window regains focus
             // Background priority can be starved and cause accumulated updates to execute all at once
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                // Check if window became inactive after BeginInvoke was called
+                // This prevents UI freeze when user Alt+Tabs during loading
+                if (!_isWindowActive) {
+                    logger.Info("[ApplyAssetsToUI] Window inactive inside callback, deferring");
+                    _pendingAssetsData = e;
+                    return;
+                }
+
+                logger.Info($"[ApplyAssetsToUI] Starting UI update for {e.Textures.Count} textures");
+
                 // Hide DataGrids during updates
                 TexturesDataGrid.Visibility = Visibility.Hidden;
                 ModelsDataGrid.Visibility = Visibility.Hidden;
@@ -5022,6 +5032,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update ready status
                 viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
+
+                logger.Info("[ApplyAssetsToUI] UI update completed");
 
                 // Auto-refresh server assets to verify upload statuses
                 _ = ServerAssetsPanel.RefreshServerAssetsAsync();

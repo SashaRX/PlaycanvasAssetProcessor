@@ -5037,15 +5037,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
                 logger.Info("[ApplyAssetsToUI] Assets assigned");
 
-                // Restore DataGrid bindings now that collections are populated
-                logger.Info("[ApplyAssetsToUI] Restoring ItemsSource bindings...");
-                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Textures"));
-                ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Models"));
-                MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Materials"));
-                logger.Info("[ApplyAssetsToUI] Bindings restored");
+                // NOTE: Do NOT restore bindings here - defer to ShowDataGridsAndApplyGrouping
+                // Restoring bindings while DataGrids are Collapsed still triggers WPF layout processing
+                // which causes freeze when window loses focus
 
                 // Sync Master Material mappings now that materials are populated
                 logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");
@@ -5099,10 +5093,21 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// Can be called directly or deferred when window becomes active.
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            logger.Info("[ShowDataGridsAndApplyGrouping] Showing DataGrids...");
+            logger.Info("[ShowDataGridsAndApplyGrouping] Starting...");
             viewModel.ProgressText = "Rendering...";
 
-            // Show DataGrids - now safe because RecalculateIndices uses silent updates
+            // Restore DataGrid bindings BEFORE showing them
+            // This must be done here (not earlier) to avoid WPF layout processing while DataGrids are Collapsed
+            logger.Info("[ShowDataGridsAndApplyGrouping] Restoring ItemsSource bindings...");
+            TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                new System.Windows.Data.Binding("Textures"));
+            ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                new System.Windows.Data.Binding("Models"));
+            MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                new System.Windows.Data.Binding("Materials"));
+            logger.Info("[ShowDataGridsAndApplyGrouping] Bindings restored");
+
+            // Show DataGrids
             TexturesDataGrid.Visibility = Visibility.Visible;
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;

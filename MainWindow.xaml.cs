@@ -5045,6 +5045,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // Check AGAIN if window became inactive during our updates
                 // If so, keep DataGrids hidden and defer showing them
+                logger.Info($"[ApplyAssetsToUI] Checking _isWindowActive: {_isWindowActive}");
                 if (!_isWindowActive) {
                     logger.Info("[ApplyAssetsToUI] Window became inactive during update, deferring DataGrid show");
                     _pendingDataGridShow = true;
@@ -5054,7 +5055,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 // Show DataGrids and apply grouping
+                logger.Info("[ApplyAssetsToUI] About to call ShowDataGridsAndApplyGrouping");
                 ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
+                logger.Info("[ApplyAssetsToUI] ShowDataGridsAndApplyGrouping returned");
 
                 // Auto-refresh server assets to verify upload statuses
                 _ = ServerAssetsPanel.RefreshServerAssetsAsync();

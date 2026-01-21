@@ -2371,9 +2371,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                // Disable virtualization for stable scrollbar with grouping
-                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, false);
-                ScrollViewer.SetCanContentScroll(TexturesDataGrid, false);
+                // CRITICAL: Keep virtualization enabled even with grouping to prevent UI freeze
+                // WPF 4.5+ supports virtualization with grouping via IsVirtualizingWhenGrouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
 
                 if (view.CanGroup) {
                     view.GroupDescriptions.Clear();
@@ -2386,6 +2389,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // Enable virtualization for performance without grouping
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
         }
@@ -2404,9 +2408,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null || !view.CanGroup) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                // Disable virtualization for stable scrollbar with grouping
-                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, false);
-                ScrollViewer.SetCanContentScroll(TexturesDataGrid, false);
+                // CRITICAL: Keep virtualization enabled even with grouping to prevent UI freeze
+                // WPF 4.5+ supports virtualization with grouping via IsVirtualizingWhenGrouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
 
                 // Only modify if not already grouped correctly
                 if (view.GroupDescriptions.Count != 2 ||
@@ -2422,6 +2429,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // Enable virtualization for performance without grouping
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
         }

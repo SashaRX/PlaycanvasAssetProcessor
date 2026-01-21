@@ -152,6 +152,9 @@ namespace AssetProcessor {
                                 ApplyAssetsToUI(pendingData);
                             }
 
+                            // Show DataGrids that were deferred when window was inactive
+                            ApplyPendingDataGridShow();
+
                             logger.Info("[AltTab] Render ENABLED after 2s stable focus");
                         }
                     });

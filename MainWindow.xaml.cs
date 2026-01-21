@@ -4967,6 +4967,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         // Track window active state to skip render loops when inactive (Alt+Tab fix)
         private volatile bool _isWindowActive = true;
+        // Track if DataGrids need to be shown when window becomes active
+        private volatile bool _pendingDataGridShow = false;
+        // Store counts for deferred DataGrid show
+        private (int textures, int models, int materials) _pendingCounts;
 
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
             // Check if window is active - if not, defer loading to prevent UI freeze
@@ -5026,34 +5030,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 RecalculateIndices();
                 logger.Info("[ApplyAssetsToUI] Indices done");
 
-                // Show DataGrids FIRST without grouping to avoid freeze
-                logger.Info("[ApplyAssetsToUI] Showing DataGrids...");
-                viewModel.ProgressText = "Rendering...";
-                TexturesDataGrid.Visibility = Visibility.Visible;
-                ModelsDataGrid.Visibility = Visibility.Visible;
-                MaterialsDataGrid.Visibility = Visibility.Visible;
-                logger.Info("[ApplyAssetsToUI] DataGrids visible");
+                // Check AGAIN if window became inactive during our updates
+                // If so, keep DataGrids hidden and defer showing them
+                if (!_isWindowActive) {
+                    logger.Info("[ApplyAssetsToUI] Window became inactive during update, deferring DataGrid show");
+                    _pendingDataGridShow = true;
+                    _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
+                    viewModel.ProgressText = "Waiting for window focus...";
+                    return;
+                }
 
-                // Update ready status
-                viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
-                viewModel.ProgressValue = viewModel.ProgressMaximum;
-
-                logger.Info("[ApplyAssetsToUI] UI update completed, scheduling deferred grouping");
-
-                // Apply grouping DEFERRED to avoid blocking UI
-                // This allows the DataGrid to render first, then apply grouping in next frame
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                    if (!_isWindowActive) {
-                        logger.Info("[ApplyAssetsToUI] Deferred grouping skipped - window inactive");
-                        return;
-                    }
-                    logger.Info("[ApplyAssetsToUI] Applying deferred grouping...");
-                    var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                    using (view?.DeferRefresh()) {
-                        ApplyTextureGroupingIfEnabled();
-                    }
-                    logger.Info("[ApplyAssetsToUI] Deferred grouping done");
-                });
+                // Show DataGrids and apply grouping
+                ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
 
                 // Auto-refresh server assets to verify upload statuses
                 _ = ServerAssetsPanel.RefreshServerAssetsAsync();
@@ -5070,6 +5058,55 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             } else {
                 viewModel.ProgressText = e.Total > 0 ? $"Loading... ({e.Processed}/{e.Total})" : "Loading...";
             }
+        }
+
+        /// <summary>
+        /// Shows DataGrids and applies grouping. Called when window is active.
+        /// Can be called directly or deferred when window becomes active.
+        /// </summary>
+        private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
+            logger.Info("[ShowDataGridsAndApplyGrouping] Showing DataGrids...");
+            viewModel.ProgressText = "Rendering...";
+
+            TexturesDataGrid.Visibility = Visibility.Visible;
+            ModelsDataGrid.Visibility = Visibility.Visible;
+            MaterialsDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visible");
+
+            // Update ready status
+            viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
+            viewModel.ProgressValue = viewModel.ProgressMaximum;
+
+            logger.Info("[ShowDataGridsAndApplyGrouping] UI update completed, scheduling deferred grouping");
+
+            // Apply grouping DEFERRED to avoid blocking UI
+            // This allows the DataGrid to render first, then apply grouping in next frame
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                if (!_isWindowActive) {
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
+                    return;
+                }
+                logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
+                var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+                using (view?.DeferRefresh()) {
+                    ApplyTextureGroupingIfEnabled();
+                }
+                logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
+            });
+        }
+
+        /// <summary>
+        /// Called when window becomes active and there are pending DataGrids to show.
+        /// </summary>
+        internal void ApplyPendingDataGridShow() {
+            if (!_pendingDataGridShow) return;
+
+            _pendingDataGridShow = false;
+            logger.Info("[ApplyPendingDataGridShow] Window active, showing deferred DataGrids");
+            ShowDataGridsAndApplyGrouping(_pendingCounts.textures, _pendingCounts.models, _pendingCounts.materials);
+
+            // Auto-refresh server assets
+            _ = ServerAssetsPanel.RefreshServerAssetsAsync();
         }
 
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {

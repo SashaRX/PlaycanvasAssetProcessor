@@ -93,12 +93,12 @@ public partial class AssetLoadingViewModel : ObservableObject {
     /// </summary>
     [RelayCommand]
     private async Task LoadAssetsAsync(AssetLoadRequest request, CancellationToken ct = default) {
+        logger.Info("[LoadAssetsAsync] >>> ENTRY (should release UI thread immediately after Task.Run)");
+
         if (string.IsNullOrEmpty(request?.ProjectFolderPath) || string.IsNullOrEmpty(request.ProjectName)) {
             ErrorOccurred?.Invoke(this, new AssetLoadErrorEventArgs("Invalid Request", "Project folder path or name is empty"));
             return;
         }
-
-        logService.LogInfo("=== AssetLoadingViewModel.LoadAssetsAsync CALLED ===");
 
         IsLoading = true;
         LoadingStatus = "Loading assets...";
@@ -113,8 +113,10 @@ public partial class AssetLoadingViewModel : ObservableObject {
                 LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(p.Processed, p.Total, p.CurrentAsset));
             });
 
+            logger.Info("[LoadAssetsAsync] Before Task.Run - UI thread should be free after this await");
             // Run loading on background thread to not block UI
             var result = await Task.Run(async () => {
+                logger.Info("[LoadAssetsAsync] Inside Task.Run - now on ThreadPool");
                 return await assetLoadCoordinator.LoadAssetsFromJsonAsync(
                     request.ProjectFolderPath,
                     request.ProjectName,
@@ -123,6 +125,7 @@ public partial class AssetLoadingViewModel : ObservableObject {
                     progress,
                     ct).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);
+            logger.Info("[LoadAssetsAsync] After Task.Run - loading complete");
 
             if (!result.Success) {
                 logService.LogError($"Failed to load assets: {result.Error}");

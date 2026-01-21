@@ -2371,9 +2371,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                // Disable virtualization for stable scrollbar with grouping
-                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, false);
-                ScrollViewer.SetCanContentScroll(TexturesDataGrid, false);
+                // CRITICAL: Keep virtualization enabled even with grouping to prevent UI freeze
+                // WPF 4.5+ supports virtualization with grouping via IsVirtualizingWhenGrouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
 
                 if (view.CanGroup) {
                     view.GroupDescriptions.Clear();
@@ -2386,6 +2389,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // Enable virtualization for performance without grouping
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
         }
@@ -2404,9 +2408,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null || !view.CanGroup) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                // Disable virtualization for stable scrollbar with grouping
-                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, false);
-                ScrollViewer.SetCanContentScroll(TexturesDataGrid, false);
+                // CRITICAL: Keep virtualization enabled even with grouping to prevent UI freeze
+                // WPF 4.5+ supports virtualization with grouping via IsVirtualizingWhenGrouping
+                VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
+                ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
 
                 // Only modify if not already grouped correctly
                 if (view.GroupDescriptions.Count != 2 ||
@@ -2422,6 +2429,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 // Enable virtualization for performance without grouping
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
         }
@@ -4959,10 +4967,19 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         // Track window active state to skip render loops when inactive (Alt+Tab fix)
         private volatile bool _isWindowActive = true;
+        // Track if DataGrids need to be shown when window becomes active
+        private volatile bool _pendingDataGridShow = false;
+        // Store counts for deferred DataGrid show
+        private (int textures, int models, int materials) _pendingCounts;
 
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
-            // Note: Deferral disabled - was causing freezes. Just apply immediately.
-            // The D3D11 render loop already checks _isWindowActive to prevent GPU conflicts.
+            // Check if window is active - if not, defer loading to prevent UI freeze
+            if (!_isWindowActive) {
+                logger.Info("[OnAssetsLoaded] Window inactive, deferring asset loading");
+                _pendingAssetsData = e;
+                return;
+            }
+
             ApplyAssetsToUI(e);
         }
 
@@ -4970,58 +4987,67 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
-            // Single Dispatcher call to handle all UI updates atomically
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                // Hide DataGrids during updates
-                TexturesDataGrid.Visibility = Visibility.Hidden;
-                ModelsDataGrid.Visibility = Visibility.Hidden;
-                MaterialsDataGrid.Visibility = Visibility.Hidden;
-
-                // Batch update: assign new collections
-                viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
-                viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
-                viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
-
-                // Sync master material mappings from config to materials
-                viewModel.SyncMaterialMasterMappings();
-
-                // Build combined Assets collection
-                var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
-                allAssets.AddRange(e.Textures);
-                allAssets.AddRange(e.Models);
-                allAssets.AddRange(e.Materials);
-                viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
-
-                // Sync Master Material mappings now that materials are populated
-                logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");
-                viewModel.SyncMaterialMasterMappings();
-
-                // Update folder paths
-                folderPaths = new Dictionary<int, string>(e.FolderPaths);
-
-                // Recalculate indices
-                viewModel.ProgressText = "Recalculating indices...";
-                RecalculateIndices();
-
-                // Apply grouping with DeferRefresh
-                viewModel.ProgressText = "Applying grouping...";
-                var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                using (view?.DeferRefresh()) {
-                    ApplyTextureGroupingIfEnabled();
+            // Phase 1: Collapse and clear bindings
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                if (!_isWindowActive) {
+                    logger.Info("[ApplyAssetsToUI] Window inactive, deferring all");
+                    _pendingAssetsData = e;
+                    return;
                 }
 
-                // Show DataGrids
-                viewModel.ProgressText = "Rendering...";
-                TexturesDataGrid.Visibility = Visibility.Visible;
-                ModelsDataGrid.Visibility = Visibility.Visible;
-                MaterialsDataGrid.Visibility = Visibility.Visible;
+                logger.Info($"[ApplyAssetsToUI] Phase 1: Starting UI update for {e.Textures.Count} textures");
 
-                // Update ready status
-                viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
-                viewModel.ProgressValue = viewModel.ProgressMaximum;
+                // Collapse DataGrids and clear bindings
+                TexturesDataGrid.Visibility = Visibility.Collapsed;
+                ModelsDataGrid.Visibility = Visibility.Collapsed;
+                MaterialsDataGrid.Visibility = Visibility.Collapsed;
 
-                // Auto-refresh server assets to verify upload statuses
-                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                System.Windows.Data.BindingOperations.ClearBinding(TexturesDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                System.Windows.Data.BindingOperations.ClearBinding(ModelsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                logger.Info("[ApplyAssetsToUI] Phase 1 done: DataGrids collapsed, bindings cleared");
+
+                // Phase 2: Assign collections (deferred to allow message pump)
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    if (!_isWindowActive) {
+                        logger.Info("[ApplyAssetsToUI] Window inactive before Phase 2, deferring");
+                        _pendingAssetsData = e;
+                        return;
+                    }
+
+                    logger.Info("[ApplyAssetsToUI] Phase 2: Assigning collections...");
+                    viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+                    viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+                    viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+
+                    var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
+                    allAssets.AddRange(e.Textures);
+                    allAssets.AddRange(e.Models);
+                    allAssets.AddRange(e.Materials);
+                    viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+
+                    viewModel.SyncMaterialMasterMappings();
+                    folderPaths = new Dictionary<int, string>(e.FolderPaths);
+                    RecalculateIndices();
+                    logger.Info("[ApplyAssetsToUI] Phase 2 done: Collections assigned");
+
+                    // Phase 3: Show DataGrids (deferred to allow message pump)
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                        if (!_isWindowActive) {
+                            logger.Info("[ApplyAssetsToUI] Window inactive before Phase 3, deferring DataGrid show");
+                            _pendingDataGridShow = true;
+                            _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
+                            viewModel.ProgressText = "Waiting for window focus...";
+                            return;
+                        }
+
+                        logger.Info("[ApplyAssetsToUI] Phase 3: Showing DataGrids");
+                        ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
+
+                        // Auto-refresh server assets
+                        _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                    });
+                });
             });
         }
 
@@ -5035,6 +5061,78 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             } else {
                 viewModel.ProgressText = e.Total > 0 ? $"Loading... ({e.Processed}/{e.Total})" : "Loading...";
             }
+        }
+
+        /// <summary>
+        /// Shows DataGrids and applies grouping. Called when window is active.
+        /// Can be called directly or deferred when window becomes active.
+        /// </summary>
+        private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
+            logger.Info("[ShowDataGridsAndApplyGrouping] Starting...");
+            viewModel.ProgressText = "Rendering...";
+
+            // Defer ALL DataGrid operations to allow WPF message pump to process window activation
+            // This prevents freeze when window loses focus during rendering
+            logger.Info("[ShowDataGridsAndApplyGrouping] Scheduling deferred DataGrid initialization...");
+
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => {
+                // Check AGAIN if window is still active before heavy rendering
+                if (!_isWindowActive) {
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred init cancelled - window inactive");
+                    _pendingDataGridShow = true;
+                    _pendingCounts = (textureCount, modelCount, materialCount);
+                    viewModel.ProgressText = "Waiting for window focus...";
+                    return;
+                }
+
+                logger.Info("[ShowDataGridsAndApplyGrouping] Restoring bindings and showing DataGrids...");
+
+                // Restore bindings
+                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Textures"));
+                ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Models"));
+                MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Materials"));
+
+                // Show DataGrids
+                TexturesDataGrid.Visibility = Visibility.Visible;
+                ModelsDataGrid.Visibility = Visibility.Visible;
+                MaterialsDataGrid.Visibility = Visibility.Visible;
+
+                logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visible");
+
+                // Update ready status
+                viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
+                viewModel.ProgressValue = viewModel.ProgressMaximum;
+
+                // Apply grouping with lowest priority
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    if (!_isWindowActive) {
+                        logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
+                        return;
+                    }
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
+                    ApplyTextureGroupingIfEnabled();
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
+                });
+            });
+
+            logger.Info("[ShowDataGridsAndApplyGrouping] Deferred init scheduled, returning immediately");
+        }
+
+        /// <summary>
+        /// Called when window becomes active and there are pending DataGrids to show.
+        /// </summary>
+        internal void ApplyPendingDataGridShow() {
+            if (!_pendingDataGridShow) return;
+
+            _pendingDataGridShow = false;
+            logger.Info("[ApplyPendingDataGridShow] Window active, showing deferred DataGrids");
+            ShowDataGridsAndApplyGrouping(_pendingCounts.textures, _pendingCounts.models, _pendingCounts.materials);
+
+            // Auto-refresh server assets
+            _ = ServerAssetsPanel.RefreshServerAssetsAsync();
         }
 
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {
@@ -5056,7 +5154,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void OnB2VerificationCompleted(object? sender, B2VerificationCompletedEventArgs e) {
-            Dispatcher.Invoke(() => {
+            // Use BeginInvoke instead of Invoke to prevent potential deadlock
+            // when this is called from background thread while UI thread is processing ApplyAssetsToUI
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 if (!e.Success) {
                     logService.LogWarn($"[B2 Verification] Failed: {e.ErrorMessage}");
                     return;
@@ -5085,7 +5185,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         #region MaterialSelectionViewModel Event Handlers
 
         private void OnMaterialParametersLoaded(object? sender, MaterialParametersLoadedEventArgs e) {
-            Dispatcher.Invoke(() => {
+            // Use BeginInvoke to prevent potential deadlock when called from background thread
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 DisplayMaterialParameters(e.Material);
             });
         }

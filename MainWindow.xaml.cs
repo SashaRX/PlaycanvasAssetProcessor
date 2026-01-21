@@ -5096,39 +5096,54 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             logger.Info("[ShowDataGridsAndApplyGrouping] Starting...");
             viewModel.ProgressText = "Rendering...";
 
-            // Restore DataGrid bindings BEFORE showing them
-            // This must be done here (not earlier) to avoid WPF layout processing while DataGrids are Collapsed
-            logger.Info("[ShowDataGridsAndApplyGrouping] Restoring ItemsSource bindings...");
-            TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                new System.Windows.Data.Binding("Textures"));
-            ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                new System.Windows.Data.Binding("Models"));
-            MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                new System.Windows.Data.Binding("Materials"));
-            logger.Info("[ShowDataGridsAndApplyGrouping] Bindings restored");
+            // Defer ALL DataGrid operations to allow WPF message pump to process window activation
+            // This prevents freeze when window loses focus during rendering
+            logger.Info("[ShowDataGridsAndApplyGrouping] Scheduling deferred DataGrid initialization...");
 
-            // Show DataGrids
-            TexturesDataGrid.Visibility = Visibility.Visible;
-            ModelsDataGrid.Visibility = Visibility.Visible;
-            MaterialsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visible");
-
-            // Update ready status
-            viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
-            viewModel.ProgressValue = viewModel.ProgressMaximum;
-
-            logger.Info("[ShowDataGridsAndApplyGrouping] UI update completed, scheduling deferred grouping");
-
-            // Apply grouping DEFERRED to avoid blocking UI during initial render
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => {
+                // Check AGAIN if window is still active before heavy rendering
                 if (!_isWindowActive) {
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred init cancelled - window inactive");
+                    _pendingDataGridShow = true;
+                    _pendingCounts = (textureCount, modelCount, materialCount);
+                    viewModel.ProgressText = "Waiting for window focus...";
                     return;
                 }
-                logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
-                ApplyTextureGroupingIfEnabled();
-                logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
+
+                logger.Info("[ShowDataGridsAndApplyGrouping] Restoring bindings and showing DataGrids...");
+
+                // Restore bindings
+                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Textures"));
+                ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Models"));
+                MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Materials"));
+
+                // Show DataGrids
+                TexturesDataGrid.Visibility = Visibility.Visible;
+                ModelsDataGrid.Visibility = Visibility.Visible;
+                MaterialsDataGrid.Visibility = Visibility.Visible;
+
+                logger.Info("[ShowDataGridsAndApplyGrouping] DataGrids visible");
+
+                // Update ready status
+                viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
+                viewModel.ProgressValue = viewModel.ProgressMaximum;
+
+                // Apply grouping with lowest priority
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    if (!_isWindowActive) {
+                        logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
+                        return;
+                    }
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
+                    ApplyTextureGroupingIfEnabled();
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
+                });
             });
+
+            logger.Info("[ShowDataGridsAndApplyGrouping] Deferred init scheduled, returning immediately");
         }
 
         /// <summary>

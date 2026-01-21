@@ -5007,7 +5007,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialsDataGrid.Visibility = Visibility.Collapsed;
                 logger.Info("[ApplyAssetsToUI] DataGrids collapsed");
 
-                // Batch update: assign new collections
+                // Clear DataGrid ItemsSource bindings to prevent WPF from processing collection changes
+                // This prevents freeze when large collections are assigned while window is losing focus
+                logger.Info("[ApplyAssetsToUI] Clearing ItemsSource bindings...");
+                System.Windows.Data.BindingOperations.ClearBinding(TexturesDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                System.Windows.Data.BindingOperations.ClearBinding(ModelsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                logger.Info("[ApplyAssetsToUI] Bindings cleared");
+
+                // Batch update: assign new collections (now without triggering binding updates)
                 logger.Info("[ApplyAssetsToUI] Assigning Textures collection...");
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
                 logger.Info("[ApplyAssetsToUI] Textures assigned");
@@ -5028,6 +5036,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info("[ApplyAssetsToUI] Assigning Assets collection...");
                 viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
                 logger.Info("[ApplyAssetsToUI] Assets assigned");
+
+                // Restore DataGrid bindings now that collections are populated
+                logger.Info("[ApplyAssetsToUI] Restoring ItemsSource bindings...");
+                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Textures"));
+                ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Models"));
+                MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Materials"));
+                logger.Info("[ApplyAssetsToUI] Bindings restored");
 
                 // Sync Master Material mappings now that materials are populated
                 logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");

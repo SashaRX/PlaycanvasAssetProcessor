@@ -106,12 +106,9 @@ public partial class AssetLoadingViewModel : ObservableObject {
         LoadingTotal = 0;
 
         try {
-            // Create progress reporter that will marshal to UI thread
-            var progress = new Progress<AssetLoadProgress>(p => {
-                LoadingProgress = p.Processed;
-                LoadingTotal = p.Total;
-                LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(p.Processed, p.Total, p.CurrentAsset));
-            });
+            // DIAGNOSTIC: Removed Progress<T> completely to test if it causes the freeze
+            // Progress<T> marshals callbacks to UI thread via SynchronizationContext
+            // which might be flooding UI message queue even with throttling
 
             logger.Info("[LoadAssetsAsync] Before Task.Run - UI thread should be free after this await");
             // Run loading on background thread to not block UI
@@ -122,7 +119,7 @@ public partial class AssetLoadingViewModel : ObservableObject {
                     request.ProjectName,
                     request.ProjectsBasePath,
                     request.ProjectId,
-                    progress,
+                    null,  // No progress - testing if this fixes freeze
                     ct).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);
             logger.Info("[LoadAssetsAsync] After Task.Run - loading complete");

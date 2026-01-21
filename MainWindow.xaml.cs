@@ -4987,93 +4987,90 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
-            // Use Normal priority instead of Background to prevent freezes when window regains focus
-            // Background priority can be starved and cause accumulated updates to execute all at once
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                // Check if window became inactive after BeginInvoke was called
-                // This prevents UI freeze when user Alt+Tabs during loading
-                if (!_isWindowActive) {
-                    logger.Info("[ApplyAssetsToUI] Window inactive inside callback, deferring");
-                    _pendingAssetsData = e;
-                    return;
-                }
+            // Start async processing that yields between operations to allow window messages
+            _ = ApplyAssetsToUIAsync(e);
+        }
 
-                logger.Info($"[ApplyAssetsToUI] Starting UI update for {e.Textures.Count} textures");
+        private async Task ApplyAssetsToUIAsync(AssetsLoadedEventArgs e) {
+            // Switch to UI thread
+            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Normal);
 
-                // Use Collapsed instead of Hidden - Collapsed removes element from visual tree entirely
-                // Hidden still keeps element in tree and may trigger binding updates
-                TexturesDataGrid.Visibility = Visibility.Collapsed;
-                ModelsDataGrid.Visibility = Visibility.Collapsed;
-                MaterialsDataGrid.Visibility = Visibility.Collapsed;
-                logger.Info("[ApplyAssetsToUI] DataGrids collapsed");
+            // Check if window became inactive
+            if (!_isWindowActive) {
+                logger.Info("[ApplyAssetsToUI] Window inactive, deferring all");
+                _pendingAssetsData = e;
+                return;
+            }
 
-                // Clear DataGrid ItemsSource bindings to prevent WPF from processing collection changes
-                // This prevents freeze when large collections are assigned while window is losing focus
-                logger.Info("[ApplyAssetsToUI] Clearing ItemsSource bindings...");
-                System.Windows.Data.BindingOperations.ClearBinding(TexturesDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
-                System.Windows.Data.BindingOperations.ClearBinding(ModelsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
-                System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
-                logger.Info("[ApplyAssetsToUI] Bindings cleared");
+            logger.Info($"[ApplyAssetsToUI] Starting UI update for {e.Textures.Count} textures");
 
-                // Batch update: assign new collections (now without triggering binding updates)
-                logger.Info("[ApplyAssetsToUI] Assigning Textures collection...");
-                viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
-                logger.Info("[ApplyAssetsToUI] Textures assigned");
+            // Collapse DataGrids
+            TexturesDataGrid.Visibility = Visibility.Collapsed;
+            ModelsDataGrid.Visibility = Visibility.Collapsed;
+            MaterialsDataGrid.Visibility = Visibility.Collapsed;
+            logger.Info("[ApplyAssetsToUI] DataGrids collapsed");
 
-                logger.Info("[ApplyAssetsToUI] Assigning Models collection...");
-                viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
-                logger.Info("[ApplyAssetsToUI] Models assigned");
+            // Clear bindings
+            System.Windows.Data.BindingOperations.ClearBinding(TexturesDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+            System.Windows.Data.BindingOperations.ClearBinding(ModelsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+            System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+            logger.Info("[ApplyAssetsToUI] Bindings cleared");
 
-                logger.Info("[ApplyAssetsToUI] Assigning Materials collection...");
-                viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
-                logger.Info("[ApplyAssetsToUI] Materials assigned");
+            // Yield to allow window messages to be processed
+            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+            if (!_isWindowActive) {
+                logger.Info("[ApplyAssetsToUI] Window inactive after clear bindings, deferring");
+                _pendingAssetsData = e;
+                return;
+            }
 
-                // Build combined Assets collection
-                var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
-                allAssets.AddRange(e.Textures);
-                allAssets.AddRange(e.Models);
-                allAssets.AddRange(e.Materials);
-                logger.Info("[ApplyAssetsToUI] Assigning Assets collection...");
-                viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
-                logger.Info("[ApplyAssetsToUI] Assets assigned");
+            // Assign collections
+            logger.Info("[ApplyAssetsToUI] Assigning collections...");
+            viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+            viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+            viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
 
-                // NOTE: Do NOT restore bindings here - defer to ShowDataGridsAndApplyGrouping
-                // Restoring bindings while DataGrids are Collapsed still triggers WPF layout processing
-                // which causes freeze when window loses focus
+            var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
+            allAssets.AddRange(e.Textures);
+            allAssets.AddRange(e.Models);
+            allAssets.AddRange(e.Materials);
+            viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+            logger.Info("[ApplyAssetsToUI] Collections assigned");
 
-                // Sync Master Material mappings now that materials are populated
-                logger.Info($"OnAssetsLoaded: Syncing master material mappings for {e.Materials.Count} materials");
-                viewModel.SyncMaterialMasterMappings();
-                logger.Info("[ApplyAssetsToUI] SyncMaterialMasterMappings done");
-
-                // Update folder paths
+            // Yield again
+            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+            if (!_isWindowActive) {
+                logger.Info("[ApplyAssetsToUI] Window inactive after collections, deferring");
+                _pendingDataGridShow = true;
+                _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);
+                viewModel.ProgressText = "Waiting for window focus...";
+                return;
+            }
 
-                // Recalculate indices
-                logger.Info("[ApplyAssetsToUI] Recalculating indices...");
-                viewModel.ProgressText = "Recalculating indices...";
-                RecalculateIndices();
-                logger.Info("[ApplyAssetsToUI] Indices done");
+            // Sync and recalculate
+            logger.Info("[ApplyAssetsToUI] Syncing master mappings...");
+            viewModel.SyncMaterialMasterMappings();
+            folderPaths = new Dictionary<int, string>(e.FolderPaths);
+            RecalculateIndices();
+            logger.Info("[ApplyAssetsToUI] Sync and indices done");
 
-                // Check AGAIN if window became inactive during our updates
-                // If so, keep DataGrids hidden and defer showing them
-                logger.Info($"[ApplyAssetsToUI] Checking _isWindowActive: {_isWindowActive}");
-                if (!_isWindowActive) {
-                    logger.Info("[ApplyAssetsToUI] Window became inactive during update, deferring DataGrid show");
-                    _pendingDataGridShow = true;
-                    _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
-                    viewModel.ProgressText = "Waiting for window focus...";
-                    return;
-                }
+            // Yield before showing DataGrids
+            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+            if (!_isWindowActive) {
+                logger.Info("[ApplyAssetsToUI] Window inactive before show, deferring");
+                _pendingDataGridShow = true;
+                _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
+                viewModel.ProgressText = "Waiting for window focus...";
+                return;
+            }
 
-                // Show DataGrids and apply grouping
-                logger.Info("[ApplyAssetsToUI] About to call ShowDataGridsAndApplyGrouping");
-                ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
-                logger.Info("[ApplyAssetsToUI] ShowDataGridsAndApplyGrouping returned");
+            // Show DataGrids
+            logger.Info("[ApplyAssetsToUI] Showing DataGrids");
+            ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
 
-                // Auto-refresh server assets to verify upload statuses
-                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
-            });
+            // Auto-refresh server assets
+            _ = ServerAssetsPanel.RefreshServerAssetsAsync();
         }
 
         private void OnAssetLoadingProgressChanged(object? sender, AssetLoadProgressEventArgs e) {

@@ -645,3 +645,114 @@ See `Docs/PIPELINE_REVIEW.md` for:
 - List of unused/obsolete code
 - Comprehensive improvement plan
 - Prioritized feature roadmap
+
+---
+
+## WPF Threading and UI Freeze Prevention
+
+### Problem: UI Freeze on Window Deactivation During Asset Loading
+
+When user Alt+Tabs away from the application during asset loading, the UI would freeze for 10-60 seconds. This happened because WPF processes window messages (WM_ACTIVATE, etc.) only between Dispatcher callbacks.
+
+### Root Causes
+
+1. **Single long Dispatcher callback** - All asset loading UI updates ran in one callback, blocking message pump
+2. **PropertyChanged spam** - Setting `Index` on 200+ resources triggered 200+ binding updates
+3. **DataGrid binding updates** - Even with `Visibility.Collapsed`, setting `ItemsSource` triggers WPF layout
+4. **async/await pitfall** - After `await Dispatcher.InvokeAsync()`, continuation runs on ThreadPool, not UI thread
+
+### Solutions Implemented
+
+#### 1. Multi-phase Dispatcher Callbacks (MainWindow.xaml.cs: `ApplyAssetsToUI`)
+
+Instead of one long callback, split into phases with `Dispatcher.BeginInvoke(Background)` between them:
+
+```csharp
+// Phase 1: Collapse DataGrids, clear bindings
+Dispatcher.BeginInvoke(Normal, () => {
+    if (!_isWindowActive) { _pendingAssetsData = e; return; }
+    // ... collapse and clear ...
+
+    // Phase 2: Assign collections (deferred)
+    Dispatcher.BeginInvoke(Background, () => {
+        if (!_isWindowActive) { /* defer */ return; }
+        // ... assign collections ...
+
+        // Phase 3: Show DataGrids (deferred)
+        Dispatcher.BeginInvoke(Background, () => {
+            if (!_isWindowActive) { /* defer */ return; }
+            ShowDataGridsAndApplyGrouping(...);
+        });
+    });
+});
+```
+
+#### 2. Silent Setters for Batch Updates
+
+Added methods that set backing fields without triggering `PropertyChanged`:
+
+```csharp
+// BaseResource.cs
+public void SetIndexSilent(int value) {
+    index = value;  // No OnPropertyChanged!
+}
+
+// MaterialResource.cs
+public void SetMasterMaterialNameSilent(string? value) {
+    masterMaterialName = value;  // No OnPropertyChanged!
+}
+```
+
+Used in `RecalculateIndices()` and `SyncMaterialMasterMappings()`.
+
+#### 3. Clear/Restore DataGrid Bindings
+
+Before assigning collections, clear bindings to prevent WPF layout processing:
+
+```csharp
+// Before assignment
+BindingOperations.ClearBinding(TexturesDataGrid, ItemsSourceProperty);
+
+// Assign collections (no binding = no WPF processing)
+viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+
+// Restore bindings only when showing DataGrids
+TexturesDataGrid.SetBinding(ItemsSourceProperty, new Binding("Textures"));
+TexturesDataGrid.Visibility = Visibility.Visible;
+```
+
+#### 4. Window Activation Tracking
+
+Track window active state via WndProc hook (`MainWindow.D3D11Viewer.cs`):
+
+```csharp
+private bool _isWindowActive = true;
+
+// In WndProc:
+case WM_ACTIVATE:
+    _isWindowActive = (wParam != 0);
+    break;
+```
+
+Check `_isWindowActive` before each phase; if false, defer work to `_pendingAssetsData` or `_pendingDataGridShow`.
+
+### Why async/await Failed
+
+```csharp
+// DON'T DO THIS:
+private async Task ApplyAssetsToUIAsync(AssetsLoadedEventArgs e) {
+    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Normal);
+    // ⚠️ After await, we're on ThreadPool, NOT UI thread!
+    TexturesDataGrid.Visibility = Collapsed;  // CRASH - wrong thread!
+}
+```
+
+The continuation after `await Dispatcher.InvokeAsync()` runs on ThreadPool because `Dispatcher.InvokeAsync` doesn't capture/restore `SynchronizationContext` for the caller. Use nested `Dispatcher.BeginInvoke` callbacks instead.
+
+### Key Files
+
+- `MainWindow.xaml.cs`: `ApplyAssetsToUI`, `ShowDataGridsAndApplyGrouping`
+- `MainWindow.D3D11Viewer.cs`: `_isWindowActive` tracking, `ApplyPendingDataGridShow`
+- `BaseResource.cs`: `SetIndexSilent`
+- `MaterialResource.cs`: `SetMasterMaterialNameSilent`
+- `MainViewModel.cs`: `RecalculateIndices`, `SyncMaterialMasterMappings`

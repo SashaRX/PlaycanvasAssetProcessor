@@ -37,12 +37,121 @@ using System.Linq;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using AssetProcessor.TextureViewer;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 
 namespace AssetProcessor {
     public partial class MainWindow {
         private readonly SemaphoreSlim d3dTextureLoadSemaphore = new(1, 1);
         private readonly object d3dPreviewCtsLock = new();
         private CancellationTokenSource? d3dTexturePreviewCts;
+
+        // Pending assets data when loading completes while window is inactive
+        private AssetsLoadedEventArgs? _pendingAssetsData = null;
+
+        // Alt+Tab fix: Track window active state to skip render loops when inactive
+        private CancellationTokenSource? _activationCts;
+        private readonly object _activationLock = new();
+        private HwndSource? _hwndSource;
+
+        // Win32 constants
+        private const int WM_ACTIVATEAPP = 0x001C;
+        private const int WM_ACTIVATE = 0x0006;
+        private const int WA_INACTIVE = 0;
+
+        private void SetupAltTabFix() {
+            // Hook into Win32 message loop BEFORE WPF processes messages
+            SourceInitialized += (s, e) => {
+                _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+                _hwndSource?.AddHook(WndProcHook);
+                logger.Info("[AltTab] Win32 WndProc hook installed");
+            };
+
+            Closed += (s, e) => {
+                _hwndSource?.RemoveHook(WndProcHook);
+                _hwndSource = null;
+            };
+        }
+
+        private IntPtr WndProcHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) {
+            // WM_ACTIVATEAPP fires when app gains/loses focus (before WPF events)
+            if (msg == WM_ACTIVATEAPP) {
+                bool isActivating = wParam != IntPtr.Zero;
+
+                if (!isActivating) {
+                    // IMMEDIATELY disable D3D11 rendering BEFORE WPF processes deactivation
+                    _isWindowActive = false;
+                    AssetProcessor.TextureViewer.D3D11TextureRenderer.GlobalRenderingEnabled = false;
+
+                    // Cancel pending activation
+                    lock (_activationLock) {
+                        _activationCts?.Cancel();
+                    }
+
+                    logger.Info("[AltTab] WM_ACTIVATEAPP: DEACTIVATED (Win32 level)");
+                } else {
+                    // Activation - schedule delayed re-enable
+                    logger.Info("[AltTab] WM_ACTIVATEAPP: ACTIVATING (Win32 level)");
+                    ScheduleDelayedActivation();
+                }
+            }
+            // WM_ACTIVATE fires when window gains/loses focus
+            else if (msg == WM_ACTIVATE) {
+                int activateState = (int)(wParam.ToInt64() & 0xFFFF);
+
+                if (activateState == WA_INACTIVE) {
+                    // Window is being deactivated - disable rendering immediately
+                    _isWindowActive = false;
+                    AssetProcessor.TextureViewer.D3D11TextureRenderer.GlobalRenderingEnabled = false;
+
+                    lock (_activationLock) {
+                        _activationCts?.Cancel();
+                    }
+
+                    logger.Info("[AltTab] WM_ACTIVATE: INACTIVE (Win32 level)");
+                }
+            }
+
+            return IntPtr.Zero; // Let WPF continue processing
+        }
+
+        private void ScheduleDelayedActivation() {
+            lock (_activationLock) {
+                _activationCts?.Cancel();
+                _activationCts = new CancellationTokenSource();
+            }
+
+            var cts = _activationCts;
+
+            // Start delayed activation on thread pool
+            _ = Task.Run(async () => {
+                try {
+                    // Wait for stable focus (2 seconds total)
+                    for (int i = 0; i < 10; i++) {
+                        await Task.Delay(200, cts.Token);
+                    }
+
+                    if (cts.Token.IsCancellationRequested) {
+                        return;
+                    }
+
+                    // Enable rendering on UI thread
+                    await Dispatcher.InvokeAsync(() => {
+                        if (IsActive && !cts.Token.IsCancellationRequested) {
+                            _isWindowActive = true;
+                            AssetProcessor.TextureViewer.D3D11TextureRenderer.GlobalRenderingEnabled = true;
+
+                            // Apply any deferred resize
+                            D3D11TextureViewer?.ApplyPendingResize();
+
+                            logger.Info("[AltTab] Render ENABLED after 2s stable focus");
+                        }
+                    });
+                } catch (OperationCanceledException) {
+                    // Expected when deactivated during wait
+                }
+            });
+        }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e) {
             logger.Info("MainWindow loaded - D3D11 viewer ready");
@@ -51,6 +160,22 @@ namespace AssetProcessor {
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
             _ = ApplyRendererPreferenceAsync(useD3D11);
             logger.Info($"Applied UseD3D11Preview setting on startup: {useD3D11}");
+
+            // Configure HelixViewport3D CameraController after template is applied
+            viewPort3d.Loaded += (_, __) => {
+                if (viewPort3d.CameraController != null) {
+                    // Disable inertia completely for instant response
+                    viewPort3d.CameraController.IsInertiaEnabled = false;
+                    viewPort3d.CameraController.InertiaFactor = 0;
+
+                    // Configure zoom
+                    viewPort3d.CameraController.ZoomSensitivity = 1;
+
+                    logger.Info("[HelixViewport] CameraController configured: InertiaEnabled=false, ZoomSensitivity=1");
+                } else {
+                    logger.Warn("[HelixViewport] CameraController is null after Loaded event");
+                }
+            };
 
             // Load saved column order for all DataGrids
             LoadColumnOrder(TexturesDataGrid);
@@ -126,6 +251,11 @@ namespace AssetProcessor {
         private static int _renderLoopSkippedCount = 0;
 
         private void OnD3D11Rendering(object? sender, EventArgs e) {
+            // Skip rendering when window is inactive to prevent GPU resource conflicts
+            if (!_isWindowActive) {
+                return;
+            }
+
             if (texturePreviewService.IsD3D11RenderLoopEnabled) {
                 _renderLoopCallCount++;
                 D3D11TextureViewer?.RenderFrame();

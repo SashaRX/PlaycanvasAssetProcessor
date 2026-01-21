@@ -317,21 +317,21 @@ namespace AssetProcessor.Helpers {
 
     /// <summary>
     /// MultiValueConverter to check if a chunk is included in the selected master material.
-    /// Values: [0] = ChunkId (string), [1] = SelectedMaster (MasterMaterial)
-    /// Returns: true if chunk is in master's ChunkIds list
+    /// Values: [0] = ChunkName (string), [1] = SelectedMaster (MasterMaterial)
+    /// Returns: true if chunk name is in master's Chunks dictionary
     /// </summary>
     public class ChunkInMasterConverter : IMultiValueConverter {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) {
             if (values.Length < 2)
                 return false;
 
-            if (values[0] is not string chunkId)
+            if (values[0] is not string chunkName)
                 return false;
 
             if (values[1] is not MasterMaterials.Models.MasterMaterial master)
                 return false;
 
-            return master.ChunkIds.Contains(chunkId);
+            return master.Chunks.ContainsKey(chunkName);
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) {

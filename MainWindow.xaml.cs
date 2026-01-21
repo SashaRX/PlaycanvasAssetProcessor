@@ -171,6 +171,10 @@ namespace AssetProcessor {
             ViewModel = this.viewModel;
 
             InitializeComponent();
+
+            // Alt+Tab freeze fix - must be called after window handle exists
+            this.SourceInitialized += (s, e) => SetupAltTabFix();
+
             UpdatePreviewContentHeight(DefaultPreviewContentHeight);
             ResetPreviewState();
             _ = InitializeOnStartup();
@@ -4953,9 +4957,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         #region AssetLoadingViewModel Event Handlers
 
-        private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
-            logService.LogInfo($"[OnAssetsLoaded] Loaded {e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials");
+        // Track window active state to skip render loops when inactive (Alt+Tab fix)
+        private volatile bool _isWindowActive = true;
 
+        private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
+            // Note: Deferral disabled - was causing freezes. Just apply immediately.
+            // The D3D11 render loop already checks _isWindowActive to prevent GPU conflicts.
+            ApplyAssetsToUI(e);
+        }
+
+        private void ApplyAssetsToUI(AssetsLoadedEventArgs e) {
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
@@ -5211,6 +5222,46 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ORMTexture = ormTexture,
                 Textures = viewModel.Textures
             });
+        }
+
+        private void DeleteExportedTexture_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement delete exported texture file
+            logger.Info("DeleteExportedTexture_Click - not implemented yet");
+        }
+
+        private void DeleteExportedModel_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement delete exported model file
+            logger.Info("DeleteExportedModel_Click - not implemented yet");
+        }
+
+        private void DeleteExportedMaterial_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement delete exported material file
+            logger.Info("DeleteExportedMaterial_Click - not implemented yet");
+        }
+
+        private void ORMGroup_PackConvert_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement ORM group pack & convert
+            logger.Info("ORMGroup_PackConvert_Click - not implemented yet");
+        }
+
+        private void ORMGroup_Upload_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement ORM group upload
+            logger.Info("ORMGroup_Upload_Click - not implemented yet");
+        }
+
+        private void ORMGroup_DeleteExported_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement ORM group delete exported
+            logger.Info("ORMGroup_DeleteExported_Click - not implemented yet");
+        }
+
+        private void ORMGroup_OpenFolder_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement ORM group open folder
+            logger.Info("ORMGroup_OpenFolder_Click - not implemented yet");
+        }
+
+        private void DeleteAllExportedFiles_Click(object sender, RoutedEventArgs e) {
+            // TODO: Implement delete all exported files
+            logger.Info("DeleteAllExportedFiles_Click - not implemented yet");
         }
 
         // Reads KTX2 file header to extract metadata (width, height, mip levels)
@@ -5555,11 +5606,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             if (checkBox.IsChecked == true) {
                 // Add chunk to master
-                viewModel.MasterMaterialsViewModel.AddChunkToMaster(selectedMaster, chunk.Id);
+                _ = viewModel.MasterMaterialsViewModel.AddChunkToMasterAsync(selectedMaster, chunk);
                 logger.Info($"Added chunk '{chunk.Id}' to master '{selectedMaster.Name}'");
             } else {
                 // Remove chunk from master
-                viewModel.MasterMaterialsViewModel.RemoveChunkFromMaster(selectedMaster, chunk.Id);
+                _ = viewModel.MasterMaterialsViewModel.RemoveChunkFromMasterAsync(selectedMaster, chunk.Id);
                 logger.Info($"Removed chunk '{chunk.Id}' from master '{selectedMaster.Name}'");
             }
 

@@ -12,6 +12,7 @@ public partial class ChunkSlotViewModel : ObservableObject
     private readonly ChunkSlot _slot;
     private readonly Action<string, string?> _onChunkChanged;
     private readonly Action<string, bool> _onEnabledChanged;
+    private bool _isInitializing = true;
 
     [ObservableProperty]
     private bool isEnabled;
@@ -95,10 +96,16 @@ public partial class ChunkSlotViewModel : ObservableObject
             // Select default
             SelectedChunk = AvailableChunks.FirstOrDefault(c => c.Id == slot.DefaultChunkId);
         }
+
+        // Initialization complete - now callbacks will fire
+        _isInitializing = false;
     }
 
     partial void OnSelectedChunkChanged(ShaderChunk? value)
     {
+        // Don't fire callback during initialization
+        if (_isInitializing) return;
+
         // If selected chunk is the default, pass null (means use default)
         var chunkId = value?.Id == _slot.DefaultChunkId ? null : value?.Id;
         _onChunkChanged(_slot.Id, chunkId);
@@ -106,6 +113,9 @@ public partial class ChunkSlotViewModel : ObservableObject
 
     partial void OnIsEnabledChanged(bool value)
     {
+        // Don't fire callback during initialization
+        if (_isInitializing) return;
+
         _onEnabledChanged(_slot.Id, value);
     }
 }

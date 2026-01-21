@@ -7,7 +7,15 @@ using NLog;
 namespace AssetProcessor.Services;
 
 /// <summary>
-/// Service for managing Master Materials and Shader Chunks
+/// Service for managing Master Materials and Shader Chunks.
+///
+/// Storage structure:
+/// {project}/server/assets/content/materials/
+/// ├── {masterName}_master.json        # Master material definition
+/// └── {masterName}/
+///     └── chunks/
+///         ├── diffusePS.mjs           # Individual chunk files
+///         └── glossPS.mjs
 /// </summary>
 public partial class MasterMaterialService : IMasterMaterialService
 {
@@ -78,60 +86,207 @@ public partial class MasterMaterialService : IMasterMaterialService
             Name = "standard",
             Description = "PlayCanvas StandardMaterial - full PBR with lighting, reflections, all material properties",
             BlendType = "opaque",
-            IsBuiltIn = true,
-            ChunkIds = [.. StandardMaterialChunks]
+            IsBuiltIn = true
+            // No chunks - standard uses engine defaults
         }
     ];
 
+    /// <summary>
+    /// Gets the materials folder path: {project}/server/assets/content/materials/
+    /// </summary>
+    public string GetMaterialsFolderPath(string projectFolderPath)
+    {
+        return Path.Combine(projectFolderPath, "server", "assets", "content", "materials");
+    }
+
+    /// <summary>
+    /// Gets the master material file path: {materials}/{name}_master.json
+    /// </summary>
+    public string GetMasterFilePath(string projectFolderPath, string masterName)
+    {
+        return Path.Combine(GetMaterialsFolderPath(projectFolderPath), $"{masterName}_master.json");
+    }
+
+    /// <summary>
+    /// Gets the chunks folder path for a specific master: {materials}/{masterName}/chunks/
+    /// </summary>
+    public string GetChunksFolderPath(string projectFolderPath, string masterName)
+    {
+        return Path.Combine(GetMaterialsFolderPath(projectFolderPath), masterName, "chunks");
+    }
+
+    /// <summary>
+    /// Gets the chunk file path: {materials}/{masterName}/chunks/{chunkName}.mjs
+    /// </summary>
+    public string GetChunkFilePath(string projectFolderPath, string masterName, string chunkName)
+    {
+        return Path.Combine(GetChunksFolderPath(projectFolderPath, masterName), $"{chunkName}.mjs");
+    }
+
+    /// <summary>
+    /// Gets the relative server path for a chunk: {masterName}/chunks/{chunkName}.mjs
+    /// </summary>
+    public string GetChunkServerPath(string masterName, string chunkName)
+    {
+        return $"{masterName}/chunks/{chunkName}.mjs";
+    }
+
     public async Task<MasterMaterialsConfig> LoadConfigAsync(string projectFolderPath, CancellationToken ct = default)
     {
-        var configPath = GetConfigPath(projectFolderPath);
+        var config = new MasterMaterialsConfig();
 
-        if (!File.Exists(configPath))
+        if (string.IsNullOrEmpty(projectFolderPath))
         {
-            Logger.Info($"Creating default MasterMaterials config at {configPath}");
-            var defaultConfig = new MasterMaterialsConfig();
-            await SaveConfigAsync(projectFolderPath, defaultConfig, ct);
-            return defaultConfig;
+            Logger.Warn("LoadConfigAsync: projectFolderPath is null or empty");
+            return config;
         }
 
+        var materialsFolder = GetMaterialsFolderPath(projectFolderPath);
+        Logger.Debug($"LoadConfigAsync: Looking for materials in {materialsFolder}");
+
+        if (!Directory.Exists(materialsFolder))
+        {
+            Logger.Info($"Materials folder not found, returning empty config: {materialsFolder}");
+            return config;
+        }
+
+        // Load all *_master.json files
+        string[] masterFiles;
         try
         {
-            var json = await File.ReadAllTextAsync(configPath, ct);
-            var config = JsonSerializer.Deserialize<MasterMaterialsConfig>(json, JsonOptions);
-
-            if (config == null)
-            {
-                Logger.Warn("Failed to deserialize MasterMaterials config, using default");
-                return new MasterMaterialsConfig();
-            }
-
-            Logger.Info($"Loaded MasterMaterials config from {configPath}: {config.Masters.Count} masters, {config.Chunks.Count} chunks");
-            return config;
+            masterFiles = Directory.GetFiles(materialsFolder, "*_master.json", SearchOption.TopDirectoryOnly);
+            Logger.Debug($"LoadConfigAsync: Found {masterFiles.Length} master files");
         }
         catch (Exception ex)
         {
-            Logger.Error(ex, $"Error loading MasterMaterials config from {configPath}");
-            return new MasterMaterialsConfig();
+            Logger.Error(ex, $"Error enumerating master files in {materialsFolder}");
+            return config;
         }
+
+        foreach (var masterFile in masterFiles)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                var json = await File.ReadAllTextAsync(masterFile, ct);
+                var master = JsonSerializer.Deserialize<MasterMaterial>(json, JsonOptions);
+
+                if (master != null)
+                {
+                    config.Masters.Add(master);
+                    Logger.Debug($"Loaded master material: {master.Name} with {master.Chunks.Count} chunks");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, $"Error loading master material from {masterFile}");
+            }
+        }
+
+        // Load mappings config if exists
+        var mappingsPath = Path.Combine(materialsFolder, "mappings.json");
+        if (File.Exists(mappingsPath))
+        {
+            try
+            {
+                var json = await File.ReadAllTextAsync(mappingsPath, ct);
+                var mappingsConfig = JsonSerializer.Deserialize<MaterialMappingsConfig>(json, JsonOptions);
+                if (mappingsConfig != null)
+                {
+                    config.MaterialInstanceMappings = mappingsConfig.MaterialInstanceMappings;
+                    config.DefaultMasterMaterial = mappingsConfig.DefaultMasterMaterial;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, $"Error loading mappings from {mappingsPath}");
+            }
+        }
+
+        Logger.Info($"Loaded {config.Masters.Count} master materials from {materialsFolder}");
+        return config;
     }
 
     public async Task SaveConfigAsync(string projectFolderPath, MasterMaterialsConfig config, CancellationToken ct = default)
     {
-        var configPath = GetConfigPath(projectFolderPath);
-        var directory = Path.GetDirectoryName(configPath);
+        var materialsFolder = GetMaterialsFolderPath(projectFolderPath);
+        Directory.CreateDirectory(materialsFolder);
 
-        Logger.Info($"SaveConfigAsync: Saving to {configPath}");
-        Logger.Info($"SaveConfigAsync: {config.Masters.Count} masters, {config.MaterialInstanceMappings.Count} mappings");
-
-        if (!string.IsNullOrEmpty(directory))
+        // Save each master material to its own file
+        foreach (var master in config.Masters.Where(m => !m.IsBuiltIn))
         {
-            Directory.CreateDirectory(directory);
+            ct.ThrowIfCancellationRequested();
+
+            var masterPath = GetMasterFilePath(projectFolderPath, master.Name);
+            var json = JsonSerializer.Serialize(master, JsonOptions);
+            await File.WriteAllTextAsync(masterPath, json, ct);
+            Logger.Debug($"Saved master material: {master.Name}");
         }
 
-        var json = JsonSerializer.Serialize(config, JsonOptions);
-        await File.WriteAllTextAsync(configPath, json, ct);
-        Logger.Info($"SaveConfigAsync: Successfully wrote {json.Length} bytes to {configPath}");
+        // Save mappings to separate file
+        var mappingsPath = Path.Combine(materialsFolder, "mappings.json");
+        var mappingsConfig = new MaterialMappingsConfig
+        {
+            MaterialInstanceMappings = config.MaterialInstanceMappings,
+            DefaultMasterMaterial = config.DefaultMasterMaterial
+        };
+        var mappingsJson = JsonSerializer.Serialize(mappingsConfig, JsonOptions);
+        await File.WriteAllTextAsync(mappingsPath, mappingsJson, ct);
+
+        Logger.Info($"Saved {config.Masters.Count(m => !m.IsBuiltIn)} master materials to {materialsFolder}");
+    }
+
+    /// <summary>
+    /// Saves a single master material to its file
+    /// </summary>
+    public async Task SaveMasterAsync(string projectFolderPath, MasterMaterial master, CancellationToken ct = default)
+    {
+        if (master.IsBuiltIn)
+        {
+            Logger.Warn($"Cannot save built-in master material: {master.Name}");
+            return;
+        }
+
+        var materialsFolder = GetMaterialsFolderPath(projectFolderPath);
+        Directory.CreateDirectory(materialsFolder);
+
+        var masterPath = GetMasterFilePath(projectFolderPath, master.Name);
+        var json = JsonSerializer.Serialize(master, JsonOptions);
+        await File.WriteAllTextAsync(masterPath, json, ct);
+
+        Logger.Info($"Saved master material: {master.Name} to {masterPath}");
+    }
+
+    /// <summary>
+    /// Loads a single master material by name
+    /// </summary>
+    public async Task<MasterMaterial?> LoadMasterAsync(string projectFolderPath, string masterName, CancellationToken ct = default)
+    {
+        // Check built-in first
+        var builtIn = BuiltInMasters.FirstOrDefault(m => m.Name == masterName);
+        if (builtIn != null)
+        {
+            return builtIn;
+        }
+
+        var masterPath = GetMasterFilePath(projectFolderPath, masterName);
+        if (!File.Exists(masterPath))
+        {
+            Logger.Warn($"Master material not found: {masterPath}");
+            return null;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(masterPath, ct);
+            return JsonSerializer.Deserialize<MasterMaterial>(json, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, $"Error loading master material from {masterPath}");
+            return null;
+        }
     }
 
     public IEnumerable<MasterMaterial> GetAllMasters(MasterMaterialsConfig config)
@@ -159,9 +314,9 @@ public partial class MasterMaterialService : IMasterMaterialService
         config.MaterialInstanceMappings.Remove(materialId);
     }
 
-    public async Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default)
+    public async Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string masterName, string chunkName, CancellationToken ct = default)
     {
-        var filePath = GetChunkFilePath(projectFolderPath, chunkId);
+        var filePath = GetChunkFilePath(projectFolderPath, masterName, chunkName);
 
         if (!File.Exists(filePath))
         {
@@ -172,7 +327,7 @@ public partial class MasterMaterialService : IMasterMaterialService
         try
         {
             var content = await File.ReadAllTextAsync(filePath, ct);
-            return ParseMjsChunk(content, chunkId);
+            return ParseMjsChunk(content, chunkName);
         }
         catch (Exception ex)
         {
@@ -181,9 +336,9 @@ public partial class MasterMaterialService : IMasterMaterialService
         }
     }
 
-    public async Task SaveChunkToFileAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default)
+    public async Task SaveChunkToFileAsync(string projectFolderPath, string masterName, ShaderChunk chunk, CancellationToken ct = default)
     {
-        var filePath = GetChunkFilePath(projectFolderPath, chunk.Id);
+        var filePath = GetChunkFilePath(projectFolderPath, masterName, chunk.Id);
         var directory = Path.GetDirectoryName(filePath);
 
         if (!string.IsNullOrEmpty(directory))
@@ -196,9 +351,9 @@ public partial class MasterMaterialService : IMasterMaterialService
         Logger.Info($"Saved chunk '{chunk.Id}' to {filePath}");
     }
 
-    public async Task DeleteChunkFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default)
+    public async Task DeleteChunkFileAsync(string projectFolderPath, string masterName, string chunkName, CancellationToken ct = default)
     {
-        var filePath = GetChunkFilePath(projectFolderPath, chunkId);
+        var filePath = GetChunkFilePath(projectFolderPath, masterName, chunkName);
 
         if (File.Exists(filePath))
         {
@@ -207,13 +362,16 @@ public partial class MasterMaterialService : IMasterMaterialService
         }
     }
 
+    /// <summary>
+    /// Generates consolidated chunks.mjs for a master material (for export)
+    /// </summary>
     public async Task<string> GenerateConsolidatedChunksAsync(string projectFolderPath, MasterMaterial master, CancellationToken ct = default)
     {
         var chunks = new List<ShaderChunk>();
 
-        foreach (var chunkId in master.ChunkIds)
+        foreach (var (chunkName, _) in master.Chunks)
         {
-            var chunk = await LoadChunkFromFileAsync(projectFolderPath, chunkId, ct);
+            var chunk = await LoadChunkFromFileAsync(projectFolderPath, master.Name, chunkName, ct);
             if (chunk != null)
             {
                 chunks.Add(chunk);
@@ -223,18 +381,66 @@ public partial class MasterMaterialService : IMasterMaterialService
         return GenerateConsolidatedMjs(chunks);
     }
 
+    /// <summary>
+    /// Adds a chunk to a master material and saves the chunk file
+    /// </summary>
+    public async Task AddChunkToMasterAsync(string projectFolderPath, MasterMaterial master, ShaderChunk chunk, CancellationToken ct = default)
+    {
+        // Save the chunk file
+        await SaveChunkToFileAsync(projectFolderPath, master.Name, chunk, ct);
+
+        // Update master's chunk reference
+        var serverPath = GetChunkServerPath(master.Name, chunk.Id);
+        master.SetChunk(chunk.Id, serverPath);
+
+        // Save master material
+        await SaveMasterAsync(projectFolderPath, master, ct);
+    }
+
+    /// <summary>
+    /// Removes a chunk from a master material and deletes the chunk file
+    /// </summary>
+    public async Task RemoveChunkFromMasterAsync(string projectFolderPath, MasterMaterial master, string chunkName, CancellationToken ct = default)
+    {
+        // Remove from master
+        master.RemoveChunk(chunkName);
+
+        // Delete chunk file
+        await DeleteChunkFileAsync(projectFolderPath, master.Name, chunkName, ct);
+
+        // Save master material
+        await SaveMasterAsync(projectFolderPath, master, ct);
+    }
+
+    // Legacy interface implementation (keeping for compatibility)
     public string GetChunksFolderPath(string projectFolderPath)
     {
-        return Path.Combine(projectFolderPath, "MasterMaterials", "chunks");
+        // Legacy path - returns the materials folder
+        return GetMaterialsFolderPath(projectFolderPath);
+    }
+
+    // Legacy - loads chunk by ID only (deprecated)
+    public Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default)
+    {
+        Logger.Warn("LoadChunkFromFileAsync with single chunkId is deprecated. Use the version with masterName parameter.");
+        return Task.FromResult<ShaderChunk?>(null);
+    }
+
+    // Legacy - saves chunk without master context (deprecated)
+    public Task SaveChunkToFileAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default)
+    {
+        Logger.Warn("SaveChunkToFileAsync without masterName is deprecated. Use the version with masterName parameter.");
+        return Task.CompletedTask;
+    }
+
+    // Legacy - deletes chunk without master context (deprecated)
+    public Task DeleteChunkFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default)
+    {
+        Logger.Warn("DeleteChunkFileAsync without masterName is deprecated. Use the version with masterName parameter.");
+        return Task.CompletedTask;
     }
 
     #region Private Helpers
-
-    private static string GetConfigPath(string projectFolderPath)
-        => Path.Combine(projectFolderPath, "MasterMaterials", "config.json");
-
-    private static string GetChunkFilePath(string projectFolderPath, string chunkId)
-        => Path.Combine(projectFolderPath, "MasterMaterials", "chunks", $"{chunkId}.mjs");
 
     private static ShaderChunk? ParseMjsChunk(string content, string expectedId)
     {
@@ -267,16 +473,13 @@ public partial class MasterMaterialService : IMasterMaterialService
     {
         var escapedGlsl = EscapeTemplateString(chunk.Glsl);
         var escapedWgsl = EscapeTemplateString(chunk.Wgsl);
-        var escapedDesc = chunk.Description?.Replace("'", "\\'") ?? string.Empty;
 
-        return $@"export const chunks = {{
-  {chunk.Id}: {{
-    glsl: `{escapedGlsl}`,
-    wgsl: `{escapedWgsl}`,
-    type: '{chunk.Type}',
-    description: '{escapedDesc}'
-  }}
-}};
+        return $@"// Shader chunk: {chunk.Id}
+// Type: {chunk.Type}
+{(chunk.Description != null ? $"// Description: {chunk.Description}\n" : "")}
+export const glsl = `{escapedGlsl}`;
+
+export const wgsl = `{escapedWgsl}`;
 ";
     }
 
@@ -316,10 +519,10 @@ public partial class MasterMaterialService : IMasterMaterialService
             .Replace("${", "\\${");
     }
 
-    [GeneratedRegex(@"glsl:\s*`([^`]*)`", RegexOptions.Singleline)]
+    [GeneratedRegex(@"glsl\s*[=:]\s*`([^`]*)`", RegexOptions.Singleline)]
     private static partial Regex GlslRegex();
 
-    [GeneratedRegex(@"wgsl:\s*`([^`]*)`", RegexOptions.Singleline)]
+    [GeneratedRegex(@"wgsl\s*[=:]\s*`([^`]*)`", RegexOptions.Singleline)]
     private static partial Regex WgslRegex();
 
     [GeneratedRegex(@"type:\s*['""](\w+)['""]")]
@@ -329,4 +532,23 @@ public partial class MasterMaterialService : IMasterMaterialService
     private static partial Regex DescriptionRegex();
 
     #endregion
+}
+
+/// <summary>
+/// Separate config file for material-to-master mappings
+/// Stored in {materials}/mappings.json
+/// </summary>
+public class MaterialMappingsConfig
+{
+    /// <summary>
+    /// Mapping of PlayCanvas material ID to master material name
+    /// </summary>
+    [System.Text.Json.Serialization.JsonPropertyName("materialInstanceMappings")]
+    public Dictionary<int, string> MaterialInstanceMappings { get; set; } = [];
+
+    /// <summary>
+    /// Default master material name applied to materials without explicit mapping
+    /// </summary>
+    [System.Text.Json.Serialization.JsonPropertyName("defaultMasterMaterial")]
+    public string? DefaultMasterMaterial { get; set; }
 }

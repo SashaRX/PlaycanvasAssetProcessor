@@ -325,6 +325,26 @@ namespace AssetProcessor.Data {
             await command.ExecuteNonQueryAsync(ct);
         }
 
+        public async Task<bool> UpdateStatusByLocalPathAsync(string localPath, string newStatus, string? errorMessage = null, CancellationToken ct = default) {
+            await EnsureInitializedAsync(ct);
+
+            await using var connection = new SqliteConnection(_connectionString);
+            await connection.OpenAsync(ct);
+
+            var sql = @"
+                UPDATE upload_history
+                SET status = @status, error_message = @errorMessage
+                WHERE local_path = @localPath
+            ";
+            await using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@localPath", localPath);
+            command.Parameters.AddWithValue("@status", newStatus);
+            command.Parameters.AddWithValue("@errorMessage", (object?)errorMessage ?? DBNull.Value);
+
+            var rowsAffected = await command.ExecuteNonQueryAsync(ct);
+            return rowsAffected > 0;
+        }
+
         private async Task EnsureInitializedAsync(CancellationToken ct) {
             if (!_isInitialized) {
                 await InitializeAsync(ct);

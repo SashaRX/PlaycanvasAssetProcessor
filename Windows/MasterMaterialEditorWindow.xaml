@@ -71,8 +71,9 @@
             </StackPanel>
 
             <ListBox Grid.Row="1" x:Name="ChunksListBox"
-                     ItemsSource="{Binding AttachedChunkIds}"
-                     SelectedItem="{Binding SelectedChunkId}"
+                     ItemsSource="{Binding AttachedChunks}"
+                     SelectedItem="{Binding SelectedChunk}"
+                     DisplayMemberPath="ChunkName"
                      Background="{DynamicResource ThemeBackgroundAlt}"
                      Foreground="{DynamicResource ThemeForeground}"/>
         </Grid>

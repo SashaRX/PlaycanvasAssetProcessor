@@ -8,6 +8,8 @@ using System;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace AssetProcessor {
     public partial class App : Application {
@@ -16,6 +18,10 @@ namespace AssetProcessor {
 
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
+
+            // CRITICAL: Disable WPF hardware acceleration to prevent freeze during Alt+Tab from fullscreen games
+            // This is the nuclear option - WPF software rendering won't conflict with exclusive GPU access
+            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
             // Apply theme based on Windows settings
             ThemeHelper.ApplyTheme(this);

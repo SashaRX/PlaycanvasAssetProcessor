@@ -460,68 +460,101 @@ public sealed class D3D11TextureRenderer : IDisposable {
     }
 
     /// <summary>
+    /// Static flag to completely disable rendering (set by MainWindow on Alt+Tab).
+    /// This prevents ALL D3D11 operations, not just Present.
+    /// </summary>
+    public static volatile bool GlobalRenderingEnabled = true;
+
+    /// <summary>
     /// Render the current texture.
     /// </summary>
     public void Render() {
-        if (context == null || renderTargetView == null) {
+        // Check global flag FIRST - skip ALL D3D11 operations when disabled
+        // This prevents freeze when fullscreen game is taking/releasing GPU
+        if (!GlobalRenderingEnabled) {
             return;
         }
 
-        // Clear background to dark gray
-        context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+        if (context == null || renderTargetView == null || swapChain == null) {
+            return;
+        }
 
-        lock (renderLock) {
-            // If no texture loaded, just present the cleared background
-            if (textureSRV == null) {
-                swapChain!.Present(1, PresentFlags.None);
-                return;
-            }
+        try {
+            // Clear background to dark gray
+            context.ClearRenderTargetView(renderTargetView, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
 
-            // Set render target
-            context.OMSetRenderTargets(renderTargetView);
-
-            // Set viewport
-            var viewport = new Viewport(0, 0, viewportWidth, viewportHeight);
-            context.RSSetViewport(viewport);
-
-            // Skip rendering if shaders aren't compiled yet (async compilation in progress)
-            if (!shadersReady || vertexShader == null || pixelShader == null || inputLayout == null || constantBuffer == null || vertexBuffer == null) {
-                // Shaders still compiling, just show cleared background
-                swapChain!.Present(1, PresentFlags.None);
-                return;
-            }
-
-            if (vertexShader != null && pixelShader != null && inputLayout != null && constantBuffer != null && vertexBuffer != null) {
-                // Update constant buffer
-                UpdateConstantBuffer();
-
-                // Set shaders and resources
-                context.VSSetShader(vertexShader);
-                context.PSSetShader(pixelShader);
-                context.PSSetShaderResource(0, textureSRV);
-                ID3D11SamplerState? sampler = null;
-                if (useLinearFilter) {
-                    sampler = tilingEnabled ? samplerLinearWrap : samplerLinear;
-                } else {
-                    sampler = tilingEnabled ? samplerPointWrap : samplerPoint;
+            lock (renderLock) {
+                // If no texture loaded, just present the cleared background
+                if (textureSRV == null) {
+                    PresentSafe();
+                    return;
                 }
 
-                context.PSSetSampler(0, sampler);
-                context.VSSetConstantBuffer(0, constantBuffer);
-                context.PSSetConstantBuffer(0, constantBuffer);
+                // Set render target
+                context.OMSetRenderTargets(renderTargetView);
 
-                // Set input layout and vertex buffer
-                context.IASetInputLayout(inputLayout);
-                context.IASetVertexBuffer(0, vertexBuffer, (uint)Marshal.SizeOf<Vertex>(), 0);
-                context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+                // Set viewport
+                var viewport = new Viewport(0, 0, viewportWidth, viewportHeight);
+                context.RSSetViewport(viewport);
 
-                // Draw
-                context.Draw(6, 0);
-            }
+                // Skip rendering if shaders aren't compiled yet (async compilation in progress)
+                if (!shadersReady || vertexShader == null || pixelShader == null || inputLayout == null || constantBuffer == null || vertexBuffer == null) {
+                    // Shaders still compiling, just show cleared background
+                    PresentSafe();
+                    return;
+                }
 
-            // Present
-            swapChain!.Present(1, PresentFlags.None);
-        } // lock (renderLock)
+                if (vertexShader != null && pixelShader != null && inputLayout != null && constantBuffer != null && vertexBuffer != null) {
+                    // Update constant buffer
+                    UpdateConstantBuffer();
+
+                    // Set shaders and resources
+                    context.VSSetShader(vertexShader);
+                    context.PSSetShader(pixelShader);
+                    context.PSSetShaderResource(0, textureSRV);
+                    ID3D11SamplerState? sampler = null;
+                    if (useLinearFilter) {
+                        sampler = tilingEnabled ? samplerLinearWrap : samplerLinear;
+                    } else {
+                        sampler = tilingEnabled ? samplerPointWrap : samplerPoint;
+                    }
+
+                    context.PSSetSampler(0, sampler);
+                    context.VSSetConstantBuffer(0, constantBuffer);
+                    context.PSSetConstantBuffer(0, constantBuffer);
+
+                    // Set input layout and vertex buffer
+                    context.IASetInputLayout(inputLayout);
+                    context.IASetVertexBuffer(0, vertexBuffer, (uint)Marshal.SizeOf<Vertex>(), 0);
+                    context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+
+                    // Draw
+                    context.Draw(6, 0);
+                }
+
+                // Present
+                PresentSafe();
+            } // lock (renderLock)
+        } catch (SharpGen.Runtime.SharpGenException ex) {
+            // DXGI_ERROR_DEVICE_REMOVED or DXGI_ERROR_DEVICE_RESET - device lost during Alt+Tab to fullscreen game
+            logger.Warn($"D3D11 render failed (device may be lost): {ex.Message}");
+        } catch (Exception ex) {
+            logger.Error(ex, "Unexpected error during D3D11 render");
+        }
+    }
+
+    /// <summary>
+    /// Present with error handling for device lost scenarios.
+    /// Uses non-blocking present to avoid freezing when GPU is busy (e.g., fullscreen game).
+    /// </summary>
+    private void PresentSafe() {
+        try {
+            // Use 0 (no vsync wait) to avoid blocking when GPU is busy with fullscreen games
+            // This prevents Alt+Tab freeze when returning from exclusive fullscreen applications
+            swapChain?.Present(0, PresentFlags.None);
+        } catch (SharpGen.Runtime.SharpGenException) {
+            // Device lost - silently ignore, will recover on next render when device is available
+        }
     }
 
     private void UpdateConstantBuffer() {
@@ -602,6 +635,12 @@ public sealed class D3D11TextureRenderer : IDisposable {
 
     public void Resize(int width, int height) {
         if (width <= 0 || height <= 0) return;
+
+        // CRITICAL: Skip resize when rendering is disabled (Alt+Tab to fullscreen game)
+        // ResizeBuffers is the most dangerous D3D11 operation during GPU ownership changes
+        if (!GlobalRenderingEnabled) {
+            return;
+        }
 
         viewportWidth = width;
         viewportHeight = height;

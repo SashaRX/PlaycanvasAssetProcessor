@@ -8,7 +8,15 @@ using NLog;
 namespace AssetProcessor.ViewModels;
 
 /// <summary>
-/// ViewModel for the Master Materials tab
+/// ViewModel for the Master Materials tab.
+///
+/// Storage structure:
+/// {project}/server/assets/content/materials/
+/// ├── {masterName}_master.json        # Master material definition
+/// ├── mappings.json                   # Material ID to master mappings
+/// └── {masterName}/
+///     └── chunks/
+///         └── {chunkName}.mjs         # Individual chunk files
 /// </summary>
 public partial class MasterMaterialsViewModel : ObservableObject
 {
@@ -164,26 +172,23 @@ public partial class MasterMaterialsViewModel : ObservableObject
                 Chunks.Add(builtInChunk);
             }
 
-            // Then load custom chunks from files
-            foreach (var chunkMeta in _config.Chunks)
+            // Load custom chunks from each master's chunks folder
+            foreach (var master in _config.Masters.Where(m => !m.IsBuiltIn))
             {
-                // Skip if a built-in chunk with same ID exists
-                if (Chunks.Any(c => c.Id == chunkMeta.Id && c.IsBuiltIn))
+                foreach (var (chunkName, _) in master.Chunks)
                 {
-                    continue;
-                }
+                    // Skip if already loaded
+                    if (Chunks.Any(c => c.Id == chunkName))
+                    {
+                        continue;
+                    }
 
-                var loadedChunk = await _masterMaterialService.LoadChunkFromFileAsync(_projectFolderPath, chunkMeta.Id, ct);
-                if (loadedChunk != null)
-                {
-                    loadedChunk.IsBuiltIn = false;
-                    Chunks.Add(loadedChunk);
-                }
-                else
-                {
-                    // Chunk file doesn't exist, use metadata only
-                    chunkMeta.IsBuiltIn = false;
-                    Chunks.Add(chunkMeta);
+                    var loadedChunk = await _masterMaterialService.LoadChunkFromFileAsync(_projectFolderPath, master.Name, chunkName, ct);
+                    if (loadedChunk != null)
+                    {
+                        loadedChunk.IsBuiltIn = false;
+                        Chunks.Add(loadedChunk);
+                    }
                 }
             }
 
@@ -230,20 +235,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
                 await Task.Delay(SaveDebounceDelayMs, token);
                 if (token.IsCancellationRequested) return;
 
-                // Marshal back to UI thread for the actual save
-                var dispatcher = System.Windows.Application.Current?.Dispatcher;
-                if (dispatcher != null)
-                {
-                    // IMPORTANT: Double await - first for DispatcherOperation, second for the inner Task
-                    var innerTask = await dispatcher.InvokeAsync(() => SaveConfigInternalAsync(token));
-                    await innerTask;
-                }
-                else
-                {
-                    // Fallback for tests/design-time
-                    await SaveConfigInternalAsync(token);
-                }
-
+                // Save on background thread - no need to marshal to UI
+                await SaveConfigInternalAsync(token);
                 Logger.Info("Debounced auto-save completed successfully");
             }
             catch (OperationCanceledException)
@@ -265,7 +258,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
     {
         if (!await _saveLock.WaitAsync(0, ct))
         {
-            // Another save is in progress, skip this one
             return;
         }
 
@@ -307,24 +299,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
             _config.Masters = mastersToSave;
             Logger.Debug($"Saving {mastersToSave.Count} custom masters, {_config.MaterialInstanceMappings.Count} material mappings");
 
-            // Only save custom chunks (not built-in ones)
-            var customChunks = Chunks.Where(c => !c.IsBuiltIn).ToList();
-            _config.Chunks = customChunks.Select(c => new ShaderChunk
-            {
-                Id = c.Id,
-                Type = c.Type,
-                Description = c.Description,
-                SourceFile = $"{c.Id}.mjs"
-            }).ToList();
-
-            // Save config JSON
+            // Save config (which saves each master to its own file + mappings)
             await _masterMaterialService.SaveConfigAsync(_projectFolderPath, _config, ct);
-
-            // Save only custom chunk files (not built-in)
-            foreach (var chunk in customChunks)
-            {
-                await _masterMaterialService.SaveChunkToFileAsync(_projectFolderPath, chunk, ct);
-            }
 
             HasUnsavedChanges = false;
             StatusMessage = "Configuration saved";
@@ -355,15 +331,11 @@ public partial class MasterMaterialsViewModel : ObservableObject
             IsBuiltIn = false
         };
 
-        // Initialize slot assignments with defaults
-        newMaster.InitializeSlotAssignments();
-
         MasterMaterials.Add(newMaster);
         SelectedMaster = newMaster;
         HasUnsavedChanges = true;
         EditMasterRequested?.Invoke(this, newMaster);
 
-        // Auto-save
         await SaveConfigAsync();
     }
 
@@ -395,25 +367,9 @@ public partial class MasterMaterialsViewModel : ObservableObject
             newName = $"{baseName}_{counter++}";
         }
 
-        var clonedMaster = new MasterMaterial
-        {
-            Name = newName,
-            Description = $"Clone of {master.Name}",
-            BlendType = master.BlendType,
-            IsBuiltIn = false,
-            BaseMaterialId = master.BaseMaterialId, // Copy base material reference
-            ChunkIds = [.. master.ChunkIds], // Copy all chunk IDs
-            SlotAssignments = master.SlotAssignments?.Select(a => new ChunkSlotAssignment
-            {
-                SlotId = a.SlotId,
-                ChunkId = a.ChunkId,
-                Enabled = a.Enabled
-            }).ToList(),
-            // Deep copy default parameters
-            DefaultParams = master.DefaultParams != null
-                ? new Dictionary<string, object>(master.DefaultParams)
-                : null
-        };
+        var clonedMaster = master.Clone();
+        clonedMaster.Name = newName;
+        clonedMaster.Description = $"Clone of {master.Name}";
 
         MasterMaterials.Add(clonedMaster);
         SelectedMaster = clonedMaster;
@@ -421,10 +377,7 @@ public partial class MasterMaterialsViewModel : ObservableObject
         StatusMessage = $"Created clone: {newName}";
         _logService.LogInfo(StatusMessage);
 
-        // Auto-save after cloning
-        Logger.Info($"CloneMasterAsync: About to save. _config={(_config == null ? "NULL" : "exists")}, _projectFolderPath={_projectFolderPath ?? "null"}");
         await SaveConfigAsync();
-        Logger.Info($"CloneMasterAsync: SaveConfigAsync completed");
     }
 
     [RelayCommand]
@@ -442,7 +395,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
         HasUnsavedChanges = true;
         StatusMessage = $"Deleted master material: {master.Name}";
 
-        // Auto-save
         await SaveConfigAsync();
     }
 
@@ -499,7 +451,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
         HasUnsavedChanges = true;
         StatusMessage = $"Created copy: {newId}";
 
-        // Open editor for the new chunk
         EditChunkRequested?.Invoke(this, copiedChunk);
     }
 
@@ -517,14 +468,13 @@ public partial class MasterMaterialsViewModel : ObservableObject
         // Remove from all masters using this chunk
         foreach (var master in MasterMaterials.Where(m => !m.IsBuiltIn))
         {
-            master.ChunkIds.Remove(chunk.Id);
+            if (master.Chunks.ContainsKey(chunk.Id))
+            {
+                await _masterMaterialService.RemoveChunkFromMasterAsync(_projectFolderPath, master, chunk.Id, ct);
+            }
         }
 
         Chunks.Remove(chunk);
-
-        // Delete the file
-        await _masterMaterialService.DeleteChunkFileAsync(_projectFolderPath, chunk.Id, ct);
-
         HasUnsavedChanges = true;
         StatusMessage = $"Deleted chunk: {chunk.Id}";
     }
@@ -532,9 +482,13 @@ public partial class MasterMaterialsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveChunkAsync(ShaderChunk chunk, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(_projectFolderPath)) return;
+        if (string.IsNullOrEmpty(_projectFolderPath) || SelectedMaster == null || SelectedMaster.IsBuiltIn)
+        {
+            StatusMessage = "Select a custom master material first";
+            return;
+        }
 
-        await _masterMaterialService.SaveChunkToFileAsync(_projectFolderPath, chunk, ct);
+        await _masterMaterialService.SaveChunkToFileAsync(_projectFolderPath, SelectedMaster.Name, chunk, ct);
         HasUnsavedChanges = true;
         StatusMessage = $"Chunk '{chunk.Id}' saved";
     }
@@ -574,7 +528,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
         get => _config?.DefaultMasterMaterial;
         set
         {
-            // Создаём config если его нет
             _config ??= new MasterMaterialsConfig();
 
             if (_config.DefaultMasterMaterial != value)
@@ -597,7 +550,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
         if (_config?.MaterialInstanceMappings.TryGetValue(materialId, out var name) == true)
             return name;
 
-        // Return default if no explicit mapping
         return _config?.DefaultMasterMaterial;
     }
 
@@ -614,7 +566,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     public void SetMasterForMaterial(int materialId, string? masterName)
     {
-        // Создаём config если его нет
         _config ??= new MasterMaterialsConfig();
 
         if (string.IsNullOrEmpty(masterName))
@@ -629,8 +580,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
         }
 
         HasUnsavedChanges = true;
-
-        // Auto-save (debounced)
         ScheduleDebouncedSave();
     }
 
@@ -639,7 +588,6 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     public void SetMasterForMaterials(IEnumerable<int> materialIds, string? masterName)
     {
-        // Создаём config если его нет
         _config ??= new MasterMaterialsConfig();
 
         int count = 0;
@@ -667,31 +615,24 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// <summary>
     /// Adds a chunk to a master material
     /// </summary>
-    public void AddChunkToMaster(MasterMaterial master, string chunkId)
+    public async Task AddChunkToMasterAsync(MasterMaterial master, ShaderChunk chunk)
     {
-        if (master.IsBuiltIn) return;
+        if (master.IsBuiltIn || string.IsNullOrEmpty(_projectFolderPath)) return;
 
-        if (!master.ChunkIds.Contains(chunkId))
-        {
-            master.ChunkIds.Add(chunkId);
-            HasUnsavedChanges = true;
-
-            // Auto-save (debounced)
-            ScheduleDebouncedSave();
-        }
+        await _masterMaterialService.AddChunkToMasterAsync(_projectFolderPath, master, chunk);
+        HasUnsavedChanges = true;
+        ScheduleDebouncedSave();
     }
 
     /// <summary>
     /// Removes a chunk from a master material
     /// </summary>
-    public void RemoveChunkFromMaster(MasterMaterial master, string chunkId)
+    public async Task RemoveChunkFromMasterAsync(MasterMaterial master, string chunkName)
     {
-        if (master.IsBuiltIn) return;
+        if (master.IsBuiltIn || string.IsNullOrEmpty(_projectFolderPath)) return;
 
-        master.ChunkIds.Remove(chunkId);
+        await _masterMaterialService.RemoveChunkFromMasterAsync(_projectFolderPath, master, chunkName);
         HasUnsavedChanges = true;
-
-        // Auto-save (debounced)
         ScheduleDebouncedSave();
     }
 
@@ -708,19 +649,8 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     private void RebuildChunkSlotCategories()
     {
-        // Use Dispatcher to avoid virtualization issues during layout
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher != null)
-        {
-            dispatcher.BeginInvoke(
-                System.Windows.Threading.DispatcherPriority.Background,
-                new Action(RebuildChunkSlotCategoriesInternal));
-        }
-        else
-        {
-            // Fallback for design-time or tests
-            RebuildChunkSlotCategoriesInternal();
-        }
+        // Run directly - no dispatcher needed since this is called from property setter which runs on UI thread
+        RebuildChunkSlotCategoriesInternal();
     }
 
     private void RebuildChunkSlotCategoriesInternal()
@@ -740,17 +670,18 @@ public partial class MasterMaterialsViewModel : ObservableObject
             var categoryVm = new ChunkSlotCategoryViewModel
             {
                 CategoryName = categoryName,
-                IsExpanded = categoryName == "Surface" || categoryName == "Vertex" // Expand important ones by default
+                IsExpanded = categoryName == "Surface" || categoryName == "Vertex"
             };
 
             var slots = ShaderChunkSchema.GetSlotsByCategory(categoryName);
             foreach (var slot in slots)
             {
-                // Get current chunk assignment for this slot
-                var currentChunkId = SelectedMaster.SlotAssignments?
-                    .FirstOrDefault(a => a.SlotId == slot.Id)?.ChunkId;
+                // Check if this chunk is in the master's Chunks dictionary
+                var isInMaster = SelectedMaster.Chunks.ContainsKey(slot.DefaultChunkId);
+                var currentChunkId = isInMaster ? slot.DefaultChunkId : null;
 
-                var isEnabled = SelectedMaster.IsSlotEnabled(slot.Id);
+                // For built-in standard material, all slots use defaults (enabled)
+                var isEnabled = SelectedMaster.IsBuiltIn || isInMaster || slot.IsEnabledByDefault;
 
                 var slotVm = new ChunkSlotViewModel(
                     slot,
@@ -773,23 +704,28 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     private void OnSlotChunkChanged(string slotId, string? chunkId)
     {
-        if (SelectedMaster == null || SelectedMaster.IsBuiltIn) return;
+        if (SelectedMaster == null || SelectedMaster.IsBuiltIn || string.IsNullOrEmpty(_projectFolderPath))
+            return;
 
-        SelectedMaster.SetChunkForSlot(slotId, chunkId);
-        HasUnsavedChanges = true;
-
-        // If a chunk was selected, also select it in the editor
         if (!string.IsNullOrEmpty(chunkId))
         {
+            // Add chunk to master
             var chunk = Chunks.FirstOrDefault(c => c.Id == chunkId);
             if (chunk != null)
             {
+                _ = AddChunkToMasterAsync(SelectedMaster, chunk);
                 SelectedChunk = chunk;
             }
         }
-
-        // Auto-save (debounced)
-        ScheduleDebouncedSave();
+        else
+        {
+            // Remove chunk from master (use default)
+            var slot = ShaderChunkSchema.GetSlot(slotId);
+            if (slot != null)
+            {
+                _ = RemoveChunkFromMasterAsync(SelectedMaster, slot.DefaultChunkId);
+            }
+        }
     }
 
     /// <summary>
@@ -797,12 +733,31 @@ public partial class MasterMaterialsViewModel : ObservableObject
     /// </summary>
     private void OnSlotEnabledChanged(string slotId, bool enabled)
     {
-        if (SelectedMaster == null || SelectedMaster.IsBuiltIn) return;
+        if (SelectedMaster == null || SelectedMaster.IsBuiltIn)
+            return;
 
-        SelectedMaster.SetSlotEnabled(slotId, enabled);
+        var slot = ShaderChunkSchema.GetSlot(slotId);
+        if (slot == null) return;
+
+        if (enabled)
+        {
+            // When enabling, add the default chunk
+            var chunk = Chunks.FirstOrDefault(c => c.Id == slot.DefaultChunkId);
+            if (chunk != null && !string.IsNullOrEmpty(_projectFolderPath))
+            {
+                _ = AddChunkToMasterAsync(SelectedMaster, chunk);
+            }
+        }
+        else
+        {
+            // When disabling, remove the chunk
+            if (!string.IsNullOrEmpty(_projectFolderPath))
+            {
+                _ = RemoveChunkFromMasterAsync(SelectedMaster, slot.DefaultChunkId);
+            }
+        }
+
         HasUnsavedChanges = true;
-
-        // Auto-save (debounced)
         ScheduleDebouncedSave();
     }
 }

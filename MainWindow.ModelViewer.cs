@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
@@ -572,6 +573,11 @@ namespace AssetProcessor {
         /// Обновляет billboard rotation каждый кадр (cylindrical billboard - только Y-axis rotation в мировом пространстве)
         /// </summary>
         private void UpdateBillboard(object? sender, EventArgs e) {
+            // Skip when window is inactive to prevent GPU conflicts during Alt+Tab
+            if (!_isWindowActive) {
+                return;
+            }
+
             // Проверяем что всё инициализировано
             if (_humanSilhouette == null || _humanBillboardRotation == null || viewPort3d?.Camera == null) {
                 return;
@@ -596,10 +602,20 @@ namespace AssetProcessor {
 
             // Поворачиваем вокруг Z (вертикальная ось в Z-up)
             if (_humanBillboardRotation.Rotation is AxisAngleRotation3D rotation)
-{
+            {
                 rotation.Axis = new Vector3D(0, 0, 1);
                 rotation.Angle = angle;
             }
+        }
+
+        /// <summary>
+        /// Bubbling MouseWheel handler - fires AFTER HelixViewport3D has processed the event.
+        /// Just mark as handled to prevent parent ScrollViewer from scrolling.
+        /// </summary>
+        private void HelixViewportBorder_MouseWheel(object sender, MouseWheelEventArgs e) {
+            // HelixViewport3D has already handled the zoom by this point (bubbling phase)
+            // Mark as handled to prevent ScrollViewer from scrolling
+            e.Handled = true;
         }
     }
 }

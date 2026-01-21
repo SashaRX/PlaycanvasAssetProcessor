@@ -5,7 +5,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace AssetProcessor.ViewModels;
 
 /// <summary>
-/// ViewModel for the Master Material Editor window
+/// ViewModel for the Master Material Editor window.
+///
+/// Edits master materials with the new simplified structure:
+/// - Name: unique identifier
+/// - BlendType: "opaque", "alpha", "additive", "premul"
+/// - Chunks: Dictionary of chunk name to server path
+/// - DefaultParams: optional default parameter values
 /// </summary>
 public partial class MasterMaterialEditorViewModel : ObservableObject
 {
@@ -16,16 +22,13 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
     private string? description;
 
     [ObservableProperty]
-    private string baseMaterialIdText = string.Empty;
-
-    [ObservableProperty]
     private string blendType = "opaque";
 
     [ObservableProperty]
-    private ObservableCollection<string> attachedChunkIds = [];
+    private ObservableCollection<ChunkEntry> attachedChunks = [];
 
     [ObservableProperty]
-    private string? selectedChunkId;
+    private ChunkEntry? selectedChunk;
 
     [ObservableProperty]
     private bool hasUnsavedChanges;
@@ -53,13 +56,12 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
         OriginalMaster = master;
         Name = master.Name;
         Description = master.Description;
-        BaseMaterialIdText = master.BaseMaterialId?.ToString() ?? string.Empty;
         BlendType = master.BlendType;
 
-        AttachedChunkIds.Clear();
-        foreach (var chunkId in master.ChunkIds)
+        AttachedChunks.Clear();
+        foreach (var (chunkName, serverPath) in master.Chunks)
         {
-            AttachedChunkIds.Add(chunkId);
+            AttachedChunks.Add(new ChunkEntry { ChunkName = chunkName, ServerPath = serverPath });
         }
 
         HasUnsavedChanges = false;
@@ -70,20 +72,22 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
     /// </summary>
     public MasterMaterial ToMasterMaterial()
     {
-        int? baseMaterialId = null;
-        if (int.TryParse(BaseMaterialIdText, out var id))
+        var chunks = new Dictionary<string, string>();
+        foreach (var entry in AttachedChunks)
         {
-            baseMaterialId = id;
+            chunks[entry.ChunkName] = entry.ServerPath;
         }
 
         return new MasterMaterial
         {
             Name = Name,
             Description = Description,
-            BaseMaterialId = baseMaterialId,
             BlendType = BlendType,
-            ChunkIds = [.. AttachedChunkIds],
-            IsBuiltIn = false
+            Chunks = chunks,
+            IsBuiltIn = false,
+            DefaultParams = OriginalMaster?.DefaultParams != null
+                ? new Dictionary<string, object>(OriginalMaster.DefaultParams)
+                : null
         };
     }
 
@@ -99,15 +103,19 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Adds a chunk ID to the attached list
+    /// Adds a chunk to the attached list
     /// </summary>
-    public void AddChunk(string chunkId)
+    public void AddChunk(string chunkName)
     {
-        if (!AttachedChunkIds.Contains(chunkId))
+        if (AttachedChunks.Any(c => c.ChunkName == chunkName))
         {
-            AttachedChunkIds.Add(chunkId);
-            HasUnsavedChanges = true;
+            return;
         }
+
+        // Server path will be: {masterName}/chunks/{chunkName}.mjs
+        var serverPath = $"{Name}/chunks/{chunkName}.mjs";
+        AttachedChunks.Add(new ChunkEntry { ChunkName = chunkName, ServerPath = serverPath });
+        HasUnsavedChanges = true;
     }
 
     /// <summary>
@@ -115,10 +123,10 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
     /// </summary>
     public void RemoveSelectedChunk()
     {
-        if (!string.IsNullOrEmpty(SelectedChunkId))
+        if (SelectedChunk != null)
         {
-            AttachedChunkIds.Remove(SelectedChunkId);
-            SelectedChunkId = null;
+            AttachedChunks.Remove(SelectedChunk);
+            SelectedChunk = null;
             HasUnsavedChanges = true;
         }
     }
@@ -139,18 +147,18 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
             return (false, "Name must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens");
         }
 
-        // Validate base material ID if provided
-        if (!string.IsNullOrWhiteSpace(BaseMaterialIdText) && !int.TryParse(BaseMaterialIdText, out _))
-        {
-            return (false, "Base Material ID must be a valid integer");
-        }
-
         return (true, null);
     }
 
     partial void OnNameChanged(string value)
     {
         HasUnsavedChanges = true;
+
+        // Update server paths in chunks when name changes
+        foreach (var chunk in AttachedChunks)
+        {
+            chunk.ServerPath = $"{value}/chunks/{chunk.ChunkName}.mjs";
+        }
     }
 
     partial void OnDescriptionChanged(string? value)
@@ -158,13 +166,35 @@ public partial class MasterMaterialEditorViewModel : ObservableObject
         HasUnsavedChanges = true;
     }
 
-    partial void OnBaseMaterialIdTextChanged(string value)
-    {
-        HasUnsavedChanges = true;
-    }
-
     partial void OnBlendTypeChanged(string value)
     {
         HasUnsavedChanges = true;
+    }
+}
+
+/// <summary>
+/// Represents a chunk entry in the master material
+/// </summary>
+public class ChunkEntry : ObservableObject
+{
+    private string _chunkName = string.Empty;
+    private string _serverPath = string.Empty;
+
+    /// <summary>
+    /// The chunk name (e.g., "diffusePS", "glossPS")
+    /// </summary>
+    public string ChunkName
+    {
+        get => _chunkName;
+        set => SetProperty(ref _chunkName, value);
+    }
+
+    /// <summary>
+    /// The server path to the chunk file (e.g., "pbr_opaque/chunks/diffusePS.mjs")
+    /// </summary>
+    public string ServerPath
+    {
+        get => _serverPath;
+        set => SetProperty(ref _serverPath, value);
     }
 }

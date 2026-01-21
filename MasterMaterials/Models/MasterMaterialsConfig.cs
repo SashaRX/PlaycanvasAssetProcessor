@@ -3,7 +3,11 @@ using System.Text.Json.Serialization;
 namespace AssetProcessor.MasterMaterials.Models;
 
 /// <summary>
-/// Root configuration stored in {ProjectFolder}/MasterMaterials/config.json
+/// Configuration for Master Materials in a project.
+///
+/// Note: This is primarily used for in-memory operations.
+/// Master materials are stored as individual files: {name}_master.json
+/// Mappings are stored in: mappings.json
 /// </summary>
 public class MasterMaterialsConfig
 {
@@ -11,22 +15,18 @@ public class MasterMaterialsConfig
     /// Config file version for migration support
     /// </summary>
     [JsonPropertyName("version")]
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
 
     /// <summary>
-    /// List of master materials defined in this project
+    /// List of master materials loaded from project folder.
+    /// Each master is stored in its own file: {name}_master.json
     /// </summary>
-    [JsonPropertyName("masters")]
+    [JsonIgnore]
     public List<MasterMaterial> Masters { get; set; } = [];
 
     /// <summary>
-    /// List of all shader chunks metadata (actual code in .mjs files)
-    /// </summary>
-    [JsonPropertyName("chunks")]
-    public List<ShaderChunk> Chunks { get; set; } = [];
-
-    /// <summary>
-    /// Mapping of PlayCanvas material ID to master material name
+    /// Mapping of PlayCanvas material ID to master material name.
+    /// Stored in mappings.json
     /// </summary>
     [JsonPropertyName("materialInstanceMappings")]
     public Dictionary<int, string> MaterialInstanceMappings { get; set; } = [];

@@ -1,0 +1,68 @@
+04:50:42.145 Activated ENTER
+04:50:42.146 Activated EXIT
+04:50:42.949 Deactivated ENTER
+04:50:42.950 Deactivated EXIT
+04:51:09.525 Activated ENTER
+04:51:09.526 Activated EXIT
+04:51:11.797 Deactivated ENTER
+04:51:11.797 Deactivated EXIT
+04:51:12.411 Activated ENTER
+04:51:12.411 Activated EXIT
+04:51:13.011 Deactivated ENTER
+04:51:13.011 Deactivated EXIT
+04:51:13.886 Activated ENTER
+04:51:13.886 Activated EXIT
+04:51:15.790 Deactivated ENTER
+04:51:15.790 Deactivated EXIT
+04:53:18.187 Activated ENTER
+04:53:18.187 Activated EXIT
+04:53:20.444 Deactivated ENTER
+04:53:20.445 Deactivated EXIT
+04:53:24.053 Activated ENTER
+04:53:24.054 Activated EXIT
+04:53:24.600 Deactivated ENTER
+04:53:24.600 Deactivated EXIT
+04:53:24.618 Activated ENTER
+04:53:24.618 Activated EXIT
+04:53:27.314 Deactivated ENTER
+04:57:06.623 Activated ENTER
+04:57:06.623 Activated EXIT
+04:57:08.048 Deactivated ENTER
+04:57:08.048 Deactivated EXIT
+04:57:27.899 Activated ENTER
+04:57:27.900 Activated EXIT
+04:57:30.270 Deactivated ENTER
+05:01:24.875 HwndSource hook installed
+05:01:24.879 WM_ACTIVATEAPP: isActivating=True
+05:01:24.881 WM_ACTIVATEAPP: Viewers disabled before WPF activation
+05:01:24.883 Activated ENTER
+05:01:24.884 Activated EXIT
+05:01:36.649 Deactivated ENTER
+05:01:36.652 Deactivated EXIT
+05:01:36.653 WM_ACTIVATEAPP: isActivating=False
+05:01:42.651 WM_ACTIVATEAPP: isActivating=True
+05:01:42.652 WM_ACTIVATEAPP: Viewers disabled before WPF activation
+05:01:42.653 Activated ENTER
+05:01:42.654 Activated EXIT
+05:02:06.357 Deactivated ENTER
+05:02:06.358 Deactivated EXIT
+05:02:06.359 WM_ACTIVATEAPP: isActivating=False
+05:02:08.739 WM_ACTIVATEAPP: isActivating=True
+05:02:08.739 WM_ACTIVATEAPP: Viewers disabled before WPF activation
+05:02:08.741 Activated ENTER
+05:02:08.741 Activated EXIT
+05:02:09.701 Deactivated ENTER
+05:02:09.703 Deactivated EXIT
+05:02:09.706 WM_ACTIVATEAPP: isActivating=False
+05:02:21.659 HwndSource hook installed
+05:02:21.664 WM_ACTIVATEAPP: isActivating=True
+05:02:21.666 WM_ACTIVATEAPP: Viewers disabled before WPF activation
+05:02:21.669 Activated ENTER
+05:02:21.669 Activated EXIT
+05:02:21.973 Deactivated ENTER
+05:02:21.975 Deactivated EXIT
+05:02:21.975 WM_ACTIVATEAPP: isActivating=False
+05:02:22.010 WM_ACTIVATEAPP: isActivating=True
+05:02:22.010 WM_ACTIVATEAPP: Viewers disabled before WPF activation
+05:02:22.011 Activated ENTER
+05:02:22.011 Activated EXIT

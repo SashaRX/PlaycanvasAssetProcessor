@@ -138,6 +138,7 @@
             <MenuItem Header="Upload to PlayCanvas" Click="UploadTexture_Click"/>
             <Separator/>
             <MenuItem Header="Delete ORM Texture" Click="DeleteORMFromList_Click"/>
+            <MenuItem Header="Delete Exported File" Click="DeleteExportedTexture_Click"/>
             <Separator/>
             <MenuItem Header="Open Source Folder" Click="OpenFileLocation_Click"/>
             <MenuItem Header="Open Processed Folder" Click="OpenProcessedFolder_Click"/>
@@ -149,6 +150,8 @@
         <!-- ContextMenu для строк моделей -->
         <ContextMenu x:Key="ModelRowContextMenu">
             <MenuItem Header="Process Model" Click="ProcessSelectedModel_Click"/>
+            <Separator/>
+            <MenuItem Header="Delete Exported File" Click="DeleteExportedModel_Click"/>
             <Separator/>
             <MenuItem Header="Open Source Folder" Click="OpenModelFileLocation_Click"/>
             <MenuItem Header="Open Processed Folder" Click="OpenModelProcessedFolder_Click"/>
@@ -181,6 +184,7 @@
             <MenuItem Header="Create ORM for All Materials" Click="CreateORMForAllMaterials_Click"/>
             <Separator/>
             <MenuItem Header="Delete ORM Texture" Click="DeleteORMTexture_Click"/>
+            <MenuItem Header="Delete Exported File" Click="DeleteExportedMaterial_Click"/>
             <Separator/>
             <MenuItem Header="Open Source Folder" Click="OpenMaterialSourceFolder_Click"/>
             <MenuItem Header="Open Processed Folder" Click="OpenMaterialProcessedFolder_Click"/>
@@ -212,6 +216,16 @@
             <MenuItem Header="Copy" Click="Chunk_Copy_Click" FontWeight="Bold"/>
             <Separator/>
             <MenuItem Header="Delete" Click="Chunk_Delete_Click"/>
+        </ContextMenu>
+
+        <!-- ContextMenu для ORM групп (подгрупп текстур) -->
+        <ContextMenu x:Key="ORMGroupContextMenu">
+            <MenuItem Header="Pack &amp; Convert ORM" Click="ORMGroup_PackConvert_Click" FontWeight="Bold"/>
+            <Separator/>
+            <MenuItem Header="Upload ORM to Server" Click="ORMGroup_Upload_Click"/>
+            <MenuItem Header="Delete Exported ORM" Click="ORMGroup_DeleteExported_Click"/>
+            <Separator/>
+            <MenuItem Header="Open ORM Folder" Click="ORMGroup_OpenFolder_Click"/>
         </ContextMenu>
 
     </Window.Resources>
@@ -364,6 +378,11 @@
                         <Button x:Name="ClearExportMarksButton" Content="Clear" Width="40" Margin="0,0,3,0"
                                 Click="ClearExportMarksButton_Click"
                                 ToolTip="Clear all export marks"/>
+
+                        <Button x:Name="DeleteExportedButton" Content="Delete" Width="45" Margin="0,0,3,0"
+                                Click="DeleteAllExportedFiles_Click"
+                                Background="#FFF44336" Foreground="White"
+                                ToolTip="Delete all exported files from server folder"/>
 
                         <Button x:Name="ExportAssetsButton" Content="Export" Width="50" Margin="0,0,3,0"
                                 Click="ExportAssetsButton_Click"
@@ -622,7 +641,8 @@
                                                             <Border x:Name="SubGroupBorder" Margin="4,1,4,1" BorderBrush="{DynamicResource ThemeMaterialORM}" BorderThickness="1" Background="{DynamicResource ThemeBackgroundAlt}" CornerRadius="2" UseLayoutRounding="True" SnapsToDevicePixels="True">
                                                                 <StackPanel>
                                                                     <!-- Заголовок: кнопка сворачивания + кликабельная область выделения -->
-                                                                    <Border x:Name="ORMHeaderBorder" Background="#30B050B0" MouseLeftButtonDown="ORMSubGroupHeader_Click" Cursor="Hand" Height="18">
+                                                                    <Border x:Name="ORMHeaderBorder" Background="#30B050B0" MouseLeftButtonDown="ORMSubGroupHeader_Click" Cursor="Hand" Height="18"
+                                                                            ContextMenu="{StaticResource ORMGroupContextMenu}">
                                                                         <StackPanel Orientation="Horizontal" Margin="2,0,2,0" VerticalAlignment="Center">
                                                                             <!-- Кнопка сворачивания -->
                                                                             <ToggleButton x:Name="ExpanderToggle" IsChecked="True" Width="12" Height="12" Margin="0,0,4,0"
@@ -729,7 +749,7 @@
                               Sorting="ModelsDataGrid_Sorting"
                               SizeChanged="ModelsDataGrid_SizeChanged"
                               ColumnDisplayIndexChanged="ModelsDataGrid_ColumnDisplayIndexChanged"
-                              IsReadOnly="False"
+                              IsReadOnly="True"
                               CanUserAddRows="False"
                               CanUserDeleteRows="False"
                               CanUserSortColumns="True"
@@ -952,7 +972,7 @@
                                       Background="{DynamicResource ThemeDataGridBackground}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
-                                    <DataGridTextColumn Header="Chunks" Binding="{Binding ChunkIds.Count}" Width="45"/>
+                                    <DataGridTextColumn Header="Chunks" Binding="{Binding Chunks.Count}" Width="45"/>
                                     <DataGridCheckBoxColumn Header="●" Binding="{Binding IsBuiltIn}" Width="25" IsReadOnly="True">
                                         <DataGridCheckBoxColumn.HeaderStyle>
                                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -1414,11 +1434,24 @@
                                 </Border>
 
                                 <!-- 3D Viewport -->
-                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch">
+                                <Border Grid.Row="1" Background="#FF414D58" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch"
+                                        MouseWheel="HelixViewportBorder_MouseWheel">
                                     <helix:HelixViewport3D x:Name="viewPort3d"
+                                                          Focusable="True"
+                                                          FocusVisualStyle="{x:Null}"
                                                           ZoomExtentsWhenLoaded="true"
                                                           ShowCoordinateSystem="false"
-                                                          ShowViewCube="true">
+                                                          ShowViewCube="true"
+                                                          IsInertiaEnabled="False"
+                                                          IsRotationEnabled="True"
+                                                          IsPanEnabled="True"
+                                                          IsZoomEnabled="True"
+                                                          CameraRotationMode="Turntable"
+                                                          RotateAroundMouseDownPoint="True"
+                                                          ZoomAroundMouseDownPoint="True"
+                                                          ZoomSensitivity="1"
+                                                          RotateGesture="LeftClick"
+                                                          PanGesture="MiddleClick">
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>
                                 </Border>

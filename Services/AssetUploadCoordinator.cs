@@ -242,11 +242,12 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
         }
 
         // Build list of files to upload
+        // Remote path should preserve folder hierarchy from /server/
         var files = Directory.GetFiles(exportPath, "*", SearchOption.AllDirectories)
             .Where(f => IsUploadableFile(f))
             .Select(f => {
-                var relativePath = Path.GetRelativePath(exportPath, f).Replace('\\', '/');
-                return (LocalPath: f, RemotePath: $"{projectName}/{modelName}/{relativePath}");
+                var remotePath = BuildRemotePath(f, projectName, modelName);
+                return (LocalPath: f, RemotePath: remotePath);
             })
             .ToList();
 
@@ -408,10 +409,27 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
     }
 
     private static string BuildRemotePath(string localPath, string projectName, string? modelName) {
+        // Normalize path to forward slashes
+        var normalizedPath = localPath.Replace('\\', '/');
+
+        // Find /server/ in path and extract everything after it
+        // This preserves the original folder hierarchy: assets/content/props/bunkerDoor/textures/file.ktx2
+        var serverIndex = normalizedPath.IndexOf("/server/", StringComparison.OrdinalIgnoreCase);
+        if (serverIndex >= 0) {
+            // Return path after /server/ - this is the CDN path
+            return normalizedPath.Substring(serverIndex + 8); // +8 = "/server/"
+        }
+
+        // Fallback: try to find /assets/content/ pattern
+        var assetsContentIndex = normalizedPath.IndexOf("/assets/content/", StringComparison.OrdinalIgnoreCase);
+        if (assetsContentIndex >= 0) {
+            return normalizedPath.Substring(assetsContentIndex + 1); // +1 to skip leading /
+        }
+
+        // Legacy fallback: build path from file type
         var fileName = Path.GetFileName(localPath);
         var ext = Path.GetExtension(localPath).ToLowerInvariant();
 
-        // Determine subfolder based on file type
         string subFolder;
         if (ext == ".ktx2" || ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
             subFolder = "textures";
@@ -424,10 +442,10 @@ public class AssetUploadCoordinator : IAssetUploadCoordinator {
         }
 
         if (!string.IsNullOrEmpty(modelName)) {
-            return $"{projectName}/{modelName}/{subFolder}/{fileName}";
+            return $"assets/content/{modelName}/{subFolder}/{fileName}";
         }
 
-        return $"{projectName}/{subFolder}/{fileName}";
+        return $"assets/content/{subFolder}/{fileName}";
     }
 
     private static bool IsUploadableFile(string filePath) {

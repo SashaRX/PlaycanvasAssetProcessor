@@ -451,6 +451,14 @@ public class MainViewModelTests {
             return Task.CompletedTask;
         }
 
+        public Task SaveMasterAsync(string projectFolderPath, MasterMaterial master, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<MasterMaterial?> LoadMasterAsync(string projectFolderPath, string masterName, CancellationToken ct = default) {
+            return Task.FromResult<MasterMaterial?>(null);
+        }
+
         public IEnumerable<MasterMaterial> GetAllMasters(MasterMaterialsConfig config) {
             return Enumerable.Empty<MasterMaterial>();
         }
@@ -463,15 +471,16 @@ public class MainViewModelTests {
 
         public void RemoveMaterialMaster(MasterMaterialsConfig config, int materialId) { }
 
-        public Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default) {
+        // New methods with masterName parameter
+        public Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string masterName, string chunkName, CancellationToken ct = default) {
             return Task.FromResult<ShaderChunk?>(null);
         }
 
-        public Task SaveChunkToFileAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default) {
+        public Task SaveChunkToFileAsync(string projectFolderPath, string masterName, ShaderChunk chunk, CancellationToken ct = default) {
             return Task.CompletedTask;
         }
 
-        public Task DeleteChunkFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default) {
+        public Task DeleteChunkFileAsync(string projectFolderPath, string masterName, string chunkName, CancellationToken ct = default) {
             return Task.CompletedTask;
         }
 
@@ -479,8 +488,38 @@ public class MainViewModelTests {
             return Task.FromResult(string.Empty);
         }
 
-        public string GetChunksFolderPath(string projectFolderPath) {
-            return string.Empty;
+        public Task AddChunkToMasterAsync(string projectFolderPath, MasterMaterial master, ShaderChunk chunk, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveChunkFromMasterAsync(string projectFolderPath, MasterMaterial master, string chunkName, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        // Path methods
+        public string GetMaterialsFolderPath(string projectFolderPath) => string.Empty;
+        public string GetMasterFilePath(string projectFolderPath, string masterName) => string.Empty;
+        public string GetChunksFolderPath(string projectFolderPath, string masterName) => string.Empty;
+        public string GetChunkFilePath(string projectFolderPath, string masterName, string chunkName) => string.Empty;
+        public string GetChunkServerPath(string masterName, string chunkName) => string.Empty;
+
+        // Legacy methods (deprecated)
+        [Obsolete]
+        public string GetChunksFolderPath(string projectFolderPath) => string.Empty;
+
+        [Obsolete]
+        public Task<ShaderChunk?> LoadChunkFromFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default) {
+            return Task.FromResult<ShaderChunk?>(null);
+        }
+
+        [Obsolete]
+        public Task SaveChunkToFileAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        [Obsolete]
+        public Task DeleteChunkFileAsync(string projectFolderPath, string chunkId, CancellationToken ct = default) {
+            return Task.CompletedTask;
         }
     }
 

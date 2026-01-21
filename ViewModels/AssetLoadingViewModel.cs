@@ -680,13 +680,17 @@ public partial class AssetLoadingViewModel : ObservableObject {
                 logger.Debug($"B2 file: {path}");
             }
 
+            // Create upload state service to persist status changes
+            using var uploadStateService = new Data.UploadStateService();
+            await uploadStateService.InitializeAsync();
+
             foreach (var resource in uploadedResources) {
                 if (string.IsNullOrEmpty(resource.RemoteUrl)) {
                     logger.Debug($"B2 verification: {resource.Name} has no RemoteUrl, skipping");
                     continue;
                 }
 
-                // Extract remote path from URL (already decoded)
+                // Extract remote path from URL (handles both full URLs and relative paths)
                 var remotePath = ExtractRemotePathFromUrl(resource.RemoteUrl, projectName);
                 if (string.IsNullOrEmpty(remotePath)) {
                     logger.Warn($"B2 verification: {resource.Name} - failed to extract path from URL: {resource.RemoteUrl}");
@@ -699,10 +703,29 @@ public partial class AssetLoadingViewModel : ObservableObject {
                     verifiedCount++;
                     logger.Debug($"B2 verification: {resource.Name} VERIFIED at {remotePath}");
                 } else {
-                    // File not found on B2 - update status
+                    // File not found on B2 - update status in memory and database
                     resource.UploadStatus = "Not on Server";
                     notFoundOnServer.Add(resource);
                     logger.Warn($"B2 verification: {resource.Name} NOT FOUND. Expected: {remotePath}");
+
+                    // Persist status change to database
+                    if (!string.IsNullOrEmpty(resource.Path)) {
+                        // For textures, the uploaded file is .ktx2
+                        var localPath = resource is TextureResource
+                            ? Path.ChangeExtension(resource.Path, ".ktx2")
+                            : resource.Path;
+
+                        if (!string.IsNullOrEmpty(localPath)) {
+                            var updated = await uploadStateService.UpdateStatusByLocalPathAsync(
+                                localPath,
+                                "Not on Server",
+                                "File not found on B2 during verification");
+
+                            if (updated) {
+                                logger.Debug($"B2 verification: Persisted 'Not on Server' status for {resource.Name}");
+                            }
+                        }
+                    }
                 }
             }
 
@@ -725,20 +748,30 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
     /// <summary>
     /// Extracts remote path from CDN URL and decodes it.
+    /// Handles both full URLs (https://cdn.example.com/path) and relative paths (content/file.ktx2).
     /// </summary>
     private static string? ExtractRemotePathFromUrl(string cdnUrl, string projectName) {
         if (string.IsNullOrEmpty(cdnUrl)) return null;
 
         try {
-            var uri = new Uri(cdnUrl);
-            // AbsolutePath is already URL-decoded
-            var path = uri.AbsolutePath.TrimStart('/');
+            string path;
 
-            // Double-decode in case of double encoding
-            path = Uri.UnescapeDataString(path);
+            // Check if it's a full URL or a relative path
+            if (Uri.TryCreate(cdnUrl, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == "http" || uri.Scheme == "https")) {
+                // Full URL - extract path from AbsolutePath (already URL-decoded by Uri)
+                path = uri.AbsolutePath.TrimStart('/');
+            } else {
+                // Relative path - use as-is, just decode if needed
+                path = Uri.UnescapeDataString(cdnUrl.TrimStart('/'));
+            }
+
+            // Normalize path separators
+            path = path.Replace('\\', '/');
 
             // If path doesn't start with project name, prepend it
-            if (!path.StartsWith(projectName, StringComparison.OrdinalIgnoreCase)) {
+            if (!path.StartsWith(projectName + "/", StringComparison.OrdinalIgnoreCase) &&
+                !path.StartsWith(projectName + "\\", StringComparison.OrdinalIgnoreCase)) {
                 return $"{projectName}/{path}";
             }
 

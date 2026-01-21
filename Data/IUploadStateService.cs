@@ -82,5 +82,10 @@ namespace AssetProcessor.Data {
         /// Получает записи для нескольких ресурсов по ResourceId и типу
         /// </summary>
         Task<IReadOnlyList<UploadRecord>> GetByResourceIdsAsync(IEnumerable<int> resourceIds, string resourceType, CancellationToken ct = default);
+
+        /// <summary>
+        /// Обновляет статус записи по локальному пути
+        /// </summary>
+        Task<bool> UpdateStatusByLocalPathAsync(string localPath, string newStatus, string? errorMessage = null, CancellationToken ct = default);
     }
 }

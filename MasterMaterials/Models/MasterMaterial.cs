@@ -3,15 +3,38 @@ using System.Text.Json.Serialization;
 namespace AssetProcessor.MasterMaterials.Models;
 
 /// <summary>
-/// Represents a Master Material configuration
+/// Represents a Master Material configuration.
+/// Stored as {name}_master.json in materials/ folder.
+/// Contains chunk overrides and default parameters for runtime material creation.
 /// </summary>
 public class MasterMaterial
 {
     /// <summary>
-    /// Unique name for the master material
+    /// Unique name for the master material (e.g., "pbr_opaque")
     /// </summary>
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Blend type: "opaque", "alpha", "additive", "premul"
+    /// </summary>
+    [JsonPropertyName("blendType")]
+    public string BlendType { get; set; } = "opaque";
+
+    /// <summary>
+    /// Chunk overrides: key = chunk name to replace, value = path to .mjs file (relative to materials folder)
+    /// Example: { "diffusePS": "pbr_opaque/chunks/diffusePS.mjs" }
+    /// </summary>
+    [JsonPropertyName("chunks")]
+    public Dictionary<string, string> Chunks { get; set; } = new();
+
+    /// <summary>
+    /// Default parameter values for material instances.
+    /// Instances can override these values.
+    /// </summary>
+    [JsonPropertyName("defaultParams")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object>? DefaultParams { get; set; }
 
     /// <summary>
     /// Optional description
@@ -21,146 +44,62 @@ public class MasterMaterial
     public string? Description { get; set; }
 
     /// <summary>
-    /// PlayCanvas material ID to use as base template
-    /// </summary>
-    [JsonPropertyName("baseMaterialId")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? BaseMaterialId { get; set; }
-
-    /// <summary>
-    /// List of chunk IDs used by this master material (legacy, for backwards compatibility)
-    /// </summary>
-    [JsonPropertyName("chunkIds")]
-    public List<string> ChunkIds { get; set; } = [];
-
-    /// <summary>
-    /// Slot-based chunk assignments (new system)
-    /// </summary>
-    [JsonPropertyName("slotAssignments")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<ChunkSlotAssignment>? SlotAssignments { get; set; }
-
-    /// <summary>
-    /// Default parameter values for instances
-    /// </summary>
-    [JsonPropertyName("defaultParams")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string, object>? DefaultParams { get; set; }
-
-    /// <summary>
-    /// Blend type: "opaque", "alpha", "additive", "premul"
-    /// </summary>
-    [JsonPropertyName("blendType")]
-    public string BlendType { get; set; } = "opaque";
-
-    /// <summary>
-    /// Whether this is a built-in system master (pbr_opaque, etc.)
+    /// Whether this is a built-in system master (not editable)
     /// </summary>
     [JsonIgnore]
     public bool IsBuiltIn { get; set; }
 
     /// <summary>
-    /// Gets the chunk ID for a specific slot, or default if not assigned
+    /// Gets the folder name for this master's chunks
     /// </summary>
-    public string GetChunkForSlot(string slotId)
-    {
-        var assignment = SlotAssignments?.FirstOrDefault(a => a.SlotId == slotId);
-        if (assignment != null && !string.IsNullOrEmpty(assignment.ChunkId))
-        {
-            return assignment.ChunkId;
-        }
+    [JsonIgnore]
+    public string ChunksFolderName => $"{Name}/chunks";
 
-        // Return default chunk for the slot
-        var slot = ShaderChunkSchema.GetSlot(slotId);
-        return slot?.DefaultChunkId ?? string.Empty;
+    /// <summary>
+    /// Gets the filename for this master material
+    /// </summary>
+    [JsonIgnore]
+    public string FileName => $"{Name}_master.json";
+
+    /// <summary>
+    /// Adds or updates a chunk override
+    /// </summary>
+    public void SetChunk(string chunkName, string mjsPath)
+    {
+        Chunks[chunkName] = mjsPath;
     }
 
     /// <summary>
-    /// Sets the chunk for a specific slot
+    /// Removes a chunk override
     /// </summary>
-    public void SetChunkForSlot(string slotId, string? chunkId)
+    public bool RemoveChunk(string chunkName)
     {
-        SlotAssignments ??= [];
-
-        var existing = SlotAssignments.FirstOrDefault(a => a.SlotId == slotId);
-        if (existing != null)
-        {
-            existing.ChunkId = chunkId;
-        }
-        else
-        {
-            SlotAssignments.Add(new ChunkSlotAssignment
-            {
-                SlotId = slotId,
-                ChunkId = chunkId,
-                Enabled = true
-            });
-        }
-
-        // Also update ChunkIds for backwards compatibility
-        UpdateChunkIdsFromSlots();
+        return Chunks.Remove(chunkName);
     }
 
     /// <summary>
-    /// Checks if a slot is enabled
+    /// Gets the path to a chunk file, or null if not overridden
     /// </summary>
-    public bool IsSlotEnabled(string slotId)
+    public string? GetChunkPath(string chunkName)
     {
-        var assignment = SlotAssignments?.FirstOrDefault(a => a.SlotId == slotId);
-        if (assignment != null)
-        {
-            return assignment.Enabled;
-        }
-
-        // Check if slot is enabled by default
-        var slot = ShaderChunkSchema.GetSlot(slotId);
-        return slot?.IsEnabledByDefault ?? false;
+        return Chunks.TryGetValue(chunkName, out var path) ? path : null;
     }
 
     /// <summary>
-    /// Sets whether a slot is enabled
+    /// Creates a deep copy of this master material
     /// </summary>
-    public void SetSlotEnabled(string slotId, bool enabled)
+    public MasterMaterial Clone()
     {
-        SlotAssignments ??= [];
-
-        var existing = SlotAssignments.FirstOrDefault(a => a.SlotId == slotId);
-        if (existing != null)
+        return new MasterMaterial
         {
-            existing.Enabled = enabled;
-        }
-        else
-        {
-            SlotAssignments.Add(new ChunkSlotAssignment
-            {
-                SlotId = slotId,
-                ChunkId = null,
-                Enabled = enabled
-            });
-        }
-
-        UpdateChunkIdsFromSlots();
-    }
-
-    /// <summary>
-    /// Updates ChunkIds list from slot assignments for backwards compatibility
-    /// </summary>
-    private void UpdateChunkIdsFromSlots()
-    {
-        if (SlotAssignments == null) return;
-
-        ChunkIds = SlotAssignments
-            .Where(a => a.Enabled && !string.IsNullOrEmpty(a.ChunkId))
-            .Select(a => a.ChunkId!)
-            .Distinct()
-            .ToList();
-    }
-
-    /// <summary>
-    /// Initializes slot assignments from the schema defaults
-    /// </summary>
-    public void InitializeSlotAssignments()
-    {
-        SlotAssignments = ShaderChunkSchema.CreateDefaultAssignments();
+            Name = Name,
+            BlendType = BlendType,
+            Chunks = new Dictionary<string, string>(Chunks),
+            DefaultParams = DefaultParams != null
+                ? new Dictionary<string, object>(DefaultParams)
+                : null,
+            Description = Description,
+            IsBuiltIn = false // Clones are never built-in
+        };
     }
 }

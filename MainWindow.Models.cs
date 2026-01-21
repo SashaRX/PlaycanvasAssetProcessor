@@ -187,7 +187,6 @@ namespace AssetProcessor {
 
         private void LoadModel(string path) {
             try {
-                viewPort3d.RotateGesture = new MouseGesture(MouseAction.LeftClick);
 
                 // ������� ������ ������, �������� ���������
                 List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];

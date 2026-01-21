@@ -984,8 +984,9 @@ public class ModelExportPipeline {
         if (options.MasterMaterialsConfig != null) {
             var master = options.MasterMaterialsConfig.Masters
                 .FirstOrDefault(m => m.Name == masterName);
-            if (master != null && master.ChunkIds.Count > 0) {
-                chunksFile = $"chunks/{masterName}_chunks.mjs";
+            if (master != null && master.Chunks.Count > 0) {
+                // Reference the master's chunks folder
+                chunksFile = $"{masterName}/chunks";
             }
         }
 
@@ -1183,7 +1184,7 @@ public class ModelExportPipeline {
 
             var master = options.MasterMaterialsConfig.Masters
                 .FirstOrDefault(m => m.Name == masterName);
-            if (master != null && master.ChunkIds.Count > 0) {
+            if (master != null && master.Chunks.Count > 0) {
                 masterNamesWithChunks.Add(masterName);
             }
         }

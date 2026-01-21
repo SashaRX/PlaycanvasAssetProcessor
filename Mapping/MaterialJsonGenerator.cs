@@ -296,8 +296,8 @@ public class MaterialJsonGenerator {
     }
 
     /// <summary>
-    /// Получает путь к файлу chunks для master материала
-    /// Возвращает null если master не имеет chunks
+    /// Получает путь к файлу chunks для master материала.
+    /// Returns path to individual chunk files, not a consolidated file.
     /// </summary>
     private string? GetChunksFilePath(string masterName, MaterialJsonOptions options) {
         if (options.MasterMaterialsConfig == null) {
@@ -309,10 +309,9 @@ public class MaterialJsonGenerator {
             .FirstOrDefault(m => m.Name == masterName);
 
         // Если это кастомный master с chunks
-        if (master != null && master.ChunkIds.Count > 0) {
-            // Возвращаем относительный путь к consolidated chunks файлу
-            var chunksBasePath = options.ChunksBasePath ?? "chunks";
-            return $"{chunksBasePath}/{masterName}_chunks.mjs";
+        if (master != null && master.Chunks.Count > 0) {
+            // Возвращаем путь к папке chunks мастера: {masterName}/chunks/
+            return $"{masterName}/chunks";
         }
 
         return null;

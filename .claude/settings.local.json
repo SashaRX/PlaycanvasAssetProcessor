@@ -117,7 +117,15 @@
       "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml\")",
       "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\Windows\\\\InputDialog.xaml.cs\")",
       "Bash(Get-ChildItem -Path \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\" -Recurse -Name \"*.txt\" -ErrorAction SilentlyContinue)",
-      "Bash(Where-Object { $_ -match \"log|file\" })"
+      "Bash(Where-Object { $_ -match \"log|file\" })",
+      "Bash(del \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\Release\\\\net9.0-windows10.0.26100.0\\\\win-x64\\\\activation_trace.txt\")",
+      "Bash(Start-Process \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\Release\\\\net9.0-windows10.0.26100.0\\\\win-x64\\\\TexTool.exe\")",
+      "Bash(cmd /c start \"\" \"D:\\\\sourceProject\\\\repos\\\\PlaycanvasAssetProcessor\\\\bin\\\\Release\\\\net9.0-windows10.0.26100.0\\\\win-x64\\\\TexTool.exe\")",
+      "Bash(echo:*)",
+      "Bash(start AssetProcessor.exe)",
+      "Bash(echo.:*)",
+      "WebFetch(domain:searchcode.com)",
+      "WebFetch(domain:www.nudoq.org)"
     ],
     "deny": [],
     "ask": []

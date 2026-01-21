@@ -114,7 +114,7 @@ public partial class MasterMaterialEditorWindow : Window
     {
         // Get chunks that are not already attached
         var availableToAdd = _availableChunks
-            .Where(c => !ViewModel.AttachedChunkIds.Contains(c.Id))
+            .Where(c => !ViewModel.AttachedChunks.Any(x => x.ChunkName == c.Id))
             .ToList();
 
         if (availableToAdd.Count == 0)
@@ -175,7 +175,7 @@ public partial class MasterMaterialEditorWindow : Window
 
     private void RemoveChunk_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(ViewModel.SelectedChunkId))
+        if (ViewModel.SelectedChunk == null)
         {
             MessageBox.Show(
                 "Please select a chunk to remove.",

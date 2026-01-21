@@ -81,6 +81,9 @@ public class D3D11TextureViewerControl : HwndHost {
         logger.Info("D3D11 texture viewer control destroyed");
     }
 
+    // Pending resize to apply when rendering is re-enabled
+    private (int width, int height)? _pendingResize;
+
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
         base.OnRenderSizeChanged(sizeInfo);
 
@@ -88,16 +91,48 @@ public class D3D11TextureViewerControl : HwndHost {
         int height = (int)sizeInfo.NewSize.Height;
 
         if (width > 0 && height > 0) {
+            // Skip D3D11 resize when rendering is disabled (Alt+Tab to fullscreen game)
+            if (!D3D11TextureRenderer.GlobalRenderingEnabled) {
+                _pendingResize = (width, height);
+                logger.Debug($"D3D11 resize DEFERRED (rendering disabled): {width}x{height}");
+                return;
+            }
+
             renderer?.Resize(width, height);
             logger.Debug($"D3D11 viewer resized: {width}x{height}");
         }
     }
 
     /// <summary>
+    /// Apply any pending resize that was deferred while rendering was disabled.
+    /// Call this after re-enabling rendering.
+    /// </summary>
+    public void ApplyPendingResize() {
+        if (_pendingResize.HasValue && D3D11TextureRenderer.GlobalRenderingEnabled) {
+            var (width, height) = _pendingResize.Value;
+            _pendingResize = null;
+            renderer?.Resize(width, height);
+            logger.Debug($"D3D11 applied pending resize: {width}x{height}");
+        }
+    }
+
+    /// <summary>
     /// Render one frame. Call this from CompositionTarget.Rendering event or manually.
+    /// Skips rendering when application is inactive to prevent D3D device issues.
     /// </summary>
     public void RenderFrame() {
-        renderer?.Render();
+        // Skip rendering when application is not active (minimized or Alt+Tabbed to another app)
+        // This prevents D3D device issues when GPU is used by fullscreen games
+        var app = System.Windows.Application.Current;
+        if (app?.MainWindow == null || !app.MainWindow.IsActive) {
+            return;
+        }
+
+        try {
+            renderer?.Render();
+        } catch (Exception ex) {
+            logger.Error(ex, "[D3D11] RenderFrame exception");
+        }
     }
 
     /// <summary>
@@ -199,7 +234,8 @@ public class D3D11TextureViewerControl : HwndHost {
                 return IntPtr.Zero;
 
             case WM_SETFOCUS:
-                logger.Debug("[Native] Window received focus");
+                // Just accept focus - don't do any complex checks that could cause issues
+                // The render loop already has protection via _isWindowActive flag
                 return IntPtr.Zero;
 
             case WM_SETCURSOR:
@@ -362,10 +398,9 @@ public class D3D11TextureViewerControl : HwndHost {
     }
 
     private void HandleMouseMove(IntPtr lParam) {
-        // Set focus when mouse moves over the window to receive mouse wheel events
-        if (GetFocus() != hwndHost) {
-            SetFocus(hwndHost);
-        }
+        // REMOVED: Auto-focus on mouse move was causing freezes during Alt+Tab
+        // Focus is now only obtained when user clicks on the control
+        // Mouse wheel will work when control is clicked/focused
 
         if (!isPanning || renderer == null) return;
 
@@ -523,6 +558,9 @@ public class D3D11TextureViewerControl : HwndHost {
 
     [DllImport("user32.dll")]
     private static extern IntPtr SetFocus(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetParent(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetFocus();

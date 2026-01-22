@@ -4990,12 +4990,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
-            // All data operations in single synchronous block on UI thread
-            // DataGrids are collapsed, so this is fast regardless of window state
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, () => {
-                logger.Info($"[ApplyAssetsToUI] Starting UI update for {e.Textures.Count} textures");
+            // Phase 1: Collapse DataGrids and clear bindings (instant)
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                logger.Info($"[ApplyAssetsToUI] Phase 1: Collapse and clear ({e.Textures.Count} textures)");
 
-                // Collapse DataGrids and clear bindings
                 TexturesDataGrid.Visibility = Visibility.Collapsed;
                 ModelsDataGrid.Visibility = Visibility.Collapsed;
                 MaterialsDataGrid.Visibility = Visibility.Collapsed;
@@ -5004,27 +5002,39 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 System.Windows.Data.BindingOperations.ClearBinding(ModelsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
                 System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
 
-                // Assign collections (DataGrids are collapsed, no UI overhead)
-                viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
-                viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
-                viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+                logger.Info("[ApplyAssetsToUI] Phase 1 complete");
 
-                var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
-                allAssets.AddRange(e.Textures);
-                allAssets.AddRange(e.Models);
-                allAssets.AddRange(e.Materials);
-                viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+                // Phase 2: Assign collections (deferred to allow message pump)
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                    logger.Info("[ApplyAssetsToUI] Phase 2: Assign collections");
 
-                viewModel.SyncMaterialMasterMappings();
-                folderPaths = new Dictionary<int, string>(e.FolderPaths);
-                RecalculateIndices();
-                logger.Info("[ApplyAssetsToUI] Data assigned, showing DataGrids");
+                    viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+                    viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+                    viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
 
-                // Show DataGrids immediately - no deferral
-                ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
+                    var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
+                    allAssets.AddRange(e.Textures);
+                    allAssets.AddRange(e.Models);
+                    allAssets.AddRange(e.Materials);
+                    viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
 
-                // Auto-refresh server assets
-                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                    logger.Info("[ApplyAssetsToUI] Phase 2 complete");
+
+                    // Phase 3: Sync and show (deferred to allow message pump)
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                        logger.Info("[ApplyAssetsToUI] Phase 3: Sync and show");
+
+                        viewModel.SyncMaterialMasterMappings();
+                        folderPaths = new Dictionary<int, string>(e.FolderPaths);
+                        RecalculateIndices();
+
+                        logger.Info("[ApplyAssetsToUI] Phase 3: Data assigned, showing DataGrids");
+                        ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
+
+                        // Auto-refresh server assets
+                        _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                    });
+                });
             });
         }
 

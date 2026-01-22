@@ -5010,8 +5010,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
                 logger.Info("[ApplyAssetsToUI] Phase 1 done: DataGrids collapsed, bindings cleared");
 
-                // Phase 2: Assign collections (deferred to allow message pump)
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // Phase 2: Assign collections (use Normal priority to ensure execution)
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                     if (!_isWindowActive) {
                         logger.Info("[ApplyAssetsToUI] Window inactive before Phase 2, deferring");
                         _pendingAssetsData = e;
@@ -5034,8 +5034,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     RecalculateIndices();
                     logger.Info("[ApplyAssetsToUI] Phase 2 done: Collections assigned");
 
-                    // Phase 3: Show DataGrids (deferred to allow message pump)
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    // Phase 3: Show DataGrids (use Normal priority to ensure execution)
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                         if (!_isWindowActive) {
                             logger.Info("[ApplyAssetsToUI] Window inactive before Phase 3, deferring DataGrid show");
                             _pendingDataGridShow = true;

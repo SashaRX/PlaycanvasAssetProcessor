@@ -5081,43 +5081,46 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Models/Materials...");
-            viewModel.ProgressText = "Rendering models and materials...";
+            logger.Info("[ShowDataGridsAndApplyGrouping] Binding and showing Models/Materials...");
+            viewModel.ProgressText = "Loading...";
 
-            // Phase 1: Bind and show Models and Materials (small - fast)
+            // Bind and show Models and Materials immediately (small - fast)
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete");
 
-            // Phase 2: Show TexturesDataGrid FIRST (empty) - let WPF do initial layout
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Showing empty TexturesDataGrid...");
-                viewModel.ProgressText = "Preparing textures list...";
+            // Use DispatcherTimer with delay to load TexturesDataGrid
+            // This ensures UI is fully rendered before we touch the heavy DataGrid
+            var timer = new System.Windows.Threading.DispatcherTimer {
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+            timer.Tick += (s, e) => {
+                timer.Stop();
+                logger.Info("[ShowDataGridsAndApplyGrouping] Timer: Binding TexturesDataGrid...");
+                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Textures"));
                 TexturesDataGrid.Visibility = Visibility.Visible;
-                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: TexturesDataGrid visible (empty)");
+                logger.Info("[ShowDataGridsAndApplyGrouping] Timer: TexturesDataGrid visible");
 
-                // Phase 3: Bind data AFTER DataGrid is visible
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3: Binding TexturesDataGrid...");
-                    viewModel.ProgressText = "Loading textures list...";
-                    TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                        new System.Windows.Data.Binding("Textures"));
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 complete: TexturesDataGrid bound");
-
-                    // Phase 4: Apply grouping (deferred)
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 4: Applying grouping...");
-                        ApplyTextureGroupingIfEnabled();
-                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 4 complete: Grouping applied");
-                        viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
-                        viewModel.ProgressValue = viewModel.ProgressMaximum;
-                    });
-                });
-            });
+                // Apply grouping after another small delay
+                var groupTimer = new System.Windows.Threading.DispatcherTimer {
+                    Interval = TimeSpan.FromMilliseconds(100)
+                };
+                groupTimer.Tick += (s2, e2) => {
+                    groupTimer.Stop();
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Timer: Applying grouping...");
+                    ApplyTextureGroupingIfEnabled();
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Complete");
+                    viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
+                    viewModel.ProgressValue = viewModel.ProgressMaximum;
+                };
+                groupTimer.Start();
+            };
+            timer.Start();
+            logger.Info("[ShowDataGridsAndApplyGrouping] Models/Materials shown, timer started for textures");
         }
 
         /// <summary>

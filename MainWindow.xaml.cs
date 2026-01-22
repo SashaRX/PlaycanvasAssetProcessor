@@ -5101,8 +5101,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 done");
 
-                // Phase 2: Apply grouping (still collapsed) - separate callback to yield to message pump
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                // Phase 2: Apply grouping (still collapsed) - use Normal priority to ensure execution
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                     if (!_isWindowActive) {
                         logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 cancelled - window inactive");
                         _pendingDataGridShow = true;
@@ -5112,10 +5112,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Applying grouping...");
                     ApplyTextureGroupingIfEnabled();
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 done");
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 done, scheduling Phase 3...");
 
                     // Phase 3: Show Models and Materials first (smaller, faster)
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 callback entered, _isWindowActive=" + _isWindowActive);
                         if (!_isWindowActive) {
                             logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 cancelled - window inactive");
                             _pendingDataGridShow = true;
@@ -5126,10 +5127,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3: Showing Models/Materials...");
                         ModelsDataGrid.Visibility = Visibility.Visible;
                         MaterialsDataGrid.Visibility = Visibility.Visible;
-                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 done");
+                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 done, scheduling Phase 4...");
 
                         // Phase 4: Show Textures (largest, with grouping - most expensive)
-                        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
+                        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 4 callback entered, _isWindowActive=" + _isWindowActive);
                             if (!_isWindowActive) {
                                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 4 cancelled - window inactive");
                                 _pendingDataGridShow = true;

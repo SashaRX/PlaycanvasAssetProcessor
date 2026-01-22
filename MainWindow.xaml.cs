@@ -1509,12 +1509,16 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
                 private static readonly TextureTypeToBackgroundConverter textureTypeConverter = new();
 
 private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
-            if (e?.Row?.DataContext is TextureResource texture) {
-                // Initialize conversion settings for the texture if not already done
-                // Use flag to prevent repeated initialization on every scroll
-                if (!texture.IsConversionSettingsInitialized) {
-                    InitializeTextureConversionSettings(texture);
+            try {
+                if (e?.Row?.DataContext is TextureResource texture) {
+                    // Initialize conversion settings for the texture if not already done
+                    // Use flag to prevent repeated initialization on every scroll
+                    if (!texture.IsConversionSettingsInitialized) {
+                        InitializeTextureConversionSettings(texture);
+                    }
                 }
+            } catch (Exception ex) {
+                logger.Error(ex, "Error in TexturesDataGrid_LoadingRow");
             }
         }
 

@@ -4990,7 +4990,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // Update status
             viewModel.ProgressText = $"Populating UI ({e.Textures.Count} textures, {e.Models.Count} models)...";
 
-            // Phase 1: Collapse and clear bindings
+            // Single callback for all data operations (DataGrids are collapsed, so this is fast)
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 if (!_isWindowActive) {
                     logger.Info("[ApplyAssetsToUI] Window inactive, deferring all");
@@ -4998,7 +4998,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                logger.Info($"[ApplyAssetsToUI] Phase 1: Starting UI update for {e.Textures.Count} textures");
+                logger.Info($"[ApplyAssetsToUI] Starting UI update for {e.Textures.Count} textures");
 
                 // Collapse DataGrids and clear bindings
                 TexturesDataGrid.Visibility = Visibility.Collapsed;
@@ -5008,48 +5008,37 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 System.Windows.Data.BindingOperations.ClearBinding(TexturesDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
                 System.Windows.Data.BindingOperations.ClearBinding(ModelsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
                 System.Windows.Data.BindingOperations.ClearBinding(MaterialsDataGrid, System.Windows.Controls.ItemsControl.ItemsSourceProperty);
-                logger.Info("[ApplyAssetsToUI] Phase 1 done: DataGrids collapsed, bindings cleared");
 
-                // Phase 2: Assign collections (use Normal priority to ensure execution)
+                // Assign collections (DataGrids are collapsed, no UI overhead)
+                viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+                viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+                viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+
+                var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
+                allAssets.AddRange(e.Textures);
+                allAssets.AddRange(e.Models);
+                allAssets.AddRange(e.Materials);
+                viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
+
+                viewModel.SyncMaterialMasterMappings();
+                folderPaths = new Dictionary<int, string>(e.FolderPaths);
+                RecalculateIndices();
+                logger.Info("[ApplyAssetsToUI] Data assigned, showing DataGrids");
+
+                // Show DataGrids in separate callback to allow message pump
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                     if (!_isWindowActive) {
-                        logger.Info("[ApplyAssetsToUI] Window inactive before Phase 2, deferring");
-                        _pendingAssetsData = e;
+                        logger.Info("[ApplyAssetsToUI] Window inactive, deferring DataGrid show");
+                        _pendingDataGridShow = true;
+                        _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
+                        viewModel.ProgressText = "Waiting for window focus...";
                         return;
                     }
 
-                    logger.Info("[ApplyAssetsToUI] Phase 2: Assigning collections...");
-                    viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
-                    viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
-                    viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+                    ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
 
-                    var allAssets = new List<BaseResource>(e.Textures.Count + e.Models.Count + e.Materials.Count);
-                    allAssets.AddRange(e.Textures);
-                    allAssets.AddRange(e.Models);
-                    allAssets.AddRange(e.Materials);
-                    viewModel.Assets = new ObservableCollection<BaseResource>(allAssets);
-
-                    viewModel.SyncMaterialMasterMappings();
-                    folderPaths = new Dictionary<int, string>(e.FolderPaths);
-                    RecalculateIndices();
-                    logger.Info("[ApplyAssetsToUI] Phase 2 done: Collections assigned");
-
-                    // Phase 3: Show DataGrids (use Normal priority to ensure execution)
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                        if (!_isWindowActive) {
-                            logger.Info("[ApplyAssetsToUI] Window inactive before Phase 3, deferring DataGrid show");
-                            _pendingDataGridShow = true;
-                            _pendingCounts = (e.Textures.Count, e.Models.Count, e.Materials.Count);
-                            viewModel.ProgressText = "Waiting for window focus...";
-                            return;
-                        }
-
-                        logger.Info("[ApplyAssetsToUI] Phase 3: Showing DataGrids");
-                        ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
-
-                        // Auto-refresh server assets
-                        _ = ServerAssetsPanel.RefreshServerAssetsAsync();
-                    });
+                    // Auto-refresh server assets
+                    _ = ServerAssetsPanel.RefreshServerAssetsAsync();
                 });
             });
         }

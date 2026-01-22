@@ -5022,15 +5022,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     // Phase 3a: Sync material mappings (separate callback)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                        System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3a: BEFORE SyncMaterialMasterMappings");
-                        logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings starting");
-                        try {
-                            viewModel.SyncMaterialMasterMappings();
-                        } catch (Exception ex) {
-                            logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
-                        }
-                        System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3a: AFTER SyncMaterialMasterMappings");
-                        logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings complete");
+                        System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3a: SKIPPING SyncMaterialMasterMappings for debug");
+                        logger.Info("[ApplyAssetsToUI] Phase 3a: SKIPPED SyncMaterialMasterMappings (debug)");
+                        // TEMPORARILY DISABLED FOR DEBUGGING
+                        // try {
+                        //     viewModel.SyncMaterialMasterMappings();
+                        // } catch (Exception ex) {
+                        //     logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
+                        // }
 
                         // Phase 3b: Recalculate indices (separate callback)
                         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
@@ -5046,7 +5045,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                                 System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3c: ShowDataGridsAndApplyGrouping");
                                 logger.Info("[ApplyAssetsToUI] Phase 3c: ShowDataGridsAndApplyGrouping");
                                 ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
-                                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                                // B2 refresh temporarily disabled for debugging
+                                // _ = ServerAssetsPanel.RefreshServerAssetsAsync();
                             });
                         });
                     });

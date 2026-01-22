@@ -99,8 +99,8 @@ public partial class AssetLoadingViewModel : ObservableObject {
     /// </summary>
     [RelayCommand]
     private async Task LoadAssetsAsync(AssetLoadRequest request, CancellationToken ct = default) {
-        if (string.IsNullOrEmpty(request?.ProjectFolderPath) || string.IsNullOrEmpty(request.ProjectName)) {
-            ErrorOccurred?.Invoke(this, new AssetLoadErrorEventArgs("Invalid Request", "Project folder path or name is empty"));
+        if (string.IsNullOrEmpty(request?.ProjectFolderPath) || string.IsNullOrEmpty(request.ProjectName) || string.IsNullOrEmpty(request.ProjectsBasePath)) {
+            ErrorOccurred?.Invoke(this, new AssetLoadErrorEventArgs("Invalid Request", "Project folder path, name, or base path is empty"));
             return;
         }
 

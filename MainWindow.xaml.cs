@@ -4981,10 +4981,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         // Track window active state to skip render loops when inactive (Alt+Tab fix)
         private volatile bool _isWindowActive = true;
-        // Track if DataGrids need to be shown when window becomes active
-        private volatile bool _pendingDataGridShow = false;
-        // Store counts for deferred DataGrid show
-        private (int textures, int models, int materials) _pendingCounts;
 
         private void OnAssetsLoaded(object? sender, AssetsLoadedEventArgs e) {
             // Check if window is active - if not, defer loading to prevent UI freeze
@@ -5105,20 +5101,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             };
             timer.Start();
             logger.Info("[ShowDataGridsAndApplyGrouping] Models/Materials shown, timer started for textures");
-        }
-
-        /// <summary>
-        /// Called when window becomes active and there are pending DataGrids to show.
-        /// </summary>
-        internal void ApplyPendingDataGridShow() {
-            if (!_pendingDataGridShow) return;
-
-            _pendingDataGridShow = false;
-            logger.Info("[ApplyPendingDataGridShow] Window active, showing deferred DataGrids");
-            ShowDataGridsAndApplyGrouping(_pendingCounts.textures, _pendingCounts.models, _pendingCounts.materials);
-
-            // Auto-refresh server assets
-            _ = ServerAssetsPanel.RefreshServerAssetsAsync();
         }
 
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {
@@ -5309,46 +5291,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ORMTexture = ormTexture,
                 Textures = viewModel.Textures
             });
-        }
-
-        private void DeleteExportedTexture_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement delete exported texture file
-            logger.Info("DeleteExportedTexture_Click - not implemented yet");
-        }
-
-        private void DeleteExportedModel_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement delete exported model file
-            logger.Info("DeleteExportedModel_Click - not implemented yet");
-        }
-
-        private void DeleteExportedMaterial_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement delete exported material file
-            logger.Info("DeleteExportedMaterial_Click - not implemented yet");
-        }
-
-        private void ORMGroup_PackConvert_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement ORM group pack & convert
-            logger.Info("ORMGroup_PackConvert_Click - not implemented yet");
-        }
-
-        private void ORMGroup_Upload_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement ORM group upload
-            logger.Info("ORMGroup_Upload_Click - not implemented yet");
-        }
-
-        private void ORMGroup_DeleteExported_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement ORM group delete exported
-            logger.Info("ORMGroup_DeleteExported_Click - not implemented yet");
-        }
-
-        private void ORMGroup_OpenFolder_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement ORM group open folder
-            logger.Info("ORMGroup_OpenFolder_Click - not implemented yet");
-        }
-
-        private void DeleteAllExportedFiles_Click(object sender, RoutedEventArgs e) {
-            // TODO: Implement delete all exported files
-            logger.Info("DeleteAllExportedFiles_Click - not implemented yet");
         }
 
         // Reads KTX2 file header to extract metadata (width, height, mip levels)

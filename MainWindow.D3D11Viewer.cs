@@ -89,13 +89,11 @@ namespace AssetProcessor {
                     }
 
                     bool hasPendingData = _pendingAssetsData != null;
-                    bool hasPendingGridShow = _pendingDataGridShow;
-                    logger.Debug($"WM_ACTIVATEAPP: DEACTIVATED. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
+                    logger.Debug($"WM_ACTIVATEAPP: DEACTIVATED. PendingData={hasPendingData}");
                 } else {
                     // Activation - schedule delayed re-enable
                     bool hasPendingData = _pendingAssetsData != null;
-                    bool hasPendingGridShow = _pendingDataGridShow;
-                    logger.Debug($"WM_ACTIVATEAPP: ACTIVATING. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
+                    logger.Debug($"WM_ACTIVATEAPP: ACTIVATING. PendingData={hasPendingData}");
                     ScheduleDelayedActivation();
                 }
             }
@@ -128,7 +126,7 @@ namespace AssetProcessor {
             var cts = _activationCts;
 
             // Check if there's pending data - use shorter delay if so
-            bool hasPendingData = _pendingAssetsData != null || _pendingDataGridShow;
+            bool hasPendingData = _pendingAssetsData != null;
 
             // Start delayed activation on thread pool
             _ = Task.Run(async () => {
@@ -164,9 +162,6 @@ namespace AssetProcessor {
                                 _pendingAssetsData = null;
                                 ApplyAssetsToUI(pendingData);
                             }
-
-                            // Show DataGrids that were deferred when window was inactive
-                            ApplyPendingDataGridShow();
 
                             logger.Debug($"Render ENABLED after {(hasPendingData ? "200ms" : "2s")} stable focus");
                         }

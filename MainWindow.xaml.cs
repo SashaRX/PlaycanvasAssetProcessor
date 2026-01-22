@@ -5020,25 +5020,35 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     logger.Info("[ApplyAssetsToUI] Phase 2 complete");
 
-                    // Phase 3: Sync and show (deferred to allow message pump)
+                    // Phase 3a: Sync material mappings (separate callback)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                        logger.Info("[ApplyAssetsToUI] Phase 3: Sync and show");
+                        logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings starting");
+                        NLog.LogManager.Flush();
+                        try {
+                            viewModel.SyncMaterialMasterMappings();
+                        } catch (Exception ex) {
+                            logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
+                        }
+                        logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings complete");
                         NLog.LogManager.Flush();
 
-                        viewModel.SyncMaterialMasterMappings();
-                        logger.Info("[ApplyAssetsToUI] Phase 3: SyncMaterialMasterMappings done");
-                        NLog.LogManager.Flush();
+                        // Phase 3b: Recalculate indices (separate callback)
+                        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                            logger.Info("[ApplyAssetsToUI] Phase 3b: RecalculateIndices starting");
+                            NLog.LogManager.Flush();
+                            folderPaths = new Dictionary<int, string>(e.FolderPaths);
+                            RecalculateIndices();
+                            logger.Info("[ApplyAssetsToUI] Phase 3b: RecalculateIndices complete");
+                            NLog.LogManager.Flush();
 
-                        folderPaths = new Dictionary<int, string>(e.FolderPaths);
-                        RecalculateIndices();
-                        logger.Info("[ApplyAssetsToUI] Phase 3: RecalculateIndices done");
-                        NLog.LogManager.Flush();
-
-                        logger.Info("[ApplyAssetsToUI] Phase 3: Calling ShowDataGridsAndApplyGrouping");
-                        ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
-
-                        // Auto-refresh server assets
-                        _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                            // Phase 3c: Show DataGrids (separate callback)
+                            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                                logger.Info("[ApplyAssetsToUI] Phase 3c: ShowDataGridsAndApplyGrouping");
+                                NLog.LogManager.Flush();
+                                ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
+                                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                            });
+                        });
                     });
                 });
             });

@@ -5042,29 +5042,35 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         /// <summary>
         /// Shows DataGrids and applies grouping with yield for heavy Textures grid.
+        /// Split into phases to prevent UI freeze:
+        /// 1. Show all DataGrids WITHOUT grouping (fast)
+        /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            logger.Info("[ShowDataGridsAndApplyGrouping] Starting...");
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding and showing without grouping...");
             viewModel.ProgressText = "Rendering...";
 
-            // Restore bindings for smaller grids and show them immediately
+            // Phase 1: Bind and show ALL DataGrids WITHOUT grouping
+            // This is fast because WPF only virtualizes rows without group headers
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
+            TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                new System.Windows.Data.Binding("Textures"));
+
+            // Show all DataGrids immediately (no grouping yet = fast)
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] Models/Materials visible");
+            TexturesDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete: All DataGrids visible (no grouping)");
 
-            // Defer heavy Textures grid with grouping to allow UI to breathe
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => {
-                // Bind and apply grouping
-                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Textures"));
+            // Phase 2: Defer grouping to separate message to allow UI to breathe
+            // Using Normal priority ensures message pump can process window messages between phases
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Applying grouping...");
                 ApplyTextureGroupingIfEnabled();
-                TexturesDataGrid.Visibility = Visibility.Visible;
-
-                logger.Info("[ShowDataGridsAndApplyGrouping] Textures visible");
+                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: Grouping applied");
                 viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
             });

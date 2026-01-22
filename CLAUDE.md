@@ -650,46 +650,60 @@ See `Docs/PIPELINE_REVIEW.md` for:
 
 ## WPF Threading and UI Freeze Prevention
 
-### Problem: UI Freeze on Window Deactivation During Asset Loading
+### Problem: UI Freeze During Asset Loading
 
-When user Alt+Tabs away from the application during asset loading, the UI would freeze for 10-60 seconds. This happened because WPF processes window messages (WM_ACTIVATE, etc.) only between Dispatcher callbacks.
+When loading large asset sets (200+ textures), the UI would freeze. Root causes:
 
-### Root Causes
+1. **PropertyChanged spam** - Setting `Index` on 200+ resources triggered 200+ binding updates
+2. **DataGrid binding updates** - Setting `ItemsSource` triggers expensive WPF layout calculations
+3. **TexturesDataGrid is heaviest** - Most columns, largest dataset, grouping support
 
-1. **Single long Dispatcher callback** - All asset loading UI updates ran in one callback, blocking message pump
-2. **PropertyChanged spam** - Setting `Index` on 200+ resources triggered 200+ binding updates
-3. **DataGrid binding updates** - Even with `Visibility.Collapsed`, setting `ItemsSource` triggers WPF layout
-4. **async/await pitfall** - After `await Dispatcher.InvokeAsync()`, continuation runs on ThreadPool, not UI thread
+### Solution: Timer-Deferred DataGrid Loading
 
-### Solutions Implemented
-
-#### 1. Multi-phase Dispatcher Callbacks (MainWindow.xaml.cs: `ApplyAssetsToUI`)
-
-Instead of one long callback, split into phases with `Dispatcher.BeginInvoke(Background)` between them:
+Current implementation in `ApplyAssetsToUI` (MainWindow.xaml.cs):
 
 ```csharp
-// Phase 1: Collapse DataGrids, clear bindings
-Dispatcher.BeginInvoke(Normal, () => {
-    if (!_isWindowActive) { _pendingAssetsData = e; return; }
-    // ... collapse and clear ...
+private void ApplyAssetsToUI(AssetsLoadedEventArgs e) {
+    Dispatcher.Invoke(() => {
+        // 1. Assign all data synchronously (fast - no bindings yet)
+        viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+        viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
+        viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
+        RecalculateIndices();
+        viewModel.SyncMaterialMasterMappings();
 
-    // Phase 2: Assign collections (deferred)
-    Dispatcher.BeginInvoke(Background, () => {
-        if (!_isWindowActive) { /* defer */ return; }
-        // ... assign collections ...
+        // 2. Show Models/Materials immediately (small datasets)
+        ModelsDataGrid.SetBinding(ItemsSourceProperty, new Binding("Models"));
+        MaterialsDataGrid.SetBinding(ItemsSourceProperty, new Binding("Materials"));
+        ModelsDataGrid.Visibility = Visibility.Visible;
+        MaterialsDataGrid.Visibility = Visibility.Visible;
 
-        // Phase 3: Show DataGrids (deferred)
-        Dispatcher.BeginInvoke(Background, () => {
-            if (!_isWindowActive) { /* defer */ return; }
-            ShowDataGridsAndApplyGrouping(...);
-        });
+        // 3. Defer TexturesDataGrid with timer (prevents freeze)
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        timer.Tick += (s, args) => {
+            timer.Stop();
+            TexturesDataGrid.SetBinding(ItemsSourceProperty, new Binding("Textures"));
+            TexturesDataGrid.Visibility = Visibility.Visible;
+
+            // 4. Defer grouping with another timer
+            var groupTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            groupTimer.Tick += (s2, args2) => {
+                groupTimer.Stop();
+                ApplyTextureGroupingIfEnabled();
+                viewModel.ProgressValue = viewModel.ProgressMaximum; // 100%
+            };
+            groupTimer.Start();
+        };
+        timer.Start();
     });
-});
+}
 ```
 
-#### 2. Silent Setters for Batch Updates
+**Why timers work**: Each timer tick is a separate message pump iteration, allowing WPF to process window messages between heavy operations.
 
-Added methods that set backing fields without triggering `PropertyChanged`:
+### Silent Setters for Batch Updates
+
+Methods that set backing fields without triggering `PropertyChanged`:
 
 ```csharp
 // BaseResource.cs
@@ -703,40 +717,68 @@ public void SetMasterMaterialNameSilent(string? value) {
 }
 ```
 
-Used in `RecalculateIndices()` and `SyncMaterialMasterMappings()`.
+Used in `RecalculateIndices()` and `SyncMaterialMasterMappings()` to avoid 200+ binding updates.
 
-#### 3. Clear/Restore DataGrid Bindings
+### Key Files
 
-Before assigning collections, clear bindings to prevent WPF layout processing:
+- `MainWindow.xaml.cs`: `ApplyAssetsToUI`, `ShowDataGridsAndApplyGrouping`
+- `BaseResource.cs`: `SetIndexSilent`
+- `MaterialResource.cs`: `SetMasterMaterialNameSilent`
+- `MainViewModel.cs`: `RecalculateIndices`, `SyncMaterialMasterMappings`
 
-```csharp
-// Before assignment
-BindingOperations.ClearBinding(TexturesDataGrid, ItemsSourceProperty);
+---
 
-// Assign collections (no binding = no WPF processing)
-viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
+## DataGrid Configuration and Visual Fixes
 
-// Restore bindings only when showing DataGrids
-TexturesDataGrid.SetBinding(ItemsSourceProperty, new Binding("Textures"));
-TexturesDataGrid.Visibility = Visibility.Visible;
+### Row Header Visual Glitch
+
+**Problem**: WPF DataGrid shows a narrow column on the left (row header) that causes visual glitch - appears as a thin grey line that doesn't align with content.
+
+**Solution**: Set `HeadersVisibility="Column"` on all DataGrids to hide row headers while keeping column headers:
+
+```xml
+<DataGrid x:Name="TexturesDataGrid"
+          HeadersVisibility="Column"
+          ... />
 ```
 
-#### 4. Window Activation Tracking
+Applied to all DataGrids in:
+- `MainWindow.xaml`: TexturesDataGrid, ModelsDataGrid, MaterialsDataGrid
+- `Controls/ServerAssetsPanel.xaml`: ServerAssetsDataGrid
 
-Track window active state via WndProc hook (`MainWindow.D3D11Viewer.cs`):
+### DataGrid Performance Settings
 
-```csharp
-private bool _isWindowActive = true;
+All DataGrids use virtualization for performance:
 
-// In WndProc:
-case WM_ACTIVATE:
-    _isWindowActive = (wParam != 0);
-    break;
+```xml
+<DataGrid VirtualizingPanel.IsVirtualizing="True"
+          VirtualizingPanel.VirtualizationMode="Recycling"
+          EnableRowVirtualization="True"
+          EnableColumnVirtualization="True"
+          ... />
 ```
 
-Check `_isWindowActive` before each phase; if false, defer work to `_pendingAssetsData` or `_pendingDataGridShow`.
+### Grouping and CollectionViewSource
 
-### Why async/await Failed
+TexturesDataGrid supports grouping by folder path:
+
+```csharp
+private void ApplyTextureGroupingIfEnabled() {
+    if (!viewModel.EnableTextureGrouping) return;
+
+    var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+    if (view != null) {
+        view.GroupDescriptions.Clear();
+        view.GroupDescriptions.Add(new PropertyGroupDescription("FolderPath"));
+    }
+}
+```
+
+**Warning**: Grouping is expensive for large datasets. Applied after timer delay to prevent freeze.
+
+---
+
+## Why async/await Can Fail in WPF
 
 ```csharp
 // DON'T DO THIS:
@@ -747,21 +789,15 @@ private async Task ApplyAssetsToUIAsync(AssetsLoadedEventArgs e) {
 }
 ```
 
-The continuation after `await Dispatcher.InvokeAsync()` runs on ThreadPool because `Dispatcher.InvokeAsync` doesn't capture/restore `SynchronizationContext` for the caller. Use nested `Dispatcher.BeginInvoke` callbacks instead.
+The continuation after `await Dispatcher.InvokeAsync()` runs on ThreadPool because `Dispatcher.InvokeAsync` doesn't capture/restore `SynchronizationContext` for the caller. Use `Dispatcher.Invoke` or nested `Dispatcher.BeginInvoke` callbacks instead.
 
-### Key Files
+---
 
-- `MainWindow.xaml.cs`: `ApplyAssetsToUI`, `ShowDataGridsAndApplyGrouping`
-- `MainWindow.D3D11Viewer.cs`: `_isWindowActive` tracking, `ApplyPendingDataGridShow`
-- `BaseResource.cs`: `SetIndexSilent`
-- `MaterialResource.cs`: `SetMasterMaterialNameSilent`
-- `MainViewModel.cs`: `RecalculateIndices`, `SyncMaterialMasterMappings`
+## Why Progress<T> Causes UI Freeze
 
-### Why Progress<T> Causes UI Freeze
+**CRITICAL**: Never use `Progress<T>` for frequent background operations in WPF!
 
-**CRITICAL**: Never use `Progress<T>` for background operations in WPF!
-
-`Progress<T>` captures `SynchronizationContext` on construction and marshals ALL `Report()` calls to the UI thread. Even with throttling, this floods the UI message queue:
+`Progress<T>` captures `SynchronizationContext` on construction and marshals ALL `Report()` calls to the UI thread:
 
 ```csharp
 // DON'T DO THIS - floods UI thread:
@@ -793,16 +829,13 @@ public sealed class SharedProgressState {
 }
 
 // ViewModel - poll state every 100ms
-private SharedProgressState? _progressState;
 private DispatcherTimer? _progressTimer;
 
-private void StartProgressPolling() {
+private void StartProgressPolling(SharedProgressState state) {
     _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
     _progressTimer.Tick += (s, e) => {
-        if (_progressState != null) {
-            LoadingProgress = _progressState.Current;
-            LoadingTotal = _progressState.Total;
-        }
+        LoadingProgress = state.Current;
+        LoadingTotal = state.Total;
     };
     _progressTimer.Start();
 }

@@ -364,8 +364,14 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Application log files
 error_log.txt
 info_log.txt
 debug_log.txt
+warning_log.txt
+internal-nlog.txt
+*_debug.txt
+file.txt
+
 assets/
 nul

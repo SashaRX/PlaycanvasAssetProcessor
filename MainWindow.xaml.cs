@@ -5086,9 +5086,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     return;
                 }
 
-                logger.Info("[ShowDataGridsAndApplyGrouping] Restoring bindings and showing DataGrids...");
+                logger.Info("[ShowDataGridsAndApplyGrouping] Restoring bindings...");
 
-                // Restore bindings
+                // Restore bindings (DataGrids still collapsed)
                 TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                     new System.Windows.Data.Binding("Textures"));
                 ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
@@ -5096,7 +5096,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                     new System.Windows.Data.Binding("Materials"));
 
-                // Show DataGrids
+                // Apply grouping BEFORE showing DataGrid (while collapsed)
+                // This prevents the freeze that happens when DataGrid becomes visible with grouping
+                logger.Info("[ShowDataGridsAndApplyGrouping] Applying grouping while DataGrids collapsed...");
+                ApplyTextureGroupingIfEnabled();
+                logger.Info("[ShowDataGridsAndApplyGrouping] Grouping applied");
+
+                // Now show DataGrids (grouping already set up)
                 TexturesDataGrid.Visibility = Visibility.Visible;
                 ModelsDataGrid.Visibility = Visibility.Visible;
                 MaterialsDataGrid.Visibility = Visibility.Visible;
@@ -5106,17 +5112,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Update ready status
                 viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
-
-                // Apply grouping with lowest priority
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => {
-                    if (!_isWindowActive) {
-                        logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping skipped - window inactive");
-                        return;
-                    }
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Applying deferred grouping...");
-                    ApplyTextureGroupingIfEnabled();
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Deferred grouping done");
-                });
             });
 
             logger.Info("[ShowDataGridsAndApplyGrouping] Deferred init scheduled, returning immediately");

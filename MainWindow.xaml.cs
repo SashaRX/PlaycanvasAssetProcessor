@@ -5105,8 +5105,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: AFTER TexturesDataGrid.Visible");
             logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete: All DataGrids visible (no grouping)");
 
-            // Phase 2: Defer grouping to separate message to allow UI to breathe
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+            // Phase 2: Use ContextIdle priority - runs AFTER WPF finishes rendering
+            // Normal priority might get blocked by pending render operations
+            logger.Info("[ShowDataGridsAndApplyGrouping] Scheduling Phase 2 with ContextIdle priority...");
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
                 System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Phase 2 starting");
                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Applying grouping...");
                 ApplyTextureGroupingIfEnabled();

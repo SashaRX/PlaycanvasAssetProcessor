@@ -33,7 +33,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
         /// </summary>
         public async Task<bool> IsAvailableAsync() {
             try {
-                var process = new Process {
+                using var process = new Process {
                     StartInfo = new ProcessStartInfo {
                         FileName = _basisuExecutablePath,
                         Arguments = "-version",
@@ -80,7 +80,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             logger.Info($"  Executable: {_basisuExecutablePath}");
             logger.Info($"  Arguments: {args}");
 
-            var process = new Process {
+            using var process = new Process {
                 StartInfo = new ProcessStartInfo {
                     FileName = _basisuExecutablePath,
                     Arguments = args,
@@ -423,7 +423,7 @@ namespace AssetProcessor.TextureConversion.BasisU {
             IProgress<(int current, int total, string fileName)>? progress = null,
             CancellationToken cancellationToken = default) {
             var results = new List<BasisUResult>();
-            var semaphore = new SemaphoreSlim(
+            using var semaphore = new SemaphoreSlim(
                 settings.UseMultithreading ? (settings.ThreadCount > 0 ? settings.ThreadCount : Environment.ProcessorCount) : 1
             );
 

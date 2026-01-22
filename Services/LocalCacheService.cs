@@ -27,18 +27,29 @@ public class LocalCacheService(IHttpClientFactory httpClientFactory, IFileSystem
         ArgumentException.ThrowIfNullOrEmpty(projectsRoot);
         ArgumentException.ThrowIfNullOrEmpty(projectName);
 
-        string assetsFolder = Path.Combine(projectsRoot, projectName, AssetsDirectoryName);
+        string assetsFolder = Path.GetFullPath(Path.Combine(projectsRoot, projectName, AssetsDirectoryName));
         string targetFolder = assetsFolder;
 
         if (parentId.HasValue && folderPaths.TryGetValue(parentId.Value, out string? folderPath) && !string.IsNullOrEmpty(folderPath)) {
-            targetFolder = Path.Combine(targetFolder, folderPath);
+            string combinedPath = Path.GetFullPath(Path.Combine(targetFolder, folderPath));
+            // Security: prevent path traversal attacks
+            if (!combinedPath.StartsWith(assetsFolder, StringComparison.OrdinalIgnoreCase)) {
+                throw new ArgumentException($"Invalid folder path: path traversal detected", nameof(folderPaths));
+            }
+            targetFolder = combinedPath;
         }
 
         if (!fileSystem.Directory.Exists(targetFolder)) {
             fileSystem.Directory.CreateDirectory(targetFolder);
         }
 
-        return Path.Combine(targetFolder, fileName ?? "Unknown");
+        string resultPath = Path.GetFullPath(Path.Combine(targetFolder, fileName ?? "Unknown"));
+        // Security: validate final path is within assets folder
+        if (!resultPath.StartsWith(assetsFolder, StringComparison.OrdinalIgnoreCase)) {
+            throw new ArgumentException($"Invalid file name: path traversal detected", nameof(fileName));
+        }
+
+        return resultPath;
     }
 
     public async Task SaveAssetsListAsync(JToken jsonResponse, string projectFolderPath, CancellationToken cancellationToken) {

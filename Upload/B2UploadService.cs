@@ -22,6 +22,7 @@ public class B2UploadService : IB2UploadService, IDisposable {
     private B2AuthorizationResponse? _authResponse;
     private B2GetUploadUrlResponse? _uploadUrl;
     private readonly SemaphoreSlim _uploadSemaphore;
+    private bool _disposed;
     private readonly object _uploadUrlLock = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new() {
@@ -66,7 +67,6 @@ public class B2UploadService : IB2UploadService, IDisposable {
         }
 
         _settings = settings;
-        _uploadSemaphore.Dispose();
 
         try {
             Logger.Info("Authorizing with B2...");
@@ -635,6 +635,8 @@ public class B2UploadService : IB2UploadService, IDisposable {
     #endregion
 
     public void Dispose() {
+        if (_disposed) return;
+        _disposed = true;
         _httpClient.Dispose();
         _uploadSemaphore.Dispose();
     }

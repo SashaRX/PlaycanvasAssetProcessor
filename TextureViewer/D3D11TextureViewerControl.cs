@@ -148,6 +148,7 @@ public class D3D11TextureViewerControl : HwndHost {
         if (renderer != null) {
             renderer.SetZoom(zoom);
             renderer.SetPan(panX, panY);
+            renderer.Render(); // Immediate visual update
         }
 
         logger.Info("View reset to default (zoom=1.0, pan=0,0)");
@@ -166,6 +167,7 @@ public class D3D11TextureViewerControl : HwndHost {
         zoom = Math.Clamp(zoom, 0.125f, 16.0f);
 
         renderer.SetZoom(zoom);
+        renderer.Render(); // Immediate visual update (don't rely on render loop)
     }
 
     // Static dictionary to map HWND to control instances for WndProc routing
@@ -292,6 +294,7 @@ public class D3D11TextureViewerControl : HwndHost {
             zoom *= delta > 0 ? 1.1f : 0.9f;
             zoom = Math.Clamp(zoom, 0.125f, 16.0f);
             renderer.SetZoom(zoom);
+            renderer.Render(); // Immediate visual update
             return true;
         }
 
@@ -309,6 +312,7 @@ public class D3D11TextureViewerControl : HwndHost {
             zoom *= delta > 0 ? 1.1f : 0.9f;
             zoom = Math.Clamp(zoom, 0.125f, 16.0f);
             renderer.SetZoom(zoom);
+            renderer.Render(); // Immediate visual update
             return true;
         }
 
@@ -367,6 +371,7 @@ public class D3D11TextureViewerControl : HwndHost {
 
         renderer.SetZoom(zoom);
         renderer.SetPan(panX, panY);
+        renderer.Render(); // Immediate visual update (don't rely on render loop)
 
         return true;
     }
@@ -427,6 +432,7 @@ public class D3D11TextureViewerControl : HwndHost {
             panX -= deltaX * simplePanX;
             panY -= deltaY * simplePanY;
             renderer.SetPan(panX, panY);
+            renderer.Render(); // Immediate visual update
             lastMouseX = currentX;
             lastMouseY = currentY;
             return;
@@ -456,6 +462,7 @@ public class D3D11TextureViewerControl : HwndHost {
         panY -= deltaY * panSpeedY;  // Y: up/down (inverted for correct direction)
 
         renderer.SetPan(panX, panY);
+        renderer.Render(); // Immediate visual update for smooth panning
 
         lastMouseX = currentX;
         lastMouseY = currentY;

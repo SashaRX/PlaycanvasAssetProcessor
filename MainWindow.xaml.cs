@@ -5041,33 +5041,33 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         /// <summary>
-        /// Shows DataGrids and applies grouping. Executes synchronously.
+        /// Shows DataGrids and applies grouping with yield for heavy Textures grid.
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
             logger.Info("[ShowDataGridsAndApplyGrouping] Starting...");
             viewModel.ProgressText = "Rendering...";
 
-            // Restore bindings
-            TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                new System.Windows.Data.Binding("Textures"));
+            // Restore bindings for smaller grids and show them immediately
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
-
-            // Apply grouping while DataGrids are still collapsed
-            ApplyTextureGroupingIfEnabled();
-
-            // Show all DataGrids
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
-            TexturesDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] Models/Materials visible");
 
-            logger.Info("[ShowDataGridsAndApplyGrouping] All DataGrids visible");
+            // Defer heavy Textures grid with grouping to allow UI to breathe
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => {
+                // Bind and apply grouping
+                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Textures"));
+                ApplyTextureGroupingIfEnabled();
+                TexturesDataGrid.Visibility = Visibility.Visible;
 
-            // Update ready status
-            viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
-            viewModel.ProgressValue = viewModel.ProgressMaximum;
+                logger.Info("[ShowDataGridsAndApplyGrouping] Textures visible");
+                viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
+                viewModel.ProgressValue = viewModel.ProgressMaximum;
+            });
         }
 
         /// <summary>

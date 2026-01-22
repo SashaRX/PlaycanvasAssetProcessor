@@ -37,8 +37,6 @@ namespace AssetProcessor {
         }
 
         private async Task<bool> LoadAssetsFromJsonFileAsync() {
-            logService.LogInfo($"[LoadAssetsFromJsonFileAsync] Starting. ProjectFolderPath={ProjectFolderPath}, ProjectName={ProjectName}");
-
             if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
                 logService.LogError("Project folder path or name is null or empty");
                 return false;

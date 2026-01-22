@@ -396,7 +396,7 @@ public class MainViewModelTests {
             string projectName,
             string projectsRoot,
             int projectId,
-            IProgress<AssetLoadProgress>? progress,
+            SharedProgressState? progressState,
             CancellationToken cancellationToken) {
             return Task.FromResult(new AssetLoadResult {
                 Success = true,

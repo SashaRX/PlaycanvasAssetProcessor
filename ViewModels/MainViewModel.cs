@@ -874,6 +874,7 @@ namespace AssetProcessor.ViewModels {
             }
 
             logger.Info($"[SyncMaterialMasterMappings] Loop done. Processed {processedCount}, synced {syncedCount}");
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] SyncMaterialMasterMappings returning...");
         }
 
         /// <summary>

@@ -64,7 +64,7 @@ namespace AssetProcessor {
             SourceInitialized += (s, e) => {
                 _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
                 _hwndSource?.AddHook(WndProcHook);
-                logger.Info("[AltTab] Win32 WndProc hook installed");
+                logger.Debug($"Win32 WndProc hook installed. Initial _isWindowActive={_isWindowActive}");
             };
 
             Closed += (s, e) => {
@@ -88,10 +88,14 @@ namespace AssetProcessor {
                         _activationCts?.Cancel();
                     }
 
-                    logger.Info("[AltTab] WM_ACTIVATEAPP: DEACTIVATED (Win32 level)");
+                    bool hasPendingData = _pendingAssetsData != null;
+                    bool hasPendingGridShow = _pendingDataGridShow;
+                    logger.Debug($"WM_ACTIVATEAPP: DEACTIVATED. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
                 } else {
                     // Activation - schedule delayed re-enable
-                    logger.Info("[AltTab] WM_ACTIVATEAPP: ACTIVATING (Win32 level)");
+                    bool hasPendingData = _pendingAssetsData != null;
+                    bool hasPendingGridShow = _pendingDataGridShow;
+                    logger.Debug($"WM_ACTIVATEAPP: ACTIVATING. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
                     ScheduleDelayedActivation();
                 }
             }
@@ -108,7 +112,7 @@ namespace AssetProcessor {
                         _activationCts?.Cancel();
                     }
 
-                    logger.Info("[AltTab] WM_ACTIVATE: INACTIVE (Win32 level)");
+                    logger.Debug("WM_ACTIVATE: INACTIVE (Win32 level)");
                 }
             }
 
@@ -123,12 +127,21 @@ namespace AssetProcessor {
 
             var cts = _activationCts;
 
+            // Check if there's pending data - use shorter delay if so
+            bool hasPendingData = _pendingAssetsData != null || _pendingDataGridShow;
+
             // Start delayed activation on thread pool
             _ = Task.Run(async () => {
                 try {
-                    // Wait for stable focus (2 seconds total)
-                    for (int i = 0; i < 10; i++) {
+                    if (hasPendingData) {
+                        // Shorter delay when there's pending data (200ms for basic stability)
+                        logger.Debug("Using short activation delay - pending data exists");
                         await Task.Delay(200, cts.Token);
+                    } else {
+                        // Full delay for stable focus when no pending data (2 seconds)
+                        for (int i = 0; i < 10; i++) {
+                            await Task.Delay(200, cts.Token);
+                        }
                     }
 
                     if (cts.Token.IsCancellationRequested) {
@@ -146,7 +159,7 @@ namespace AssetProcessor {
 
                             // Apply pending assets data that was deferred when window was inactive
                             if (_pendingAssetsData != null) {
-                                logger.Info("[AltTab] Applying deferred assets data");
+                                logger.Debug("Applying deferred assets data after window activation");
                                 var pendingData = _pendingAssetsData;
                                 _pendingAssetsData = null;
                                 ApplyAssetsToUI(pendingData);
@@ -155,7 +168,7 @@ namespace AssetProcessor {
                             // Show DataGrids that were deferred when window was inactive
                             ApplyPendingDataGridShow();
 
-                            logger.Info("[AltTab] Render ENABLED after 2s stable focus");
+                            logger.Debug($"Render ENABLED after {(hasPendingData ? "200ms" : "2s")} stable focus");
                         }
                     });
                 } catch (OperationCanceledException) {
@@ -322,24 +335,12 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (!texturePreviewService.IsUsingD3D11Renderer) {
+            // PreviewMouseWheel tunnels from parent Grid - no need for complex position checks
+            if (!texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null) {
                 return;
             }
 
-            if (sender is FrameworkElement element) {
-                Point position = e.GetPosition(element);
-                if (position.X < 0 || position.Y < 0 || position.X > element.ActualWidth || position.Y > element.ActualHeight) {
-                    return;
-                }
-
-                if (!element.IsMouseOver) {
-                    return;
-                }
-            } else if (TexturePreviewViewport is FrameworkElement viewport && !viewport.IsMouseOver) {
-                return;
-            }
-
-            D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
+            D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
             e.Handled = true;
         }
 

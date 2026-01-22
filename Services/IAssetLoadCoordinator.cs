@@ -15,7 +15,7 @@ public interface IAssetLoadCoordinator {
     /// <param name="projectName">Name of the project</param>
     /// <param name="projectsRoot">Root folder for all projects</param>
     /// <param name="projectId">PlayCanvas project ID for URL generation</param>
-    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="progressState">Optional shared progress state for UI polling (avoids SynchronizationContext)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result containing processed assets or error</returns>
     Task<AssetLoadResult> LoadAssetsFromJsonAsync(
@@ -23,7 +23,7 @@ public interface IAssetLoadCoordinator {
         string projectName,
         string projectsRoot,
         int projectId,
-        IProgress<AssetLoadProgress>? progress,
+        SharedProgressState? progressState,
         CancellationToken cancellationToken);
 
     /// <summary>

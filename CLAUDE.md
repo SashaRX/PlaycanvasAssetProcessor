@@ -756,3 +756,59 @@ The continuation after `await Dispatcher.InvokeAsync()` runs on ThreadPool becau
 - `BaseResource.cs`: `SetIndexSilent`
 - `MaterialResource.cs`: `SetMasterMaterialNameSilent`
 - `MainViewModel.cs`: `RecalculateIndices`, `SyncMaterialMasterMappings`
+
+### Why Progress<T> Causes UI Freeze
+
+**CRITICAL**: Never use `Progress<T>` for background operations in WPF!
+
+`Progress<T>` captures `SynchronizationContext` on construction and marshals ALL `Report()` calls to the UI thread. Even with throttling, this floods the UI message queue:
+
+```csharp
+// DON'T DO THIS - floods UI thread:
+var progress = new Progress<int>(p => UpdateProgressBar(p));
+await Task.Run(() => {
+    for (int i = 0; i < 1000; i++) {
+        progress.Report(i);  // Each call marshals to UI thread!
+    }
+});
+```
+
+**Solution: Timer-based polling with SharedProgressState**
+
+Instead of `Progress<T>`, use a shared state object that background threads write to, and poll it with `DispatcherTimer`:
+
+```csharp
+// SharedProgressState - thread-safe, no marshalling
+public sealed class SharedProgressState {
+    private volatile int _current;
+    private volatile int _total;
+
+    public int Current => _current;
+    public int Total => _total;
+
+    public void Update(int current, int total) {
+        _current = current;
+        _total = total;
+    }
+}
+
+// ViewModel - poll state every 100ms
+private SharedProgressState? _progressState;
+private DispatcherTimer? _progressTimer;
+
+private void StartProgressPolling() {
+    _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+    _progressTimer.Tick += (s, e) => {
+        if (_progressState != null) {
+            LoadingProgress = _progressState.Current;
+            LoadingTotal = _progressState.Total;
+        }
+    };
+    _progressTimer.Start();
+}
+```
+
+Key files:
+- `Services/Models/SharedProgressState.cs`: Thread-safe progress state
+- `ViewModels/AssetLoadingViewModel.cs`: Timer-based polling implementation
+- `Services/AssetLoadCoordinator.cs`: Uses SharedProgressState instead of IProgress<T>

@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace AssetProcessor.ViewModels;
 
@@ -26,6 +27,10 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
     private readonly ILogService logService;
     private readonly IAssetLoadCoordinator assetLoadCoordinator;
+
+    // Timer-based progress polling (avoids SynchronizationContext/Progress<T> UI freeze)
+    private DispatcherTimer? _progressTimer;
+    private SharedProgressState? _progressState;
 
     #region Observable Properties
 
@@ -90,6 +95,7 @@ public partial class AssetLoadingViewModel : ObservableObject {
 
     /// <summary>
     /// Loads assets from JSON file and performs post-processing.
+    /// Uses timer-based progress polling to avoid SynchronizationContext/Progress&lt;T&gt; UI freeze.
     /// </summary>
     [RelayCommand]
     private async Task LoadAssetsAsync(AssetLoadRequest request, CancellationToken ct = default) {
@@ -98,20 +104,16 @@ public partial class AssetLoadingViewModel : ObservableObject {
             return;
         }
 
-        logService.LogInfo("=== AssetLoadingViewModel.LoadAssetsAsync CALLED ===");
-
         IsLoading = true;
         LoadingStatus = "Loading assets...";
         LoadingProgress = 0;
         LoadingTotal = 0;
 
         try {
-            // Create progress reporter that will marshal to UI thread
-            var progress = new Progress<AssetLoadProgress>(p => {
-                LoadingProgress = p.Processed;
-                LoadingTotal = p.Total;
-                LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(p.Processed, p.Total, p.CurrentAsset));
-            });
+            // Create shared progress state and start polling timer
+            // This avoids Progress<T> which captures SynchronizationContext and floods UI thread
+            _progressState = new SharedProgressState();
+            StartProgressPolling();
 
             // Run loading on background thread to not block UI
             var result = await Task.Run(async () => {
@@ -120,9 +122,12 @@ public partial class AssetLoadingViewModel : ObservableObject {
                     request.ProjectName,
                     request.ProjectsBasePath,
                     request.ProjectId,
-                    progress,
+                    _progressState,
                     ct).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);
+
+            // Stop progress polling
+            StopProgressPolling();
 
             if (!result.Success) {
                 logService.LogError($"Failed to load assets: {result.Error}");
@@ -226,7 +231,47 @@ public partial class AssetLoadingViewModel : ObservableObject {
             logService.LogError($"Error loading assets: {ex.Message}");
             ErrorOccurred?.Invoke(this, new AssetLoadErrorEventArgs("Error", ex.Message));
         } finally {
+            StopProgressPolling();
+            _progressState = null;
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Starts the timer-based progress polling (every 100ms).
+    /// </summary>
+    private void StartProgressPolling() {
+        _progressTimer = new DispatcherTimer {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
+        _progressTimer.Tick += OnProgressTimerTick;
+        _progressTimer.Start();
+    }
+
+    /// <summary>
+    /// Stops the progress polling timer.
+    /// </summary>
+    private void StopProgressPolling() {
+        if (_progressTimer != null) {
+            _progressTimer.Stop();
+            _progressTimer.Tick -= OnProgressTimerTick;
+            _progressTimer = null;
+        }
+    }
+
+    /// <summary>
+    /// Timer tick handler - reads progress state and updates observable properties.
+    /// </summary>
+    private void OnProgressTimerTick(object? sender, EventArgs e) {
+        if (_progressState == null) return;
+
+        int current = _progressState.Current;
+        int total = _progressState.Total;
+
+        if (total > 0 && (current != LoadingProgress || total != LoadingTotal)) {
+            LoadingProgress = current;
+            LoadingTotal = total;
+            LoadingProgressChanged?.Invoke(this, new AssetLoadProgressEventArgs(current, total, _progressState.CurrentAsset));
         }
     }
 

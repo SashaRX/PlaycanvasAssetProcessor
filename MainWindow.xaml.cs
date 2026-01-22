@@ -2408,11 +2408,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (view == null || !view.CanGroup) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                // CRITICAL: Keep virtualization enabled even with grouping to prevent UI freeze
-                // WPF 4.5+ supports virtualization with grouping via IsVirtualizingWhenGrouping
+                // CRITICAL: Use Standard mode and disable IsVirtualizingWhenGrouping
+                // Recycling + IsVirtualizingWhenGrouping causes WPF crash (ArgumentOutOfRangeException)
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
-                VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, true);
-                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
+                VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, false);
+                VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Standard);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
 
                 // Only modify if not already grouped correctly
@@ -2427,7 +2427,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     view.GroupDescriptions.Clear();
                 }
 
-                // Enable virtualization for performance without grouping
+                // Without grouping, Recycling mode is safe
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
                 VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Recycling);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);

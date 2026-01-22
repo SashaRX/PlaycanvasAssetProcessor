@@ -5031,14 +5031,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     logger.Info("[ApplyAssetsToUI] Phase 2 complete");
 
-                    // Phase 3a: Sync material mappings (separate callback)
+                    // Phase 3a: Sync material mappings (SKIPPED - causes freeze)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                        logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings");
-                        try {
-                            viewModel.SyncMaterialMasterMappings();
-                        } catch (Exception ex) {
-                            logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
-                        }
+                        logger.Info("[ApplyAssetsToUI] Phase 3a: SKIPPED SyncMaterialMasterMappings");
+                        // TODO: Fix SyncMaterialMasterMappings freeze issue
+                        // viewModel.SyncMaterialMasterMappings();
                         logger.Info("[ApplyAssetsToUI] Phase 3a complete");
 
                         // Phase 3b: Recalculate indices (separate callback)

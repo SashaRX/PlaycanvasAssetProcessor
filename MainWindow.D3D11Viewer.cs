@@ -339,7 +339,9 @@ namespace AssetProcessor {
                 }
 
                 // Don't intercept if texture viewer is not visible (model viewer may be active)
-                if (D3D11TextureViewer.Visibility != Visibility.Visible) {
+                // Check both D3D11TextureViewer and its parent container (TextureViewerScroll)
+                if (D3D11TextureViewer.Visibility != Visibility.Visible ||
+                    TextureViewerScroll.Visibility != Visibility.Visible) {
                     return;
                 }
 

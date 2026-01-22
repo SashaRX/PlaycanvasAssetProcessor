@@ -5093,19 +5093,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             MaterialsDataGrid.Visibility = Visibility.Visible;
             logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete");
 
-            // Phase 2: Bind TexturesDataGrid (deferred - this is the heavy part)
+            // Phase 2: Show TexturesDataGrid FIRST (empty) - let WPF do initial layout
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Binding TexturesDataGrid...");
-                viewModel.ProgressText = "Loading textures list...";
-                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Textures"));
-                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: TexturesDataGrid bound");
+                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Showing empty TexturesDataGrid...");
+                viewModel.ProgressText = "Preparing textures list...";
+                TexturesDataGrid.Visibility = Visibility.Visible;
+                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: TexturesDataGrid visible (empty)");
 
-                // Phase 3: Show TexturesDataGrid (deferred)
+                // Phase 3: Bind data AFTER DataGrid is visible
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3: Showing TexturesDataGrid...");
-                    TexturesDataGrid.Visibility = Visibility.Visible;
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 complete: TexturesDataGrid visible");
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3: Binding TexturesDataGrid...");
+                    viewModel.ProgressText = "Loading textures list...";
+                    TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                        new System.Windows.Data.Binding("Textures"));
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 complete: TexturesDataGrid bound");
 
                     // Phase 4: Apply grouping (deferred)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {

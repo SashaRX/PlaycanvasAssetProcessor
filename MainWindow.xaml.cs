@@ -5035,6 +5035,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         groupTimer.Stop();
                         logger.Info("[ApplyAssetsToUI] Timer: Applying grouping");
                         ApplyTextureGroupingIfEnabled();
+                        viewModel.ProgressValue = viewModel.ProgressMaximum;
                         viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
                         _ = ServerAssetsPanel.RefreshServerAssetsAsync();
                     };

@@ -5101,9 +5101,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
             System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: BEFORE TexturesDataGrid.Visible");
-            TexturesDataGrid.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: AFTER TexturesDataGrid.Visible");
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete: All DataGrids visible (no grouping)");
+            // TEMPORARILY SKIP showing TexturesDataGrid to test if it's causing the freeze
+            // TexturesDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete (TexturesDataGrid SKIPPED for debug)");
+            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: AFTER Phase 1 log");
 
             // Phase 2: Use ContextIdle priority - runs AFTER WPF finishes rendering
             // Normal priority might get blocked by pending render operations

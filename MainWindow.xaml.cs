@@ -5023,12 +5023,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     // Phase 3: Sync and show (deferred to allow message pump)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                         logger.Info("[ApplyAssetsToUI] Phase 3: Sync and show");
+                        NLog.LogManager.Flush();
 
                         viewModel.SyncMaterialMasterMappings();
+                        logger.Info("[ApplyAssetsToUI] Phase 3: SyncMaterialMasterMappings done");
+                        NLog.LogManager.Flush();
+
                         folderPaths = new Dictionary<int, string>(e.FolderPaths);
                         RecalculateIndices();
+                        logger.Info("[ApplyAssetsToUI] Phase 3: RecalculateIndices done");
+                        NLog.LogManager.Flush();
 
-                        logger.Info("[ApplyAssetsToUI] Phase 3: Data assigned, showing DataGrids");
+                        logger.Info("[ApplyAssetsToUI] Phase 3: Calling ShowDataGridsAndApplyGrouping");
                         ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
 
                         // Auto-refresh server assets
@@ -5057,30 +5063,42 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding and showing without grouping...");
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding...");
+            NLog.LogManager.Flush();
             viewModel.ProgressText = "Rendering...";
 
             // Phase 1: Bind and show ALL DataGrids WITHOUT grouping
-            // This is fast because WPF only virtualizes rows without group headers
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
+            logger.Info("[ShowDataGridsAndApplyGrouping] Models bound");
+
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
+            logger.Info("[ShowDataGridsAndApplyGrouping] Materials bound");
+
             TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Textures"));
+            logger.Info("[ShowDataGridsAndApplyGrouping] Textures bound");
+            NLog.LogManager.Flush();
 
             // Show all DataGrids immediately (no grouping yet = fast)
+            logger.Info("[ShowDataGridsAndApplyGrouping] Showing ModelsDataGrid...");
             ModelsDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] Showing MaterialsDataGrid...");
             MaterialsDataGrid.Visibility = Visibility.Visible;
+            logger.Info("[ShowDataGridsAndApplyGrouping] Showing TexturesDataGrid...");
+            NLog.LogManager.Flush();
             TexturesDataGrid.Visibility = Visibility.Visible;
             logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete: All DataGrids visible (no grouping)");
+            NLog.LogManager.Flush();
 
             // Phase 2: Defer grouping to separate message to allow UI to breathe
-            // Using Normal priority ensures message pump can process window messages between phases
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Applying grouping...");
+                NLog.LogManager.Flush();
                 ApplyTextureGroupingIfEnabled();
                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: Grouping applied");
+                NLog.LogManager.Flush();
                 viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
             });

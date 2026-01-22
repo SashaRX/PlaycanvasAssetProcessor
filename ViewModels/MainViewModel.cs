@@ -874,6 +874,7 @@ namespace AssetProcessor.ViewModels {
             }
 
             logger.Info($"[SyncMaterialMasterMappings] Loop done. Processed {processedCount}, synced {syncedCount}");
+            NLog.LogManager.Flush();  // Force log flush to see exact freeze point
         }
 
         /// <summary>

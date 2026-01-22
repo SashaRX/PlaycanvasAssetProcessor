@@ -335,24 +335,12 @@ namespace AssetProcessor {
 
         // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
         private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (!texturePreviewService.IsUsingD3D11Renderer) {
+            // PreviewMouseWheel tunnels from parent Grid - no need for complex position checks
+            if (!texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null) {
                 return;
             }
 
-            if (sender is FrameworkElement element) {
-                Point position = e.GetPosition(element);
-                if (position.X < 0 || position.Y < 0 || position.X > element.ActualWidth || position.Y > element.ActualHeight) {
-                    return;
-                }
-
-                if (!element.IsMouseOver) {
-                    return;
-                }
-            } else if (TexturePreviewViewport is FrameworkElement viewport && !viewport.IsMouseOver) {
-                return;
-            }
-
-            D3D11TextureViewer?.HandleZoomFromWpf(e.Delta);
+            D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
             e.Handled = true;
         }
 

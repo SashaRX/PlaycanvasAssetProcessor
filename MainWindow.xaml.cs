@@ -5084,27 +5084,23 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Starting");
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding...");
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding Models/Materials only...");
             viewModel.ProgressText = "Rendering...";
 
-            // Phase 1: Bind and show ALL DataGrids WITHOUT grouping
+            // Phase 1: Bind and show ONLY Models and Materials DataGrids
+            // SKIP TexturesDataGrid entirely to test if it causes freeze
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
-            TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                new System.Windows.Data.Binding("Textures"));
-            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Bindings set");
+            // SKIP: TexturesDataGrid.SetBinding - testing if this is the freeze cause
+            logger.Info("[ShowDataGridsAndApplyGrouping] Bindings set (TexturesDataGrid SKIPPED)");
 
-            // Show all DataGrids immediately (no grouping yet = fast)
+            // Show Models and Materials only
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: BEFORE TexturesDataGrid.Visible");
-            // TEMPORARILY SKIP showing TexturesDataGrid to test if it's causing the freeze
-            // TexturesDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete (TexturesDataGrid SKIPPED for debug)");
-            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: AFTER Phase 1 log");
+            // SKIP: TexturesDataGrid.Visibility
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete (TexturesDataGrid FULLY SKIPPED)");
 
             // Phase 2: Use ContextIdle priority - runs AFTER WPF finishes rendering
             // Normal priority might get blocked by pending render operations

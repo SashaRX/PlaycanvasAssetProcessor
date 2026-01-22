@@ -64,7 +64,7 @@ namespace AssetProcessor {
             SourceInitialized += (s, e) => {
                 _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
                 _hwndSource?.AddHook(WndProcHook);
-                logger.Info($"[AltTab] Win32 WndProc hook installed. Initial _isWindowActive={_isWindowActive}");
+                logger.Debug($"Win32 WndProc hook installed. Initial _isWindowActive={_isWindowActive}");
             };
 
             Closed += (s, e) => {
@@ -90,12 +90,12 @@ namespace AssetProcessor {
 
                     bool hasPendingData = _pendingAssetsData != null;
                     bool hasPendingGridShow = _pendingDataGridShow;
-                    logger.Info($"[AltTab] WM_ACTIVATEAPP: DEACTIVATED. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
+                    logger.Debug($"WM_ACTIVATEAPP: DEACTIVATED. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
                 } else {
                     // Activation - schedule delayed re-enable
                     bool hasPendingData = _pendingAssetsData != null;
                     bool hasPendingGridShow = _pendingDataGridShow;
-                    logger.Info($"[AltTab] WM_ACTIVATEAPP: ACTIVATING. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
+                    logger.Debug($"WM_ACTIVATEAPP: ACTIVATING. PendingData={hasPendingData}, PendingGridShow={hasPendingGridShow}");
                     ScheduleDelayedActivation();
                 }
             }
@@ -112,7 +112,7 @@ namespace AssetProcessor {
                         _activationCts?.Cancel();
                     }
 
-                    logger.Info("[AltTab] WM_ACTIVATE: INACTIVE (Win32 level)");
+                    logger.Debug("WM_ACTIVATE: INACTIVE (Win32 level)");
                 }
             }
 
@@ -135,7 +135,7 @@ namespace AssetProcessor {
                 try {
                     if (hasPendingData) {
                         // Shorter delay when there's pending data (200ms for basic stability)
-                        logger.Info("[AltTab] Using short activation delay - pending data exists");
+                        logger.Debug("Using short activation delay - pending data exists");
                         await Task.Delay(200, cts.Token);
                     } else {
                         // Full delay for stable focus when no pending data (2 seconds)
@@ -159,7 +159,7 @@ namespace AssetProcessor {
 
                             // Apply pending assets data that was deferred when window was inactive
                             if (_pendingAssetsData != null) {
-                                logger.Info("[AltTab] Applying deferred assets data");
+                                logger.Debug("Applying deferred assets data after window activation");
                                 var pendingData = _pendingAssetsData;
                                 _pendingAssetsData = null;
                                 ApplyAssetsToUI(pendingData);
@@ -168,7 +168,7 @@ namespace AssetProcessor {
                             // Show DataGrids that were deferred when window was inactive
                             ApplyPendingDataGridShow();
 
-                            logger.Info($"[AltTab] Render ENABLED after {(hasPendingData ? "200ms" : "2s")} stable focus");
+                            logger.Debug($"Render ENABLED after {(hasPendingData ? "200ms" : "2s")} stable focus");
                         }
                     });
                 } catch (OperationCanceledException) {

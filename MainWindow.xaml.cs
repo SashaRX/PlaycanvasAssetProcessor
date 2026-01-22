@@ -2521,8 +2521,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                         string ormName = ormTexture.Name ?? "unknown";
                         logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
 
-                        // DIAGNOSTIC: Add delay to let LoadTexture complete first
-                        // This tests if the freeze is caused by concurrent execution
+                        // Small delay to let LoadTexture complete first (prevents concurrent execution issues)
                         _ = Task.Run(async () => {
                             try {
                                 // Wait for LoadTexture to complete (queued via BeginInvoke)

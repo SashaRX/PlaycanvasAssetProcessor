@@ -37,8 +37,6 @@ namespace AssetProcessor {
         }
 
         private async Task<bool> LoadAssetsFromJsonFileAsync() {
-            logger.Info("[LoadAssetsFromJsonFileAsync] >>> ENTRY");
-
             if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
                 logService.LogError("Project folder path or name is null or empty");
                 return false;
@@ -49,7 +47,6 @@ namespace AssetProcessor {
             viewModel.ProgressText = "Loading...";
 
             try {
-                logger.Info("[LoadAssetsFromJsonFileAsync] Before ExecuteAsync");
                 // Use ViewModel command which handles threading correctly
                 await viewModel.AssetLoading.LoadAssetsCommand.ExecuteAsync(new ViewModels.AssetLoadRequest {
                     ProjectFolderPath = ProjectFolderPath,
@@ -57,7 +54,6 @@ namespace AssetProcessor {
                     ProjectsBasePath = AppSettings.Default.ProjectsFolderPath,
                     ProjectId = CurrentProjectId
                 });
-                logger.Info("[LoadAssetsFromJsonFileAsync] After ExecuteAsync");
 
                 // Start file watcher
                 StartFileWatcher();

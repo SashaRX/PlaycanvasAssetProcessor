@@ -516,7 +516,7 @@
                                 VirtualizingPanel.IsVirtualizing="True"
                                 VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                                 VirtualizingPanel.VirtualizationMode="Recycling"
-                                VirtualizingPanel.ScrollUnit="Pixel"
+                                VirtualizingPanel.ScrollUnit="Item"
                                 EnableRowVirtualization="True"
                                 EnableColumnVirtualization="False"
                                 ScrollViewer.CanContentScroll="True"

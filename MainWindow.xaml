@@ -514,7 +514,7 @@
                                 Background="{DynamicResource ThemeDataGridBackground}"
                                 RowHeight="16"
                                 VirtualizingPanel.IsVirtualizing="True"
-                                VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                                VirtualizingPanel.IsVirtualizingWhenGrouping="False"
                                 VirtualizingPanel.VirtualizationMode="Standard"
                                 VirtualizingPanel.ScrollUnit="Pixel"
                                 EnableRowVirtualization="True"

@@ -5022,29 +5022,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     // Phase 3a: Sync material mappings (separate callback)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                        System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3a: BEFORE SyncMaterialMasterMappings");
                         logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings starting");
-                        NLog.LogManager.Flush();
                         try {
                             viewModel.SyncMaterialMasterMappings();
                         } catch (Exception ex) {
                             logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
                         }
+                        System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3a: AFTER SyncMaterialMasterMappings");
                         logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings complete");
-                        NLog.LogManager.Flush();
 
                         // Phase 3b: Recalculate indices (separate callback)
                         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                            System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3b: BEFORE RecalculateIndices");
                             logger.Info("[ApplyAssetsToUI] Phase 3b: RecalculateIndices starting");
-                            NLog.LogManager.Flush();
                             folderPaths = new Dictionary<int, string>(e.FolderPaths);
                             RecalculateIndices();
+                            System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3b: AFTER RecalculateIndices");
                             logger.Info("[ApplyAssetsToUI] Phase 3b: RecalculateIndices complete");
-                            NLog.LogManager.Flush();
 
                             // Phase 3c: Show DataGrids (separate callback)
                             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                                System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3c: ShowDataGridsAndApplyGrouping");
                                 logger.Info("[ApplyAssetsToUI] Phase 3c: ShowDataGridsAndApplyGrouping");
-                                NLog.LogManager.Flush();
                                 ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
                                 _ = ServerAssetsPanel.RefreshServerAssetsAsync();
                             });
@@ -5073,42 +5073,34 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Starting");
             logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding...");
-            NLog.LogManager.Flush();
             viewModel.ProgressText = "Rendering...";
 
             // Phase 1: Bind and show ALL DataGrids WITHOUT grouping
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
-            logger.Info("[ShowDataGridsAndApplyGrouping] Models bound");
-
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
-            logger.Info("[ShowDataGridsAndApplyGrouping] Materials bound");
-
             TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Textures"));
-            logger.Info("[ShowDataGridsAndApplyGrouping] Textures bound");
-            NLog.LogManager.Flush();
+            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Bindings set");
 
             // Show all DataGrids immediately (no grouping yet = fast)
-            logger.Info("[ShowDataGridsAndApplyGrouping] Showing ModelsDataGrid...");
             ModelsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] Showing MaterialsDataGrid...");
             MaterialsDataGrid.Visibility = Visibility.Visible;
-            logger.Info("[ShowDataGridsAndApplyGrouping] Showing TexturesDataGrid...");
-            NLog.LogManager.Flush();
+            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: BEFORE TexturesDataGrid.Visible");
             TexturesDataGrid.Visibility = Visibility.Visible;
+            System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: AFTER TexturesDataGrid.Visible");
             logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete: All DataGrids visible (no grouping)");
-            NLog.LogManager.Flush();
 
             // Phase 2: Defer grouping to separate message to allow UI to breathe
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
+                System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Phase 2 starting");
                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Applying grouping...");
-                NLog.LogManager.Flush();
                 ApplyTextureGroupingIfEnabled();
+                System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Phase 2 complete");
                 logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: Grouping applied");
-                NLog.LogManager.Flush();
                 viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
             });

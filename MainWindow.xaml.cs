@@ -1510,15 +1510,11 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
 
 private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e) {
             if (e?.Row?.DataContext is TextureResource texture) {
-                // Initialize conversion settings for the texture if not already set
-                // ��������� ������ ���� ���, ����� �� �������� ������� �������� ��� ������ �����������
-                if (string.IsNullOrEmpty(texture.CompressionFormat)) {
+                // Initialize conversion settings for the texture if not already done
+                // Use flag to prevent repeated initialization on every scroll
+                if (!texture.IsConversionSettingsInitialized) {
                     InitializeTextureConversionSettings(texture);
                 }
-
-                // �� ������������� ���� ���� ����� - �� ��� ���������� ����� Style � XAML
-                // ��� ������������� ������ �������� ��� ������ ����������� ������ �� ����� ����������
-                // ���� ���� ����������� ����� DataTrigger � DataGrid.RowStyle
             }
         }
 
@@ -4420,7 +4416,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         // Initialize compression format and preset for texture without updating UI panel
         // ��������������: ���������� ������������ PresetManager � ����������� �������� ������
         private void InitializeTextureConversionSettings(TextureResource texture) {
-            // ������� ������������� ��� �������� ������ - ��� �������� ����������� �������
+            // Mark as initialized first to prevent re-entry on scroll
+            texture.IsConversionSettingsInitialized = true;
+
+            // Базовая инициализация для текстуры - без тяжелых операций чтения
             var textureType = TextureResource.DetermineTextureType(texture.Name ?? "");
             var profile = TextureConversion.Core.MipGenerationProfile.CreateDefault(
                 MapTextureTypeToCore(textureType));
@@ -4430,7 +4429,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             // (from KTX2 metadata or after compression process)
 
             // Auto-detect preset by filename if not already set
-            // ���������� ������������ PresetManager ��� ��������� �������� ������ ��� ������ �������������
             if (string.IsNullOrEmpty(texture.PresetName)) {
                 var matchedPreset = cachedPresetManager.FindPresetByFileName(texture.Name ?? "");
                 texture.PresetName = matchedPreset?.Name ?? "";

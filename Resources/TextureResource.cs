@@ -9,6 +9,11 @@ namespace AssetProcessor.Resources {
         public virtual bool IsORMTexture => false;
 
         /// <summary>
+        /// Flag to track if conversion settings have been initialized (prevents repeated initialization on scroll)
+        /// </summary>
+        public bool IsConversionSettingsInitialized { get; set; }
+
+        /// <summary>
         /// Computed row background color based on texture type (theme-aware, cached)
         /// </summary>
         public Brush RowBackground {

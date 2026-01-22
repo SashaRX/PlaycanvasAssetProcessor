@@ -2404,12 +2404,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// Called after loading assets to apply default grouping.
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
+            logger.Info("[ApplyTextureGroupingIfEnabled] Starting...");
             ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            if (view == null || !view.CanGroup) return;
+            if (view == null || !view.CanGroup) {
+                logger.Info("[ApplyTextureGroupingIfEnabled] View is null or cannot group");
+                return;
+            }
 
             if (GroupTexturesCheckBox.IsChecked == true) {
+                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping enabled, setting virtualization...");
                 // CRITICAL: Use Standard mode WITH IsVirtualizingWhenGrouping
-                // Recycling mode causes WPF crash, but Standard mode should work
                 VirtualizingPanel.SetIsVirtualizing(TexturesDataGrid, true);
                 VirtualizingPanel.SetIsVirtualizingWhenGrouping(TexturesDataGrid, true);
                 VirtualizingPanel.SetVirtualizationMode(TexturesDataGrid, VirtualizationMode.Standard);
@@ -2419,11 +2423,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 // Only modify if not already grouped correctly
                 if (view.GroupDescriptions.Count != 2 ||
                     (view.GroupDescriptions[0] as PropertyGroupDescription)?.PropertyName != "GroupName") {
-                    view.GroupDescriptions.Clear();
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
+                    logger.Info("[ApplyTextureGroupingIfEnabled] Applying group descriptions with DeferRefresh...");
+                    // Use DeferRefresh to batch all changes and only refresh once
+                    using (view.DeferRefresh()) {
+                        view.GroupDescriptions.Clear();
+                        view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
+                        view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
+                    }
+                    logger.Info("[ApplyTextureGroupingIfEnabled] Group descriptions applied");
                 }
             } else {
+                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping disabled");
                 if (view.GroupDescriptions.Count > 0) {
                     view.GroupDescriptions.Clear();
                 }
@@ -2434,6 +2444,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 VirtualizingPanel.SetScrollUnit(TexturesDataGrid, ScrollUnit.Pixel);
                 ScrollViewer.SetCanContentScroll(TexturesDataGrid, true);
             }
+            logger.Info("[ApplyTextureGroupingIfEnabled] Complete");
         }
 
         /// <summary>

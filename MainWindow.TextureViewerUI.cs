@@ -270,14 +270,6 @@ namespace AssetProcessor {
             return GetScaleMultiplier(imageWidth, imageHeight);
         }
 
-        private static double ClampNormalized(double value) {
-            if (!double.IsFinite(value)) {
-                return 0.5;
-            }
-
-            return Math.Clamp(value, 0.0, 1.0);
-        }
-
         // Updated: Use D3D11 viewer for texture preview
         private void UpdatePreviewImage(BitmapSource bitmap, bool setReference, bool preserveViewport) {
             if (bitmap == null || D3D11TextureViewer == null) return;
@@ -288,30 +280,6 @@ namespace AssetProcessor {
             } catch (Exception ex) {
                 logger.Error(ex, "Exception in UpdatePreviewImage");
             }
-        }
-
-        // LEGACY: UpdateZoomUi removed - controls deleted
-        // private void UpdateZoomUi() {
-        //     if (ZoomValueTextBlock != null) {
-        //         ZoomValueTextBlock.Text = $"{currentZoom * 100:0.#}%";
-        //     }
-        //
-        //     if (ZoomSlider != null) {
-        //         bool previous = isUpdatingZoomSlider;
-        //         isUpdatingZoomSlider = true;
-        //         ZoomSlider.Value = currentZoom;
-        //         isUpdatingZoomSlider = previous;
-        //     }
-        // }
-
-        // LEGACY: ScheduleFitZoomUpdate disabled
-        private void ScheduleFitZoomUpdate(bool forceApply) {
-            // Disabled for fallback mode
-        }
-
-        // LEGACY: RecalculateFitZoom disabled
-        private void RecalculateFitZoom(bool apply) {
-            // Disabled for fallback mode
         }
 
         private static (double width, double height) GetImageSizeInDips(BitmapSource bitmap) {
@@ -331,84 +299,6 @@ namespace AssetProcessor {
             double width = bitmap.PixelWidth * 96.0 / dpiX;
             double height = bitmap.PixelHeight * 96.0 / dpiY;
             return (width, height);
-        }
-
-        private (double width, double height) GetViewportSize() {
-            if (TexturePreviewViewport != null) {
-                double width = TexturePreviewViewport.ActualWidth;
-                double height = TexturePreviewViewport.ActualHeight;
-
-                if (double.IsNaN(width) || width < 0) {
-                    width = 0;
-                }
-
-                if (double.IsNaN(height) || height < 0) {
-                    height = 0;
-                }
-
-                return (width, height);
-            }
-
-            return (0, 0);
-        }
-
-        private double GetEffectiveZoom(BitmapSource bitmap, double zoom) {
-            EnsurePreviewReferenceSize(bitmap);
-            double scaleMultiplier = GetScaleMultiplier(bitmap);
-            double effectiveZoom = zoom * scaleMultiplier;
-            if (!double.IsFinite(effectiveZoom) || effectiveZoom <= 0) {
-                effectiveZoom = 1.0;
-            }
-
-            return effectiveZoom;
-        }
-
-        // LEGACY: UpdateTransform disabled - using simple Stretch="Uniform" instead
-        private void UpdateTransform(bool rebuildFromCenter) {
-            // Disabled for fallback mode
-        }
-
-        // LEGACY: ApplyFitZoom disabled
-        private void ApplyFitZoom() {
-            // Disabled for fallback mode
-        }
-
-        private void ApplyZoomWithPivot(double newZoom, Point pivot) {
-            // LEGACY: Now handled by D3D11 viewer
-        }
-
-        private void SetZoomAndCenter(double zoom) {
-            // LEGACY: Now handled by D3D11 viewer
-        }
-
-        private void ResetPan() {
-            // LEGACY: Now handled by D3D11 viewer
-        }
-
-        private Point ToImageSpace(Point referencePoint, FrameworkElement referenceElement) {
-            // LEGACY: Now handled by D3D11 viewer
-            return referencePoint;
-        }
-
-        private Point GetViewportCenterInImageSpace() {
-            // LEGACY: Now handled by D3D11 viewer
-            return new Point(0, 0);
-        }
-
-        private FrameworkElement? GetPanReferenceElement() {
-            return TexturePreviewViewport;
-        }
-
-        private void StartPanning(Point startPosition) {
-            // LEGACY: Now handled by D3D11 viewer mouse events
-        }
-
-        private void StopPanning() {
-            // LEGACY: Now handled by D3D11 viewer mouse events
-        }
-
-        private void ApplyPanDelta(Vector delta) {
-            // LEGACY: Now handled by D3D11 viewer
         }
 
         private void UpdatePreviewSourceControls() {
@@ -489,49 +379,6 @@ namespace AssetProcessor {
             return (byte)Math.Clamp(corrected * 255.0f, 0, 255);
         }
 
-        // Removed: PreviewWidthSlider methods (slider was removed from UI)
-        // Removed: Old TexturePreviewViewport_SizeChanged and TexturePreviewImage_SizeChanged (now handled by D3D11)
-
-        // LEGACY: Mouse wheel zoom removed
-
-        // LEGACY: Zoom/Pan controls removed - fallback to simple preview
-        // private void ZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-        //     if (isUpdatingZoomSlider || TexturePreviewImage?.Source == null) {
-        //         return;
-        //     }
-        //
-        //     double newZoom = e.NewValue;
-        //     if (double.IsNaN(newZoom) || newZoom <= 0) {
-        //         return;
-        //     }
-        //
-        //     Point pivot = GetViewportCenterInImageSpace();
-        //     ApplyZoomWithPivot(newZoom, pivot);
-        // }
-        //
-        // private void FitZoomButton_Click(object sender, RoutedEventArgs e) {
-        //     if (TexturePreviewImage?.Source == null) {
-        //         return;
-        //     }
-        //
-        //     isFitMode = true;
-        //     ScheduleFitZoomUpdate(true);
-        // }
-        //
-        // private void Zoom100Button_Click(object sender, RoutedEventArgs e) {
-        //     SetZoomAndCenter(1.0);
-        // }
-        //
-        // private void Zoom200Button_Click(object sender, RoutedEventArgs e) {
-        //     SetZoomAndCenter(2.0);
-        // }
-        //
-        // private void ResetPanButton_Click(object sender, RoutedEventArgs e) {
-        //     ResetPan();
-        // }
-
-        // LEGACY: Old mouse event handlers removed - now handled by D3D11 viewer overlay
-
         private void TextureViewerScroll_SizeChanged(object sender, SizeChangedEventArgs e) {
             ClampPreviewContentHeight();
         }
@@ -572,8 +419,6 @@ namespace AssetProcessor {
             double clampedHeight = Math.Clamp(desiredHeight, MinPreviewContentHeight, MaxPreviewContentHeight);
             PreviewContentRow.Height = new GridLength(clampedHeight);
         }
-
-        // Removed: UpdatePreviewWidthText (PreviewWidthSlider was removed)
 
         private void PreviewSourceRadioButton_Checked(object sender, RoutedEventArgs e) {
             if (texturePreviewService.IsUpdatingPreviewSourceControls) {
@@ -826,7 +671,6 @@ namespace AssetProcessor {
                 UpdateHistogram(texturePreviewService.OriginalBitmapSource);
             }));
 
-            ScheduleFitZoomUpdate(false);
             UpdateMipmapInfo(mip, texturePreviewService.CurrentKtxMipmaps.Count);
         }
 
@@ -964,7 +808,6 @@ namespace AssetProcessor {
 
                     UpdateChannelButtonsState();
                     UpdateHistogram(texturePreviewService.OriginalBitmapSource);
-                    ScheduleFitZoomUpdate(recalculateFitZoom);
 
                     // AUTO-ENABLE Normal reconstruction for normal map viewModel.Textures (PNG)
                     // Must be AFTER all reset operations to prevent being cleared

@@ -49,10 +49,6 @@ namespace AssetProcessor.Helpers {
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
             throw new NotImplementedException();
         }
-
-        internal string Convert(object value, object targetType, object parameter, object culture) {
-            throw new NotImplementedException();
-        }
     }
 
     public class ResolutionConverter : IValueConverter {

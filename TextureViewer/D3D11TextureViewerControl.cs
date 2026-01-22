@@ -155,19 +155,103 @@ public class D3D11TextureViewerControl : HwndHost {
     }
 
     /// <summary>
-    /// Handle zoom from WPF mouse wheel event.
-    /// Call this from PreviewMouseWheel in parent window.
+    /// Handle zoom from WPF mouse wheel event with cursor position.
+    /// Call this from Win32 message hook in parent window.
     /// </summary>
-    public void HandleZoomFromWpf(int delta) {
-        if (renderer == null) return;
+    /// <param name="delta">Mouse wheel delta</param>
+    /// <param name="screenX">Mouse X in screen coordinates</param>
+    /// <param name="screenY">Mouse Y in screen coordinates</param>
+    public void HandleZoomFromWpf(int delta, int screenX, int screenY) {
+        if (renderer == null || hwndHost == IntPtr.Zero) return;
 
-        // Zoom with mouse wheel
+        // Convert screen coordinates to client coordinates
+        POINT pt = new POINT { x = screenX, y = screenY };
+        ScreenToClient(hwndHost, ref pt);
+
+        // Get client area size
+        if (!GetClientRect(hwndHost, out RECT clientRect)) {
+            return;
+        }
+
+        int clientWidth = clientRect.right - clientRect.left;
+        int clientHeight = clientRect.bottom - clientRect.top;
+
+        // Ignore if outside client bounds
+        if (pt.x < 0 || pt.y < 0 || pt.x >= clientWidth || pt.y >= clientHeight) {
+            return;
+        }
+
+        // Get D3D11 viewport size
+        int viewportWidth = renderer.ViewportWidth;
+        int viewportHeight = renderer.ViewportHeight;
+
+        if (clientWidth <= 0 || clientHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+            // Fallback to simple zoom
+            zoom *= delta > 0 ? 1.1f : 0.9f;
+            zoom = Math.Clamp(zoom, 0.125f, 16.0f);
+            renderer.SetZoom(zoom);
+            renderer.Render();
+            return;
+        }
+
+        // Scale mouse coordinates from client rect space to viewport space
+        float mouseInViewportX = pt.x * (float)viewportWidth / clientWidth;
+        float mouseInViewportY = pt.y * (float)viewportHeight / clientHeight;
+
+        // Get texture dimensions
+        int texWidth = renderer.TextureWidth;
+        int texHeight = renderer.TextureHeight;
+        if (texWidth <= 0 || texHeight <= 0) {
+            // No texture loaded, fallback to simple zoom
+            zoom *= delta > 0 ? 1.1f : 0.9f;
+            zoom = Math.Clamp(zoom, 0.125f, 16.0f);
+            renderer.SetZoom(zoom);
+            renderer.Render();
+            return;
+        }
+
+        // Calculate aspect ratios (MUST match D3D11TextureRenderer.UpdateConstantBuffer!)
+        float viewportAspect = (float)viewportWidth / viewportHeight;
+        float textureAspect = (float)texWidth / texHeight;
+
+        // Calculate posScale (aspect ratio correction)
+        float posScaleX, posScaleY;
+        if (viewportAspect > textureAspect) {
+            posScaleX = textureAspect / viewportAspect;
+            posScaleY = 1.0f;
+        } else {
+            posScaleX = 1.0f;
+            posScaleY = viewportAspect / textureAspect;
+        }
+
+        // Convert mouse position to NDC space [-1, 1]
+        float mouseNDCX = (mouseInViewportX / viewportWidth) * 2.0f - 1.0f;
+        float mouseNDCY = -((mouseInViewportY / viewportHeight) * 2.0f - 1.0f);
+
+        // Convert from NDC space to UV space [0, 1]
+        float quadLocalX = (mouseNDCX + 1.0f) * 0.5f;
+        float quadLocalY = (1.0f - (mouseNDCY + 1.0f) * 0.5f);
+
+        // Aspect-correction
+        float aspectUvX = (quadLocalX - 0.5f) / posScaleX + 0.5f;
+        float aspectUvY = (quadLocalY - 0.5f) / posScaleY + 0.5f;
+
+        // Find UV coordinate under mouse
+        float uvUnderMouseX = aspectUvX * (1.0f / zoom) + panX;
+        float uvUnderMouseY = aspectUvY * (1.0f / zoom) + panY;
+
+        // Apply zoom change
         float zoomDelta = delta > 0 ? 1.1f : 0.9f;
         zoom *= zoomDelta;
         zoom = Math.Clamp(zoom, 0.125f, 16.0f);
 
+        // Calculate new pan to keep UV point under mouse stationary
+        panX = uvUnderMouseX - aspectUvX * (1.0f / zoom);
+        panY = uvUnderMouseY - aspectUvY * (1.0f / zoom);
+
         renderer.SetZoom(zoom);
-        renderer.Render(); // Immediate visual update (don't rely on render loop)
+        renderer.SetPan(panX, panY);
+        renderer.Render();
     }
 
     // Static dictionary to map HWND to control instances for WndProc routing

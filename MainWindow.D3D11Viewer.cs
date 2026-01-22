@@ -175,6 +175,9 @@ namespace AssetProcessor {
         private void MainWindow_Loaded(object sender, RoutedEventArgs e) {
             logger.Info("MainWindow loaded - D3D11 viewer ready");
 
+            // Hook into Win32 message loop to catch WM_MOUSEWHEEL before WPF
+            System.Windows.Interop.ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
+
             // Apply UseD3D11Preview setting on startup
             bool useD3D11 = AppSettings.Default.UseD3D11Preview;
             _ = ApplyRendererPreferenceAsync(useD3D11);
@@ -292,14 +295,10 @@ namespace AssetProcessor {
         }
 
         // Mouse wheel zoom handler for D3D11 viewer
-        // IMPORTANT: HwndHost does NOT receive WPF routed events, so we handle on parent Grid
-        // CRITICAL: e.GetPosition() is also buggy for HwndHost! Use Mouse.GetPosition()!
+        // Note: This handler is never called when mouse is over HwndHost
+        // ComponentDispatcher_ThreadFilterMessage handles zoom at Win32 level
         private void TexturePreviewViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            if (!texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null || sender is not Grid grid) {
-                return; // Let event bubble for scrolling
-            }
-            D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
-            e.Handled = true;
+            // ComponentDispatcher_ThreadFilterMessage handles zoom for HwndHost with cursor position
         }
 
         private void TexturePreviewViewport_MouseEnter(object sender, MouseEventArgs e) {
@@ -328,15 +327,51 @@ namespace AssetProcessor {
             Keyboard.ClearFocus();
         }
 
-        // Mouse wheel zoom handler for D3D11 viewer (WM_MOUSEWHEEL goes to parent for child windows)
-        private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            // PreviewMouseWheel tunnels from parent Grid - no need for complex position checks
-            if (!texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null) {
-                return;
-            }
+        private const int WM_MOUSEWHEEL = 0x020A;
 
-            D3D11TextureViewer.HandleZoomFromWpf(e.Delta);
-            e.Handled = true;
+        // Win32 message hook - catches WM_MOUSEWHEEL before WPF processes it
+        // Required because HwndHost (D3D11TextureViewer) doesn't participate in WPF routed events
+        private void ComponentDispatcher_ThreadFilterMessage(ref System.Windows.Interop.MSG msg, ref bool handled) {
+            if (msg.message == WM_MOUSEWHEEL && !handled) {
+                // Check if D3D11 renderer is active and visible
+                if (TexturePreviewViewport == null || !texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null) {
+                    return;
+                }
+
+                // Don't intercept if texture viewer is not visible (model viewer may be active)
+                if (D3D11TextureViewer.Visibility != Visibility.Visible) {
+                    return;
+                }
+
+                // Get mouse position from lParam (screen coordinates)
+                int x = (short)(msg.lParam.ToInt64() & 0xFFFF);
+                int y = (short)((msg.lParam.ToInt64() >> 16) & 0xFFFF);
+
+                // Convert to viewport coordinates
+                Point screenPoint = new Point(x, y);
+                Point viewportPoint = TexturePreviewViewport.PointFromScreen(screenPoint);
+
+                // Check if mouse is within texture preview bounds
+                if (viewportPoint.X >= 0 && viewportPoint.Y >= 0 &&
+                    viewportPoint.X <= TexturePreviewViewport.ActualWidth &&
+                    viewportPoint.Y <= TexturePreviewViewport.ActualHeight) {
+                    // Get delta from wParam and apply zoom with cursor position
+                    short delta = (short)((msg.wParam.ToInt64() >> 16) & 0xFFFF);
+                    D3D11TextureViewer.HandleZoomFromWpf(delta, x, y);
+                    handled = true;
+                }
+            }
+        }
+
+        // Mouse wheel zoom handler for ScrollViewer - not used when ComponentDispatcher handles zoom
+        private void TextureViewerScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            // ComponentDispatcher_ThreadFilterMessage handles zoom for HwndHost
+        }
+
+        // Mouse wheel zoom handler for D3D11 viewer (backup, called from Grid)
+        // Note: This handler is never called when mouse is over HwndHost - use ComponentDispatcher instead
+        private void D3D11TextureViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            // ComponentDispatcher_ThreadFilterMessage handles zoom for HwndHost with cursor position
         }
 
         // Mouse event handlers for pan removed - now handled natively in D3D11TextureViewerControl

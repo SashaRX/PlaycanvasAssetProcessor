@@ -1184,7 +1184,7 @@
                                           Background="#FF333333"
                                           ClipToBounds="True"
                                           SizeChanged="TexturePreviewViewport_SizeChanged"
-                                          MouseWheel="D3D11TextureViewer_PreviewMouseWheel"
+                                          PreviewMouseWheel="D3D11TextureViewer_PreviewMouseWheel"
                                           MouseEnter="TexturePreviewViewport_MouseEnter"
                                           MouseLeave="TexturePreviewViewport_MouseLeave"
                                           Focusable="True">

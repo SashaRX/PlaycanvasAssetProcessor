@@ -5033,14 +5033,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                     // Phase 3a: Sync material mappings (separate callback)
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                        System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3a: SKIPPING SyncMaterialMasterMappings for debug");
-                        logger.Info("[ApplyAssetsToUI] Phase 3a: SKIPPED SyncMaterialMasterMappings (debug)");
-                        // TEMPORARILY DISABLED FOR DEBUGGING
-                        // try {
-                        //     viewModel.SyncMaterialMasterMappings();
-                        // } catch (Exception ex) {
-                        //     logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
-                        // }
+                        logger.Info("[ApplyAssetsToUI] Phase 3a: SyncMaterialMasterMappings");
+                        try {
+                            viewModel.SyncMaterialMasterMappings();
+                        } catch (Exception ex) {
+                            logger.Error(ex, "[ApplyAssetsToUI] Phase 3a: Exception in SyncMaterialMasterMappings");
+                        }
+                        logger.Info("[ApplyAssetsToUI] Phase 3a complete");
 
                         // Phase 3b: Recalculate indices (separate callback)
                         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
@@ -5053,11 +5052,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                             // Phase 3c: Show DataGrids (separate callback)
                             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, () => {
-                                System.Diagnostics.Debug.WriteLine("[DEBUG] Phase 3c: ShowDataGridsAndApplyGrouping");
                                 logger.Info("[ApplyAssetsToUI] Phase 3c: ShowDataGridsAndApplyGrouping");
                                 ShowDataGridsAndApplyGrouping(e.Textures.Count, e.Models.Count, e.Materials.Count);
-                                // B2 refresh temporarily disabled for debugging
-                                // _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
                             });
                         });
                     });
@@ -5084,35 +5081,41 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Binding Models/Materials only...");
-            viewModel.ProgressText = "Rendering...";
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1: Models/Materials...");
+            viewModel.ProgressText = "Rendering models and materials...";
 
-            // Phase 1: Bind and show ONLY Models and Materials DataGrids
-            // SKIP TexturesDataGrid entirely to test if it causes freeze
+            // Phase 1: Bind and show Models and Materials (small - fast)
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Materials"));
-            // SKIP: TexturesDataGrid.SetBinding - testing if this is the freeze cause
-            logger.Info("[ShowDataGridsAndApplyGrouping] Bindings set (TexturesDataGrid SKIPPED)");
-
-            // Show Models and Materials only
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
-            // SKIP: TexturesDataGrid.Visibility
-            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete (TexturesDataGrid FULLY SKIPPED)");
+            logger.Info("[ShowDataGridsAndApplyGrouping] Phase 1 complete");
 
-            // Phase 2: Use ContextIdle priority - runs AFTER WPF finishes rendering
-            // Normal priority might get blocked by pending render operations
-            logger.Info("[ShowDataGridsAndApplyGrouping] Scheduling Phase 2 with ContextIdle priority...");
+            // Phase 2: Bind TexturesDataGrid (deferred - this is the heavy part)
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Phase 2 starting");
-                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Applying grouping...");
-                ApplyTextureGroupingIfEnabled();
-                System.Diagnostics.Debug.WriteLine("[DEBUG] ShowDataGridsAndApplyGrouping: Phase 2 complete");
-                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: Grouping applied");
-                viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
-                viewModel.ProgressValue = viewModel.ProgressMaximum;
+                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2: Binding TexturesDataGrid...");
+                viewModel.ProgressText = "Loading textures list...";
+                TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
+                    new System.Windows.Data.Binding("Textures"));
+                logger.Info("[ShowDataGridsAndApplyGrouping] Phase 2 complete: TexturesDataGrid bound");
+
+                // Phase 3: Show TexturesDataGrid (deferred)
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3: Showing TexturesDataGrid...");
+                    TexturesDataGrid.Visibility = Visibility.Visible;
+                    logger.Info("[ShowDataGridsAndApplyGrouping] Phase 3 complete: TexturesDataGrid visible");
+
+                    // Phase 4: Apply grouping (deferred)
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
+                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 4: Applying grouping...");
+                        ApplyTextureGroupingIfEnabled();
+                        logger.Info("[ShowDataGridsAndApplyGrouping] Phase 4 complete: Grouping applied");
+                        viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
+                        viewModel.ProgressValue = viewModel.ProgressMaximum;
+                    });
+                });
             });
         }
 

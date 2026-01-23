@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using NLog;
 
 namespace AssetProcessor.TextureViewer;
@@ -26,6 +27,10 @@ public class D3D11TextureViewerControl : HwndHost {
     private float zoom = 1.0f;
     private float panX = 0.0f;
     private float panY = 0.0f;
+
+    // Debounce resize to prevent freeze during window maximize
+    private DispatcherTimer? _resizeDebounceTimer;
+    private (int width, int height) _pendingResizeSize;
 
     // Cursor handles for pan
     private IntPtr hCursorSizeAll = IntPtr.Zero;
@@ -98,8 +103,23 @@ public class D3D11TextureViewerControl : HwndHost {
                 return;
             }
 
-            renderer?.Resize(width, height);
-            logger.Debug($"D3D11 viewer resized: {width}x{height}");
+            // Debounce resize to prevent freeze during rapid resizing (window maximize)
+            _pendingResizeSize = (width, height);
+            if (_resizeDebounceTimer == null) {
+                _resizeDebounceTimer = new DispatcherTimer {
+                    Interval = TimeSpan.FromMilliseconds(16) // ~1 frame
+                };
+                _resizeDebounceTimer.Tick += (s, e) => {
+                    _resizeDebounceTimer?.Stop();
+                    var (w, h) = _pendingResizeSize;
+                    if (w > 0 && h > 0 && D3D11TextureRenderer.GlobalRenderingEnabled) {
+                        renderer?.Resize(w, h);
+                        logger.Debug($"D3D11 viewer resized: {w}x{h}");
+                    }
+                };
+            }
+            _resizeDebounceTimer.Stop();
+            _resizeDebounceTimer.Start();
         }
     }
 

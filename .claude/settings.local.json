@@ -125,7 +125,8 @@
       "Bash(start AssetProcessor.exe)",
       "Bash(echo.:*)",
       "WebFetch(domain:searchcode.com)",
-      "WebFetch(domain:www.nudoq.org)"
+      "WebFetch(domain:www.nudoq.org)",
+      "Bash(Select-Object -First 100)"
     ],
     "deny": [],
     "ask": []

@@ -1551,7 +1551,6 @@ private void TexturesDataGrid_LoadingRow(object? sender, DataGridRowEventArgs? e
             if (sender is not DataGrid grid) return;
             InitializeGridColumnsIfNeeded(grid);
             SubscribeDataGridColumnResizing(grid);
-            // Debounce UpdateColumnHeadersBasedOnWidth and FillRemainingSpace
             DebouncedResizeUpdate(grid);
         }
 
@@ -2361,27 +2360,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         #region Column Visibility Management
 
         private void GroupTexturesCheckBox_Changed(object sender, RoutedEventArgs e) {
-            // Always save the preference
             AppSettings.Default.Save();
-
-            // Skip grouping logic if ItemsSource is not yet set (during InitializeComponent)
-            if (TexturesDataGrid?.ItemsSource == null) return;
-
-            ICollectionView view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            if (view == null) return;
-
-            if (GroupTexturesCheckBox.IsChecked == true) {
-                // Virtualization settings are set in XAML - don't change VirtualizationMode at runtime
-                // (causes InvalidOperationException after Measure has been called)
-                if (view.CanGroup) {
-                    view.GroupDescriptions.Clear();
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
-                    // Второй уровень группировки для ORM подгрупп (ao/gloss/metallic/height под og/ogm/ogmh)
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
-                }
-            } else {
-                view.GroupDescriptions.Clear();
-            }
+            if (TexturesDataGrid?.ItemsSource == null || viewModel?.Textures == null) return;
+            ApplyTextureGroupingIfEnabled();
         }
 
         private void CollapseGroupsCheckBox_Changed(object sender, RoutedEventArgs e) {
@@ -2395,31 +2376,22 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
             logger.Info("[ApplyTextureGroupingIfEnabled] Starting...");
-            ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
+
+            var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
             if (view == null || !view.CanGroup) {
                 logger.Info("[ApplyTextureGroupingIfEnabled] View is null or cannot group");
                 return;
             }
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping enabled...");
-                // Virtualization settings are set in XAML - don't change VirtualizationMode at runtime
-                // (causes InvalidOperationException after Measure has been called)
-
-                // Only modify if not already grouped correctly
-                if (view.GroupDescriptions.Count != 2 ||
-                    (view.GroupDescriptions[0] as PropertyGroupDescription)?.PropertyName != "GroupName") {
-                    logger.Info("[ApplyTextureGroupingIfEnabled] Applying group descriptions with DeferRefresh...");
-                    // Use DeferRefresh to batch all changes and only refresh once
-                    using (view.DeferRefresh()) {
-                        view.GroupDescriptions.Clear();
-                        view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
-                        view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
-                    }
-                    logger.Info("[ApplyTextureGroupingIfEnabled] Group descriptions applied");
+                logger.Info("[ApplyTextureGroupingIfEnabled] Applying grouping...");
+                using (view.DeferRefresh()) {
+                    view.GroupDescriptions.Clear();
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
                 }
+                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping applied");
             } else {
-                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping disabled");
                 if (view.GroupDescriptions.Count > 0) {
                     view.GroupDescriptions.Clear();
                 }
@@ -4976,9 +4948,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private void ApplyAssetsToUI(AssetsLoadedEventArgs e) {
             logger.Info($"[ApplyAssetsToUI] Starting: {e.Textures.Count} textures, {e.Models.Count} models");
 
-            // Must run on UI thread - event may come from background thread
             Dispatcher.Invoke(() => {
-                // All sync operations in one block
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
@@ -4986,39 +4956,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 RecalculateIndices();
                 viewModel.SyncMaterialMasterMappings();
 
-                logger.Info("[ApplyAssetsToUI] Data assigned, showing DataGrids");
+                logger.Info("[ApplyAssetsToUI] Data assigned, binding DataGrids");
 
-                // Bind and show Models/Materials immediately
-                ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Models"));
-                MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                    new System.Windows.Data.Binding("Materials"));
+                // Bind all DataGrids
+                ModelsDataGrid.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("Models"));
+                MaterialsDataGrid.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("Materials"));
+                TexturesDataGrid.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("Textures"));
+
                 ModelsDataGrid.Visibility = Visibility.Visible;
                 MaterialsDataGrid.Visibility = Visibility.Visible;
+                TexturesDataGrid.Visibility = Visibility.Visible;
 
-                // Defer TexturesDataGrid with timer to prevent UI freeze
-                var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-                timer.Tick += (s, args) => {
-                    timer.Stop();
-                    logger.Info("[ApplyAssetsToUI] Timer: Binding TexturesDataGrid");
-                    TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
-                        new System.Windows.Data.Binding("Textures"));
-                    TexturesDataGrid.Visibility = Visibility.Visible;
+                // Apply grouping after binding
+                ApplyTextureGroupingIfEnabled();
 
-                    // Grouping after another delay
-                    var groupTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-                    groupTimer.Tick += (s2, args2) => {
-                        groupTimer.Stop();
-                        logger.Info("[ApplyAssetsToUI] Timer: Applying grouping");
-                        ApplyTextureGroupingIfEnabled();
-                        viewModel.ProgressValue = viewModel.ProgressMaximum;
-                        viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
-                        _ = ServerAssetsPanel.RefreshServerAssetsAsync();
-                    };
-                    groupTimer.Start();
-                };
-                timer.Start();
-                logger.Info("[ApplyAssetsToUI] Setup complete, waiting for timers");
+                viewModel.ProgressValue = viewModel.ProgressMaximum;
+                viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
+                _ = ServerAssetsPanel.RefreshServerAssetsAsync();
+                logger.Info("[ApplyAssetsToUI] Complete");
             });
         }
 
@@ -5592,6 +5547,29 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 viewPort3d?.ZoomExtents();
                 e.Handled = true;
             }
+        }
+
+        private DispatcherTimer? _windowStateTimer;
+
+        private void Window_StateChanged(object sender, EventArgs e) {
+            // Hide TexturesDataGrid during maximize/restore to prevent freeze with grouping
+            if (TexturesDataGrid == null) return;
+
+            // Only apply workaround when grouping is enabled
+            if (GroupTexturesCheckBox?.IsChecked != true) return;
+
+            // Hide DataGrid before layout recalculation
+            TexturesDataGrid.Visibility = Visibility.Hidden;
+
+            // Show after layout settles
+            _windowStateTimer?.Stop();
+            _windowStateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            _windowStateTimer.Tick += (s, args) => {
+                _windowStateTimer?.Stop();
+                _windowStateTimer = null;
+                TexturesDataGrid.Visibility = Visibility.Visible;
+            };
+            _windowStateTimer.Start();
         }
 
         #endregion

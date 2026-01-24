@@ -4958,7 +4958,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 logger.Info("[ApplyAssetsToUI] Data assigned, binding DataGrids");
 
-                // Bind all DataGrids
                 ModelsDataGrid.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("Models"));
                 MaterialsDataGrid.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("Materials"));
                 TexturesDataGrid.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("Textures"));
@@ -4967,7 +4966,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialsDataGrid.Visibility = Visibility.Visible;
                 TexturesDataGrid.Visibility = Visibility.Visible;
 
-                // Apply grouping after binding
                 ApplyTextureGroupingIfEnabled();
 
                 viewModel.ProgressValue = viewModel.ProgressMaximum;

@@ -79,6 +79,7 @@ namespace AssetProcessor {
         private readonly IAssetLoadCoordinator assetLoadCoordinator;
         private readonly IProjectFileWatcherService projectFileWatcherService;
         private readonly IKtx2InfoService ktx2InfoService;
+        private readonly IPlayCanvasCredentialsService credentialsService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
@@ -113,16 +114,13 @@ namespace AssetProcessor {
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        /// <summary>
-        /// �������� �������������� PlayCanvas API ���� �� ��������.
-        /// ������������ ��� ���� ������� PlayCanvas API ��� ���������� ������ � ������������� ����������.
-        /// </summary>
-        private static string? GetDecryptedApiKey() {
-            if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out string? apiKey)) {
-                logger.Error("�� ������� ������������ PlayCanvas API ���� �� ��������");
-                return null;
+        private bool TryGetApiKey(out string? apiKey) {
+            if (credentialsService.TryGetApiKey(out apiKey)) {
+                return true;
             }
-            return apiKey;
+
+            logService.LogError("API key is missing or could not be decrypted.");
+            return false;
         }
 
         private readonly MainViewModel viewModel;
@@ -148,6 +146,7 @@ namespace AssetProcessor {
             IAssetLoadCoordinator assetLoadCoordinator,
             IProjectFileWatcherService projectFileWatcherService,
             IKtx2InfoService ktx2InfoService,
+            IPlayCanvasCredentialsService credentialsService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -167,6 +166,7 @@ namespace AssetProcessor {
             this.assetLoadCoordinator = assetLoadCoordinator ?? throw new ArgumentNullException(nameof(assetLoadCoordinator));
             this.projectFileWatcherService = projectFileWatcherService ?? throw new ArgumentNullException(nameof(projectFileWatcherService));
             this.ktx2InfoService = ktx2InfoService ?? throw new ArgumentNullException(nameof(ktx2InfoService));
+            this.credentialsService = credentialsService ?? throw new ArgumentNullException(nameof(credentialsService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 
@@ -3601,7 +3601,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private async void Connect(object? sender, RoutedEventArgs? e) {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+            if (!credentialsService.HasStoredCredentials) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
                 SettingsWindow settingsWindow = new();
                 settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
@@ -3611,12 +3611,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             try {
-                string? apiKey = GetDecryptedApiKey();
-                if (string.IsNullOrEmpty(apiKey)) {
+                if (!TryGetApiKey(out string? apiKey)) {
                     throw new Exception("Failed to decrypt API key");
                 }
 
-                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(AppSettings.Default.UserName, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                string? username = credentialsService.Username;
+                if (string.IsNullOrEmpty(username)) {
+                    throw new Exception("Username is null or empty");
+                }
+
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 if (string.IsNullOrEmpty(projectsResult.UserId)) {
                     throw new Exception("User ID is null or empty");
                 }
@@ -3798,10 +3802,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
             string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-            string? apiKey = GetDecryptedApiKey();
-
-            if (string.IsNullOrEmpty(apiKey)) {
-                logService.LogError("API key is missing while checking for updates");
+            if (!TryGetApiKey(out string? apiKey)) {
                 return false;
             }
 
@@ -3811,7 +3812,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
             try {
-                string resolvedApiKey = apiKey ?? GetDecryptedApiKey() ?? string.Empty;
+                string resolvedApiKey = apiKey ?? credentialsService.GetApiKeyOrNull() ?? string.Empty;
                 BranchSelectionResult result = await projectSelectionService.LoadBranchesAsync(projectId, resolvedApiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
 
                 viewModel.Branches.Clear();
@@ -3842,9 +3843,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string? apiKey = GetDecryptedApiKey();
-
-                if (string.IsNullOrEmpty(apiKey)) {
+                if (!TryGetApiKey(out string? apiKey)) {
                     MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -4018,8 +4017,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logService.LogInfo("=== Initializing on startup ===");
 
                 // ��������� ������� API ����� � username
-                if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
-                    string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+                if (!credentialsService.HasStoredCredentials) {
                     logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
                     logService.LogInfo("No API key or username - showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
@@ -4075,9 +4073,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (assetsLoaded) {
                     // Local assets loaded, now check for server updates
-                    string? apiKey = GetDecryptedApiKey();
-                    if (string.IsNullOrEmpty(apiKey)) {
-                        logService.LogError("API key missing");
+                    if (!TryGetApiKey(out string? apiKey)) {
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                         return;
                     }
@@ -4118,14 +4114,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 logger.Info("LoadLastSettings: Starting");
 
-                string? apiKey = GetDecryptedApiKey();
-                if (string.IsNullOrEmpty(apiKey)) {
+                if (!TryGetApiKey(out string? apiKey)) {
                     throw new Exception("API key is null or empty after decryption");
                 }
 
                 CancellationToken cancellationToken = new();
 
-                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(AppSettings.Default.UserName, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                string? username = credentialsService.Username;
+                if (string.IsNullOrEmpty(username)) {
+                    throw new Exception("Username is null or empty");
+                }
+
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 if (string.IsNullOrEmpty(projectsResult.UserId)) {
                     throw new Exception("User ID is null or empty");
                 }

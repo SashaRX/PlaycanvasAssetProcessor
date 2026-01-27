@@ -114,7 +114,7 @@ namespace AssetProcessor {
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        private bool TryGetApiKey(out string? apiKey) {
+        private bool TryGetApiKey(out string apiKey) {
             if (credentialsService.TryGetApiKey(out apiKey)) {
                 return true;
             }
@@ -3611,7 +3611,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             try {
-                if (!TryGetApiKey(out string? apiKey)) {
+                if (!TryGetApiKey(out string apiKey)) {
                     throw new Exception("Failed to decrypt API key");
                 }
 
@@ -3802,7 +3802,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
             string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
             string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-            if (!TryGetApiKey(out string? apiKey)) {
+            if (!TryGetApiKey(out string apiKey)) {
                 return false;
             }
 
@@ -3812,7 +3812,11 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
             try {
-                string resolvedApiKey = apiKey ?? credentialsService.GetApiKeyOrNull() ?? string.Empty;
+                string resolvedApiKey = apiKey ?? string.Empty;
+                if (string.IsNullOrEmpty(resolvedApiKey) && !TryGetApiKey(out resolvedApiKey)) {
+                    MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
                 BranchSelectionResult result = await projectSelectionService.LoadBranchesAsync(projectId, resolvedApiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
 
                 viewModel.Branches.Clear();
@@ -3843,7 +3847,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                if (!TryGetApiKey(out string? apiKey)) {
+                if (!TryGetApiKey(out string apiKey)) {
                     MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -4073,7 +4077,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (assetsLoaded) {
                     // Local assets loaded, now check for server updates
-                    if (!TryGetApiKey(out string? apiKey)) {
+                    if (!TryGetApiKey(out string apiKey)) {
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                         return;
                     }
@@ -4114,7 +4118,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 logger.Info("LoadLastSettings: Starting");
 
-                if (!TryGetApiKey(out string? apiKey)) {
+                if (!TryGetApiKey(out string apiKey)) {
                     throw new Exception("API key is null or empty after decryption");
                 }
 

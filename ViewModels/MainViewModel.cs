@@ -290,8 +290,7 @@ namespace AssetProcessor.ViewModels {
                 return ApiKey;
             }
 
-            string? apiKey = credentialsService.GetApiKeyOrNull();
-            if (string.IsNullOrEmpty(apiKey)) {
+            if (!credentialsService.TryGetApiKey(out string apiKey)) {
                 StatusMessage = "Security error: check master password.";
                 return null;
             }

@@ -16,21 +16,23 @@ namespace AssetProcessor.Services {
         public string? Username => appSettings.UserName;
 
         public string? GetApiKeyOrNull() {
-            if (TryGetApiKey(out string? apiKey)) {
+            if (TryGetApiKey(out string apiKey)) {
                 return apiKey;
             }
 
             return null;
         }
 
-        public bool TryGetApiKey(out string? apiKey) {
-            if (!appSettings.TryGetDecryptedPlaycanvasApiKey(out apiKey)) {
+        public bool TryGetApiKey(out string apiKey) {
+            if (!appSettings.TryGetDecryptedPlaycanvasApiKey(out string? decryptedApiKey) ||
+                string.IsNullOrEmpty(decryptedApiKey)) {
                 logger.Error("Failed to decrypt PlayCanvas API key from settings.");
-                apiKey = null;
+                apiKey = string.Empty;
                 return false;
             }
 
-            return !string.IsNullOrEmpty(apiKey);
+            apiKey = decryptedApiKey;
+            return true;
         }
     }
 }

@@ -3,6 +3,6 @@ namespace AssetProcessor.Services {
         bool HasStoredCredentials { get; }
         string? Username { get; }
         string? GetApiKeyOrNull();
-        bool TryGetApiKey(out string? apiKey);
+        bool TryGetApiKey(out string apiKey);
     }
 }

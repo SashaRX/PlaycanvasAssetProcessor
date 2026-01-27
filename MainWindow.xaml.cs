@@ -2776,6 +2776,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             SubscribeToColumnWidthChanges(grid);
         }
 
+        private void RestoreGridLayout(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            LoadColumnVisibility(grid, GetColumnVisibilitySettingName(grid));
+            LoadColumnWidths(grid);
+            LoadColumnOrder(grid);
+            SubscribeToColumnWidthChanges(grid);
+            FillRemainingSpaceForGrid(grid);
+            UpdateColumnHeadersBasedOnWidth(grid);
+        }
+
         private string GetColumnVisibilitySettingName(DataGrid grid) {
             if (grid == TexturesDataGrid) return nameof(AppSettings.TexturesColumnVisibility);
             if (grid == ModelsDataGrid) return nameof(AppSettings.ModelsColumnVisibility);
@@ -4970,6 +4981,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialsDataGrid.Visibility = Visibility.Visible;
                 TexturesDataGrid.Visibility = Visibility.Visible;
 
+                RestoreGridLayout(ModelsDataGrid);
+                RestoreGridLayout(MaterialsDataGrid);
+                RestoreGridLayout(TexturesDataGrid);
+
                 ApplyTextureGroupingIfEnabled();
 
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
@@ -5008,6 +5023,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 new System.Windows.Data.Binding("Materials"));
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
+            RestoreGridLayout(ModelsDataGrid);
+            RestoreGridLayout(MaterialsDataGrid);
 
             // Use DispatcherTimer with delay to load TexturesDataGrid
             // This ensures UI is fully rendered before we touch the heavy DataGrid
@@ -5020,6 +5037,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                     new System.Windows.Data.Binding("Textures"));
                 TexturesDataGrid.Visibility = Visibility.Visible;
+                RestoreGridLayout(TexturesDataGrid);
                 logger.Info("[ShowDataGridsAndApplyGrouping] Timer: TexturesDataGrid visible");
 
                 // Apply grouping after another small delay

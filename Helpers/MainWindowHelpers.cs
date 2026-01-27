@@ -208,20 +208,26 @@ namespace AssetProcessor.Helpers {
                         } else {
                             long fileSizeInBytes = fileInfo.Length;
                             long resourceSizeInBytes = resource.Size;
-                            double tolerance = 0.05;
-                            double lowerBound = resourceSizeInBytes * (1 - tolerance);
-                            double upperBound = resourceSizeInBytes * (1 + tolerance);
 
-                            if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
-                                if (!string.IsNullOrEmpty(resource.Hash) && !FileHelper.IsFileIntact(resource.Path, resource.Hash, resource.Size)) {
-                                    resource.Status = "Hash ERROR";
-                                    logService.LogError($"{resource.Name} hash mismatch for file: {resource.Path}, expected hash: {resource.Hash}");
-                                } else {
-                                    resource.Status = "Downloaded";
-                                }
+                            if (resourceSizeInBytes <= 0) {
+                                resource.Size = (int)fileSizeInBytes;
+                                resource.Status = "Downloaded";
                             } else {
-                                resource.Status = "Size Mismatch";
-                                logService.LogError($"{resource.Name} size mismatch: fileSizeInBytes: {fileSizeInBytes} and resourceSizeInBytes: {resourceSizeInBytes}");
+                                double tolerance = 0.05;
+                                double lowerBound = resourceSizeInBytes * (1 - tolerance);
+                                double upperBound = resourceSizeInBytes * (1 + tolerance);
+
+                                if (fileSizeInBytes >= lowerBound && fileSizeInBytes <= upperBound) {
+                                    if (!string.IsNullOrEmpty(resource.Hash) && !FileHelper.IsFileIntact(resource.Path, resource.Hash, resource.Size)) {
+                                        resource.Status = "Hash ERROR";
+                                        logService.LogError($"{resource.Name} hash mismatch for file: {resource.Path}, expected hash: {resource.Hash}");
+                                    } else {
+                                        resource.Status = "Downloaded";
+                                    }
+                                } else {
+                                    resource.Status = "Size Mismatch";
+                                    logService.LogError($"{resource.Name} size mismatch: fileSizeInBytes: {fileSizeInBytes} and resourceSizeInBytes: {resourceSizeInBytes}");
+                                }
                             }
                         }
                     }

@@ -3841,15 +3841,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     viewModel.Branches.Add(branch);
                 }
 
-                projectSelectionService.SetBranchInitializationInProgress(true);
-                try {
-                    if (result.Branches.Count > 0) {
-                        viewModel.SelectedBranchId = result.SelectedBranchId ?? result.Branches[0].Id;
-                    } else {
-                        viewModel.SelectedBranchId = null;
-                    }
-                } finally {
-                    projectSelectionService.SetBranchInitializationInProgress(false);
+                if (result.Branches.Count > 0) {
+                    viewModel.SelectedBranchId = result.SelectedBranchId ?? result.Branches[0].Id;
+                } else {
+                    viewModel.SelectedBranchId = null;
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error loading branches: {ex.Message}");
@@ -4186,19 +4181,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                             viewModel.Branches.Add(branch);
                         }
 
-                        projectSelectionService.SetBranchInitializationInProgress(true);
-                        try {
-                            if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
-                                viewModel.SelectedBranchId = branchesResult.SelectedBranchId;
-                                logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
-                            } else if (branchesResult.Branches.Count > 0) {
-                                viewModel.SelectedBranchId = branchesResult.Branches[0].Id;
-                                logger.Info("LoadLastSettings: Selected first branch");
-                            } else {
-                                viewModel.SelectedBranchId = null;
-                            }
-                        } finally {
-                            projectSelectionService.SetBranchInitializationInProgress(false);
+                        if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
+                            viewModel.SelectedBranchId = branchesResult.SelectedBranchId;
+                            logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
+                        } else if (branchesResult.Branches.Count > 0) {
+                            viewModel.SelectedBranchId = branchesResult.Branches[0].Id;
+                            logger.Info("LoadLastSettings: Selected first branch");
+                        } else {
+                            viewModel.SelectedBranchId = null;
                         }
 
                         UpdateProjectPath();

@@ -50,13 +50,20 @@ public class FileStatusScannerService : IFileStatusScannerService {
                 logger.Debug($"Missing texture: '{texture.Name}', status='{currentStatus}'");
             }
 
-            // Если статус указывает на локальный файл, но файла нет - обновляем на "On Server"
             if (isLocalStatus && !fileExists) {
                 logger.Info($"Updating '{texture.Name}' from '{currentStatus}' to 'On Server'");
                 texture.Status = "On Server";
                 texture.CompressedSize = 0;
                 texture.CompressionFormat = null;
                 texture.MipmapCount = 0;
+                updatedCount++;
+                updatedNames.Add(texture.Name ?? "Unknown");
+            } else if (fileExists && string.Equals(currentStatus, "On Server", StringComparison.OrdinalIgnoreCase)) {
+                logger.Info($"Updating '{texture.Name}' from '{currentStatus}' to 'Downloaded'");
+                texture.Status = "Downloaded";
+                if (texture.Size <= 0) {
+                    texture.Size = (int)new FileInfo(texture.Path).Length;
+                }
                 updatedCount++;
                 updatedNames.Add(texture.Name ?? "Unknown");
             }
@@ -94,6 +101,14 @@ public class FileStatusScannerService : IFileStatusScannerService {
                 model.Status = "On Server";
                 updatedCount++;
                 updatedNames.Add(model.Name ?? "Unknown");
+            } else if (fileExists && string.Equals(currentStatus, "On Server", StringComparison.OrdinalIgnoreCase)) {
+                logger.Info($"Updating '{model.Name}' from '{currentStatus}' to 'Downloaded'");
+                model.Status = "Downloaded";
+                if (model.Size <= 0) {
+                    model.Size = (int)new FileInfo(model.Path).Length;
+                }
+                updatedCount++;
+                updatedNames.Add(model.Name ?? "Unknown");
             }
         }
 
@@ -127,6 +142,11 @@ public class FileStatusScannerService : IFileStatusScannerService {
             if (isLocalStatus && !fileExists) {
                 logger.Info($"Updating material '{material.Name}' from '{currentStatus}' to 'On Server'");
                 material.Status = "On Server";
+                updatedCount++;
+                updatedNames.Add(material.Name ?? "Unknown");
+            } else if (fileExists && string.Equals(currentStatus, "On Server", StringComparison.OrdinalIgnoreCase)) {
+                logger.Info($"Updating material '{material.Name}' from '{currentStatus}' to 'Downloaded'");
+                material.Status = "Downloaded";
                 updatedCount++;
                 updatedNames.Add(material.Name ?? "Unknown");
             }

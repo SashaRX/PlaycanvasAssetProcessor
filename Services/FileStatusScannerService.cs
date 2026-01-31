@@ -174,7 +174,7 @@ public class FileStatusScannerService : IFileStatusScannerService {
         logger.Info($"ScanAll: Checked {totalChecked} assets, {totalMissing} missing, updated {totalUpdated}");
 
         if (totalUpdated > 0) {
-            _logService.LogInfo($"Updated {totalUpdated} assets to 'On Server' (files deleted)");
+            _logService.LogInfo($"Updated {totalUpdated} assets statuses based on file presence");
         }
 
         return new ScanResult {

@@ -295,8 +295,8 @@ namespace AssetProcessor {
         /// </summary>
         public int CurrentProjectId {
             get {
-                if (ProjectsComboBox?.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                    if (int.TryParse(selectedProject.Key, out int projectId)) {
+                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                    if (int.TryParse(viewModel.SelectedProjectId, out int projectId)) {
                         return projectId;
                     }
                 }
@@ -888,7 +888,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            if (ProjectsComboBox.SelectedItem is not KeyValuePair<string, string> selectedProject) {
+            if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
                 return;
             }
 
@@ -3459,7 +3459,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// </summary>
         private void ApplyConnectionButtonState() {
             Dispatcher.Invoke(() => {
-                bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+                bool hasSelection = !string.IsNullOrEmpty(viewModel.SelectedProjectId)
+                    && !string.IsNullOrEmpty(viewModel.SelectedBranchId);
 
                 if (DynamicConnectionButton == null) {
                     logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
@@ -3650,16 +3651,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 projectSelectionService.SetProjectInitializationInProgress(true);
                 try {
                     if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                        ProjectsComboBox.SelectedValue = projectsResult.SelectedProjectId;
+                        viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
+                    } else if (viewModel.Projects.Count > 0) {
+                        viewModel.SelectedProjectId = viewModel.Projects[0].Key;
                     } else {
-                        ProjectsComboBox.SelectedIndex = 0;
+                        viewModel.SelectedProjectId = null;
                     }
                 } finally {
                     projectSelectionService.SetProjectInitializationInProgress(false);
                 }
 
-                if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                    await LoadBranchesAsync(selectedProject.Key, cancellationToken, apiKey);
+                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                    await LoadBranchesAsync(viewModel.SelectedProjectId, cancellationToken, apiKey);
                     UpdateProjectPath();
                 }
 
@@ -3807,12 +3810,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async Task<bool> CheckForUpdates() {
-            if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null || string.IsNullOrEmpty(ProjectFolderPath)) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) {
                 return false;
             }
 
-            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
+            string? selectedProjectId = viewModel.SelectedProjectId;
+            string? selectedBranchId = viewModel.SelectedBranchId;
+            if (string.IsNullOrEmpty(selectedProjectId) || string.IsNullOrEmpty(selectedBranchId)) {
+                return false;
+            }
             if (!TryGetApiKey(out string apiKey)) {
                 return false;
             }
@@ -3835,14 +3841,15 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     viewModel.Branches.Add(branch);
                 }
 
-                if (result.Branches.Count > 0) {
-                    if (!string.IsNullOrEmpty(result.SelectedBranchId)) {
-                        BranchesComboBox.SelectedValue = result.SelectedBranchId;
+                projectSelectionService.SetBranchInitializationInProgress(true);
+                try {
+                    if (result.Branches.Count > 0) {
+                        viewModel.SelectedBranchId = result.SelectedBranchId ?? result.Branches[0].Id;
                     } else {
-                        BranchesComboBox.SelectedIndex = 0;
+                        viewModel.SelectedBranchId = null;
                     }
-                } else {
-                    BranchesComboBox.SelectedIndex = -1;
+                } finally {
+                    projectSelectionService.SetBranchInitializationInProgress(false);
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error loading branches: {ex.Message}");
@@ -3852,12 +3859,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private async void CreateBranchButton_Click(object sender, RoutedEventArgs e) {
             try {
                 // Проверяем, что выбран проект
-                if (ProjectsComboBox.SelectedItem == null) {
+                if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
                     MessageBox.Show("Пожалуйста, выберите проект перед созданием ветки.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
+                string selectedProjectId = viewModel.SelectedProjectId;
                 if (!TryGetApiKey(out string apiKey)) {
                     MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
@@ -3881,7 +3888,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 await LoadBranchesAsync(selectedProjectId, CancellationToken.None, apiKey);
 
                 // Выбираем новую ветку
-                BranchesComboBox.SelectedValue = newBranch.Id;
+                viewModel.SelectedBranchId = newBranch.Id;
 
                 MessageBox.Show($"Ветка '{branchName}' успешно создана.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
             } catch (PlayCanvasApiException ex) {
@@ -3897,7 +3904,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void UpdateProjectPath() {
-            if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
+            if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                return;
+            }
+
+            var selectedProject = viewModel.Projects.FirstOrDefault(project => project.Key == viewModel.SelectedProjectId);
+            if (!selectedProject.Equals(default(KeyValuePair<string, string>))) {
                 projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
             }
         }
@@ -4060,14 +4072,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 logger.Info("=== SmartLoadAssets: Starting ===");
 
-                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                string? selectedProjectId = viewModel.SelectedProjectId;
+                string? selectedBranchId = viewModel.SelectedBranchId;
+                if (string.IsNullOrEmpty(selectedProjectId) || string.IsNullOrEmpty(selectedBranchId)) {
                     logger.Warn("SmartLoadAssets: No project or branch selected");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
-
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
                 if (string.IsNullOrEmpty(ProjectFolderPath)) {
                     logService.LogInfo("Project folder path is empty");
@@ -4156,34 +4167,41 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     projectSelectionService.SetProjectInitializationInProgress(true);
                     try {
                         if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                            ProjectsComboBox.SelectedValue = projectsResult.SelectedProjectId;
+                            viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
                             logger.Info($"LoadLastSettings: Selected project: {projectsResult.SelectedProjectId}");
-                        } else {
-                            ProjectsComboBox.SelectedIndex = 0;
+                        } else if (viewModel.Projects.Count > 0) {
+                            viewModel.SelectedProjectId = viewModel.Projects[0].Key;
                             logger.Info("LoadLastSettings: Selected first project");
+                        } else {
+                            viewModel.SelectedProjectId = null;
                         }
                     } finally {
                         projectSelectionService.SetProjectInitializationInProgress(false);
                     }
 
-                    if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                        BranchSelectionResult branchesResult = await projectSelectionService.LoadBranchesAsync(selectedProject.Key, apiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
+                    if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                        BranchSelectionResult branchesResult = await projectSelectionService.LoadBranchesAsync(viewModel.SelectedProjectId, apiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
                         viewModel.Branches.Clear();
                         foreach (Branch branch in branchesResult.Branches) {
                             viewModel.Branches.Add(branch);
                         }
 
-                        if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
-                            BranchesComboBox.SelectedValue = branchesResult.SelectedBranchId;
-                            logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
-                        } else if (branchesResult.Branches.Count > 0) {
-                            BranchesComboBox.SelectedIndex = 0;
-                            logger.Info("LoadLastSettings: Selected first branch");
-                        } else {
-                            BranchesComboBox.SelectedIndex = -1;
+                        projectSelectionService.SetBranchInitializationInProgress(true);
+                        try {
+                            if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
+                                viewModel.SelectedBranchId = branchesResult.SelectedBranchId;
+                                logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
+                            } else if (branchesResult.Branches.Count > 0) {
+                                viewModel.SelectedBranchId = branchesResult.Branches[0].Id;
+                                logger.Info("LoadLastSettings: Selected first branch");
+                            } else {
+                                viewModel.SelectedBranchId = null;
+                            }
+                        } finally {
+                            projectSelectionService.SetBranchInitializationInProgress(false);
                         }
 
-                        projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
+                        UpdateProjectPath();
                         logger.Info($"LoadLastSettings: Project folder path set to: {ProjectFolderPath}");
 
                         // ????? ??????: ????? hash ? ??????? ?????? ?? ?????

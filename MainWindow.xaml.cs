@@ -3662,7 +3662,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
-                    await LoadBranchesAsync(viewModel.SelectedProjectId, cancellationToken, apiKey);
+                    if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
+                        await loadBranchesCommand.ExecuteAsync(cancellationToken);
+                    }
                     UpdateProjectPath();
                 }
 
@@ -3827,30 +3829,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ProjectFolderPath!, selectedProjectId, selectedBranchId, apiKey, CancellationToken.None);
         }
 
-        private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
-            try {
-                string resolvedApiKey = apiKey ?? string.Empty;
-                if (string.IsNullOrEmpty(resolvedApiKey) && !TryGetApiKey(out resolvedApiKey)) {
-                    MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                BranchSelectionResult result = await projectSelectionService.LoadBranchesAsync(projectId, resolvedApiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
-
-                viewModel.Branches.Clear();
-                foreach (Branch branch in result.Branches) {
-                    viewModel.Branches.Add(branch);
-                }
-
-                if (result.Branches.Count > 0) {
-                    viewModel.SelectedBranchId = result.SelectedBranchId ?? result.Branches[0].Id;
-                } else {
-                    viewModel.SelectedBranchId = null;
-                }
-            } catch (Exception ex) {
-                MessageBox.Show($"Error loading branches: {ex.Message}");
-            }
-        }
-
         private async void CreateBranchButton_Click(object sender, RoutedEventArgs e) {
             try {
                 // Проверяем, что выбран проект
@@ -3880,7 +3858,9 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info($"Branch created successfully: {newBranch.Name} (ID: {newBranch.Id})");
 
                 // Обновляем список веток
-                await LoadBranchesAsync(selectedProjectId, CancellationToken.None, apiKey);
+                if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
+                    await loadBranchesCommand.ExecuteAsync(CancellationToken.None);
+                }
 
                 // Выбираем новую ветку
                 viewModel.SelectedBranchId = newBranch.Id;
@@ -4175,20 +4155,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     }
 
                     if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
-                        BranchSelectionResult branchesResult = await projectSelectionService.LoadBranchesAsync(viewModel.SelectedProjectId, apiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
-                        viewModel.Branches.Clear();
-                        foreach (Branch branch in branchesResult.Branches) {
-                            viewModel.Branches.Add(branch);
-                        }
-
-                        if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
-                            viewModel.SelectedBranchId = branchesResult.SelectedBranchId;
-                            logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
-                        } else if (branchesResult.Branches.Count > 0) {
-                            viewModel.SelectedBranchId = branchesResult.Branches[0].Id;
-                            logger.Info("LoadLastSettings: Selected first branch");
-                        } else {
-                            viewModel.SelectedBranchId = null;
+                        if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
+                            await loadBranchesCommand.ExecuteAsync(cancellationToken);
                         }
 
                         UpdateProjectPath();

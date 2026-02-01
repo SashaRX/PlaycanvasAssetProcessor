@@ -97,6 +97,7 @@ namespace AssetProcessor {
             services.AddSingleton<IProjectSelectionService, ProjectSelectionService>();
             services.AddSingleton<IProjectSyncService, ProjectSyncService>();
             services.AddSingleton<IConnectionStateService, ConnectionStateService>();
+            services.AddSingleton<IPlayCanvasCredentialsService, PlayCanvasCredentialsService>();
             services.AddSingleton<IAssetJsonParserService, AssetJsonParserService>();
             services.AddSingleton<IORMTextureService, ORMTextureService>();
             services.AddSingleton<IFileStatusScannerService, FileStatusScannerService>();
@@ -153,6 +154,7 @@ namespace AssetProcessor {
                 var projectSyncService = sp.GetRequiredService<IProjectSyncService>();
                 var assetDownloadCoordinator = sp.GetRequiredService<IAssetDownloadCoordinator>();
                 var projectSelectionService = sp.GetRequiredService<IProjectSelectionService>();
+                var credentialsService = sp.GetRequiredService<IPlayCanvasCredentialsService>();
                 var textureSelectionViewModel = sp.GetRequiredService<TextureSelectionViewModel>();
                 var ormTextureViewModel = sp.GetRequiredService<ORMTextureViewModel>();
                 var conversionSettingsViewModel = sp.GetRequiredService<TextureConversionSettingsViewModel>();
@@ -166,6 +168,7 @@ namespace AssetProcessor {
                     projectSyncService,
                     assetDownloadCoordinator,
                     projectSelectionService,
+                    credentialsService,
                     textureSelectionViewModel,
                     ormTextureViewModel,
                     conversionSettingsViewModel,

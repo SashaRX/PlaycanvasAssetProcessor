@@ -79,6 +79,7 @@ namespace AssetProcessor {
         private readonly IAssetLoadCoordinator assetLoadCoordinator;
         private readonly IProjectFileWatcherService projectFileWatcherService;
         private readonly IKtx2InfoService ktx2InfoService;
+        private readonly IPlayCanvasCredentialsService credentialsService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
@@ -113,16 +114,13 @@ namespace AssetProcessor {
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        /// <summary>
-        /// �������� �������������� PlayCanvas API ���� �� ��������.
-        /// ������������ ��� ���� ������� PlayCanvas API ��� ���������� ������ � ������������� ����������.
-        /// </summary>
-        private static string? GetDecryptedApiKey() {
-            if (!AppSettings.Default.TryGetDecryptedPlaycanvasApiKey(out string? apiKey)) {
-                logger.Error("�� ������� ������������ PlayCanvas API ���� �� ��������");
-                return null;
+        private bool TryGetApiKey(out string apiKey) {
+            if (credentialsService.TryGetApiKey(out apiKey)) {
+                return true;
             }
-            return apiKey;
+
+            logService.LogError("API key is missing or could not be decrypted.");
+            return false;
         }
 
         private readonly MainViewModel viewModel;
@@ -148,6 +146,7 @@ namespace AssetProcessor {
             IAssetLoadCoordinator assetLoadCoordinator,
             IProjectFileWatcherService projectFileWatcherService,
             IKtx2InfoService ktx2InfoService,
+            IPlayCanvasCredentialsService credentialsService,
             MainViewModel viewModel) {
             this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
             this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
@@ -167,6 +166,7 @@ namespace AssetProcessor {
             this.assetLoadCoordinator = assetLoadCoordinator ?? throw new ArgumentNullException(nameof(assetLoadCoordinator));
             this.projectFileWatcherService = projectFileWatcherService ?? throw new ArgumentNullException(nameof(projectFileWatcherService));
             this.ktx2InfoService = ktx2InfoService ?? throw new ArgumentNullException(nameof(ktx2InfoService));
+            this.credentialsService = credentialsService ?? throw new ArgumentNullException(nameof(credentialsService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 
@@ -295,8 +295,8 @@ namespace AssetProcessor {
         /// </summary>
         public int CurrentProjectId {
             get {
-                if (ProjectsComboBox?.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                    if (int.TryParse(selectedProject.Key, out int projectId)) {
+                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                    if (int.TryParse(viewModel.SelectedProjectId, out int projectId)) {
                         return projectId;
                     }
                 }
@@ -888,7 +888,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            if (ProjectsComboBox.SelectedItem is not KeyValuePair<string, string> selectedProject) {
+            if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
                 return;
             }
 
@@ -2776,6 +2776,17 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             SubscribeToColumnWidthChanges(grid);
         }
 
+        private void RestoreGridLayout(DataGrid grid) {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            LoadColumnVisibility(grid, GetColumnVisibilitySettingName(grid));
+            LoadColumnWidths(grid);
+            LoadColumnOrder(grid);
+            SubscribeToColumnWidthChanges(grid);
+            FillRemainingSpaceForGrid(grid);
+            UpdateColumnHeadersBasedOnWidth(grid);
+        }
+
         private string GetColumnVisibilitySettingName(DataGrid grid) {
             if (grid == TexturesDataGrid) return nameof(AppSettings.TexturesColumnVisibility);
             if (grid == ModelsDataGrid) return nameof(AppSettings.ModelsColumnVisibility);
@@ -3448,7 +3459,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         /// </summary>
         private void ApplyConnectionButtonState() {
             Dispatcher.Invoke(() => {
-                bool hasSelection = ProjectsComboBox.SelectedItem != null && BranchesComboBox.SelectedItem != null;
+                bool hasSelection = !string.IsNullOrEmpty(viewModel.SelectedProjectId)
+                    && !string.IsNullOrEmpty(viewModel.SelectedBranchId);
 
                 if (DynamicConnectionButton == null) {
                     logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
@@ -3601,7 +3613,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         private async void Connect(object? sender, RoutedEventArgs? e) {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) || string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+            if (!credentialsService.HasStoredCredentials) {
                 MessageBox.Show("Please set your Playcanvas API key, and Username in the settings window.");
                 SettingsWindow settingsWindow = new();
                 settingsWindow.OnPreviewRendererChanged += HandlePreviewRendererChanged;
@@ -3611,12 +3623,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
 
             try {
-                string? apiKey = GetDecryptedApiKey();
-                if (string.IsNullOrEmpty(apiKey)) {
+                if (!TryGetApiKey(out string apiKey)) {
                     throw new Exception("Failed to decrypt API key");
                 }
 
-                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(AppSettings.Default.UserName, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                string? username = credentialsService.Username;
+                if (string.IsNullOrEmpty(username)) {
+                    throw new Exception("Username is null or empty");
+                }
+
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 if (string.IsNullOrEmpty(projectsResult.UserId)) {
                     throw new Exception("User ID is null or empty");
                 }
@@ -3635,16 +3651,20 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 projectSelectionService.SetProjectInitializationInProgress(true);
                 try {
                     if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                        ProjectsComboBox.SelectedValue = projectsResult.SelectedProjectId;
+                        viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
+                    } else if (viewModel.Projects.Count > 0) {
+                        viewModel.SelectedProjectId = viewModel.Projects[0].Key;
                     } else {
-                        ProjectsComboBox.SelectedIndex = 0;
+                        viewModel.SelectedProjectId = null;
                     }
                 } finally {
                     projectSelectionService.SetProjectInitializationInProgress(false);
                 }
 
-                if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                    await LoadBranchesAsync(selectedProject.Key, cancellationToken, apiKey);
+                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                    if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
+                        await loadBranchesCommand.ExecuteAsync(cancellationToken);
+                    }
                     UpdateProjectPath();
                 }
 
@@ -3792,16 +3812,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async Task<bool> CheckForUpdates() {
-            if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null || string.IsNullOrEmpty(ProjectFolderPath)) {
+            if (string.IsNullOrEmpty(ProjectFolderPath)) {
                 return false;
             }
 
-            string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-            string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
-            string? apiKey = GetDecryptedApiKey();
-
-            if (string.IsNullOrEmpty(apiKey)) {
-                logService.LogError("API key is missing while checking for updates");
+            string? selectedProjectId = viewModel.SelectedProjectId;
+            string? selectedBranchId = viewModel.SelectedBranchId;
+            if (string.IsNullOrEmpty(selectedProjectId) || string.IsNullOrEmpty(selectedBranchId)) {
+                return false;
+            }
+            if (!TryGetApiKey(out string apiKey)) {
                 return false;
             }
 
@@ -3809,42 +3829,16 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 ProjectFolderPath!, selectedProjectId, selectedBranchId, apiKey, CancellationToken.None);
         }
 
-        private async Task LoadBranchesAsync(string projectId, CancellationToken cancellationToken, string? apiKey = null) {
-            try {
-                string resolvedApiKey = apiKey ?? GetDecryptedApiKey() ?? string.Empty;
-                BranchSelectionResult result = await projectSelectionService.LoadBranchesAsync(projectId, resolvedApiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
-
-                viewModel.Branches.Clear();
-                foreach (Branch branch in result.Branches) {
-                    viewModel.Branches.Add(branch);
-                }
-
-                if (result.Branches.Count > 0) {
-                    if (!string.IsNullOrEmpty(result.SelectedBranchId)) {
-                        BranchesComboBox.SelectedValue = result.SelectedBranchId;
-                    } else {
-                        BranchesComboBox.SelectedIndex = 0;
-                    }
-                } else {
-                    BranchesComboBox.SelectedIndex = -1;
-                }
-            } catch (Exception ex) {
-                MessageBox.Show($"Error loading branches: {ex.Message}");
-            }
-        }
-
         private async void CreateBranchButton_Click(object sender, RoutedEventArgs e) {
             try {
                 // Проверяем, что выбран проект
-                if (ProjectsComboBox.SelectedItem == null) {
+                if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
                     MessageBox.Show("Пожалуйста, выберите проект перед созданием ветки.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string? apiKey = GetDecryptedApiKey();
-
-                if (string.IsNullOrEmpty(apiKey)) {
+                string selectedProjectId = viewModel.SelectedProjectId;
+                if (!TryGetApiKey(out string apiKey)) {
                     MessageBox.Show("API ключ не найден. Пожалуйста, настройте API ключ в настройках.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -3864,10 +3858,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info($"Branch created successfully: {newBranch.Name} (ID: {newBranch.Id})");
 
                 // Обновляем список веток
-                await LoadBranchesAsync(selectedProjectId, CancellationToken.None, apiKey);
+                if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
+                    await loadBranchesCommand.ExecuteAsync(CancellationToken.None);
+                }
 
                 // Выбираем новую ветку
-                BranchesComboBox.SelectedValue = newBranch.Id;
+                viewModel.SelectedBranchId = newBranch.Id;
 
                 MessageBox.Show($"Ветка '{branchName}' успешно создана.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
             } catch (PlayCanvasApiException ex) {
@@ -3883,7 +3879,12 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private void UpdateProjectPath() {
-            if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
+            if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                return;
+            }
+
+            var selectedProject = viewModel.Projects.FirstOrDefault(project => project.Key == viewModel.SelectedProjectId);
+            if (!selectedProject.Equals(default(KeyValuePair<string, string>))) {
                 projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
             }
         }
@@ -4018,8 +4019,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logService.LogInfo("=== Initializing on startup ===");
 
                 // ��������� ������� API ����� � username
-                if (string.IsNullOrEmpty(AppSettings.Default.PlaycanvasApiKey) ||
-                    string.IsNullOrEmpty(AppSettings.Default.UserName)) {
+                if (!credentialsService.HasStoredCredentials) {
                     logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
                     logService.LogInfo("No API key or username - showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
@@ -4047,14 +4047,13 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 logger.Info("=== SmartLoadAssets: Starting ===");
 
-                if (ProjectsComboBox.SelectedItem == null || BranchesComboBox.SelectedItem == null) {
+                string? selectedProjectId = viewModel.SelectedProjectId;
+                string? selectedBranchId = viewModel.SelectedBranchId;
+                if (string.IsNullOrEmpty(selectedProjectId) || string.IsNullOrEmpty(selectedBranchId)) {
                     logger.Warn("SmartLoadAssets: No project or branch selected");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
-
-                string selectedProjectId = ((KeyValuePair<string, string>)ProjectsComboBox.SelectedItem).Key;
-                string selectedBranchId = ((Branch)BranchesComboBox.SelectedItem).Id;
 
                 if (string.IsNullOrEmpty(ProjectFolderPath)) {
                     logService.LogInfo("Project folder path is empty");
@@ -4075,9 +4074,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
                 if (assetsLoaded) {
                     // Local assets loaded, now check for server updates
-                    string? apiKey = GetDecryptedApiKey();
-                    if (string.IsNullOrEmpty(apiKey)) {
-                        logService.LogError("API key missing");
+                    if (!TryGetApiKey(out string apiKey)) {
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                         return;
                     }
@@ -4118,14 +4115,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             try {
                 logger.Info("LoadLastSettings: Starting");
 
-                string? apiKey = GetDecryptedApiKey();
-                if (string.IsNullOrEmpty(apiKey)) {
+                if (!TryGetApiKey(out string apiKey)) {
                     throw new Exception("API key is null or empty after decryption");
                 }
 
                 CancellationToken cancellationToken = new();
 
-                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(AppSettings.Default.UserName, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                string? username = credentialsService.Username;
+                if (string.IsNullOrEmpty(username)) {
+                    throw new Exception("Username is null or empty");
+                }
+
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 if (string.IsNullOrEmpty(projectsResult.UserId)) {
                     throw new Exception("User ID is null or empty");
                 }
@@ -4141,34 +4142,24 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     projectSelectionService.SetProjectInitializationInProgress(true);
                     try {
                         if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                            ProjectsComboBox.SelectedValue = projectsResult.SelectedProjectId;
+                            viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
                             logger.Info($"LoadLastSettings: Selected project: {projectsResult.SelectedProjectId}");
-                        } else {
-                            ProjectsComboBox.SelectedIndex = 0;
+                        } else if (viewModel.Projects.Count > 0) {
+                            viewModel.SelectedProjectId = viewModel.Projects[0].Key;
                             logger.Info("LoadLastSettings: Selected first project");
+                        } else {
+                            viewModel.SelectedProjectId = null;
                         }
                     } finally {
                         projectSelectionService.SetProjectInitializationInProgress(false);
                     }
 
-                    if (ProjectsComboBox.SelectedItem is KeyValuePair<string, string> selectedProject) {
-                        BranchSelectionResult branchesResult = await projectSelectionService.LoadBranchesAsync(selectedProject.Key, apiKey, AppSettings.Default.LastSelectedBranchName, cancellationToken);
-                        viewModel.Branches.Clear();
-                        foreach (Branch branch in branchesResult.Branches) {
-                            viewModel.Branches.Add(branch);
+                    if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                        if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
+                            await loadBranchesCommand.ExecuteAsync(cancellationToken);
                         }
 
-                        if (!string.IsNullOrEmpty(branchesResult.SelectedBranchId)) {
-                            BranchesComboBox.SelectedValue = branchesResult.SelectedBranchId;
-                            logger.Info($"LoadLastSettings: Selected branch: {branchesResult.SelectedBranchId}");
-                        } else if (branchesResult.Branches.Count > 0) {
-                            BranchesComboBox.SelectedIndex = 0;
-                            logger.Info("LoadLastSettings: Selected first branch");
-                        } else {
-                            BranchesComboBox.SelectedIndex = -1;
-                        }
-
-                        projectSelectionService.UpdateProjectPath(AppSettings.Default.ProjectsFolderPath, selectedProject);
+                        UpdateProjectPath();
                         logger.Info($"LoadLastSettings: Project folder path set to: {ProjectFolderPath}");
 
                         // ????? ??????: ????? hash ? ??????? ?????? ?? ?????
@@ -4966,6 +4957,10 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 MaterialsDataGrid.Visibility = Visibility.Visible;
                 TexturesDataGrid.Visibility = Visibility.Visible;
 
+                RestoreGridLayout(ModelsDataGrid);
+                RestoreGridLayout(MaterialsDataGrid);
+                RestoreGridLayout(TexturesDataGrid);
+
                 ApplyTextureGroupingIfEnabled();
 
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
@@ -5004,6 +4999,8 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 new System.Windows.Data.Binding("Materials"));
             ModelsDataGrid.Visibility = Visibility.Visible;
             MaterialsDataGrid.Visibility = Visibility.Visible;
+            RestoreGridLayout(ModelsDataGrid);
+            RestoreGridLayout(MaterialsDataGrid);
 
             // Use DispatcherTimer with delay to load TexturesDataGrid
             // This ensures UI is fully rendered before we touch the heavy DataGrid
@@ -5016,6 +5013,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                     new System.Windows.Data.Binding("Textures"));
                 TexturesDataGrid.Visibility = Visibility.Visible;
+                RestoreGridLayout(TexturesDataGrid);
                 logger.Info("[ShowDataGridsAndApplyGrouping] Timer: TexturesDataGrid visible");
 
                 // Apply grouping after another small delay

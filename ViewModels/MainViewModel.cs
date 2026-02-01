@@ -13,7 +13,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +31,7 @@ namespace AssetProcessor.ViewModels {
         private readonly IAssetDownloadCoordinator assetDownloadCoordinator;
         private readonly SynchronizationContext? synchronizationContext;
         private readonly IProjectSelectionService projectSelectionService;
+        private readonly IPlayCanvasCredentialsService credentialsService;
         private readonly TextureSelectionViewModel textureSelectionViewModel;
         private readonly ORMTextureViewModel ormTextureViewModel;
         private readonly TextureConversionSettingsViewModel conversionSettingsViewModel;
@@ -158,6 +158,7 @@ namespace AssetProcessor.ViewModels {
             IProjectSyncService projectSyncService,
             IAssetDownloadCoordinator assetDownloadCoordinator,
             IProjectSelectionService projectSelectionService,
+            IPlayCanvasCredentialsService credentialsService,
             TextureSelectionViewModel textureSelectionViewModel,
             ORMTextureViewModel ormTextureViewModel,
             TextureConversionSettingsViewModel conversionSettingsViewModel,
@@ -170,6 +171,7 @@ namespace AssetProcessor.ViewModels {
             this.projectSyncService = projectSyncService;
             this.assetDownloadCoordinator = assetDownloadCoordinator;
             this.projectSelectionService = projectSelectionService;
+            this.credentialsService = credentialsService;
             this.textureSelectionViewModel = textureSelectionViewModel;
             this.ormTextureViewModel = ormTextureViewModel;
             this.conversionSettingsViewModel = conversionSettingsViewModel;
@@ -177,6 +179,8 @@ namespace AssetProcessor.ViewModels {
             this.materialSelectionViewModel = materialSelectionViewModel;
             this.masterMaterialsViewModel = masterMaterialsViewModel;
             synchronizationContext = SynchronizationContext.Current;
+            Username = credentialsService.Username;
+            ApiKey = credentialsService.GetApiKeyOrNull();
 
             logger.Info("MainViewModel initialized");
         }
@@ -286,13 +290,12 @@ namespace AssetProcessor.ViewModels {
                 return ApiKey;
             }
 
-            try {
-                return AppSettings.Default.GetDecryptedPlaycanvasApiKey();
-            } catch (CryptographicException ex) {
-                logger.Error(ex, "Failed to decrypt Playcanvas API key from settings.");
+            if (!credentialsService.TryGetApiKey(out string apiKey)) {
                 StatusMessage = "Security error: check master password.";
                 return null;
             }
+
+            return apiKey;
         }
 
         [RelayCommand]

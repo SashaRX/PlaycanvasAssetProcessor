@@ -200,14 +200,14 @@ namespace AssetProcessor {
             };
 
             // Load saved column order for all DataGrids
-            LoadColumnOrder(TexturesDataGrid);
-            LoadColumnOrder(ModelsDataGrid);
-            LoadColumnOrder(MaterialsDataGrid);
+            dataGridLayoutService.LoadColumnOrder(TexturesDataGrid, GetColumnOrderSettingName(TexturesDataGrid));
+            dataGridLayoutService.LoadColumnOrder(ModelsDataGrid, GetColumnOrderSettingName(ModelsDataGrid));
+            dataGridLayoutService.LoadColumnOrder(MaterialsDataGrid, GetColumnOrderSettingName(MaterialsDataGrid));
 
             // Load saved column widths for all DataGrids
-            LoadColumnWidths(TexturesDataGrid);
-            LoadColumnWidths(ModelsDataGrid);
-            LoadColumnWidths(MaterialsDataGrid);
+            dataGridLayoutService.LoadColumnWidths(TexturesDataGrid, GetColumnWidthsSettingName(TexturesDataGrid));
+            dataGridLayoutService.LoadColumnWidths(ModelsDataGrid, GetColumnWidthsSettingName(ModelsDataGrid));
+            dataGridLayoutService.LoadColumnWidths(MaterialsDataGrid, GetColumnWidthsSettingName(MaterialsDataGrid));
 
             // Load saved column visibility for all DataGrids
             LoadAllColumnVisibility();
@@ -251,21 +251,21 @@ namespace AssetProcessor {
 
         private void LoadAllColumnVisibility() {
             // Load visibility for Textures
-            LoadColumnVisibility(TexturesDataGrid, nameof(AppSettings.TexturesColumnVisibility),
+            LoadColumnVisibilityWithMenu(TexturesDataGrid, nameof(AppSettings.TexturesColumnVisibility),
                 (ContextMenu)FindResource("TextureColumnHeaderContextMenu"));
 
             // Load visibility for Models
-            LoadColumnVisibility(ModelsDataGrid, nameof(AppSettings.ModelsColumnVisibility),
+            LoadColumnVisibilityWithMenu(ModelsDataGrid, nameof(AppSettings.ModelsColumnVisibility),
                 (ContextMenu)FindResource("ModelColumnHeaderContextMenu"));
 
             // Load visibility for Materials
-            LoadColumnVisibility(MaterialsDataGrid, nameof(AppSettings.MaterialsColumnVisibility),
+            LoadColumnVisibilityWithMenu(MaterialsDataGrid, nameof(AppSettings.MaterialsColumnVisibility),
                 (ContextMenu)FindResource("MaterialColumnHeaderContextMenu"));
 
             // Fill remaining space after loading visibility
-            FillRemainingSpaceForGrid(TexturesDataGrid);
-            FillRemainingSpaceForGrid(ModelsDataGrid);
-            FillRemainingSpaceForGrid(MaterialsDataGrid);
+            dataGridLayoutService.FillRemainingSpace(TexturesDataGrid, dataGridLayoutService.HasSavedWidths(TexturesDataGrid));
+            dataGridLayoutService.FillRemainingSpace(ModelsDataGrid, dataGridLayoutService.HasSavedWidths(ModelsDataGrid));
+            dataGridLayoutService.FillRemainingSpace(MaterialsDataGrid, dataGridLayoutService.HasSavedWidths(MaterialsDataGrid));
         }
 
         // Diagnostic counter for render loop calls

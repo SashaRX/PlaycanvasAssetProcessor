@@ -103,6 +103,7 @@ namespace AssetProcessor {
             services.AddSingleton<IFileStatusScannerService, FileStatusScannerService>();
             services.AddSingleton<IKtx2InfoService, Ktx2InfoService>();
             services.AddSingleton<IMasterMaterialService, MasterMaterialService>();
+            services.AddSingleton<IDataGridLayoutService, DataGridLayoutService>();
             services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(
                 sp.GetRequiredService<IProjectSyncService>(),
                 sp.GetRequiredService<ILocalCacheService>(),

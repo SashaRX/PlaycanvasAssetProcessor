@@ -1259,7 +1259,8 @@
                 </Border>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="ModelViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+            <ScrollViewer x:Name="ModelViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"
+                          PreviewMouseWheel="ModelViewerScroll_PreviewMouseWheel">
                 <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -1356,6 +1357,7 @@
 
                                 <!-- 3D Viewport -->
                                 <Border Grid.Row="1" Background="#FF414D58" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0" MinWidth="128" MinHeight="128" VerticalAlignment="Stretch"
+                                        PreviewMouseWheel="HelixViewportBorder_PreviewMouseWheel"
                                         MouseWheel="HelixViewportBorder_MouseWheel">
                                     <helix:HelixViewport3D x:Name="viewPort3d"
                                                           Focusable="True"

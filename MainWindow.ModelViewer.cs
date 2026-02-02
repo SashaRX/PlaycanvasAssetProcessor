@@ -609,6 +609,53 @@ namespace AssetProcessor {
         }
 
         /// <summary>
+        /// ScrollViewer PreviewMouseWheel - backup handler (main zoom is via ComponentDispatcher).
+        /// </summary>
+        private void ModelViewerScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            // Main zoom handling is in ComponentDispatcher_ThreadFilterMessage
+            // This is a backup in case WPF events reach here
+            var mousePos = e.GetPosition(viewPort3d);
+            if (mousePos.X >= 0 && mousePos.Y >= 0 &&
+                mousePos.X <= viewPort3d.ActualWidth && mousePos.Y <= viewPort3d.ActualHeight) {
+                ZoomCamera(e.Delta);
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// Tunneling PreviewMouseWheel handler on Border - backup handler.
+        /// </summary>
+        private void HelixViewportBorder_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            ZoomCamera(e.Delta);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Zooms the camera by the specified wheel delta.
+        /// </summary>
+        private void ZoomCamera(int wheelDelta) {
+            if (viewPort3d.Camera is not PerspectiveCamera camera) {
+                return;
+            }
+
+            // Calculate zoom delta (positive = zoom in, negative = zoom out)
+            double zoomDelta = wheelDelta / 120.0 * 0.1; // 120 = standard wheel delta
+
+            // Get current look direction and distance
+            var lookDir = camera.LookDirection;
+            double currentDistance = lookDir.Length;
+
+            // Calculate new distance (minimum 0.1 to avoid flipping)
+            double newDistance = Math.Max(0.1, currentDistance * (1 - zoomDelta));
+
+            // Move camera along look direction
+            lookDir.Normalize();
+            var target = camera.Position + camera.LookDirection;
+            camera.Position = target - lookDir * newDistance;
+            camera.LookDirection = lookDir * newDistance;
+        }
+
+        /// <summary>
         /// Bubbling MouseWheel handler - fires AFTER HelixViewport3D has processed the event.
         /// Just mark as handled to prevent parent ScrollViewer from scrolling.
         /// </summary>

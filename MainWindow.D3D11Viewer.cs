@@ -331,34 +331,46 @@ namespace AssetProcessor {
 
         // Win32 message hook - catches WM_MOUSEWHEEL before WPF processes it
         // Required because HwndHost (D3D11TextureViewer) doesn't participate in WPF routed events
+        // Also handles HelixViewport3D zoom to bypass ScrollViewer interception
         private void ComponentDispatcher_ThreadFilterMessage(ref System.Windows.Interop.MSG msg, ref bool handled) {
             if (msg.message == WM_MOUSEWHEEL && !handled) {
-                // Check if D3D11 renderer is active and visible
-                if (TexturePreviewViewport == null || !texturePreviewService.IsUsingD3D11Renderer || D3D11TextureViewer == null) {
-                    return;
-                }
-
-                // Don't intercept if texture viewer is not visible (model viewer may be active)
-                if (D3D11TextureViewer.Visibility != Visibility.Visible) {
-                    return;
-                }
-
                 // Get mouse position from lParam (screen coordinates)
                 int x = (short)(msg.lParam.ToInt64() & 0xFFFF);
                 int y = (short)((msg.lParam.ToInt64() >> 16) & 0xFFFF);
-
-                // Convert to viewport coordinates
                 Point screenPoint = new Point(x, y);
-                Point viewportPoint = TexturePreviewViewport.PointFromScreen(screenPoint);
 
-                // Check if mouse is within texture preview bounds
-                if (viewportPoint.X >= 0 && viewportPoint.Y >= 0 &&
-                    viewportPoint.X <= TexturePreviewViewport.ActualWidth &&
-                    viewportPoint.Y <= TexturePreviewViewport.ActualHeight) {
-                    // Get delta from wParam and apply zoom with cursor position
-                    short delta = (short)((msg.wParam.ToInt64() >> 16) & 0xFFFF);
-                    D3D11TextureViewer.HandleZoomFromWpf(delta, x, y);
-                    handled = true;
+                // Check HelixViewport3D (model viewer) first
+                if (ModelViewerScroll.Visibility == Visibility.Visible && viewPort3d != null) {
+                    try {
+                        Point viewportPoint = viewPort3d.PointFromScreen(screenPoint);
+                        if (viewportPoint.X >= 0 && viewportPoint.Y >= 0 &&
+                            viewportPoint.X <= viewPort3d.ActualWidth &&
+                            viewportPoint.Y <= viewPort3d.ActualHeight) {
+                            short delta = (short)((msg.wParam.ToInt64() >> 16) & 0xFFFF);
+                            ZoomCamera(delta);
+                            handled = true;
+                            return;
+                        }
+                    } catch {
+                        // PointFromScreen can throw if window is not visible
+                    }
+                }
+
+                // Check D3D11 texture viewer
+                if (TexturePreviewViewport != null && texturePreviewService.IsUsingD3D11Renderer &&
+                    D3D11TextureViewer != null && D3D11TextureViewer.Visibility == Visibility.Visible) {
+                    try {
+                        Point viewportPoint = TexturePreviewViewport.PointFromScreen(screenPoint);
+                        if (viewportPoint.X >= 0 && viewportPoint.Y >= 0 &&
+                            viewportPoint.X <= TexturePreviewViewport.ActualWidth &&
+                            viewportPoint.Y <= TexturePreviewViewport.ActualHeight) {
+                            short delta = (short)((msg.wParam.ToInt64() >> 16) & 0xFFFF);
+                            D3D11TextureViewer.HandleZoomFromWpf(delta, x, y);
+                            handled = true;
+                        }
+                    } catch {
+                        // PointFromScreen can throw if window is not visible
+                    }
                 }
             }
         }

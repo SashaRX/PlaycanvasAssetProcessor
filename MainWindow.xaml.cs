@@ -3662,9 +3662,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 }
 
                 if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
-                    if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
-                        await loadBranchesCommand.ExecuteAsync(cancellationToken);
-                    }
+                    await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);
                     UpdateProjectPath();
                 }
 
@@ -3858,9 +3856,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 logger.Info($"Branch created successfully: {newBranch.Name} (ID: {newBranch.Id})");
 
                 // Обновляем список веток
-                if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
-                    await loadBranchesCommand.ExecuteAsync(CancellationToken.None);
-                }
+                await viewModel.LoadBranchesCommand.ExecuteAsync(CancellationToken.None);
 
                 // Выбираем новую ветку
                 viewModel.SelectedBranchId = newBranch.Id;
@@ -4155,9 +4151,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                     }
 
                     if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
-                        if (viewModel.LoadBranchesCommand is IAsyncRelayCommand<CancellationToken> loadBranchesCommand) {
-                            await loadBranchesCommand.ExecuteAsync(cancellationToken);
-                        }
+                        await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);
 
                         UpdateProjectPath();
                         logger.Info($"LoadLastSettings: Project folder path set to: {ProjectFolderPath}");

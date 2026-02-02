@@ -2782,36 +2782,22 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             NavigateToTextureFromHyperlink(sender, "Opacity Map", material => material.OpacityMapId);
         }
 
-        private void NavigateToDiffuseTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.DiffuseMapId);
-        }
+        private void NavigateToMaterialTexture_Click(object sender, RoutedEventArgs e) {
+            if (sender is not FrameworkElement element || element.Tag is not string textureType) return;
+            var material = MaterialsDataGrid.SelectedItem as MaterialResource;
+            if (material == null) return;
 
-        private void NavigateToNormalTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.NormalMapId);
-        }
-
-        private void NavigateToAOTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.AOMapId);
-        }
-
-        private void NavigateToGlossTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.GlossMapId);
-        }
-
-        private void NavigateToMetalnessTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.MetalnessMapId);
-        }
-
-        private void NavigateToEmissiveTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.EmissiveMapId);
-        }
-
-        private void NavigateToOpacityTexture_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureById(GetSelectedMaterial()?.OpacityMapId);
-        }
-
-        private MaterialResource? GetSelectedMaterial() {
-            return MaterialsDataGrid.SelectedItem as MaterialResource;
+            int? textureId = textureType switch {
+                "Diffuse" => material.DiffuseMapId,
+                "Normal" => material.NormalMapId,
+                "AO" => material.AOMapId,
+                "Gloss" => material.GlossMapId,
+                "Metalness" => material.MetalnessMapId,
+                "Emissive" => material.EmissiveMapId,
+                "Opacity" => material.OpacityMapId,
+                _ => null
+            };
+            NavigateToTextureById(textureId);
         }
 
         private void NavigateToTextureById(int? textureId) {

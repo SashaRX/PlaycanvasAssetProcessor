@@ -1566,7 +1566,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureDiffusePreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Diffuse" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToDiffuseTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Diffuse" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                                 <!-- Normal -->
                                 <Grid Margin="0,2">
@@ -1583,7 +1583,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureNormalPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Normal" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToNormalTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Normal" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                                 <!-- AO -->
                                 <Grid Margin="0,2">
@@ -1600,7 +1600,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureAOPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="AO" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToAOTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="AO" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                                 <!-- Gloss -->
                                 <Grid Margin="0,2">
@@ -1617,7 +1617,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureGlossPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Gloss" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToGlossTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Gloss" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                                 <!-- Metal -->
                                 <Grid Margin="0,2">
@@ -1634,7 +1634,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Metalness" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToMetalnessTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Metalness" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                                 <!-- Emissive -->
                                 <Grid Margin="0,2">
@@ -1651,7 +1651,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureEmissivePreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Emissive" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToEmissiveTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Emissive" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                                 <!-- Opacity -->
                                 <Grid Margin="0,2">
@@ -1668,7 +1668,7 @@
                                     <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                                         <Image x:Name="TextureOpacityPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Opacity" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
                                     </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Click="NavigateToOpacityTexture_Click" ToolTip="Navigate to texture"/>
+                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Opacity" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

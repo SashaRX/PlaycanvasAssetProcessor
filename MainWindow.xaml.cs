@@ -362,52 +362,14 @@ namespace AssetProcessor {
 
         #region UI Event Handlers
 
-        private void ShowTextureViewer() {
-            TextureViewerScroll.Visibility = Visibility.Visible;
-            ModelViewerScroll.Visibility = Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
-        }
+        private enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
 
-        private void ShowModelViewer() {
-            TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewerScroll.Visibility = Visibility.Visible;
-            MaterialViewerScroll.Visibility = Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
-        }
-
-        private void ShowMaterialViewer() {
-            TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewerScroll.Visibility = Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = Visibility.Visible;
-            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
-        }
-
-        private void HideAllViewers() {
-            TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewerScroll.Visibility = Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
-        }
-
-        private void ShowServerFileInfo() {
-            TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewerScroll.Visibility = Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = Visibility.Visible;
-            ChunkSlotsScroll.Visibility = Visibility.Collapsed;
-        }
-
-        private void ShowChunkSlotsViewer() {
-            TextureViewerScroll.Visibility = Visibility.Collapsed;
-            ModelViewerScroll.Visibility = Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = Visibility.Visible;
+        private void ShowViewer(ViewerType viewerType) {
+            TextureViewerScroll.Visibility = viewerType == ViewerType.Texture ? Visibility.Visible : Visibility.Collapsed;
+            ModelViewerScroll.Visibility = viewerType == ViewerType.Model ? Visibility.Visible : Visibility.Collapsed;
+            MaterialViewerScroll.Visibility = viewerType == ViewerType.Material ? Visibility.Visible : Visibility.Collapsed;
+            ServerFileInfoScroll.Visibility = viewerType == ViewerType.ServerFile ? Visibility.Visible : Visibility.Collapsed;
+            ChunkSlotsScroll.Visibility = viewerType == ViewerType.ChunkSlots ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private ViewModels.ServerAssetViewModel? _selectedServerAsset;
@@ -835,12 +797,6 @@ namespace AssetProcessor {
             }
         }
 
-        private void SetRightPanelVisibility(bool visible) {
-            if (!visible) {
-                HideAllViewers();
-            }
-        }
-
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Guard against early calls during initialization
             if (!this.IsLoaded || UnifiedExportGroupBox == null) return;
@@ -848,34 +804,30 @@ namespace AssetProcessor {
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
-                        SetRightPanelVisibility(true);
-                        ShowTextureViewer();
+                        ShowViewer(ViewerType.Texture);
                         UpdateExportCounts();
                         TextureToolsPanel.Visibility = Visibility.Visible;
                         break;
                     case "Models":
-                        SetRightPanelVisibility(true);
-                        ShowModelViewer();
+                        ShowViewer(ViewerType.Model);
                         UpdateExportCounts();
                         TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Materials":
-                        SetRightPanelVisibility(true);
-                        ShowMaterialViewer();
+                        ShowViewer(ViewerType.Material);
                         UpdateExportCounts();
                         TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Master Materials":
-                        SetRightPanelVisibility(true);
-                        ShowChunkSlotsViewer();
+                        ShowViewer(ViewerType.ChunkSlots);
                         TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Server":
-                        ShowServerFileInfo();
+                        ShowViewer(ViewerType.ServerFile);
                         TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Logs":
-                        SetRightPanelVisibility(false);
+                        ShowViewer(ViewerType.None);
                         TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                 }

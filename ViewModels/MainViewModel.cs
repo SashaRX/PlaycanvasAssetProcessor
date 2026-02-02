@@ -32,6 +32,8 @@ namespace AssetProcessor.ViewModels {
         private readonly SynchronizationContext? synchronizationContext;
         private readonly IProjectSelectionService projectSelectionService;
         private readonly IPlayCanvasCredentialsService credentialsService;
+        private readonly ITextureUploadService textureUploadService;
+        private readonly IModelConversionService modelConversionService;
         private readonly TextureSelectionViewModel textureSelectionViewModel;
         private readonly ORMTextureViewModel ormTextureViewModel;
         private readonly TextureConversionSettingsViewModel conversionSettingsViewModel;
@@ -159,6 +161,8 @@ namespace AssetProcessor.ViewModels {
             IAssetDownloadCoordinator assetDownloadCoordinator,
             IProjectSelectionService projectSelectionService,
             IPlayCanvasCredentialsService credentialsService,
+            ITextureUploadService textureUploadService,
+            IModelConversionService modelConversionService,
             TextureSelectionViewModel textureSelectionViewModel,
             ORMTextureViewModel ormTextureViewModel,
             TextureConversionSettingsViewModel conversionSettingsViewModel,
@@ -172,6 +176,8 @@ namespace AssetProcessor.ViewModels {
             this.assetDownloadCoordinator = assetDownloadCoordinator;
             this.projectSelectionService = projectSelectionService;
             this.credentialsService = credentialsService;
+            this.textureUploadService = textureUploadService;
+            this.modelConversionService = modelConversionService;
             this.textureSelectionViewModel = textureSelectionViewModel;
             this.ormTextureViewModel = ormTextureViewModel;
             this.conversionSettingsViewModel = conversionSettingsViewModel;
@@ -183,6 +189,89 @@ namespace AssetProcessor.ViewModels {
             ApiKey = credentialsService.GetApiKeyOrNull();
 
             logger.Info("MainViewModel initialized");
+        }
+
+        public async Task<UserNotification> UploadTexturesAsync(
+            IList? selectedItems,
+            IProgress<double>? progress = null,
+            CancellationToken cancellationToken = default) {
+            var texturesToUpload = ResolveTexturesForUpload(selectedItems);
+            var projectName = CurrentProjectName ?? "UnknownProject";
+
+            var uploadProgress = progress == null
+                ? null
+                : new Progress<Upload.B2UploadProgress>(p => progress.Report(p.PercentComplete));
+
+            var result = await textureUploadService.UploadTexturesAsync(
+                texturesToUpload,
+                projectName,
+                uploadProgress,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!result.Success) {
+                var kind = result.FailureReason == TextureUploadFailureReason.AuthorizationFailed
+                    ? NotificationKind.Error
+                    : NotificationKind.Warning;
+
+                return new UserNotification(
+                    kind,
+                    "Upload Error",
+                    result.Message);
+            }
+
+            var batch = result.BatchResult;
+            var message = batch == null
+                ? "Upload completed."
+                : $"Upload completed!\n\n" +
+                  $"Uploaded: {batch.SuccessCount}\n" +
+                  $"Skipped (already exists): {batch.SkippedCount}\n" +
+                  $"Failed: {batch.FailedCount}\n" +
+                  $"Duration: {batch.Duration.TotalSeconds:F1}s";
+
+            return new UserNotification(
+                batch?.Success == true ? NotificationKind.Info : NotificationKind.Warning,
+                "Upload Result",
+                message);
+        }
+
+        public async Task<ModelConversionUiResult> ProcessSelectedModelAsync(
+            ModelResource? selectedModel,
+            ModelConversion.Core.ModelConversionSettings settings,
+            CancellationToken cancellationToken = default) {
+            if (selectedModel == null) {
+                return new ModelConversionUiResult(false, "No model selected for processing.", null);
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedModel.Path)) {
+                return new ModelConversionUiResult(false, "Model file path is empty.", null);
+            }
+
+            ProgressText = $"Processing {selectedModel.Name}...";
+            var result = await modelConversionService.ConvertAsync(selectedModel, settings, cancellationToken)
+                .ConfigureAwait(false);
+            ProgressText = "Ready";
+
+            if (!result.Success) {
+                return new ModelConversionUiResult(false, $"Model processing failed:\n\n{result.Message}", result.Result);
+            }
+
+            return new ModelConversionUiResult(
+                true,
+                $"Model processed successfully!\n\nLOD files: {result.Result?.LodFiles.Count ?? 0}\nOutput: {result.Result?.OutputDirectory}",
+                result.Result);
+        }
+
+        private IReadOnlyList<TextureResource> ResolveTexturesForUpload(IList? selectedItems) {
+            if (selectedItems != null) {
+                var selected = selectedItems.Cast<object>()
+                    .OfType<TextureResource>()
+                    .ToList();
+                if (selected.Count > 0) {
+                    return selected;
+                }
+            }
+
+            return Textures.Where(t => t.ExportToServer).ToList();
         }
 
         /// <summary>

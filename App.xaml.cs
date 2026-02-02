@@ -2,9 +2,11 @@ using AssetProcessor.Helpers;
 using AssetProcessor.Services;
 using AssetProcessor.Settings;
 using AssetProcessor.ViewModels;
+using AssetProcessor.Upload;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using System;
+using AssetProcessor.Data;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Windows;
@@ -103,6 +105,10 @@ namespace AssetProcessor {
             services.AddSingleton<IFileStatusScannerService, FileStatusScannerService>();
             services.AddSingleton<IKtx2InfoService, Ktx2InfoService>();
             services.AddSingleton<IMasterMaterialService, MasterMaterialService>();
+            services.AddTransient<IB2UploadService, B2UploadService>();
+            services.AddTransient<IUploadStateService, UploadStateService>();
+            services.AddSingleton<ITextureUploadService, TextureUploadService>();
+            services.AddSingleton<IModelConversionService, ModelConversionService>();
             services.AddSingleton<IAssetDownloadCoordinator>(sp => new AssetDownloadCoordinator(
                 sp.GetRequiredService<IProjectSyncService>(),
                 sp.GetRequiredService<ILocalCacheService>(),
@@ -155,6 +161,8 @@ namespace AssetProcessor {
                 var assetDownloadCoordinator = sp.GetRequiredService<IAssetDownloadCoordinator>();
                 var projectSelectionService = sp.GetRequiredService<IProjectSelectionService>();
                 var credentialsService = sp.GetRequiredService<IPlayCanvasCredentialsService>();
+                var textureUploadService = sp.GetRequiredService<ITextureUploadService>();
+                var modelConversionService = sp.GetRequiredService<IModelConversionService>();
                 var textureSelectionViewModel = sp.GetRequiredService<TextureSelectionViewModel>();
                 var ormTextureViewModel = sp.GetRequiredService<ORMTextureViewModel>();
                 var conversionSettingsViewModel = sp.GetRequiredService<TextureConversionSettingsViewModel>();
@@ -169,6 +177,8 @@ namespace AssetProcessor {
                     assetDownloadCoordinator,
                     projectSelectionService,
                     credentialsService,
+                    textureUploadService,
+                    modelConversionService,
                     textureSelectionViewModel,
                     ormTextureViewModel,
                     conversionSettingsViewModel,

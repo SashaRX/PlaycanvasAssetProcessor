@@ -4655,134 +4655,18 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
         }
 
         private async void UploadTexturesButton_Click(object sender, RoutedEventArgs e) {
-            var projectName = ProjectName ?? "UnknownProject";
-            var outputPath = Settings.AppSettings.Default.ProjectsFolderPath;
-
-            if (string.IsNullOrEmpty(outputPath)) {
-                MessageBox.Show(
-                    "Не указана папка проектов. Откройте настройки и укажите Projects Folder Path.",
-                    "Upload Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            // Проверяем настройки B2
-            if (string.IsNullOrEmpty(Settings.AppSettings.Default.B2KeyId) ||
-                string.IsNullOrEmpty(Settings.AppSettings.Default.B2BucketName)) {
-                MessageBox.Show(
-                    "Backblaze B2 credentials not configured. Go to Settings -> CDN/Upload to configure.",
-                    "Upload Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            // Получаем текстуры для загрузки:
-            // 1. Сначала пробуем выбранные в DataGrid
-            // 2. Если ничего не выбрано - берём отмеченные для экспорта (ExportToServer = true)
-            IEnumerable<Resources.TextureResource> texturesToUpload = TexturesDataGrid.SelectedItems.Cast<Resources.TextureResource>();
-
-            if (!texturesToUpload.Any()) {
-                // Используем текстуры, отмеченные для экспорта
-                texturesToUpload = viewModel.Textures.Where(t => t.ExportToServer);
-            }
-
-            // Вычисляем путь к KTX2 из исходного Path (заменяем расширение на .ktx2)
-            var selectedTextures = texturesToUpload
-                .Where(t => !string.IsNullOrEmpty(t.Path))
-                .Select(t => {
-                    var sourceDir = System.IO.Path.GetDirectoryName(t.Path)!;
-                    var fileName = System.IO.Path.GetFileNameWithoutExtension(t.Path);
-                    var ktx2Path = System.IO.Path.Combine(sourceDir, fileName + ".ktx2");
-                    return (Texture: t, Ktx2Path: ktx2Path);
-                })
-                .Where(x => System.IO.File.Exists(x.Ktx2Path))
-                .ToList();
-
-            if (!selectedTextures.Any()) {
-                MessageBox.Show(
-                    "No converted textures found.\n\nEither select textures in the list, or mark them for export (Mark Related), then process them to KTX2.",
-                    "Upload Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
             try {
                 UploadTexturesButton.IsEnabled = false;
                 UploadTexturesButton.Content = "Uploading...";
 
-                using var b2Service = new Upload.B2UploadService();
-                using var uploadStateService = new Data.UploadStateService();
-                var uploadCoordinator = new Services.AssetUploadCoordinator(b2Service, uploadStateService);
-
-                var initialized = await uploadCoordinator.InitializeAsync();
-                if (!initialized) {
-                    MessageBox.Show(
-                        "Failed to connect to Backblaze B2. Check your credentials in Settings.",
-                        "Upload Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                    return;
-                }
-
-                // Подготавливаем список файлов для загрузки
-                var files = selectedTextures
-                    .Select(x => (LocalPath: x.Ktx2Path, RemotePath: $"{projectName}/textures/{System.IO.Path.GetFileName(x.Ktx2Path)}"))
-                    .ToList();
-
-                var result = await b2Service.UploadBatchAsync(
-                    files,
-                    progress: new Progress<Upload.B2UploadProgress>(p => {
-                        Dispatcher.Invoke(() => {
-                            ProgressBar.Value = p.PercentComplete;
-                        });
-                    })
-                );
-
-                // Обновляем статусы текстур и сохраняем в БД
-                logger.Debug($"Results count: {result.Results.Count}, selectedTextures count: {selectedTextures.Count}");
-                foreach (var item in selectedTextures) {
-                    logger.Debug($"Looking for path: '{item.Ktx2Path}'");
-                    foreach (var r in result.Results) {
-                        logger.Debug($"  Result path: '{r.LocalPath}' Success={r.Success} Skipped={r.Skipped}");
-                    }
-                    var uploadResult = result.Results.FirstOrDefault(r =>
-                        string.Equals(r.LocalPath, item.Ktx2Path, StringComparison.OrdinalIgnoreCase));
-                    logger.Debug($"uploadResult found: {uploadResult != null}, Success: {uploadResult?.Success}");
-                    if (uploadResult?.Success == true) {
-                        item.Texture.UploadStatus = "Uploaded";
-                        item.Texture.RemoteUrl = uploadResult.CdnUrl;
-                        item.Texture.UploadedHash = uploadResult.ContentSha1;
-                        item.Texture.LastUploadedAt = DateTime.UtcNow;
-
-                        // Сохраняем в БД для персистентности между сессиями
-                        var remotePath = $"{projectName}/textures/{System.IO.Path.GetFileName(item.Ktx2Path)}";
-                        await uploadStateService.SaveUploadAsync(new Data.UploadRecord {
-                            LocalPath = item.Ktx2Path,
-                            RemotePath = remotePath,
-                            ContentSha1 = uploadResult.ContentSha1 ?? "",
-                            ContentLength = new System.IO.FileInfo(item.Ktx2Path).Length,
-                            UploadedAt = DateTime.UtcNow,
-                            CdnUrl = uploadResult.CdnUrl ?? "",
-                            Status = "Uploaded",
-                            FileId = uploadResult.FileId,
-                            ProjectName = projectName
-                        });
-                    }
-                }
-
-                MessageBox.Show(
-                    $"Upload completed!\n\n" +
-                    $"Uploaded: {result.SuccessCount}\n" +
-                    $"Skipped (already exists): {result.SkippedCount}\n" +
-                    $"Failed: {result.FailedCount}\n" +
-                    $"Duration: {result.Duration.TotalSeconds:F1}s",
-                    "Upload Result",
-                    MessageBoxButton.OK,
-                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
-
+                var progress = new Progress<double>(value => ProgressBar.Value = value);
+                var notification = await viewModel.UploadTexturesAsync(TexturesDataGrid.SelectedItems, progress);
+                var icon = notification.Kind switch {
+                    NotificationKind.Error => MessageBoxImage.Error,
+                    NotificationKind.Warning => MessageBoxImage.Warning,
+                    _ => MessageBoxImage.Information
+                };
+                MessageBox.Show(notification.Message, notification.Title, MessageBoxButton.OK, icon);
             } catch (Exception ex) {
                 logger.Error(ex, "Texture upload failed");
                 MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -5420,82 +5304,26 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
         // Context menu handlers for model rows
         private async void ProcessSelectedModel_Click(object sender, RoutedEventArgs e) {
-            System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] ProcessSelectedModel_Click START\n");
             try {
                 var selectedModel = ModelsDataGrid.SelectedItem as ModelResource;
-                if (selectedModel == null) {
-                    MessageBox.Show("No model selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Model: {selectedModel.Name}\n");
-
-                if (string.IsNullOrEmpty(selectedModel.Path)) {
-                    MessageBox.Show("Model file path is empty.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
 
                 // Get settings from ModelConversionSettingsPanel
                 // ������� ���� � ����� ��� ��������������� ����������� ���� ��������� (FBX/GLB)
-                var settings = ModelConversionSettingsPanel.GetSettings(selectedModel.Path);
+                var settings = ModelConversionSettingsPanel.GetSettings(selectedModel?.Path);
 
-                // Create output directory
-                var modelName = Path.GetFileNameWithoutExtension(selectedModel.Path);
-                var sourceDir = Path.GetDirectoryName(selectedModel.Path) ?? Environment.CurrentDirectory;
-                var outputDir = Path.Combine(sourceDir, "glb");
-                Directory.CreateDirectory(outputDir);
-
-                logService.LogInfo($"Processing model: {selectedModel.Name}");
-                logService.LogInfo($"  Source: {selectedModel.Path}");
-                logService.LogInfo($"  Output: {outputDir}");
-
-                // Load FBX2glTF and gltfpack paths from global settings
-                var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
-                var fbx2glTFPath = string.IsNullOrWhiteSpace(modelConversionSettings.FBX2glTFExecutablePath)
-                    ? "FBX2glTF-windows-x86_64.exe"
-                    : modelConversionSettings.FBX2glTFExecutablePath;
-                var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
-                    ? "gltfpack.exe"
-                    : modelConversionSettings.GltfPackExecutablePath;
-
-                logService.LogInfo($"  FBX2glTF: {fbx2glTFPath}");
-                logService.LogInfo($"  gltfpack: {gltfPackPath}");
-
-                ProgressTextBlock.Text = $"Processing {selectedModel.Name}...";
-
-                // Create the model conversion pipeline
-                var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
-
-                System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Calling ConvertAsync\n");
-                var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
-                System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] ConvertAsync returned, Success={result.Success}\n");
-
-                if (result.Success) {
-                    logService.LogInfo($"Model processed successfully");
-                    logService.LogInfo($"  LOD files: {result.LodFiles.Count}");
-                    logService.LogInfo($"  Manifest: {result.ManifestPath}");
-
-                    // Автоматически обновляем viewport с новыми GLB LOD файлами
-                    logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
-                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Before TryLoadGlbLodAsync\n");
+                var result = await viewModel.ProcessSelectedModelAsync(selectedModel, settings);
+                if (result.Success && result.Result != null) {
                     await TryLoadGlbLodAsync(selectedModel.Path);
-                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] After TryLoadGlbLodAsync\n");
-
-                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] About to show MessageBox\n");
-                    MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
-                        "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] MessageBox closed\n");
-                } else {
-                    var errors = string.Join("\n", result.Errors);
-                    logService.LogError($"? Model processing failed:\n{errors}");
-                    MessageBox.Show($"Model processing failed:\n\n{errors}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
 
-                ProgressTextBlock.Text = "Ready";
+                MessageBox.Show(
+                    result.Message,
+                    result.Success ? "Success" : "Error",
+                    MessageBoxButton.OK,
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Error);
             } catch (Exception ex) {
-                logService.LogError($"Error processing model: {ex.Message}");
+                logger.Error(ex, "Error processing model");
                 MessageBox.Show($"Error processing model: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                ProgressTextBlock.Text = "Ready";
             }
         }
 

@@ -2672,114 +2672,14 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
-        private void NavigateToTextureFromHyperlink(object sender, string mapType, Func<MaterialResource, int?> mapIdSelector) {
-            ArgumentNullException.ThrowIfNull(sender);
+        private void MaterialMapHyperlink_Click(object sender, RoutedEventArgs e) {
+            if (sender is not Hyperlink link || link.NavigateUri == null) return;
+            if (!string.Equals(link.NavigateUri.Scheme, "texture", StringComparison.OrdinalIgnoreCase)) return;
 
-            MaterialResource? material = (sender as Hyperlink)?.DataContext as MaterialResource?? MaterialsDataGrid.SelectedItem as MaterialResource;
-
-            if (sender is Hyperlink hyperlink)
-            {
-                logger.Debug("����������� ������. NavigateUri: {NavigateUri}; ������� �����: {HyperlinkText}",
-                             hyperlink.NavigateUri,
-                             string.Concat(hyperlink.Inlines.OfType<Run>().Select(r => r.Text)));
+            string idText = link.NavigateUri.AbsoluteUri.Replace("texture://", string.Empty);
+            if (int.TryParse(idText, out int textureId)) {
+                NavigateToTextureById(textureId);
             }
-            else
-            {
-                logger.Warn("NavigateToTextureFromHyperlink ������ ������������ ���� {SenderType}, ��������� Hyperlink.", sender.GetType().FullName);
-            }
-
-            logger.Debug("������ ����� �� �����������. ��� �����������: {SenderType}; ��� DataContext: {DataContextType}; ��� ��������� � �������: {SelectedType}",
-                         sender.GetType().FullName,
-                         (sender as FrameworkContentElement)?.DataContext?.GetType().FullName ?? "<null>",
-                         MaterialsDataGrid.SelectedItem?.GetType().FullName ?? "<null>");
-
-            // 1) �������� ����� ID �������� �� Hyperlink.NavigateUri (�� ��������� ��� ��� ���������)
-            int? mapId = null;
-            if (sender is Hyperlink link && link.NavigateUri != null &&
-                string.Equals(link.NavigateUri.Scheme, "texture", StringComparison.OrdinalIgnoreCase))
-            {
-                string idText = link.NavigateUri.AbsoluteUri.Replace("texture://", string.Empty);
-                if (int.TryParse(idText, out int parsed))
-                {
-                    mapId = parsed;
-                }
-            }
-
-            // 2) ���� � NavigateUri ��� ��������, ������� ����� �� ���������
-            if (!mapId.HasValue)
-            {
-                if (material == null) {
-                    logger.Warn("�� ������� ���������� �������� ��� ����������� {MapType}.", mapType);
-                    return;
-                }
-
-                mapId = mapIdSelector(material);
-            }
-            material ??= new MaterialResource { Name = "<unknown>", ID = -1 };
-            if (!mapId.HasValue) {
-                logger.Info("��� ��������� {MaterialName} ({MaterialId}) ����������� ������������� �������� {MapType}.", material.Name, material.ID, mapType);
-                return;
-            }
-
-            logger.Info("������ �� ������� � �������� {MapType} � ID {TextureId} �� ��������� {MaterialName} ({MaterialId}).",
-                        mapType,
-                        mapId.Value,
-                        material.Name,
-                        material.ID);
-
-            _ = Dispatcher.BeginInvoke(new Action(() => {
-                if (TexturesTabItem != null) {
-                    tabControl.SelectedItem = TexturesTabItem;
-                    logger.Debug("������� ������� ������������ ����� TabControl.");
-                }
-
-                TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == mapId.Value);
-                if (texture != null) {
-                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                    view?.MoveCurrentTo(texture);
-
-                    TexturesDataGrid.SelectedItem = texture;
-                    TexturesDataGrid.UpdateLayout();
-                    TexturesDataGrid.ScrollIntoView(texture);
-                    TexturesDataGrid.Focus();
-
-                    logger.Info("�������� {TextureName} (ID {TextureId}) �������� � ���������� � ������� �������.", texture.Name, texture.ID);
-                } else {
-                    logger.Error("�������� � ID {TextureId} �� ������� � ���������. ����� �������: {TextureCount}.", mapId.Value, viewModel.Textures.Count);
-                }
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-        }
-
-        private void MaterialDiffuseMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Diffuse Map", material => material.DiffuseMapId);
-        }
-
-        private void MaterialNormalMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Normal Map", material => material.NormalMapId);
-        }
-
-        private void MaterialSpecularMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Specular Map", material => material.SpecularMapId);
-        }
-
-        private void MaterialMetalnessMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Metalness Map", material => material.MetalnessMapId);
-        }
-
-        private void MaterialGlossMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Gloss Map", material => material.GlossMapId);
-        }
-
-        private void MaterialAOMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "AO Map", material => material.AOMapId);
-        }
-
-        private void MaterialEmissiveMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Emissive Map", material => material.EmissiveMapId);
-        }
-
-        private void MaterialOpacityMapHyperlink_Click(object sender, RoutedEventArgs e) {
-            NavigateToTextureFromHyperlink(sender, "Opacity Map", material => material.OpacityMapId);
         }
 
         private void NavigateToMaterialTexture_Click(object sender, RoutedEventArgs e) {

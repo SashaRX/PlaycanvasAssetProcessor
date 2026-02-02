@@ -2847,56 +2847,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             }
         }
 
-        private void SwitchToTexturesTabAndSelectTexture(MaterialResource material) {
-            if (material == null) return;
-
-            // ������������� �� ������� �������
-            if (TexturesTabItem != null) {
-                tabControl.SelectedItem = TexturesTabItem;
-            }
-
-            // ���� ������ ��������� ��������, ��������� � ����������
-            TextureResource? textureToSelect = null;
-
-            // ��������� ��������� ���� ������� � ������� ����������
-            var textureIds = new int?[] {
-                material.DiffuseMapId,
-                material.NormalMapId,
-                material.AOMapId,
-                material.GlossMapId,
-                material.MetalnessMapId,
-                material.EmissiveMapId,
-                material.OpacityMapId
-            };
-
-            foreach (var textureId in textureIds) {
-                if (textureId.HasValue) {
-                    var texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
-                    if (texture != null) {
-                        textureToSelect = texture;
-                        break;
-                    }
-                }
-            }
-
-            // ���� ������� ��������� ��������, �������� �
-            if (textureToSelect != null) {
-                _ = Dispatcher.BeginInvoke(new Action(() => {
-                    ICollectionView? view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-                    view?.MoveCurrentTo(textureToSelect);
-
-                    TexturesDataGrid.SelectedItem = textureToSelect;
-                    TexturesDataGrid.UpdateLayout();
-                    TexturesDataGrid.ScrollIntoView(textureToSelect);
-                    TexturesDataGrid.Focus();
-
-                    logger.Info($"������������� ������� �������� {textureToSelect.Name} (ID {textureToSelect.ID}) ��� ��������� {material.Name} (ID {material.ID})");
-                }), System.Windows.Threading.DispatcherPriority.Loaded);
-            } else {
-                logger.Info($"��� ��������� {material.Name} (ID {material.ID}) �� ������� ��������� �������");
-            }
-        }
-
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
             if (textureId.HasValue) {
                 TextureResource? texture = viewModel.Textures.FirstOrDefault(t => t.ID == textureId.Value);
@@ -2966,41 +2916,6 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
 
 
         #region Helper Methods
-
-        private string GetResourcePath(string? fileName, int? parentId = null) {
-            if (string.IsNullOrEmpty(ProjectFolderPath)) {
-                throw new Exception("Project folder path is null or empty");
-            }
-
-            if (string.IsNullOrEmpty(ProjectName)) {
-                throw new Exception("Project name is null or empty");
-            }
-
-            return projectAssetService.GetResourcePath(AppSettings.Default.ProjectsFolderPath, ProjectName, folderPaths, fileName, parentId);
-        }
-
-        private void RecalculateIndices() {
-            viewModel.RecalculateIndices();
-        }
-
-        private bool _layoutUpdatePending = false;
-
-        /// <summary>
-        /// ���������� ���������� layout DataGrid ��� �������������� ������������� �����������
-        /// </summary>
-        private void DeferUpdateLayout() {
-            if (_layoutUpdatePending) {
-                return; // ��� ������������� ����������
-            }
-
-            _layoutUpdatePending = true;
-            Dispatcher.InvokeAsync(() => {
-                TexturesDataGrid?.UpdateLayout();
-                ModelsDataGrid?.UpdateLayout();
-                MaterialsDataGrid?.UpdateLayout();
-                _layoutUpdatePending = false;
-            }, DispatcherPriority.Loaded);
-        }
 
         /// <summary>
         /// Scans all textures for existing KTX2 files and populates CompressionFormat, MipmapCount, and CompressedSize.
@@ -4534,7 +4449,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
                 viewModel.Materials = new ObservableCollection<MaterialResource>(e.Materials);
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);
-                RecalculateIndices();
+                viewModel.RecalculateIndices();
                 viewModel.SyncMaterialMasterMappings();
 
                 logger.Info("[ApplyAssetsToUI] Data assigned, binding DataGrids");

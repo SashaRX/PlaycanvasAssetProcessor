@@ -487,7 +487,10 @@ namespace AssetProcessor {
         // TextureSelectionViewModel Event Handlers and texture preview loading are in MainWindow.TextureSelection.cs
 
 private void AboutMenu(object? sender, RoutedEventArgs e) {
-            MessageBox.Show("AssetProcessor v1.0\n\nDeveloped by: SashaRX\n\n2021");
+            var aboutWindow = new Windows.AboutWindow {
+                Owner = this
+            };
+            aboutWindow.ShowDialog();
         }
 
         private void SettingsMenu(object? sender, RoutedEventArgs e) {

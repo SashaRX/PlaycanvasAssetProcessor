@@ -181,15 +181,12 @@ namespace AssetProcessor {
         #region Model Context Menu Handlers
 
         private async void ProcessSelectedModel_Click(object sender, RoutedEventArgs e) {
-            File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] ProcessSelectedModel_Click START\n");
             try {
                 var selectedModel = ModelsDataGrid.SelectedItem as ModelResource;
                 if (selectedModel == null) {
                     MessageBox.Show("No model selected for processing.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
-
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Model: {selectedModel.Name}\n");
 
                 if (string.IsNullOrEmpty(selectedModel.Path)) {
                     MessageBox.Show("Model file path is empty.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -227,9 +224,7 @@ namespace AssetProcessor {
                 // Create the model conversion pipeline
                 var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
 
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Calling ConvertAsync\n");
                 var result = await pipeline.ConvertAsync(selectedModel.Path, outputDir, settings);
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] ConvertAsync returned, Success={result.Success}\n");
 
                 if (result.Success) {
                     logService.LogInfo($"Model processed successfully");
@@ -238,14 +233,10 @@ namespace AssetProcessor {
 
                     // Автоматически обновляем viewport с новыми GLB LOD файлами
                     logService.LogInfo("Refreshing viewport with converted GLB LOD files...");
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] Before TryLoadGlbLodAsync\n");
                     await TryLoadGlbLodAsync(selectedModel.Path);
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] After TryLoadGlbLodAsync\n");
 
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] About to show MessageBox\n");
                     MessageBox.Show($"Model processed successfully!\n\nLOD files: {result.LodFiles.Count}\nOutput: {outputDir}",
                         "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [CONVERT] MessageBox closed\n");
                 } else {
                     var errors = string.Join("\n", result.Errors);
                     logService.LogError($"❌ Model processing failed:\n{errors}");

@@ -50,13 +50,10 @@ namespace AssetProcessor {
                 if (!string.IsNullOrEmpty(selectedModel.Path)) {
                     if (selectedModel.Status == "Downloaded") { // если модель уже скачана
                         // Сначала пробуем загрузить GLB LOD файлы
-                        System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] Before TryLoadGlbLodAsync\n");
                         await TryLoadGlbLodAsync(selectedModel.Path);
-                        System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] After TryLoadGlbLodAsync, _isGlbViewerActive={_isGlbViewerActive}\n");
 
                         // Если GLB LOD не найдены, загружаем FBX модель и другую информацию
                         if (!_isGlbViewerActive) {
-                            System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] Loading FBX model\n");
                             // Загружаем модель во вьюпорт (3D просмотрщик)
                             LoadModel(selectedModel.Path);
 
@@ -78,9 +75,7 @@ namespace AssetProcessor {
                                     UpdateUVImage(mesh);
                                 }
                             }
-                            System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] FBX loaded\n");
                         }
-                        System.IO.File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [SelectionChanged] COMPLETE\n");
                         // Если GLB viewer активен, информация уже установлена в TryLoadGlbLodAsync
                     }
                 }

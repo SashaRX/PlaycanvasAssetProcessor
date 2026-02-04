@@ -44,7 +44,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
             var startTime = DateTime.Now;
 
             try {
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] ConvertAsync START\n");
                 Logger.Info($"=== MODEL CONVERSION PIPELINE START ===");
                 Logger.Info($"Input: {inputPath}");
                 Logger.Info($"Output: {outputDirectory}");
@@ -55,25 +54,20 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 var isGltfInput = inputExtension is ".gltf" or ".glb";
 
                 // Проверяем доступность инструментов
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Checking FBX2glTF availability\n");
                 if (!isGltfInput && !await _fbx2glTFWrapper.IsAvailableAsync()) {
                     throw new Exception("FBX2glTF not available. Please install it or specify path.");
                 }
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] FBX2glTF OK, checking gltfpack\n");
 
                 if (!await _gltfPackWrapper.IsAvailableAsync()) {
                     throw new Exception("gltfpack not available. Please install meshoptimizer or specify path.");
                 }
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] gltfpack OK\n");
 
                 // Создаём директории
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Creating directories\n");
                 Directory.CreateDirectory(outputDirectory);
                 var buildDir = Path.Combine(outputDirectory, "build");
                 Directory.CreateDirectory(buildDir);
 
                 var modelName = Path.GetFileNameWithoutExtension(inputPath);
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Model name: {modelName}, isGltfInput: {isGltfInput}\n");
 
                 string baseGltfPath;
 
@@ -90,12 +84,10 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     InspectGlbUV(inputPath, $"INPUT {inputExtension.ToUpper()} (direct)");
                 } else {
                     // ШАГ A: FBX → базовый GLB (без сжатия)
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Starting FBX2glTF conversion\n");
                     Logger.Info("=== STEP A: FBX → BASE GLB ===");
                     Logger.Info($"Exclude textures: {settings.ExcludeTextures} (textures will be processed separately)");
                     var baseGlbPathNoExt = Path.Combine(buildDir, modelName);
                     var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputPath, baseGlbPathNoExt, settings.ExcludeTextures);
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] FBX2glTF done, Success: {fbxResult.Success}\n");
 
                     if (!fbxResult.Success) {
                         throw new Exception($"FBX2glTF conversion failed: {fbxResult.Error}");
@@ -105,15 +97,11 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     baseGltfPath = fbxResult.OutputFilePath!;
                     result.BaseGlbPath = baseGltfPath;
 
-                    // DEBUG: Проверяем UV после FBX2glTF
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Calling InspectGlbUV\n");
                     InspectGlbUV(baseGltfPath, "BASE GLB (after FBX2glTF)");
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] InspectGlbUV done\n");
                 }
 
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Starting LOD generation\n");
                     Logger.Info("=== STEP B & C: LOD GENERATION ===");
 
                     // Сохраняем LOD файлы напрямую в outputDirectory
@@ -125,7 +113,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         var lodFileName = $"{modelName}_lod{(int)lodSettings.Level}.glb";
                         var lodOutputPath = Path.Combine(outputDirectory, lodFileName);
 
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Generating {lodName}\n");
                         Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
 
                         // Используем gltfpack для симплификации
@@ -139,7 +126,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                             generateReport: settings.GenerateQAReport,
                             excludeTextures: settings.ExcludeTextures
                         );
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] {lodName} done, Success: {gltfResult.Success}\n");
 
                         if (!gltfResult.Success) {
                             Logger.Error($"Failed to generate {lodName}: {gltfResult.Error}");
@@ -149,10 +135,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
                         Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
 
-                        // DEBUG: Проверяем UV после обработки
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Calling InspectGlbUV for {lodName}\n");
                         InspectGlbUV(lodOutputPath, $"{lodName} (after gltfpack)");
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] InspectGlbUV for {lodName} done\n");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 
@@ -166,14 +149,12 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         };
                     }
 
-                    File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] LOD loop complete\n");
                     // Сохраняем LOD файлы и метрики в результат
                     result.LodFiles = lodFiles;
                     result.LodMetrics = lodMetrics;
 
                     // ШАГ D: Генерация манифеста
                     if (settings.GenerateManifest && lodFiles.Count > 0) {
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Generating manifest\n");
                         Logger.Info($"=== STEP D: MANIFEST GENERATION ===");
 
                         var manifestPath = _manifestGenerator.GenerateManifest(
@@ -185,12 +166,10 @@ namespace AssetProcessor.ModelConversion.Pipeline {
 
                         Logger.Info($"Manifest created: {manifestPath}");
                         result.ManifestPath = manifestPath;
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Manifest done\n");
                     }
 
                     // ШАГ E: QA отчёт
                     if (settings.GenerateQAReport && lodMetrics.Count > 0) {
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Generating QA report\n");
                         Logger.Info($"=== STEP E: QA REPORT ===");
 
                         var qaReport = new QualityReport {
@@ -214,50 +193,34 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         // Добавляем warnings/errors из отчёта
                         result.Warnings.AddRange(qaReport.Warnings);
                         result.Errors.AddRange(qaReport.Errors);
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] QA report done\n");
                     }
                 }
 
                 // Cleanup промежуточных файлов
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Cleanup phase\n");
                 if (settings.CleanupIntermediateFiles) {
-                    // Logger.Info("=== CLEANUP INTERMEDIATE FILES ==="); // NLog блокирует UI
                     try {
                         // КРИТИЧНО: Удаляем только buildDir, который содержит все промежуточные файлы
                         // НЕ удаляем файлы из input directory - это может удалить пользовательские текстуры!
-                        // FBX2glTF создаёт текстуры в buildDir или его поддиректориях, которые удаляются вместе с buildDir
                         if (Directory.Exists(buildDir)) {
                             Directory.Delete(buildDir, recursive: true);
-                            // Logger.Info($"Deleted build directory: {buildDir}"); // NLog блокирует UI
                         }
-
-                        // ПРИМЕЧАНИЕ: Удалён опасный код, который искал текстуры в input directory
-                        // Старый код мог удалить пользовательские файлы с именами типа "model_basecolor.png"
-                        // Все промежуточные текстуры уже удаляются вместе с buildDir (рекурсивное удаление)
                     } catch (Exception ex) {
-                        // Logger.Warn($"Failed to cleanup build directory: {ex.Message}"); // NLog блокирует UI
-                        File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Cleanup warning: {ex.Message}\n");
+                        Logger.Warn($"Failed to cleanup build directory: {ex.Message}");
                     }
                 }
 
                 result.Success = result.Errors.Count == 0;
                 result.Duration = DateTime.Now - startTime;
 
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] ConvertAsync COMPLETE, Success: {result.Success}\n");
-
-                // NOTE: Logger.Info здесь закомментирован - NLog может блокировать UI поток
-                // Логирование перемещено в файл для диагностики
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] Duration: {result.Duration.TotalSeconds:F2}s, LOD files: {result.LodFiles.Count}\n");
+                Logger.Info($"=== MODEL CONVERSION COMPLETE: Success={result.Success}, Duration={result.Duration.TotalSeconds:F2}s ===");
 
             } catch (Exception ex) {
-                File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] EXCEPTION: {ex.Message}\n");
-                // Logger.Error(ex, "Model conversion failed"); // NLog блокирует UI
+                Logger.Error(ex, "Model conversion failed");
                 result.Success = false;
                 result.Errors.Add(ex.Message);
                 result.Duration = DateTime.Now - startTime;
             }
 
-            File.AppendAllText("glblod_debug.txt", $"{DateTime.Now}: [PIPELINE] About to return result\n");
             return result;
         }
 

@@ -1,7 +1,8 @@
-# Pipeline Review - Полная ревизия системы обработки и загрузки ассетов
+# Pipeline Review - Ревизия системы обработки и загрузки ассетов
 
-**Дата**: 2026-01-08
-**Версия**: 1.0
+**Дата создания**: 2026-01-08
+**Последнее обновление**: 2026-02-04
+**Версия**: 2.0
 
 ---
 
@@ -41,13 +42,16 @@
 │  └────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────┘
           │
-          ▼ (РАЗРЫВ - нет автоматической связи)
+          ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      UPLOAD TO B2 CDN                                    │
-│  ┌──────────────┐                                                       │
-│  │ Manual Only  │  ← Только ручная загрузка текстур                     │
-│  │ (Textures)   │  ← Нет загрузки моделей/материалов                    │
-│  └──────────────┘  ← Состояние теряется при перезапуске                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                   │
+│  │ Textures     │  │ Models/GLB   │  │ Materials    │                   │
+│  │ Upload       │  │ Upload       │  │ JSON Upload  │                   │
+│  └──────────────┘  └──────────────┘  └──────────────┘                   │
+│                                                                         │
+│  ✅ SQLite persistence   ✅ Auto-upload after export                    │
+│  ✅ Server assets panel  ✅ Hash-based sync                             │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,285 +65,122 @@
 | Settings UI (CDN/Upload) | ✅ Готов | KeyId, ApplicationKey, Bucket, PathPrefix |
 | Texture Upload Button | ✅ Готов | Загрузка выбранных/отмеченных текстур |
 | Export Pipeline | ✅ Готов | Полный экспорт модели + текстуры + материалы |
+| **UploadStateService** | ✅ Готов | SQLite persistence состояния загрузок |
+| **ServerAssetsPanel** | ✅ Готов | Таблица серверных ассетов с управлением |
+| **AutoUploadAfterExport** | ✅ Готов | Автоматическая загрузка после экспорта |
 
-### 1.3 Критические проблемы
+### 1.3 Решённые проблемы
 
-| # | Проблема | Влияние | Приоритет |
-|---|----------|---------|-----------|
-| 1 | **Нет persistence состояния загрузки** | Статус теряется при перезапуске | КРИТИЧНО |
-| 2 | **Нет загрузки экспортированных моделей** | Модели нельзя деплоить | КРИТИЧНО |
-| 3 | **Нет таблицы серверных ассетов** | Непонятно что на сервере | ВЫСОКО |
-| 4 | **Export и Upload разорваны** | Требуется ручное вмешательство | ВЫСОКО |
-| 5 | **Нет upload history/audit** | Нет истории операций | СРЕДНЕ |
-| 6 | **Mapping.json не загружается** | Требуется ручная загрузка | СРЕДНЕ |
-
----
-
-## 2. Неиспользуемый/устаревший код
-
-### 2.1 Файлы для удаления
-
-| Файл | Причина |
-|------|---------|
-| `Services/PlayCanvasServiceBase.cs` | Устарел, есть полный `PlayCanvasService` |
-| `Controls/TextureConversionSettingsPanel.xaml.cs.backup` | Backup файл |
-
-### 2.2 Дублирующийся код
-
-| Файл | Проблема |
-|------|----------|
-| `Helpers/Helpers.cs` | `OpenFileStreamWithRetryAsync` и `OpenFileWithRetryAsync` - дублируют логику |
-
-### 2.3 Неиспользуемые компоненты
-
-| Файл | Статус | Рекомендация |
-|------|--------|--------------|
-| `ViewModels/ModelConversionViewModel.cs` | Не подключен к UI | Интегрировать или удалить |
-| `ModelConversion/` директория | Частично используется | Провести аудит |
+| # | Проблема | Статус | Решение |
+|---|----------|--------|---------|
+| 1 | Нет persistence состояния загрузки | ✅ Решено | `Data/UploadStateService.cs` (SQLite) |
+| 2 | Нет загрузки экспортированных моделей | ✅ Решено | `AutoUploadAfterExportAsync` в MainWindow.Models.cs |
+| 3 | Нет таблицы серверных ассетов | ✅ Решено | `Controls/ServerAssetsPanel.xaml` |
+| 4 | Export и Upload разорваны | ✅ Решено | Интегрированный workflow |
+| 5 | Mapping.json не загружается | ✅ Решено | Автоматическая загрузка |
 
 ---
 
-## 3. Документация CLAUDE.md - что нужно добавить
+## 2. Очистка кода (выполнено 2026-02-04)
 
-### 3.1 Отсутствующие разделы
+### 2.1 Удалённые файлы
 
-1. **CDN/Upload Pipeline** - нет документации по B2 upload
-2. **Model Export Pipeline** - описан частично
-3. **Server Asset Structure** - нет описания структуры `server/`
-4. **Mapping.json format** - нет спецификации
+| Файл | Причина | Дата |
+|------|---------|------|
+| `Services/PlayCanvasServiceBase.cs` | Устарел, заменён на PlayCanvasService | 2026-02-04 |
+| `Controls/TextureConversionSettingsPanel.xaml.cs.backup` | Backup файл | 2026-02-04 |
+| `ViewModels/ModelConversionViewModel.cs` | Не использовался | 2026-02-04 |
+| `ModelConversion/Native/MeshOptimizer.cs` | Экспериментальный, не использовался | 2026-02-04 |
+| `ModelConversion/Native/NativeMeshSimplifier.cs` | Экспериментальный, не использовался | 2026-02-04 |
 
-### 3.2 Устаревшая информация
+### 2.2 Рефакторинг MainWindow (выполнено 2026-02-04)
 
-- Нет упоминания B2UploadService, AssetUploadCoordinator
-- Нет описания upload status tracking в BaseResource
-- Нет секции про CDN settings
+MainWindow.xaml.cs разделён на partial-классы:
 
----
+| Файл | Содержимое |
+|------|------------|
+| `MainWindow.Helpers.cs` | KTX2 сканирование, валидация, настройки |
+| `MainWindow.ViewModelEventHandlers.cs` | Обработчики событий ViewModel |
+| `MainWindow.TextureSelection.cs` | Выбор текстур и превью |
+| `MainWindow.ServerAssets.cs` | Работа с серверными ассетами |
+| `MainWindow.ContextMenuHandlers.cs` | Контекстные меню |
+| `MainWindow.DataGridGrouping.cs` | Группировка DataGrid |
+| `MainWindow.TextureProcessing.cs` | Обработка текстур |
+| `MainWindow.TextureConversionSettings.cs` | Настройки конвертации |
+| `MainWindow.MasterMaterials.cs` | Master Materials |
+| `MainWindow.Materials.cs` | UI материалов |
 
-## 4. План улучшений
-
-### Фаза 1: Критические исправления (Приоритет: КРИТИЧНО)
-
-#### 1.1 Persistent Upload State
-**Цель**: Сохранять состояние загрузки между сессиями
-
-```
-Новые файлы:
-- Data/UploadStateDatabase.cs (SQLite wrapper)
-- Data/UploadRecord.cs (модель записи)
-- Services/IUploadStateService.cs
-- Services/UploadStateService.cs
-
-Структура БД:
-CREATE TABLE upload_history (
-    id INTEGER PRIMARY KEY,
-    local_path TEXT NOT NULL,
-    remote_path TEXT NOT NULL,
-    content_sha1 TEXT NOT NULL,
-    content_length INTEGER,
-    uploaded_at DATETIME,
-    cdn_url TEXT,
-    status TEXT,
-    error_message TEXT
-);
-```
-
-#### 1.2 Model Export Upload
-**Цель**: Кнопка загрузки после экспорта модели
-
-```
-UI изменения:
-- MainWindow.xaml: Add "Upload Export" button in ModelExportGroupBox
-- MainWindow.Models.cs: UploadExportButton_Click handler
-
-Логика:
-1. После успешного экспорта → показать кнопку "Upload to CDN"
-2. Загрузить все файлы из export directory
-3. Автоматически загрузить mapping.json
-4. Показать progress и результат
-```
-
-### Фаза 2: Server Asset Tracking (Приоритет: ВЫСОКО)
-
-#### 2.1 Server Assets Table
-**Цель**: Таблица с содержимым CDN
-
-```
-Новые файлы:
-- Controls/ServerAssetsPanel.xaml
-- Controls/ServerAssetsPanel.xaml.cs
-- ViewModels/ServerAssetViewModel.cs
-
-UI:
-- Новая вкладка "Server" в MainWindow
-- DataGrid с колонками: Path, Size, UploadedAt, SHA1, CDN URL
-- Кнопки: Refresh, Delete, Open URL, Compare with Local
-
-Функции:
-- B2UploadService.ListFilesAsync() → заполнение таблицы
-- Сравнение с локальными файлами (hash comparison)
-- Подсветка: "Only on Server", "Only Local", "Hash Mismatch"
-```
-
-#### 2.2 Unified Asset Status Column
-**Цель**: Единая колонка статуса в таблицах текстур/моделей
-
-```
-Статусы:
-- "Not Exported" (серый)
-- "Exported" (синий)
-- "Uploading..." (желтый + progress)
-- "Uploaded" (зеленый) + CDN URL tooltip
-- "Upload Failed" (красный)
-- "Outdated" (оранжевый) - локальный hash != серверный
-```
-
-### Фаза 3: Workflow Integration (Приоритет: ВЫСОКО)
-
-#### 3.1 Export → Upload Workflow
-**Цель**: Автоматическая загрузка после экспорта
-
-```
-ExportOptions изменения:
-+ AutoUploadAfterExport: bool
-+ UploadMappingJson: bool
-
-Workflow:
-1. Export Model → создаются файлы
-2. If AutoUploadAfterExport:
-   a. Upload all exported files
-   b. Update UploadState database
-   c. Upload mapping.json
-3. Show summary dialog
-```
-
-#### 3.2 Batch Operations
-**Цель**: Массовые операции над ассетами
-
-```
-Операции:
-- "Upload All Exported" - загрузить все экспортированные
-- "Sync to Server" - загрузить только измененные
-- "Verify Server" - проверить целостность на сервере
-```
-
-### Фаза 4: UX Improvements (Приоритет: СРЕДНЕ)
-
-#### 4.1 Upload Progress Enhancement
-```
-Улучшения:
-- ETA (estimated time remaining)
-- Upload speed (MB/s)
-- Individual file progress в tooltip
-- Retry button для failed uploads
-```
-
-#### 4.2 CDN URL Management
-```
-Функции:
-- Copy CDN URL to clipboard
-- Open CDN URL in browser
-- Generate embed code (for PlayCanvas)
-```
-
-### Фаза 5: Audit & History (Приоритет: СРЕДНЕ)
-
-#### 5.1 Upload History Viewer
-```
-Новые файлы:
-- Windows/UploadHistoryWindow.xaml
-- Windows/UploadHistoryWindow.xaml.cs
-
-Функции:
-- Просмотр всех загрузок
-- Фильтрация по дате/статусу
-- Export to CSV
-- Re-upload selected
-```
+**Результат**: MainWindow.xaml.cs сокращён с ~2000 до ~739 строк.
 
 ---
 
-## 5. Рекомендуемый порядок реализации
+## 3. Документация
 
-### Итерация 1 (Критично)
-1. ✅ Создать UploadStateService с SQLite persistence
-2. ✅ Добавить кнопку "Upload Export" для моделей
-3. ✅ Автоматическая загрузка mapping.json
+### 3.1 CLAUDE.md
 
-### Итерация 2 (Server Tracking)
-4. ➡️ Добавить вкладку "Server" с таблицей ассетов
-5. ➡️ Реализовать сравнение local vs server
-6. ➡️ Добавить колонку статуса в DataGrid
-
-### Итерация 3 (Workflow)
-7. ➡️ Опция AutoUploadAfterExport
-8. ➡️ Batch sync operations
-9. ➡️ Upload history viewer
-
-### Итерация 4 (Polish)
-10. ➡️ Enhanced progress UI
-11. ➡️ CDN URL management
-12. ➡️ Audit logging
+Документация актуальна. Содержит разделы:
+- ✅ CDN/Upload Pipeline
+- ✅ Model Export Pipeline
+- ✅ Export Structure
+- ✅ Mapping.json Format
+- ✅ Upload Status Tracking
+- ✅ CDN Settings
 
 ---
 
-## 6. Структура файлов после улучшений
+## 4. Текущая структура файлов
 
 ```
 AssetProcessor/
 ├── Data/
-│   ├── UploadStateDatabase.cs      # NEW: SQLite wrapper
-│   └── UploadRecord.cs             # NEW: Upload history record
+│   ├── UploadRecord.cs             # Модель записи загрузки
+│   ├── IUploadStateService.cs      # Интерфейс
+│   └── UploadStateService.cs       # SQLite реализация
+├── Upload/
+│   ├── B2UploadService.cs          # B2 API клиент
+│   ├── IB2UploadService.cs         # Интерфейс
+│   └── B2UploadSettings.cs         # Настройки
 ├── Services/
-│   ├── IUploadStateService.cs      # NEW: Interface
-│   ├── UploadStateService.cs       # NEW: Implementation
-│   ├── AssetUploadCoordinator.cs   # MODIFY: Use state service
-│   └── B2UploadService.cs          # EXISTS
+│   ├── AssetUploadCoordinator.cs   # Координация загрузок
+│   └── IAssetUploadCoordinator.cs  # Интерфейс
 ├── Controls/
-│   ├── ServerAssetsPanel.xaml      # NEW: Server assets view
-│   └── ServerAssetsPanel.xaml.cs   # NEW: Code-behind
-├── Windows/
-│   └── UploadHistoryWindow.xaml    # NEW: History viewer
+│   ├── ServerAssetsPanel.xaml      # Панель серверных ассетов
+│   └── ServerAssetsPanel.xaml.cs
 ├── ViewModels/
-│   └── ServerAssetViewModel.cs     # NEW: Server asset VM
-└── MainWindow.xaml.cs              # MODIFY: Add upload handlers
+│   └── ServerAssetViewModel.cs     # ViewModel серверного ассета
+├── MainWindow.xaml.cs              # Основной файл (~739 строк)
+├── MainWindow.*.cs                 # 10 partial-классов
+└── Export/
+    └── ModelExportPipeline.cs      # Экспорт моделей
 ```
 
 ---
 
-## 7. Удаление устаревшего кода
+## 5. Возможные улучшения (низкий приоритет)
 
-```bash
-# Файлы для удаления:
-rm Services/PlayCanvasServiceBase.cs
-rm Controls/TextureConversionSettingsPanel.xaml.cs.backup
+### 5.1 UX Improvements
 
-# Рефакторинг:
-# Helpers/Helpers.cs - объединить дублирующиеся методы
-```
+| Улучшение | Описание | Приоритет |
+|-----------|----------|-----------|
+| Upload Progress Enhancement | ETA, скорость загрузки, retry button | Низкий |
+| Upload History Viewer | Окно просмотра истории загрузок | Низкий |
+| Batch Sync Operations | "Sync All", "Verify Server" | Низкий |
 
----
+### 5.2 Audit & Logging
 
-## 8. Обновление CLAUDE.md
-
-Добавить секции:
-1. **CDN/Upload Pipeline** - полное описание B2 upload workflow
-2. **Export Pipeline** - детали ModelExportPipeline
-3. **Server Asset Structure** - описание структуры `server/`
-4. **Upload State Tracking** - как работает persistence
-
-Обновить секции:
-1. **Resource Models** - добавить upload properties
-2. **Important File Locations** - добавить Upload/, Data/
-3. **Common Workflows** - добавить "Deploying to CDN"
+| Улучшение | Описание | Приоритет |
+|-----------|----------|-----------|
+| Export to CSV | Экспорт истории загрузок | Низкий |
+| Detailed audit log | Подробное логирование операций | Низкий |
 
 ---
 
 ## Заключение
 
-Текущая система имеет хорошую основу (B2UploadService, Export Pipeline), но страдает от:
-1. Отсутствия persistence - критическая проблема
-2. Разрыва между Export и Upload - требует ручного вмешательства
-3. Отсутствия видимости серверных ассетов - пользователь "слепой"
-
-Рекомендуется начать с Фазы 1 (persistence + model upload), затем Фаза 2 (server tracking).
+Система полностью функциональна:
+- ✅ Полный pipeline от PlayCanvas API до CDN
+- ✅ SQLite persistence состояния загрузок
+- ✅ Автоматическая загрузка после экспорта
+- ✅ Панель управления серверными ассетами
+- ✅ Hash-based синхронизация
+- ✅ Чистый, структурированный код

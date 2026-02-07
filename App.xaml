@@ -1092,10 +1092,6 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
         </Style>
 
-        <Style TargetType="Window">
-            <Setter Property="Background" Value="{DynamicResource ThemeBackground}"/>
-        </Style>
-
         <!-- ============================================ -->
         <!-- COMMON COMPACT STYLES (for panels) -->
         <!-- Must be defined AFTER base styles they inherit from -->

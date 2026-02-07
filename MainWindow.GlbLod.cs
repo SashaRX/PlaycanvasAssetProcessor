@@ -128,9 +128,22 @@ namespace AssetProcessor {
         /// </summary>
         private ImageBrush? LoadTextureAsBrush(string texturePath) {
             try {
+                // Загружаем байты текстуры
+                var imageBytes = System.IO.File.ReadAllBytes(texturePath);
+                return CreateBrushFromBytes(imageBytes);
+            } catch (Exception) {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Создаёт ImageBrush из байтов изображения (для использования после фоновой загрузки)
+        /// </summary>
+        private ImageBrush? CreateBrushFromBytes(byte[] imageBytes) {
+            try {
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
-                bitmap.UriSource = new Uri(texturePath, UriKind.Absolute);
+                bitmap.StreamSource = new System.IO.MemoryStream(imageBytes);
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
                 bitmap.Freeze(); // Для thread-safety
@@ -142,11 +155,45 @@ namespace AssetProcessor {
                     ViewboxUnits = BrushMappingMode.RelativeToBoundingBox
                 };
 
-                // LodLogger.Info($"[Texture] Loaded: {texturePath} ({bitmap.PixelWidth}x{bitmap.PixelHeight})"); // NLog блокирует
                 return brush;
+            } catch (Exception) {
+                return null;
+            }
+        }
 
-            } catch (Exception){
-                // LodLogger.Warn(ex, $"Failed to load texture: {texturePath}"); // NLog блокирует
+        /// <summary>
+        /// Загружает байты текстуры в фоновом потоке
+        /// </summary>
+        private byte[]? LoadAlbedoTextureBytes(string fbxPath) {
+            try {
+                var modelName = System.IO.Path.GetFileNameWithoutExtension(fbxPath);
+
+                var materialNames = new[] {
+                    modelName + "_mat",
+                    modelName,
+                    modelName.ToLowerInvariant() + "_mat",
+                    modelName.ToLowerInvariant()
+                };
+
+                MaterialResource? material = null;
+                foreach (var matName in materialNames) {
+                    material = viewModel.Materials.FirstOrDefault(m =>
+                        string.Equals(m.Name, matName, StringComparison.OrdinalIgnoreCase));
+                    if (material != null) break;
+                }
+
+                if (material == null) return null;
+
+                var diffuseMapId = material.DiffuseMapId;
+                if (!diffuseMapId.HasValue) return null;
+
+                var texture = viewModel.Textures.FirstOrDefault(t => t.ID == diffuseMapId.Value);
+                if (texture == null) return null;
+
+                if (string.IsNullOrEmpty(texture.Path) || !System.IO.File.Exists(texture.Path)) return null;
+
+                return System.IO.File.ReadAllBytes(texture.Path);
+            } catch (Exception) {
                 return null;
             }
         }
@@ -187,11 +234,27 @@ namespace AssetProcessor {
             try {
                 _currentFbxPath = fbxPath;
 
-                // Загружаем albedo текстуру из таблицы материалов
-                _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
+                // Выполняем все файловые операции в фоновом потоке
+                var initResult = await Task.Run(() => {
+                    // Ищем GLB LOD файлы
+                    var lodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
 
-                // Ищем GLB LOD файлы
-                _currentLodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
+                    if (lodInfos.Count == 0) {
+                        return (LodInfos: lodInfos, LodFilePaths: (Dictionary<LodLevel, string>?)null, GltfPackPath: (string?)null);
+                    }
+
+                    // Загружаем настройки
+                    var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
+                    var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
+                        ? "gltfpack.exe"
+                        : modelConversionSettings.GltfPackExecutablePath;
+
+                    var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
+
+                    return (LodInfos: lodInfos, LodFilePaths: lodFilePaths, GltfPackPath: gltfPackPath);
+                });
+
+                _currentLodInfos = initResult.LodInfos;
 
                 if (_currentLodInfos.Count == 0) {
                     HideGlbLodUI();
@@ -204,57 +267,65 @@ namespace AssetProcessor {
 
                 // Создаём SharpGlbLoader если его еще нет
                 if (_sharpGlbLoader == null) {
-                    var modelConversionSettings = ModelConversion.Settings.ModelConversionSettingsManager.LoadSettings();
-                    var gltfPackPath = string.IsNullOrWhiteSpace(modelConversionSettings.GltfPackExecutablePath)
-                        ? "gltfpack.exe"
-                        : modelConversionSettings.GltfPackExecutablePath;
-                    _sharpGlbLoader = new SharpGlbLoader(gltfPackPath);
+                    _sharpGlbLoader = new SharpGlbLoader(initResult.GltfPackPath!);
                 } else {
                     _sharpGlbLoader.ClearCache();
                 }
 
-                // Загружаем все LOD данные через SharpGLTF
+                // Загружаем все LOD данные и текстуру в фоновом потоке
                 _lodGlbData.Clear();
                 _lodQuantizationInfos.Clear();
-                var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
 
-                // Обёртываем CPU-интенсивные операции в Task.Run
-                await Task.Run(() => {
-                    foreach (var kvp in lodFilePaths) {
+                var loadResult = await Task.Run(() => {
+                    // Загружаем LOD данные
+                    var lodData = new Dictionary<LodLevel, SharpGlbLoader.GlbData>();
+                    var quantInfos = new Dictionary<LodLevel, GlbQuantizationAnalyzer.UVQuantizationInfo>();
+
+                    foreach (var kvp in initResult.LodFilePaths!) {
                         var lodLevel = kvp.Key;
                         var glbPath = kvp.Value;
 
                         var quantInfo = GlbQuantizationAnalyzer.AnalyzeQuantization(glbPath);
-                        _lodQuantizationInfos[lodLevel] = quantInfo;
+                        quantInfos[lodLevel] = quantInfo;
 
                         var glbData = _sharpGlbLoader!.LoadGlb(glbPath);
                         if (glbData.Success) {
-                            _lodGlbData[lodLevel] = glbData;
+                            lodData[lodLevel] = glbData;
                             LodLogger.Info($"{lodLevel} loaded: {glbData.Meshes.Count} meshes");
                         } else {
                             LodLogger.Error($"Failed to load {lodLevel}: {glbData.Error}");
                         }
                     }
+
+                    // Загружаем текстуру в фоновом потоке
+                    var textureBytes = LoadAlbedoTextureBytes(fbxPath);
+
+                    return (LodData: lodData, QuantInfos: quantInfos, TextureBytes: textureBytes);
                 });
 
-                // UI операции в Dispatcher
-                await Dispatcher.InvokeAsync(() => {
-                    if (_lodGlbData.Count == 0) {
-                        HideGlbLodUI();
-                        LoadFbxModelDirectly(fbxPath);
-                        return;
-                    }
+                _lodGlbData = loadResult.LodData;
+                _lodQuantizationInfos = loadResult.QuantInfos;
 
-                    if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {
-                        LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
-                    } else if (_lodGlbData.Count > 0) {
-                        var firstLod = _lodGlbData.Keys.First();
-                        LoadGlbModelToViewport(firstLod, zoomToFit: true);
-                    }
+                // UI операции
+                if (_lodGlbData.Count == 0) {
+                    HideGlbLodUI();
+                    return;
+                }
 
-                    _isGlbViewerActive = true;
-                    SelectLod(LodLevel.LOD0);
-                });
+                // Создаём brush из загруженных байтов на UI потоке
+                _cachedAlbedoBrush = loadResult.TextureBytes != null
+                    ? CreateBrushFromBytes(loadResult.TextureBytes)
+                    : null;
+
+                if (_lodGlbData.ContainsKey(LodLevel.LOD0)) {
+                    LoadGlbModelToViewport(LodLevel.LOD0, zoomToFit: true);
+                } else if (_lodGlbData.Count > 0) {
+                    var firstLod = _lodGlbData.Keys.First();
+                    LoadGlbModelToViewport(firstLod, zoomToFit: true);
+                }
+
+                _isGlbViewerActive = true;
+                SelectLod(LodLevel.LOD0);
 
             } catch (Exception ex) {
                 LodLogger.Error(ex, "Failed to load GLB LOD files");
@@ -1040,7 +1111,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Переключает вьюпорт на FBX модель
         /// </summary>
-        private void SwitchToFbxView() {
+        private async void SwitchToFbxView() {
             try {
                 if (string.IsNullOrEmpty(_currentFbxPath)) {
                     LodLogger.Warn("No FBX path available for switching");
@@ -1049,14 +1120,10 @@ namespace AssetProcessor {
 
                 LodLogger.Info($"Switching to FBX view: {_currentFbxPath}");
 
-                // Загружаем FBX модель (используем существующий метод LoadModel)
-                // Это вызовет LoadModel который загрузит FBX и отобразит его
-                Dispatcher.Invoke(() => {
-                    ModelCurrentLodTextBlock.Text = "Current: FBX (Original)";
-                });
+                ModelCurrentLodTextBlock.Text = "Current: FBX (Original)";
 
                 // Загружаем FBX напрямую через Assimp без конвертации
-                LoadFbxModelDirectly(_currentFbxPath);
+                await LoadFbxModelDirectlyAsync(_currentFbxPath);
 
             } catch (Exception ex) {
                 LodLogger.Error(ex, "Failed to switch to FBX view");
@@ -1079,28 +1146,45 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Загружает FBX модель напрямую (без GLB конвертации)
+        /// Загружает FBX модель напрямую (без GLB конвертации) асинхронно
         /// </summary>
-        private void LoadFbxModelDirectly(string fbxPath) {
+        private async Task LoadFbxModelDirectlyAsync(string fbxPath) {
             try {
-                // Загружаем текстуру если ещё не загружена
-                if (_cachedAlbedoBrush == null) {
-                    _cachedAlbedoBrush = FindAndLoadAlbedoTexture(fbxPath);
-                }
+                // Загружаем данные в фоновом потоке
+                var loadResult = await Task.Run(() => {
+                    // Загружаем текстуру если ещё не загружена
+                    byte[]? textureBytes = null;
+                    if (_cachedAlbedoBrush == null) {
+                        textureBytes = LoadAlbedoTextureBytes(fbxPath);
+                    }
 
-                using var context = new AssimpContext();
-                var scene = context.ImportFile(fbxPath,
-                    PostProcessSteps.Triangulate |
-                    PostProcessSteps.GenerateNormals |
-                    PostProcessSteps.FlipUVs);
+                    using var context = new AssimpContext();
+                    var scene = context.ImportFile(fbxPath,
+                        PostProcessSteps.Triangulate |
+                        PostProcessSteps.GenerateNormals |
+                        PostProcessSteps.FlipUVs);
 
-                if (scene == null || !scene.HasMeshes) {
-                    LodLogger.Error("Failed to load FBX: no meshes");
+                    if (scene == null || !scene.HasMeshes) {
+                        return (Scene: (Scene?)null, TextureBytes: textureBytes, Error: "Failed to load FBX: no meshes");
+                    }
+
+                    LodLogger.Info($"Loaded FBX: {scene.MeshCount} meshes");
+                    return (Scene: scene, TextureBytes: textureBytes, Error: (string?)null);
+                });
+
+                if (loadResult.Scene == null) {
+                    LodLogger.Error(loadResult.Error ?? "Unknown error loading FBX");
                     return;
                 }
 
-                LodLogger.Info($"Loaded FBX: {scene.MeshCount} meshes");
+                // Создаём brush из загруженных байтов если нужно
+                if (_cachedAlbedoBrush == null && loadResult.TextureBytes != null) {
+                    _cachedAlbedoBrush = CreateBrushFromBytes(loadResult.TextureBytes);
+                }
 
+                var scene = loadResult.Scene;
+
+                // UI операции на главном потоке
                 // Очищаем viewport
                 var modelsToRemove = viewPort3d.Children.OfType<ModelVisual3D>().ToList();
                 foreach (var model in modelsToRemove) {

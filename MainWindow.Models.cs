@@ -52,29 +52,10 @@ namespace AssetProcessor {
                         // Сначала пробуем загрузить GLB LOD файлы
                         await TryLoadGlbLodAsync(selectedModel.Path);
 
-                        // Если GLB LOD не найдены, загружаем FBX модель и другую информацию
+                        // Если GLB LOD не найдены, загружаем FBX модель
+                        // LoadModel уже обновляет ModelInfo и UV внутри себя
                         if (!_isGlbViewerActive) {
-                            // Загружаем модель во вьюпорт (3D просмотрщик)
                             LoadModel(selectedModel.Path);
-
-                            // Загружаем информацию о модели из FBX
-                            AssimpContext context = new();
-                            Scene scene = context.ImportFile(selectedModel.Path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
-                            Mesh? mesh = scene.Meshes.FirstOrDefault();
-
-                            // Update UI on main thread using loaded mesh data
-                            if (mesh != null) {
-                                if (!string.IsNullOrEmpty(selectedModel.Name)) {
-                                    int triangles = mesh.FaceCount;
-                                    int vertices = mesh.VertexCount;
-                                    int uvChannels = mesh.TextureCoordinateChannelCount;
-                                    UpdateModelInfo(selectedModel.Name, triangles, vertices, uvChannels);
-                                }
-
-                                if (mesh.HasTextureCoords(0)) {
-                                    UpdateUVImage(mesh);
-                                }
-                            }
                         }
                         // Если GLB viewer активен, информация уже установлена в TryLoadGlbLodAsync
                     }
@@ -180,10 +161,9 @@ namespace AssetProcessor {
             return renderTarget;
         }
 
-        private void LoadModel(string path) {
+        private async void LoadModel(string path) {
             try {
-
-                // ������� ������ ������, �������� ���������
+                // Очищаем viewport на UI потоке
                 List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
                 foreach (ModelVisual3D? model in modelsToRemove) {
                     viewPort3d.Children.Remove(model);
@@ -193,19 +173,31 @@ namespace AssetProcessor {
                     viewPort3d.Children.Add(new DefaultLights());
                 }
 
-                AssimpContext importer = new();
-                Scene scene = importer.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
+                // Загружаем модель в фоновом потоке
+                var loadResult = await Task.Run(() => {
+                    AssimpContext importer = new();
+                    Scene scene = importer.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
 
-                if (scene == null || !scene.HasMeshes) {
-                    MessageBox.Show("Error loading model: Scene is null or has no meshes.");
+                    if (scene == null || !scene.HasMeshes) {
+                        return (Scene: (Scene?)null, Error: "Scene is null or has no meshes.");
+                    }
+
+                    return (Scene: scene, Error: (string?)null);
+                });
+
+                if (loadResult.Scene == null) {
+                    MessageBox.Show($"Error loading model: {loadResult.Error}");
                     return;
                 }
 
-                Model3DGroup modelGroup = new();
+                var scene = loadResult.Scene;
 
+                // Построение геометрии на UI потоке (MeshBuilder требует UI поток)
+                Model3DGroup modelGroup = new();
                 int totalTriangles = 0;
                 int totalVertices = 0;
                 int validUVChannels = 0;
+                Mesh? firstMeshWithUV = null;
 
                 foreach (Mesh? mesh in scene.Meshes) {
                     if (mesh == null) continue;
@@ -213,7 +205,6 @@ namespace AssetProcessor {
                     MeshBuilder builder = new();
 
                     if (mesh.Vertices == null || mesh.Normals == null) {
-                        MessageBox.Show("Error loading model: Mesh vertices or normals are null.");
                         continue;
                     }
 
@@ -223,16 +214,12 @@ namespace AssetProcessor {
                         builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                         builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 
-                        // ��������� ���������� ����������, ���� ��� ����
                         if (mesh.TextureCoordinateChannels.Length > 0 && mesh.TextureCoordinateChannels[0] != null && i < mesh.TextureCoordinateChannels[0].Count) {
                             builder.TextureCoordinates.Add(new System.Windows.Point(mesh.TextureCoordinateChannels[0][i].X, mesh.TextureCoordinateChannels[0][i].Y));
                         }
                     }
 
-                    if (mesh.Faces == null) {
-                        MessageBox.Show("Error loading model: Mesh faces are null.");
-                        continue;
-                    }
+                    if (mesh.Faces == null) continue;
 
                     totalTriangles += mesh.FaceCount;
                     totalVertices += mesh.VertexCount;
@@ -247,7 +234,6 @@ namespace AssetProcessor {
                     }
 
                     MeshGeometry3D geometry = builder.ToMesh(true);
-                    // ���������� albedo �������� �� ���������� ���� ��� ���������
                     DiffuseMaterial material = (_cachedAlbedoBrush != null && geometry.TextureCoordinates.Count > 0)
                         ? new DiffuseMaterial(_cachedAlbedoBrush)
                         : new DiffuseMaterial(new SolidColorBrush(Colors.Gray));
@@ -255,6 +241,11 @@ namespace AssetProcessor {
                     modelGroup.Children.Add(model);
 
                     validUVChannels = Math.Min(3, mesh.TextureCoordinateChannelCount);
+
+                    // Сохраняем первый меш с UV для отображения UV image
+                    if (firstMeshWithUV == null && mesh.HasTextureCoords(0)) {
+                        firstMeshWithUV = mesh;
+                    }
                 }
 
                 Rect3D bounds = modelGroup.Bounds;
@@ -268,12 +259,15 @@ namespace AssetProcessor {
                 ModelVisual3D visual3d = new() { Content = modelGroup };
                 viewPort3d.Children.Add(visual3d);
 
-                // ��������� ��������� viewer (wireframe, pivot, up vector)
                 ApplyViewerSettingsToModel();
-
                 viewPort3d.ZoomExtents();
 
                 UpdateModelInfo(modelName: Path.GetFileName(path), triangles: totalTriangles, vertices: totalVertices, uvChannels: validUVChannels);
+
+                // Обновляем UV image если есть UV координаты
+                if (firstMeshWithUV != null) {
+                    UpdateUVImage(firstMeshWithUV);
+                }
             } catch (InvalidOperationException ex) {
                 MessageBox.Show($"Error loading model: {ex.Message}");
                 ResetViewport();

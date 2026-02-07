@@ -126,7 +126,8 @@
       "Bash(echo.:*)",
       "WebFetch(domain:searchcode.com)",
       "WebFetch(domain:www.nudoq.org)",
-      "Bash(Select-Object -First 100)"
+      "Bash(Select-Object -First 100)",
+      "Bash(git status:*)"
     ],
     "deny": [],
     "ask": []

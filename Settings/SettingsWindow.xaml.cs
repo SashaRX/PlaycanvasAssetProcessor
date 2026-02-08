@@ -340,62 +340,16 @@ namespace AssetProcessor {
         }
 
         private async void TestKtx_Click(object sender, RoutedEventArgs e) {
-            if (KtxStatusText != null) {
-                KtxStatusText.Text = "Testing...";
-                KtxStatusText.Foreground = new SolidColorBrush(Colors.Gray);
-            }
+            var path = string.IsNullOrWhiteSpace(KtxExecutableBox.Text) ? "ktx" : KtxExecutableBox.Text;
 
-            try {
-                var path = string.IsNullOrWhiteSpace(KtxExecutableBox.Text) ? "ktx" : KtxExecutableBox.Text;
-
-                // Получаем версию ktx
-                ProcessStartInfo startInfo = new() {
-                    FileName = path,
-                    Arguments = "--version",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(startInfo);
-                if (process == null) {
-                    if (KtxStatusText != null) {
-                        KtxStatusText.Text = "✗ ktx not found";
-                        KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
-                    return;
-                }
-
-                string stdout = await process.StandardOutput.ReadToEndAsync();
-                string stderr = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                if (KtxStatusText != null) {
-                    // ktx --version выводит версию в stdout
-                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
-                    if (hasOutput || process.ExitCode == 0) {
-                        // Извлекаем версию из stdout (формат: "ktx version: v4.0" или "ktx version: v4.3.2")
-                        string version = "unknown";
-                        if (!string.IsNullOrWhiteSpace(stdout)) {
-                            var match = System.Text.RegularExpressions.Regex.Match(stdout, @"version:\s*(.+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                            if (match.Success) {
-                                version = match.Groups[1].Value.Trim();
-                            }
-                        }
-                        KtxStatusText.Text = $"✓ ktx {version}";
-                        KtxStatusText.Foreground = new SolidColorBrush(Colors.Green);
-                    } else {
-                        KtxStatusText.Text = $"✗ Exit code: {process.ExitCode}";
-                        KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
-                }
-            } catch (Exception ex) {
-                if (KtxStatusText != null) {
-                    KtxStatusText.Text = $"✗ Error: {ex.Message}";
-                    KtxStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                }
-            }
+            await RunToolVersionCheckAsync(
+                KtxStatusText,
+                path,
+                "ktx not found",
+                stdout => {
+                    var version = ExtractMatch(stdout, @"version:\s*(.+)");
+                    return $"✓ ktx {version}";
+                });
         }
 
         private void D3D11PreviewCheckBox_Changed(object sender, RoutedEventArgs e) {
@@ -423,60 +377,16 @@ namespace AssetProcessor {
         }
 
         private async void TestFBX2glTF_Click(object sender, RoutedEventArgs e) {
-            if (FBX2glTFStatusText != null) {
-                FBX2glTFStatusText.Text = "Testing...";
-                FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Gray);
-            }
+            var path = string.IsNullOrWhiteSpace(FBX2glTFExecutableBox.Text) ? "FBX2glTF-windows-x86_64.exe" : FBX2glTFExecutableBox.Text;
 
-            try {
-                var path = string.IsNullOrWhiteSpace(FBX2glTFExecutableBox.Text) ? "FBX2glTF-windows-x86_64.exe" : FBX2glTFExecutableBox.Text;
-
-                ProcessStartInfo startInfo = new() {
-                    FileName = path,
-                    Arguments = "--version",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(startInfo);
-                if (process == null) {
-                    if (FBX2glTFStatusText != null) {
-                        FBX2glTFStatusText.Text = "✗ FBX2glTF not found";
-                        FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
-                    return;
-                }
-
-                string stdout = await process.StandardOutput.ReadToEndAsync();
-                string stderr = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                if (FBX2glTFStatusText != null) {
-                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
-                    if (hasOutput || process.ExitCode == 0) {
-                        string version = "unknown";
-                        string output = stdout + stderr;
-                        if (!string.IsNullOrWhiteSpace(output)) {
-                            var match = System.Text.RegularExpressions.Regex.Match(output, @"version[:\s]+(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                            if (match.Success) {
-                                version = match.Groups[1].Value.Trim();
-                            }
-                        }
-                        FBX2glTFStatusText.Text = $"✓ FBX2glTF {version}";
-                        FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Green);
-                    } else {
-                        FBX2glTFStatusText.Text = $"✗ Exit code: {process.ExitCode}";
-                        FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
-                }
-            } catch (Exception ex) {
-                if (FBX2glTFStatusText != null) {
-                    FBX2glTFStatusText.Text = $"✗ Error: {ex.Message}";
-                    FBX2glTFStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                }
-            }
+            await RunToolVersionCheckAsync(
+                FBX2glTFStatusText,
+                path,
+                "FBX2glTF not found",
+                output => {
+                    var version = ExtractMatch(output, @"version[:\s]+(\S+)");
+                    return $"✓ FBX2glTF {version}";
+                });
         }
 
         private void SelectGltfPackExecutable(object sender, RoutedEventArgs e) {
@@ -493,16 +403,32 @@ namespace AssetProcessor {
         }
 
         private async void TestGltfPack_Click(object sender, RoutedEventArgs e) {
-            if (GltfPackStatusText != null) {
-                GltfPackStatusText.Text = "Testing...";
-                GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Gray);
+            var path = string.IsNullOrWhiteSpace(GltfPackExecutableBox.Text) ? "gltfpack.exe" : GltfPackExecutableBox.Text;
+
+            await RunToolVersionCheckAsync(
+                GltfPackStatusText,
+                path,
+                "gltfpack not found",
+                output => {
+                    var version = ExtractMatch(output, @"v(\S+)");
+                    return $"✓ gltfpack {version}";
+                });
+        }
+
+        private async Task RunToolVersionCheckAsync(
+            TextBlock? statusText,
+            string executablePath,
+            string notFoundMessage,
+            Func<string, string> successTextFactory) {
+
+            if (statusText != null) {
+                statusText.Text = "Testing...";
+                statusText.Foreground = new SolidColorBrush(Colors.Gray);
             }
 
             try {
-                var path = string.IsNullOrWhiteSpace(GltfPackExecutableBox.Text) ? "gltfpack.exe" : GltfPackExecutableBox.Text;
-
                 ProcessStartInfo startInfo = new() {
-                    FileName = path,
+                    FileName = executablePath,
                     Arguments = "--version",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -512,10 +438,7 @@ namespace AssetProcessor {
 
                 using var process = Process.Start(startInfo);
                 if (process == null) {
-                    if (GltfPackStatusText != null) {
-                        GltfPackStatusText.Text = "✗ gltfpack not found";
-                        GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
+                    SetStatus(statusText, $"✗ {notFoundMessage}", Colors.Red);
                     return;
                 }
 
@@ -523,29 +446,35 @@ namespace AssetProcessor {
                 string stderr = await process.StandardError.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
-                if (GltfPackStatusText != null) {
-                    bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
-                    if (hasOutput || process.ExitCode == 0) {
-                        string version = "unknown";
-                        string output = stdout + stderr;
-                        if (!string.IsNullOrWhiteSpace(output)) {
-                            var match = System.Text.RegularExpressions.Regex.Match(output, @"v(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                            if (match.Success) {
-                                version = match.Groups[1].Value.Trim();
-                            }
-                        }
-                        GltfPackStatusText.Text = $"✓ gltfpack {version}";
-                        GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Green);
-                    } else {
-                        GltfPackStatusText.Text = $"✗ Exit code: {process.ExitCode}";
-                        GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
+                bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
+                if (hasOutput || process.ExitCode == 0) {
+                    SetStatus(statusText, successTextFactory(stdout + stderr), Colors.Green);
+                } else {
+                    SetStatus(statusText, $"✗ Exit code: {process.ExitCode}", Colors.Red);
                 }
             } catch (Exception ex) {
-                if (GltfPackStatusText != null) {
-                    GltfPackStatusText.Text = $"✗ Error: {ex.Message}";
-                    GltfPackStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                SetStatus(statusText, $"✗ Error: {ex.Message}", Colors.Red);
+            }
+        }
+
+        private static string ExtractMatch(string input, string pattern) {
+            if (!string.IsNullOrWhiteSpace(input)) {
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    input,
+                    pattern,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (match.Success) {
+                    return match.Groups[1].Value.Trim();
                 }
+            }
+
+            return "unknown";
+        }
+
+        private static void SetStatus(TextBlock? statusText, string message, Color color) {
+            if (statusText != null) {
+                statusText.Text = message;
+                statusText.Foreground = new SolidColorBrush(color);
             }
         }
 

@@ -21,6 +21,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
         /// <param name="outputDirectory">Выходная директория</param>
         /// <param name="profileSelector">Функция для выбора профиля на основе имени файла</param>
         /// <param name="compressionSettings">Настройки сжатия</param>
+        /// <param name="toksvigSettings">Настройки Toksvig для gloss/roughness (optional)</param>
         /// <param name="saveSeparateMipmaps">Сохранять ли отдельные мипмапы</param>
         /// <param name="progress">Прогресс обработки</param>
         /// <param name="maxParallelism">Максимальное количество параллельных задач</param>
@@ -29,6 +30,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
             string outputDirectory,
             Func<string, MipGenerationProfile> profileSelector,
             CompressionSettings compressionSettings,
+            ToksvigSettings? toksvigSettings = null,
             bool saveSeparateMipmaps = false,
             IProgress<BatchProgress>? progress = null,
             int maxParallelism = 4,
@@ -93,7 +95,7 @@ namespace AssetProcessor.TextureConversion.Pipeline {
                             outputPath,
                             profile,
                             compressionSettings,
-                            toksvigSettings: null, // TODO: Add toksvigSettings parameter to batch processor
+                            toksvigSettings,
                             saveSeparateMipmaps,
                             mipmapDir
                         );

@@ -551,11 +551,7 @@ namespace AssetProcessor {
         }
 
         private async void TestB2Connection_Click(object sender, RoutedEventArgs e) {
-            if (B2ConnectionStatusText != null) {
-                B2ConnectionStatusText.Text = "Testing connection...";
-                B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Gray);
-            }
-
+            SetStatus(B2ConnectionStatusText, "Testing connection...", Colors.Gray);
             TestB2ConnectionButton.IsEnabled = false;
 
             try {
@@ -564,10 +560,7 @@ namespace AssetProcessor {
                 var bucketName = B2BucketNameTextBox.Text;
 
                 if (string.IsNullOrWhiteSpace(keyId) || string.IsNullOrWhiteSpace(applicationKey) || string.IsNullOrWhiteSpace(bucketName)) {
-                    if (B2ConnectionStatusText != null) {
-                        B2ConnectionStatusText.Text = "✗ Please fill in Key ID, Application Key, and Bucket Name";
-                        B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                    }
+                    SetStatus(B2ConnectionStatusText, "✗ Please fill in Key ID, Application Key, and Bucket Name", Colors.Red);
                     return;
                 }
 
@@ -581,26 +574,19 @@ namespace AssetProcessor {
                 using var uploadService = new B2UploadService();
                 bool success = await uploadService.AuthorizeAsync(settings);
 
-                if (B2ConnectionStatusText != null) {
-                    if (success) {
-                        // Update bucket ID if it was auto-detected
-                        if (!string.IsNullOrEmpty(settings.BucketId) && string.IsNullOrEmpty(B2BucketIdTextBox.Text)) {
-                            B2BucketIdTextBox.Text = settings.BucketId;
-                        }
-
-                        B2ConnectionStatusText.Text = $"✓ Connected to bucket: {bucketName}";
-                        B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Green);
-                    } else {
-                        B2ConnectionStatusText.Text = "✗ Connection failed. Check credentials.";
-                        B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
+                if (success) {
+                    // Update bucket ID if it was auto-detected
+                    if (!string.IsNullOrEmpty(settings.BucketId) && string.IsNullOrEmpty(B2BucketIdTextBox.Text)) {
+                        B2BucketIdTextBox.Text = settings.BucketId;
                     }
+
+                    SetStatus(B2ConnectionStatusText, $"✓ Connected to bucket: {bucketName}", Colors.Green);
+                } else {
+                    SetStatus(B2ConnectionStatusText, "✗ Connection failed. Check credentials.", Colors.Red);
                 }
 
             } catch (Exception ex) {
-                if (B2ConnectionStatusText != null) {
-                    B2ConnectionStatusText.Text = $"✗ Error: {ex.Message}";
-                    B2ConnectionStatusText.Foreground = new SolidColorBrush(Colors.Red);
-                }
+                SetStatus(B2ConnectionStatusText, $"✗ Error: {ex.Message}", Colors.Red);
             } finally {
                 TestB2ConnectionButton.IsEnabled = true;
             }

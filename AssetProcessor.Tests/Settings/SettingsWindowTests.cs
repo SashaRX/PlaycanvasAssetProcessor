@@ -27,4 +27,17 @@ public class SettingsWindowTests {
 
         Assert.Equal("unknown", Assert.IsType<string>(result));
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ExtractMatch_WhenInputIsEmptyOrWhitespace_ReturnsUnknown(string input) {
+        var method = typeof(SettingsWindow).GetMethod("ExtractMatch", BindingFlags.Static | BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+        var result = method!.Invoke(null, [input, @"version:\s*(.+)"]);
+
+        Assert.Equal("unknown", Assert.IsType<string>(result));
+    }
+
 }

@@ -426,6 +426,8 @@ namespace AssetProcessor {
                 statusText.Foreground = new SolidColorBrush(Colors.Gray);
             }
 
+            const int processTimeoutSeconds = 10;
+
             try {
                 ProcessStartInfo startInfo = new() {
                     FileName = executablePath,
@@ -442,9 +444,11 @@ namespace AssetProcessor {
                     return;
                 }
 
-                string stdout = await process.StandardOutput.ReadToEndAsync();
-                string stderr = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(processTimeoutSeconds));
+
+                string stdout = await process.StandardOutput.ReadToEndAsync(cts.Token);
+                string stderr = await process.StandardError.ReadToEndAsync(cts.Token);
+                await process.WaitForExitAsync(cts.Token);
 
                 bool hasOutput = !string.IsNullOrWhiteSpace(stdout) || !string.IsNullOrWhiteSpace(stderr);
                 if (hasOutput || process.ExitCode == 0) {
@@ -452,6 +456,8 @@ namespace AssetProcessor {
                 } else {
                     SetStatus(statusText, $"✗ Exit code: {process.ExitCode}", Colors.Red);
                 }
+            } catch (OperationCanceledException) {
+                SetStatus(statusText, $"✗ Timeout ({processTimeoutSeconds}s)", Colors.Red);
             } catch (Exception ex) {
                 SetStatus(statusText, $"✗ Error: {ex.Message}", Colors.Red);
             }

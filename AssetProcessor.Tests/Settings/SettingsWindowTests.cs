@@ -40,4 +40,15 @@ public class SettingsWindowTests {
         Assert.Equal("unknown", Assert.IsType<string>(result));
     }
 
+
+    [Fact]
+    public void TryTerminateProcess_WithNull_DoesNotThrow() {
+        var method = typeof(SettingsWindow).GetMethod("TryTerminateProcess", BindingFlags.Static | BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+        var ex = Record.Exception(() => method!.Invoke(null, [null]));
+
+        Assert.Null(ex);
+    }
+
 }

@@ -459,15 +459,29 @@ namespace AssetProcessor {
                     SetStatus(statusText, $"✗ Exit code: {process.ExitCode}", Colors.Red);
                 }
             } catch (OperationCanceledException) {
-                if (process is { HasExited: false }) {
-                    process.Kill(entireProcessTree: true);
-                }
-
+                TryTerminateProcess(process);
                 SetStatus(statusText, $"✗ Timeout ({processTimeoutSeconds}s)", Colors.Red);
             } catch (Exception ex) {
                 SetStatus(statusText, $"✗ Error: {ex.Message}", Colors.Red);
             } finally {
                 process?.Dispose();
+            }
+        }
+
+
+        private static void TryTerminateProcess(Process? process) {
+            if (process == null) {
+                return;
+            }
+
+            try {
+                if (!process.HasExited) {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(1000);
+                }
+            } catch {
+                // Процесс мог завершиться между проверкой и Kill/WaitForExit.
+                // Игнорируем, так как это best-effort cleanup при timeout.
             }
         }
 

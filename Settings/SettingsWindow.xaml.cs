@@ -428,6 +428,8 @@ namespace AssetProcessor {
 
             const int processTimeoutSeconds = 10;
 
+            Process? process = null;
+
             try {
                 ProcessStartInfo startInfo = new() {
                     FileName = executablePath,
@@ -438,7 +440,7 @@ namespace AssetProcessor {
                     CreateNoWindow = true
                 };
 
-                using var process = Process.Start(startInfo);
+                process = Process.Start(startInfo);
                 if (process == null) {
                     SetStatus(statusText, $"✗ {notFoundMessage}", Colors.Red);
                     return;
@@ -457,9 +459,15 @@ namespace AssetProcessor {
                     SetStatus(statusText, $"✗ Exit code: {process.ExitCode}", Colors.Red);
                 }
             } catch (OperationCanceledException) {
+                if (process is { HasExited: false }) {
+                    process.Kill(entireProcessTree: true);
+                }
+
                 SetStatus(statusText, $"✗ Timeout ({processTimeoutSeconds}s)", Colors.Red);
             } catch (Exception ex) {
                 SetStatus(statusText, $"✗ Error: {ex.Message}", Colors.Red);
+            } finally {
+                process?.Dispose();
             }
         }
 

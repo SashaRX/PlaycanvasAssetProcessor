@@ -346,6 +346,7 @@ namespace AssetProcessor {
                 KtxStatusText,
                 path,
                 "ktx not found",
+                sender as Button,
                 stdout => {
                     var version = ExtractMatch(stdout, @"version:\s*(.+)");
                     return $"✓ ktx {version}";
@@ -383,6 +384,7 @@ namespace AssetProcessor {
                 FBX2glTFStatusText,
                 path,
                 "FBX2glTF not found",
+                sender as Button,
                 output => {
                     var version = ExtractMatch(output, @"version[:\s]+(\S+)");
                     return $"✓ FBX2glTF {version}";
@@ -409,6 +411,7 @@ namespace AssetProcessor {
                 GltfPackStatusText,
                 path,
                 "gltfpack not found",
+                sender as Button,
                 output => {
                     var version = ExtractMatch(output, @"v(\S+)");
                     return $"✓ gltfpack {version}";
@@ -419,6 +422,7 @@ namespace AssetProcessor {
             TextBlock? statusText,
             string executablePath,
             string notFoundMessage,
+            Button? triggerButton,
             Func<string, string> successTextFactory) {
 
             if (statusText != null) {
@@ -427,6 +431,10 @@ namespace AssetProcessor {
             }
 
             const int processTimeoutSeconds = 10;
+
+            if (triggerButton != null) {
+                triggerButton.IsEnabled = false;
+            }
 
             Process? process = null;
 
@@ -465,6 +473,9 @@ namespace AssetProcessor {
                 SetStatus(statusText, $"✗ Error: {ex.Message}", Colors.Red);
             } finally {
                 process?.Dispose();
+                if (triggerButton != null) {
+                    triggerButton.IsEnabled = true;
+                }
             }
         }
 

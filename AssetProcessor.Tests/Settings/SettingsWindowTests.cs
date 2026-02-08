@@ -51,4 +51,17 @@ public class SettingsWindowTests {
         Assert.Null(ex);
     }
 
+
+    [Fact]
+    public void RunToolVersionCheckAsync_Signature_ContainsTriggerButtonParameter() {
+        var method = typeof(SettingsWindow).GetMethod("RunToolVersionCheckAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+        var parameters = method!.GetParameters();
+
+        Assert.Equal(5, parameters.Length);
+        Assert.Equal("triggerButton", parameters[3].Name);
+        Assert.Equal("Button", Nullable.GetUnderlyingType(parameters[3].ParameterType)?.Name ?? parameters[3].ParameterType.Name);
+    }
+
 }

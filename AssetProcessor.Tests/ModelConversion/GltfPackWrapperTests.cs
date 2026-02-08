@@ -78,4 +78,25 @@ public class GltfPackWrapperTests {
         Assert.True(toksvig.HasDefaultValue);
         Assert.Null(toksvig.DefaultValue);
     }
+
+    [Fact]
+    public async Task OptimizeAsync_FlipUvsEnabled_ReturnsFailedResultWithClearError() {
+        var wrapper = new GltfPackWrapper("gltfpack.exe");
+        var settings = GltfPackSettings.CreateDefault();
+        settings.FlipUVs = true;
+
+        var result = await wrapper.OptimizeAsync(
+            inputPath: "input.glb",
+            outputPath: "output.glb",
+            lodSettings: LodSettings.CreateDefault(LodLevel.LOD1),
+            compressionMode: CompressionMode.Quantization,
+            quantization: QuantizationSettings.CreateDefault(),
+            advancedSettings: settings,
+            generateReport: false,
+            excludeTextures: true);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.Error);
+        Assert.Contains("FlipUVs=true не поддерживается", result.Error);
+    }
 }

@@ -37,28 +37,20 @@ namespace AssetProcessor {
         /// Called after loading assets to apply default grouping.
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
-            logger.Info("[ApplyTextureGroupingIfEnabled] Starting...");
-
             var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            if (view == null || !view.CanGroup) {
-                logger.Info("[ApplyTextureGroupingIfEnabled] View is null or cannot group");
-                return;
-            }
+            if (view == null || !view.CanGroup) return;
 
             if (GroupTexturesCheckBox.IsChecked == true) {
-                logger.Info("[ApplyTextureGroupingIfEnabled] Applying grouping...");
                 using (view.DeferRefresh()) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
                     view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
                 }
-                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping applied");
             } else {
                 if (view.GroupDescriptions.Count > 0) {
                     view.GroupDescriptions.Clear();
                 }
             }
-            logger.Info("[ApplyTextureGroupingIfEnabled] Complete");
         }
 
         /// <summary>

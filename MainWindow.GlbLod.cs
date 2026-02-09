@@ -17,6 +17,7 @@ using AssetProcessor.ModelConversion.Core;
 using AssetProcessor.ModelConversion.Viewer;
 using AssetProcessor.ModelConversion.Settings;
 using AssetProcessor.Resources;
+using AssetProcessor.Helpers;
 using NLog;
 
 namespace AssetProcessor {
@@ -1081,7 +1082,7 @@ namespace AssetProcessor {
         /// <summary>
         /// Обработчик клика по кнопкам Source Type (FBX/GLB)
         /// </summary>
-        private void SourceTypeButton_Click(object sender, RoutedEventArgs e) {
+        private async void SourceTypeButton_Click(object sender, RoutedEventArgs e) {
             if (sender is Button button && button.Tag is string tagStr) {
                 bool showFbx = tagStr == "FBX";
 
@@ -1099,8 +1100,9 @@ namespace AssetProcessor {
                 LodSlider.IsEnabled = !showFbx;
 
                 if (showFbx) {
-                    // Показываем FBX модель
-                    SwitchToFbxView();
+                    await UiAsyncHelper.ExecuteAsync(
+                        () => SwitchToFbxViewAsync(),
+                        nameof(SourceTypeButton_Click));
                 } else {
                     // Показываем GLB модель
                     SwitchToGlbView();
@@ -1111,23 +1113,18 @@ namespace AssetProcessor {
         /// <summary>
         /// Переключает вьюпорт на FBX модель
         /// </summary>
-        private async void SwitchToFbxView() {
-            try {
-                if (string.IsNullOrEmpty(_currentFbxPath)) {
-                    LodLogger.Warn("No FBX path available for switching");
-                    return;
-                }
-
-                LodLogger.Info($"Switching to FBX view: {_currentFbxPath}");
-
-                ModelCurrentLodTextBlock.Text = "Current: FBX (Original)";
-
-                // Загружаем FBX напрямую через Assimp без конвертации
-                await LoadFbxModelDirectlyAsync(_currentFbxPath);
-
-            } catch (Exception ex) {
-                LodLogger.Error(ex, "Failed to switch to FBX view");
+        private async Task SwitchToFbxViewAsync() {
+            if (string.IsNullOrEmpty(_currentFbxPath)) {
+                LodLogger.Warn("No FBX path available for switching");
+                return;
             }
+
+            LodLogger.Info($"Switching to FBX view: {_currentFbxPath}");
+
+            ModelCurrentLodTextBlock.Text = "Current: FBX (Original)";
+
+            // Загружаем FBX напрямую через Assimp без конвертации
+            await LoadFbxModelDirectlyAsync(_currentFbxPath);
         }
 
         /// <summary>

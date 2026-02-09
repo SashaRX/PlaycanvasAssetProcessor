@@ -44,10 +44,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
             var startTime = DateTime.Now;
 
             try {
-                Logger.Info($"=== MODEL CONVERSION PIPELINE START ===");
-                Logger.Info($"Input: {inputPath}");
-                Logger.Info($"Output: {outputDirectory}");
-                Logger.Info($"Settings: Generate LODs={settings.GenerateLods}, Compression={settings.CompressionMode}");
+                Logger.Info($"Model conversion: {inputPath} → {outputDirectory}, LODs={settings.GenerateLods}, Compression={settings.CompressionMode}");
 
                 // Определяем формат входного файла
                 var inputExtension = Path.GetExtension(inputPath).ToLowerInvariant();
@@ -72,20 +69,11 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 string baseGltfPath;
 
                 if (isGltfInput) {
-                    // ШАГ A: Прямой glTF/GLB вход (из 3ds Max или другого DCC)
-                    Logger.Info("=== STEP A: DIRECT glTF/GLB INPUT ===");
-                    Logger.Info($"Input format: {inputExtension.ToUpper()} (skipping FBX2glTF conversion)");
-
-                    // Используем входной файл напрямую
+                    Logger.Info($"Direct {inputExtension.ToUpper()} input (skipping FBX2glTF)");
                     baseGltfPath = inputPath;
                     result.BaseGlbPath = inputPath;
-
-                    // DEBUG: Проверяем UV
-                    InspectGlbUV(inputPath, $"INPUT {inputExtension.ToUpper()} (direct)");
                 } else {
-                    // ШАГ A: FBX → базовый GLB (без сжатия)
-                    Logger.Info("=== STEP A: FBX → BASE GLB ===");
-                    Logger.Info($"Exclude textures: {settings.ExcludeTextures} (textures will be processed separately)");
+                    Logger.Info($"Converting FBX → GLB (excludeTextures={settings.ExcludeTextures})");
                     var baseGlbPathNoExt = Path.Combine(buildDir, modelName);
                     var fbxResult = await _fbx2glTFWrapper.ConvertToGlbAsync(inputPath, baseGlbPathNoExt, settings.ExcludeTextures);
 
@@ -96,15 +84,10 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     Logger.Info($"Base GLB created: {fbxResult.OutputFilePath} ({fbxResult.OutputFileSize} bytes)");
                     baseGltfPath = fbxResult.OutputFilePath!;
                     result.BaseGlbPath = baseGltfPath;
-
-                    InspectGlbUV(baseGltfPath, "BASE GLB (after FBX2glTF)");
                 }
 
                 // ШАГ B & C: Генерация LOD цепочки
                 if (settings.GenerateLods) {
-                    Logger.Info("=== STEP B & C: LOD GENERATION ===");
-
-                    // Сохраняем LOD файлы напрямую в outputDirectory
                     var lodFiles = new Dictionary<LodLevel, string>();
                     var lodMetrics = new Dictionary<string, MeshMetrics>();
 
@@ -113,7 +96,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         var lodFileName = $"{modelName}_lod{(int)lodSettings.Level}.glb";
                         var lodOutputPath = Path.Combine(outputDirectory, lodFileName);
 
-                        Logger.Info($"  Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}, aggressive={lodSettings.AggressiveSimplification}");
+                        Logger.Info($"Generating {lodName}: simplification={lodSettings.SimplificationRatio:F2}");
 
                         // Используем gltfpack для симплификации
                         var gltfResult = await _gltfPackWrapper.OptimizeAsync(
@@ -133,9 +116,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                             continue;
                         }
 
-                        Logger.Info($"  {lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
-
-                        InspectGlbUV(lodOutputPath, $"{lodName} (after gltfpack)");
+                        Logger.Info($"{lodName} created: {gltfResult.OutputFileSize} bytes, {gltfResult.TriangleCount} tris, {gltfResult.VertexCount} verts");
 
                         lodFiles[lodSettings.Level] = lodOutputPath;
 
@@ -153,10 +134,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                     result.LodFiles = lodFiles;
                     result.LodMetrics = lodMetrics;
 
-                    // ШАГ D: Генерация манифеста
                     if (settings.GenerateManifest && lodFiles.Count > 0) {
-                        Logger.Info($"=== STEP D: MANIFEST GENERATION ===");
-
                         var manifestPath = _manifestGenerator.GenerateManifest(
                             modelName,
                             lodFiles,
@@ -168,29 +146,22 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                         result.ManifestPath = manifestPath;
                     }
 
-                    // ШАГ E: QA отчёт
                     if (settings.GenerateQAReport && lodMetrics.Count > 0) {
-                        Logger.Info($"=== STEP E: QA REPORT ===");
-
                         var qaReport = new QualityReport {
                             ModelName = modelName,
                             LodMetrics = lodMetrics
                         };
 
-                        // Оцениваем критерии приёмки
                         qaReport.EvaluateAcceptanceCriteria(settings);
 
-                        // Сохраняем отчёт в outputDirectory
                         var reportPath = Path.Combine(outputDirectory, $"{modelName}_qa_report.json");
                         qaReport.SaveToFile(reportPath);
 
                         Logger.Info($"QA Report saved: {reportPath}");
-                        Logger.Info(qaReport.ToTextReport());
 
                         result.QAReport = qaReport;
                         result.QAReportPath = reportPath;
 
-                        // Добавляем warnings/errors из отчёта
                         result.Warnings.AddRange(qaReport.Warnings);
                         result.Errors.AddRange(qaReport.Errors);
                     }
@@ -212,7 +183,7 @@ namespace AssetProcessor.ModelConversion.Pipeline {
                 result.Success = result.Errors.Count == 0;
                 result.Duration = DateTime.Now - startTime;
 
-                Logger.Info($"=== MODEL CONVERSION COMPLETE: Success={result.Success}, Duration={result.Duration.TotalSeconds:F2}s ===");
+                Logger.Info($"Model conversion complete: Success={result.Success}, Duration={result.Duration.TotalSeconds:F2}s");
 
             } catch (Exception ex) {
                 Logger.Error(ex, "Model conversion failed");
@@ -222,93 +193,6 @@ namespace AssetProcessor.ModelConversion.Pipeline {
             }
 
             return result;
-        }
-
-        /// <summary>
-        /// Проверяет UV координаты в GLB файле для диагностики
-        /// </summary>
-        private void InspectGlbUV(string glbPath, string stage) {
-            try {
-                Logger.Info($"=== UV INSPECTION: {stage} ===");
-                Logger.Info($"File: {glbPath}");
-
-                // Читаем GLB файл
-                using var fileStream = File.OpenRead(glbPath);
-                using var reader = new BinaryReader(fileStream);
-
-                // Читаем GLB header (12 bytes)
-                var magic = reader.ReadUInt32();  // должно быть 0x46546C67 ('glTF')
-                var version = reader.ReadUInt32();
-                var length = reader.ReadUInt32();
-
-                // Читаем JSON chunk header (8 bytes)
-                var jsonLength = reader.ReadUInt32();
-                var jsonType = reader.ReadUInt32();  // должно быть 0x4E4F534A ('JSON')
-
-                // Читаем JSON content
-                var jsonBytes = reader.ReadBytes((int)jsonLength);
-                var jsonText = System.Text.Encoding.UTF8.GetString(jsonBytes);
-
-                // Парсим JSON
-                var gltf = System.Text.Json.JsonDocument.Parse(jsonText);
-
-                // Проверяем наличие TEXCOORD в примитивах
-                bool foundTexcoord = false;
-                if (gltf.RootElement.TryGetProperty("meshes", out var meshes)) {
-                    int meshIndex = 0;
-                    foreach (var mesh in meshes.EnumerateArray()) {
-                        if (mesh.TryGetProperty("primitives", out var primitives)) {
-                            int primIndex = 0;
-                            foreach (var prim in primitives.EnumerateArray()) {
-                                if (prim.TryGetProperty("attributes", out var attrs)) {
-                                    if (attrs.TryGetProperty("TEXCOORD_0", out var texcoord)) {
-                                        var accessorIdx = texcoord.GetInt32();
-                                        Logger.Info($"  Mesh {meshIndex} Primitive {primIndex}: TEXCOORD_0 found (accessor {accessorIdx})");
-
-                                        // Читаем информацию об accessor
-                                        if (gltf.RootElement.TryGetProperty("accessors", out var accessors)) {
-                                            var accessor = accessors[accessorIdx];
-                                            var componentType = accessor.GetProperty("componentType").GetInt32();
-                                            var count = accessor.GetProperty("count").GetInt32();
-                                            var normalized = accessor.TryGetProperty("normalized", out var n) ? n.GetBoolean() : false;
-
-                                            string compTypeName = componentType switch {
-                                                5126 => "FLOAT",
-                                                5123 => "UNSIGNED_SHORT",
-                                                _ => componentType.ToString()
-                                            };
-
-                                            Logger.Info($"    Component Type: {compTypeName} ({componentType}), Count: {count}, Normalized: {normalized}");
-
-                                            // Проверяем min/max если есть
-                                            if (accessor.TryGetProperty("min", out var min) && accessor.TryGetProperty("max", out var max)) {
-                                                var minU = min[0].GetDouble();
-                                                var minV = min[1].GetDouble();
-                                                var maxU = max[0].GetDouble();
-                                                var maxV = max[1].GetDouble();
-                                                Logger.Info($"    UV Range: U=[{minU:F4}, {maxU:F4}], V=[{minV:F4}, {maxV:F4}]");
-                                            } else {
-                                                Logger.Warn("    No min/max data for UV accessor");
-                                            }
-                                        }
-
-                                        foundTexcoord = true;
-                                    }
-                                }
-                                primIndex++;
-                            }
-                        }
-                        meshIndex++;
-                    }
-                }
-
-                if (!foundTexcoord) {
-                    Logger.Warn("  NO TEXCOORD_0 found in any mesh primitive!");
-                }
-
-            } catch (Exception ex) {
-                Logger.Error(ex, $"Failed to inspect UV in {glbPath}");
-            }
         }
 
         /// <summary>

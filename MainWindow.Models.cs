@@ -46,21 +46,19 @@ using AssetProcessor.ModelConversion.Settings;
 namespace AssetProcessor {
     public partial class MainWindow {
         private async void ModelsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
-                if (!string.IsNullOrEmpty(selectedModel.Path)) {
-                    if (selectedModel.Status == "Downloaded") { // если модель уже скачана
-                        // Сначала пробуем загрузить GLB LOD файлы
-                        await TryLoadGlbLodAsync(selectedModel.Path);
+            await UiAsyncHelper.ExecuteAsync(async () => {
+                if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
+                    if (!string.IsNullOrEmpty(selectedModel.Path)) {
+                        if (selectedModel.Status == "Downloaded") {
+                            await TryLoadGlbLodAsync(selectedModel.Path);
 
-                        // Если GLB LOD не найдены, загружаем FBX модель
-                        // LoadModel уже обновляет ModelInfo и UV внутри себя
-                        if (!_isGlbViewerActive) {
-                            LoadModel(selectedModel.Path);
+                            if (!_isGlbViewerActive) {
+                                await LoadModelAsync(selectedModel.Path);
+                            }
                         }
-                        // Если GLB viewer активен, информация уже установлена в TryLoadGlbLodAsync
                     }
                 }
-            }
+            }, nameof(ModelsDataGrid_SelectionChanged));
         }
 
         private void UpdateModelInfo(string modelName, int triangles, int vertices, int uvChannels) {
@@ -161,7 +159,7 @@ namespace AssetProcessor {
             return renderTarget;
         }
 
-        private async void LoadModel(string path) {
+        private async Task LoadModelAsync(string path) {
             try {
                 // Очищаем viewport на UI потоке
                 List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];

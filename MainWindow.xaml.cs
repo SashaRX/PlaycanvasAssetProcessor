@@ -246,7 +246,7 @@ namespace AssetProcessor {
 #if DEBUG
             // Dev-only: load test model at startup for quick debugging
             if (File.Exists(MainWindowHelpers.MODEL_PATH)) {
-                LoadModel(path: MainWindowHelpers.MODEL_PATH);
+                _ = LoadModelAsync(path: MainWindowHelpers.MODEL_PATH);
             }
 #endif
 
@@ -325,11 +325,15 @@ namespace AssetProcessor {
         }
 
         private async void ViewModel_ProjectSelectionChanged(object? sender, ProjectSelectionChangedEventArgs e) {
-            await HandleProjectSelectionChangedAsync();
+            await UiAsyncHelper.ExecuteAsync(
+                () => HandleProjectSelectionChangedAsync(),
+                nameof(ViewModel_ProjectSelectionChanged));
         }
 
         private async void ViewModel_BranchSelectionChanged(object? sender, BranchSelectionChangedEventArgs e) {
-            await HandleBranchSelectionChangedAsync();
+            await UiAsyncHelper.ExecuteAsync(
+                () => HandleBranchSelectionChangedAsync(),
+                nameof(ViewModel_BranchSelectionChanged));
         }
 
         private Task ApplyRendererPreferenceAsync(bool useD3D11) {

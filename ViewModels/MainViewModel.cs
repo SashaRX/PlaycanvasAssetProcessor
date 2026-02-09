@@ -673,30 +673,20 @@ namespace AssetProcessor.ViewModels {
         /// Uses batch update mode to suppress individual PropertyChanged notifications.
         /// </summary>
         public void RecalculateIndices() {
-            logger.Info($"[RecalculateIndices] Starting: {Textures.Count} textures, {Models.Count} models, {Materials.Count} materials");
-
-            // Update indices without triggering individual PropertyChanged events
-            // by using direct field access where possible
             int index = 1;
-            logger.Info("[RecalculateIndices] Processing textures...");
             foreach (TextureResource texture in Textures) {
                 texture.SetIndexSilent(index++);
             }
-            logger.Info("[RecalculateIndices] Textures done");
 
             index = 1;
-            logger.Info("[RecalculateIndices] Processing models...");
             foreach (ModelResource model in Models) {
                 model.SetIndexSilent(index++);
             }
-            logger.Info("[RecalculateIndices] Models done");
 
             index = 1;
-            logger.Info("[RecalculateIndices] Processing materials...");
             foreach (MaterialResource material in Materials) {
                 material.SetIndexSilent(index++);
             }
-            logger.Info("[RecalculateIndices] Materials done, completed");
         }
 
         /// <summary>
@@ -847,36 +837,25 @@ namespace AssetProcessor.ViewModels {
         /// Uses silent setter to avoid triggering PropertyChanged during batch operation.
         /// </summary>
         public void SyncMaterialMasterMappings() {
-            logger.Info($"[SyncMaterialMasterMappings] Starting. Materials count: {Materials?.Count ?? 0}, Config exists: {masterMaterialsViewModel.Config != null}");
-
             if (Materials == null || Materials.Count == 0) {
-                logger.Warn("[SyncMaterialMasterMappings] No materials to sync!");
                 return;
             }
 
             int syncedCount = 0;
-            int processedCount = 0;
-            logger.Info("[SyncMaterialMasterMappings] Starting foreach loop...");
 
             foreach (var material in Materials) {
-                processedCount++;
-
-                // Unsubscribe first to avoid triggering save during initial sync
                 material.PropertyChanged -= Material_PropertyChanged;
 
-                // Apply EXPLICIT mapping from config to material (not default!)
-                // Use silent setter to avoid triggering PropertyChanged
                 var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
                 if (!string.IsNullOrEmpty(masterName)) {
                     material.SetMasterMaterialNameSilent(masterName);
                     syncedCount++;
                 }
 
-                // Now subscribe to future changes
                 material.PropertyChanged += Material_PropertyChanged;
             }
 
-            logger.Info($"[SyncMaterialMasterMappings] Loop done. Processed {processedCount}, synced {syncedCount}");
+            logger.Info($"SyncMaterialMasterMappings: synced {syncedCount}/{Materials.Count} materials");
         }
 
         /// <summary>
@@ -894,40 +873,5 @@ namespace AssetProcessor.ViewModels {
             // Update the mapping in config
             masterMaterialsViewModel.SetMasterForMaterial(material.ID, material.MasterMaterialName);
         }
-    }
-
-    public sealed class TextureProcessingCompletedEventArgs : EventArgs {
-        public TextureProcessingCompletedEventArgs(TextureProcessingResult result) {
-            Result = result;
-        }
-
-        public TextureProcessingResult Result { get; }
-    }
-
-    public sealed class TexturePreviewLoadedEventArgs : EventArgs {
-        public TexturePreviewLoadedEventArgs(TextureResource texture, TexturePreviewResult preview) {
-            Texture = texture;
-            Preview = preview;
-        }
-
-        public TextureResource Texture { get; }
-
-        public TexturePreviewResult Preview { get; }
-    }
-
-    public sealed class ProjectSelectionChangedEventArgs : EventArgs {
-        public ProjectSelectionChangedEventArgs(KeyValuePair<string, string> project) {
-            SelectedProject = project;
-        }
-
-        public KeyValuePair<string, string> SelectedProject { get; }
-    }
-
-    public sealed class BranchSelectionChangedEventArgs : EventArgs {
-        public BranchSelectionChangedEventArgs(Branch branch) {
-            SelectedBranch = branch;
-        }
-
-        public Branch SelectedBranch { get; }
     }
 }

@@ -1,4 +1,5 @@
 using AssetProcessor.Exceptions;
+using AssetProcessor.Helpers;
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
@@ -80,30 +81,23 @@ namespace AssetProcessor {
         /// </summary>
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             var currentState = connectionStateService.CurrentState;
-            logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentState}");
+            logger.Info($"DynamicConnectionButton_Click: current state: {currentState}");
 
-            try {
+            await UiAsyncHelper.ExecuteAsync(async () => {
                 switch (currentState) {
                     case ConnectionState.Disconnected:
-                        logger.Info("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
                         ConnectToPlayCanvas();
                         break;
 
                     case ConnectionState.UpToDate:
-                        logger.Info("DynamicConnectionButton_Click: Calling RefreshFromServer");
                         await RefreshFromServer();
                         break;
 
                     case ConnectionState.NeedsDownload:
-                        logger.Info("DynamicConnectionButton_Click: Calling DownloadFromServer");
                         await DownloadFromServer();
                         break;
                 }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in DynamicConnectionButton_Click");
-                logService.LogError($"Error in DynamicConnectionButton_Click: {ex}");
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            }, nameof(DynamicConnectionButton_Click), showMessageBox: true);
         }
 
         /// <summary>

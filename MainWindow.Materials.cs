@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using NLog;
 using System;
@@ -268,20 +269,15 @@ namespace AssetProcessor {
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            logger.Info($"MaterialsDataGrid_SelectionChanged CALLED, SelectedItem={MaterialsDataGrid.SelectedItem?.GetType().Name ?? "null"}");
+            await UiAsyncHelper.ExecuteAsync(async () => {
+                if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                    logger.Info($"MaterialsDataGrid_SelectionChanged: material={selectedMaterial.Name}");
 
-            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                logger.Info($"MaterialsDataGrid_SelectionChanged: processing material={selectedMaterial.Name}, MasterMaterialName='{selectedMaterial.MasterMaterialName}'");
-
-                // Update MainViewModel's selected material for filtering
-                viewModel.SelectedMaterial = selectedMaterial;
-
-                // Update right panel Master ComboBox using centralized helper
-                UpdateMasterMaterialComboBox(selectedMaterial.MasterMaterialName);
-
-                // Delegate to MaterialSelectionViewModel for parameter loading
-                await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
-            }
+                    viewModel.SelectedMaterial = selectedMaterial;
+                    UpdateMasterMaterialComboBox(selectedMaterial.MasterMaterialName);
+                    await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
+                }
+            }, nameof(MaterialsDataGrid_SelectionChanged));
         }
 
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {

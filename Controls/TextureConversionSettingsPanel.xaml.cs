@@ -1,27 +1,27 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using AssetProcessor.Helpers;
 using AssetProcessor.Services;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 using NLog;
 
 namespace AssetProcessor.Controls {
+    /// <summary>
+    /// UserControl for texture conversion settings.
+    /// Split into partial classes:
+    /// - TextureConversionSettingsPanel.xaml.cs (core: init, visibility, event handlers)
+    /// - TextureConversionSettingsPanel.Presets.cs (preset loading and management)
+    /// - TextureConversionSettingsPanel.Getters.cs (settings getters and loaders)
+    /// - TextureConversionSettingsPanel.NormalMap.cs (normal map auto-detection)
+    /// </summary>
     public partial class TextureConversionSettingsPanel : UserControl, ITextureConversionSettingsProvider {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private bool _isLoading = false;
         private readonly PresetManager _presetManager = new();
-
-        /// <summary>
-        /// Менеджер настроек конвертации (новая система параметров)
-        /// </summary>
         private ConversionSettingsManager? _conversionSettingsManager;
-
-        /// <summary>
-        /// Путь к текущей обрабатываемой текстуре (для auto-detect normal map)
-        /// </summary>
         private string? _currentTexturePath;
 
         public event EventHandler? SettingsChanged;
@@ -30,20 +30,12 @@ namespace AssetProcessor.Controls {
 
         public TextureConversionSettingsPanel() {
             InitializeComponent();
-            // КРИТИЧНО: НЕ вызываем InitializePresets() здесь!
-            // Пресеты будут загружены из PopulateConversionSettingsUI() в MainWindow
-            // через новую систему ConversionSettingsSchema
             InitializeDefaults();
         }
 
-        /// <summary>
-        /// Устанавливает ConversionSettingsManager для использования новой системы пресетов
-        /// </summary>
         public void SetConversionSettingsManager(ConversionSettingsManager manager) {
             _conversionSettingsManager = manager;
 
-            // КРИТИЧНО: Когда установлен ConversionSettingsManager, загружаем пресеты из новой системы
-            // Это гарантирует что ItemsSource заполнен ПОСЛЕ создания панели
             if (manager != null) {
                 var presets = ConversionSettingsSchema.GetPredefinedPresets();
                 var presetNames = new List<string> { "Custom" };
@@ -51,42 +43,36 @@ namespace AssetProcessor.Controls {
 
                 PresetComboBox.ItemsSource = presetNames;
                 if (PresetComboBox.Items.Count > 0) {
-                    PresetComboBox.SelectedIndex = 0; // "Custom"
+                    PresetComboBox.SelectedIndex = 0;
                 }
-
             }
         }
 
-        /// <summary>
-        /// Начинает загрузку настроек - блокирует события SettingsChanged
-        /// </summary>
         public void BeginLoadingSettings() {
             _isLoading = true;
         }
 
-        /// <summary>
-        /// Завершает загрузку настроек - разблокирует события SettingsChanged
-        /// </summary>
         public void EndLoadingSettings() {
             _isLoading = false;
         }
 
-        private void InitializePresets() {
-            // Загружаем все пресеты (встроенные + пользовательские)
-            var presets = _presetManager.GetAllPresets();
+        // ============================================
+        // INITIALIZATION
+        // ============================================
 
+        private void InitializePresets() {
+            var presets = _presetManager.GetAllPresets();
             PresetComboBox.ItemsSource = presets;
             PresetComboBox.DisplayMemberPath = "Name";
-
             if (presets.Count > 0) {
-                PresetComboBox.SelectedIndex = 0; // Выбираем первый пресет по умолчанию
+                PresetComboBox.SelectedIndex = 0;
             }
         }
 
         private void InitializeDefaults() {
             _isLoading = true;
 
-            // Compression Settings
+            // Compression
             CompressionFormatComboBox.SelectedItem = CompressionFormat.ETC1S;
             OutputFormatComboBox.SelectedItem = OutputFormat.KTX2;
             CompressionLevelSlider.Value = 1;
@@ -99,7 +85,7 @@ namespace AssetProcessor.Controls {
             KTX2SupercompressionComboBox.SelectedItem = KTX2SupercompressionType.Zstandard;
             ZstdLevelSlider.Value = 3;
 
-            // Alpha Options
+            // Alpha
             ForceAlphaCheckBox.IsChecked = false;
             RemoveAlphaCheckBox.IsChecked = false;
 
@@ -108,22 +94,19 @@ namespace AssetProcessor.Controls {
 
             // Mipmaps
             GenerateMipmapsCheckBox.IsChecked = true;
-            CustomMipmapsCheckBox.IsChecked = false; // По умолчанию автоматическая генерация
-            MipFilterComboBox.SelectedIndex = 5; // Kaiser (FilterType)
+            CustomMipmapsCheckBox.IsChecked = false;
+            MipFilterComboBox.SelectedIndex = 5; // Kaiser
             ToktxFilterComboBox.SelectedItem = ToktxFilterType.Kaiser;
             WrapModeComboBox.SelectedItem = WrapMode.Clamp;
             RemoveTemporalMipmapsCheckBox.IsChecked = true;
             ApplyGammaCorrectionCheckBox.IsChecked = true;
             SaveSeparateMipmapsCheckBox.IsChecked = false;
-
-            // Обновляем видимость панелей мипмапов
             UpdateMipmapPanelsVisibility();
 
             // Normal Maps
             ConvertToNormalMapCheckBox.IsChecked = false;
             NormalizeVectorsCheckBox.IsChecked = false;
             NormalizeNormalsCheckBox.IsChecked = false;
-            // Removed - unnecessary option
 
             // Toksvig
             ToksvigEnabledCheckBox.IsChecked = false;
@@ -134,11 +117,10 @@ namespace AssetProcessor.Controls {
             ToksvigVarianceThresholdSlider.Value = 0.002;
             NormalMapPathTextBox.Text = string.Empty;
 
-            // Histogram Analysis (упрощённая версия с Quality)
+            // Histogram
             EnableHistogramCheckBox.IsChecked = false;
             HistogramQualityComboBox.SelectedItem = HistogramQuality.HighQuality;
             HistogramChannelModeComboBox.SelectedItem = HistogramChannelMode.AverageLuminance;
-            // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
             HistogramPercentileLowSlider.Value = 0.5;
             HistogramPercentileHighSlider.Value = 99.5;
             HistogramKneeWidthSlider.Value = 0.02;
@@ -152,16 +134,8 @@ namespace AssetProcessor.Controls {
         }
 
         // ============================================
-        // COMPRESSION FORMAT HANDLING
+        // PANEL VISIBILITY UPDATES
         // ============================================
-
-        private void CompressionFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading) {
-                UpdateCompressionPanels();
-                UpdateOutputFormatPanels(); // Обновляем также output панели (для скрытия суперкомпрессии)
-                OnSettingsChanged();
-            }
-        }
 
         private void UpdateCompressionPanels() {
             if (CompressionFormatComboBox.SelectedItem == null) return;
@@ -179,41 +153,29 @@ namespace AssetProcessor.Controls {
             }
         }
 
-        // ============================================
-        // OUTPUT FORMAT HANDLING
-        // ============================================
-
-        private void OutputFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading) {
-                UpdateOutputFormatPanels();
-                OnSettingsChanged();
-            }
-        }
-
         private void UpdateOutputFormatPanels() {
             if (OutputFormatComboBox.SelectedItem == null || CompressionFormatComboBox.SelectedItem == null) return;
 
             var output = (OutputFormat)OutputFormatComboBox.SelectedItem;
             var compression = (CompressionFormat)CompressionFormatComboBox.SelectedItem;
 
-            // Показываем суперкомпрессию только для KTX2 и только НЕ для ETC1S
-            // (т.к. --zcmp несовместим с ETC1S/BasisLZ)
-            if (output == OutputFormat.KTX2 && compression != CompressionFormat.ETC1S) {
-                KTX2SupercompressionPanel.Visibility = Visibility.Visible;
-            } else {
-                KTX2SupercompressionPanel.Visibility = Visibility.Collapsed;
-            }
+            // Zstd supercompression only for KTX2 + UASTC (incompatible with ETC1S/BasisLZ)
+            KTX2SupercompressionPanel.Visibility =
+                (output == OutputFormat.KTX2 && compression != CompressionFormat.ETC1S)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
         }
 
-        // ============================================
-        // TOKSVIG CALCULATION MODE HANDLING
-        // ============================================
+        private void UpdateMipmapPanelsVisibility() {
+            bool useCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false;
 
-        private void ToksvigCalculationModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading) {
-                UpdateToksvigCalculationModePanels();
-                OnSettingsChanged();
-            }
+            ManualMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
+            AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
+            ToksvigExpander.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
+
+            // --normal_mode and --normalize only work with automatic mipmaps
+            ConvertToNormalMapCheckBox.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
+            NormalizeVectorsCheckBox.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private void UpdateToksvigCalculationModePanels() {
@@ -223,7 +185,7 @@ namespace AssetProcessor.Controls {
 
             if (mode == ToksvigCalculationMode.Simplified) {
                 ToksvigSimplifiedSettingsPanel.Visibility = Visibility.Visible;
-                ToksvigSmoothVarianceCheckBox.IsEnabled = false; // Smooth variance only for Classic mode
+                ToksvigSmoothVarianceCheckBox.IsEnabled = false;
             } else {
                 ToksvigSimplifiedSettingsPanel.Visibility = Visibility.Collapsed;
                 ToksvigSmoothVarianceCheckBox.IsEnabled = true;
@@ -231,24 +193,40 @@ namespace AssetProcessor.Controls {
         }
 
         // ============================================
-        // MUTUAL EXCLUSION CHECKBOXES
+        // UI EVENT HANDLERS
         // ============================================
 
-        private void ForceAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
-            if (RemoveAlphaCheckBox.IsChecked == true) {
-                RemoveAlphaCheckBox.IsChecked = false;
+        private void CompressionFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateCompressionPanels();
+                UpdateOutputFormatPanels();
+                OnSettingsChanged();
             }
+        }
+
+        private void OutputFormatComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateOutputFormatPanels();
+                OnSettingsChanged();
+            }
+        }
+
+        private void ToksvigCalculationModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) {
+                UpdateToksvigCalculationModePanels();
+                OnSettingsChanged();
+            }
+        }
+
+        private void ForceAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
+            if (RemoveAlphaCheckBox.IsChecked == true) RemoveAlphaCheckBox.IsChecked = false;
             CheckboxSettingChanged(sender, e);
         }
 
         private void RemoveAlphaCheckBox_Checked(object sender, RoutedEventArgs e) {
-            if (ForceAlphaCheckBox.IsChecked == true) {
-                ForceAlphaCheckBox.IsChecked = false;
-            }
+            if (ForceAlphaCheckBox.IsChecked == true) ForceAlphaCheckBox.IsChecked = false;
             CheckboxSettingChanged(sender, e);
         }
-
-        // OETFRadioButton_Changed removed - теперь используем ColorSpaceComboBox
 
         private void ApplyGammaCorrectionCheckBox_Checked(object sender, RoutedEventArgs e) {
             CheckboxSettingChanged(sender, e);
@@ -258,32 +236,6 @@ namespace AssetProcessor.Controls {
             if (!_isLoading) {
                 UpdateMipmapPanelsVisibility();
                 OnSettingsChanged();
-            }
-        }
-
-        /// <summary>
-        /// Обновляет видимость панелей в зависимости от режима генерации мипмапов
-        /// </summary>
-        private void UpdateMipmapPanelsVisibility() {
-            bool useCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false;
-
-            // Показываем/скрываем панели
-            ManualMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
-            AutomaticMipmapsPanel.Visibility = useCustomMipmaps ? Visibility.Collapsed : Visibility.Visible;
-
-            // Toksvig доступен только для кастомных мипмапов - СКРЫВАЕМ весь раздел если disabled
-            ToksvigExpander.Visibility = useCustomMipmaps ? Visibility.Visible : Visibility.Collapsed;
-
-            // ВАЖНО: --normal_mode и --normalize работают ТОЛЬКО с автоматическими mipmaps (--genmipmap)!
-            // При manual mipmaps - СКРЫВАЕМ эти опции чтобы не вызывать конфликта
-            if (useCustomMipmaps) {
-                // СКРЫВАЕМ опции которые не работают с manual mipmaps
-                ConvertToNormalMapCheckBox.Visibility = Visibility.Collapsed;
-                NormalizeVectorsCheckBox.Visibility = Visibility.Collapsed;
-            } else {
-                // ПОКАЗЫВАЕМ опции для автоматического режима
-                ConvertToNormalMapCheckBox.Visibility = Visibility.Visible;
-                NormalizeVectorsCheckBox.Visibility = Visibility.Visible;
             }
         }
 
@@ -307,726 +259,49 @@ namespace AssetProcessor.Controls {
             }
         }
 
-        private void UpdateNormalMapAutoDetect() {
-            // КРИТИЧНО: Если Toksvig включен И путь пустой И есть текущая текстура - ИЩЕМ normal map!
-            bool toksvigEnabled = ToksvigEnabledCheckBox.IsChecked ?? false;
-            bool pathEmpty = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text);
-
-            Logger.Info($"=== UpdateNormalMapAutoDetect called ===");
-            Logger.Info($"  toksvigEnabled: {toksvigEnabled}");
-            Logger.Info($"  pathEmpty: {pathEmpty}");
-            Logger.Info($"  _currentTexturePath: {_currentTexturePath}");
-
-            if (toksvigEnabled && pathEmpty && !string.IsNullOrWhiteSpace(_currentTexturePath)) {
-                Logger.Info($"  Conditions met! Searching for normal map...");
-                // АВТОПОИСК normal map прямо СЕЙЧАС!
-                var normalMapPath = FindNormalMapForTexture(_currentTexturePath);
-                Logger.Info($"  FindNormalMapForTexture result: {normalMapPath}");
-
-                if (!string.IsNullOrWhiteSpace(normalMapPath)) {
-                    _isLoading = true; // Чтобы не вызывать событие изменения
-                    NormalMapPathTextBox.Text = normalMapPath;
-                    _isLoading = false;
-
-                    var fileName = System.IO.Path.GetFileName(normalMapPath);
-                    NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {fileName}";
-                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
-                    Logger.Info($"  ✓ Auto-detected and set: {fileName}");
-                    return;
-                } else {
-                    Logger.Warn($"  ✗ Normal map not found for: {_currentTexturePath}");
-                }
-            } else {
-                Logger.Info($"  Conditions NOT met, skipping auto-detect");
-            }
-
-            // Обновляем статус auto-detect для normal map
-            if (string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)) {
-                NormalMapStatusTextBlock.Text = "(auto-detect from filename)";
-                NormalMapStatusTextBlock.Foreground = GetThemeForegroundDim();
-            } else {
-                var fileName = System.IO.Path.GetFileName(NormalMapPathTextBox.Text);
-                if (System.IO.File.Exists(NormalMapPathTextBox.Text)) {
-                    NormalMapStatusTextBlock.Text = $"✓ Using: {fileName}";
-                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
-                } else {
-                    NormalMapStatusTextBlock.Text = $"⚠ Not found: {fileName}";
-                    NormalMapStatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-                }
-            }
-        }
-
-        // ============================================
-        // SETTINGS GETTERS
-        // ============================================
-
-        public CompressionSettingsData GetCompressionSettings() {
-            var format = CompressionFormatComboBox.SelectedItem != null
-                ? (CompressionFormat)CompressionFormatComboBox.SelectedItem
-                : CompressionFormat.ETC1S;
-
-            var outputFormat = OutputFormatComboBox.SelectedItem != null
-                ? (OutputFormat)OutputFormatComboBox.SelectedItem
-                : OutputFormat.KTX2;
-
-            var supercompression = KTX2SupercompressionComboBox.SelectedItem != null
-                ? (KTX2SupercompressionType)KTX2SupercompressionComboBox.SelectedItem
-                : KTX2SupercompressionType.Zstandard;
-
-            var colorSpace = ColorSpaceComboBox.SelectedItem != null
-                ? (ColorSpace)ColorSpaceComboBox.SelectedItem
-                : ColorSpace.Auto;
-
-            var toktxFilter = ToktxFilterComboBox.SelectedItem != null
-                ? (ToktxFilterType)ToktxFilterComboBox.SelectedItem
-                : ToktxFilterType.Kaiser;
-
-            var wrapMode = WrapModeComboBox.SelectedItem != null
-                ? (WrapMode)WrapModeComboBox.SelectedItem
-                : WrapMode.Clamp;
-
-            return new CompressionSettingsData {
-                CompressionFormat = format,
-                OutputFormat = outputFormat,
-                CompressionLevel = (int)Math.Round(CompressionLevelSlider.Value),
-                QualityLevel = (int)Math.Round(ETC1SQualitySlider.Value),
-                UASTCQuality = (int)Math.Round(UASTCQualitySlider.Value),
-                UseUASTCRDO = UseUASTCRDOCheckBox.IsChecked ?? true,
-                UASTCRDOQuality = (float)Math.Round(UASTCRDOLambdaSlider.Value, 3), // 3 digits for 0.001 precision
-                PerceptualMode = PerceptualModeCheckBox.IsChecked ?? true,
-                KTX2Supercompression = supercompression,
-                KTX2ZstdLevel = (int)Math.Round(ZstdLevelSlider.Value),
-                UseETC1SRDO = UseETC1SRDOCheckBox.IsChecked ?? true,
-                // Alpha options
-                ForceAlphaChannel = ForceAlphaCheckBox.IsChecked ?? false,
-                RemoveAlphaChannel = RemoveAlphaCheckBox.IsChecked ?? false,
-                // Color Space
-                ColorSpace = colorSpace,
-                // Mipmaps
-                ToktxMipFilter = toktxFilter,
-                WrapMode = wrapMode,
-                ClampMipmaps = false, // Deprecated - теперь используем WrapMode
-                UseLinearMipFiltering = false, // Removed from UI
-                GenerateMipmaps = GenerateMipmapsCheckBox.IsChecked ?? true,
-                UseCustomMipmaps = CustomMipmapsCheckBox.IsChecked ?? false,
-                ConvertToNormalMap = ConvertToNormalMapCheckBox.IsChecked ?? false,
-                NormalizeVectors = NormalizeVectorsCheckBox.IsChecked ?? false,
-                KeepRGBLayout = false, // Removed from UI
-                // КРИТИЧНО: Checkbox называется "Keep" но свойство "Remove" - нужна инверсия!
-                RemoveTemporaryMipmaps = !(RemoveTemporalMipmapsCheckBox.IsChecked ?? false)
-            };
-        }
-
-        public MipProfileSettings GetMipProfileSettings() {
-            var filter = MipFilterComboBox.SelectedItem != null
-                ? (FilterType)MipFilterComboBox.SelectedItem
-                : FilterType.Kaiser;
-
-            return new MipProfileSettings {
-                Filter = filter,
-                ApplyGammaCorrection = ApplyGammaCorrectionCheckBox.IsChecked ?? true,
-                Gamma = 2.2f,
-                BlurRadius = 0.0f,
-                IncludeLastLevel = true,
-                MinMipSize = 1,
-                NormalizeNormals = NormalizeNormalsCheckBox.IsChecked ?? false
-            };
-        }
-
-        public ToksvigSettings GetToksvigSettings() {
-            var mode = ToksvigCalculationModeComboBox.SelectedItem != null
-                ? (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem
-                : ToksvigCalculationMode.Classic;
-
-            return new ToksvigSettings {
-                Enabled = ToksvigEnabledCheckBox.IsChecked ?? false,
-                CalculationMode = mode,
-                CompositePower = (float)ToksvigCompositePowerSlider.Value,
-                MinToksvigMipLevel = (int)ToksvigMinMipLevelSlider.Value,
-                SmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true,
-                UseEnergyPreserving = ToksvigUseEnergyPreservingCheckBox.IsChecked ?? true,
-                VarianceThreshold = (float)ToksvigVarianceThresholdSlider.Value,
-                NormalMapPath = string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text) ? null : NormalMapPathTextBox.Text
-            };
-        }
-
-        public HistogramSettings? GetHistogramSettings() {
-            // Если histogram analysis отключен, возвращаем null
-            if (EnableHistogramCheckBox.IsChecked != true) {
-                return null;
-            }
+        private void HistogramQualityComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (_isLoading) return;
 
             var quality = HistogramQualityComboBox.SelectedItem != null
                 ? (HistogramQuality)HistogramQualityComboBox.SelectedItem
                 : HistogramQuality.HighQuality;
 
-            var channelMode = HistogramChannelModeComboBox.SelectedItem != null
-                ? (HistogramChannelMode)HistogramChannelModeComboBox.SelectedItem
-                : HistogramChannelMode.AverageLuminance;
-
-            // Создаём настройки на основе выбранного качества
-            var settings = quality == HistogramQuality.HighQuality
-                ? HistogramSettings.CreateHighQuality()
-                : HistogramSettings.CreateFast();
-
-            // Применяем пользовательские значения из слайдеров (если изменялись)
-            settings.ChannelMode = channelMode;
-            settings.PercentileLow = (float)HistogramPercentileLowSlider.Value;
-            settings.PercentileHigh = (float)HistogramPercentileHighSlider.Value;
-            settings.KneeWidth = (float)HistogramKneeWidthSlider.Value;
-            settings.MinRangeThreshold = (float)HistogramMinRangeThresholdSlider.Value;
-
-            return settings;
-        }
-
-        /// <summary>
-        /// Устанавливает путь текущей текстуры (для auto-detect normal map)
-        /// </summary>
-        public void SetCurrentTexturePath(string? texturePath) {
-            Logger.Info($"=== SetCurrentTexturePath called ===");
-            Logger.Info($"  texturePath: {texturePath}");
-            Logger.Info($"  Toksvig enabled: {ToksvigEnabledCheckBox.IsChecked ?? false}");
-            Logger.Info($"  NormalMapPath empty: {string.IsNullOrWhiteSpace(NormalMapPathTextBox.Text)}");
-
-            _currentTexturePath = texturePath;
-            // КРИТИЧНО: Если Toksvig УЖЕ включен, запускаем автопоиск СРАЗУ!
-            UpdateNormalMapAutoDetect();
-        }
-
-        /// <summary>
-        /// Очищает путь к normal map (для auto-detect при выборе новой текстуры)
-        /// </summary>
-        public void ClearNormalMapPath() {
-            _isLoading = true;
-            NormalMapPathTextBox.Text = string.Empty;
-            UpdateNormalMapAutoDetect();
-            _isLoading = false;
-        }
-
-        /// <summary>
-        /// Пытается автоматически найти normal map для текстуры gloss
-        /// </summary>
-        public ToksvigSettings GetToksvigSettingsWithAutoDetect(string glossTexturePath) {
-            var settings = GetToksvigSettings();
-
-            // Если NormalMapPath уже указан вручную, не делаем автопоиск
-            if (!string.IsNullOrWhiteSpace(settings.NormalMapPath)) {
-                return settings;
-            }
-
-            // Автопоиск normal map если Toksvig включен
-            if (settings.Enabled) {
-                var normalMapPath = FindNormalMapForTexture(glossTexturePath);
-                if (!string.IsNullOrWhiteSpace(normalMapPath)) {
-                    settings.NormalMapPath = normalMapPath;
-
-                    // Обновляем UI с найденным путем (серым цветом)
-                    _ = Dispatcher.BeginInvoke(() => {
-                        NormalMapStatusTextBlock.Text = $"⚙ Auto-detected: {System.IO.Path.GetFileName(normalMapPath)}";
-                        NormalMapStatusTextBlock.Foreground = GetThemeForegroundDim();
-                    });
-                }
-            }
-
-            return settings;
-        }
-
-        /// <summary>
-        /// Gets theme-aware dim foreground brush for secondary text
-        /// </summary>
-        private static System.Windows.Media.Brush GetThemeForegroundDim() {
-            bool isDark = Helpers.ThemeHelper.IsDarkTheme;
-            return new System.Windows.Media.SolidColorBrush(
-                isDark
-                    ? System.Windows.Media.Color.FromRgb(160, 160, 160)  // Light gray for dark theme
-                    : System.Windows.Media.Color.FromRgb(96, 96, 96));   // Dark gray for light theme
-        }
-
-        /// <summary>
-        /// Ищет normal map по имени файла gloss текстуры
-        /// </summary>
-        private string? FindNormalMapForTexture(string texturePath) {
-            if (string.IsNullOrWhiteSpace(texturePath)) return null;
-
-            try {
-                // КРИТИЧНО: Sanitize path перед использованием File.Exists!
-                texturePath = PathSanitizer.SanitizePath(texturePath);
-
-                var directory = System.IO.Path.GetDirectoryName(texturePath);
-                if (string.IsNullOrEmpty(directory) || !System.IO.Directory.Exists(directory)) return null;
-
-                var fileNameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(texturePath);
-
-                // Убираем "_gloss", "_glossiness", "_smoothness" из имени
-                var glossSuffixes = new[] { "_gloss", "_glossiness", "_smoothness", "_sm", "_gls" };
-                string baseName = fileNameWithoutExt;
-                foreach (var suffix in glossSuffixes) {
-                    if (baseName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
-                        baseName = baseName.Substring(0, baseName.Length - suffix.Length);
-                        break;
-                    }
-                }
-
-                // ОПТИМИЗАЦИЯ: Получаем все файлы в директории ОДИН РАЗ вместо множественных File.Exists
-                var allFiles = System.IO.Directory.GetFiles(directory);
-                var fileNameLookup = new HashSet<string>(
-                    allFiles.Select(System.IO.Path.GetFileName).Where(fn => fn != null)!,
-                    StringComparer.OrdinalIgnoreCase);
-
-                // Ищем файлы с "_normal", "_norm", "_nrm", "_n"
-                var normalSuffixes = new[] { "_normal", "_norm", "_nrm", "_n", "_normals" };
-                var extensions = new[] { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".tif", ".tiff" };
-
-                foreach (var normalSuffix in normalSuffixes) {
-                    foreach (var ext in extensions) {
-                        var normalFileName = baseName + normalSuffix + ext;
-
-                        // Case-insensitive поиск в HashSet (очень быстро!)
-                        if (fileNameLookup.Contains(normalFileName)) {
-                            // Находим точное имя файла с правильным регистром
-                            var actualFileName = allFiles.FirstOrDefault(f =>
-                                string.Equals(System.IO.Path.GetFileName(f), normalFileName, StringComparison.OrdinalIgnoreCase));
-                            if (actualFileName != null) {
-                                return actualFileName;
-                            }
-                        }
-                    }
-                }
-            } catch {
-                // Игнорируем ошибки автопоиска
-            }
-
-            return null;
-        }
-
-        public bool GenerateMipmaps => GenerateMipmapsCheckBox.IsChecked ?? true;
-        public bool SaveSeparateMipmaps => SaveSeparateMipmapsCheckBox.IsChecked ?? false;
-
-        /// <summary>
-        /// Возвращает имя текущего выбранного пресета
-        /// Новая система: строки из ConversionSettingsSchema
-        /// Старая система: объекты TextureConversionPreset
-        /// </summary>
-        public string? PresetName {
-            get {
-                // Новая система (строки)
-                if (PresetComboBox.SelectedItem is string presetName) {
-                    return presetName == "Custom" ? null : presetName;
-                }
-                // Старая система (объекты)
-                if (PresetComboBox.SelectedItem is TextureConversionPreset preset) {
-                    return preset.Name;
-                }
-                return null;
-            }
-        }
-
-        ToksvigSettings ITextureConversionSettingsProvider.GetToksvigSettings(string texturePath) =>
-            GetToksvigSettingsWithAutoDetect(texturePath);
-
-        // ============================================
-        // SETTINGS LOADERS
-        // ============================================
-
-        public void LoadSettings(CompressionSettingsData compression, MipProfileSettings mipProfile, bool generateMips, bool saveSeparateMips) {
-            _isLoading = true;
-
-            // Compression
-            CompressionFormatComboBox.SelectedItem = compression.CompressionFormat;
-            OutputFormatComboBox.SelectedItem = compression.OutputFormat;
-            CompressionLevelSlider.Value = compression.CompressionLevel;
-            ETC1SQualitySlider.Value = compression.QualityLevel;
-            UASTCQualitySlider.Value = compression.UASTCQuality;
-            UseUASTCRDOCheckBox.IsChecked = compression.UseUASTCRDO;
-            UASTCRDOLambdaSlider.Value = compression.UASTCRDOQuality;
-            PerceptualModeCheckBox.IsChecked = compression.PerceptualMode;
-            KTX2SupercompressionComboBox.SelectedItem = compression.KTX2Supercompression;
-            ZstdLevelSlider.Value = compression.KTX2ZstdLevel;
-            UseETC1SRDOCheckBox.IsChecked = compression.UseETC1SRDO;
-
-            // Alpha
-            ForceAlphaCheckBox.IsChecked = compression.ForceAlphaChannel;
-            RemoveAlphaCheckBox.IsChecked = compression.RemoveAlphaChannel;
-
-            // Color Space
-            ColorSpaceComboBox.SelectedItem = compression.ColorSpace;
-
-            // Mipmaps
-            MipFilterComboBox.SelectedItem = mipProfile.Filter;
-            ToktxFilterComboBox.SelectedItem = compression.ToktxMipFilter;
-            WrapModeComboBox.SelectedItem = compression.WrapMode;
-            ApplyGammaCorrectionCheckBox.IsChecked = mipProfile.ApplyGammaCorrection;
-            GenerateMipmapsCheckBox.IsChecked = generateMips;
-            SaveSeparateMipmapsCheckBox.IsChecked = saveSeparateMips;
-
-            // Custom Mipmaps определяется по использованию специальных фильтров или Toksvig
-            // По умолчанию false (автоматическая генерация через toktx)
-            CustomMipmapsCheckBox.IsChecked = false;
-
-            // Normal Maps
-            NormalizeNormalsCheckBox.IsChecked = mipProfile.NormalizeNormals;
-            ConvertToNormalMapCheckBox.IsChecked = compression.ConvertToNormalMap;
-            NormalizeVectorsCheckBox.IsChecked = compression.NormalizeVectors;
-
-            // Toksvig (moved RemoveTemporaryMipmaps here, inverted logic)
-            RemoveTemporalMipmapsCheckBox.IsChecked = !compression.RemoveTemporaryMipmaps;
-
-            UpdateCompressionPanels();
-            UpdateOutputFormatPanels();
-            UpdateMipmapPanelsVisibility();
-
-            _isLoading = false;
-        }
-
-        public void LoadToksvigSettings(ToksvigSettings settings, bool loadNormalMapPath = false) {
-            _isLoading = true;
-
-            ToksvigEnabledCheckBox.IsChecked = settings.Enabled;
-            ToksvigCalculationModeComboBox.SelectedItem = settings.CalculationMode;
-            ToksvigCompositePowerSlider.Value = settings.CompositePower;
-            ToksvigMinMipLevelSlider.Value = settings.MinToksvigMipLevel;
-            ToksvigSmoothVarianceCheckBox.IsChecked = settings.SmoothVariance;
-            ToksvigUseEnergyPreservingCheckBox.IsChecked = settings.UseEnergyPreserving;
-            ToksvigVarianceThresholdSlider.Value = settings.VarianceThreshold;
-
-            // Если Toksvig включен, автоматически включаем Custom Mipmaps
-            if (settings.Enabled) {
-                CustomMipmapsCheckBox.IsChecked = true;
-            }
-
-            // КРИТИЧНО: НЕ загружаем NormalMapPath по умолчанию!
-            // Это позволяет auto-detect работать для каждой новой текстуры
-            // Загружаем только если явно указано (например, при загрузке сохраненных настроек)
-            if (loadNormalMapPath) {
-                NormalMapPathTextBox.Text = settings.NormalMapPath ?? string.Empty;
-            }
-
-            UpdateToksvigCalculationModePanels();
-            UpdateMipmapPanelsVisibility();
-
-            _isLoading = false;
-        }
-
-        public void LoadHistogramSettings(HistogramSettings? settings) {
-            _isLoading = true;
-
-            if (settings != null && settings.Mode != HistogramMode.Off) {
-                EnableHistogramCheckBox.IsChecked = true;
-                HistogramQualityComboBox.SelectedItem = settings.Quality;
-                HistogramChannelModeComboBox.SelectedItem = settings.ChannelMode;
-                // ProcessingMode и Quantization удалены (всегда Preprocessing + Half16)
-                HistogramPercentileLowSlider.Value = settings.PercentileLow;
-                HistogramPercentileHighSlider.Value = settings.PercentileHigh;
-                HistogramKneeWidthSlider.Value = settings.KneeWidth;
-                HistogramMinRangeThresholdSlider.Value = settings.MinRangeThreshold;
-            } else {
-                EnableHistogramCheckBox.IsChecked = false;
-            }
-
-            _isLoading = false;
-        }
-
-        // ============================================
-        // PRESET HANDLING
-        // ============================================
-
-        private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (_isLoading) return;
-
-            // Новая система: строковые имена пресетов (ConversionSettingsManager)
-            if (PresetComboBox.SelectedItem is string presetName) {
-                if (_conversionSettingsManager != null && presetName != "Custom") {
-                    // Применяем пресет из ConversionSettingsSchema
-                    var presets = ConversionSettingsSchema.GetPredefinedPresets();
-                    var preset = presets.FirstOrDefault(p => p.Name == presetName);
-                    if (preset != null) {
-                        LoadConversionPresetToUI(preset);
-                        OnSettingsChanged();
-                    }
-                }
-            }
-            // Старая система: объекты TextureConversionPreset (PresetManager)
-            else if (PresetComboBox.SelectedItem is TextureConversionPreset selectedPreset) {
-                LoadPresetToUI(selectedPreset);
-                OnSettingsChanged();
-            }
-        }
-
-        /// <summary>
-        /// Загружает ConversionPreset (новая система) в UI
-        /// </summary>
-        private void LoadConversionPresetToUI(ConversionPreset preset) {
-            _isLoading = true;
-
-            try {
-                // Применяем значения параметров из пресета
-                foreach (var param in preset.ParameterValues) {
-                    switch (param.Key) {
-                        case "compressionFormat":
-                            if (Enum.TryParse<CompressionFormat>(param.Value?.ToString(), true, out var format)) {
-                                CompressionFormatComboBox.SelectedItem = format;
-                            }
-                            break;
-
-                        case "outputFormat":
-                            if (Enum.TryParse<OutputFormat>(param.Value?.ToString(), true, out var outputFormat)) {
-                                OutputFormatComboBox.SelectedItem = outputFormat;
-                            }
-                            break;
-
-                        case "qualityLevel":
-                            if (param.Value is int qualityInt) {
-                                ETC1SQualitySlider.Value = qualityInt;
-                            }
-                            break;
-
-                        case "uastcQuality":
-                            if (param.Value is int uastcQuality) {
-                                UASTCQualitySlider.Value = uastcQuality;
-                            }
-                            break;
-
-                        case "uastcRDOLambda":
-                            if (param.Value is double rdoLambda) {
-                                UASTCRDOLambdaSlider.Value = rdoLambda;
-                            }
-                            break;
-
-                        case "treatAsSRGB":
-                            if (param.Value is bool srgb && srgb) {
-                                ColorSpaceComboBox.SelectedItem = ColorSpace.SRGB;
-                            }
-                            break;
-
-                        case "treatAsLinear":
-                            if (param.Value is bool linear && linear) {
-                                ColorSpaceComboBox.SelectedItem = ColorSpace.Linear;
-                            }
-                            break;
-
-                        case "colorSpace":
-                            if (Enum.TryParse<ColorSpace>(param.Value?.ToString(), true, out var colorSpace)) {
-                                ColorSpaceComboBox.SelectedItem = colorSpace;
-                            }
-                            break;
-
-                        case "mipFilter":
-                            if (Enum.TryParse<FilterType>(param.Value?.ToString(), true, out var filter)) {
-                                MipFilterComboBox.SelectedItem = filter;
-                            }
-                            break;
-
-                        case "perceptualMode":
-                            if (param.Value is bool perceptual) {
-                                PerceptualModeCheckBox.IsChecked = perceptual;
-                            }
-                            break;
-
-                        case "normalizeVectors":
-                            if (param.Value is bool normalize) {
-                                NormalizeVectorsCheckBox.IsChecked = normalize;
-                            }
-                            break;
-
-                        case "enableToksvig":
-                            if (param.Value is bool enableToksvig) {
-                                ToksvigEnabledCheckBox.IsChecked = enableToksvig;
-                            }
-                            break;
-
-                        case "compositePower":
-                            if (param.Value is double compositePower) {
-                                ToksvigCompositePowerSlider.Value = compositePower;
-                            }
-                            break;
-
-                        // Histogram Analysis
-                        case "enableHistogram":
-                            if (param.Value is bool enableHistogram) {
-                                EnableHistogramCheckBox.IsChecked = enableHistogram;
-                            }
-                            break;
-
-                        case "histogramQuality":
-                            if (Enum.TryParse<HistogramQuality>(param.Value?.ToString(), true, out var histQuality)) {
-                                HistogramQualityComboBox.SelectedItem = histQuality;
-                            }
-                            break;
-
-                        // histogramMode удалён (заменён на histogramQuality)
-
-                        // histogramProcessingMode удалён (всегда Preprocessing)
-
-                        case "histogramChannelMode":
-                            if (Enum.TryParse<HistogramChannelMode>(param.Value?.ToString(), true, out var histChannel)) {
-                                HistogramChannelModeComboBox.SelectedItem = histChannel;
-                            }
-                            break;
-
-                        // histogramQuantization удалён (всегда Half16)
-
-                        case "histogramPercentileLow":
-                            if (param.Value is double percLow) {
-                                HistogramPercentileLowSlider.Value = percLow;
-                            }
-                            break;
-
-                        case "histogramPercentileHigh":
-                            if (param.Value is double percHigh) {
-                                HistogramPercentileHighSlider.Value = percHigh;
-                            }
-                            break;
-
-                        case "histogramKneeWidth":
-                            if (param.Value is double kneeWidth) {
-                                HistogramKneeWidthSlider.Value = kneeWidth;
-                            }
-                            break;
-
-                        case "histogramMinRangeThreshold":
-                            if (param.Value is double minRange) {
-                                HistogramMinRangeThresholdSlider.Value = minRange;
-                            }
-                            break;
-                    }
-                }
-
-                UpdateCompressionPanels();
-                UpdateOutputFormatPanels();
-
-            } finally {
-                _isLoading = false;
-            }
-        }
-
-        private void LoadPresetToUI(TextureConversionPreset preset) {
-            _isLoading = true;
-
-            // Compression settings
-            CompressionFormatComboBox.SelectedItem = preset.CompressionFormat;
-            OutputFormatComboBox.SelectedItem = preset.OutputFormat;
-            CompressionLevelSlider.Value = preset.CompressionLevel;
-            KTX2SupercompressionComboBox.SelectedItem = preset.KTX2Supercompression;
-            ZstdLevelSlider.Value = preset.KTX2ZstdLevel;
-
-            // Quality settings
-            ETC1SQualitySlider.Value = preset.QualityLevel;
-            UASTCQualitySlider.Value = preset.UASTCQuality;
-            UseUASTCRDOCheckBox.IsChecked = preset.UseUASTCRDO;
-            UASTCRDOLambdaSlider.Value = preset.UASTCRDOQuality;
-            UseETC1SRDOCheckBox.IsChecked = preset.UseETC1SRDO;
-
-            // Mipmap settings
-            GenerateMipmapsCheckBox.IsChecked = preset.GenerateMipmaps;
-            MipFilterComboBox.SelectedItem = preset.MipFilter;
-            // MipClampCheckBox удален - теперь используется WrapModeComboBox
-            ApplyGammaCorrectionCheckBox.IsChecked = preset.ApplyGammaCorrection;
-
-            // Advanced settings
-            PerceptualModeCheckBox.IsChecked = preset.PerceptualMode;
-            ForceAlphaCheckBox.IsChecked = preset.ForceAlphaChannel;
-            RemoveAlphaCheckBox.IsChecked = preset.RemoveAlphaChannel;
-
-            // Color Space
-            // Старые пресеты могут иметь TreatAsLinear/TreatAsSRGB
-            if (preset.TreatAsLinear) {
-                ColorSpaceComboBox.SelectedItem = ColorSpace.Linear;
-            } else if (preset.TreatAsSRGB) {
-                ColorSpaceComboBox.SelectedItem = ColorSpace.SRGB;
-            } else {
-                ColorSpaceComboBox.SelectedItem = ColorSpace.Auto;
-            }
-
-            // Normal Maps
-            NormalizeNormalsCheckBox.IsChecked = preset.NormalizeNormals;
-            ConvertToNormalMapCheckBox.IsChecked = preset.ConvertToNormalMap;
-            NormalizeVectorsCheckBox.IsChecked = preset.NormalizeVectors;
-
-            // Toksvig
-            LoadToksvigSettings(preset.ToksvigSettings);
-
-            // Histogram Analysis
-            LoadHistogramSettings(preset.HistogramSettings);
-
-            UpdateCompressionPanels();
-            UpdateOutputFormatPanels();
-
-            _isLoading = false;
-        }
-
-        /// <summary>
-        /// Программно устанавливает пресет БЕЗ триггера событий SettingsChanged (для новой системы)
-        /// </summary>
-        public void SetPresetSilently(string presetName) {
             _isLoading = true;
             try {
-                if (PresetComboBox.Items.Cast<string>().Contains(presetName)) {
-                    PresetComboBox.SelectedItem = presetName;
+                if (quality == HistogramQuality.HighQuality) {
+                    HistogramPercentileLowSlider.Value = 0.5;
+                    HistogramPercentileHighSlider.Value = 99.5;
+                    HistogramKneeWidthSlider.Value = 0.02;
                 } else {
-                    PresetComboBox.SelectedIndex = 0; // "Custom"
+                    HistogramPercentileLowSlider.Value = 1.0;
+                    HistogramPercentileHighSlider.Value = 99.0;
+                    HistogramKneeWidthSlider.Value = 0.0;
                 }
             } finally {
                 _isLoading = false;
             }
+
+            OnSettingsChanged();
         }
 
-        /// <summary>
-        /// Автоматически выбирает пресет на основе имени файла
-        /// </summary>
-        public bool AutoDetectPresetByFileName(string fileName) {
-            if (string.IsNullOrEmpty(fileName)) {
-                return false;
-            }
-
-            var matchingPreset = _presetManager.FindPresetByFileName(fileName);
-            if (matchingPreset != null) {
-                PresetComboBox.SelectedItem = matchingPreset;
-                LoadPresetToUI(matchingPreset);
-                return true;
-            }
-
-            return false;
+        private void CheckboxSettingChanged(object sender, RoutedEventArgs e) {
+            if (!_isLoading) OnSettingsChanged();
         }
 
-        private void AutoDetectPreset_Click(object sender, RoutedEventArgs e) {
-            OnAutoDetectRequested();
+        private void ComboBoxSettingChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) OnSettingsChanged();
         }
 
-        private void ManagePresets_Click(object sender, RoutedEventArgs e) {
-            var presetsWindow = new Windows.PresetManagementWindow(_presetManager);
-            presetsWindow.Owner = Window.GetWindow(this);
-            presetsWindow.ShowDialog();
+        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (!_isLoading) OnSettingsChanged();
+        }
 
-            // КРИТИЧНО: Проверяем какая система пресетов используется
-            if (_conversionSettingsManager != null) {
-                // Новая система - обновляем список строк
-                var presets = ConversionSettingsSchema.GetPredefinedPresets();
-                var currentSelectedName = PresetComboBox.SelectedItem as string;
+        private void KTX2SupercompressionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!_isLoading) OnSettingsChanged();
+        }
 
-                var presetNames = new List<string> { "Custom" };
-                presetNames.AddRange(presets.Select(p => p.Name));
-
-                PresetComboBox.ItemsSource = presetNames;
-
-                // Восстанавливаем выбранный пресет
-                if (!string.IsNullOrEmpty(currentSelectedName) && presetNames.Contains(currentSelectedName)) {
-                    PresetComboBox.SelectedItem = currentSelectedName;
-                } else {
-                    PresetComboBox.SelectedIndex = 0; // "Custom"
-                }
-            } else {
-                // Старая система - обновляем список объектов
-                var currentPreset = PresetComboBox.SelectedItem as TextureConversionPreset;
-                InitializePresets();
-
-                // Пытаемся восстановить выбранный пресет
-                if (currentPreset != null) {
-                    var updatedPreset = _presetManager.GetPreset(currentPreset.Name);
-                    if (updatedPreset != null) {
-                        PresetComboBox.SelectedItem = updatedPreset;
-                    }
-                }
-            }
+        private void TextBoxSettingChanged(object sender, TextChangedEventArgs e) {
+            if (!_isLoading) OnSettingsChanged();
         }
 
         // ============================================
@@ -1059,72 +334,8 @@ namespace AssetProcessor.Controls {
         }
 
         // ============================================
-        // EVENT HANDLERS
+        // EVENT RAISERS
         // ============================================
-
-        private void CheckboxSettingChanged(object sender, RoutedEventArgs e) {
-            if (!_isLoading) {
-                OnSettingsChanged();
-            }
-        }
-
-        private void ComboBoxSettingChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading) {
-                OnSettingsChanged();
-            }
-        }
-
-        /// <summary>
-        /// Обработчик изменения Quality Mode - автоматически обновляет слайдеры
-        /// </summary>
-        private void HistogramQualityComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (_isLoading) return;
-
-            // Получаем выбранное качество
-            var quality = HistogramQualityComboBox.SelectedItem != null
-                ? (HistogramQuality)HistogramQualityComboBox.SelectedItem
-                : HistogramQuality.HighQuality;
-
-            // Автоматически обновляем слайдеры согласно выбранному качеству
-            _isLoading = true;
-            try {
-                if (quality == HistogramQuality.HighQuality) {
-                    // HighQuality: PercentileWithKnee (0.5%, 99.5%), knee=2%
-                    HistogramPercentileLowSlider.Value = 0.5;
-                    HistogramPercentileHighSlider.Value = 99.5;
-                    HistogramKneeWidthSlider.Value = 0.02;
-                    Logger.Info("Histogram Quality Mode changed to HighQuality: percentiles=[0.5%, 99.5%], knee=0.02");
-                } else {
-                    // Fast: Percentile (1%, 99%), no knee
-                    HistogramPercentileLowSlider.Value = 1.0;
-                    HistogramPercentileHighSlider.Value = 99.0;
-                    HistogramKneeWidthSlider.Value = 0.0;
-                    Logger.Info("Histogram Quality Mode changed to Fast: percentiles=[1%, 99%], knee=0");
-                }
-            } finally {
-                _isLoading = false;
-            }
-
-            OnSettingsChanged();
-        }
-
-        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (!_isLoading) {
-                OnSettingsChanged();
-            }
-        }
-
-        private void KTX2SupercompressionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (!_isLoading) {
-                OnSettingsChanged();
-            }
-        }
-
-        private void TextBoxSettingChanged(object sender, TextChangedEventArgs e) {
-            if (!_isLoading) {
-                OnSettingsChanged();
-            }
-        }
 
         private void OnSettingsChanged() {
             SettingsChanged?.Invoke(this, EventArgs.Empty);

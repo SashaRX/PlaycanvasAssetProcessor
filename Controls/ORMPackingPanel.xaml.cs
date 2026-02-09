@@ -33,9 +33,6 @@ namespace AssetProcessor.Controls {
             mainWindow = window;
             availableTextures = textures;
 
-            Logger.Info($"Initialize: availableTextures count = {availableTextures.Count}");
-
-            // Обновляем ComboBox источниками (но не сбрасываем выбранные значения!)
             RefreshSourceLists();
         }
 
@@ -58,23 +55,12 @@ namespace AssetProcessor.Controls {
             GlossSourceComboBox.IsEnabled = !isConverted;
             MetallicSourceComboBox.IsEnabled = !isConverted;
             HeightSourceComboBox.IsEnabled = !isConverted;
-
-            if (isConverted) {
-                Logger.Info($"[ORMPackingPanel] ORM texture '{ormTexture.Name}' is already packed. Source ComboBoxes disabled.");
-            }
         }
 
         /// <summary>
         /// Обновляет списки источников
         /// </summary>
         private void RefreshSourceLists() {
-            // No default/empty item - all channels must have actual texture sources
-            Logger.Info($"RefreshSourceLists: availableTextures count = {availableTextures.Count}");
-            if (availableTextures.Count > 0) {
-                Logger.Info($"First 3 textures: {string.Join(", ", availableTextures.Take(3).Select(t => $"{t.Name}(ID={t.ID})"))}");
-            }
-
-            // CRITICAL: Use same list instance for all ComboBoxes so SelectedItem reference matching works
             AOSourceComboBox.ItemsSource = availableTextures;
             GlossSourceComboBox.ItemsSource = availableTextures;
             MetallicSourceComboBox.ItemsSource = availableTextures;
@@ -89,12 +75,7 @@ namespace AssetProcessor.Controls {
         private void LoadORMSettings() {
             if (currentORMTexture == null) return;
 
-            Logger.Info($"LoadORMSettings: ORM Name = {currentORMTexture.Name}");
-            Logger.Info($"  AOSource: {currentORMTexture.AOSource?.Name ?? "null"} (ID={currentORMTexture.AOSource?.ID})");
-            Logger.Info($"  GlossSource: {currentORMTexture.GlossSource?.Name ?? "null"} (ID={currentORMTexture.GlossSource?.ID})");
-            Logger.Info($"  MetallicSource: {currentORMTexture.MetallicSource?.Name ?? "null"} (ID={currentORMTexture.MetallicSource?.ID})");
-
-            // CRITICAL: Capture references IMMEDIATELY before UI changes trigger SaveORMSettings
+            // Capture references BEFORE UI changes trigger SaveORMSettings
             var aoSource = currentORMTexture.AOSource;
             var glossSource = currentORMTexture.GlossSource;
             var metallicSource = currentORMTexture.MetallicSource;
@@ -105,11 +86,6 @@ namespace AssetProcessor.Controls {
             var glossFilterType = currentORMTexture.GlossFilterType;
             var metallicFilterType = currentORMTexture.MetallicFilterType;
 
-            Logger.Info($"  Captured aoSource: {aoSource?.Name ?? "null"} (ID={aoSource?.ID})");
-            Logger.Info($"  Captured glossSource: {glossSource?.Name ?? "null"} (ID={glossSource?.ID})");
-
-            // CRITICAL FIX: Set flag BEFORE any UI changes to prevent SaveORMSettings from
-            // overwriting currentORMTexture with stale ComboBox values from previous selection
             _isSettingComboBoxes = true;
 
             // Packing mode (OG=2, OGM=3, OGMH=4 in enum, but ComboBox index is 0, 1, 2)
@@ -194,12 +170,8 @@ namespace AssetProcessor.Controls {
                     GlossFilterTypeComboBox.SelectedItem = glossFilterType;
                     MetallicFilterTypeComboBox.SelectedItem = metallicFilterType;
                 } finally {
-                    Logger.Info("[LoadORMSettings] Dispatcher callback finally block - setting _isSettingComboBoxes = false");
                     _isSettingComboBoxes = false;
-                    // Now that ComboBoxes are set correctly, update status
-                    Logger.Info("[LoadORMSettings] Calling final UpdateStatus...");
                     UpdateStatus();
-                    Logger.Info("[LoadORMSettings] Final UpdateStatus completed, Dispatcher callback done");
                 }
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
@@ -257,9 +229,7 @@ namespace AssetProcessor.Controls {
             currentORMTexture.GlossToksvigEnergyPreserving = ToksvigEnergyPreservingCheckBox.IsChecked ?? true;
             currentORMTexture.GlossToksvigSmoothVariance = ToksvigSmoothVarianceCheckBox.IsChecked ?? true;
 
-            Logger.Info($"[SaveORMSettings] Gloss Toksvig: Enabled={currentORMTexture.GlossToksvigEnabled}, Power={currentORMTexture.GlossToksvigPower}, CheckBoxState={GlossToksvigCheckBox.IsChecked}");
-
-            // Toksvig calculation mode - handle null case
+            // Toksvig calculation mode
             if (ToksvigCalculationModeComboBox.SelectedItem != null) {
                 currentORMTexture.GlossToksvigCalculationMode = (ToksvigCalculationMode)ToksvigCalculationModeComboBox.SelectedItem;
             }
@@ -322,12 +292,9 @@ namespace AssetProcessor.Controls {
             if (StatusText == null || MissingChannelsText == null || PackConvertButton == null) return;
             if (currentORMTexture == null) return;
 
-            Logger.Info("[UpdateStatus] Starting...");
             SaveORMSettings();
-            Logger.Info("[UpdateStatus] SaveORMSettings completed");
 
             var missing = currentORMTexture.GetMissingChannels();
-            Logger.Info($"[UpdateStatus] GetMissingChannels returned {missing.Count} items");
 
             if (missing.Count == 0) {
                 StatusText.Text = "✓ All required channels configured";
@@ -338,9 +305,8 @@ namespace AssetProcessor.Controls {
                 StatusText.Text = "⚠ Some channels use default values";
                 StatusText.Foreground = System.Windows.Media.Brushes.Orange;
                 MissingChannelsText.Text = $"Missing sources: {string.Join(", ", missing)}";
-                PackConvertButton.IsEnabled = true; // Разрешаем упаковку с константами
+                PackConvertButton.IsEnabled = true;
             }
-            Logger.Info("[UpdateStatus] Completed");
         }
 
         // Event handlers
@@ -424,16 +390,12 @@ namespace AssetProcessor.Controls {
             if (format == CompressionFormat.ETC1S) {
                 ETC1SPanel.Visibility = Visibility.Visible;
                 UASTCPanel.Visibility = Visibility.Collapsed;
-                Logger.Info("Switched to ETC1S compression format");
             } else if (format == CompressionFormat.UASTC) {
                 ETC1SPanel.Visibility = Visibility.Collapsed;
                 UASTCPanel.Visibility = Visibility.Visible;
-                Logger.Info("Switched to UASTC compression format");
             }
 
-            Logger.Info("[CompressionFormat_Changed] Calling UpdateStatus...");
             UpdateStatus();
-            Logger.Info("[CompressionFormat_Changed] UpdateStatus completed");
         }
 
         private void EnableRDO_Changed(object sender, RoutedEventArgs e) {
@@ -466,8 +428,6 @@ namespace AssetProcessor.Controls {
             if (currentORMTexture == null || mainWindow == null) return;
 
             SaveORMSettings();
-
-            Logger.Info($"[PackConvert_Click] Gloss Toksvig settings AFTER SaveORMSettings: Enabled={currentORMTexture.GlossToksvigEnabled}, Power={currentORMTexture.GlossToksvigPower}");
 
             try {
                 PackConvertButton.IsEnabled = false;
@@ -582,10 +542,6 @@ namespace AssetProcessor.Controls {
                         currentORMTexture.Resolution = currentORMTexture.MetallicSource.Resolution;
                     }
 
-                    Logger.Info($"ORM texture updated: Status={currentORMTexture.Status}, Resolution={currentORMTexture.Resolution?[0]}x{currentORMTexture.Resolution?[1]}, MipLevels={result.MipLevels}, Size={currentORMTexture.CompressedSize}");
-
-                    // Refresh MainWindow to update preview and row color
-                    Logger.Info("Calling MainWindow.RefreshCurrentTextureAsync() to update preview and row color");
                     if (mainWindow != null)
                         await mainWindow.RefreshCurrentTextureAsync();
                 } else {
@@ -638,9 +594,7 @@ namespace AssetProcessor.Controls {
                 if (glossChannel != null) {
                     glossChannel.SourcePath = currentORMTexture.GlossSource?.Path;
                     glossChannel.ApplyToksvig = currentORMTexture.GlossToksvigEnabled;
-                    glossChannel.AOProcessingMode = AOProcessingMode.None; // AO processing only for AO channel
-
-                    Logger.Info($"  Gloss channel settings: ApplyToksvig={glossChannel.ApplyToksvig}, GlossToksvigEnabled={currentORMTexture.GlossToksvigEnabled}");
+                    glossChannel.AOProcessingMode = AOProcessingMode.None;
 
                     // Set filter via MipProfile
                     if (glossChannel.MipProfile == null) {
@@ -658,14 +612,6 @@ namespace AssetProcessor.Controls {
                             SmoothVariance = currentORMTexture.GlossToksvigSmoothVariance,
                             VarianceThreshold = 0.002f
                         };
-                        Logger.Info($"  Toksvig settings created: Power={glossChannel.ToksvigSettings.CompositePower}, Mode={glossChannel.ToksvigSettings.CalculationMode}");
-
-                        // Validation warning for suboptimal Toksvig settings
-                        if (currentORMTexture.GlossToksvigPower < 2.0f) {
-                            Logger.Warn($"⚠ Toksvig Power={currentORMTexture.GlossToksvigPower:F2} is low. Recommended: 4.0+ for strong anti-aliasing. Low power may result in noisy/sparkly gloss.");
-                        }
-                    } else {
-                        Logger.Warn("  Toksvig is DISABLED - checkbox not checked!");
                     }
                 }
             }

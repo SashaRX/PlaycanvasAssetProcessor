@@ -391,14 +391,14 @@ namespace AssetProcessor.ModelConversion.Wrappers {
             // ============================================
 
             // Инвертировать UV по вертикали
-            // ВАЖНО: gltfpack НЕ поддерживает флаг -flipuv напрямую
-            // Этот флаг будет проигнорирован gltfpack, что приведёт к неработающей настройке
-            // Для инверсии UV требуется пост-обработка после конвертации (не реализовано)
-            // Показываем предупреждение пользователю, что настройка не будет применена
+            // ВАЖНО: gltfpack НЕ поддерживает флаг -flipuv напрямую.
+            // Ранее настройка тихо игнорировалась, что приводило к ложному ощущению, что опция работает.
+            // Теперь явно останавливаем операцию с понятной ошибкой, чтобы пользователь
+            // выбрал корректный путь (выключить FlipUVs или использовать отдельный пост-процессор).
             if (settings.FlipUVs) {
-                Logger.Warn("gltfpack: FlipUVs setting is enabled, but gltfpack does NOT support -flipuv flag. UV coordinates will NOT be flipped. Post-processing required for UV flipping (not implemented).");
-                // НЕ добавляем флаг -flipuv, так как он не поддерживается и будет проигнорирован
-                // TODO: Реализовать пост-обработку UV координат для инверсии по вертикали
+                const string flipUvError = "FlipUVs=true не поддерживается: gltfpack не умеет инвертировать UV по вертикали. Отключите FlipUVs или выполните UV post-process отдельным шагом.";
+                Logger.Error($"gltfpack: {flipUvError}");
+                throw new NotSupportedException(flipUvError);
             }
 
             // ============================================

@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using AssetProcessor.Services;
 using AssetProcessor.TextureConversion.Core;
 using AssetProcessor.TextureConversion.Settings;
 

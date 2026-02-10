@@ -424,12 +424,17 @@ namespace AssetProcessor {
             desiredHeight = Math.Max(minHeight, Math.Min(maxHeight, desiredHeight));
             ModelViewportRow.Height = new GridLength(desiredHeight);
 
-            // Синхронизируем внешнюю строку, чтобы LOD-панель не обрезалась
+            // Синхронизируем внешнюю строку и её MinHeight,
+            // чтобы внешний GridSplitter не мог сжать строку ниже содержимого
             double delta = desiredHeight - oldHeight;
-            if (ModelPreviewRow != null && delta != 0) {
-                double outerHeight = ModelPreviewRow.ActualHeight + delta;
-                outerHeight = Math.Max(250, Math.Min(1200, outerHeight));
-                ModelPreviewRow.Height = new GridLength(outerHeight);
+            if (ModelPreviewRow != null) {
+                if (delta != 0) {
+                    double outerHeight = ModelPreviewRow.ActualHeight + delta;
+                    outerHeight = Math.Max(250, Math.Min(1200, outerHeight));
+                    ModelPreviewRow.Height = new GridLength(outerHeight);
+                }
+                // info (~50) + viewport + thumb (14) + LOD (~50) + margins
+                ModelPreviewRow.MinHeight = desiredHeight + 120;
             }
 
             e.Handled = true;

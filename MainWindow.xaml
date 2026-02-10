@@ -1375,6 +1375,9 @@
                                                           ZoomSensitivity="1"
                                                           RotateGesture="LeftClick"
                                                           PanGesture="MiddleClick">
+                                        <helix:HelixViewport3D.CacheMode>
+                                            <BitmapCache RenderAtScale="2" />
+                                        </helix:HelixViewport3D.CacheMode>
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>
                                 </Border>

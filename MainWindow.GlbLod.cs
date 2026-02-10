@@ -437,14 +437,19 @@ namespace AssetProcessor {
 
         /// <summary>
         /// Внешний Thumb между Model Preview и нижней секцией (UV Maps).
-        /// Ресайзит только ModelPreviewRow.
+        /// Ресайзит ModelPreviewRow и синхронно ModelViewportRow.
         /// </summary>
         private void ModelPreviewGridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
-            if (ModelPreviewRow == null) return;
+            if (ModelPreviewRow == null || ModelViewportRow == null) return;
 
-            double desiredHeight = ModelPreviewRow.ActualHeight + e.VerticalChange;
-            desiredHeight = Math.Max(200, Math.Min(1200, desiredHeight));
-            ModelPreviewRow.Height = new GridLength(desiredHeight);
+            double desiredOuter = ModelPreviewRow.ActualHeight + e.VerticalChange;
+            desiredOuter = Math.Max(200, Math.Min(1200, desiredOuter));
+            ModelPreviewRow.Height = new GridLength(desiredOuter);
+
+            // Синхронно уменьшаем/увеличиваем вьюпорт
+            double desiredViewport = ModelViewportRow.ActualHeight + e.VerticalChange;
+            desiredViewport = Math.Max(100, Math.Min(800, desiredViewport));
+            ModelViewportRow.Height = new GridLength(desiredViewport);
 
             e.Handled = true;
         }

@@ -415,13 +415,22 @@ namespace AssetProcessor {
         private void ModelViewportGridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
             if (ModelViewportRow == null) return;
 
-            double desiredHeight = ModelViewportRow.ActualHeight + e.VerticalChange;
+            double oldHeight = ModelViewportRow.ActualHeight;
+            double desiredHeight = oldHeight + e.VerticalChange;
 
             const double minHeight = 150;
             const double maxHeight = 800;
 
             desiredHeight = Math.Max(minHeight, Math.Min(maxHeight, desiredHeight));
             ModelViewportRow.Height = new GridLength(desiredHeight);
+
+            // Синхронизируем внешнюю строку, чтобы LOD-панель не обрезалась
+            double delta = desiredHeight - oldHeight;
+            if (ModelPreviewRow != null && delta != 0) {
+                double outerHeight = ModelPreviewRow.ActualHeight + delta;
+                outerHeight = Math.Max(250, Math.Min(1200, outerHeight));
+                ModelPreviewRow.Height = new GridLength(outerHeight);
+            }
 
             e.Handled = true;
         }

@@ -1276,7 +1276,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition x:Name="ModelViewportRow" Height="300" MinHeight="100" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" MinHeight="32" />
                                 </Grid.RowDefinitions>
 
                                 <!-- Model Info Panel (ABOVE viewport) -->

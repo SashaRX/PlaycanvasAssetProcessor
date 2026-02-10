@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using AssimpVector3D = Assimp.Vector3D;
 
 namespace AssetProcessor {
     /// <summary>
@@ -77,7 +78,7 @@ namespace AssetProcessor {
                 drawingContext.DrawRectangle(backgroundBrush, null, new Rect(0, 0, width, height));
 
                 if (mesh.TextureCoordinateChannels.Length > channelIndex) {
-                    List<Vector3D>? textureCoordinates = mesh.TextureCoordinateChannels[channelIndex];
+                    List<AssimpVector3D>? textureCoordinates = mesh.TextureCoordinateChannels[channelIndex];
 
                     if (textureCoordinates != null && textureCoordinates.Count > 0) {
                         SolidColorBrush fillBrush = new(Color.FromArgb(186, 255, 69, 0));
@@ -101,7 +102,7 @@ namespace AssetProcessor {
                                     break;
                                 }
 
-                                Vector3D uv = textureCoordinates[vertexIndex];
+                                AssimpVector3D uv = textureCoordinates[vertexIndex];
                                 float displayV = flipV ? (1 - uv.Y) : uv.Y;
                                 points[i] = new Point(uv.X * width, displayV * height);
                             }
@@ -175,8 +176,8 @@ namespace AssetProcessor {
                     if (mesh.Vertices == null || mesh.Normals == null) continue;
 
                     for (int i = 0; i < mesh.VertexCount; i++) {
-                        Vector3D vertex = mesh.Vertices[i];
-                        Vector3D normal = mesh.Normals[i];
+                        AssimpVector3D vertex = mesh.Vertices[i];
+                        AssimpVector3D normal = mesh.Normals[i];
                         builder.Positions.Add(new Point3D(vertex.X, vertex.Y, vertex.Z));
                         builder.Normals.Add(new System.Windows.Media.Media3D.Vector3D(normal.X, normal.Y, normal.Z));
 

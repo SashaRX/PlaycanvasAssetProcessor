@@ -1276,7 +1276,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition x:Name="ModelViewportRow" Height="300" MinHeight="100" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" MinHeight="32" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <!-- Model Info Panel (ABOVE viewport) -->
@@ -1382,17 +1382,20 @@
                                     </helix:HelixViewport3D>
                                 </Border>
 
-                                <!-- GridSplitter for resizing viewport -->
-                                <GridSplitter Grid.Row="2"
-                                              Height="6"
-                                              Margin="0,4,0,4"
-                                              Background="{DynamicResource ThemeBackgroundAlt}"
-                                              HorizontalAlignment="Stretch"
-                                              ResizeDirection="Rows"
-                                              ResizeBehavior="PreviousAndNext"
-                                              ShowsPreview="False"
-                                              Cursor="SizeNS"
-                                              DragDelta="ModelViewportGridSplitter_DragDelta" />
+                                <!-- Drag handle for resizing viewport (Thumb instead of GridSplitter to avoid auto-resize of LOD panel) -->
+                                <Thumb Grid.Row="2"
+                                       Height="6"
+                                       Margin="0,4,0,4"
+                                       HorizontalAlignment="Stretch"
+                                       Cursor="SizeNS"
+                                       DragDelta="ModelViewportGridSplitter_DragDelta">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="{DynamicResource ThemeBackgroundAlt}"
+                                                    CornerRadius="2" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
 
                                 <!-- LOD Controls Panel (BELOW viewport, like texture mipmaps) -->
                                 <StackPanel x:Name="LodControlsPanel" Grid.Row="3" Orientation="Vertical" Margin="6,4,6,6" Visibility="Collapsed">

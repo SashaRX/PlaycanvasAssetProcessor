@@ -424,18 +424,27 @@ namespace AssetProcessor {
             desiredHeight = Math.Max(minHeight, Math.Min(maxHeight, desiredHeight));
             ModelViewportRow.Height = new GridLength(desiredHeight);
 
-            // Синхронизируем внешнюю строку и её MinHeight,
-            // чтобы внешний GridSplitter не мог сжать строку ниже содержимого
+            // Синхронизируем внешнюю строку (Expander)
             double delta = desiredHeight - oldHeight;
-            if (ModelPreviewRow != null) {
-                if (delta != 0) {
-                    double outerHeight = ModelPreviewRow.ActualHeight + delta;
-                    outerHeight = Math.Max(250, Math.Min(1200, outerHeight));
-                    ModelPreviewRow.Height = new GridLength(outerHeight);
-                }
-                // info (~50) + viewport + thumb (14) + LOD (~50) + margins
-                ModelPreviewRow.MinHeight = desiredHeight + 120;
+            if (ModelPreviewRow != null && delta != 0) {
+                double outerHeight = ModelPreviewRow.ActualHeight + delta;
+                outerHeight = Math.Max(200, Math.Min(1200, outerHeight));
+                ModelPreviewRow.Height = new GridLength(outerHeight);
             }
+
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Внешний Thumb между Model Preview и нижней секцией (UV Maps).
+        /// Ресайзит только ModelPreviewRow.
+        /// </summary>
+        private void ModelPreviewGridSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e) {
+            if (ModelPreviewRow == null) return;
+
+            double desiredHeight = ModelPreviewRow.ActualHeight + e.VerticalChange;
+            desiredHeight = Math.Max(200, Math.Min(1200, desiredHeight));
+            ModelPreviewRow.Height = new GridLength(desiredHeight);
 
             e.Handled = true;
         }

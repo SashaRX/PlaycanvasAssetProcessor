@@ -1264,7 +1264,8 @@
                 <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition x:Name="ModelPreviewRow" Height="420" MinHeight="420" MaxHeight="1200" />
+                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="1200" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" MinHeight="150" />
                         </Grid.RowDefinitions>
@@ -1275,7 +1276,6 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition x:Name="ModelViewportRow" Height="300" MinHeight="100" />
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
@@ -1396,93 +1396,94 @@
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
-
-                                <!-- LOD Controls Panel (BELOW viewport, like texture mipmaps) -->
-                                <StackPanel x:Name="LodControlsPanel" Grid.Row="3" Orientation="Vertical" Margin="6,4,6,6" Visibility="Collapsed">
-                                    <!-- Source Type Switch (FBX/GLB) -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="Source:"
-                                                  Foreground="{DynamicResource ThemeForeground}"
-                                                  FontSize="10"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,6,0" />
-                                        <Button x:Name="SourceFbxButton"
-                                               Content="FBX"
-                                               Click="SourceTypeButton_Click"
-                                               Tag="FBX"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}"
-                                               ToolTip="Show original FBX model" />
-                                        <Button x:Name="SourceGlbButton"
-                                               Content="GLB"
-                                               Click="SourceTypeButton_Click"
-                                               Tag="GLB"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               FontWeight="Bold"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}"
-                                               ToolTip="Show converted GLB model" />
-
-                                        <Separator Width="10" Background="Transparent" />
-
-                                        <!-- LOD Slider -->
-                                        <TextBlock Text="LOD:"
-                                                  Foreground="{DynamicResource ThemeForeground}"
-                                                  FontSize="10"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,6,0" />
-                                        <Slider x:Name="LodSlider"
-                                               Minimum="0"
-                                               Maximum="3"
-                                               Value="0"
-                                               TickFrequency="1"
-                                               IsSnapToTickEnabled="True"
-                                               Width="100"
-                                               VerticalAlignment="Center"
-                                               ValueChanged="LodSlider_ValueChanged"
-                                               ToolTip="Select LOD level" />
-                                        <TextBlock x:Name="LodSliderValueText"
-                                                  Text="LOD0"
-                                                  Foreground="{DynamicResource ThemeForeground}"
-                                                  FontSize="10"
-                                                  FontWeight="SemiBold"
-                                                  VerticalAlignment="Center"
-                                                  Margin="6,0,0,0"
-                                                  MinWidth="35" />
-                                        <TextBlock x:Name="LodInfoText"
-                                                  Text=""
-                                                  Foreground="{DynamicResource ThemeForegroundDim}"
-                                                  FontSize="9"
-                                                  VerticalAlignment="Center"
-                                                  Margin="8,0,0,0" />
-                                    </StackPanel>
-                                </StackPanel>
                             </Grid>
                         </Expander>
 
-                        <!-- GridSplitter between Model Preview and bottom section -->
-                        <GridSplitter x:Name="ModelPreviewGridSplitter"
-                                      Grid.Row="1"
-                                      Height="6"
-                                      Margin="0,4,0,4"
-                                      Background="{DynamicResource ThemeBackgroundAlt}"
-                                      HorizontalAlignment="Stretch"
-                                      VerticalAlignment="Center"
-                                      ResizeDirection="Rows"
-                                      ResizeBehavior="PreviousAndNext"
-                                      ShowsPreview="False"
-                                      Cursor="SizeNS"
-                                      DragCompleted="ModelPreviewGridSplitter_DragCompleted" />
+                        <!-- LOD Controls Panel (outside Expander so it can't be clipped by resize) -->
+                        <StackPanel x:Name="LodControlsPanel" Grid.Row="1" Orientation="Vertical" Margin="6,4,6,2" Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Source:"
+                                          Foreground="{DynamicResource ThemeForeground}"
+                                          FontSize="10"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0" />
+                                <Button x:Name="SourceFbxButton"
+                                       Content="FBX"
+                                       Click="SourceTypeButton_Click"
+                                       Tag="FBX"
+                                       Width="45"
+                                       Height="20"
+                                       Margin="2,0"
+                                       FontSize="9"
+                                       Padding="2"
+                                       BorderBrush="{DynamicResource ThemeBorder}"
+                                       ToolTip="Show original FBX model" />
+                                <Button x:Name="SourceGlbButton"
+                                       Content="GLB"
+                                       Click="SourceTypeButton_Click"
+                                       Tag="GLB"
+                                       Width="45"
+                                       Height="20"
+                                       Margin="2,0"
+                                       FontSize="9"
+                                       FontWeight="Bold"
+                                       Padding="2"
+                                       BorderBrush="{DynamicResource ThemeBorder}"
+                                       ToolTip="Show converted GLB model" />
+
+                                <Separator Width="10" Background="Transparent" />
+
+                                <!-- LOD Slider -->
+                                <TextBlock Text="LOD:"
+                                          Foreground="{DynamicResource ThemeForeground}"
+                                          FontSize="10"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0" />
+                                <Slider x:Name="LodSlider"
+                                       Minimum="0"
+                                       Maximum="3"
+                                       Value="0"
+                                       TickFrequency="1"
+                                       IsSnapToTickEnabled="True"
+                                       Width="100"
+                                       VerticalAlignment="Center"
+                                       ValueChanged="LodSlider_ValueChanged"
+                                       ToolTip="Select LOD level" />
+                                <TextBlock x:Name="LodSliderValueText"
+                                          Text="LOD0"
+                                          Foreground="{DynamicResource ThemeForeground}"
+                                          FontSize="10"
+                                          FontWeight="SemiBold"
+                                          VerticalAlignment="Center"
+                                          Margin="6,0,0,0"
+                                          MinWidth="35" />
+                                <TextBlock x:Name="LodInfoText"
+                                          Text=""
+                                          Foreground="{DynamicResource ThemeForegroundDim}"
+                                          FontSize="9"
+                                          VerticalAlignment="Center"
+                                          Margin="8,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Drag handle between Model Preview and bottom section -->
+                        <Thumb Grid.Row="2"
+                               Height="6"
+                               Margin="0,4,0,4"
+                               HorizontalAlignment="Stretch"
+                               Cursor="SizeNS"
+                               DragDelta="ModelPreviewGridSplitter_DragDelta"
+                               DragCompleted="ModelPreviewGridSplitter_DragCompleted">
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border Background="{DynamicResource ThemeBackgroundAlt}"
+                                            CornerRadius="2" />
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
 
                         <!-- Bottom section: UV Maps + Settings -->
-                        <Grid Grid.Row="2">
+                        <Grid Grid.Row="3">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />

@@ -3,8 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:help="clr-namespace:AssetProcessor.Helpers"
              mc:Ignorable="d"
              d:DesignHeight="500" d:DesignWidth="300">
+
+    <UserControl.Resources>
+        <help:InverseBoolConverter x:Key="InverseBoolConverter"/>
+    </UserControl.Resources>
 
     <Border Background="{DynamicResource ThemeBackground}" BorderThickness="2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0" MinWidth="250">
         <Grid>
@@ -177,7 +182,7 @@
                                 <Style TargetType="ListBoxItem">
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                     <Setter Property="Padding" Value="4,2"/>
-                                    <Setter Property="ContextMenu" Value="{StaticResource ChunkRowContextMenu}"/>
+                                    <Setter Property="ContextMenu" Value="{DynamicResource ChunkRowContextMenu}"/>
                                 </Style>
                             </ListBox.ItemContainerStyle>
                         </ListBox>

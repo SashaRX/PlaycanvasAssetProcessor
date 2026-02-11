@@ -39,7 +39,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Diffuse" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureDiffusePreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Diffuse"/>
@@ -56,7 +56,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Normal" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialNormalMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialNormalMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureNormalPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Normal"/>
@@ -73,7 +73,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="AO" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialAOMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialAOMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureAOPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="AO"/>
@@ -90,7 +90,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Gloss" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialGlossMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureGlossPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Gloss"/>
@@ -107,7 +107,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Metal" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Metalness"/>
@@ -124,7 +124,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Emissive" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialEmissiveMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialEmissiveMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureEmissivePreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Emissive"/>
@@ -141,7 +141,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Opacity" VerticalAlignment="Center" FontSize="11"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                            <Hyperlink x:Name="MaterialOpacityMapHyperlink" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
+                            <Hyperlink x:Name="MaterialOpacityMapHyperlink" Style="{DynamicResource TextureHyperlinkStyle}">-</Hyperlink>
                         </TextBlock>
                         <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
                             <Image x:Name="TextureOpacityPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Opacity"/>

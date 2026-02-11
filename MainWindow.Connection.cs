@@ -26,6 +26,15 @@ namespace AssetProcessor {
     /// </summary>
     public partial class MainWindow {
 
+        /// <summary>
+        /// Wires event handlers for ConnectionPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeConnectionPanel() {
+            connectionPanel.DynamicConnectionButton.Click += DynamicConnectionButton_Click;
+            connectionPanel.CreateBranchButton.Click += CreateBranchButton_Click;
+        }
+
         #region Connection Status
 
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
@@ -56,16 +65,16 @@ namespace AssetProcessor {
                 bool hasSelection = !string.IsNullOrEmpty(viewModel.SelectedProjectId)
                     && !string.IsNullOrEmpty(viewModel.SelectedBranchId);
 
-                if (DynamicConnectionButton == null) {
-                    logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
+                if (connectionPanel.DynamicConnectionButton == null) {
+                    logger.Warn("ApplyConnectionButtonState: connectionPanel.DynamicConnectionButton is null!");
                     return;
                 }
 
                 var buttonInfo = connectionStateService.GetButtonInfo(hasSelection);
-                DynamicConnectionButton.Content = buttonInfo.Content;
-                DynamicConnectionButton.ToolTip = buttonInfo.ToolTip;
-                DynamicConnectionButton.IsEnabled = buttonInfo.IsEnabled;
-                DynamicConnectionButton.Background = new SolidColorBrush(
+                connectionPanel.DynamicConnectionButton.Content = buttonInfo.Content;
+                connectionPanel.DynamicConnectionButton.ToolTip = buttonInfo.ToolTip;
+                connectionPanel.DynamicConnectionButton.IsEnabled = buttonInfo.IsEnabled;
+                connectionPanel.DynamicConnectionButton.Background = new SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(buttonInfo.ColorR, buttonInfo.ColorG, buttonInfo.ColorB));
             });
         }
@@ -77,9 +86,9 @@ namespace AssetProcessor {
         /// <summary>
         /// Handler for dynamic connection button click
         /// </summary>
-        private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
+        private async void connectionPanel.DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             var currentState = connectionStateService.CurrentState;
-            logger.Info($"DynamicConnectionButton_Click: current state: {currentState}");
+            logger.Info($"connectionPanel.DynamicConnectionButton_Click: current state: {currentState}");
 
             await UiAsyncHelper.ExecuteAsync(async () => {
                 switch (currentState) {
@@ -95,7 +104,7 @@ namespace AssetProcessor {
                         await DownloadFromServer();
                         break;
                 }
-            }, nameof(DynamicConnectionButton_Click), showMessageBox: true);
+            }, nameof(connectionPanel.DynamicConnectionButton_Click), showMessageBox: true);
         }
 
         /// <summary>
@@ -115,7 +124,7 @@ namespace AssetProcessor {
         /// </summary>
         private async Task RefreshFromServer() {
             try {
-                DynamicConnectionButton.IsEnabled = false;
+                connectionPanel.DynamicConnectionButton.IsEnabled = false;
 
                 // Re-scan file statuses to detect deleted files
                 RescanFileStatuses();
@@ -138,7 +147,7 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 logService.LogError($"Error in RefreshFromServer: {ex}");
             } finally {
-                DynamicConnectionButton.IsEnabled = true;
+                connectionPanel.DynamicConnectionButton.IsEnabled = true;
             }
         }
 
@@ -150,7 +159,7 @@ namespace AssetProcessor {
             try {
                 logService.LogInfo("Starting download from server");
                 CancelButton.IsEnabled = true;
-                DynamicConnectionButton.IsEnabled = false;
+                connectionPanel.DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
                     bool hasServerUpdates = await CheckForUpdates();
@@ -181,7 +190,7 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
                 CancelButton.IsEnabled = false;
-                DynamicConnectionButton.IsEnabled = true;
+                connectionPanel.DynamicConnectionButton.IsEnabled = true;
             }
         }
 

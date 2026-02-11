@@ -189,6 +189,7 @@ namespace AssetProcessor {
             InitializeChunkSlotsPanel();
             InitializeMasterMaterialsEditorPanel();
             InitializeExportToolsPanel();
+            InitializeConnectionPanel();
 
             viewModel.ConversionSettingsProvider = ConversionSettingsPanel;
             viewModel.TextureProcessingCompleted += ViewModel_TextureProcessingCompleted;

@@ -21,6 +21,28 @@ namespace AssetProcessor {
 
         #region Master Materials Tab Event Handlers
 
+        /// <summary>
+        /// Wires event handlers for ChunkSlotsPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeChunkSlotsPanel() {
+            // Catch SlotEditChunk_Click via bubbling Button.Click from DataTemplate
+            chunkSlotsPanel.AddHandler(Button.ClickEvent, new RoutedEventHandler(ChunkSlotsPanel_ButtonClick));
+        }
+
+        /// <summary>
+        /// Handles bubbling Button.Click from ChunkSlotsPanel edit buttons.
+        /// </summary>
+        private void ChunkSlotsPanel_ButtonClick(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button btn && btn.Tag is ChunkSlotViewModel slotVm) {
+                var selectedChunk = slotVm.SelectedChunk;
+                if (selectedChunk != null) {
+                    viewModel.MasterMaterialsViewModel.SelectedChunk = selectedChunk;
+                    LoadChunkIntoEditor(selectedChunk);
+                }
+            }
+        }
+
         private void MasterMaterialsDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
             if (MasterMaterialsDataGrid.SelectedItem is MasterMaterial master) {
                 if (!master.IsBuiltIn) {
@@ -47,7 +69,7 @@ namespace AssetProcessor {
             }
 
             // Force refresh the ListBox to update chunk count display
-            AllChunksListBox.Items.Refresh();
+            chunkSlotsPanel.AllChunksListBox.Items.Refresh();
         }
 
         // ChunkLabel_MouseLeftButtonDown removed - selection is now handled by ListBox.SelectedItem binding
@@ -109,18 +131,6 @@ namespace AssetProcessor {
         private void Chunk_Copy_Click(object sender, RoutedEventArgs e) {
             if (sender is MenuItem menuItem && menuItem.DataContext is ShaderChunk chunk) {
                 viewModel.MasterMaterialsViewModel.CopyChunkCommand.Execute(chunk);
-            }
-        }
-
-        private void SlotEditChunk_Click(object sender, RoutedEventArgs e) {
-            if (sender is not Button button) return;
-            if (button.Tag is not ChunkSlotViewModel slotVm) return;
-
-            var selectedChunk = slotVm.SelectedChunk;
-            if (selectedChunk != null) {
-                // Select the chunk and load it into the editor
-                viewModel.MasterMaterialsViewModel.SelectedChunk = selectedChunk;
-                LoadChunkIntoEditor(selectedChunk);
             }
         }
 

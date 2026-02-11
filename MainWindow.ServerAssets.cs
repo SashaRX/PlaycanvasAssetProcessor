@@ -35,38 +35,47 @@ namespace AssetProcessor {
         private ViewModels.ServerAssetViewModel? _selectedServerAsset;
 
         /// <summary>
+        /// Wires event handlers for ServerFileInfoPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeServerFileInfoPanel() {
+            serverFileInfoPanel.CopyServerUrlButton.Click += CopyServerUrlButton_Click;
+            serverFileInfoPanel.DeleteServerFileButton.Click += DeleteServerFileButton_Click;
+        }
+
+        /// <summary>
         /// Updates the server file info panel with the selected asset
         /// </summary>
         public void UpdateServerFileInfo(ViewModels.ServerAssetViewModel? asset) {
             _selectedServerAsset = asset;
 
             // Safety check - panel controls may not be ready
-            if (ServerFileNameText == null) return;
+            if (serverFileInfoPanel?.ServerFileNameText == null) return;
 
             if (asset == null) {
-                ServerFileNameText.Text = "-";
-                ServerFileTypeText.Text = "-";
-                ServerFileSizeText.Text = "-";
-                ServerFileSyncStatusText.Text = "-";
-                ServerFileSyncStatusText.Foreground = System.Windows.Media.Brushes.Gray;
-                ServerFileUploadedText.Text = "-";
-                ServerFileSha1Text.Text = "-";
-                ServerFileRemotePathText.Text = "-";
-                ServerFileCdnUrlText.Text = "-";
-                ServerFileLocalPathText.Text = "-";
+                serverFileInfoPanel.ServerFileNameText.Text = "-";
+                serverFileInfoPanel.ServerFileTypeText.Text = "-";
+                serverFileInfoPanel.ServerFileSizeText.Text = "-";
+                serverFileInfoPanel.ServerFileSyncStatusText.Text = "-";
+                serverFileInfoPanel.ServerFileSyncStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+                serverFileInfoPanel.ServerFileUploadedText.Text = "-";
+                serverFileInfoPanel.ServerFileSha1Text.Text = "-";
+                serverFileInfoPanel.ServerFileRemotePathText.Text = "-";
+                serverFileInfoPanel.ServerFileCdnUrlText.Text = "-";
+                serverFileInfoPanel.ServerFileLocalPathText.Text = "-";
                 return;
             }
 
-            ServerFileNameText.Text = asset.FileName;
-            ServerFileTypeText.Text = asset.FileType;
-            ServerFileSizeText.Text = asset.SizeDisplay;
-            ServerFileSyncStatusText.Text = asset.SyncStatus;
-            ServerFileSyncStatusText.Foreground = asset.SyncStatusColor;
-            ServerFileUploadedText.Text = asset.UploadedAtDisplay;
-            ServerFileSha1Text.Text = asset.ContentSha1;
-            ServerFileRemotePathText.Text = asset.RemotePath;
-            ServerFileCdnUrlText.Text = asset.CdnUrl ?? "-";
-            ServerFileLocalPathText.Text = asset.LocalPath ?? "Not found locally";
+            serverFileInfoPanel.ServerFileNameText.Text = asset.FileName;
+            serverFileInfoPanel.ServerFileTypeText.Text = asset.FileType;
+            serverFileInfoPanel.ServerFileSizeText.Text = asset.SizeDisplay;
+            serverFileInfoPanel.ServerFileSyncStatusText.Text = asset.SyncStatus;
+            serverFileInfoPanel.ServerFileSyncStatusText.Foreground = asset.SyncStatusColor;
+            serverFileInfoPanel.ServerFileUploadedText.Text = asset.UploadedAtDisplay;
+            serverFileInfoPanel.ServerFileSha1Text.Text = asset.ContentSha1;
+            serverFileInfoPanel.ServerFileRemotePathText.Text = asset.RemotePath;
+            serverFileInfoPanel.ServerFileCdnUrlText.Text = asset.CdnUrl ?? "-";
+            serverFileInfoPanel.ServerFileLocalPathText.Text = asset.LocalPath ?? "Not found locally";
         }
 
         private void CopyServerUrlButton_Click(object sender, RoutedEventArgs e) {

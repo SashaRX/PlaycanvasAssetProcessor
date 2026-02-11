@@ -21,14 +21,14 @@ namespace AssetProcessor {
                 PlotAreaBorderColor = OxyColor.FromRgb(borderColor.R, borderColor.G, borderColor.B),
                 PlotAreaBorderThickness = new OxyThickness(0)
             };
-            HistogramPlotView.Model = emptyModel;
+            histogramPanel.HistogramPlotView.Model = emptyModel;
 
-            HistogramMinTextBlock.Text = "0";
-            HistogramMaxTextBlock.Text = "255";
-            HistogramMeanTextBlock.Text = "127.5";
-            HistogramMedianTextBlock.Text = "128";
-            HistogramStdDevTextBlock.Text = "45.2";
-            HistogramPixelsTextBlock.Text = "0";
+            histogramPanel.HistogramMinTextBlock.Text = "0";
+            histogramPanel.HistogramMaxTextBlock.Text = "255";
+            histogramPanel.HistogramMeanTextBlock.Text = "127.5";
+            histogramPanel.HistogramMedianTextBlock.Text = "128";
+            histogramPanel.HistogramStdDevTextBlock.Text = "45.2";
+            histogramPanel.HistogramPixelsTextBlock.Text = "0";
         }
 
         private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false) {
@@ -46,17 +46,17 @@ namespace AssetProcessor {
         }
 
         private void ApplyHistogramResult(HistogramComputationResult result) {
-            HistogramPlotView.Model = result.Model;
+            histogramPanel.HistogramPlotView.Model = result.Model;
             UpdateHistogramStatisticsUI(result.Statistics);
         }
 
         private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
-            HistogramMinTextBlock.Text = $"{stats.Min:F0}";
-            HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
-            HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
-            HistogramMedianTextBlock.Text = $"{stats.Median:F0}";
-            HistogramStdDevTextBlock.Text = $"{stats.StdDev:F2}";
-            HistogramPixelsTextBlock.Text = $"{stats.TotalPixels:N0}";
+            histogramPanel.HistogramMinTextBlock.Text = $"{stats.Min:F0}";
+            histogramPanel.HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
+            histogramPanel.HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
+            histogramPanel.HistogramMedianTextBlock.Text = $"{stats.Median:F0}";
+            histogramPanel.HistogramStdDevTextBlock.Text = $"{stats.StdDev:F2}";
+            histogramPanel.HistogramPixelsTextBlock.Text = $"{stats.TotalPixels:N0}";
         }
 
         #endregion

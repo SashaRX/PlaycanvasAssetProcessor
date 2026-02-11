@@ -1,5 +1,6 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
+using AssetProcessor.Services.Models;
 using AssetProcessor.TextureViewer;
 using System;
 using System.Collections.Generic;

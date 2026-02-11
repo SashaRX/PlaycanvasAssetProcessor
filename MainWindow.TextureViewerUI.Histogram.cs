@@ -1,4 +1,5 @@
 using AssetProcessor.Helpers;
+using AssetProcessor.Services.Models;
 using AssetProcessor.Settings;
 using OxyPlot;
 using System;

@@ -20,6 +20,23 @@ namespace AssetProcessor {
     public partial class MainWindow {
 
         /// <summary>
+        /// Wires event handlers for ExportToolsPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeExportToolsPanel() {
+            exportToolsPanel.SelectRelatedButton.Click += SelectRelatedButton_Click;
+            exportToolsPanel.ClearExportMarksButton.Click += ClearExportMarksButton_Click;
+            exportToolsPanel.exportToolsPanel.ExportAssetsButton.Click += ExportAssetsButton_Click;
+            exportToolsPanel.UploadToCloudButton.Click += UploadToCloudButton_Click;
+            exportToolsPanel.CreateORMButton.Click += CreateORMButton_Click;
+            exportToolsPanel.UploadTexturesButton.Click += UploadTexturesButton_Click;
+
+            // Set CommandParameter directly (ElementName binding doesn't work across UserControl NameScopes)
+            exportToolsPanel.ProcessTexturesButton.CommandParameter = TexturesDataGrid.SelectedItems;
+            exportToolsPanel.AutoDetectAllButton.CommandParameter = TexturesDataGrid.SelectedItems;
+        }
+
+        /// <summary>
         /// Export all marked assets (models with related materials and textures)
         /// </summary>
         private async void ExportAssetsButton_Click(object sender, RoutedEventArgs e) {
@@ -53,12 +70,12 @@ namespace AssetProcessor {
             var gltfPackPath = string.IsNullOrWhiteSpace(modelSettings.GltfPackExecutablePath)
                 ? "gltfpack.exe" : modelSettings.GltfPackExecutablePath;
 
-            bool generateORM = GenerateORMCheckBox.IsChecked ?? true;
-            bool generateLODs = GenerateLODsCheckBox.IsChecked ?? true;
+            bool generateORM = exportToolsPanel.GenerateORMCheckBox.IsChecked ?? true;
+            bool generateLODs = exportToolsPanel.GenerateLODsCheckBox.IsChecked ?? true;
 
             try {
-                ExportAssetsButton.IsEnabled = false;
-                ExportAssetsButton.Content = "Exporting...";
+                exportToolsPanel.ExportAssetsButton.IsEnabled = false;
+                exportToolsPanel.ExportAssetsButton.Content = "Exporting...";
 
                 var pipeline = new ModelExportPipeline(
                     projectName, outputPath,
@@ -136,7 +153,7 @@ namespace AssetProcessor {
                     try {
                         currentItem++;
                         ProgressBar.Value = (double)currentItem / totalItems * 100;
-                        ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+                        exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting model: {model.Name} ({currentItem}/{totalItems})");
 
@@ -187,7 +204,7 @@ namespace AssetProcessor {
                     try {
                         currentItem++;
                         ProgressBar.Value = (double)currentItem / totalItems * 100;
-                        ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+                        exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting material (JSON only): {material.Name} ({currentItem}/{totalItems})");
 
@@ -214,7 +231,7 @@ namespace AssetProcessor {
                     try {
                         currentItem++;
                         ProgressBar.Value = (double)currentItem / totalItems * 100;
-                        ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+                        exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting texture: {texture.Name} ({currentItem}/{totalItems})");
 
@@ -242,7 +259,7 @@ namespace AssetProcessor {
 
                 var exportMessage = $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}";
 
-                if (successCount > 0 && (AutoUploadCheckBox.IsChecked ?? false)) {
+                if (successCount > 0 && (exportToolsPanel.AutoUploadCheckBox.IsChecked ?? false)) {
                     var shouldUpload = MessageBox.Show(
                         exportMessage + "\n\nUpload to cloud now?",
                         "Export Result", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -259,8 +276,8 @@ namespace AssetProcessor {
                 logger.Error(ex, "Export failed");
                 MessageBox.Show($"Export failed: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                ExportAssetsButton.IsEnabled = true;
-                ExportAssetsButton.Content = "Export";
+                exportToolsPanel.ExportAssetsButton.IsEnabled = true;
+                exportToolsPanel.ExportAssetsButton.Content = "Export";
                 ProgressBar.Value = 0;
                 ProgressTextBlock.Text = "";
             }

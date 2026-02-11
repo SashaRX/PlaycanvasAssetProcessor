@@ -188,6 +188,7 @@ namespace AssetProcessor {
             InitializeServerFileInfoPanel();
             InitializeChunkSlotsPanel();
             InitializeMasterMaterialsEditorPanel();
+            InitializeExportToolsPanel();
 
             viewModel.ConversionSettingsProvider = ConversionSettingsPanel;
             viewModel.TextureProcessingCompleted += ViewModel_TextureProcessingCompleted;
@@ -374,36 +375,36 @@ namespace AssetProcessor {
 
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Guard against early calls during initialization
-            if (!this.IsLoaded || UnifiedExportGroupBox == null) return;
+            if (!this.IsLoaded || exportToolsPanel == null) return;
 
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
                         ShowViewer(ViewerType.Texture);
                         UpdateExportCounts();
-                        TextureToolsPanel.Visibility = Visibility.Visible;
+                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Visible;
                         break;
                     case "Models":
                         ShowViewer(ViewerType.Model);
                         UpdateExportCounts();
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Materials":
                         ShowViewer(ViewerType.Material);
                         UpdateExportCounts();
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Master Materials":
                         ShowViewer(ViewerType.ChunkSlots);
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Server":
                         ShowViewer(ViewerType.ServerFile);
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                     case "Logs":
                         ShowViewer(ViewerType.None);
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
                         break;
                 }
             }

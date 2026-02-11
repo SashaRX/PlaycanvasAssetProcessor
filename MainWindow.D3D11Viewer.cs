@@ -151,7 +151,7 @@ namespace AssetProcessor {
             UpdateExportCounts();
 
             if (tabControl.SelectedItem is TabItem selectedTab && selectedTab.Header?.ToString() == "Textures") {
-                TextureToolsPanel.Visibility = Visibility.Visible;
+                exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Visible;
             }
         }
 

@@ -240,8 +240,8 @@ namespace AssetProcessor {
             }
 
             try {
-                UploadTexturesButton.IsEnabled = false;
-                UploadTexturesButton.Content = "Uploading...";
+                exportToolsPanel.UploadTexturesButton.IsEnabled = false;
+                exportToolsPanel.UploadTexturesButton.Content = "Uploading...";
 
                 using var b2Service = new Upload.B2UploadService();
                 using var uploadStateService = new Data.UploadStateService();
@@ -317,8 +317,8 @@ namespace AssetProcessor {
                 logger.Error(ex, "Texture upload failed");
                 MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                UploadTexturesButton.IsEnabled = true;
-                UploadTexturesButton.Content = "Upload";
+                exportToolsPanel.UploadTexturesButton.IsEnabled = true;
+                exportToolsPanel.UploadTexturesButton.Content = "Upload";
                 ProgressBar.Value = 0;
             }
         }
@@ -331,9 +331,9 @@ namespace AssetProcessor {
             int markedMaterials = viewModel.Materials.Count(m => m.ExportToServer);
             int markedTextures = viewModel.Textures.Count(t => t.ExportToServer);
 
-            MarkedModelsCountText.Text = markedModels.ToString();
-            MarkedMaterialsCountText.Text = markedMaterials.ToString();
-            MarkedTexturesCountText.Text = markedTextures.ToString();
+            exportToolsPanel.MarkedModelsCountText.Text = markedModels.ToString();
+            exportToolsPanel.MarkedMaterialsCountText.Text = markedMaterials.ToString();
+            exportToolsPanel.MarkedTexturesCountText.Text = markedTextures.ToString();
         }
 
         #endregion

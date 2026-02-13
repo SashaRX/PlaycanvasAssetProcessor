@@ -66,7 +66,7 @@ namespace AssetProcessor {
                     && !string.IsNullOrEmpty(viewModel.SelectedBranchId);
 
                 if (connectionPanel.DynamicConnectionButton == null) {
-                    logger.Warn("ApplyConnectionButtonState: connectionPanel.DynamicConnectionButton is null!");
+                    logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
                     return;
                 }
 
@@ -86,9 +86,9 @@ namespace AssetProcessor {
         /// <summary>
         /// Handler for dynamic connection button click
         /// </summary>
-        private async void connectionPanel.DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
+        private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             var currentState = connectionStateService.CurrentState;
-            logger.Info($"connectionPanel.DynamicConnectionButton_Click: current state: {currentState}");
+            logger.Info($"DynamicConnectionButton_Click: current state: {currentState}");
 
             await UiAsyncHelper.ExecuteAsync(async () => {
                 switch (currentState) {
@@ -104,7 +104,7 @@ namespace AssetProcessor {
                         await DownloadFromServer();
                         break;
                 }
-            }, nameof(connectionPanel.DynamicConnectionButton_Click), showMessageBox: true);
+            }, nameof(DynamicConnectionButton_Click), showMessageBox: true);
         }
 
         /// <summary>

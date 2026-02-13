@@ -587,14 +587,14 @@ private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
                     AppSettings.Default.RightPanelPreviousWidth = PreviewColumn.Width.Value;
                 }
                 AppSettings.Default.RightPanelWidth = 0; // Mark as hidden
-                ToggleViewButton.Content = "►";
+                viewModel.ToggleViewButtonContent = "►";
                 PreviewColumn.Width = new GridLength(0);
                 PreviewColumn.MinWidth = 0;
             } else {
                 // Restore saved width
                 double restoreWidth = AppSettings.Default.RightPanelPreviousWidth;
                 if (restoreWidth < 256) restoreWidth = 300; // Use default if too small
-                ToggleViewButton.Content = "◄";
+                viewModel.ToggleViewButtonContent = "◄";
                 PreviewColumn.MinWidth = 256;
                 PreviewColumn.Width = new GridLength(restoreWidth);
                 AppSettings.Default.RightPanelWidth = restoreWidth;

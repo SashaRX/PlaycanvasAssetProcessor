@@ -40,10 +40,10 @@ namespace AssetProcessor {
 
         private void UpdateModelInfo(string modelName, int triangles, int vertices, int uvChannels) {
             Dispatcher.Invoke(() => {
-                ModelNameTextBlock.Text = $"Model Name: {modelName}";
-                ModelTrianglesTextBlock.Text = $"Triangles: {triangles}";
-                ModelVerticesTextBlock.Text = $"Vertices: {vertices}";
-                ModelUVChannelsTextBlock.Text = $"UV Channels: {uvChannels}";
+                viewModel.ModelInfoName = $"Model Name: {modelName}";
+                viewModel.ModelInfoTriangles = $"Triangles: {triangles}";
+                viewModel.ModelInfoVertices = $"Vertices: {vertices}";
+                viewModel.ModelInfoUVChannels = $"UV Channels: {uvChannels}";
             });
         }
 

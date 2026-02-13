@@ -327,14 +327,14 @@ namespace AssetProcessor {
         private void ShowGlbLodUI() {
             Dispatcher.Invoke(() => {
                 LodControlsPanel.Visibility = Visibility.Visible;
-                ModelCurrentLodTextBlock.Visibility = Visibility.Visible;
+                viewModel.IsModelCurrentLodVisible = true;
             });
         }
 
         private void HideGlbLodUI() {
             Dispatcher.Invoke(() => {
                 LodControlsPanel.Visibility = Visibility.Collapsed;
-                ModelCurrentLodTextBlock.Visibility = Visibility.Collapsed;
+                viewModel.IsModelCurrentLodVisible = false;
 
                 _currentLodInfos.Clear();
                 _lodQuantizationInfos.Clear();
@@ -363,11 +363,11 @@ namespace AssetProcessor {
             try {
                 LoadGlbModelToViewport(lodLevel);
 
-                ModelCurrentLodTextBlock.Text = $"Current LOD: {lodLevel} (GLB)";
+                viewModel.ModelCurrentLodText = $"Current LOD: {lodLevel} (GLB)";
 
                 if (_currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
-                    ModelTrianglesTextBlock.Text = $"Triangles: {lodInfo.TriangleCount:N0}";
-                    ModelVerticesTextBlock.Text = $"Vertices: {lodInfo.VertexCount:N0}";
+                    viewModel.ModelInfoTriangles = $"Triangles: {lodInfo.TriangleCount:N0}";
+                    viewModel.ModelInfoVertices = $"Vertices: {lodInfo.VertexCount:N0}";
                 }
 
                 UpdateLodSliderState(lodLevel);
@@ -388,25 +388,25 @@ namespace AssetProcessor {
 
             LodSlider.Maximum = maxLod;
             LodSlider.Value = (int)currentLod;
-            LodSliderValueText.Text = $"LOD{(int)currentLod}";
+            viewModel.LodValueText = $"LOD{(int)currentLod}";
 
             if (_currentLodInfos.TryGetValue(currentLod, out var lodInfo)) {
-                LodInfoText.Text = $"△ {lodInfo.TriangleCount:N0}  |  {lodInfo.FileSize / 1024.0:F0} KB";
+                viewModel.LodInfoText = $"△ {lodInfo.TriangleCount:N0}  |  {lodInfo.FileSize / 1024.0:F0} KB";
             } else {
-                LodInfoText.Text = "";
+                viewModel.LodInfoText = "";
             }
         }
 
         private void LodSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (LodSlider == null || LodSliderValueText == null) return;
+            if (LodSlider == null) return;
 
             int lodIndex = (int)e.NewValue;
             var lodLevel = (LodLevel)lodIndex;
 
-            LodSliderValueText.Text = $"LOD{lodIndex}";
+            viewModel.LodValueText = $"LOD{lodIndex}";
 
             if (_currentLodInfos != null && _currentLodInfos.TryGetValue(lodLevel, out var lodInfo)) {
-                LodInfoText.Text = $"△ {lodInfo.TriangleCount:N0}  |  {lodInfo.FileSize / 1024.0:F0} KB";
+                viewModel.LodInfoText = $"△ {lodInfo.TriangleCount:N0}  |  {lodInfo.FileSize / 1024.0:F0} KB";
             }
 
             SelectLod(lodLevel);
@@ -489,7 +489,7 @@ namespace AssetProcessor {
                 return;
             }
 
-            ModelCurrentLodTextBlock.Text = "Current: FBX (Original)";
+            viewModel.ModelCurrentLodText = "Current: FBX (Original)";
             await LoadFbxModelDirectlyAsync(_currentFbxPath);
         }
 

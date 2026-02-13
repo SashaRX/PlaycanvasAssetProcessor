@@ -174,7 +174,7 @@
 
         <!-- ContextMenu для строк материалов -->
         <ContextMenu x:Key="MaterialRowContextMenu" Opened="MaterialRowContextMenu_Opened">
-            <MenuItem Header="Set Master Material" x:Name="SetMasterMaterialMenuItem" FontWeight="Bold">
+            <MenuItem Header="Set Master Material" FontWeight="Bold">
                 <MenuItem Header="(None)" Click="SetMasterForSelectedMaterials_Click" Tag=""/>
             </MenuItem>
             <Separator/>
@@ -225,11 +225,20 @@
         <!-- Статусная строка -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock x:Name="ConnectionStatusTextBlock"
-                           Text="Disconnected"
-                           Foreground="Red"
+                <TextBlock Text="{Binding ConnectionStatusText}"
                            VerticalAlignment="Center"
-                           Width="320"/>
+                           Width="320">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Red"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                    <Setter Property="Foreground" Value="Green"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
                 <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="10" MinWidth="200" TextAlignment="Right"/>
@@ -317,7 +326,7 @@
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                            <Slider Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
@@ -504,7 +513,7 @@
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                            <Slider Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
@@ -605,13 +614,13 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider Grid.Column="1" x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                            <Slider Grid.Column="1" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center" HorizontalAlignment="Left"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
                             <TextBlock Grid.Column="2" Text="Default Master:" VerticalAlignment="Center" Margin="20,0,8,0" FontWeight="SemiBold"/>
-                            <ComboBox Grid.Column="3" x:Name="DefaultMasterMaterialComboBox"
+                            <ComboBox Grid.Column="3"
                                       ItemsSource="{Binding MasterMaterialsViewModel.MasterMaterials}"
                                       DisplayMemberPath="Name"
                                       SelectedValuePath="Name"
@@ -705,22 +714,22 @@
                     </DataGrid>
                     </Grid>
                 </TabItem>
-                <TabItem x:Name="MasterMaterialsTabItem" Header="Master Materials">
+                <TabItem Header="Master Materials">
                     <controls:MasterMaterialsEditorPanel x:Name="masterMaterialsEditorPanel"/>
                 </TabItem>
-                <TabItem x:Name="ServerTabItem" Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"
+                <TabItem Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"
                          Background="#FF9C27B0">
                     <controls:ServerAssetsPanel x:Name="ServerAssetsPanel"/>
                 </TabItem>
-                <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
-                    <controls:LogViewerControl x:Name="LogViewer"/>
+                <TabItem Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
+                    <controls:LogViewerControl/>
                 </TabItem>
             </TabControl>
 
             <GridSplitter x:Name="RightPanelSplitter" Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="{DynamicResource ThemeBorder}" FontSize="6"
                           DragCompleted="RightPanelSplitter_DragCompleted"/>
 
-            <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
+            <Button Grid.Column="1" Content="{Binding ToggleViewButtonContent}"
                 Click="ToggleViewerButton_Click" Background="{DynamicResource ThemeBackgroundAlt}" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="{DynamicResource ThemeAccent}"/>
 
             <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged" PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
@@ -924,14 +933,12 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
-                                            <TextBlock x:Name="ModelNameTextBlock"
-                                                      Text="Model Name:"
+                                            <TextBlock Text="{Binding ModelInfoName}"
                                                       Foreground="White"
                                                       FontSize="10"
                                                       FontWeight="SemiBold"
                                                       Margin="0,0,0,2" />
-                                            <TextBlock x:Name="ModelTrianglesTextBlock"
-                                                      Text="Triangles:"
+                                            <TextBlock Text="{Binding ModelInfoTriangles}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
@@ -971,20 +978,16 @@
                                                     <ComboBoxItem Content="Z" />
                                                 </ComboBox>
                                             </StackPanel>
-                                            <TextBlock x:Name="ModelCurrentLodTextBlock"
-                                                      x:FieldModifier="private"
-                                                      Text="Current LOD: FBX"
+                                            <TextBlock Text="{Binding ModelCurrentLodText}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1"
-                                                      Visibility="Collapsed" />
-                                            <TextBlock x:Name="ModelVerticesTextBlock"
-                                                      Text="Vertices:"
+                                                      Visibility="{Binding IsModelCurrentLodVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="{Binding ModelInfoVertices}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
-                                            <TextBlock x:Name="ModelUVChannelsTextBlock"
-                                                      Text="UV Channels:"
+                                            <TextBlock Text="{Binding ModelInfoUVChannels}"
                                                       Foreground="#FFAAAAAA"
                                                       FontSize="9" />
                                         </StackPanel>
@@ -1085,16 +1088,14 @@
                                        VerticalAlignment="Center"
                                        ValueChanged="LodSlider_ValueChanged"
                                        ToolTip="Select LOD level" />
-                                <TextBlock x:Name="LodSliderValueText"
-                                          Text="LOD0"
+                                <TextBlock Text="{Binding LodValueText}"
                                           Foreground="{DynamicResource ThemeForeground}"
                                           FontSize="10"
                                           FontWeight="SemiBold"
                                           VerticalAlignment="Center"
                                           Margin="6,0,0,0"
                                           MinWidth="35" />
-                                <TextBlock x:Name="LodInfoText"
-                                          Text=""
+                                <TextBlock Text="{Binding LodInfoText}"
                                           Foreground="{DynamicResource ThemeForegroundDim}"
                                           FontSize="9"
                                           VerticalAlignment="Center"
@@ -1158,7 +1159,7 @@
                         </Expander>
 
                         <!-- Model Conversion Settings Panel -->
-                        <Expander Grid.Row="1" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
+                        <Expander Grid.Row="1" Header="Model Conversion Settings"
                                   Style="{StaticResource RightPanelExpanderStyle}" IsExpanded="True">
                             <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
                                                                    ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>

@@ -164,12 +164,12 @@ namespace AssetProcessor {
             if (savedWidth >= 256 && savedWidth <= 512) {
                 PreviewColumn.Width = new GridLength(savedWidth);
                 isViewerVisible = true;
-                ToggleViewButton.Content = "◄";
+                viewModel.ToggleViewButtonContent = "◄";
             } else if (savedWidth <= 0) {
                 PreviewColumn.Width = new GridLength(0);
                 PreviewColumn.MinWidth = 0;
                 isViewerVisible = false;
-                ToggleViewButton.Content = "►";
+                viewModel.ToggleViewButtonContent = "►";
             }
         }
 

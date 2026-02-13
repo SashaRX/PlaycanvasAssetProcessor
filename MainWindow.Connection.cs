@@ -39,12 +39,11 @@ namespace AssetProcessor {
 
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
             Dispatcher.Invoke(() => {
+                viewModel.IsConnected = isConnected;
                 if (isConnected) {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                    viewModel.ConnectionStatusText = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
                 } else {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+                    viewModel.ConnectionStatusText = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
                 }
             });
         }

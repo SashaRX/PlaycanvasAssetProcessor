@@ -166,6 +166,39 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private bool isMipmapSliderVisible;
 
+        // Connection status
+        [ObservableProperty]
+        private string connectionStatusText = "Disconnected";
+
+        // Model viewer info
+        [ObservableProperty]
+        private string modelInfoName = "Model Name:";
+
+        [ObservableProperty]
+        private string modelInfoTriangles = "Triangles:";
+
+        [ObservableProperty]
+        private string modelInfoVertices = "Vertices:";
+
+        [ObservableProperty]
+        private string modelInfoUVChannels = "UV Channels:";
+
+        [ObservableProperty]
+        private string modelCurrentLodText = "Current LOD: FBX";
+
+        [ObservableProperty]
+        private bool isModelCurrentLodVisible;
+
+        [ObservableProperty]
+        private string lodValueText = "LOD0";
+
+        [ObservableProperty]
+        private string lodInfoText = "";
+
+        // Viewer toggle button
+        [ObservableProperty]
+        private string toggleViewButtonContent = "►";
+
         [ObservableProperty]
         private IReadOnlyDictionary<int, string> folderPaths = new Dictionary<int, string>();
 

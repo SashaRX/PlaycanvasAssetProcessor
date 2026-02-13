@@ -26,7 +26,7 @@ namespace AssetProcessor {
         private void InitializeExportToolsPanel() {
             exportToolsPanel.SelectRelatedButton.Click += SelectRelatedButton_Click;
             exportToolsPanel.ClearExportMarksButton.Click += ClearExportMarksButton_Click;
-            exportToolsPanel.exportToolsPanel.ExportAssetsButton.Click += ExportAssetsButton_Click;
+            exportToolsPanel.ExportAssetsButton.Click += ExportAssetsButton_Click;
             exportToolsPanel.UploadToCloudButton.Click += UploadToCloudButton_Click;
             exportToolsPanel.CreateORMButton.Click += CreateORMButton_Click;
             exportToolsPanel.UploadTexturesButton.Click += UploadTexturesButton_Click;

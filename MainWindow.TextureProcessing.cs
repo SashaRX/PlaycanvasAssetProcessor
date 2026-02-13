@@ -131,16 +131,14 @@ namespace AssetProcessor {
                         UpdateHistogramCorrectionButtonState();
 
                         bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-                        if (TextureFormatTextBlock != null) {
-                            string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
-                            string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
-                                ? " (sRGB)"
-                                : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
-                                    ? " (Linear)"
-                                    : string.Empty;
-                            string histInfo = hasHistogram ? " + Histogram" : string.Empty;
-                            TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
-                        }
+                        string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
+                        string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
+                            ? " (sRGB)"
+                            : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
+                                ? " (Linear)"
+                                : string.Empty;
+                        string histInfo = hasHistogram ? " + Histogram" : string.Empty;
+                        viewModel.TextureInfoFormat = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
 
                         D3D11TextureViewer.Renderer.Render();
 

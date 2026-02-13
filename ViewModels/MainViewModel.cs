@@ -146,6 +146,27 @@ namespace AssetProcessor.ViewModels {
         private TextureResource? selectedTexture;
 
         [ObservableProperty]
+        private string textureInfoName = "Texture Name:";
+
+        [ObservableProperty]
+        private string textureInfoResolution = "Resolution:";
+
+        [ObservableProperty]
+        private string textureInfoSize = "Size:";
+
+        [ObservableProperty]
+        private string textureInfoColorSpace = "Color Space:";
+
+        [ObservableProperty]
+        private string textureInfoFormat = "Format:";
+
+        [ObservableProperty]
+        private string mipmapInfoText = "";
+
+        [ObservableProperty]
+        private bool isMipmapSliderVisible;
+
+        [ObservableProperty]
         private IReadOnlyDictionary<int, string> folderPaths = new Dictionary<int, string>();
 
         [ObservableProperty]

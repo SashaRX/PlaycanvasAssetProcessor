@@ -236,18 +236,18 @@ namespace AssetProcessor {
                             ORMPanel.SetORMTexture(ormTexture);
                         }
 
-                        TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
-                        TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+                        viewModel.TextureInfoName = "Texture Name: " + ormTexture.Name;
+                        viewModel.TextureInfoColorSpace = "Color Space: Linear (ORM)";
 
                         if (!string.IsNullOrEmpty(ormTexture.Path) && System.IO.File.Exists(ormTexture.Path)) {
-                            TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                            viewModel.TextureInfoResolution = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
                                 ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
                                 : "Resolution: Unknown";
-                            TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+                            viewModel.TextureInfoFormat = "Format: KTX2 (packed)";
                             _ = LoadORMPreviewAsync(ormTexture);
                         } else {
-                            TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
-                            TextureFormatTextBlock.Text = "Format: Not packed";
+                            viewModel.TextureInfoResolution = "Resolution: Not packed yet";
+                            viewModel.TextureInfoFormat = "Format: Not packed";
                         }
 
                         viewModel.SelectedTexture = ormTexture;

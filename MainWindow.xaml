@@ -751,33 +751,28 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
-                                            <TextBlock x:Name="TextureNameTextBlock"
-                                                      Text="Texture Name:"
+                                            <TextBlock Text="{Binding TextureInfoName}"
                                                       Foreground="White"
                                                       FontSize="10"
                                                       FontWeight="SemiBold"
                                                       Margin="0,0,0,2" />
-                                            <TextBlock x:Name="TextureResolutionTextBlock"
-                                                      Text="Resolution:"
+                                            <TextBlock Text="{Binding TextureInfoResolution}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Orientation="Vertical">
-                                            <TextBlock x:Name="TextureSizeTextBlock"
-                                                      Text="Size:"
+                                            <TextBlock Text="{Binding TextureInfoSize}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock x:Name="TextureColorSpaceTextBlock"
-                                                          Text="Color Space:"
+                                                <TextBlock Text="{Binding TextureInfoColorSpace}"
                                                           Foreground="#FFAAAAAA"
                                                           FontSize="9"
                                                           Margin="0,0,8,0" />
-                                                <TextBlock x:Name="TextureFormatTextBlock"
-                                                          Text="Format:"
+                                                <TextBlock Text="{Binding TextureInfoFormat}"
                                                           Foreground="#FFAAAAAA"
                                                           FontSize="9" />
                                             </StackPanel>
@@ -861,9 +856,9 @@
                                         <!-- Histogram correction toggle button -->
                                         <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>
                                     </StackPanel>
-                                    <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
+                                    <Border Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="{Binding IsMipmapSliderVisible, Converter={StaticResource BooleanToVisibilityConverter}}" HorizontalAlignment="Left">
                                         <StackPanel Orientation="Vertical">
-                                            <TextBlock x:Name="MipmapInfoTextBlock" Text="Уровень мипа" FontSize="10" Margin="0,0,0,4" />
+                                            <TextBlock Text="{Binding MipmapInfoText}" FontSize="10" Margin="0,0,0,4" />
                                             <Slider x:Name="MipmapLevelSlider"
                                                     Minimum="0"
                                                     Maximum="0"

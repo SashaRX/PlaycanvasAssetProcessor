@@ -233,11 +233,9 @@ namespace AssetProcessor {
                 _ = UpdateHistogramAsync(texturePreviewService.OriginalBitmapSource);
                 ShowOriginalImage(preserveMask: true);
 
-                if (TextureFormatTextBlock != null) {
-                    bool isSRGB = IsSRGBTexture(texturePreviewService.CurrentSelectedTexture);
-                    string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
-                    TextureFormatTextBlock.Text = $"Format: {formatInfo}";
-                }
+                bool isSRGB = IsSRGBTexture(texturePreviewService.CurrentSelectedTexture);
+                string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                viewModel.TextureInfoFormat = $"Format: {formatInfo}";
             } else {
                 ClearD3D11Viewer();
             }
@@ -309,9 +307,7 @@ namespace AssetProcessor {
         #region Mipmap Controls
 
         private void HideMipmapControls() {
-            if (MipmapSliderPanel != null) {
-                MipmapSliderPanel.Visibility = Visibility.Collapsed;
-            }
+            viewModel.IsMipmapSliderVisible = false;
 
             if (MipmapLevelSlider != null) {
                 texturePreviewService.IsUpdatingMipLevel = true;
@@ -321,15 +317,11 @@ namespace AssetProcessor {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
 
-            if (MipmapInfoTextBlock != null) {
-                MipmapInfoTextBlock.Text = string.Empty;
-            }
+            viewModel.MipmapInfoText = string.Empty;
         }
 
         private void ShowMipmapControls() {
-            if (MipmapSliderPanel != null) {
-                MipmapSliderPanel.Visibility = Visibility.Visible;
-            }
+            viewModel.IsMipmapSliderVisible = true;
 
             if (MipmapLevelSlider != null) {
                 MipmapLevelSlider.IsEnabled = true;
@@ -337,18 +329,18 @@ namespace AssetProcessor {
         }
 
         private void UpdateMipmapControls(IList<KtxMipLevel> mipmaps) {
-            if (MipmapSliderPanel == null || MipmapLevelSlider == null || MipmapInfoTextBlock == null) {
+            if (MipmapLevelSlider == null) {
                 return;
             }
 
             texturePreviewService.IsUpdatingMipLevel = true;
             try {
-                MipmapSliderPanel.Visibility = Visibility.Visible;
+                viewModel.IsMipmapSliderVisible = true;
                 MipmapLevelSlider.Minimum = 0;
                 MipmapLevelSlider.Maximum = Math.Max(0, mipmaps.Count - 1);
                 MipmapLevelSlider.Value = 0;
                 MipmapLevelSlider.IsEnabled = mipmaps.Count > 1;
-                MipmapInfoTextBlock.Text = mipmaps.Count > 0
+                viewModel.MipmapInfoText = mipmaps.Count > 0
                     ? $"Mip 0 of {Math.Max(0, mipmaps.Count - 1)} | {mipmaps[0].Width}x{mipmaps[0].Height}"
                     : "No mipmaps";
             } finally {
@@ -357,7 +349,7 @@ namespace AssetProcessor {
         }
 
         private void UpdateD3D11MipmapControls(int mipCount) {
-            if (MipmapSliderPanel == null || MipmapLevelSlider == null || MipmapInfoTextBlock == null) {
+            if (MipmapLevelSlider == null) {
                 return;
             }
 
@@ -367,7 +359,7 @@ namespace AssetProcessor {
 
             texturePreviewService.IsUpdatingMipLevel = true;
             try {
-                MipmapSliderPanel.Visibility = Visibility.Visible;
+                viewModel.IsMipmapSliderVisible = true;
                 MipmapLevelSlider.Minimum = 0;
                 MipmapLevelSlider.Maximum = Math.Max(0, mipCount - 1);
                 MipmapLevelSlider.Value = 0;
@@ -375,17 +367,15 @@ namespace AssetProcessor {
 
                 int width = D3D11TextureViewer.Renderer.TextureWidth;
                 int height = D3D11TextureViewer.Renderer.TextureHeight;
-                MipmapInfoTextBlock.Text = $"Mip 0 of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
+                viewModel.MipmapInfoText = $"Mip 0 of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
             } finally {
                 texturePreviewService.IsUpdatingMipLevel = false;
             }
         }
 
         private void UpdateMipmapInfo(KtxMipLevel mipLevel, int totalLevels) {
-            if (MipmapInfoTextBlock != null) {
-                int maxLevel = Math.Max(0, totalLevels - 1);
-                MipmapInfoTextBlock.Text = $"Mip {mipLevel.Level} of {maxLevel} | {mipLevel.Width}x{mipLevel.Height}";
-            }
+            int maxLevel = Math.Max(0, totalLevels - 1);
+            viewModel.MipmapInfoText = $"Mip {mipLevel.Level} of {maxLevel} | {mipLevel.Width}x{mipLevel.Height}";
         }
 
         private void SetCurrentMipLevel(int level, bool updateSlider = true) {
@@ -431,12 +421,10 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentMipLevel = newLevel;
                     D3D11TextureViewer.Renderer.SetMipLevel(newLevel);
 
-                    if (MipmapInfoTextBlock != null) {
-                        int mipCount = D3D11TextureViewer.Renderer.MipCount;
-                        int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
-                        int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
-                        MipmapInfoTextBlock.Text = $"Mip {newLevel} of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
-                    }
+                    int mipCount = D3D11TextureViewer.Renderer.MipCount;
+                    int width = D3D11TextureViewer.Renderer.TextureWidth >> newLevel;
+                    int height = D3D11TextureViewer.Renderer.TextureHeight >> newLevel;
+                    viewModel.MipmapInfoText = $"Mip {newLevel} of {Math.Max(0, mipCount - 1)} | {width}x{height} (D3D11)";
                 }
             }
         }

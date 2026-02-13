@@ -109,10 +109,8 @@ namespace AssetProcessor {
 
                         viewer.Renderer.LoadTexture(textureData);
 
-                        if (TextureFormatTextBlock != null) {
-                            string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
-                            TextureFormatTextBlock.Text = $"Format: {formatInfo}";
-                        }
+                        string formatInfo = isSRGB ? "PNG (sRGB data)" : "PNG (Linear data)";
+                        viewModel.TextureInfoFormat = $"Format: {formatInfo}";
 
                         UpdateHistogramCorrectionButtonState();
                         viewer.Renderer.Render();
@@ -218,12 +216,10 @@ namespace AssetProcessor {
                         UpdateHistogramCorrectionButtonState();
 
                         bool hasHistogram = viewer.Renderer.HasHistogramMetadata();
-                        if (TextureFormatTextBlock != null) {
-                            string compressionFormat = textureData.CompressionFormat ?? "Unknown";
-                            string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
-                            string histInfo = hasHistogram ? " + Histogram" : "";
-                            TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
-                        }
+                        string compressionFormat = textureData.CompressionFormat ?? "Unknown";
+                        string srgbInfo = compressionFormat.Contains("SRGB") ? " (sRGB)" : compressionFormat.Contains("UNORM") ? " (Linear)" : "";
+                        string histInfo = hasHistogram ? " + Histogram" : "";
+                        viewModel.TextureInfoFormat = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
 
                         viewer.Renderer.Render();
 

@@ -78,18 +78,13 @@ namespace AssetProcessor {
                     TexturesDataGrid.SelectedItem = null;
 
                     // Показываем ORM панель настроек (как при выборе ORM в DataGrid)
-                    if (ConversionSettingsExpander != null) {
-                        ConversionSettingsExpander.Visibility = Visibility.Collapsed;
-                    }
+                    viewModel.IsConversionSettingsVisible = false;
+                    viewModel.IsORMPanelVisible = true;
 
-                    if (ORMPanel != null) {
-                        ORMPanel.Visibility = Visibility.Visible;
-
-                        // Инициализируем ORM панель с доступными текстурами (исключаем ORM текстуры)
-                        var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                        ORMPanel.Initialize(this, availableTextures);
-                        ORMPanel.SetORMTexture(ormTexture);
-                    }
+                    // Инициализируем ORM панель с доступными текстурами (исключаем ORM текстуры)
+                    var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                    ORMPanel.Initialize(this, availableTextures);
+                    ORMPanel.SetORMTexture(ormTexture);
 
                     // Обновляем информацию о текстуре в preview панели
                     viewModel.TextureInfoName = "Texture Name: " + ormTexture.Name;

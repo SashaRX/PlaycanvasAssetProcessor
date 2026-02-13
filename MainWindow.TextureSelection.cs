@@ -23,12 +23,8 @@ namespace AssetProcessor {
         /// Handles panel visibility changes requested by TextureSelectionViewModel
         /// </summary>
         private void OnPanelVisibilityRequested(object? sender, PanelVisibilityRequestEventArgs e) {
-            if (ConversionSettingsExpander != null) {
-                ConversionSettingsExpander.Visibility = e.ShowConversionSettingsPanel ? Visibility.Visible : Visibility.Collapsed;
-            }
-            if (ORMPanel != null) {
-                ORMPanel.Visibility = e.ShowORMPanel ? Visibility.Visible : Visibility.Collapsed;
-            }
+            viewModel.IsConversionSettingsVisible = e.ShowConversionSettingsPanel;
+            viewModel.IsORMPanelVisible = e.ShowORMPanel;
         }
 
         /// <summary>

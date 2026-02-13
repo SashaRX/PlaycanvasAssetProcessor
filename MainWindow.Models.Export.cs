@@ -86,7 +86,7 @@ namespace AssetProcessor {
 
                 pipeline.ProgressChanged += progress => {
                     Dispatcher.Invoke(() => {
-                        ProgressTextBlock.Text = progress.ShortStatus;
+                        viewModel.ProgressText = progress.ShortStatus;
                     });
                 };
 
@@ -279,7 +279,7 @@ namespace AssetProcessor {
                 exportToolsPanel.ExportAssetsButton.IsEnabled = true;
                 exportToolsPanel.ExportAssetsButton.Content = "Export";
                 ProgressBar.Value = 0;
-                ProgressTextBlock.Text = "";
+                viewModel.ProgressText = "";
             }
         }
 

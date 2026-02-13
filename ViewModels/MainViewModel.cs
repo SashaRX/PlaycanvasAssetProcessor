@@ -18,6 +18,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace AssetProcessor.ViewModels {
+    public enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
+
     /// <summary>
     /// Main ViewModel for the application's primary window
     /// </summary>
@@ -198,6 +200,20 @@ namespace AssetProcessor.ViewModels {
         // Viewer toggle button
         [ObservableProperty]
         private string toggleViewButtonContent = "►";
+
+        // Right panel viewer type
+        [ObservableProperty]
+        private ViewerType activeViewerType = ViewerType.Texture;
+
+        // Panel visibility
+        [ObservableProperty]
+        private bool isORMPanelVisible;
+
+        [ObservableProperty]
+        private bool isConversionSettingsVisible;
+
+        [ObservableProperty]
+        private bool isLodControlsVisible;
 
         [ObservableProperty]
         private IReadOnlyDictionary<int, string> folderPaths = new Dictionary<int, string>();

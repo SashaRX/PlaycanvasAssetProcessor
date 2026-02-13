@@ -36,6 +36,7 @@
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
         <help:InverseBoolConverter x:Key="InverseBoolConverter" />
+        <help:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter" />
         <help:SafeFirstItemPropertyConverter x:Key="SafeFirstItemPropertyConverter" />
         <help:CollectionHasItemsToVisibilityConverter x:Key="CollectionHasItemsToVisibilityConverter" />
 
@@ -254,8 +255,7 @@
                          Minimum="0"
                          Maximum="{Binding ProgressMaximum}"
                          Value="{Binding ProgressValue}"/>
-            <TextBlock x:Name="ProgressTextBlock"
-                       HorizontalAlignment="Center"
+            <TextBlock HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource ThemeForeground}"
                        FontWeight="Bold"
@@ -732,7 +732,7 @@
             <Button Grid.Column="1" Content="{Binding ToggleViewButtonContent}"
                 Click="ToggleViewerButton_Click" Background="{DynamicResource ThemeBackgroundAlt}" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="{DynamicResource ThemeAccent}"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged" PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Texture}" SizeChanged="TextureViewerScroll_SizeChanged" PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
                 <Border x:Name="TextureViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -887,8 +887,9 @@
                         <controls:HistogramPanel x:Name="histogramPanel" Grid.Row="1"/>
 
                         <!-- Conversion Settings Panel -->
-                        <Expander Grid.Row="2" x:Name="ConversionSettingsExpander" Header="Conversion Settings"
+                        <Expander Grid.Row="2" Header="Conversion Settings"
                                   Style="{StaticResource RightPanelExpanderStyle}" IsExpanded="True"
+                                  Visibility="{Binding IsConversionSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
@@ -898,13 +899,13 @@
                         <!-- ORM Packing Panel (only visible when ORM texture is selected) -->
                         <controls:ORMPackingPanel Grid.Row="3"
                                                   x:Name="ORMPanel"
-                                                  Visibility="Collapsed"
+                                                  Visibility="{Binding IsORMPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                   Margin="0,2,0,0"/>
                     </Grid>
                 </Border>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="ModelViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Model}"
                           PreviewMouseWheel="ModelViewerScroll_PreviewMouseWheel">
                 <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
@@ -1039,7 +1040,7 @@
                         </Expander>
 
                         <!-- LOD Controls Panel (outside Expander so it can't be clipped by resize) -->
-                        <StackPanel x:Name="LodControlsPanel" Grid.Row="1" Orientation="Vertical" Margin="6,4,6,2" Visibility="Collapsed">
+                        <StackPanel Grid.Row="1" Orientation="Vertical" Margin="6,4,6,2" Visibility="{Binding IsLodControlsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Source:"
                                           Foreground="{DynamicResource ThemeForeground}"
@@ -1170,17 +1171,17 @@
             </ScrollViewer>
 
             <!-- Просмотр параметров материала -->
-            <ScrollViewer x:Name="MaterialViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Material}">
                 <controls:MaterialInfoPanel x:Name="materialInfoPanel"/>
             </ScrollViewer>
 
             <!-- Server File Info Panel -->
-            <ScrollViewer x:Name="ServerFileInfoScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=ServerFile}">
                 <controls:ServerFileInfoPanel x:Name="serverFileInfoPanel"/>
             </ScrollViewer>
 
             <!-- Chunk Slots Panel (for Master Materials tab) -->
-            <ScrollViewer x:Name="ChunkSlotsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=ChunkSlots}">
                 <controls:ChunkSlotsPanel x:Name="chunkSlotsPanel"/>
             </ScrollViewer>
 

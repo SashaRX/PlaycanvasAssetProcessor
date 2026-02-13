@@ -1,5 +1,6 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Settings;
+using AssetProcessor.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,14 +19,8 @@ namespace AssetProcessor {
 
         #region Viewer Management
 
-        private enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
-
         private void ShowViewer(ViewerType viewerType) {
-            TextureViewerScroll.Visibility = viewerType == ViewerType.Texture ? Visibility.Visible : Visibility.Collapsed;
-            ModelViewerScroll.Visibility = viewerType == ViewerType.Model ? Visibility.Visible : Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = viewerType == ViewerType.Material ? Visibility.Visible : Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = viewerType == ViewerType.ServerFile ? Visibility.Visible : Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = viewerType == ViewerType.ChunkSlots ? Visibility.Visible : Visibility.Collapsed;
+            viewModel.ActiveViewerType = viewerType;
         }
 
         #endregion
@@ -225,16 +220,12 @@ namespace AssetProcessor {
                     if (textureInGroup.ParentORMTexture != null) {
                         var ormTexture = textureInGroup.ParentORMTexture;
 
-                        if (ConversionSettingsExpander != null) {
-                            ConversionSettingsExpander.Visibility = Visibility.Collapsed;
-                        }
+                        viewModel.IsConversionSettingsVisible = false;
+                        viewModel.IsORMPanelVisible = true;
 
-                        if (ORMPanel != null) {
-                            ORMPanel.Visibility = Visibility.Visible;
-                            var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                            ORMPanel.Initialize(this, availableTextures);
-                            ORMPanel.SetORMTexture(ormTexture);
-                        }
+                        var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                        ORMPanel.Initialize(this, availableTextures);
+                        ORMPanel.SetORMTexture(ormTexture);
 
                         viewModel.TextureInfoName = "Texture Name: " + ormTexture.Name;
                         viewModel.TextureInfoColorSpace = "Color Space: Linear (ORM)";

@@ -26,7 +26,7 @@ namespace AssetProcessor {
                     TexturesDataGrid.Items.Refresh();
                     ProgressBar.Value = 0;
                     ProgressBar.Maximum = e.Result.SuccessCount + e.Result.ErrorCount;
-                    ProgressTextBlock.Text = $"Completed: {e.Result.SuccessCount} success, {e.Result.ErrorCount} errors";
+                    viewModel.ProgressText = $"Completed: {e.Result.SuccessCount} success, {e.Result.ErrorCount} errors";
                 });
 
                 string resultMessage = BuildProcessingSummaryMessage(e.Result);

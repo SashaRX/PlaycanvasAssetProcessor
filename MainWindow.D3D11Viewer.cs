@@ -236,7 +236,7 @@ namespace AssetProcessor {
                 Point screenPoint = new Point(x, y);
 
                 // Check HelixViewport3D (model viewer) first
-                if (ModelViewerScroll.Visibility == Visibility.Visible && viewPort3d != null) {
+                if (viewModel.ActiveViewerType == ViewModels.ViewerType.Model && viewPort3d != null) {
                     try {
                         Point viewportPoint = viewPort3d.PointFromScreen(screenPoint);
                         if (viewportPoint.X >= 0 && viewportPoint.Y >= 0 &&

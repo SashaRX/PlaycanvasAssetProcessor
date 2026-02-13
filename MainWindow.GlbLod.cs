@@ -326,14 +326,14 @@ namespace AssetProcessor {
 
         private void ShowGlbLodUI() {
             Dispatcher.Invoke(() => {
-                LodControlsPanel.Visibility = Visibility.Visible;
+                viewModel.IsLodControlsVisible = true;
                 viewModel.IsModelCurrentLodVisible = true;
             });
         }
 
         private void HideGlbLodUI() {
             Dispatcher.Invoke(() => {
-                LodControlsPanel.Visibility = Visibility.Collapsed;
+                viewModel.IsLodControlsVisible = false;
                 viewModel.IsModelCurrentLodVisible = false;
 
                 _currentLodInfos.Clear();

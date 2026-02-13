@@ -108,7 +108,7 @@ namespace AssetProcessor {
                         Dispatcher.Invoke(() => {
                             ProgressBar.Value = p.PercentComplete * 0.9;
                             var fileName = Path.GetFileName(p.CurrentFile);
-                            ProgressTextBlock.Text = $"Upload: {fileName} ({p.CurrentFileIndex}/{p.TotalFiles})";
+                            viewModel.ProgressText = $"Upload: {fileName} ({p.CurrentFileIndex}/{p.TotalFiles})";
                         });
                     })
                 );
@@ -139,7 +139,7 @@ namespace AssetProcessor {
                 exportToolsPanel.UploadToCloudButton.IsEnabled = true;
                 exportToolsPanel.UploadToCloudButton.Content = "Upload to Cloud";
                 ProgressBar.Value = 0;
-                ProgressTextBlock.Text = "";
+                viewModel.ProgressText = "";
             }
         }
 

@@ -609,6 +609,7 @@
                         <Grid Grid.Row="0" Margin="8,0,8,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -616,11 +617,14 @@
                             <TextBlock Grid.Column="0" Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <Slider Grid.Column="1" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
-                            <TextBlock Grid.Column="2" Text="Default Master:" VerticalAlignment="Center" Margin="20,0,8,0" FontWeight="SemiBold"/>
-                            <ComboBox Grid.Column="3"
+                            <TextBlock Grid.Column="2" HorizontalAlignment="Left"
+                                       Text="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, StringFormat={}{0:P0}}"
+                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
+                            <TextBlock Grid.Column="3" Text="Default Master:" VerticalAlignment="Center" Margin="20,0,8,0" FontWeight="SemiBold"/>
+                            <ComboBox Grid.Column="4"
                                       ItemsSource="{Binding MasterMaterialsViewModel.MasterMaterials}"
                                       DisplayMemberPath="Name"
                                       SelectedValuePath="Name"

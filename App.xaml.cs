@@ -177,6 +177,11 @@ namespace AssetProcessor {
                     materialSelectionViewModel,
                     masterMaterialsViewModel);
             });
+            // Service facades for MainWindow (reduce constructor from 21 to 6 parameters)
+            services.AddSingleton<ConnectionServiceFacade>();
+            services.AddSingleton<AssetDataServiceFacade>();
+            services.AddSingleton<TextureViewerServiceFacade>();
+
             services.AddTransient<MainWindow>();
         }
     }

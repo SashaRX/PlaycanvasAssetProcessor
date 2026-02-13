@@ -61,26 +61,33 @@ namespace AssetProcessor {
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
         private bool _isUpdatingMasterComboBox = false; // Flag to prevent recursive master combobox updates
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly IPlayCanvasService playCanvasService;
-        private readonly IHistogramCoordinator histogramCoordinator;
-        private readonly ITextureChannelService textureChannelService;
-        private readonly ITexturePreviewService texturePreviewService;
-        private readonly IProjectSelectionService projectSelectionService;
+
+        // Service facades (group related services to reduce constructor parameters: 21 → 5+viewModel)
+        private readonly ConnectionServiceFacade connectionServices;
+        private readonly AssetDataServiceFacade assetDataServices;
+        private readonly TextureViewerServiceFacade textureViewerServices;
         private readonly ILogService logService;
-        private readonly ILocalCacheService localCacheService;
-        private readonly IProjectAssetService projectAssetService;
-        private readonly IPreviewRendererCoordinator previewRendererCoordinator;
-        private readonly IAssetResourceService assetResourceService;
-        private readonly IConnectionStateService connectionStateService;
-        private readonly IAssetJsonParserService assetJsonParserService;
-        private readonly IORMTextureService ormTextureService;
-        private readonly IFileStatusScannerService fileStatusScannerService;
-        private readonly IProjectConnectionService projectConnectionService;
-        private readonly IAssetLoadCoordinator assetLoadCoordinator;
-        private readonly IProjectFileWatcherService projectFileWatcherService;
-        private readonly IKtx2InfoService ktx2InfoService;
-        private readonly IPlayCanvasCredentialsService credentialsService;
         private readonly IDataGridLayoutService dataGridLayoutService;
+
+        // Shortcut properties for backward compatibility with partial files
+        private IPlayCanvasService playCanvasService => connectionServices.PlayCanvasService;
+        private IConnectionStateService connectionStateService => connectionServices.ConnectionStateService;
+        private IPlayCanvasCredentialsService credentialsService => connectionServices.CredentialsService;
+        private IProjectSelectionService projectSelectionService => connectionServices.ProjectSelectionService;
+        private IProjectConnectionService projectConnectionService => connectionServices.ProjectConnectionService;
+        private IProjectFileWatcherService projectFileWatcherService => connectionServices.ProjectFileWatcherService;
+        private IAssetLoadCoordinator assetLoadCoordinator => assetDataServices.AssetLoadCoordinator;
+        private IAssetResourceService assetResourceService => assetDataServices.AssetResourceService;
+        private IAssetJsonParserService assetJsonParserService => assetDataServices.AssetJsonParserService;
+        private IFileStatusScannerService fileStatusScannerService => assetDataServices.FileStatusScannerService;
+        private ILocalCacheService localCacheService => assetDataServices.LocalCacheService;
+        private IProjectAssetService projectAssetService => assetDataServices.ProjectAssetService;
+        private ITexturePreviewService texturePreviewService => textureViewerServices.TexturePreviewService;
+        private ITextureChannelService textureChannelService => textureViewerServices.TextureChannelService;
+        private IPreviewRendererCoordinator previewRendererCoordinator => textureViewerServices.PreviewRendererCoordinator;
+        private IHistogramCoordinator histogramCoordinator => textureViewerServices.HistogramCoordinator;
+        private IORMTextureService ormTextureService => textureViewerServices.ORMTextureService;
+        private IKtx2InfoService ktx2InfoService => textureViewerServices.Ktx2InfoService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
@@ -129,46 +136,16 @@ namespace AssetProcessor {
         public MainViewModel ViewModel { get; }
 
         public MainWindow(
-            IPlayCanvasService playCanvasService,
-            IHistogramCoordinator histogramCoordinator,
-            ITextureChannelService textureChannelService,
-            ITexturePreviewService texturePreviewService,
-            IProjectSelectionService projectSelectionService,
+            ConnectionServiceFacade connectionServices,
+            AssetDataServiceFacade assetDataServices,
+            TextureViewerServiceFacade textureViewerServices,
             ILogService logService,
-            ILocalCacheService localCacheService,
-            IProjectAssetService projectAssetService,
-            IPreviewRendererCoordinator previewRendererCoordinator,
-            IAssetResourceService assetResourceService,
-            IConnectionStateService connectionStateService,
-            IAssetJsonParserService assetJsonParserService,
-            IORMTextureService ormTextureService,
-            IFileStatusScannerService fileStatusScannerService,
-            IProjectConnectionService projectConnectionService,
-            IAssetLoadCoordinator assetLoadCoordinator,
-            IProjectFileWatcherService projectFileWatcherService,
-            IKtx2InfoService ktx2InfoService,
-            IPlayCanvasCredentialsService credentialsService,
             IDataGridLayoutService dataGridLayoutService,
             MainViewModel viewModel) {
-            this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
-            this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
-            this.textureChannelService = textureChannelService ?? throw new ArgumentNullException(nameof(textureChannelService));
-            this.texturePreviewService = texturePreviewService ?? throw new ArgumentNullException(nameof(texturePreviewService));
-            this.projectSelectionService = projectSelectionService ?? throw new ArgumentNullException(nameof(projectSelectionService));
+            this.connectionServices = connectionServices ?? throw new ArgumentNullException(nameof(connectionServices));
+            this.assetDataServices = assetDataServices ?? throw new ArgumentNullException(nameof(assetDataServices));
+            this.textureViewerServices = textureViewerServices ?? throw new ArgumentNullException(nameof(textureViewerServices));
             this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
-            this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
-            this.projectAssetService = projectAssetService ?? throw new ArgumentNullException(nameof(projectAssetService));
-            this.previewRendererCoordinator = previewRendererCoordinator ?? throw new ArgumentNullException(nameof(previewRendererCoordinator));
-            this.assetResourceService = assetResourceService ?? throw new ArgumentNullException(nameof(assetResourceService));
-            this.connectionStateService = connectionStateService ?? throw new ArgumentNullException(nameof(connectionStateService));
-            this.assetJsonParserService = assetJsonParserService ?? throw new ArgumentNullException(nameof(assetJsonParserService));
-            this.ormTextureService = ormTextureService ?? throw new ArgumentNullException(nameof(ormTextureService));
-            this.fileStatusScannerService = fileStatusScannerService ?? throw new ArgumentNullException(nameof(fileStatusScannerService));
-            this.projectConnectionService = projectConnectionService ?? throw new ArgumentNullException(nameof(projectConnectionService));
-            this.assetLoadCoordinator = assetLoadCoordinator ?? throw new ArgumentNullException(nameof(assetLoadCoordinator));
-            this.projectFileWatcherService = projectFileWatcherService ?? throw new ArgumentNullException(nameof(projectFileWatcherService));
-            this.ktx2InfoService = ktx2InfoService ?? throw new ArgumentNullException(nameof(ktx2InfoService));
-            this.credentialsService = credentialsService ?? throw new ArgumentNullException(nameof(credentialsService));
             this.dataGridLayoutService = dataGridLayoutService ?? throw new ArgumentNullException(nameof(dataGridLayoutService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;

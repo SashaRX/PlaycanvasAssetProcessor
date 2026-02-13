@@ -331,7 +331,7 @@
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
-                            <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                            <TextBlock Text="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,15,0" MinWidth="40"/>
                             <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center"
                                         IsChecked="{Binding Source={x:Static settings:AppSettings.Default}, Path=GroupTexturesByType, Mode=TwoWay}"
@@ -373,8 +373,8 @@
                                 ScrollViewer.IsDeferredScrollingEnabled="True"
                                 HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
-                                                ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
+                                <ScaleTransform ScaleX="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale}"
+                                                ScaleY="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale}"/>
                             </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -518,7 +518,7 @@
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
-                            <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                            <TextBlock Text="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
                         <DataGrid x:Name="ModelsDataGrid" Grid.Row="1"
@@ -548,8 +548,8 @@
                               ScrollViewer.IsDeferredScrollingEnabled="False"
                               HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
-                                                ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
+                                <ScaleTransform ScaleX="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale}"
+                                                ScaleY="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale}"/>
                             </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -657,8 +657,8 @@
                               ScrollViewer.IsDeferredScrollingEnabled="False"
                               HorizontalScrollBarVisibility="Disabled">
                         <DataGrid.LayoutTransform>
-                            <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
-                                            ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
+                            <ScaleTransform ScaleX="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale}"
+                                            ScaleY="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale}"/>
                         </DataGrid.LayoutTransform>
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">

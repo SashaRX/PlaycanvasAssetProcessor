@@ -24,8 +24,8 @@ namespace AssetProcessor {
             try {
                 await Dispatcher.InvokeAsync(() => {
                     TexturesDataGrid.Items.Refresh();
-                    ProgressBar.Value = 0;
-                    ProgressBar.Maximum = e.Result.SuccessCount + e.Result.ErrorCount;
+                    viewModel.ProgressValue = 0;
+                    viewModel.ProgressMaximum = e.Result.SuccessCount + e.Result.ErrorCount;
                     viewModel.ProgressText = $"Completed: {e.Result.SuccessCount} success, {e.Result.ErrorCount} errors";
                 });
 
@@ -264,7 +264,7 @@ namespace AssetProcessor {
                     files,
                     progress: new Progress<Upload.B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
-                            ProgressBar.Value = p.PercentComplete;
+                            viewModel.ProgressValue = p.PercentComplete;
                         });
                     })
                 );
@@ -317,7 +317,7 @@ namespace AssetProcessor {
             } finally {
                 exportToolsPanel.UploadTexturesButton.IsEnabled = true;
                 exportToolsPanel.UploadTexturesButton.Content = "Upload";
-                ProgressBar.Value = 0;
+                viewModel.ProgressValue = 0;
             }
         }
 

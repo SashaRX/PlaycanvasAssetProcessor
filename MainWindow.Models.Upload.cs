@@ -106,7 +106,7 @@ namespace AssetProcessor {
                     filePairs,
                     progress: new Progress<B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
-                            ProgressBar.Value = p.PercentComplete * 0.9;
+                            viewModel.ProgressValue = p.PercentComplete * 0.9;
                             var fileName = Path.GetFileName(p.CurrentFile);
                             viewModel.ProgressText = $"Upload: {fileName} ({p.CurrentFileIndex}/{p.TotalFiles})";
                         });
@@ -120,7 +120,7 @@ namespace AssetProcessor {
                     await SaveUploadRecordsAndUpdateStatusesAsync(result, serverPath, projectName, uploadStateService);
                 }
 
-                Dispatcher.Invoke(() => { ProgressBar.Value = 100; });
+                Dispatcher.Invoke(() => { viewModel.ProgressValue = 100; });
 
                 MessageBox.Show(
                     $"Upload completed!\n\n" +
@@ -138,7 +138,7 @@ namespace AssetProcessor {
             } finally {
                 exportToolsPanel.UploadToCloudButton.IsEnabled = true;
                 exportToolsPanel.UploadToCloudButton.Content = "Upload to Cloud";
-                ProgressBar.Value = 0;
+                viewModel.ProgressValue = 0;
                 viewModel.ProgressText = "";
             }
         }

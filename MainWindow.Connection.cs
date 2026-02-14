@@ -157,7 +157,7 @@ namespace AssetProcessor {
         private async Task DownloadFromServer() {
             try {
                 logService.LogInfo("Starting download from server");
-                CancelButton.IsEnabled = true;
+                viewModel.IsCancelEnabled = true;
                 connectionPanel.DynamicConnectionButton.IsEnabled = false;
 
                 if (cancellationTokenSource != null) {
@@ -188,7 +188,7 @@ namespace AssetProcessor {
                 logger.Error(ex, "Error in DownloadFromServer");
                 MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                CancelButton.IsEnabled = false;
+                viewModel.IsCancelEnabled = false;
                 connectionPanel.DynamicConnectionButton.IsEnabled = true;
             }
         }

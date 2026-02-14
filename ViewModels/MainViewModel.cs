@@ -109,6 +109,12 @@ namespace AssetProcessor.ViewModels {
         private string? progressText;
 
         [ObservableProperty]
+        private bool isCancelEnabled;
+
+        [ObservableProperty]
+        private string versionText = "v1.0.0";
+
+        [ObservableProperty]
         private bool isConnected;
 
         [ObservableProperty]

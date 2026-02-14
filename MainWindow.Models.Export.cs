@@ -145,14 +145,14 @@ namespace AssetProcessor {
                 int totalItems = modelsToExport.Count + standaloneMaterials.Count + standaloneTextures.Count;
                 int currentItem = 0;
 
-                ProgressBar.Value = 0;
-                ProgressBar.Maximum = 100;
+                viewModel.ProgressValue = 0;
+                viewModel.ProgressMaximum = 100;
 
                 // 1. Export models (with their materials and textures)
                 foreach (var model in modelsToExport) {
                     try {
                         currentItem++;
-                        ProgressBar.Value = (double)currentItem / totalItems * 100;
+                        viewModel.ProgressValue = (double)currentItem / totalItems * 100;
                         exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting model: {model.Name} ({currentItem}/{totalItems})");
@@ -203,7 +203,7 @@ namespace AssetProcessor {
                 foreach (var material in standaloneMaterials) {
                     try {
                         currentItem++;
-                        ProgressBar.Value = (double)currentItem / totalItems * 100;
+                        viewModel.ProgressValue = (double)currentItem / totalItems * 100;
                         exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting material (JSON only): {material.Name} ({currentItem}/{totalItems})");
@@ -230,7 +230,7 @@ namespace AssetProcessor {
                 foreach (var texture in standaloneTextures) {
                     try {
                         currentItem++;
-                        ProgressBar.Value = (double)currentItem / totalItems * 100;
+                        viewModel.ProgressValue = (double)currentItem / totalItems * 100;
                         exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting texture: {texture.Name} ({currentItem}/{totalItems})");
@@ -252,7 +252,7 @@ namespace AssetProcessor {
                     }
                 }
 
-                ProgressBar.Value = 100;
+                viewModel.ProgressValue = 100;
                 logger.Info($"Export complete: {successCount} succeeded, {failCount} failed, {exportedFiles.Count} files");
 
                 _lastExportedFiles = new List<string>(exportedFiles);
@@ -278,7 +278,7 @@ namespace AssetProcessor {
             } finally {
                 exportToolsPanel.ExportAssetsButton.IsEnabled = true;
                 exportToolsPanel.ExportAssetsButton.Content = "Export";
-                ProgressBar.Value = 0;
+                viewModel.ProgressValue = 0;
                 viewModel.ProgressText = "";
             }
         }

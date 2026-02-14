@@ -223,7 +223,7 @@ namespace AssetProcessor {
             projectFileWatcherService.FilesDeletionDetected += OnFilesDeletionDetected;
 
             // ����������� ������ ���������� � ����������� � ������ � �������
-            VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
+            viewModel.VersionText = $"v{VersionHelper.GetVersionString()}";
 
 
 #if DEBUG

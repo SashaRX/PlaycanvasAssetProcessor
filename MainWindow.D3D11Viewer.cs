@@ -156,7 +156,7 @@ namespace AssetProcessor {
         }
 
         private void InitializeDarkThemeCheckBox() {
-            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
+            viewModel.IsDarkThemeChecked = ThemeHelper.IsDarkTheme;
         }
 
         private void RestoreRightPanelWidth() {

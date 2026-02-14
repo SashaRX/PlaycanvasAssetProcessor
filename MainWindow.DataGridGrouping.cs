@@ -40,7 +40,7 @@ namespace AssetProcessor {
             var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
             if (view == null || !view.CanGroup) return;
 
-            if (GroupTexturesCheckBox.IsChecked == true) {
+            if (Settings.AppSettings.Default.GroupTexturesByType) {
                 using (view.DeferRefresh()) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));

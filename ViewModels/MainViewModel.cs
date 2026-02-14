@@ -115,6 +115,18 @@ namespace AssetProcessor.ViewModels {
         private string versionText = "v1.0.0";
 
         [ObservableProperty]
+        private bool isDarkThemeChecked;
+
+        [ObservableProperty]
+        private bool isThemeAuto = true;
+
+        [ObservableProperty]
+        private bool isThemeLight;
+
+        [ObservableProperty]
+        private bool isThemeDark;
+
+        [ObservableProperty]
         private bool isConnected;
 
         [ObservableProperty]

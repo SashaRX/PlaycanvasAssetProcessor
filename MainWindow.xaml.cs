@@ -494,44 +494,30 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             Close();
         }
 
-        private void ThemeAuto_Click(object sender, RoutedEventArgs e) {
-            ThemeAutoMenuItem.IsChecked = true;
-            ThemeLightMenuItem.IsChecked = false;
-            ThemeDarkMenuItem.IsChecked = false;
-            ThemeHelper.CurrentMode = Helpers.ThemeMode.Auto;
-            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
+        private void SetThemeState(Helpers.ThemeMode mode) {
+            viewModel.IsThemeAuto = mode == Helpers.ThemeMode.Auto;
+            viewModel.IsThemeLight = mode == Helpers.ThemeMode.Light;
+            viewModel.IsThemeDark = mode == Helpers.ThemeMode.Dark;
+            ThemeHelper.CurrentMode = mode;
+            viewModel.IsDarkThemeChecked = ThemeHelper.IsDarkTheme;
             RefreshHistogramForTheme();
+        }
+
+        private void ThemeAuto_Click(object sender, RoutedEventArgs e) {
+            SetThemeState(Helpers.ThemeMode.Auto);
         }
 
         private void ThemeLight_Click(object sender, RoutedEventArgs e) {
-            ThemeAutoMenuItem.IsChecked = false;
-            ThemeLightMenuItem.IsChecked = true;
-            ThemeDarkMenuItem.IsChecked = false;
-            ThemeHelper.CurrentMode = Helpers.ThemeMode.Light;
-            DarkThemeCheckBox.IsChecked = false;
-            RefreshHistogramForTheme();
+            SetThemeState(Helpers.ThemeMode.Light);
         }
 
         private void ThemeDark_Click(object sender, RoutedEventArgs e) {
-            ThemeAutoMenuItem.IsChecked = false;
-            ThemeLightMenuItem.IsChecked = false;
-            ThemeDarkMenuItem.IsChecked = true;
-            ThemeHelper.CurrentMode = Helpers.ThemeMode.Dark;
-            DarkThemeCheckBox.IsChecked = true;
-            RefreshHistogramForTheme();
+            SetThemeState(Helpers.ThemeMode.Dark);
         }
 
         private void DarkThemeCheckBox_Click(object sender, RoutedEventArgs e) {
-            bool isDark = DarkThemeCheckBox.IsChecked == true;
-
-            // Update menu items to match
-            ThemeAutoMenuItem.IsChecked = false;
-            ThemeLightMenuItem.IsChecked = !isDark;
-            ThemeDarkMenuItem.IsChecked = isDark;
-
-            // Apply theme
-            ThemeHelper.CurrentMode = isDark ? Helpers.ThemeMode.Dark : Helpers.ThemeMode.Light;
-            RefreshHistogramForTheme();
+            bool isDark = viewModel.IsDarkThemeChecked;
+            SetThemeState(isDark ? Helpers.ThemeMode.Dark : Helpers.ThemeMode.Light);
         }
 
         private void RefreshHistogramForTheme() {
@@ -710,7 +696,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (TexturesDataGrid == null) return;
 
             // Only apply workaround when grouping is enabled
-            if (GroupTexturesCheckBox?.IsChecked != true) return;
+            if (!Settings.AppSettings.Default.GroupTexturesByType) return;
 
             // Hide DataGrid before layout recalculation
             TexturesDataGrid.Visibility = Visibility.Hidden;

@@ -84,8 +84,8 @@ namespace AssetProcessor {
             var projectName = ProjectName ?? "UnknownProject";
 
             try {
-                exportToolsPanel.UploadToCloudButton.IsEnabled = false;
-                exportToolsPanel.UploadToCloudButton.Content = "Uploading...";
+                viewModel.IsUploadToCloudEnabled = false;
+                viewModel.UploadToCloudButtonContent = "Uploading...";
 
                 using var b2Service = new B2UploadService();
                 using var uploadStateService = new Data.UploadStateService();
@@ -136,8 +136,8 @@ namespace AssetProcessor {
                 logger.Error(ex, "Upload failed");
                 MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                exportToolsPanel.UploadToCloudButton.IsEnabled = true;
-                exportToolsPanel.UploadToCloudButton.Content = "Upload to Cloud";
+                viewModel.IsUploadToCloudEnabled = true;
+                viewModel.UploadToCloudButtonContent = "Upload";
                 viewModel.ProgressValue = 0;
                 viewModel.ProgressText = "";
             }

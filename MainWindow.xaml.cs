@@ -360,29 +360,29 @@ namespace AssetProcessor {
                     case "Textures":
                         ShowViewer(ViewerType.Texture);
                         UpdateExportCounts();
-                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Visible;
+                        viewModel.IsTextureToolsVisible = true;
                         break;
                     case "Models":
                         ShowViewer(ViewerType.Model);
                         UpdateExportCounts();
-                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Materials":
                         ShowViewer(ViewerType.Material);
                         UpdateExportCounts();
-                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Master Materials":
                         ShowViewer(ViewerType.ChunkSlots);
-                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Server":
                         ShowViewer(ViewerType.ServerFile);
-                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Logs":
                         ShowViewer(ViewerType.None);
-                        exportToolsPanel.TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                 }
             }

@@ -74,8 +74,8 @@ namespace AssetProcessor {
             bool generateLODs = exportToolsPanel.GenerateLODsCheckBox.IsChecked ?? true;
 
             try {
-                exportToolsPanel.ExportAssetsButton.IsEnabled = false;
-                exportToolsPanel.ExportAssetsButton.Content = "Exporting...";
+                viewModel.IsExportEnabled = false;
+                viewModel.ExportButtonContent = "Exporting...";
 
                 var pipeline = new ModelExportPipeline(
                     projectName, outputPath,
@@ -153,7 +153,7 @@ namespace AssetProcessor {
                     try {
                         currentItem++;
                         viewModel.ProgressValue = (double)currentItem / totalItems * 100;
-                        exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+                        viewModel.ExportButtonContent = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting model: {model.Name} ({currentItem}/{totalItems})");
 
@@ -204,7 +204,7 @@ namespace AssetProcessor {
                     try {
                         currentItem++;
                         viewModel.ProgressValue = (double)currentItem / totalItems * 100;
-                        exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+                        viewModel.ExportButtonContent = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting material (JSON only): {material.Name} ({currentItem}/{totalItems})");
 
@@ -231,7 +231,7 @@ namespace AssetProcessor {
                     try {
                         currentItem++;
                         viewModel.ProgressValue = (double)currentItem / totalItems * 100;
-                        exportToolsPanel.ExportAssetsButton.Content = $"Export {currentItem}/{totalItems}";
+                        viewModel.ExportButtonContent = $"Export {currentItem}/{totalItems}";
 
                         logger.Info($"Exporting texture: {texture.Name} ({currentItem}/{totalItems})");
 
@@ -276,8 +276,8 @@ namespace AssetProcessor {
                 logger.Error(ex, "Export failed");
                 MessageBox.Show($"Export failed: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                exportToolsPanel.ExportAssetsButton.IsEnabled = true;
-                exportToolsPanel.ExportAssetsButton.Content = "Export";
+                viewModel.IsExportEnabled = true;
+                viewModel.ExportButtonContent = "Export";
                 viewModel.ProgressValue = 0;
                 viewModel.ProgressText = "";
             }

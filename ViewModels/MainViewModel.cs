@@ -114,6 +114,28 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private string versionText = "v1.0.0";
 
+        // Export button states
+        [ObservableProperty]
+        private bool isExportEnabled = true;
+
+        [ObservableProperty]
+        private string exportButtonContent = "Export";
+
+        [ObservableProperty]
+        private bool isUploadToCloudEnabled = true;
+
+        [ObservableProperty]
+        private string uploadToCloudButtonContent = "Upload";
+
+        [ObservableProperty]
+        private bool isUploadTexturesEnabled = true;
+
+        [ObservableProperty]
+        private string uploadTexturesButtonContent = "Upload";
+
+        [ObservableProperty]
+        private bool isTextureToolsVisible;
+
         [ObservableProperty]
         private bool isDarkThemeChecked;
 

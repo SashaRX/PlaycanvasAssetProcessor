@@ -5,6 +5,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignHeight="100" d:DesignWidth="600">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
 
     <GroupBox Header="Asset Export" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="2">
         <StackPanel Orientation="Vertical" Margin="4,2,4,2">
@@ -28,11 +31,11 @@
                 <Button x:Name="ClearExportMarksButton" Content="Clear" Width="40" Margin="0,0,3,0"
                         ToolTip="Clear all export marks"/>
 
-                <Button x:Name="ExportAssetsButton" Content="Export" Width="50" Margin="0,0,3,0"
+                <Button x:Name="ExportAssetsButton" Content="{Binding ExportButtonContent}" IsEnabled="{Binding IsExportEnabled}" Width="50" Margin="0,0,3,0"
                         Background="#FF2196F3" Foreground="White" FontWeight="Bold"
                         ToolTip="Export all marked assets to server format"/>
 
-                <Button x:Name="UploadToCloudButton" Content="Upload" Width="50" Margin="0,0,3,0"
+                <Button x:Name="UploadToCloudButton" Content="{Binding UploadToCloudButtonContent}" IsEnabled="{Binding IsUploadToCloudEnabled}" Width="50" Margin="0,0,3,0"
                         Background="#FF9C27B0" Foreground="White" FontWeight="Bold"
                         ToolTip="Upload exported assets to cloud storage"/>
 
@@ -50,7 +53,7 @@
             </StackPanel>
 
             <!-- Texture Tools Row - Only visible for Textures tab -->
-            <StackPanel x:Name="TextureToolsPanel" Orientation="Horizontal" Margin="0,2,0,0" Visibility="Collapsed">
+            <StackPanel x:Name="TextureToolsPanel" Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding IsTextureToolsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="Tools:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold" Foreground="Gray"/>
 
                 <Button x:Name="ProcessTexturesButton" Content="Process" Width="55" Margin="0,0,3,0"
@@ -65,7 +68,7 @@
                         Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
                         ToolTip="Create virtual ORM texture for channel packing"/>
 
-                <Button x:Name="UploadTexturesButton" Content="Upload" Width="50" Margin="0,0,3,0"
+                <Button x:Name="UploadTexturesButton" Content="{Binding UploadTexturesButtonContent}" IsEnabled="{Binding IsUploadTexturesEnabled}" Width="50" Margin="0,0,3,0"
                         ToolTip="Upload processed textures to cloud storage"/>
 
                 <CheckBox x:Name="ProcessAllCheckBox" Content="All" VerticalAlignment="Center" Margin="5,0,0,0"

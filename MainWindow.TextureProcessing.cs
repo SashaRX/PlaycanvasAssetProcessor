@@ -238,8 +238,8 @@ namespace AssetProcessor {
             }
 
             try {
-                exportToolsPanel.UploadTexturesButton.IsEnabled = false;
-                exportToolsPanel.UploadTexturesButton.Content = "Uploading...";
+                viewModel.IsUploadTexturesEnabled = false;
+                viewModel.UploadTexturesButtonContent = "Uploading...";
 
                 using var b2Service = new Upload.B2UploadService();
                 using var uploadStateService = new Data.UploadStateService();
@@ -315,8 +315,8 @@ namespace AssetProcessor {
                 logger.Error(ex, "Texture upload failed");
                 MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                exportToolsPanel.UploadTexturesButton.IsEnabled = true;
-                exportToolsPanel.UploadTexturesButton.Content = "Upload";
+                viewModel.IsUploadTexturesEnabled = true;
+                viewModel.UploadTexturesButtonContent = "Upload";
                 viewModel.ProgressValue = 0;
             }
         }

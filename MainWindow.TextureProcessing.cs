@@ -329,9 +329,9 @@ namespace AssetProcessor {
             int markedMaterials = viewModel.Materials.Count(m => m.ExportToServer);
             int markedTextures = viewModel.Textures.Count(t => t.ExportToServer);
 
-            exportToolsPanel.MarkedModelsCountText.Text = markedModels.ToString();
-            exportToolsPanel.MarkedMaterialsCountText.Text = markedMaterials.ToString();
-            exportToolsPanel.MarkedTexturesCountText.Text = markedTextures.ToString();
+            viewModel.MarkedModelsCount = markedModels.ToString();
+            viewModel.MarkedMaterialsCount = markedMaterials.ToString();
+            viewModel.MarkedTexturesCount = markedTextures.ToString();
         }
 
         #endregion

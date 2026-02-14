@@ -14,11 +14,11 @@
             <!-- Marked assets count -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                 <TextBlock Text="Marked:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
-                <TextBlock x:Name="MarkedModelsCountText" Text="0" VerticalAlignment="Center" Foreground="#FF2196F3" FontWeight="Bold"/>
+                <TextBlock Text="{Binding MarkedModelsCount}" VerticalAlignment="Center" Foreground="#FF2196F3" FontWeight="Bold"/>
                 <TextBlock Text=" models," VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock x:Name="MarkedMaterialsCountText" Text="0" VerticalAlignment="Center" Foreground="#FF4CAF50" FontWeight="Bold"/>
+                <TextBlock Text="{Binding MarkedMaterialsCount}" VerticalAlignment="Center" Foreground="#FF4CAF50" FontWeight="Bold"/>
                 <TextBlock Text=" materials," VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock x:Name="MarkedTexturesCountText" Text="0" VerticalAlignment="Center" Foreground="#FF9C27B0" FontWeight="Bold"/>
+                <TextBlock Text="{Binding MarkedTexturesCount}" VerticalAlignment="Center" Foreground="#FF9C27B0" FontWeight="Bold"/>
                 <TextBlock Text=" textures" VerticalAlignment="Center"/>
             </StackPanel>
 

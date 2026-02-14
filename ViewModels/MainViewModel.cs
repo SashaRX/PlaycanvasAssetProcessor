@@ -16,6 +16,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
 
 namespace AssetProcessor.ViewModels {
     public enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
@@ -135,6 +136,29 @@ namespace AssetProcessor.ViewModels {
 
         [ObservableProperty]
         private bool isTextureToolsVisible;
+
+        // Connection button states
+        [ObservableProperty]
+        private string connectionButtonContent = "Connect";
+
+        [ObservableProperty]
+        private string connectionButtonToolTip = "Connect to PlayCanvas and load projects";
+
+        [ObservableProperty]
+        private bool isConnectionButtonEnabled = true;
+
+        [ObservableProperty]
+        private Brush? connectionButtonBackground;
+
+        // Marked asset counts
+        [ObservableProperty]
+        private string markedModelsCount = "0";
+
+        [ObservableProperty]
+        private string markedMaterialsCount = "0";
+
+        [ObservableProperty]
+        private string markedTexturesCount = "0";
 
         [ObservableProperty]
         private bool isDarkThemeChecked;

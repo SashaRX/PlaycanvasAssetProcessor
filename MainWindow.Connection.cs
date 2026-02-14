@@ -64,16 +64,11 @@ namespace AssetProcessor {
                 bool hasSelection = !string.IsNullOrEmpty(viewModel.SelectedProjectId)
                     && !string.IsNullOrEmpty(viewModel.SelectedBranchId);
 
-                if (connectionPanel.DynamicConnectionButton == null) {
-                    logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
-                    return;
-                }
-
                 var buttonInfo = connectionStateService.GetButtonInfo(hasSelection);
-                connectionPanel.DynamicConnectionButton.Content = buttonInfo.Content;
-                connectionPanel.DynamicConnectionButton.ToolTip = buttonInfo.ToolTip;
-                connectionPanel.DynamicConnectionButton.IsEnabled = buttonInfo.IsEnabled;
-                connectionPanel.DynamicConnectionButton.Background = new SolidColorBrush(
+                viewModel.ConnectionButtonContent = buttonInfo.Content;
+                viewModel.ConnectionButtonToolTip = buttonInfo.ToolTip;
+                viewModel.IsConnectionButtonEnabled = buttonInfo.IsEnabled;
+                viewModel.ConnectionButtonBackground = new SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(buttonInfo.ColorR, buttonInfo.ColorG, buttonInfo.ColorB));
             });
         }
@@ -123,7 +118,7 @@ namespace AssetProcessor {
         /// </summary>
         private async Task RefreshFromServer() {
             try {
-                connectionPanel.DynamicConnectionButton.IsEnabled = false;
+                viewModel.IsConnectionButtonEnabled = false;
 
                 // Re-scan file statuses to detect deleted files
                 RescanFileStatuses();
@@ -146,7 +141,7 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 logService.LogError($"Error in RefreshFromServer: {ex}");
             } finally {
-                connectionPanel.DynamicConnectionButton.IsEnabled = true;
+                viewModel.IsConnectionButtonEnabled = true;
             }
         }
 
@@ -158,7 +153,7 @@ namespace AssetProcessor {
             try {
                 logService.LogInfo("Starting download from server");
                 viewModel.IsCancelEnabled = true;
-                connectionPanel.DynamicConnectionButton.IsEnabled = false;
+                viewModel.IsConnectionButtonEnabled = false;
 
                 if (cancellationTokenSource != null) {
                     bool hasServerUpdates = await CheckForUpdates();
@@ -189,7 +184,7 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
                 viewModel.IsCancelEnabled = false;
-                connectionPanel.DynamicConnectionButton.IsEnabled = true;
+                viewModel.IsConnectionButtonEnabled = true;
             }
         }
 

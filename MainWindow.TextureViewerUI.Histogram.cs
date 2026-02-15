@@ -21,14 +21,14 @@ namespace AssetProcessor {
                 PlotAreaBorderColor = OxyColor.FromRgb(borderColor.R, borderColor.G, borderColor.B),
                 PlotAreaBorderThickness = new OxyThickness(0)
             };
-            histogramPanel.HistogramPlotView.Model = emptyModel;
+            viewModel.HistogramPlotModel = emptyModel;
 
-            histogramPanel.HistogramMinTextBlock.Text = "0";
-            histogramPanel.HistogramMaxTextBlock.Text = "255";
-            histogramPanel.HistogramMeanTextBlock.Text = "127.5";
-            histogramPanel.HistogramMedianTextBlock.Text = "128";
-            histogramPanel.HistogramStdDevTextBlock.Text = "45.2";
-            histogramPanel.HistogramPixelsTextBlock.Text = "0";
+            viewModel.HistogramMin = "0";
+            viewModel.HistogramMax = "255";
+            viewModel.HistogramMean = "127.5";
+            viewModel.HistogramMedian = "128";
+            viewModel.HistogramStdDev = "45.2";
+            viewModel.HistogramPixels = "0";
         }
 
         private void UpdateHistogram(BitmapSource bitmapSource, bool isGray = false) {
@@ -46,17 +46,17 @@ namespace AssetProcessor {
         }
 
         private void ApplyHistogramResult(HistogramComputationResult result) {
-            histogramPanel.HistogramPlotView.Model = result.Model;
+            viewModel.HistogramPlotModel = result.Model;
             UpdateHistogramStatisticsUI(result.Statistics);
         }
 
         private void UpdateHistogramStatisticsUI(HistogramStatistics stats) {
-            histogramPanel.HistogramMinTextBlock.Text = $"{stats.Min:F0}";
-            histogramPanel.HistogramMaxTextBlock.Text = $"{stats.Max:F0}";
-            histogramPanel.HistogramMeanTextBlock.Text = $"{stats.Mean:F2}";
-            histogramPanel.HistogramMedianTextBlock.Text = $"{stats.Median:F0}";
-            histogramPanel.HistogramStdDevTextBlock.Text = $"{stats.StdDev:F2}";
-            histogramPanel.HistogramPixelsTextBlock.Text = $"{stats.TotalPixels:N0}";
+            viewModel.HistogramMin = $"{stats.Min:F0}";
+            viewModel.HistogramMax = $"{stats.Max:F0}";
+            viewModel.HistogramMean = $"{stats.Mean:F2}";
+            viewModel.HistogramMedian = $"{stats.Median:F0}";
+            viewModel.HistogramStdDev = $"{stats.StdDev:F2}";
+            viewModel.HistogramPixels = $"{stats.TotalPixels:N0}";
         }
 
         #endregion
@@ -64,8 +64,8 @@ namespace AssetProcessor {
         #region Histogram Correction
 
         private void HistogramCorrectionButton_Click(object sender, RoutedEventArgs e) {
-            if (sender is System.Windows.Controls.Primitives.ToggleButton button && D3D11TextureViewer?.Renderer != null) {
-                bool enabled = button.IsChecked ?? true;
+            if (D3D11TextureViewer?.Renderer != null) {
+                bool enabled = viewModel.IsHistogramCorrectionChecked;
                 D3D11TextureViewer.Renderer.SetHistogramCorrection(enabled);
 
                 AppSettings.Default.HistogramCorrectionEnabled = enabled;
@@ -79,16 +79,16 @@ namespace AssetProcessor {
         /// Updates the histogram correction button state based on whether current texture has histogram metadata.
         /// </summary>
         private void UpdateHistogramCorrectionButtonState() {
-            if (HistogramCorrectionButton == null || D3D11TextureViewer?.Renderer == null) {
+            if (D3D11TextureViewer?.Renderer == null) {
                 return;
             }
 
             bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-            HistogramCorrectionButton.IsEnabled = hasHistogram;
+            viewModel.IsHistogramCorrectionEnabled = hasHistogram;
 
             if (hasHistogram) {
                 bool savedEnabled = AppSettings.Default.HistogramCorrectionEnabled;
-                HistogramCorrectionButton.IsChecked = savedEnabled;
+                viewModel.IsHistogramCorrectionChecked = savedEnabled;
                 D3D11TextureViewer.Renderer.SetHistogramCorrection(savedEnabled);
                 logger.Info($"Histogram correction {(savedEnabled ? "enabled" : "disabled")} (restored from settings)");
 
@@ -97,12 +97,12 @@ namespace AssetProcessor {
                     string scaleStr = meta.IsPerChannel
                         ? $"[{meta.Scale[0]:F3}, {meta.Scale[1]:F3}, {meta.Scale[2]:F3}]"
                         : meta.Scale[0].ToString("F3");
-                    HistogramCorrectionButton.ToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
+                    viewModel.HistogramCorrectionToolTip = $"Histogram compensation\nScale: {scaleStr}\nOffset: {meta.Offset[0]:F3}";
                     logger.Info($"Histogram metadata found: scale={scaleStr}");
                 }
             } else {
-                HistogramCorrectionButton.IsChecked = false;
-                HistogramCorrectionButton.ToolTip = "No histogram metadata in this texture";
+                viewModel.IsHistogramCorrectionChecked = false;
+                viewModel.HistogramCorrectionToolTip = "No histogram metadata in this texture";
             }
         }
 

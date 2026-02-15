@@ -11,7 +11,8 @@
         <StackPanel Orientation="Vertical">
             <!-- Histogram Plot -->
             <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,0,0,4" Height="128">
-                <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" DefaultTrackerTemplate="{DynamicResource HistogramTrackerTemplate}" />
+                <oxy:PlotView Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" DefaultTrackerTemplate="{DynamicResource HistogramTrackerTemplate}"
+                              Model="{Binding HistogramPlotModel}"/>
             </Border>
 
             <!-- Histogram Statistics -->
@@ -31,24 +32,24 @@
 
                     <!-- Row 1 -->
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Min:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                    <TextBlock x:Name="HistogramMinTextBlock" Grid.Row="0" Grid.Column="1" Text="0" FontSize="9" Margin="0,0,8,2"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding HistogramMin}" FontSize="9" Margin="0,0,8,2"/>
 
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Max:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                    <TextBlock x:Name="HistogramMaxTextBlock" Grid.Row="0" Grid.Column="3" Text="255" FontSize="9" Margin="0,0,0,2"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding HistogramMax}" FontSize="9" Margin="0,0,0,2"/>
 
                     <!-- Row 2 -->
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Mean:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                    <TextBlock x:Name="HistogramMeanTextBlock" Grid.Row="1" Grid.Column="1" Text="127.5" FontSize="9" Margin="0,0,8,2"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HistogramMean}" FontSize="9" Margin="0,0,8,2"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="Median:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                    <TextBlock x:Name="HistogramMedianTextBlock" Grid.Row="1" Grid.Column="3" Text="128" FontSize="9" Margin="0,0,0,2"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding HistogramMedian}" FontSize="9" Margin="0,0,0,2"/>
 
                     <!-- Row 3 -->
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="StdDev:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,0"/>
-                    <TextBlock x:Name="HistogramStdDevTextBlock" Grid.Row="2" Grid.Column="1" Text="45.2" FontSize="9" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HistogramStdDev}" FontSize="9" Margin="0,0,8,0"/>
 
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Pixels:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,0"/>
-                    <TextBlock x:Name="HistogramPixelsTextBlock" Grid.Row="2" Grid.Column="3" Text="0" FontSize="9" Margin="0,0,0,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding HistogramPixels}" FontSize="9" Margin="0,0,0,0"/>
                 </Grid>
             </Border>
         </StackPanel>

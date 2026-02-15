@@ -867,7 +867,7 @@
                                         <ToggleButton x:Name="TileToggleButton" Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="False" Click="TileToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
 
                                         <!-- Histogram correction toggle button -->
-                                        <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>
+                                        <ToggleButton Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsEnabled="{Binding IsHistogramCorrectionEnabled}" IsChecked="{Binding IsHistogramCorrectionChecked}" Click="HistogramCorrectionButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2" ToolTip="{Binding HistogramCorrectionToolTip}"/>
                                     </StackPanel>
                                     <Border Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="{Binding IsMipmapSliderVisible, Converter={StaticResource BooleanToVisibilityConverter}}" HorizontalAlignment="Left">
                                         <StackPanel Orientation="Vertical">
@@ -888,7 +888,7 @@
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <controls:HistogramPanel x:Name="histogramPanel" Grid.Row="1"/>
+                        <controls:HistogramPanel Grid.Row="1"/>
 
                         <!-- Conversion Settings Panel -->
                         <Expander Grid.Row="2" Header="Conversion Settings"

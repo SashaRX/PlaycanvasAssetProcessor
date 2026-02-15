@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
+using OxyPlot;
 
 namespace AssetProcessor.ViewModels {
     public enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
@@ -296,6 +297,37 @@ namespace AssetProcessor.ViewModels {
 
         [ObservableProperty]
         private ServerAssetViewModel? selectedServerAsset;
+
+        // Histogram statistics
+        [ObservableProperty]
+        private string histogramMin = "0";
+
+        [ObservableProperty]
+        private string histogramMax = "255";
+
+        [ObservableProperty]
+        private string histogramMean = "127.5";
+
+        [ObservableProperty]
+        private string histogramMedian = "128";
+
+        [ObservableProperty]
+        private string histogramStdDev = "45.2";
+
+        [ObservableProperty]
+        private string histogramPixels = "0";
+
+        [ObservableProperty]
+        private PlotModel? histogramPlotModel;
+
+        [ObservableProperty]
+        private bool isHistogramCorrectionEnabled;
+
+        [ObservableProperty]
+        private bool isHistogramCorrectionChecked = true;
+
+        [ObservableProperty]
+        private string histogramCorrectionToolTip = "Histogram preprocessing compensation (denormalization)";
 
         public MainViewModel(
             IPlayCanvasService playCanvasService,

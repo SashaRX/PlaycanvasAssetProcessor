@@ -137,6 +137,12 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private bool isTextureToolsVisible;
 
+        [ObservableProperty]
+        private bool isGenerateOrmChecked = true;
+
+        [ObservableProperty]
+        private bool isGenerateLodsChecked = true;
+
         // Connection button states
         [ObservableProperty]
         private string connectionButtonContent = "Connect";
@@ -159,6 +165,9 @@ namespace AssetProcessor.ViewModels {
 
         [ObservableProperty]
         private string markedTexturesCount = "0";
+
+        [ObservableProperty]
+        private bool isAutoUploadEnabled;
 
         [ObservableProperty]
         private bool isDarkThemeChecked;
@@ -284,6 +293,9 @@ namespace AssetProcessor.ViewModels {
 
         [ObservableProperty]
         private string? currentProjectName;
+
+        [ObservableProperty]
+        private ServerAssetViewModel? selectedServerAsset;
 
         public MainViewModel(
             IPlayCanvasService playCanvasService,

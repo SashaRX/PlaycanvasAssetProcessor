@@ -39,16 +39,16 @@
                         Background="#FF9C27B0" Foreground="White" FontWeight="Bold"
                         ToolTip="Upload exported assets to cloud storage"/>
 
-                <CheckBox x:Name="GenerateORMCheckBox" Content="ORM" VerticalAlignment="Center" Margin="5,0,3,0"
-                          IsChecked="True"
+                <CheckBox Content="ORM" VerticalAlignment="Center" Margin="5,0,3,0"
+                          IsChecked="{Binding IsGenerateOrmChecked, Mode=TwoWay}"
                           ToolTip="Generate ORM packed textures (AO+Gloss+Metallic)"/>
 
-                <CheckBox x:Name="GenerateLODsCheckBox" Content="LODs" VerticalAlignment="Center" Margin="0,0,3,0"
-                          IsChecked="True"
+                <CheckBox Content="LODs" VerticalAlignment="Center" Margin="0,0,3,0"
+                          IsChecked="{Binding IsGenerateLodsChecked, Mode=TwoWay}"
                           ToolTip="Generate LOD chain for models"/>
 
-                <CheckBox x:Name="AutoUploadCheckBox" Content="Auto" VerticalAlignment="Center" Margin="0,0,0,0"
-                          IsChecked="False"
+                <CheckBox Content="Auto" VerticalAlignment="Center" Margin="0,0,0,0"
+                          IsChecked="{Binding IsAutoUploadEnabled, Mode=TwoWay}"
                           ToolTip="Automatically upload assets after export"/>
             </StackPanel>
 

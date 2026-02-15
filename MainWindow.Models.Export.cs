@@ -70,8 +70,8 @@ namespace AssetProcessor {
             var gltfPackPath = string.IsNullOrWhiteSpace(modelSettings.GltfPackExecutablePath)
                 ? "gltfpack.exe" : modelSettings.GltfPackExecutablePath;
 
-            bool generateORM = exportToolsPanel.GenerateORMCheckBox.IsChecked ?? true;
-            bool generateLODs = exportToolsPanel.GenerateLODsCheckBox.IsChecked ?? true;
+            bool generateORM = viewModel.IsGenerateOrmChecked;
+            bool generateLODs = viewModel.IsGenerateLodsChecked;
 
             try {
                 viewModel.IsExportEnabled = false;
@@ -259,7 +259,7 @@ namespace AssetProcessor {
 
                 var exportMessage = $"Export completed!\n\nSuccess: {successCount}\nFailed: {failCount}\n\nOutput: {pipeline.GetContentBasePath()}";
 
-                if (successCount > 0 && (exportToolsPanel.AutoUploadCheckBox.IsChecked ?? false)) {
+                if (successCount > 0 && viewModel.IsAutoUploadEnabled) {
                     var shouldUpload = MessageBox.Show(
                         exportMessage + "\n\nUpload to cloud now?",
                         "Export Result", MessageBoxButton.YesNo, MessageBoxImage.Question);

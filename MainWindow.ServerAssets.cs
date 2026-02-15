@@ -27,8 +27,6 @@ namespace AssetProcessor {
 
         #region Server File Info
 
-        private ViewModels.ServerAssetViewModel? _selectedServerAsset;
-
         /// <summary>
         /// Wires event handlers for ServerFileInfoPanel controls.
         /// Called from MainWindow constructor after InitializeComponent.
@@ -42,50 +40,23 @@ namespace AssetProcessor {
         /// Updates the server file info panel with the selected asset
         /// </summary>
         public void UpdateServerFileInfo(ViewModels.ServerAssetViewModel? asset) {
-            _selectedServerAsset = asset;
-
-            // Safety check - panel controls may not be ready
-            if (serverFileInfoPanel?.ServerFileNameText == null) return;
-
-            if (asset == null) {
-                serverFileInfoPanel.ServerFileNameText.Text = "-";
-                serverFileInfoPanel.ServerFileTypeText.Text = "-";
-                serverFileInfoPanel.ServerFileSizeText.Text = "-";
-                serverFileInfoPanel.ServerFileSyncStatusText.Text = "-";
-                serverFileInfoPanel.ServerFileSyncStatusText.Foreground = System.Windows.Media.Brushes.Gray;
-                serverFileInfoPanel.ServerFileUploadedText.Text = "-";
-                serverFileInfoPanel.ServerFileSha1Text.Text = "-";
-                serverFileInfoPanel.ServerFileRemotePathText.Text = "-";
-                serverFileInfoPanel.ServerFileCdnUrlText.Text = "-";
-                serverFileInfoPanel.ServerFileLocalPathText.Text = "-";
-                return;
-            }
-
-            serverFileInfoPanel.ServerFileNameText.Text = asset.FileName;
-            serverFileInfoPanel.ServerFileTypeText.Text = asset.FileType;
-            serverFileInfoPanel.ServerFileSizeText.Text = asset.SizeDisplay;
-            serverFileInfoPanel.ServerFileSyncStatusText.Text = asset.SyncStatus;
-            serverFileInfoPanel.ServerFileSyncStatusText.Foreground = asset.SyncStatusColor;
-            serverFileInfoPanel.ServerFileUploadedText.Text = asset.UploadedAtDisplay;
-            serverFileInfoPanel.ServerFileSha1Text.Text = asset.ContentSha1;
-            serverFileInfoPanel.ServerFileRemotePathText.Text = asset.RemotePath;
-            serverFileInfoPanel.ServerFileCdnUrlText.Text = asset.CdnUrl ?? "-";
-            serverFileInfoPanel.ServerFileLocalPathText.Text = asset.LocalPath ?? "Not found locally";
+            viewModel.SelectedServerAsset = asset;
         }
 
         private void CopyServerUrlButton_Click(object sender, RoutedEventArgs e) {
-            if (_selectedServerAsset != null && !string.IsNullOrEmpty(_selectedServerAsset.CdnUrl)) {
-                if (Helpers.ClipboardHelper.SetText(_selectedServerAsset.CdnUrl)) {
-                    logService.LogInfo($"Copied CDN URL: {_selectedServerAsset.CdnUrl}");
+            var asset = viewModel.SelectedServerAsset;
+            if (asset != null && !string.IsNullOrEmpty(asset.CdnUrl)) {
+                if (Helpers.ClipboardHelper.SetText(asset.CdnUrl)) {
+                    logService.LogInfo($"Copied CDN URL: {asset.CdnUrl}");
                 }
             }
         }
 
         private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {
-            if (_selectedServerAsset == null) return;
+            if (viewModel.SelectedServerAsset == null) return;
 
             var result = MessageBox.Show(
-                $"Are you sure you want to delete '{_selectedServerAsset.FileName}' from the server?\n\nThis action cannot be undone.",
+                $"Are you sure you want to delete '{viewModel.SelectedServerAsset.FileName}' from the server?\n\nThis action cannot be undone.",
                 "Confirm Delete",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -108,15 +79,15 @@ namespace AssetProcessor {
                 };
 
                 await b2Service.AuthorizeAsync(settings);
-                var success = await b2Service.DeleteFileAsync(_selectedServerAsset.RemotePath);
+                var success = await b2Service.DeleteFileAsync(viewModel.SelectedServerAsset.RemotePath);
 
                 if (success) {
-                    logService.LogInfo($"Deleted: {_selectedServerAsset.RemotePath}");
+                    logService.LogInfo($"Deleted: {viewModel.SelectedServerAsset.RemotePath}");
                     UpdateServerFileInfo(null);
                     // Refresh the server assets panel
                     await ServerAssetsPanel.RefreshServerAssetsAsync();
                 } else {
-                    logService.LogError($"Failed to delete: {_selectedServerAsset.RemotePath}");
+                    logService.LogError($"Failed to delete: {viewModel.SelectedServerAsset.RemotePath}");
                 }
             } catch (Exception ex) {
                 logService.LogError($"Error deleting file: {ex.Message}");

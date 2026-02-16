@@ -31,7 +31,7 @@ namespace AssetProcessor {
         private void UpdatePivotVisibility() {
             if (viewPort3d == null) return;
 
-            bool showPivot = ShowPivotCheckBox.IsChecked == true;
+            bool showPivot = viewModel.IsShowPivotChecked;
 
             if (_pivotVisual != null && viewPort3d.Children.Contains(_pivotVisual)) {
                 viewPort3d.Children.Remove(_pivotVisual);
@@ -160,7 +160,7 @@ namespace AssetProcessor {
             if (_isWireframeMode) UpdateModelWireframe();
             if (_isZUp) ApplyUpVectorTransform();
             UpdatePivotVisibility();
-            if (ShowHumanCheckBox?.IsChecked == true) UpdateHumanSilhouette();
+            if (viewModel.IsShowHumanChecked) UpdateHumanSilhouette();
         }
 
         #endregion

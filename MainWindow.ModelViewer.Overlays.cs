@@ -15,7 +15,7 @@ namespace AssetProcessor {
         #region Wireframe
 
         private void ShowWireframeCheckBox_Changed(object sender, RoutedEventArgs e) {
-            _isWireframeMode = ShowWireframeCheckBox.IsChecked == true;
+            _isWireframeMode = viewModel.IsShowWireframeChecked;
             UpdateModelWireframe();
         }
 
@@ -121,7 +121,7 @@ namespace AssetProcessor {
         private void ShowHumanCheckBox_Changed(object sender, RoutedEventArgs e) {
             if (viewPort3d == null) return;
 
-            bool showHuman = ShowHumanCheckBox.IsChecked == true;
+            bool showHuman = viewModel.IsShowHumanChecked;
 
             if (showHuman) {
                 UpdateHumanSilhouette();

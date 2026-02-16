@@ -271,6 +271,64 @@ namespace AssetProcessor.ViewModels {
         [ObservableProperty]
         private string lodInfoText = "";
 
+        [ObservableProperty]
+        private double lodSliderMaximum = 3;
+
+        [ObservableProperty]
+        private double lodSliderValue;
+
+        [ObservableProperty]
+        private bool isLodSliderEnabled;
+
+        [ObservableProperty]
+        private bool isShowingFbxSource = true;
+
+        // Preview source radio buttons
+        [ObservableProperty]
+        private bool isPreviewSourceOriginalEnabled;
+
+        [ObservableProperty]
+        private bool isPreviewSourceKtxEnabled;
+
+        [ObservableProperty]
+        private bool isPreviewSourceOriginalChecked;
+
+        [ObservableProperty]
+        private bool isPreviewSourceKtxChecked;
+
+        // Texture viewer toggle buttons
+        [ObservableProperty]
+        private bool isFilterEnabled = true;
+
+        [ObservableProperty]
+        private bool isTilingEnabled;
+
+        // Model viewer checkboxes
+        [ObservableProperty]
+        private bool isShowPivotChecked;
+
+        [ObservableProperty]
+        private bool isShowWireframeChecked;
+
+        [ObservableProperty]
+        private bool isShowHumanChecked = true;
+
+        // Channel filter buttons
+        [ObservableProperty]
+        private bool isRChannelChecked;
+
+        [ObservableProperty]
+        private bool isGChannelChecked;
+
+        [ObservableProperty]
+        private bool isBChannelChecked;
+
+        [ObservableProperty]
+        private bool isAChannelChecked;
+
+        [ObservableProperty]
+        private bool isNormalChannelChecked;
+
         // Viewer toggle button
         [ObservableProperty]
         private string toggleViewButtonContent = "►";

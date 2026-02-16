@@ -354,8 +354,8 @@ namespace AssetProcessor {
                     }
                 }
 
-                LodSlider.Maximum = maxLod;
-                LodSlider.IsEnabled = maxLod > 0;
+                viewModel.LodSliderMaximum = maxLod;
+                viewModel.IsLodSliderEnabled = maxLod > 0;
             });
         }
 
@@ -386,8 +386,8 @@ namespace AssetProcessor {
                 }
             }
 
-            LodSlider.Maximum = maxLod;
-            LodSlider.Value = (int)currentLod;
+            viewModel.LodSliderMaximum = maxLod;
+            viewModel.LodSliderValue = (int)currentLod;
             viewModel.LodValueText = $"LOD{(int)currentLod}";
 
             if (_currentLodInfos.TryGetValue(currentLod, out var lodInfo)) {
@@ -398,8 +398,6 @@ namespace AssetProcessor {
         }
 
         private void LodSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (LodSlider == null) return;
-
             int lodIndex = (int)e.NewValue;
             var lodLevel = (LodLevel)lodIndex;
 
@@ -468,10 +466,8 @@ namespace AssetProcessor {
 
                 _isShowingFbx = showFbx;
 
-                SourceFbxButton.FontWeight = showFbx ? FontWeights.Bold : FontWeights.Normal;
-                SourceGlbButton.FontWeight = showFbx ? FontWeights.Normal : FontWeights.Bold;
-
-                LodSlider.IsEnabled = !showFbx;
+                viewModel.IsShowingFbxSource = showFbx;
+                viewModel.IsLodSliderEnabled = !showFbx;
 
                 if (showFbx) {
                     await UiAsyncHelper.ExecuteAsync(

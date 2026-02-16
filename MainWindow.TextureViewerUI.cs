@@ -28,16 +28,12 @@ namespace AssetProcessor {
         }
 
         private void FilterToggleButton_Click(object sender, RoutedEventArgs e) {
-            if (sender is ToggleButton button) {
-                bool useLinearFilter = button.IsChecked ?? true;
-                D3D11TextureViewer?.Renderer?.SetFilter(useLinearFilter);
-            }
+            D3D11TextureViewer?.Renderer?.SetFilter(viewModel.IsFilterEnabled);
         }
 
         private void TileToggleButton_Click(object sender, RoutedEventArgs e) {
-            if (sender is ToggleButton button && D3D11TextureViewer?.Renderer != null) {
-                bool enableTiling = button.IsChecked ?? false;
-                D3D11TextureViewer.Renderer.SetTiling(enableTiling);
+            if (D3D11TextureViewer?.Renderer != null) {
+                D3D11TextureViewer.Renderer.SetTiling(viewModel.IsTilingEnabled);
                 D3D11TextureViewer.Renderer.Render();
             }
         }
@@ -171,16 +167,12 @@ namespace AssetProcessor {
         #region Preview Source Mode
 
         private void UpdatePreviewSourceControls() {
-            if (PreviewSourceOriginalRadioButton == null || PreviewSourceKtxRadioButton == null) {
-                return;
-            }
-
             texturePreviewService.IsUpdatingPreviewSourceControls = true;
             try {
-                PreviewSourceOriginalRadioButton.IsEnabled = texturePreviewService.IsSourcePreviewAvailable;
-                PreviewSourceKtxRadioButton.IsEnabled = texturePreviewService.IsKtxPreviewAvailable;
-                PreviewSourceOriginalRadioButton.IsChecked = texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source;
-                PreviewSourceKtxRadioButton.IsChecked = texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
+                viewModel.IsPreviewSourceOriginalEnabled = texturePreviewService.IsSourcePreviewAvailable;
+                viewModel.IsPreviewSourceKtxEnabled = texturePreviewService.IsKtxPreviewAvailable;
+                viewModel.IsPreviewSourceOriginalChecked = texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source;
+                viewModel.IsPreviewSourceKtxChecked = texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
             } finally {
                 texturePreviewService.IsUpdatingPreviewSourceControls = false;
             }
@@ -191,10 +183,12 @@ namespace AssetProcessor {
                 return;
             }
 
-            if (sender == PreviewSourceOriginalRadioButton) {
-                SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
-            } else if (sender == PreviewSourceKtxRadioButton) {
-                SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
+            if (sender is RadioButton rb) {
+                if (rb.Content is string content && content == "KTX2") {
+                    SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
+                } else {
+                    SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
+                }
             }
         }
 

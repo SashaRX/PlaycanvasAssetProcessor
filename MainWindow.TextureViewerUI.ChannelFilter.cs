@@ -15,16 +15,16 @@ namespace AssetProcessor {
             }
 
             if (sender is ToggleButton button) {
-                string? channel = button.Tag.ToString();
+                string? channel = button.Tag?.ToString();
                 if (button.IsChecked == true) {
                     // Снять все остальные кнопки (including NormalButton)
                     isUpdatingChannelButtons = true;
                     try {
-                        RChannelButton.IsChecked = button == RChannelButton;
-                        GChannelButton.IsChecked = button == GChannelButton;
-                        BChannelButton.IsChecked = button == BChannelButton;
-                        AChannelButton.IsChecked = button == AChannelButton;
-                        NormalButton.IsChecked = button == NormalButton;
+                        viewModel.IsRChannelChecked = channel == "R";
+                        viewModel.IsGChannelChecked = channel == "G";
+                        viewModel.IsBChannelChecked = channel == "B";
+                        viewModel.IsAChannelChecked = channel == "A";
+                        viewModel.IsNormalChannelChecked = channel == "Normal";
                     } finally {
                         isUpdatingChannelButtons = false;
                     }
@@ -46,11 +46,12 @@ namespace AssetProcessor {
         private void UpdateChannelButtonsState() {
             isUpdatingChannelButtons = true;
             try {
-                RChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "R";
-                GChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "G";
-                BChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "B";
-                AChannelButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "A";
-                NormalButton.IsChecked = texturePreviewService.CurrentActiveChannelMask == "Normal";
+                var mask = texturePreviewService.CurrentActiveChannelMask;
+                viewModel.IsRChannelChecked = mask == "R";
+                viewModel.IsGChannelChecked = mask == "G";
+                viewModel.IsBChannelChecked = mask == "B";
+                viewModel.IsAChannelChecked = mask == "A";
+                viewModel.IsNormalChannelChecked = mask == "Normal";
             } finally {
                 isUpdatingChannelButtons = false;
             }

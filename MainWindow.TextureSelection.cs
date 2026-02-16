@@ -23,12 +23,8 @@ namespace AssetProcessor {
         /// Handles panel visibility changes requested by TextureSelectionViewModel
         /// </summary>
         private void OnPanelVisibilityRequested(object? sender, PanelVisibilityRequestEventArgs e) {
-            if (ConversionSettingsExpander != null) {
-                ConversionSettingsExpander.Visibility = e.ShowConversionSettingsPanel ? Visibility.Visible : Visibility.Collapsed;
-            }
-            if (ORMPanel != null) {
-                ORMPanel.Visibility = e.ShowORMPanel ? Visibility.Visible : Visibility.Collapsed;
-            }
+            viewModel.IsConversionSettingsVisible = e.ShowConversionSettingsPanel;
+            viewModel.IsORMPanelVisible = e.ShowORMPanel;
         }
 
         /// <summary>
@@ -86,14 +82,14 @@ namespace AssetProcessor {
             ClearD3D11Viewer();
 
             // Update texture info
-            TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
-            TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+            viewModel.TextureInfoName = "Texture Name: " + ormTexture.Name;
+            viewModel.TextureInfoColorSpace = "Color Space: Linear (ORM)";
 
             if (!isPacked || string.IsNullOrEmpty(ormTexture.Path)) {
                 // Not packed yet - show info
-                TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
-                TextureSizeTextBlock.Text = "Size: N/A";
-                TextureFormatTextBlock.Text = "Format: Not packed";
+                viewModel.TextureInfoResolution = "Resolution: Not packed yet";
+                viewModel.TextureInfoSize = "Size: N/A";
+                viewModel.TextureInfoFormat = "Format: Not packed";
                 return;
             }
 
@@ -157,7 +153,7 @@ namespace AssetProcessor {
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     if (ct.IsCancellationRequested) return;
                     texturePreviewService.IsKtxPreviewAvailable = false;
-                    TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
+                    viewModel.TextureInfoFormat = "Format: KTX2 (preview unavailable)";
                     logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
                 }));
             }
@@ -177,18 +173,18 @@ namespace AssetProcessor {
             }
 
             // Update texture info
-            TextureNameTextBlock.Text = "Texture Name: " + texture.Name;
-            TextureResolutionTextBlock.Text = "Resolution: " + string.Join("x", texture.Resolution);
+            viewModel.TextureInfoName = "Texture Name: " + texture.Name;
+            viewModel.TextureInfoResolution = "Resolution: " + string.Join("x", texture.Resolution);
             AssetProcessor.Helpers.SizeConverter sizeConverter = new();
             object size = AssetProcessor.Helpers.SizeConverter.Convert(texture.Size) ?? "Unknown size";
-            TextureSizeTextBlock.Text = "Size: " + size;
+            viewModel.TextureInfoSize = "Size: " + size;
 
             // Add color space info
             bool isSRGB = IsSRGBTexture(texture);
             string colorSpace = isSRGB ? "sRGB" : "Linear";
             string textureType = texture.TextureType ?? "Unknown";
-            TextureColorSpaceTextBlock.Text = $"Color Space: {colorSpace} ({textureType})";
-            TextureFormatTextBlock.Text = "Format: Loading...";
+            viewModel.TextureInfoColorSpace = $"Color Space: {colorSpace} ({textureType})";
+            viewModel.TextureInfoFormat = "Format: Loading...";
 
             // Load conversion settings for this texture
             logService.LogInfo($"[LoadTexturePreview] Loading conversion settings for: {texture.Name}");

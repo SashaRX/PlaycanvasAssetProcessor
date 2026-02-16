@@ -1,4 +1,5 @@
 using AssetProcessor.Exceptions;
+using AssetProcessor.Helpers;
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
@@ -25,16 +26,24 @@ namespace AssetProcessor {
     /// </summary>
     public partial class MainWindow {
 
+        /// <summary>
+        /// Wires event handlers for ConnectionPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeConnectionPanel() {
+            connectionPanel.DynamicConnectionButton.Click += DynamicConnectionButton_Click;
+            connectionPanel.CreateBranchButton.Click += CreateBranchButton_Click;
+        }
+
         #region Connection Status
 
         private void UpdateConnectionStatus(bool isConnected, string message = "") {
             Dispatcher.Invoke(() => {
+                viewModel.IsConnected = isConnected;
                 if (isConnected) {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Green);
+                    viewModel.ConnectionStatusText = string.IsNullOrEmpty(message) ? "Connected" : $"Connected: {message}";
                 } else {
-                    ConnectionStatusTextBlock.Text = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
-                    ConnectionStatusTextBlock.Foreground = new SolidColorBrush(Colors.Red);
+                    viewModel.ConnectionStatusText = string.IsNullOrEmpty(message) ? "Disconnected" : $"Error: {message}";
                 }
             });
         }
@@ -55,19 +64,12 @@ namespace AssetProcessor {
                 bool hasSelection = !string.IsNullOrEmpty(viewModel.SelectedProjectId)
                     && !string.IsNullOrEmpty(viewModel.SelectedBranchId);
 
-                if (DynamicConnectionButton == null) {
-                    logger.Warn("ApplyConnectionButtonState: DynamicConnectionButton is null!");
-                    return;
-                }
-
                 var buttonInfo = connectionStateService.GetButtonInfo(hasSelection);
-                DynamicConnectionButton.Content = buttonInfo.Content;
-                DynamicConnectionButton.ToolTip = buttonInfo.ToolTip;
-                DynamicConnectionButton.IsEnabled = buttonInfo.IsEnabled;
-                DynamicConnectionButton.Background = new SolidColorBrush(
+                viewModel.ConnectionButtonContent = buttonInfo.Content;
+                viewModel.ConnectionButtonToolTip = buttonInfo.ToolTip;
+                viewModel.IsConnectionButtonEnabled = buttonInfo.IsEnabled;
+                viewModel.ConnectionButtonBackground = new SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(buttonInfo.ColorR, buttonInfo.ColorG, buttonInfo.ColorB));
-
-                logger.Info($"ApplyConnectionButtonState: Set to {buttonInfo.Content} (enabled={buttonInfo.IsEnabled})");
             });
         }
 
@@ -80,30 +82,23 @@ namespace AssetProcessor {
         /// </summary>
         private async void DynamicConnectionButton_Click(object sender, RoutedEventArgs e) {
             var currentState = connectionStateService.CurrentState;
-            logger.Info($"DynamicConnectionButton_Click: Button clicked, current state: {currentState}");
+            logger.Info($"DynamicConnectionButton_Click: current state: {currentState}");
 
-            try {
+            await UiAsyncHelper.ExecuteAsync(async () => {
                 switch (currentState) {
                     case ConnectionState.Disconnected:
-                        logger.Info("DynamicConnectionButton_Click: Calling ConnectToPlayCanvas");
                         ConnectToPlayCanvas();
                         break;
 
                     case ConnectionState.UpToDate:
-                        logger.Info("DynamicConnectionButton_Click: Calling RefreshFromServer");
                         await RefreshFromServer();
                         break;
 
                     case ConnectionState.NeedsDownload:
-                        logger.Info("DynamicConnectionButton_Click: Calling DownloadFromServer");
                         await DownloadFromServer();
                         break;
                 }
-            } catch (Exception ex) {
-                logger.Error(ex, "Error in DynamicConnectionButton_Click");
-                logService.LogError($"Error in DynamicConnectionButton_Click: {ex}");
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            }, nameof(DynamicConnectionButton_Click), showMessageBox: true);
         }
 
         /// <summary>
@@ -123,7 +118,7 @@ namespace AssetProcessor {
         /// </summary>
         private async Task RefreshFromServer() {
             try {
-                DynamicConnectionButton.IsEnabled = false;
+                viewModel.IsConnectionButtonEnabled = false;
 
                 // Re-scan file statuses to detect deleted files
                 RescanFileStatuses();
@@ -146,7 +141,7 @@ namespace AssetProcessor {
                 MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 logService.LogError($"Error in RefreshFromServer: {ex}");
             } finally {
-                DynamicConnectionButton.IsEnabled = true;
+                viewModel.IsConnectionButtonEnabled = true;
             }
         }
 
@@ -156,57 +151,40 @@ namespace AssetProcessor {
         /// </summary>
         private async Task DownloadFromServer() {
             try {
-                logger.Info("DownloadFromServer: Starting download");
-                logService.LogInfo("DownloadFromServer: Starting download from server");
-                CancelButton.IsEnabled = true;
-                DynamicConnectionButton.IsEnabled = false;
+                logService.LogInfo("Starting download from server");
+                viewModel.IsCancelEnabled = true;
+                viewModel.IsConnectionButtonEnabled = false;
 
                 if (cancellationTokenSource != null) {
-                    // Check if there are actual server updates (not just missing local files)
                     bool hasServerUpdates = await CheckForUpdates();
 
                     if (hasServerUpdates) {
-                        // Server has new/changed assets - need to sync the list first
-                        logger.Info("DownloadFromServer: Server has updates, syncing assets list");
-                        logService.LogInfo("DownloadFromServer: Server has updates, syncing assets list");
+                        logService.LogInfo("Server has updates, syncing assets list");
                         await TryConnect(cancellationTokenSource.Token);
                     } else {
-                        logger.Info("DownloadFromServer: No server updates, downloading missing files only");
-                        logService.LogInfo("DownloadFromServer: No server updates, downloading missing files only");
+                        logService.LogInfo("No server updates, downloading missing files only");
                     }
 
-                    // Download files (textures, models, materials)
-                    logger.Info("DownloadFromServer: Starting file downloads");
-                    logService.LogInfo("DownloadFromServer: Starting file downloads");
                     await Download(null, null);
-                    logger.Info("DownloadFromServer: File downloads completed");
-                    logService.LogInfo("DownloadFromServer: File downloads completed");
 
-                    // Check final state
                     bool stillHasUpdates = await CheckForUpdates();
                     bool stillHasMissingFiles = HasMissingFiles();
 
                     if (stillHasUpdates || stillHasMissingFiles) {
-                        logger.Info("DownloadFromServer: Still has updates or missing files - keeping Download button");
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                     } else {
-                        logger.Info("DownloadFromServer: Project is up to date - setting button to Refresh");
-                        logService.LogInfo("DownloadFromServer: Project is up to date - setting button to Refresh");
+                        logService.LogInfo("Download complete, project is up to date");
                         UpdateConnectionButton(ConnectionState.UpToDate);
                     }
-                    logger.Info("DownloadFromServer: Button state updated");
                 } else {
-                    logger.Warn("DownloadFromServer: cancellationTokenSource is null!");
-                    logService.LogError("DownloadFromServer: cancellationTokenSource is null!");
+                    logger.Warn("DownloadFromServer: cancellationTokenSource is null");
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in DownloadFromServer");
                 MessageBox.Show($"Error downloading: {ex.Message}", "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                logService.LogError($"Error in DownloadFromServer: {ex}");
             } finally {
-                CancelButton.IsEnabled = false;
-                DynamicConnectionButton.IsEnabled = true;
-                logger.Info("DownloadFromServer: Completed");
+                viewModel.IsCancelEnabled = false;
+                viewModel.IsConnectionButtonEnabled = true;
             }
         }
 
@@ -275,52 +253,37 @@ namespace AssetProcessor {
 
         private async Task CheckProjectState() {
             try {
-                logger.Info("CheckProjectState: Starting");
-                logService.LogInfo("CheckProjectState: Starting project state check");
-
                 if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
-                    logger.Warn("CheckProjectState: projectFolderPath or projectName is empty");
-                    logService.LogInfo("CheckProjectState: projectFolderPath or projectName is empty - setting to NeedsDownload");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
                 string assetsListPath = Path.Combine(ProjectFolderPath!, "assets_list.json");
-                logger.Info($"CheckProjectState: Checking for assets_list.json at {assetsListPath}");
 
                 if (!File.Exists(assetsListPath)) {
-                    logger.Info("CheckProjectState: Project not downloaded yet - assets_list.json not found");
-                    logService.LogInfo("Project not downloaded yet - assets_list.json not found");
+                    logService.LogInfo("Project not downloaded yet — assets_list.json not found");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
-                logService.LogInfo("Project found, loading local assets...");
-                logger.Info("CheckProjectState: Loading local assets...");
+                logService.LogInfo("Loading local assets...");
                 await LoadAssetsFromJsonFileAsync();
 
-                // Initialize Master Materials context (sync happens in OnAssetsLoaded when materials are populated)
                 if (!string.IsNullOrEmpty(ProjectFolderPath)) {
                     await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
                 }
 
-                logService.LogInfo("Checking for updates...");
-                logger.Info("CheckProjectState: Checking for updates on server");
                 bool hasUpdates = await CheckForUpdates();
-
-                // Also check for missing files locally (status "On Server" means file doesn't exist)
                 bool hasMissingFiles = HasMissingFiles();
 
                 if (hasUpdates || hasMissingFiles) {
                     string reason = hasUpdates && hasMissingFiles
                         ? "updates available and missing files"
-                        : hasUpdates ? "updates available on server" : "missing files locally";
-                    logger.Info($"CheckProjectState: {reason} - setting button to Download");
+                        : hasUpdates ? "updates available" : "missing files";
                     logService.LogInfo($"CheckProjectState: {reason}");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
-                    logger.Info("CheckProjectState: Project is up to date - setting button to Refresh");
-                    logService.LogInfo("CheckProjectState: Project is up to date - setting button to Refresh");
+                    logService.LogInfo("Project is up to date");
                     UpdateConnectionButton(ConnectionState.UpToDate);
                 }
             } catch (Exception ex) {
@@ -506,26 +469,17 @@ namespace AssetProcessor {
         /// </summary>
         private async Task InitializeOnStartup() {
             try {
-                logger.Info("=== InitializeOnStartup: Starting ===");
-                logService.LogInfo("=== Initializing on startup ===");
-
-                // Check for API key and username
                 if (!credentialsService.HasStoredCredentials) {
-                    logger.Info("InitializeOnStartup: No API key or username - showing Connect button");
-                    logService.LogInfo("No API key or username - showing Connect button");
+                    logService.LogInfo("No API key or username — showing Connect button");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
 
-                // Connect to server and load project list
-                logger.Info("InitializeOnStartup: Connecting to PlayCanvas server...");
                 logService.LogInfo("Connecting to PlayCanvas server...");
                 await LoadLastSettings();
-                logger.Info("InitializeOnStartup: LoadLastSettings completed");
-
             } catch (Exception ex) {
                 logger.Error(ex, "Error during startup initialization");
-                logService.LogError($"Error during startup initialization: {ex.Message}");
+                logService.LogError($"Startup error: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.Disconnected);
             }
         }
@@ -536,41 +490,29 @@ namespace AssetProcessor {
         /// </summary>
         private async Task SmartLoadAssets() {
             try {
-                logger.Info("=== SmartLoadAssets: Starting ===");
-
                 string? selectedProjectId = viewModel.SelectedProjectId;
                 string? selectedBranchId = viewModel.SelectedBranchId;
                 if (string.IsNullOrEmpty(selectedProjectId) || string.IsNullOrEmpty(selectedBranchId)) {
-                    logger.Warn("SmartLoadAssets: No project or branch selected");
                     UpdateConnectionButton(ConnectionState.Disconnected);
                     return;
                 }
 
                 if (string.IsNullOrEmpty(ProjectFolderPath)) {
-                    logService.LogInfo("Project folder path is empty");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                     return;
                 }
 
                 // Initialize Master Materials context BEFORE loading assets
-                // so config is ready when OnAssetsLoaded calls SyncMaterialMasterMappings
-                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
-                    logger.Info("SmartLoadAssets: Initializing Master Materials context");
-                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                    logger.Info("SmartLoadAssets: Master Materials context initialized");
-                }
+                await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
 
-                // Try to load local assets
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
                 if (assetsLoaded) {
-                    // Local assets loaded, now check for server updates
                     if (!TryGetApiKey(out string apiKey)) {
                         UpdateConnectionButton(ConnectionState.NeedsDownload);
                         return;
                     }
 
-                    // Use service to check for updates
                     var checkResult = await projectConnectionService.CheckForUpdatesAsync(
                         ProjectFolderPath,
                         selectedProjectId,
@@ -584,19 +526,12 @@ namespace AssetProcessor {
                         return;
                     }
 
-                    if (checkResult.HasUpdates) {
-                        logger.Info("SmartLoadAssets: Updates available on server");
-                        UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    } else {
-                        logger.Info("SmartLoadAssets: Project is up to date");
-                        UpdateConnectionButton(ConnectionState.UpToDate);
-                    }
+                    UpdateConnectionButton(checkResult.HasUpdates
+                        ? ConnectionState.NeedsDownload
+                        : ConnectionState.UpToDate);
                 } else {
-                    // No local assets - need to download
-                    logger.Info("SmartLoadAssets: No local assets found - need to download");
                     UpdateConnectionButton(ConnectionState.NeedsDownload);
                 }
-
             } catch (Exception ex) {
                 logger.Error(ex, "Error in SmartLoadAssets");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
@@ -605,8 +540,6 @@ namespace AssetProcessor {
 
         private async Task LoadLastSettings() {
             try {
-                logger.Info("LoadLastSettings: Starting");
-
                 if (!TryGetApiKey(out string apiKey)) {
                     throw new Exception("API key is null or empty after decryption");
                 }
@@ -618,7 +551,8 @@ namespace AssetProcessor {
                     throw new Exception("Username is null or empty");
                 }
 
-                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
+                ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(
+                    username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 if (string.IsNullOrEmpty(projectsResult.UserId)) {
                     throw new Exception("User ID is null or empty");
                 }
@@ -635,10 +569,8 @@ namespace AssetProcessor {
                     try {
                         if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
                             viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
-                            logger.Info($"LoadLastSettings: Selected project: {projectsResult.SelectedProjectId}");
                         } else if (viewModel.Projects.Count > 0) {
                             viewModel.SelectedProjectId = viewModel.Projects[0].Key;
-                            logger.Info("LoadLastSettings: Selected first project");
                         } else {
                             viewModel.SelectedProjectId = null;
                         }
@@ -648,11 +580,7 @@ namespace AssetProcessor {
 
                     if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
                         await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);
-
                         UpdateProjectPath();
-                        logger.Info($"LoadLastSettings: Project folder path set to: {ProjectFolderPath}");
-
-                        // Smart loading: compare hash and show buttons accordingly
                         await SmartLoadAssets();
                     }
                 }

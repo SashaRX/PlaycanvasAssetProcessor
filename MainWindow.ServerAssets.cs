@@ -1,5 +1,6 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Settings;
+using AssetProcessor.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,70 +19,44 @@ namespace AssetProcessor {
 
         #region Viewer Management
 
-        private enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
-
         private void ShowViewer(ViewerType viewerType) {
-            TextureViewerScroll.Visibility = viewerType == ViewerType.Texture ? Visibility.Visible : Visibility.Collapsed;
-            ModelViewerScroll.Visibility = viewerType == ViewerType.Model ? Visibility.Visible : Visibility.Collapsed;
-            MaterialViewerScroll.Visibility = viewerType == ViewerType.Material ? Visibility.Visible : Visibility.Collapsed;
-            ServerFileInfoScroll.Visibility = viewerType == ViewerType.ServerFile ? Visibility.Visible : Visibility.Collapsed;
-            ChunkSlotsScroll.Visibility = viewerType == ViewerType.ChunkSlots ? Visibility.Visible : Visibility.Collapsed;
+            viewModel.ActiveViewerType = viewerType;
         }
 
         #endregion
 
         #region Server File Info
 
-        private ViewModels.ServerAssetViewModel? _selectedServerAsset;
+        /// <summary>
+        /// Wires event handlers for ServerFileInfoPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeServerFileInfoPanel() {
+            serverFileInfoPanel.CopyServerUrlButton.Click += CopyServerUrlButton_Click;
+            serverFileInfoPanel.DeleteServerFileButton.Click += DeleteServerFileButton_Click;
+        }
 
         /// <summary>
         /// Updates the server file info panel with the selected asset
         /// </summary>
         public void UpdateServerFileInfo(ViewModels.ServerAssetViewModel? asset) {
-            _selectedServerAsset = asset;
-
-            // Safety check - panel controls may not be ready
-            if (ServerFileNameText == null) return;
-
-            if (asset == null) {
-                ServerFileNameText.Text = "-";
-                ServerFileTypeText.Text = "-";
-                ServerFileSizeText.Text = "-";
-                ServerFileSyncStatusText.Text = "-";
-                ServerFileSyncStatusText.Foreground = System.Windows.Media.Brushes.Gray;
-                ServerFileUploadedText.Text = "-";
-                ServerFileSha1Text.Text = "-";
-                ServerFileRemotePathText.Text = "-";
-                ServerFileCdnUrlText.Text = "-";
-                ServerFileLocalPathText.Text = "-";
-                return;
-            }
-
-            ServerFileNameText.Text = asset.FileName;
-            ServerFileTypeText.Text = asset.FileType;
-            ServerFileSizeText.Text = asset.SizeDisplay;
-            ServerFileSyncStatusText.Text = asset.SyncStatus;
-            ServerFileSyncStatusText.Foreground = asset.SyncStatusColor;
-            ServerFileUploadedText.Text = asset.UploadedAtDisplay;
-            ServerFileSha1Text.Text = asset.ContentSha1;
-            ServerFileRemotePathText.Text = asset.RemotePath;
-            ServerFileCdnUrlText.Text = asset.CdnUrl ?? "-";
-            ServerFileLocalPathText.Text = asset.LocalPath ?? "Not found locally";
+            viewModel.SelectedServerAsset = asset;
         }
 
         private void CopyServerUrlButton_Click(object sender, RoutedEventArgs e) {
-            if (_selectedServerAsset != null && !string.IsNullOrEmpty(_selectedServerAsset.CdnUrl)) {
-                if (Helpers.ClipboardHelper.SetText(_selectedServerAsset.CdnUrl)) {
-                    logService.LogInfo($"Copied CDN URL: {_selectedServerAsset.CdnUrl}");
+            var asset = viewModel.SelectedServerAsset;
+            if (asset != null && !string.IsNullOrEmpty(asset.CdnUrl)) {
+                if (Helpers.ClipboardHelper.SetText(asset.CdnUrl)) {
+                    logService.LogInfo($"Copied CDN URL: {asset.CdnUrl}");
                 }
             }
         }
 
         private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {
-            if (_selectedServerAsset == null) return;
+            if (viewModel.SelectedServerAsset == null) return;
 
             var result = MessageBox.Show(
-                $"Are you sure you want to delete '{_selectedServerAsset.FileName}' from the server?\n\nThis action cannot be undone.",
+                $"Are you sure you want to delete '{viewModel.SelectedServerAsset.FileName}' from the server?\n\nThis action cannot be undone.",
                 "Confirm Delete",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -104,15 +79,15 @@ namespace AssetProcessor {
                 };
 
                 await b2Service.AuthorizeAsync(settings);
-                var success = await b2Service.DeleteFileAsync(_selectedServerAsset.RemotePath);
+                var success = await b2Service.DeleteFileAsync(viewModel.SelectedServerAsset.RemotePath);
 
                 if (success) {
-                    logService.LogInfo($"Deleted: {_selectedServerAsset.RemotePath}");
+                    logService.LogInfo($"Deleted: {viewModel.SelectedServerAsset.RemotePath}");
                     UpdateServerFileInfo(null);
                     // Refresh the server assets panel
                     await ServerAssetsPanel.RefreshServerAssetsAsync();
                 } else {
-                    logService.LogError($"Failed to delete: {_selectedServerAsset.RemotePath}");
+                    logService.LogError($"Failed to delete: {viewModel.SelectedServerAsset.RemotePath}");
                 }
             } catch (Exception ex) {
                 logService.LogError($"Error deleting file: {ex.Message}");
@@ -216,29 +191,25 @@ namespace AssetProcessor {
                     if (textureInGroup.ParentORMTexture != null) {
                         var ormTexture = textureInGroup.ParentORMTexture;
 
-                        if (ConversionSettingsExpander != null) {
-                            ConversionSettingsExpander.Visibility = Visibility.Collapsed;
-                        }
+                        viewModel.IsConversionSettingsVisible = false;
+                        viewModel.IsORMPanelVisible = true;
 
-                        if (ORMPanel != null) {
-                            ORMPanel.Visibility = Visibility.Visible;
-                            var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                            ORMPanel.Initialize(this, availableTextures);
-                            ORMPanel.SetORMTexture(ormTexture);
-                        }
+                        var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                        ORMPanel.Initialize(this, availableTextures);
+                        ORMPanel.SetORMTexture(ormTexture);
 
-                        TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
-                        TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+                        viewModel.TextureInfoName = "Texture Name: " + ormTexture.Name;
+                        viewModel.TextureInfoColorSpace = "Color Space: Linear (ORM)";
 
                         if (!string.IsNullOrEmpty(ormTexture.Path) && System.IO.File.Exists(ormTexture.Path)) {
-                            TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                            viewModel.TextureInfoResolution = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
                                 ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
                                 : "Resolution: Unknown";
-                            TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+                            viewModel.TextureInfoFormat = "Format: KTX2 (packed)";
                             _ = LoadORMPreviewAsync(ormTexture);
                         } else {
-                            TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
-                            TextureFormatTextBlock.Text = "Format: Not packed";
+                            viewModel.TextureInfoResolution = "Resolution: Not packed yet";
+                            viewModel.TextureInfoFormat = "Format: Not packed";
                         }
 
                         viewModel.SelectedTexture = ormTexture;

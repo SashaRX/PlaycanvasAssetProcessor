@@ -61,26 +61,33 @@ namespace AssetProcessor {
         private bool isUpdatingChannelButtons = false; // Flag to prevent recursive button updates
         private bool _isUpdatingMasterComboBox = false; // Flag to prevent recursive master combobox updates
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly IPlayCanvasService playCanvasService;
-        private readonly IHistogramCoordinator histogramCoordinator;
-        private readonly ITextureChannelService textureChannelService;
-        private readonly ITexturePreviewService texturePreviewService;
-        private readonly IProjectSelectionService projectSelectionService;
+
+        // Service facades (group related services to reduce constructor parameters: 21 → 5+viewModel)
+        private readonly ConnectionServiceFacade connectionServices;
+        private readonly AssetDataServiceFacade assetDataServices;
+        private readonly TextureViewerServiceFacade textureViewerServices;
         private readonly ILogService logService;
-        private readonly ILocalCacheService localCacheService;
-        private readonly IProjectAssetService projectAssetService;
-        private readonly IPreviewRendererCoordinator previewRendererCoordinator;
-        private readonly IAssetResourceService assetResourceService;
-        private readonly IConnectionStateService connectionStateService;
-        private readonly IAssetJsonParserService assetJsonParserService;
-        private readonly IORMTextureService ormTextureService;
-        private readonly IFileStatusScannerService fileStatusScannerService;
-        private readonly IProjectConnectionService projectConnectionService;
-        private readonly IAssetLoadCoordinator assetLoadCoordinator;
-        private readonly IProjectFileWatcherService projectFileWatcherService;
-        private readonly IKtx2InfoService ktx2InfoService;
-        private readonly IPlayCanvasCredentialsService credentialsService;
         private readonly IDataGridLayoutService dataGridLayoutService;
+
+        // Shortcut properties for backward compatibility with partial files
+        private IPlayCanvasService playCanvasService => connectionServices.PlayCanvasService;
+        private IConnectionStateService connectionStateService => connectionServices.ConnectionStateService;
+        private IPlayCanvasCredentialsService credentialsService => connectionServices.CredentialsService;
+        private IProjectSelectionService projectSelectionService => connectionServices.ProjectSelectionService;
+        private IProjectConnectionService projectConnectionService => connectionServices.ProjectConnectionService;
+        private IProjectFileWatcherService projectFileWatcherService => connectionServices.ProjectFileWatcherService;
+        private IAssetLoadCoordinator assetLoadCoordinator => assetDataServices.AssetLoadCoordinator;
+        private IAssetResourceService assetResourceService => assetDataServices.AssetResourceService;
+        private IAssetJsonParserService assetJsonParserService => assetDataServices.AssetJsonParserService;
+        private IFileStatusScannerService fileStatusScannerService => assetDataServices.FileStatusScannerService;
+        private ILocalCacheService localCacheService => assetDataServices.LocalCacheService;
+        private IProjectAssetService projectAssetService => assetDataServices.ProjectAssetService;
+        private ITexturePreviewService texturePreviewService => textureViewerServices.TexturePreviewService;
+        private ITextureChannelService textureChannelService => textureViewerServices.TextureChannelService;
+        private IPreviewRendererCoordinator previewRendererCoordinator => textureViewerServices.PreviewRendererCoordinator;
+        private IHistogramCoordinator histogramCoordinator => textureViewerServices.HistogramCoordinator;
+        private IORMTextureService ormTextureService => textureViewerServices.ORMTextureService;
+        private IKtx2InfoService ktx2InfoService => textureViewerServices.Ktx2InfoService;
         private Dictionary<int, string> folderPaths = new();
         private CancellationTokenSource? textureLoadCancellation; // ����� ������ ��� �������� �������
         private GlobalTextureConversionSettings? globalTextureSettings; // ���������� ��������� ����������� �������
@@ -129,46 +136,16 @@ namespace AssetProcessor {
         public MainViewModel ViewModel { get; }
 
         public MainWindow(
-            IPlayCanvasService playCanvasService,
-            IHistogramCoordinator histogramCoordinator,
-            ITextureChannelService textureChannelService,
-            ITexturePreviewService texturePreviewService,
-            IProjectSelectionService projectSelectionService,
+            ConnectionServiceFacade connectionServices,
+            AssetDataServiceFacade assetDataServices,
+            TextureViewerServiceFacade textureViewerServices,
             ILogService logService,
-            ILocalCacheService localCacheService,
-            IProjectAssetService projectAssetService,
-            IPreviewRendererCoordinator previewRendererCoordinator,
-            IAssetResourceService assetResourceService,
-            IConnectionStateService connectionStateService,
-            IAssetJsonParserService assetJsonParserService,
-            IORMTextureService ormTextureService,
-            IFileStatusScannerService fileStatusScannerService,
-            IProjectConnectionService projectConnectionService,
-            IAssetLoadCoordinator assetLoadCoordinator,
-            IProjectFileWatcherService projectFileWatcherService,
-            IKtx2InfoService ktx2InfoService,
-            IPlayCanvasCredentialsService credentialsService,
             IDataGridLayoutService dataGridLayoutService,
             MainViewModel viewModel) {
-            this.playCanvasService = playCanvasService ?? throw new ArgumentNullException(nameof(playCanvasService));
-            this.histogramCoordinator = histogramCoordinator ?? throw new ArgumentNullException(nameof(histogramCoordinator));
-            this.textureChannelService = textureChannelService ?? throw new ArgumentNullException(nameof(textureChannelService));
-            this.texturePreviewService = texturePreviewService ?? throw new ArgumentNullException(nameof(texturePreviewService));
-            this.projectSelectionService = projectSelectionService ?? throw new ArgumentNullException(nameof(projectSelectionService));
+            this.connectionServices = connectionServices ?? throw new ArgumentNullException(nameof(connectionServices));
+            this.assetDataServices = assetDataServices ?? throw new ArgumentNullException(nameof(assetDataServices));
+            this.textureViewerServices = textureViewerServices ?? throw new ArgumentNullException(nameof(textureViewerServices));
             this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
-            this.localCacheService = localCacheService ?? throw new ArgumentNullException(nameof(localCacheService));
-            this.projectAssetService = projectAssetService ?? throw new ArgumentNullException(nameof(projectAssetService));
-            this.previewRendererCoordinator = previewRendererCoordinator ?? throw new ArgumentNullException(nameof(previewRendererCoordinator));
-            this.assetResourceService = assetResourceService ?? throw new ArgumentNullException(nameof(assetResourceService));
-            this.connectionStateService = connectionStateService ?? throw new ArgumentNullException(nameof(connectionStateService));
-            this.assetJsonParserService = assetJsonParserService ?? throw new ArgumentNullException(nameof(assetJsonParserService));
-            this.ormTextureService = ormTextureService ?? throw new ArgumentNullException(nameof(ormTextureService));
-            this.fileStatusScannerService = fileStatusScannerService ?? throw new ArgumentNullException(nameof(fileStatusScannerService));
-            this.projectConnectionService = projectConnectionService ?? throw new ArgumentNullException(nameof(projectConnectionService));
-            this.assetLoadCoordinator = assetLoadCoordinator ?? throw new ArgumentNullException(nameof(assetLoadCoordinator));
-            this.projectFileWatcherService = projectFileWatcherService ?? throw new ArgumentNullException(nameof(projectFileWatcherService));
-            this.ktx2InfoService = ktx2InfoService ?? throw new ArgumentNullException(nameof(ktx2InfoService));
-            this.credentialsService = credentialsService ?? throw new ArgumentNullException(nameof(credentialsService));
             this.dataGridLayoutService = dataGridLayoutService ?? throw new ArgumentNullException(nameof(dataGridLayoutService));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
@@ -184,6 +161,12 @@ namespace AssetProcessor {
 
             // ������������� ConversionSettings
             InitializeConversionSettings();
+            InitializeMaterialInfoPanel();
+            InitializeServerFileInfoPanel();
+            InitializeChunkSlotsPanel();
+            InitializeMasterMaterialsEditorPanel();
+            InitializeExportToolsPanel();
+            InitializeConnectionPanel();
 
             viewModel.ConversionSettingsProvider = ConversionSettingsPanel;
             viewModel.TextureProcessingCompleted += ViewModel_TextureProcessingCompleted;
@@ -240,13 +223,13 @@ namespace AssetProcessor {
             projectFileWatcherService.FilesDeletionDetected += OnFilesDeletionDetected;
 
             // ����������� ������ ���������� � ����������� � ������ � �������
-            VersionTextBlock.Text = $"v{VersionHelper.GetVersionString()}";
+            viewModel.VersionText = $"v{VersionHelper.GetVersionString()}";
 
 
 #if DEBUG
             // Dev-only: load test model at startup for quick debugging
             if (File.Exists(MainWindowHelpers.MODEL_PATH)) {
-                LoadModel(path: MainWindowHelpers.MODEL_PATH);
+                _ = LoadModelAsync(path: MainWindowHelpers.MODEL_PATH);
             }
 #endif
 
@@ -325,11 +308,15 @@ namespace AssetProcessor {
         }
 
         private async void ViewModel_ProjectSelectionChanged(object? sender, ProjectSelectionChangedEventArgs e) {
-            await HandleProjectSelectionChangedAsync();
+            await UiAsyncHelper.ExecuteAsync(
+                () => HandleProjectSelectionChangedAsync(),
+                nameof(ViewModel_ProjectSelectionChanged));
         }
 
         private async void ViewModel_BranchSelectionChanged(object? sender, BranchSelectionChangedEventArgs e) {
-            await HandleBranchSelectionChangedAsync();
+            await UiAsyncHelper.ExecuteAsync(
+                () => HandleBranchSelectionChangedAsync(),
+                nameof(ViewModel_BranchSelectionChanged));
         }
 
         private Task ApplyRendererPreferenceAsync(bool useD3D11) {
@@ -366,36 +353,36 @@ namespace AssetProcessor {
 
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Guard against early calls during initialization
-            if (!this.IsLoaded || UnifiedExportGroupBox == null) return;
+            if (!this.IsLoaded || exportToolsPanel == null) return;
 
             if (tabControl.SelectedItem is TabItem selectedTab) {
                 switch (selectedTab.Header.ToString()) {
                     case "Textures":
                         ShowViewer(ViewerType.Texture);
                         UpdateExportCounts();
-                        TextureToolsPanel.Visibility = Visibility.Visible;
+                        viewModel.IsTextureToolsVisible = true;
                         break;
                     case "Models":
                         ShowViewer(ViewerType.Model);
                         UpdateExportCounts();
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Materials":
                         ShowViewer(ViewerType.Material);
                         UpdateExportCounts();
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Master Materials":
                         ShowViewer(ViewerType.ChunkSlots);
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Server":
                         ShowViewer(ViewerType.ServerFile);
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                     case "Logs":
                         ShowViewer(ViewerType.None);
-                        TextureToolsPanel.Visibility = Visibility.Collapsed;
+                        viewModel.IsTextureToolsVisible = false;
                         break;
                 }
             }
@@ -507,44 +494,30 @@ private void AboutMenu(object? sender, RoutedEventArgs e) {
             Close();
         }
 
-        private void ThemeAuto_Click(object sender, RoutedEventArgs e) {
-            ThemeAutoMenuItem.IsChecked = true;
-            ThemeLightMenuItem.IsChecked = false;
-            ThemeDarkMenuItem.IsChecked = false;
-            ThemeHelper.CurrentMode = Helpers.ThemeMode.Auto;
-            DarkThemeCheckBox.IsChecked = ThemeHelper.IsDarkTheme;
+        private void SetThemeState(Helpers.ThemeMode mode) {
+            viewModel.IsThemeAuto = mode == Helpers.ThemeMode.Auto;
+            viewModel.IsThemeLight = mode == Helpers.ThemeMode.Light;
+            viewModel.IsThemeDark = mode == Helpers.ThemeMode.Dark;
+            ThemeHelper.CurrentMode = mode;
+            viewModel.IsDarkThemeChecked = ThemeHelper.IsDarkTheme;
             RefreshHistogramForTheme();
+        }
+
+        private void ThemeAuto_Click(object sender, RoutedEventArgs e) {
+            SetThemeState(Helpers.ThemeMode.Auto);
         }
 
         private void ThemeLight_Click(object sender, RoutedEventArgs e) {
-            ThemeAutoMenuItem.IsChecked = false;
-            ThemeLightMenuItem.IsChecked = true;
-            ThemeDarkMenuItem.IsChecked = false;
-            ThemeHelper.CurrentMode = Helpers.ThemeMode.Light;
-            DarkThemeCheckBox.IsChecked = false;
-            RefreshHistogramForTheme();
+            SetThemeState(Helpers.ThemeMode.Light);
         }
 
         private void ThemeDark_Click(object sender, RoutedEventArgs e) {
-            ThemeAutoMenuItem.IsChecked = false;
-            ThemeLightMenuItem.IsChecked = false;
-            ThemeDarkMenuItem.IsChecked = true;
-            ThemeHelper.CurrentMode = Helpers.ThemeMode.Dark;
-            DarkThemeCheckBox.IsChecked = true;
-            RefreshHistogramForTheme();
+            SetThemeState(Helpers.ThemeMode.Dark);
         }
 
         private void DarkThemeCheckBox_Click(object sender, RoutedEventArgs e) {
-            bool isDark = DarkThemeCheckBox.IsChecked == true;
-
-            // Update menu items to match
-            ThemeAutoMenuItem.IsChecked = false;
-            ThemeLightMenuItem.IsChecked = !isDark;
-            ThemeDarkMenuItem.IsChecked = isDark;
-
-            // Apply theme
-            ThemeHelper.CurrentMode = isDark ? Helpers.ThemeMode.Dark : Helpers.ThemeMode.Light;
-            RefreshHistogramForTheme();
+            bool isDark = viewModel.IsDarkThemeChecked;
+            SetThemeState(isDark ? Helpers.ThemeMode.Dark : Helpers.ThemeMode.Light);
         }
 
         private void RefreshHistogramForTheme() {
@@ -600,14 +573,14 @@ private void ToggleViewerButton_Click(object? sender, RoutedEventArgs e) {
                     AppSettings.Default.RightPanelPreviousWidth = PreviewColumn.Width.Value;
                 }
                 AppSettings.Default.RightPanelWidth = 0; // Mark as hidden
-                ToggleViewButton.Content = "►";
+                viewModel.ToggleViewButtonContent = "►";
                 PreviewColumn.Width = new GridLength(0);
                 PreviewColumn.MinWidth = 0;
             } else {
                 // Restore saved width
                 double restoreWidth = AppSettings.Default.RightPanelPreviousWidth;
                 if (restoreWidth < 256) restoreWidth = 300; // Use default if too small
-                ToggleViewButton.Content = "◄";
+                viewModel.ToggleViewButtonContent = "◄";
                 PreviewColumn.MinWidth = 256;
                 PreviewColumn.Width = new GridLength(restoreWidth);
                 AppSettings.Default.RightPanelWidth = restoreWidth;
@@ -723,7 +696,7 @@ private void TexturesDataGrid_Sorting(object? sender, DataGridSortingEventArgs e
             if (TexturesDataGrid == null) return;
 
             // Only apply workaround when grouping is enabled
-            if (GroupTexturesCheckBox?.IsChecked != true) return;
+            if (!Settings.AppSettings.Default.GroupTexturesByType) return;
 
             // Hide DataGrid before layout recalculation
             TexturesDataGrid.Visibility = Visibility.Hidden;

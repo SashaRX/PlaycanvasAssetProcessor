@@ -36,6 +36,7 @@
         <help:TextureTypeToBackgroundConverter x:Key="TextureTypeToBackgroundConverter" />
         <help:ORMTextureColorConverter x:Key="ORMTextureColorConverter" />
         <help:InverseBoolConverter x:Key="InverseBoolConverter" />
+        <help:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter" />
         <help:SafeFirstItemPropertyConverter x:Key="SafeFirstItemPropertyConverter" />
         <help:CollectionHasItemsToVisibilityConverter x:Key="CollectionHasItemsToVisibilityConverter" />
 
@@ -174,7 +175,7 @@
 
         <!-- ContextMenu для строк материалов -->
         <ContextMenu x:Key="MaterialRowContextMenu" Opened="MaterialRowContextMenu_Opened">
-            <MenuItem Header="Set Master Material" x:Name="SetMasterMaterialMenuItem" FontWeight="Bold">
+            <MenuItem Header="Set Master Material" FontWeight="Bold">
                 <MenuItem Header="(None)" Click="SetMasterForSelectedMaterials_Click" Tag=""/>
             </MenuItem>
             <Separator/>
@@ -225,28 +226,36 @@
         <!-- Статусная строка -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem>
-                <TextBlock x:Name="ConnectionStatusTextBlock"
-                           Text="Disconnected"
-                           Foreground="Red"
+                <TextBlock Text="{Binding ConnectionStatusText}"
                            VerticalAlignment="Center"
-                           Width="320"/>
+                           Width="320">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Red"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                    <Setter Property="Foreground" Value="Green"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock x:Name="VersionTextBlock" Text="v1.0.0" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="10" MinWidth="200" TextAlignment="Right"/>
+                <TextBlock Text="{Binding VersionText}" VerticalAlignment="Center" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="10" MinWidth="200" TextAlignment="Right"/>
             </StatusBarItem>
         </StatusBar>
 
         <!-- Прогресс -->
         <Grid DockPanel.Dock="Bottom" HorizontalAlignment="Stretch">
-            <ProgressBar x:Name="ProgressBar"
+            <ProgressBar
                          Height="16"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Center"
                          Minimum="0"
                          Maximum="{Binding ProgressMaximum}"
                          Value="{Binding ProgressValue}"/>
-            <TextBlock x:Name="ProgressTextBlock"
-                       HorizontalAlignment="Center"
+            <TextBlock HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource ThemeForeground}"
                        FontWeight="Bold"
@@ -270,177 +279,28 @@
             </Grid.ColumnDefinitions>
 
             <!-- Playcanvas Project Connect (Left Side) -->
-            <GroupBox Grid.Column="0" Header="Playcanvas Project Connect" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" Width="260">
-                <StackPanel Orientation="Vertical" Margin="4,2,4,2">
-                    <!-- Dynamic Action Button -->
-                    <Button x:Name="DynamicConnectionButton"
-                            Content="Connect"
-                            Click="DynamicConnectionButton_Click"
-                            Margin="0,2,0,4"
-                            Height="24"
-                            FontWeight="Bold"
-                            ToolTip="Connect to PlayCanvas and load projects"/>
-
-                    <!-- Project and Branch Selection -->
-                    <StackPanel Orientation="Horizontal">
-                        <ComboBox x:Name="ProjectsComboBox"
-                                  ItemsSource="{Binding Projects}"
-                                  DisplayMemberPath="Value"
-                                  SelectedValuePath="Key"
-                                  SelectedValue="{Binding SelectedProjectId, Mode=TwoWay}"
-                                  Margin="0,0,4,0"
-                                  Width="115"
-                                  Height="20"
-                                  VerticalContentAlignment="Center"
-                                  Padding="4,0,4,0"
-                                  FontSize="13">
-                            <ComboBox.ItemContainerStyle>
-                                <Style TargetType="ComboBoxItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                </Style>
-                            </ComboBox.ItemContainerStyle>
-                            <i:Interaction.Triggers>
-                                <i:EventTrigger EventName="SelectionChanged">
-                                    <i:InvokeCommandAction Command="{Binding ProjectSelectionChangedCommand}"
-                                                           CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
-                                </i:EventTrigger>
-                            </i:Interaction.Triggers>
-                        </ComboBox>
-
-                        <ComboBox x:Name="BranchesComboBox"
-                                  ItemsSource="{Binding Branches}"
-                                  DisplayMemberPath="Name"
-                                  SelectedValuePath="Id"
-                                  SelectedValue="{Binding SelectedBranchId, Mode=TwoWay}"
-                                  Width="115"
-                                  Height="20"
-                                  VerticalContentAlignment="Center"
-                                  Padding="4,0,4,0"
-                                  FontSize="13">
-                            <ComboBox.ItemContainerStyle>
-                                <Style TargetType="ComboBoxItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                </Style>
-                            </ComboBox.ItemContainerStyle>
-                            <i:Interaction.Triggers>
-                                <i:EventTrigger EventName="SelectionChanged">
-                                    <i:InvokeCommandAction Command="{Binding BranchSelectionChangedCommand}"
-                                                           CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
-                                </i:EventTrigger>
-                            </i:Interaction.Triggers>
-                        </ComboBox>
-
-                        <Button x:Name="CreateBranchButton"
-                                Content="+"
-                                Width="25"
-                                Height="20"
-                                Margin="2,0,0,0"
-                                Padding="0"
-                                FontSize="14"
-                                FontWeight="Bold"
-                                ToolTip="Создать новую ветку"
-                                Click="CreateBranchButton_Click"/>
-                    </StackPanel>
-                </StackPanel>
-            </GroupBox>
+            <controls:ConnectionPanel Grid.Column="0" x:Name="connectionPanel"/>
 
             <!-- Unified Export Panel - Always visible -->
-            <GroupBox Grid.Column="1" x:Name="UnifiedExportGroupBox" Header="Asset Export" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="2">
-                <StackPanel Orientation="Vertical" Margin="4,2,4,2">
-                    <!-- Marked assets count -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="Marked:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
-                        <TextBlock x:Name="MarkedModelsCountText" Text="0" VerticalAlignment="Center" Foreground="#FF2196F3" FontWeight="Bold"/>
-                        <TextBlock Text=" models," VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="MarkedMaterialsCountText" Text="0" VerticalAlignment="Center" Foreground="#FF4CAF50" FontWeight="Bold"/>
-                        <TextBlock Text=" materials," VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="MarkedTexturesCountText" Text="0" VerticalAlignment="Center" Foreground="#FF9C27B0" FontWeight="Bold"/>
-                        <TextBlock Text=" textures" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <!-- Export Action Buttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                        <Button x:Name="SelectRelatedButton" Content="Select" Width="50" Margin="0,0,3,0"
-                                Click="SelectRelatedButton_Click"
-                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
-                                ToolTip="Mark selected assets and their related dependencies for export"/>
-
-                        <Button x:Name="ClearExportMarksButton" Content="Clear" Width="40" Margin="0,0,3,0"
-                                Click="ClearExportMarksButton_Click"
-                                ToolTip="Clear all export marks"/>
-
-                        <Button x:Name="ExportAssetsButton" Content="Export" Width="50" Margin="0,0,3,0"
-                                Click="ExportAssetsButton_Click"
-                                Background="#FF2196F3" Foreground="White" FontWeight="Bold"
-                                ToolTip="Export all marked assets to server format"/>
-
-                        <Button x:Name="UploadToCloudButton" Content="Upload" Width="50" Margin="0,0,3,0"
-                                Click="UploadToCloudButton_Click"
-                                Background="#FF9C27B0" Foreground="White" FontWeight="Bold"
-                                ToolTip="Upload exported assets to cloud storage"/>
-
-                        <CheckBox x:Name="GenerateORMCheckBox" Content="ORM" VerticalAlignment="Center" Margin="5,0,3,0"
-                                  IsChecked="True"
-                                  ToolTip="Generate ORM packed textures (AO+Gloss+Metallic)"/>
-
-                        <CheckBox x:Name="GenerateLODsCheckBox" Content="LODs" VerticalAlignment="Center" Margin="0,0,3,0"
-                                  IsChecked="True"
-                                  ToolTip="Generate LOD chain for models"/>
-
-                        <CheckBox x:Name="AutoUploadCheckBox" Content="Auto" VerticalAlignment="Center" Margin="0,0,0,0"
-                                  IsChecked="False"
-                                  ToolTip="Automatically upload assets after export"/>
-                    </StackPanel>
-
-                    <!-- Texture Tools Row - Only visible for Textures tab -->
-                    <StackPanel x:Name="TextureToolsPanel" Orientation="Horizontal" Margin="0,2,0,0" Visibility="Collapsed">
-                        <TextBlock Text="Tools:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold" Foreground="Gray"/>
-
-                        <Button x:Name="ProcessTexturesButton" Content="Process" Width="55" Margin="0,0,3,0"
-                                Command="{Binding ProcessTexturesCommand}"
-                                CommandParameter="{Binding SelectedItems, ElementName=TexturesDataGrid}"
-                                ToolTip="Convert selected textures to KTX2 format"/>
-
-                        <Button x:Name="AutoDetectAllButton" Content="Detect" Width="50" Margin="0,0,3,0"
-                                Command="{Binding AutoDetectPresetsCommand}"
-                                CommandParameter="{Binding SelectedItems, ElementName=TexturesDataGrid}"
-                                ToolTip="Automatically detect presets for textures based on filenames"/>
-
-                        <Button x:Name="CreateORMButton" Content="ORM" Width="40" Margin="0,0,3,0"
-                                Click="CreateORMButton_Click"
-                                Background="#FF4CAF50" Foreground="White" FontWeight="Bold"
-                                ToolTip="Create virtual ORM texture for channel packing"/>
-
-                        <Button x:Name="UploadTexturesButton" Content="Upload" Width="50" Margin="0,0,3,0"
-                                Click="UploadTexturesButton_Click"
-                                ToolTip="Upload processed textures to cloud storage"/>
-
-                        <CheckBox x:Name="ProcessAllCheckBox" Content="All" VerticalAlignment="Center" Margin="5,0,0,0"
-                                  ToolTip="Process all textures instead of just selected ones"
-                                  IsChecked="{Binding ProcessAllTextures, Mode=TwoWay}"/>
-                    </StackPanel>
-                </StackPanel>
-            </GroupBox>
+            <controls:ExportToolsPanel Grid.Column="1" x:Name="exportToolsPanel"/>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="2,0,2,0">
                 <Button Content="Settings" VerticalAlignment="Center" Background="{DynamicResource ThemeBackgroundAlt}" Click="Setting" Padding="6,4"/>
-                <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" IsEnabled="False" Padding="6,4" Margin="4,0,0,0"/>
+                <Button Content="Cancel" Click="CancelButton_Click" IsEnabled="{Binding IsCancelEnabled}" Padding="6,4" Margin="4,0,0,0"/>
             </StackPanel>
         </Grid>
 
         <Grid DockPanel.Dock="Top" VerticalAlignment="Top">
-            <Menu x:Name="menu" VerticalAlignment="Top" Margin="0,0,2,0">
+            <Menu VerticalAlignment="Top" Margin="0,0,2,0">
                 <MenuItem Header="File">
                     <MenuItem Header="Settings" Click="SettingsMenu"/>
                     <MenuItem Header="Exit" Click="ExitMenu"/>
                 </MenuItem>
                 <MenuItem Header="View">
                     <MenuItem Header="Theme">
-                        <MenuItem x:Name="ThemeAutoMenuItem" Header="Auto (System)" IsCheckable="True" IsChecked="True" Click="ThemeAuto_Click"/>
-                        <MenuItem x:Name="ThemeLightMenuItem" Header="Light" IsCheckable="True" Click="ThemeLight_Click"/>
-                        <MenuItem x:Name="ThemeDarkMenuItem" Header="Dark" IsCheckable="True" Click="ThemeDark_Click"/>
+                        <MenuItem Header="Auto (System)" IsCheckable="True" IsChecked="{Binding IsThemeAuto}" Click="ThemeAuto_Click"/>
+                        <MenuItem Header="Light" IsCheckable="True" IsChecked="{Binding IsThemeLight}" Click="ThemeLight_Click"/>
+                        <MenuItem Header="Dark" IsCheckable="True" IsChecked="{Binding IsThemeDark}" Click="ThemeDark_Click"/>
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="Help">
@@ -466,20 +326,20 @@
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="TexturesScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                            <Slider Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
-                            <TextBlock Text="{Binding ElementName=TexturesScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                            <TextBlock Text="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,15,0" MinWidth="40"/>
-                            <CheckBox x:Name="GroupTexturesCheckBox" Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center"
+                            <CheckBox Content="Group by Type" Margin="0,0,15,0" VerticalAlignment="Center"
                                         IsChecked="{Binding Source={x:Static settings:AppSettings.Default}, Path=GroupTexturesByType, Mode=TwoWay}"
                                         Checked="GroupTexturesCheckBox_Changed" Unchecked="GroupTexturesCheckBox_Changed"/>
-                            <CheckBox x:Name="CollapseGroupsCheckBox" Content="Collapse Groups" Margin="0,0,15,0" VerticalAlignment="Center"
+                            <CheckBox Content="Collapse Groups" Margin="0,0,15,0" VerticalAlignment="Center"
                                         IsChecked="{Binding Source={x:Static settings:AppSettings.Default}, Path=CollapseTextureGroups, Mode=TwoWay}"
                                         Checked="CollapseGroupsCheckBox_Changed" Unchecked="CollapseGroupsCheckBox_Changed"/>
-                            <CheckBox x:Name="DarkThemeCheckBox" Content="Dark Theme" VerticalAlignment="Center" Click="DarkThemeCheckBox_Click"/>
+                            <CheckBox Content="Dark Theme" VerticalAlignment="Center" IsChecked="{Binding IsDarkThemeChecked}" Click="DarkThemeCheckBox_Click"/>
                         </StackPanel>
                         <DataGrid x:Name="TexturesDataGrid" Grid.Row="1"
                                 AutoGenerateColumns="False"
@@ -513,8 +373,8 @@
                                 ScrollViewer.IsDeferredScrollingEnabled="True"
                                 HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding ElementName=TexturesScaleSlider, Path=Value}"
-                                                ScaleY="{Binding ElementName=TexturesScaleSlider, Path=Value}"/>
+                                <ScaleTransform ScaleX="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale}"
+                                                ScaleY="{Binding Source={x:Static settings:AppSettings.Default}, Path=TexturesTableScale}"/>
                             </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -653,12 +513,12 @@
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2,4,2">
                             <TextBlock Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider x:Name="ModelsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                            <Slider Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, Mode=TwoWay}"
                                     TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
-                            <TextBlock Text="{Binding ElementName=ModelsScaleSlider, Path=Value, StringFormat={}{0:P0}}"
+                            <TextBlock Text="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale, StringFormat={}{0:P0}}"
                                        VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
                         </StackPanel>
                         <DataGrid x:Name="ModelsDataGrid" Grid.Row="1"
@@ -688,8 +548,8 @@
                               ScrollViewer.IsDeferredScrollingEnabled="False"
                               HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.LayoutTransform>
-                                <ScaleTransform ScaleX="{Binding ElementName=ModelsScaleSlider, Path=Value}"
-                                                ScaleY="{Binding ElementName=ModelsScaleSlider, Path=Value}"/>
+                                <ScaleTransform ScaleX="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale}"
+                                                ScaleY="{Binding Source={x:Static settings:AppSettings.Default}, Path=ModelsTableScale}"/>
                             </DataGrid.LayoutTransform>
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -749,18 +609,22 @@
                         <Grid Grid.Row="0" Margin="8,0,8,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Scale:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Slider Grid.Column="1" x:Name="MaterialsScaleSlider" Width="120" Minimum="0.5" Maximum="2.0"
+                            <Slider Grid.Column="1" Width="120" Minimum="0.5" Maximum="2.0"
                                     Value="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, Mode=TwoWay}"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
                                     ToolTip="Adjust table scale (50% - 200%)"
                                     ValueChanged="TableScaleSlider_ValueChanged"/>
-                            <TextBlock Grid.Column="2" Text="Default Master:" VerticalAlignment="Center" Margin="20,0,8,0" FontWeight="SemiBold"/>
-                            <ComboBox Grid.Column="3" x:Name="DefaultMasterMaterialComboBox"
+                            <TextBlock Grid.Column="2" HorizontalAlignment="Left"
+                                       Text="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale, StringFormat={}{0:P0}}"
+                                       VerticalAlignment="Center" Margin="5,0,0,0" MinWidth="40"/>
+                            <TextBlock Grid.Column="3" Text="Default Master:" VerticalAlignment="Center" Margin="20,0,8,0" FontWeight="SemiBold"/>
+                            <ComboBox Grid.Column="4"
                                       ItemsSource="{Binding MasterMaterialsViewModel.MasterMaterials}"
                                       DisplayMemberPath="Name"
                                       SelectedValuePath="Name"
@@ -797,8 +661,8 @@
                               ScrollViewer.IsDeferredScrollingEnabled="False"
                               HorizontalScrollBarVisibility="Disabled">
                         <DataGrid.LayoutTransform>
-                            <ScaleTransform ScaleX="{Binding ElementName=MaterialsScaleSlider, Path=Value}"
-                                            ScaleY="{Binding ElementName=MaterialsScaleSlider, Path=Value}"/>
+                            <ScaleTransform ScaleX="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale}"
+                                            ScaleY="{Binding Source={x:Static settings:AppSettings.Default}, Path=MaterialsTableScale}"/>
                         </DataGrid.LayoutTransform>
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -854,190 +718,25 @@
                     </DataGrid>
                     </Grid>
                 </TabItem>
-                <TabItem x:Name="MasterMaterialsTabItem" Header="Master Materials">
-                    <Grid Background="{DynamicResource ThemeBackgroundAlt}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220" MinWidth="180"/>
-                            <ColumnDefinition Width="5"/>
-                            <ColumnDefinition Width="*" MinWidth="300"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Left: Master Materials List -->
-                        <Grid Grid.Column="0">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4,2">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Master Materials" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <Button Content="+" Command="{Binding MasterMaterialsViewModel.AddNewMasterCommand}"
-                                            Padding="6,2" Margin="0,0,4,0" ToolTip="Add new master material"/>
-                                    <Button Content="Save" Command="{Binding MasterMaterialsViewModel.SaveConfigCommand}"
-                                            Padding="6,2" Background="#FF4CAF50" Foreground="White" ToolTip="Save all changes"/>
-                                </StackPanel>
-                            </Border>
-
-                            <DataGrid Grid.Row="1" x:Name="MasterMaterialsDataGrid"
-                                      AutoGenerateColumns="False"
-                                      ItemsSource="{Binding MasterMaterialsViewModel.MasterMaterials}"
-                                      SelectedItem="{Binding MasterMaterialsViewModel.SelectedMaster}"
-                                      IsReadOnly="True"
-                                      CanUserAddRows="False"
-                                      RowHeight="22"
-                                      HeadersVisibility="Column"
-                                      VirtualizingPanel.IsVirtualizing="True"
-                                      EnableRowVirtualization="True"
-                                      MouseDoubleClick="MasterMaterialsDataGrid_MouseDoubleClick"
-                                      Background="{DynamicResource ThemeDataGridBackground}">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
-                                    <DataGridTextColumn Header="Chunks" Binding="{Binding Chunks.Count}" Width="45"/>
-                                    <DataGridCheckBoxColumn Header="●" Binding="{Binding IsBuiltIn}" Width="25" IsReadOnly="True">
-                                        <DataGridCheckBoxColumn.HeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                                <Setter Property="ToolTip" Value="Built-in"/>
-                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                            </Style>
-                                        </DataGridCheckBoxColumn.HeaderStyle>
-                                    </DataGridCheckBoxColumn>
-                                </DataGrid.Columns>
-                                <DataGrid.RowStyle>
-                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-                                        <Setter Property="ContextMenu" Value="{StaticResource MasterMaterialRowContextMenu}"/>
-                                    </Style>
-                                </DataGrid.RowStyle>
-                            </DataGrid>
-                        </Grid>
-
-                        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource ThemeBorder}"/>
-
-                        <!-- Center: Chunk Code Editor -->
-                        <Grid Grid.Column="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- Editor Header -->
-                            <Border Grid.Row="0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4,2">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                        <TextBlock Text="Chunk:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBox x:Name="ChunkIdTextBox" Width="150" VerticalContentAlignment="Center"
-                                                 Text="{Binding MasterMaterialsViewModel.SelectedChunk.Id, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsEnabled="{Binding MasterMaterialsViewModel.SelectedChunk.IsBuiltIn, Converter={StaticResource InverseBoolConverter}}"/>
-                                        <TextBlock Text="Type:" VerticalAlignment="Center" Margin="12,0,4,0"/>
-                                        <ComboBox x:Name="ChunkTypeComboBox" Width="80" VerticalContentAlignment="Center"
-                                                  SelectedItem="{Binding MasterMaterialsViewModel.SelectedChunk.Type, Mode=TwoWay}"
-                                                  IsEnabled="{Binding MasterMaterialsViewModel.SelectedChunk.IsBuiltIn, Converter={StaticResource InverseBoolConverter}}">
-                                            <sys:String>fragment</sys:String>
-                                            <sys:String>vertex</sys:String>
-                                        </ComboBox>
-                                    </StackPanel>
-
-                                    <TextBlock Grid.Column="1" x:Name="ChunkReadOnlyIndicator"
-                                               Text="(Read-Only: Built-in chunk)"
-                                               Foreground="Orange" FontStyle="Italic" FontSize="11"
-                                               VerticalAlignment="Center" HorizontalAlignment="Center"
-                                               Visibility="{Binding MasterMaterialsViewModel.SelectedChunk.IsBuiltIn, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                        <Button x:Name="ChunkEditorSaveButton" Content="Save Chunk"
-                                                Click="ChunkEditorSaveButton_Click"
-                                                Padding="8,2" Background="#FF4CAF50" Foreground="White" Margin="0,0,4,0"/>
-                                        <Button x:Name="ChunkEditorNewButton" Content="+ New"
-                                                Click="ChunkEditorNewButton_Click"
-                                                Padding="8,2"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <!-- Code Editors with Tabs -->
-                            <TabControl x:Name="ChunkCodeTabControl" Grid.Row="1" Background="{DynamicResource ThemeBackground}" BorderThickness="0">
-                                <TabItem Header="GLSL">
-                                    <Grid Background="{DynamicResource ThemeBackground}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-
-                                        <TextBlock Grid.Row="0" Text="GLSL Shader Code (WebGL)"
-                                                   Foreground="{DynamicResource ThemeForegroundDim}" Margin="5,5,5,2" FontSize="11"/>
-
-                                        <avalonedit:TextEditor x:Name="GlslCodeEditor" Grid.Row="1"
-                                                 FontFamily="Consolas, Courier New, monospace"
-                                                 FontSize="13"
-                                                 ShowLineNumbers="True"
-                                                 VerticalScrollBarVisibility="Auto"
-                                                 HorizontalScrollBarVisibility="Auto"
-                                                 Padding="5"
-                                                 Background="#1E1E1E"
-                                                 Foreground="#D4D4D4"
-                                                 LineNumbersForeground="#858585"/>
-                                    </Grid>
-                                </TabItem>
-                                <TabItem Header="WGSL">
-                                    <Grid Background="{DynamicResource ThemeBackground}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-
-                                        <TextBlock Grid.Row="0" Text="WGSL Shader Code (WebGPU)"
-                                                   Foreground="{DynamicResource ThemeForegroundDim}" Margin="5,5,5,2" FontSize="11"/>
-
-                                        <avalonedit:TextEditor x:Name="WgslCodeEditor" Grid.Row="1"
-                                                 FontFamily="Consolas, Courier New, monospace"
-                                                 FontSize="13"
-                                                 ShowLineNumbers="True"
-                                                 VerticalScrollBarVisibility="Auto"
-                                                 HorizontalScrollBarVisibility="Auto"
-                                                 Padding="5"
-                                                 Background="#1E1E1E"
-                                                 Foreground="#D4D4D4"
-                                                 LineNumbersForeground="#858585"/>
-                                    </Grid>
-                                </TabItem>
-                            </TabControl>
-
-                            <!-- Editor Status Bar -->
-                            <Border Grid.Row="2" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4,2">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock x:Name="ChunkEditorUnsavedIndicator" Text="● Unsaved changes"
-                                               Foreground="Orange" VerticalAlignment="Center" Margin="0,0,12,0"
-                                               Visibility="Collapsed"/>
-                                    <TextBlock x:Name="ChunkEditorStatusText" Text="Select a chunk to edit"
-                                               Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Grid>
+                <TabItem Header="Master Materials">
+                    <controls:MasterMaterialsEditorPanel x:Name="masterMaterialsEditorPanel"/>
                 </TabItem>
-                <TabItem x:Name="ServerTabItem" Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"
+                <TabItem Header="Server" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top"
                          Background="#FF9C27B0">
                     <controls:ServerAssetsPanel x:Name="ServerAssetsPanel"/>
                 </TabItem>
-                <TabItem x:Name="LogsTabItem" Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
-                    <controls:LogViewerControl x:Name="LogViewer"/>
+                <TabItem Header="Logs" Height="22" Margin="-2,-2,-2,0" VerticalAlignment="Top">
+                    <controls:LogViewerControl/>
                 </TabItem>
             </TabControl>
 
             <GridSplitter x:Name="RightPanelSplitter" Grid.Column="1" Width="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" Background="{DynamicResource ThemeBorder}" FontSize="6"
                           DragCompleted="RightPanelSplitter_DragCompleted"/>
 
-            <Button x:Name="ToggleViewButton" Grid.Column="1" Content="►"
+            <Button Grid.Column="1" Content="{Binding ToggleViewButtonContent}"
                 Click="ToggleViewerButton_Click" Background="{DynamicResource ThemeBackgroundAlt}" Padding="0,0,0,0" Grid.RowSpan="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="32" Width="7" BorderThickness="0,0,0,0" VerticalAlignment="Center" MinWidth="0" MinHeight="0" FontSize="6" FontFamily="Arial" Foreground="{DynamicResource ThemeAccent}"/>
 
-            <ScrollViewer x:Name="TextureViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Visible" SizeChanged="TextureViewerScroll_SizeChanged" PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Texture}" SizeChanged="TextureViewerScroll_SizeChanged" PreviewMouseWheel="TextureViewerScroll_PreviewMouseWheel">
                 <Border x:Name="TextureViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -1065,33 +764,28 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
-                                            <TextBlock x:Name="TextureNameTextBlock"
-                                                      Text="Texture Name:"
+                                            <TextBlock Text="{Binding TextureInfoName}"
                                                       Foreground="White"
                                                       FontSize="10"
                                                       FontWeight="SemiBold"
                                                       Margin="0,0,0,2" />
-                                            <TextBlock x:Name="TextureResolutionTextBlock"
-                                                      Text="Resolution:"
+                                            <TextBlock Text="{Binding TextureInfoResolution}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Orientation="Vertical">
-                                            <TextBlock x:Name="TextureSizeTextBlock"
-                                                      Text="Size:"
+                                            <TextBlock Text="{Binding TextureInfoSize}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock x:Name="TextureColorSpaceTextBlock"
-                                                          Text="Color Space:"
+                                                <TextBlock Text="{Binding TextureInfoColorSpace}"
                                                           Foreground="#FFAAAAAA"
                                                           FontSize="9"
                                                           Margin="0,0,8,0" />
-                                                <TextBlock x:Name="TextureFormatTextBlock"
-                                                          Text="Format:"
+                                                <TextBlock Text="{Binding TextureInfoFormat}"
                                                           Foreground="#FFAAAAAA"
                                                           FontSize="9" />
                                             </StackPanel>
@@ -1134,18 +828,20 @@
                                               Cursor="SizeNS"
                                               DragDelta="PreviewHeightGridSplitter_DragDelta" />
 
-                                <StackPanel x:Name="ChannelButtonsPanel" Grid.Row="3" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
+                                <StackPanel Grid.Row="3" Orientation="Vertical" HorizontalAlignment="Left" Margin="6,4,6,6">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
                                         <TextBlock Text="Источник превью:" FontSize="10" VerticalAlignment="Center" />
-                                        <RadioButton x:Name="PreviewSourceOriginalRadioButton"
-                                                     Content="Source"
+                                        <RadioButton Content="Source"
                                                      GroupName="TexturePreviewSource"
                                                      Margin="8,0,0,0"
+                                                     IsEnabled="{Binding IsPreviewSourceOriginalEnabled}"
+                                                     IsChecked="{Binding IsPreviewSourceOriginalChecked}"
                                                      Checked="PreviewSourceRadioButton_Checked" />
-                                        <RadioButton x:Name="PreviewSourceKtxRadioButton"
-                                                     Content="KTX2"
+                                        <RadioButton Content="KTX2"
                                                      GroupName="TexturePreviewSource"
                                                      Margin="8,0,0,0"
+                                                     IsEnabled="{Binding IsPreviewSourceKtxEnabled}"
+                                                     IsChecked="{Binding IsPreviewSourceKtxChecked}"
                                                      Checked="PreviewSourceRadioButton_Checked" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,6" RenderTransformOrigin="0.5,0.5">
@@ -1157,27 +853,27 @@
                                                 <TranslateTransform/>
                                             </TransformGroup>
                                         </StackPanel.RenderTransform>
-                                        <ToggleButton x:Name="RChannelButton" Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                        <ToggleButton x:Name="GChannelButton" Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                        <ToggleButton x:Name="BChannelButton" Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                        <ToggleButton x:Name="AChannelButton" Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                        <ToggleButton x:Name="NormalButton" Content="Nrm" Tag="Normal" Width="35" Height="20" Background="#FF4488FF" Foreground="White" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Margin="2,0,0,0"/>
+                                        <ToggleButton Content="R" Tag="R" Width="30" Height="20" Background="#FFCE3737" IsChecked="{Binding IsRChannelChecked}" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton Content="G" Tag="G" Width="30" Height="20" Background="#FF73CE37" IsChecked="{Binding IsGChannelChecked}" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton Content="B" Tag="B" Width="30" Height="20" Background="#FF3785CE" IsChecked="{Binding IsBChannelChecked}" Click="FilterButton_Click" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton Content="A" Tag="A" Width="30" Height="20" Background="Gray" Foreground="White" IsChecked="{Binding IsAChannelChecked}" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}"/>
+                                        <ToggleButton Content="Nrm" Tag="Normal" Width="35" Height="20" Background="#FF4488FF" Foreground="White" IsChecked="{Binding IsNormalChannelChecked}" Click="FilterButton_Click" HorizontalContentAlignment="Center" BorderThickness="1,1,1,1" BorderBrush="{DynamicResource ThemeBorder}" Margin="2,0,0,0"/>
 
                                         <!-- Fit/Reset button -->
-                                        <Button x:Name="FitResetButton" Content="Fit" Width="35" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Click="FitResetButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="10" Padding="2"/>
+                                        <Button Content="Fit" Width="35" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Click="FitResetButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="10" Padding="2"/>
 
                                         <!-- Filter toggle button (Point/Trilinear) -->
-                                        <ToggleButton x:Name="FilterToggleButton" Content="Filter" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="True" Click="FilterToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
+                                        <ToggleButton Content="Filter" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="{Binding IsFilterEnabled}" Click="FilterToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
 
                                         <!-- Tile toggle button -->
-                                        <ToggleButton x:Name="TileToggleButton" Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="False" Click="TileToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
+                                        <ToggleButton Content="Tiles" Width="45" Height="20" Margin="4,0,0,0" Background="{DynamicResource ThemeBackgroundAlt}" IsChecked="{Binding IsTilingEnabled}" Click="TileToggleButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2"/>
 
                                         <!-- Histogram correction toggle button -->
-                                        <ToggleButton x:Name="HistogramCorrectionButton" Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsChecked="True" Click="HistogramCorrectionButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2" ToolTip="Histogram preprocessing compensation (denormalization)"/>
+                                        <ToggleButton Content="Hist" Width="35" Height="20" Margin="4,0,0,0" Background="#FFFFD700" IsEnabled="{Binding IsHistogramCorrectionEnabled}" IsChecked="{Binding IsHistogramCorrectionChecked}" Click="HistogramCorrectionButton_Click" BorderBrush="{DynamicResource ThemeBorder}" FontSize="9" Padding="2" ToolTip="{Binding HistogramCorrectionToolTip}"/>
                                     </StackPanel>
-                                    <Border x:Name="MipmapSliderPanel" Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="Collapsed" HorizontalAlignment="Left">
+                                    <Border Margin="0,6,0,0" Background="{DynamicResource ThemeBackgroundAlt}" Padding="4" Visibility="{Binding IsMipmapSliderVisible, Converter={StaticResource BooleanToVisibilityConverter}}" HorizontalAlignment="Left">
                                         <StackPanel Orientation="Vertical">
-                                            <TextBlock x:Name="MipmapInfoTextBlock" Text="Уровень мипа" FontSize="10" Margin="0,0,0,4" />
+                                            <TextBlock Text="{Binding MipmapInfoText}" FontSize="10" Margin="0,0,0,4" />
                                             <Slider x:Name="MipmapLevelSlider"
                                                     Minimum="0"
                                                     Maximum="0"
@@ -1194,56 +890,12 @@
                         </Expander>
 
                         <!-- Histogram Section -->
-                        <Expander Grid.Row="1" Header="Histogram" IsExpanded="True" Style="{StaticResource RightPanelExpanderStyle}">
-                            <StackPanel Orientation="Vertical">
-                                <!-- Histogram Plot -->
-                                <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="0,0,0,4" Height="128">
-                                    <oxy:PlotView x:Name="HistogramPlotView" Height="128" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0,0,0,0" DefaultTrackerTemplate="{StaticResource HistogramTrackerTemplate}" />
-                                </Border>
-
-                                <!-- Histogram Statistics -->
-                                <Border BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Background="{DynamicResource ThemeBackgroundAlt}" Padding="6,4">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <!-- Row 1 -->
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Min:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                                        <TextBlock x:Name="HistogramMinTextBlock" Grid.Row="0" Grid.Column="1" Text="0" FontSize="9" Margin="0,0,8,2"/>
-
-                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Max:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                                        <TextBlock x:Name="HistogramMaxTextBlock" Grid.Row="0" Grid.Column="3" Text="255" FontSize="9" Margin="0,0,0,2"/>
-
-                                        <!-- Row 2 -->
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Mean:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                                        <TextBlock x:Name="HistogramMeanTextBlock" Grid.Row="1" Grid.Column="1" Text="127.5" FontSize="9" Margin="0,0,8,2"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Median:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,2"/>
-                                        <TextBlock x:Name="HistogramMedianTextBlock" Grid.Row="1" Grid.Column="3" Text="128" FontSize="9" Margin="0,0,0,2"/>
-
-                                        <!-- Row 3 -->
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="StdDev:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,0"/>
-                                        <TextBlock x:Name="HistogramStdDevTextBlock" Grid.Row="2" Grid.Column="1" Text="45.2" FontSize="9" Margin="0,0,8,0"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Pixels:" FontSize="9" FontWeight="SemiBold" Margin="0,0,4,0"/>
-                                        <TextBlock x:Name="HistogramPixelsTextBlock" Grid.Row="2" Grid.Column="3" Text="0" FontSize="9" Margin="0,0,0,0"/>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-                        </Expander>
+                        <controls:HistogramPanel Grid.Row="1"/>
 
                         <!-- Conversion Settings Panel -->
-                        <Expander Grid.Row="2" x:Name="ConversionSettingsExpander" Header="Conversion Settings"
+                        <Expander Grid.Row="2" Header="Conversion Settings"
                                   Style="{StaticResource RightPanelExpanderStyle}" IsExpanded="True"
+                                  Visibility="{Binding IsConversionSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                   Expanded="ConversionSettingsExpander_Expanded"
                                   Collapsed="ConversionSettingsExpander_Collapsed">
                             <controls:TextureConversionSettingsPanel x:Name="ConversionSettingsPanel"
@@ -1253,18 +905,19 @@
                         <!-- ORM Packing Panel (only visible when ORM texture is selected) -->
                         <controls:ORMPackingPanel Grid.Row="3"
                                                   x:Name="ORMPanel"
-                                                  Visibility="Collapsed"
+                                                  Visibility="{Binding IsORMPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                   Margin="0,2,0,0"/>
                     </Grid>
                 </Border>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="ModelViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed"
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Model}"
                           PreviewMouseWheel="ModelViewerScroll_PreviewMouseWheel">
                 <Border x:Name="ModelViewer" Background="{DynamicResource ThemeBackground}" BorderThickness="2,2,2,2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,0,0,0" MinWidth="128" MinHeight="128">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="250" MaxHeight="800" />
+                            <RowDefinition x:Name="ModelPreviewRow" Height="400" MinHeight="200" MaxHeight="1200" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" MinHeight="150" />
                         </Grid.RowDefinitions>
@@ -1275,7 +928,6 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition x:Name="ModelViewportRow" Height="300" MinHeight="100" />
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
@@ -1288,14 +940,12 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,12,0">
-                                            <TextBlock x:Name="ModelNameTextBlock"
-                                                      Text="Model Name:"
+                                            <TextBlock Text="{Binding ModelInfoName}"
                                                       Foreground="White"
                                                       FontSize="10"
                                                       FontWeight="SemiBold"
                                                       Margin="0,0,0,2" />
-                                            <TextBlock x:Name="ModelTrianglesTextBlock"
-                                                      Text="Triangles:"
+                                            <TextBlock Text="{Binding ModelInfoTriangles}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
@@ -1304,22 +954,21 @@
                                         <!-- Viewer Controls (Right Column) -->
                                         <StackPanel Grid.Column="1" Orientation="Vertical">
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                <CheckBox x:Name="ShowPivotCheckBox"
-                                                         Content="Pivot"
+                                                <CheckBox Content="Pivot"
                                                          Style="{StaticResource DarkBackgroundCheckBoxStyle}"
+                                                         IsChecked="{Binding IsShowPivotChecked}"
                                                          Checked="ShowPivotCheckBox_Changed"
                                                          Unchecked="ShowPivotCheckBox_Changed" />
-                                                <CheckBox x:Name="ShowWireframeCheckBox"
-                                                         Content="Wireframe"
+                                                <CheckBox Content="Wireframe"
                                                          Style="{StaticResource DarkBackgroundCheckBoxStyle}"
+                                                         IsChecked="{Binding IsShowWireframeChecked}"
                                                          Checked="ShowWireframeCheckBox_Changed"
                                                          Unchecked="ShowWireframeCheckBox_Changed" />
-                                                <CheckBox x:Name="ShowHumanCheckBox"
-                                                         Content="1.8m"
+                                                <CheckBox Content="1.8m"
                                                          Style="{StaticResource DarkBackgroundCheckBoxStyle}"
+                                                         IsChecked="{Binding IsShowHumanChecked}"
                                                          Checked="ShowHumanCheckBox_Changed"
-                                                         Unchecked="ShowHumanCheckBox_Changed"
-                                                         IsChecked="True" />
+                                                         Unchecked="ShowHumanCheckBox_Changed" />
                                                 <TextBlock Text="Up:"
                                                           Foreground="White"
                                                           FontSize="9"
@@ -1335,20 +984,16 @@
                                                     <ComboBoxItem Content="Z" />
                                                 </ComboBox>
                                             </StackPanel>
-                                            <TextBlock x:Name="ModelCurrentLodTextBlock"
-                                                      x:FieldModifier="private"
-                                                      Text="Current LOD: FBX"
+                                            <TextBlock Text="{Binding ModelCurrentLodText}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1"
-                                                      Visibility="Collapsed" />
-                                            <TextBlock x:Name="ModelVerticesTextBlock"
-                                                      Text="Vertices:"
+                                                      Visibility="{Binding IsModelCurrentLodVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="{Binding ModelInfoVertices}"
                                                       Foreground="#FFCCCCCC"
                                                       FontSize="9"
                                                       Margin="0,0,0,1" />
-                                            <TextBlock x:Name="ModelUVChannelsTextBlock"
-                                                      Text="UV Channels:"
+                                            <TextBlock Text="{Binding ModelInfoUVChannels}"
                                                       Foreground="#FFAAAAAA"
                                                       FontSize="9" />
                                         </StackPanel>
@@ -1375,108 +1020,132 @@
                                                           ZoomSensitivity="1"
                                                           RotateGesture="LeftClick"
                                                           PanGesture="MiddleClick">
+                                        <helix:HelixViewport3D.CacheMode>
+                                            <BitmapCache RenderAtScale="2" />
+                                        </helix:HelixViewport3D.CacheMode>
                                         <helix:DefaultLights/>
                                     </helix:HelixViewport3D>
                                 </Border>
 
-                                <!-- GridSplitter for resizing viewport -->
-                                <GridSplitter Grid.Row="2"
-                                              Height="6"
-                                              Margin="0,4,0,4"
-                                              Background="{DynamicResource ThemeBackgroundAlt}"
-                                              HorizontalAlignment="Stretch"
-                                              ResizeDirection="Rows"
-                                              ResizeBehavior="PreviousAndNext"
-                                              ShowsPreview="False"
-                                              Cursor="SizeNS"
-                                              DragDelta="ModelViewportGridSplitter_DragDelta" />
-
-                                <!-- LOD Controls Panel (BELOW viewport, like texture mipmaps) -->
-                                <StackPanel x:Name="LodControlsPanel" Grid.Row="3" Orientation="Vertical" Margin="6,4,6,6" Visibility="Collapsed">
-                                    <!-- Source Type Switch (FBX/GLB) -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="Source:"
-                                                  Foreground="{DynamicResource ThemeForeground}"
-                                                  FontSize="10"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,6,0" />
-                                        <Button x:Name="SourceFbxButton"
-                                               Content="FBX"
-                                               Click="SourceTypeButton_Click"
-                                               Tag="FBX"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}"
-                                               ToolTip="Show original FBX model" />
-                                        <Button x:Name="SourceGlbButton"
-                                               Content="GLB"
-                                               Click="SourceTypeButton_Click"
-                                               Tag="GLB"
-                                               Width="45"
-                                               Height="20"
-                                               Margin="2,0"
-                                               FontSize="9"
-                                               FontWeight="Bold"
-                                               Padding="2"
-                                               BorderBrush="{DynamicResource ThemeBorder}"
-                                               ToolTip="Show converted GLB model" />
-
-                                        <Separator Width="10" Background="Transparent" />
-
-                                        <!-- LOD Slider -->
-                                        <TextBlock Text="LOD:"
-                                                  Foreground="{DynamicResource ThemeForeground}"
-                                                  FontSize="10"
-                                                  VerticalAlignment="Center"
-                                                  Margin="0,0,6,0" />
-                                        <Slider x:Name="LodSlider"
-                                               Minimum="0"
-                                               Maximum="3"
-                                               Value="0"
-                                               TickFrequency="1"
-                                               IsSnapToTickEnabled="True"
-                                               Width="100"
-                                               VerticalAlignment="Center"
-                                               ValueChanged="LodSlider_ValueChanged"
-                                               ToolTip="Select LOD level" />
-                                        <TextBlock x:Name="LodSliderValueText"
-                                                  Text="LOD0"
-                                                  Foreground="{DynamicResource ThemeForeground}"
-                                                  FontSize="10"
-                                                  FontWeight="SemiBold"
-                                                  VerticalAlignment="Center"
-                                                  Margin="6,0,0,0"
-                                                  MinWidth="35" />
-                                        <TextBlock x:Name="LodInfoText"
-                                                  Text=""
-                                                  Foreground="{DynamicResource ThemeForegroundDim}"
-                                                  FontSize="9"
-                                                  VerticalAlignment="Center"
-                                                  Margin="8,0,0,0" />
-                                    </StackPanel>
-                                </StackPanel>
+                                <!-- Drag handle for resizing viewport (Thumb instead of GridSplitter to avoid auto-resize of LOD panel) -->
+                                <Thumb Grid.Row="2"
+                                       Height="6"
+                                       Margin="0,4,0,4"
+                                       HorizontalAlignment="Stretch"
+                                       Cursor="SizeNS"
+                                       DragDelta="ModelViewportGridSplitter_DragDelta">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="{DynamicResource ThemeBackgroundAlt}"
+                                                    CornerRadius="2" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
                             </Grid>
                         </Expander>
 
-                        <!-- GridSplitter between Model Preview and bottom section -->
-                        <GridSplitter x:Name="ModelPreviewGridSplitter"
-                                      Grid.Row="1"
-                                      Height="6"
-                                      Margin="0,4,0,4"
-                                      Background="{DynamicResource ThemeBackgroundAlt}"
-                                      HorizontalAlignment="Stretch"
-                                      VerticalAlignment="Center"
-                                      ResizeDirection="Rows"
-                                      ResizeBehavior="PreviousAndNext"
-                                      ShowsPreview="False"
-                                      Cursor="SizeNS"
-                                      DragCompleted="ModelPreviewGridSplitter_DragCompleted" />
+                        <!-- LOD Controls Panel (outside Expander so it can't be clipped by resize) -->
+                        <StackPanel Grid.Row="1" Orientation="Vertical" Margin="6,4,6,2" Visibility="{Binding IsLodControlsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Source:"
+                                          Foreground="{DynamicResource ThemeForeground}"
+                                          FontSize="10"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0" />
+                                <Button Content="FBX"
+                                       Click="SourceTypeButton_Click"
+                                       Tag="FBX"
+                                       Width="45"
+                                       Height="20"
+                                       Margin="2,0"
+                                       FontSize="9"
+                                       Padding="2"
+                                       BorderBrush="{DynamicResource ThemeBorder}"
+                                       ToolTip="Show original FBX model">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="FontWeight" Value="Normal"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsShowingFbxSource}" Value="True">
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <Button Content="GLB"
+                                       Click="SourceTypeButton_Click"
+                                       Tag="GLB"
+                                       Width="45"
+                                       Height="20"
+                                       Margin="2,0"
+                                       FontSize="9"
+                                       Padding="2"
+                                       BorderBrush="{DynamicResource ThemeBorder}"
+                                       ToolTip="Show converted GLB model">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsShowingFbxSource}" Value="True">
+                                                    <Setter Property="FontWeight" Value="Normal"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Separator Width="10" Background="Transparent" />
+
+                                <!-- LOD Slider -->
+                                <TextBlock Text="LOD:"
+                                          Foreground="{DynamicResource ThemeForeground}"
+                                          FontSize="10"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0" />
+                                <Slider Minimum="0"
+                                       Maximum="{Binding LodSliderMaximum}"
+                                       Value="{Binding LodSliderValue, Mode=OneWay}"
+                                       IsEnabled="{Binding IsLodSliderEnabled}"
+                                       TickFrequency="1"
+                                       IsSnapToTickEnabled="True"
+                                       Width="100"
+                                       VerticalAlignment="Center"
+                                       ValueChanged="LodSlider_ValueChanged"
+                                       ToolTip="Select LOD level" />
+                                <TextBlock Text="{Binding LodValueText}"
+                                          Foreground="{DynamicResource ThemeForeground}"
+                                          FontSize="10"
+                                          FontWeight="SemiBold"
+                                          VerticalAlignment="Center"
+                                          Margin="6,0,0,0"
+                                          MinWidth="35" />
+                                <TextBlock Text="{Binding LodInfoText}"
+                                          Foreground="{DynamicResource ThemeForegroundDim}"
+                                          FontSize="9"
+                                          VerticalAlignment="Center"
+                                          Margin="8,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Drag handle between Model Preview and bottom section -->
+                        <Thumb Grid.Row="2"
+                               Height="6"
+                               Margin="0,4,0,4"
+                               HorizontalAlignment="Stretch"
+                               Cursor="SizeNS"
+                               DragDelta="ModelPreviewGridSplitter_DragDelta"
+                               DragCompleted="ModelPreviewGridSplitter_DragCompleted">
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border Background="{DynamicResource ThemeBackgroundAlt}"
+                                            CornerRadius="2" />
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
 
                         <!-- Bottom section: UV Maps + Settings -->
-                        <Grid Grid.Row="2">
+                        <Grid Grid.Row="3">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -1515,7 +1184,7 @@
                         </Expander>
 
                         <!-- Model Conversion Settings Panel -->
-                        <Expander Grid.Row="1" x:Name="ModelConversionSettingsExpander" Header="Model Conversion Settings"
+                        <Expander Grid.Row="1" Header="Model Conversion Settings"
                                   Style="{StaticResource RightPanelExpanderStyle}" IsExpanded="True">
                             <controls:ModelConversionSettingsPanel x:Name="ModelConversionSettingsPanel"
                                                                    ProcessRequested="ModelConversionSettingsPanel_ProcessRequested"/>
@@ -1525,483 +1194,19 @@
                 </Border>
             </ScrollViewer>
 
-            <!-- Просмотр параметров материала (компактная версия) -->
-            <ScrollViewer x:Name="MaterialViewerScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                <Border x:Name="MaterialViewer" Background="{DynamicResource ThemeBackgroundAlt}" Margin="2" Padding="8" CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" MinWidth="280">
-                    <StackPanel>
-                        <!-- Header: ID + Name -->
-                        <TextBlock x:Name="MaterialIDTextBlock" Text="ID: " FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="MaterialNameTextBlock" Text="Name" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
-
-                        <!-- Master Material Selector -->
-                        <Border BorderThickness="0,1,0,1" BorderBrush="{DynamicResource ThemeBorder}" Padding="0,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Master:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
-                                <ComboBox x:Name="MaterialMasterComboBox" Grid.Column="1"
-                                          SelectionChanged="MaterialMasterComboBox_SelectionChanged"
-                                          MinWidth="150"/>
-                            </Grid>
-                        </Border>
-
-                        <!-- TEXTURES Section -->
-                        <TextBlock Text="TEXTURES" FontWeight="Bold" FontSize="10" Margin="0,8,0,4" Foreground="{DynamicResource ThemeForegroundDim}"/>
-                        <Border BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" CornerRadius="2" Padding="4">
-                            <StackPanel>
-                                <!-- Diffuse -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Diffuse" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialDiffuseMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureDiffusePreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Diffuse" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Diffuse" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                                <!-- Normal -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Normal" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialNormalMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureNormalPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Normal" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Normal" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                                <!-- AO -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="AO" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialAOMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureAOPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="AO" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="AO" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                                <!-- Gloss -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Gloss" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialGlossMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureGlossPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Gloss" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Gloss" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                                <!-- Metal -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Metal" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialMetalnessMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureMetalnessPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Metalness" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Metalness" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                                <!-- Emissive -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Emissive" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialEmissiveMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureEmissivePreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Emissive" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Emissive" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                                <!-- Opacity -->
-                                <Grid Margin="0,2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="36"/>
-                                        <ColumnDefinition Width="24"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Opacity" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis">
-                                        <Hyperlink x:Name="MaterialOpacityMapHyperlink" Click="MaterialMapHyperlink_Click" Style="{StaticResource TextureHyperlinkStyle}">-</Hyperlink>
-                                    </TextBlock>
-                                    <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" Width="32" Height="32">
-                                        <Image x:Name="TextureOpacityPreviewImage" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" Tag="Opacity" MouseLeftButtonUp="TexturePreview_MouseLeftButtonUp"/>
-                                    </Border>
-                                    <Button Grid.Column="3" Content="👁" Width="20" Height="20" Padding="0" FontSize="10" VerticalAlignment="Center" Tag="Opacity" Click="NavigateToMaterialTexture_Click" ToolTip="Navigate to texture"/>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- OVERRIDES Section -->
-                        <TextBlock Text="OVERRIDES" FontWeight="Bold" FontSize="10" Margin="0,12,0,4" Foreground="{DynamicResource ThemeForegroundDim}"/>
-                        <Border BorderThickness="1" BorderBrush="{DynamicResource ThemeBorder}" CornerRadius="2" Padding="8,4">
-                            <StackPanel>
-                                <!-- Bumpiness -->
-                                <Grid Margin="0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="50"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Bumpiness:" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBox x:Name="MaterialBumpinessTextBox" Grid.Column="1" Text="1.00" Height="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="{DynamicResource ThemeBackground}" Foreground="{DynamicResource ThemeForeground}" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                    <Slider x:Name="MaterialBumpinessIntensitySlider" Grid.Column="2" Minimum="0" Maximum="2" Value="1" SmallChange="0.01" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                                </Grid>
-                                <!-- Metalness -->
-                                <Grid Margin="0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="50"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Metalness:" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBox x:Name="MaterialMetalnessTextBox" Grid.Column="1" Text="0.00" Height="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="{DynamicResource ThemeBackground}" Foreground="{DynamicResource ThemeForeground}" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                    <Slider x:Name="MaterialMetalnessIntensitySlider" Grid.Column="2" Minimum="0" Maximum="1" Value="0" SmallChange="0.01" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                                </Grid>
-                                <!-- Glossiness -->
-                                <Grid Margin="0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="50"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Glossiness:" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBox x:Name="MaterialGlossinessTextBox" Grid.Column="1" Text="0.25" Height="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="{DynamicResource ThemeBackground}" Foreground="{DynamicResource ThemeForeground}" BorderBrush="{DynamicResource ThemeBorder}"/>
-                                    <Slider x:Name="MaterialGlossinessIntensitySlider" Grid.Column="2" Minimum="0" Maximum="1" Value="0.25" SmallChange="0.01" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                                </Grid>
-
-                                <!-- Tint Options -->
-                                <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorder}" Margin="0,8,0,0" Padding="0,8,0,0">
-                                    <StackPanel>
-                                        <!-- Diffuse Tint -->
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <CheckBox x:Name="MaterialDiffuseTintCheckBox" Content="Diffuse Tint" VerticalAlignment="Center" FlowDirection="RightToLeft" Padding="4,0,0,0"/>
-                                            <TextBox x:Name="MaterialTintColorRect" Grid.Column="1" Width="70" Height="20" Margin="8,0" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#FF9A9A9A" Foreground="Black" Text="#9A9A9A"/>
-                                            <xctk:ColorPicker x:Name="TintColorPicker" Grid.Column="2" Width="24" Height="24" SelectedColorChanged="TintColorPicker_SelectedColorChanged" ColorMode="ColorCanvas" ShowRecentColors="True" BorderThickness="0"/>
-                                        </Grid>
-                                        <!-- AO Tint -->
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <CheckBox x:Name="MaterialAOTintCheckBox" Content="AO Tint" VerticalAlignment="Center" FlowDirection="RightToLeft" Padding="4,0,0,0"/>
-                                            <TextBox x:Name="MaterialAOTintColorRect" Grid.Column="1" Width="70" Height="20" Margin="8,0" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#FFFFFFFF" Foreground="Black" Text="#FFFFFF"/>
-                                            <xctk:ColorPicker x:Name="AOTintColorPicker" Grid.Column="2" Width="24" Height="24" SelectedColorChanged="AOTintColorPicker_SelectedColorChanged" ColorMode="ColorCanvas" ShowRecentColors="True" BorderThickness="0"/>
-                                        </Grid>
-                                        <!-- Specular Tint -->
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <CheckBox x:Name="MaterialSpecularTintCheckBox" Content="Specular Tint" VerticalAlignment="Center" FlowDirection="RightToLeft" Padding="4,0,0,0"/>
-                                            <TextBox x:Name="MaterialSpecularTintColorRect" Grid.Column="1" Width="70" Height="20" Margin="8,0" IsReadOnly="True" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#FFFFFFFF" Foreground="Black" Text="#FFFFFF"/>
-                                            <xctk:ColorPicker x:Name="TintSpecularColorPicker" Grid.Column="2" Width="24" Height="24" SelectedColorChanged="TintSpecularColorPicker_SelectedColorChanged" ColorMode="ColorCanvas" ShowRecentColors="True" BorderThickness="0"/>
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Border>
+            <!-- Просмотр параметров материала -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Material}">
+                <controls:MaterialInfoPanel x:Name="materialInfoPanel"/>
             </ScrollViewer>
 
             <!-- Server File Info Panel -->
-            <ScrollViewer x:Name="ServerFileInfoScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                <Border Background="{DynamicResource ThemeBackground}" BorderThickness="2" BorderBrush="{DynamicResource ThemeBorder}" Padding="8" MinWidth="250">
-                    <StackPanel>
-                        <TextBlock Text="Server File Info" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"
-                                   Foreground="{DynamicResource ThemeForeground}"/>
-
-                        <!-- File Name -->
-                        <TextBlock Text="File Name" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileNameText" Text="-" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                        <!-- Type -->
-                        <TextBlock Text="Type" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileTypeText" Text="-" FontSize="12"
-                                   Foreground="{DynamicResource ThemeForeground}" Margin="0,0,0,10"/>
-
-                        <!-- Size -->
-                        <TextBlock Text="Size" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileSizeText" Text="-" FontSize="12"
-                                   Foreground="{DynamicResource ThemeForeground}" Margin="0,0,0,10"/>
-
-                        <!-- Sync Status -->
-                        <TextBlock Text="Sync Status" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileSyncStatusText" Text="-" FontSize="12" FontWeight="SemiBold"
-                                   Margin="0,0,0,10"/>
-
-                        <!-- Uploaded At -->
-                        <TextBlock Text="Uploaded" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileUploadedText" Text="-" FontSize="12"
-                                   Foreground="{DynamicResource ThemeForeground}" Margin="0,0,0,10"/>
-
-                        <!-- SHA1 -->
-                        <TextBlock Text="SHA1 Hash" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileSha1Text" Text="-" FontSize="11" FontFamily="Consolas"
-                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                        <!-- Remote Path -->
-                        <TextBlock Text="Remote Path" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileRemotePathText" Text="-" FontSize="11"
-                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                        <!-- CDN URL -->
-                        <TextBlock Text="CDN URL" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBox x:Name="ServerFileCdnUrlText" Text="-" FontSize="11" IsReadOnly="True"
-                                 Background="Transparent" BorderThickness="0"
-                                 Foreground="{DynamicResource ThemeAccent}" TextWrapping="Wrap" Margin="0,0,0,5"/>
-                        <Button x:Name="CopyServerUrlButton" Content="Copy CDN URL" Click="CopyServerUrlButton_Click"
-                                Padding="8,4" HorizontalAlignment="Left" Margin="0,0,0,10"/>
-
-                        <!-- Local Path -->
-                        <TextBlock Text="Local Path" FontSize="10" Foreground="{DynamicResource ThemeForegroundDim}" Margin="0,0,0,2"/>
-                        <TextBlock x:Name="ServerFileLocalPathText" Text="-" FontSize="11"
-                                   Foreground="{DynamicResource ThemeForeground}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
-                        <!-- Actions -->
-                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button x:Name="DeleteServerFileButton" Content="Delete from Server" Click="DeleteServerFileButton_Click"
-                                    Background="#FFF44336" Foreground="White" Padding="8,4" Margin="0,0,8,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=ServerFile}">
+                <controls:ServerFileInfoPanel x:Name="serverFileInfoPanel"/>
             </ScrollViewer>
 
             <!-- Chunk Slots Panel (for Master Materials tab) -->
-            <ScrollViewer x:Name="ChunkSlotsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                <Border Background="{DynamicResource ThemeBackground}" BorderThickness="2" BorderBrush="{DynamicResource ThemeBorder}" Padding="0" MinWidth="250">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Tab Header -->
-                        <TabControl x:Name="ChunkSlotsPanelTabControl" Grid.Row="0" Background="{DynamicResource ThemeBackground}" BorderThickness="0">
-                            <!-- Tab 1: Chunk Slots -->
-                            <TabItem Header="Slots">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Header with master info -->
-                                    <Border Grid.Row="0" Background="{DynamicResource ThemeBackground}" Padding="8,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ThemeBorder}">
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Master:" Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11" Margin="0,0,4,0"/>
-                                                <TextBlock Text="{Binding MasterMaterialsViewModel.SelectedMaster.Name, FallbackValue='(select a master)'}"
-                                                           FontWeight="SemiBold" Foreground="{DynamicResource ThemeAccent}"/>
-                                            </StackPanel>
-                                            <TextBlock Text="Select chunk for each slot. Custom chunks replace defaults."
-                                                       Foreground="{DynamicResource ThemeForegroundDim}" FontSize="10" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Chunk Slots List -->
-                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="600">
-                                        <ItemsControl x:Name="ChunkSlotsItemsControl"
-                                                      ItemsSource="{Binding MasterMaterialsViewModel.ChunkSlotCategories}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Expander IsExpanded="{Binding IsExpanded}" Margin="0,0,0,2">
-                                                        <Expander.Header>
-                                                            <TextBlock Text="{Binding CategoryName}" FontWeight="SemiBold" FontSize="11"/>
-                                                        </Expander.Header>
-                                                        <ItemsControl ItemsSource="{Binding Slots}" Margin="4,2,4,4">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <Grid Margin="0,2">
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="20"/>
-                                                                            <ColumnDefinition Width="90"/>
-                                                                            <ColumnDefinition Width="*"/>
-                                                                            <ColumnDefinition Width="22"/>
-                                                                        </Grid.ColumnDefinitions>
-
-                                                                        <!-- Enable/Disable checkbox -->
-                                                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}"
-                                                                                  IsEnabled="{Binding IsRequired, Converter={StaticResource InverseBoolConverter}}"
-                                                                                  VerticalAlignment="Center" ToolTip="Enable/disable this slot"/>
-
-                                                                        <!-- Slot name -->
-                                                                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
-                                                                                   VerticalAlignment="Center" FontSize="11"
-                                                                                   ToolTip="{Binding Description}"
-                                                                                   Foreground="{DynamicResource ThemeForeground}"/>
-
-                                                                        <!-- Chunk selector -->
-                                                                        <ComboBox Grid.Column="2"
-                                                                                  ItemsSource="{Binding AvailableChunks}"
-                                                                                  SelectedItem="{Binding SelectedChunk}"
-                                                                                  DisplayMemberPath="Id"
-                                                                                  IsEnabled="{Binding IsEnabled}"
-                                                                                  VerticalAlignment="Center"
-                                                                                  FontSize="11"/>
-
-                                                                        <!-- Edit button -->
-                                                                        <Button Grid.Column="3" Content="&#xE70F;"
-                                                                                FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                                                                Click="SlotEditChunk_Click"
-                                                                                Tag="{Binding}"
-                                                                                IsEnabled="{Binding IsEnabled}"
-                                                                                ToolTip="Edit selected chunk"
-                                                                                Padding="2" Margin="2,0,0,0"
-                                                                                VerticalAlignment="Center"/>
-                                                                    </Grid>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </Expander>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </Grid>
-                            </TabItem>
-
-                            <!-- Tab 2: All Chunks (for browsing/editing) -->
-                            <TabItem Header="All Chunks">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Header -->
-                                    <Border Grid.Row="0" Background="{DynamicResource ThemeBackground}" Padding="8,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ThemeBorder}">
-                                        <StackPanel>
-                                            <TextBlock Text="All shader chunks (built-in + custom)"
-                                                       Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11"/>
-                                            <TextBlock Text="Click to edit in center panel"
-                                                       Foreground="{DynamicResource ThemeForegroundDim}" FontSize="10" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Chunks list -->
-                                    <ListBox Grid.Row="1" x:Name="AllChunksListBox"
-                                             ItemsSource="{Binding MasterMaterialsViewModel.Chunks}"
-                                             SelectedItem="{Binding MasterMaterialsViewModel.SelectedChunk}"
-                                             Background="{DynamicResource ThemeDataGridBackground}"
-                                             BorderThickness="0"
-                                             MaxHeight="500"
-                                             VirtualizingPanel.IsVirtualizing="True"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="2,1">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="55"/>
-                                                        <ColumnDefinition Width="24"/>
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <!-- Chunk ID -->
-                                                    <TextBlock Grid.Column="0" Text="{Binding Id}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Description}">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundDim}"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding IsBuiltIn}" Value="False">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}"/>
-                                                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-
-                                                    <!-- Type -->
-                                                    <TextBlock Grid.Column="1" Text="{Binding Type}" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource ThemeForegroundDim}" FontSize="11"/>
-
-                                                    <!-- Built-in indicator -->
-                                                    <TextBlock Grid.Column="2" Text="●" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                               FontSize="8" ToolTip="Built-in chunk">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                        <Setter Property="Foreground" Value="#FF4CAF50"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                        <ListBox.ItemContainerStyle>
-                                            <Style TargetType="ListBoxItem">
-                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                                <Setter Property="Padding" Value="4,2"/>
-                                                <Setter Property="ContextMenu" Value="{StaticResource ChunkRowContextMenu}"/>
-                                            </Style>
-                                        </ListBox.ItemContainerStyle>
-                                    </ListBox>
-                                </Grid>
-                            </TabItem>
-                        </TabControl>
-                    </Grid>
-                </Border>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding ActiveViewerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=ChunkSlots}">
+                <controls:ChunkSlotsPanel x:Name="chunkSlotsPanel"/>
             </ScrollViewer>
 
         </Grid>

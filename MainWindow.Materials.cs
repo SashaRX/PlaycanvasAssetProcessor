@@ -1,3 +1,4 @@
+using AssetProcessor.Helpers;
 using AssetProcessor.Resources;
 using NLog;
 using System;
@@ -26,11 +27,55 @@ namespace AssetProcessor {
 
         #region Materials
 
+        /// <summary>
+        /// Wires event handlers for MaterialInfoPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeMaterialInfoPanel() {
+            // ComboBox
+            materialInfoPanel.MaterialMasterComboBox.SelectionChanged += MaterialMasterComboBox_SelectionChanged;
+
+            // Hyperlink Click (all share same handler)
+            materialInfoPanel.MaterialDiffuseMapHyperlink.Click += MaterialMapHyperlink_Click;
+            materialInfoPanel.MaterialNormalMapHyperlink.Click += MaterialMapHyperlink_Click;
+            materialInfoPanel.MaterialAOMapHyperlink.Click += MaterialMapHyperlink_Click;
+            materialInfoPanel.MaterialGlossMapHyperlink.Click += MaterialMapHyperlink_Click;
+            materialInfoPanel.MaterialMetalnessMapHyperlink.Click += MaterialMapHyperlink_Click;
+            materialInfoPanel.MaterialEmissiveMapHyperlink.Click += MaterialMapHyperlink_Click;
+            materialInfoPanel.MaterialOpacityMapHyperlink.Click += MaterialMapHyperlink_Click;
+
+            // Image MouseLeftButtonUp (all share same handler)
+            materialInfoPanel.TextureDiffusePreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+            materialInfoPanel.TextureNormalPreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+            materialInfoPanel.TextureAOPreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+            materialInfoPanel.TextureGlossPreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+            materialInfoPanel.TextureMetalnessPreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+            materialInfoPanel.TextureEmissivePreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+            materialInfoPanel.TextureOpacityPreviewImage.MouseLeftButtonUp += TexturePreview_MouseLeftButtonUp;
+
+            // Navigate buttons (unnamed) - catch bubbling Button.Click from the UserControl
+            materialInfoPanel.AddHandler(Button.ClickEvent, new RoutedEventHandler(MaterialInfoPanel_ButtonClick));
+
+            // ColorPicker SelectedColorChanged
+            materialInfoPanel.TintColorPicker.SelectedColorChanged += TintColorPicker_SelectedColorChanged;
+            materialInfoPanel.AOTintColorPicker.SelectedColorChanged += AOTintColorPicker_SelectedColorChanged;
+            materialInfoPanel.TintSpecularColorPicker.SelectedColorChanged += TintSpecularColorPicker_SelectedColorChanged;
+        }
+
+        /// <summary>
+        /// Handles bubbling Button.Click from MaterialInfoPanel navigate buttons.
+        /// </summary>
+        private void MaterialInfoPanel_ButtonClick(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button btn && btn.Tag is string textureType) {
+                NavigateToMaterialTexture(textureType);
+            }
+        }
+
         private void DisplayMaterialParameters(MaterialResource parameters) {
             Dispatcher.Invoke(() => {
                 // Header
-                MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
-                MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
+                materialInfoPanel.MaterialIDTextBlock.Text = $"ID: {parameters.ID}";
+                materialInfoPanel.MaterialNameTextBlock.Text = parameters.Name ?? "Unnamed";
 
                 // NOTE: Do NOT update MaterialMasterComboBox here!
                 // The MasterMaterialName is stored in config.json, not in material JSON files.
@@ -38,37 +83,37 @@ namespace AssetProcessor {
                 // the material from DataGrid which has the correct MasterMaterialName.
 
                 // Texture hyperlinks and previews
-                UpdateTextureHyperlink(MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);
-                UpdateTextureHyperlink(MaterialNormalMapHyperlink, parameters.NormalMapId, parameters);
-                UpdateTextureHyperlink(MaterialAOMapHyperlink, parameters.AOMapId, parameters);
-                UpdateTextureHyperlink(MaterialGlossMapHyperlink, parameters.GlossMapId, parameters);
-                UpdateTextureHyperlink(MaterialMetalnessMapHyperlink, parameters.MetalnessMapId, parameters);
-                UpdateTextureHyperlink(MaterialEmissiveMapHyperlink, parameters.EmissiveMapId, parameters);
-                UpdateTextureHyperlink(MaterialOpacityMapHyperlink, parameters.OpacityMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialDiffuseMapHyperlink, parameters.DiffuseMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialNormalMapHyperlink, parameters.NormalMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialAOMapHyperlink, parameters.AOMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialGlossMapHyperlink, parameters.GlossMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialMetalnessMapHyperlink, parameters.MetalnessMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialEmissiveMapHyperlink, parameters.EmissiveMapId, parameters);
+                UpdateTextureHyperlink(materialInfoPanel.MaterialOpacityMapHyperlink, parameters.OpacityMapId, parameters);
 
                 // Texture previews
-                SetTextureImage(TextureDiffusePreviewImage, parameters.DiffuseMapId);
-                SetTextureImage(TextureNormalPreviewImage, parameters.NormalMapId);
-                SetTextureImage(TextureAOPreviewImage, parameters.AOMapId);
-                SetTextureImage(TextureGlossPreviewImage, parameters.GlossMapId);
-                SetTextureImage(TextureMetalnessPreviewImage, parameters.MetalnessMapId);
-                SetTextureImage(TextureEmissivePreviewImage, parameters.EmissiveMapId);
-                SetTextureImage(TextureOpacityPreviewImage, parameters.OpacityMapId);
+                SetTextureImage(materialInfoPanel.TextureDiffusePreviewImage, parameters.DiffuseMapId);
+                SetTextureImage(materialInfoPanel.TextureNormalPreviewImage, parameters.NormalMapId);
+                SetTextureImage(materialInfoPanel.TextureAOPreviewImage, parameters.AOMapId);
+                SetTextureImage(materialInfoPanel.TextureGlossPreviewImage, parameters.GlossMapId);
+                SetTextureImage(materialInfoPanel.TextureMetalnessPreviewImage, parameters.MetalnessMapId);
+                SetTextureImage(materialInfoPanel.TextureEmissivePreviewImage, parameters.EmissiveMapId);
+                SetTextureImage(materialInfoPanel.TextureOpacityPreviewImage, parameters.OpacityMapId);
 
                 // Overrides sliders
-                MaterialBumpinessTextBox.Text = (parameters.BumpMapFactor ?? 1.0f).ToString("F2");
-                MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 1.0;
+                materialInfoPanel.MaterialBumpinessTextBox.Text = (parameters.BumpMapFactor ?? 1.0f).ToString("F2");
+                materialInfoPanel.MaterialBumpinessIntensitySlider.Value = parameters.BumpMapFactor ?? 1.0;
 
-                MaterialMetalnessTextBox.Text = (parameters.Metalness ?? 0.0f).ToString("F2");
-                MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0.0;
+                materialInfoPanel.MaterialMetalnessTextBox.Text = (parameters.Metalness ?? 0.0f).ToString("F2");
+                materialInfoPanel.MaterialMetalnessIntensitySlider.Value = parameters.Metalness ?? 0.0;
 
-                MaterialGlossinessTextBox.Text = (parameters.Glossiness ?? parameters.Shininess ?? 0.25f).ToString("F2");
-                MaterialGlossinessIntensitySlider.Value = parameters.Glossiness ?? parameters.Shininess ?? 0.25;
+                materialInfoPanel.MaterialGlossinessTextBox.Text = (parameters.Glossiness ?? parameters.Shininess ?? 0.25f).ToString("F2");
+                materialInfoPanel.MaterialGlossinessIntensitySlider.Value = parameters.Glossiness ?? parameters.Shininess ?? 0.25;
 
                 // Tint colors
-                SetTintColor(MaterialDiffuseTintCheckBox, MaterialTintColorRect, TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
-                SetTintColor(MaterialAOTintCheckBox, MaterialAOTintColorRect, AOTintColorPicker, parameters.AOTint, parameters.AOColor);
-                SetTintColor(MaterialSpecularTintCheckBox, MaterialSpecularTintColorRect, TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
+                SetTintColor(materialInfoPanel.MaterialDiffuseTintCheckBox, materialInfoPanel.MaterialTintColorRect, materialInfoPanel.TintColorPicker, parameters.DiffuseTint, parameters.Diffuse);
+                SetTintColor(materialInfoPanel.MaterialAOTintCheckBox, materialInfoPanel.MaterialAOTintColorRect, materialInfoPanel.AOTintColorPicker, parameters.AOTint, parameters.AOColor);
+                SetTintColor(materialInfoPanel.MaterialSpecularTintCheckBox, materialInfoPanel.MaterialSpecularTintColorRect, materialInfoPanel.TintSpecularColorPicker, parameters.SpecularTint, parameters.Specular);
             });
         }
 
@@ -119,8 +164,7 @@ namespace AssetProcessor {
             }
         }
 
-        private void NavigateToMaterialTexture_Click(object sender, RoutedEventArgs e) {
-            if (sender is not FrameworkElement element || element.Tag is not string textureType) return;
+        private void NavigateToMaterialTexture(string textureType) {
             var material = MaterialsDataGrid.SelectedItem as MaterialResource;
             if (material == null) return;
 
@@ -165,6 +209,8 @@ namespace AssetProcessor {
         private void UpdateMasterMaterialComboBox(string? masterName) {
             _isUpdatingMasterComboBox = true;
             try {
+                var comboBox = materialInfoPanel.MaterialMasterComboBox;
+
                 // Always populate ItemsSource first with master names as strings
                 var masters = viewModel.MasterMaterialsViewModel.MasterMaterials;
                 var masterNames = masters.Select(m => m.Name).ToList();
@@ -172,19 +218,19 @@ namespace AssetProcessor {
                 logger.Info($"UpdateMasterMaterialComboBox: masterNames count={masterNames.Count}, selecting='{masterName}'");
 
                 // Set ItemsSource (will clear selection)
-                MaterialMasterComboBox.ItemsSource = masterNames;
+                comboBox.ItemsSource = masterNames;
 
                 // Now set selection
                 if (!string.IsNullOrEmpty(masterName) && masterNames.Contains(masterName)) {
-                    MaterialMasterComboBox.SelectedItem = masterName;
-                    logger.Info($"UpdateMasterMaterialComboBox: SelectedItem set to '{masterName}', SelectedIndex={MaterialMasterComboBox.SelectedIndex}");
+                    comboBox.SelectedItem = masterName;
+                    logger.Info($"UpdateMasterMaterialComboBox: SelectedItem set to '{masterName}', SelectedIndex={comboBox.SelectedIndex}");
                 } else {
-                    MaterialMasterComboBox.SelectedIndex = -1;
+                    comboBox.SelectedIndex = -1;
                     logger.Info($"UpdateMasterMaterialComboBox: Cleared selection (masterName='{masterName}' not found)");
                 }
 
                 // Force layout update to ensure visual refresh
-                MaterialMasterComboBox.UpdateLayout();
+                comboBox.UpdateLayout();
             } finally {
                 _isUpdatingMasterComboBox = false;
             }
@@ -193,7 +239,7 @@ namespace AssetProcessor {
         private void MaterialMasterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             // Skip if we're programmatically updating the ComboBox
             if (_isUpdatingMasterComboBox) return;
-            if (MaterialMasterComboBox.SelectedItem is not string masterName) return;
+            if (materialInfoPanel.MaterialMasterComboBox.SelectedItem is not string masterName) return;
 
             // Apply to ALL selected materials (group assignment)
             var selectedMaterials = MaterialsDataGrid.SelectedItems.Cast<MaterialResource>().ToList();
@@ -268,20 +314,15 @@ namespace AssetProcessor {
         }
 
         private async void MaterialsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            logger.Info($"MaterialsDataGrid_SelectionChanged CALLED, SelectedItem={MaterialsDataGrid.SelectedItem?.GetType().Name ?? "null"}");
+            await UiAsyncHelper.ExecuteAsync(async () => {
+                if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
+                    logger.Info($"MaterialsDataGrid_SelectionChanged: material={selectedMaterial.Name}");
 
-            if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
-                logger.Info($"MaterialsDataGrid_SelectionChanged: processing material={selectedMaterial.Name}, MasterMaterialName='{selectedMaterial.MasterMaterialName}'");
-
-                // Update MainViewModel's selected material for filtering
-                viewModel.SelectedMaterial = selectedMaterial;
-
-                // Update right panel Master ComboBox using centralized helper
-                UpdateMasterMaterialComboBox(selectedMaterial.MasterMaterialName);
-
-                // Delegate to MaterialSelectionViewModel for parameter loading
-                await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
-            }
+                    viewModel.SelectedMaterial = selectedMaterial;
+                    UpdateMasterMaterialComboBox(selectedMaterial.MasterMaterialName);
+                    await viewModel.MaterialSelection.SelectMaterialCommand.ExecuteAsync(selectedMaterial);
+                }
+            }, nameof(MaterialsDataGrid_SelectionChanged));
         }
 
         private void SetTextureImage(System.Windows.Controls.Image imageControl, int? textureId) {
@@ -303,11 +344,11 @@ namespace AssetProcessor {
                 Color color = e.NewValue.Value;
                 Color mediaColor = Color.FromArgb(color.A, color.R, color.G, color.B);
 
-                MaterialTintColorRect.Background = new SolidColorBrush(mediaColor);
-                MaterialTintColorRect.Text = $"#{mediaColor.A:X2}{mediaColor.R:X2}{mediaColor.G:X2}{mediaColor.B:X2}";
+                materialInfoPanel.MaterialTintColorRect.Background = new SolidColorBrush(mediaColor);
+                materialInfoPanel.MaterialTintColorRect.Text = $"#{mediaColor.A:X2}{mediaColor.R:X2}{mediaColor.G:X2}{mediaColor.B:X2}";
 
                 double brightness = (mediaColor.R * 0.299 + mediaColor.G * 0.587 + mediaColor.B * 0.114) / 255;
-                MaterialTintColorRect.Foreground = new SolidColorBrush(brightness > 0.5 ? Colors.Black : Colors.White);
+                materialInfoPanel.MaterialTintColorRect.Foreground = new SolidColorBrush(brightness > 0.5 ? Colors.Black : Colors.White);
 
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                     selectedMaterial.DiffuseTint = true;
@@ -319,8 +360,8 @@ namespace AssetProcessor {
         private void AOTintColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e) {
             if (e.NewValue.HasValue) {
                 Color newColor = e.NewValue.Value;
-                MaterialAOTintColorRect.Background = new SolidColorBrush(newColor);
-                MaterialAOTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
+                materialInfoPanel.MaterialAOTintColorRect.Background = new SolidColorBrush(newColor);
+                materialInfoPanel.MaterialAOTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
 
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {
                     selectedMaterial.AOTint = true;
@@ -332,8 +373,8 @@ namespace AssetProcessor {
         private void TintSpecularColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e) {
             if (e.NewValue.HasValue) {
                 Color newColor = e.NewValue.Value;
-                MaterialSpecularTintColorRect.Background = new SolidColorBrush(newColor);
-                MaterialSpecularTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
+                materialInfoPanel.MaterialSpecularTintColorRect.Background = new SolidColorBrush(newColor);
+                materialInfoPanel.MaterialSpecularTintColorRect.Text = $"#{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}";
 
                 // Update material specular
                 if (MaterialsDataGrid.SelectedItem is MaterialResource selectedMaterial) {

@@ -219,7 +219,7 @@ namespace AssetProcessor {
                 logService.LogInfo($"  FBX2glTF: {fbx2glTFPath}");
                 logService.LogInfo($"  gltfpack: {gltfPackPath}");
 
-                ProgressTextBlock.Text = $"Processing {selectedModel.Name}...";
+                viewModel.ProgressText = $"Processing {selectedModel.Name}...";
 
                 // Create the model conversion pipeline
                 var pipeline = new ModelConversion.Pipeline.ModelConversionPipeline(fbx2glTFPath, gltfPackPath);
@@ -243,11 +243,11 @@ namespace AssetProcessor {
                     MessageBox.Show($"Model processing failed:\n\n{errors}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
 
-                ProgressTextBlock.Text = "Ready";
+                viewModel.ProgressText = "Ready";
             } catch (Exception ex) {
                 logService.LogError($"Error processing model: {ex.Message}");
                 MessageBox.Show($"Error processing model: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                ProgressTextBlock.Text = "Ready";
+                viewModel.ProgressText = "Ready";
             }
         }
 

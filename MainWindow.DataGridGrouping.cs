@@ -37,28 +37,20 @@ namespace AssetProcessor {
         /// Called after loading assets to apply default grouping.
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
-            logger.Info("[ApplyTextureGroupingIfEnabled] Starting...");
-
             var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            if (view == null || !view.CanGroup) {
-                logger.Info("[ApplyTextureGroupingIfEnabled] View is null or cannot group");
-                return;
-            }
+            if (view == null || !view.CanGroup) return;
 
-            if (GroupTexturesCheckBox.IsChecked == true) {
-                logger.Info("[ApplyTextureGroupingIfEnabled] Applying grouping...");
+            if (Settings.AppSettings.Default.GroupTexturesByType) {
                 using (view.DeferRefresh()) {
                     view.GroupDescriptions.Clear();
                     view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
                     view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
                 }
-                logger.Info("[ApplyTextureGroupingIfEnabled] Grouping applied");
             } else {
                 if (view.GroupDescriptions.Count > 0) {
                     view.GroupDescriptions.Clear();
                 }
             }
-            logger.Info("[ApplyTextureGroupingIfEnabled] Complete");
         }
 
         /// <summary>
@@ -86,35 +78,30 @@ namespace AssetProcessor {
                     TexturesDataGrid.SelectedItem = null;
 
                     // Показываем ORM панель настроек (как при выборе ORM в DataGrid)
-                    if (ConversionSettingsExpander != null) {
-                        ConversionSettingsExpander.Visibility = Visibility.Collapsed;
-                    }
+                    viewModel.IsConversionSettingsVisible = false;
+                    viewModel.IsORMPanelVisible = true;
 
-                    if (ORMPanel != null) {
-                        ORMPanel.Visibility = Visibility.Visible;
-
-                        // Инициализируем ORM панель с доступными текстурами (исключаем ORM текстуры)
-                        var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
-                        ORMPanel.Initialize(this, availableTextures);
-                        ORMPanel.SetORMTexture(ormTexture);
-                    }
+                    // Инициализируем ORM панель с доступными текстурами (исключаем ORM текстуры)
+                    var availableTextures = viewModel.Textures.Where(t => !(t is ORMTextureResource)).ToList();
+                    ORMPanel.Initialize(this, availableTextures);
+                    ORMPanel.SetORMTexture(ormTexture);
 
                     // Обновляем информацию о текстуре в preview панели
-                    TextureNameTextBlock.Text = "Texture Name: " + ormTexture.Name;
-                    TextureColorSpaceTextBlock.Text = "Color Space: Linear (ORM)";
+                    viewModel.TextureInfoName = "Texture Name: " + ormTexture.Name;
+                    viewModel.TextureInfoColorSpace = "Color Space: Linear (ORM)";
 
                     // Если ORM уже упакована - загружаем preview
                     if (!string.IsNullOrEmpty(ormTexture.Path) && File.Exists(ormTexture.Path)) {
-                        TextureResolutionTextBlock.Text = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
+                        viewModel.TextureInfoResolution = ormTexture.Resolution != null && ormTexture.Resolution.Length >= 2
                             ? $"Resolution: {ormTexture.Resolution[0]}x{ormTexture.Resolution[1]}"
                             : "Resolution: Unknown";
-                        TextureFormatTextBlock.Text = "Format: KTX2 (packed)";
+                        viewModel.TextureInfoFormat = "Format: KTX2 (packed)";
 
                         // Загружаем preview асинхронно
                         _ = LoadORMPreviewAsync(ormTexture);
                     } else {
-                        TextureResolutionTextBlock.Text = "Resolution: Not packed yet";
-                        TextureFormatTextBlock.Text = "Format: Not packed";
+                        viewModel.TextureInfoResolution = "Resolution: Not packed yet";
+                        viewModel.TextureInfoFormat = "Format: Not packed";
                         ResetPreviewState();
                         ClearD3D11Viewer();
                     }
@@ -208,7 +195,7 @@ namespace AssetProcessor {
                 if (!ktxLoaded && !cancellationToken.IsCancellationRequested) {
                     await Dispatcher.InvokeAsync(() => {
                         texturePreviewService.IsKtxPreviewAvailable = false;
-                        TextureFormatTextBlock.Text = "Format: KTX2 (preview unavailable)";
+                        viewModel.TextureInfoFormat = "Format: KTX2 (preview unavailable)";
                         logService.LogWarn($"Failed to load preview for packed ORM texture: {ormTexture.Name}");
                     });
                 }

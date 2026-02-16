@@ -24,9 +24,9 @@ namespace AssetProcessor {
             try {
                 await Dispatcher.InvokeAsync(() => {
                     TexturesDataGrid.Items.Refresh();
-                    ProgressBar.Value = 0;
-                    ProgressBar.Maximum = e.Result.SuccessCount + e.Result.ErrorCount;
-                    ProgressTextBlock.Text = $"Completed: {e.Result.SuccessCount} success, {e.Result.ErrorCount} errors";
+                    viewModel.ProgressValue = 0;
+                    viewModel.ProgressMaximum = e.Result.SuccessCount + e.Result.ErrorCount;
+                    viewModel.ProgressText = $"Completed: {e.Result.SuccessCount} success, {e.Result.ErrorCount} errors";
                 });
 
                 string resultMessage = BuildProcessingSummaryMessage(e.Result);
@@ -131,16 +131,14 @@ namespace AssetProcessor {
                         UpdateHistogramCorrectionButtonState();
 
                         bool hasHistogram = D3D11TextureViewer.Renderer.HasHistogramMetadata();
-                        if (TextureFormatTextBlock != null) {
-                            string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
-                            string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
-                                ? " (sRGB)"
-                                : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
-                                    ? " (Linear)"
-                                    : string.Empty;
-                            string histInfo = hasHistogram ? " + Histogram" : string.Empty;
-                            TextureFormatTextBlock.Text = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
-                        }
+                        string compressionFormat = e.Preview.TextureData.CompressionFormat ?? "Unknown";
+                        string srgbInfo = compressionFormat.IndexOf("SRGB", StringComparison.OrdinalIgnoreCase) >= 0
+                            ? " (sRGB)"
+                            : compressionFormat.IndexOf("UNORM", StringComparison.OrdinalIgnoreCase) >= 0
+                                ? " (Linear)"
+                                : string.Empty;
+                        string histInfo = hasHistogram ? " + Histogram" : string.Empty;
+                        viewModel.TextureInfoFormat = $"Format: KTX2/{compressionFormat}{srgbInfo}{histInfo}";
 
                         D3D11TextureViewer.Renderer.Render();
 
@@ -240,8 +238,8 @@ namespace AssetProcessor {
             }
 
             try {
-                UploadTexturesButton.IsEnabled = false;
-                UploadTexturesButton.Content = "Uploading...";
+                viewModel.IsUploadTexturesEnabled = false;
+                viewModel.UploadTexturesButtonContent = "Uploading...";
 
                 using var b2Service = new Upload.B2UploadService();
                 using var uploadStateService = new Data.UploadStateService();
@@ -266,7 +264,7 @@ namespace AssetProcessor {
                     files,
                     progress: new Progress<Upload.B2UploadProgress>(p => {
                         Dispatcher.Invoke(() => {
-                            ProgressBar.Value = p.PercentComplete;
+                            viewModel.ProgressValue = p.PercentComplete;
                         });
                     })
                 );
@@ -317,9 +315,9 @@ namespace AssetProcessor {
                 logger.Error(ex, "Texture upload failed");
                 MessageBox.Show($"Upload failed: {ex.Message}", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
             } finally {
-                UploadTexturesButton.IsEnabled = true;
-                UploadTexturesButton.Content = "Upload";
-                ProgressBar.Value = 0;
+                viewModel.IsUploadTexturesEnabled = true;
+                viewModel.UploadTexturesButtonContent = "Upload";
+                viewModel.ProgressValue = 0;
             }
         }
 
@@ -331,9 +329,9 @@ namespace AssetProcessor {
             int markedMaterials = viewModel.Materials.Count(m => m.ExportToServer);
             int markedTextures = viewModel.Textures.Count(t => t.ExportToServer);
 
-            MarkedModelsCountText.Text = markedModels.ToString();
-            MarkedMaterialsCountText.Text = markedMaterials.ToString();
-            MarkedTexturesCountText.Text = markedTextures.ToString();
+            viewModel.MarkedModelsCount = markedModels.ToString();
+            viewModel.MarkedMaterialsCount = markedMaterials.ToString();
+            viewModel.MarkedTexturesCount = markedTextures.ToString();
         }
 
         #endregion

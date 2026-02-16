@@ -149,8 +149,6 @@ namespace AssetProcessor {
         }
 
         private void ApplyAssetsToUI(AssetsLoadedEventArgs e) {
-            logger.Info($"[ApplyAssetsToUI] Starting: {e.Textures.Count} textures, {e.Models.Count} models");
-
             Dispatcher.Invoke(() => {
                 viewModel.Textures = new ObservableCollection<TextureResource>(e.Textures);
                 viewModel.Models = new ObservableCollection<ModelResource>(e.Models);
@@ -158,8 +156,6 @@ namespace AssetProcessor {
                 folderPaths = new Dictionary<int, string>(e.FolderPaths);
                 viewModel.RecalculateIndices();
                 viewModel.SyncMaterialMasterMappings();
-
-                logger.Info("[ApplyAssetsToUI] Data assigned, binding DataGrids");
 
                 ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty, new Binding("Models"));
                 MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty, new Binding("Materials"));
@@ -178,7 +174,6 @@ namespace AssetProcessor {
                 viewModel.ProgressValue = viewModel.ProgressMaximum;
                 viewModel.ProgressText = $"Ready ({e.Textures.Count} textures, {e.Models.Count} models, {e.Materials.Count} materials)";
                 _ = ServerAssetsPanel.RefreshServerAssetsAsync();
-                logger.Info("[ApplyAssetsToUI] Complete");
             });
         }
 
@@ -201,10 +196,8 @@ namespace AssetProcessor {
         /// 2. Defer grouping application to separate callback
         /// </summary>
         private void ShowDataGridsAndApplyGrouping(int textureCount, int modelCount, int materialCount) {
-            logger.Info("[ShowDataGridsAndApplyGrouping] Binding and showing Models/Materials...");
             viewModel.ProgressText = "Loading...";
 
-            // Bind and show Models and Materials immediately (small - fast)
             ModelsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                 new System.Windows.Data.Binding("Models"));
             MaterialsDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
@@ -214,36 +207,30 @@ namespace AssetProcessor {
             RestoreGridLayout(ModelsDataGrid);
             RestoreGridLayout(MaterialsDataGrid);
 
-            // Use DispatcherTimer with delay to load TexturesDataGrid
-            // This ensures UI is fully rendered before we touch the heavy DataGrid
+            // Defer TexturesDataGrid to prevent UI freeze (heaviest DataGrid)
             var timer = new System.Windows.Threading.DispatcherTimer {
                 Interval = TimeSpan.FromMilliseconds(100)
             };
             timer.Tick += (s, e) => {
                 timer.Stop();
-                logger.Info("[ShowDataGridsAndApplyGrouping] Timer: Binding TexturesDataGrid...");
                 TexturesDataGrid.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty,
                     new System.Windows.Data.Binding("Textures"));
                 TexturesDataGrid.Visibility = Visibility.Visible;
                 RestoreGridLayout(TexturesDataGrid);
-                logger.Info("[ShowDataGridsAndApplyGrouping] Timer: TexturesDataGrid visible");
 
-                // Apply grouping after another small delay
+                // Defer grouping to separate tick
                 var groupTimer = new System.Windows.Threading.DispatcherTimer {
                     Interval = TimeSpan.FromMilliseconds(100)
                 };
                 groupTimer.Tick += (s2, e2) => {
                     groupTimer.Stop();
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Timer: Applying grouping...");
                     ApplyTextureGroupingIfEnabled();
-                    logger.Info("[ShowDataGridsAndApplyGrouping] Complete");
                     viewModel.ProgressText = $"Ready ({textureCount} textures, {modelCount} models, {materialCount} materials)";
                     viewModel.ProgressValue = viewModel.ProgressMaximum;
                 };
                 groupTimer.Start();
             };
             timer.Start();
-            logger.Info("[ShowDataGridsAndApplyGrouping] Models/Materials shown, timer started for textures");
         }
 
         private void OnORMTexturesDetected(object? sender, ORMTexturesDetectedEventArgs e) {

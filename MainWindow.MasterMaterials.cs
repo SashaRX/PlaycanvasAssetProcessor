@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Xml;
 
 namespace AssetProcessor {
@@ -21,8 +22,40 @@ namespace AssetProcessor {
 
         #region Master Materials Tab Event Handlers
 
-        private void MasterMaterialsDataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
-            if (MasterMaterialsDataGrid.SelectedItem is MasterMaterial master) {
+        /// <summary>
+        /// Wires event handlers for ChunkSlotsPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeChunkSlotsPanel() {
+            // Catch SlotEditChunk_Click via bubbling Button.Click from DataTemplate
+            chunkSlotsPanel.AddHandler(Button.ClickEvent, new RoutedEventHandler(ChunkSlotsPanel_ButtonClick));
+        }
+
+        /// <summary>
+        /// Wires event handlers for MasterMaterialsEditorPanel controls.
+        /// Called from MainWindow constructor after InitializeComponent.
+        /// </summary>
+        private void InitializeMasterMaterialsEditorPanel() {
+            masterMaterialsEditorPanel.MasterMaterialsDataGrid.MouseDoubleClick += MasterMaterialsDataGrid_MouseDoubleClick;
+            masterMaterialsEditorPanel.ChunkEditorSaveButton.Click += ChunkEditorSaveButton_Click;
+            masterMaterialsEditorPanel.ChunkEditorNewButton.Click += ChunkEditorNewButton_Click;
+        }
+
+        /// <summary>
+        /// Handles bubbling Button.Click from ChunkSlotsPanel edit buttons.
+        /// </summary>
+        private void ChunkSlotsPanel_ButtonClick(object sender, RoutedEventArgs e) {
+            if (e.OriginalSource is Button btn && btn.Tag is ChunkSlotViewModel slotVm) {
+                var selectedChunk = slotVm.SelectedChunk;
+                if (selectedChunk != null) {
+                    viewModel.MasterMaterialsViewModel.SelectedChunk = selectedChunk;
+                    LoadChunkIntoEditor(selectedChunk);
+                }
+            }
+        }
+
+        private void MasterMaterialsDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
+            if (masterMaterialsEditorPanel.MasterMaterialsDataGrid.SelectedItem is MasterMaterial master) {
                 if (!master.IsBuiltIn) {
                     OpenMasterMaterialEditor(master);
                 }
@@ -47,7 +80,7 @@ namespace AssetProcessor {
             }
 
             // Force refresh the ListBox to update chunk count display
-            AllChunksListBox.Items.Refresh();
+            chunkSlotsPanel.AllChunksListBox.Items.Refresh();
         }
 
         // ChunkLabel_MouseLeftButtonDown removed - selection is now handled by ListBox.SelectedItem binding
@@ -112,18 +145,6 @@ namespace AssetProcessor {
             }
         }
 
-        private void SlotEditChunk_Click(object sender, RoutedEventArgs e) {
-            if (sender is not Button button) return;
-            if (button.Tag is not ChunkSlotViewModel slotVm) return;
-
-            var selectedChunk = slotVm.SelectedChunk;
-            if (selectedChunk != null) {
-                // Select the chunk and load it into the editor
-                viewModel.MasterMaterialsViewModel.SelectedChunk = selectedChunk;
-                LoadChunkIntoEditor(selectedChunk);
-            }
-        }
-
         private void OpenMasterMaterialEditor(MasterMaterial master) {
             var availableChunks = viewModel.MasterMaterialsViewModel.Chunks.ToList();
             var editorWindow = new Windows.MasterMaterialEditorWindow(master, availableChunks) {
@@ -162,15 +183,15 @@ namespace AssetProcessor {
 
             // Apply highlighting to editors
             if (_glslHighlighting != null) {
-                GlslCodeEditor.SyntaxHighlighting = _glslHighlighting;
+                masterMaterialsEditorPanel.GlslCodeEditor.SyntaxHighlighting = _glslHighlighting;
             }
             if (_wgslHighlighting != null) {
-                WgslCodeEditor.SyntaxHighlighting = _wgslHighlighting;
+                masterMaterialsEditorPanel.WgslCodeEditor.SyntaxHighlighting = _wgslHighlighting;
             }
 
             // Wire up text change events
-            GlslCodeEditor.TextChanged += (_, _) => OnChunkCodeChanged();
-            WgslCodeEditor.TextChanged += (_, _) => OnChunkCodeChanged();
+            masterMaterialsEditorPanel.GlslCodeEditor.TextChanged += (_, _) => OnChunkCodeChanged();
+            masterMaterialsEditorPanel.WgslCodeEditor.TextChanged += (_, _) => OnChunkCodeChanged();
 
             // Subscribe to SelectedChunk changes
             viewModel.MasterMaterialsViewModel.PropertyChanged += (s, e) => {
@@ -233,12 +254,12 @@ namespace AssetProcessor {
             _originalWgslCode = chunk.Wgsl;
 
             // Load code into editors
-            GlslCodeEditor.Text = chunk.Glsl ?? "";
-            WgslCodeEditor.Text = chunk.Wgsl ?? "";
+            masterMaterialsEditorPanel.GlslCodeEditor.Text = chunk.Glsl ?? "";
+            masterMaterialsEditorPanel.WgslCodeEditor.Text = chunk.Wgsl ?? "";
 
             // Set read-only state for built-in chunks
-            GlslCodeEditor.IsReadOnly = chunk.IsBuiltIn;
-            WgslCodeEditor.IsReadOnly = chunk.IsBuiltIn;
+            masterMaterialsEditorPanel.GlslCodeEditor.IsReadOnly = chunk.IsBuiltIn;
+            masterMaterialsEditorPanel.WgslCodeEditor.IsReadOnly = chunk.IsBuiltIn;
 
             // Update UI state
             _chunkEditorHasUnsavedChanges = false;
@@ -260,8 +281,8 @@ namespace AssetProcessor {
             if (_currentEditingChunk == null || _currentEditingChunk.IsBuiltIn) return;
 
             // Check if there are actual changes
-            bool glslChanged = GlslCodeEditor.Text != _originalGlslCode;
-            bool wgslChanged = WgslCodeEditor.Text != _originalWgslCode;
+            bool glslChanged = masterMaterialsEditorPanel.GlslCodeEditor.Text != _originalGlslCode;
+            bool wgslChanged = masterMaterialsEditorPanel.WgslCodeEditor.Text != _originalWgslCode;
 
             _chunkEditorHasUnsavedChanges = glslChanged || wgslChanged;
             UpdateChunkEditorUnsavedIndicator();
@@ -271,7 +292,7 @@ namespace AssetProcessor {
         /// Updates the unsaved changes indicator visibility
         /// </summary>
         private void UpdateChunkEditorUnsavedIndicator() {
-            ChunkEditorUnsavedIndicator.Visibility = _chunkEditorHasUnsavedChanges
+            masterMaterialsEditorPanel.ChunkEditorUnsavedIndicator.Visibility = _chunkEditorHasUnsavedChanges
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
@@ -280,7 +301,7 @@ namespace AssetProcessor {
         /// Updates the status text in the chunk editor
         /// </summary>
         private void UpdateChunkEditorStatus(string status) {
-            ChunkEditorStatusText.Text = status;
+            masterMaterialsEditorPanel.ChunkEditorStatusText.Text = status;
         }
 
         /// <summary>
@@ -296,15 +317,15 @@ namespace AssetProcessor {
             }
 
             // Update chunk with new code
-            _currentEditingChunk.Glsl = GlslCodeEditor.Text;
-            _currentEditingChunk.Wgsl = WgslCodeEditor.Text;
+            _currentEditingChunk.Glsl = masterMaterialsEditorPanel.GlslCodeEditor.Text;
+            _currentEditingChunk.Wgsl = masterMaterialsEditorPanel.WgslCodeEditor.Text;
 
             // Update in ViewModel
             viewModel.MasterMaterialsViewModel.UpdateChunk(_currentEditingChunk);
 
             // Update original values
-            _originalGlslCode = GlslCodeEditor.Text;
-            _originalWgslCode = WgslCodeEditor.Text;
+            _originalGlslCode = masterMaterialsEditorPanel.GlslCodeEditor.Text;
+            _originalWgslCode = masterMaterialsEditorPanel.WgslCodeEditor.Text;
 
             _chunkEditorHasUnsavedChanges = false;
             UpdateChunkEditorUnsavedIndicator();

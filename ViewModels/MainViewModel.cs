@@ -16,8 +16,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using OxyPlot;
 
 namespace AssetProcessor.ViewModels {
+    public enum ViewerType { None, Texture, Model, Material, ServerFile, ChunkSlots }
+
     /// <summary>
     /// Main ViewModel for the application's primary window
     /// </summary>
@@ -107,6 +111,78 @@ namespace AssetProcessor.ViewModels {
         private string? progressText;
 
         [ObservableProperty]
+        private bool isCancelEnabled;
+
+        [ObservableProperty]
+        private string versionText = "v1.0.0";
+
+        // Export button states
+        [ObservableProperty]
+        private bool isExportEnabled = true;
+
+        [ObservableProperty]
+        private string exportButtonContent = "Export";
+
+        [ObservableProperty]
+        private bool isUploadToCloudEnabled = true;
+
+        [ObservableProperty]
+        private string uploadToCloudButtonContent = "Upload";
+
+        [ObservableProperty]
+        private bool isUploadTexturesEnabled = true;
+
+        [ObservableProperty]
+        private string uploadTexturesButtonContent = "Upload";
+
+        [ObservableProperty]
+        private bool isTextureToolsVisible;
+
+        [ObservableProperty]
+        private bool isGenerateOrmChecked = true;
+
+        [ObservableProperty]
+        private bool isGenerateLodsChecked = true;
+
+        // Connection button states
+        [ObservableProperty]
+        private string connectionButtonContent = "Connect";
+
+        [ObservableProperty]
+        private string connectionButtonToolTip = "Connect to PlayCanvas and load projects";
+
+        [ObservableProperty]
+        private bool isConnectionButtonEnabled = true;
+
+        [ObservableProperty]
+        private Brush? connectionButtonBackground;
+
+        // Marked asset counts
+        [ObservableProperty]
+        private string markedModelsCount = "0";
+
+        [ObservableProperty]
+        private string markedMaterialsCount = "0";
+
+        [ObservableProperty]
+        private string markedTexturesCount = "0";
+
+        [ObservableProperty]
+        private bool isAutoUploadEnabled;
+
+        [ObservableProperty]
+        private bool isDarkThemeChecked;
+
+        [ObservableProperty]
+        private bool isThemeAuto = true;
+
+        [ObservableProperty]
+        private bool isThemeLight;
+
+        [ObservableProperty]
+        private bool isThemeDark;
+
+        [ObservableProperty]
         private bool isConnected;
 
         [ObservableProperty]
@@ -146,10 +222,170 @@ namespace AssetProcessor.ViewModels {
         private TextureResource? selectedTexture;
 
         [ObservableProperty]
+        private string textureInfoName = "Texture Name:";
+
+        [ObservableProperty]
+        private string textureInfoResolution = "Resolution:";
+
+        [ObservableProperty]
+        private string textureInfoSize = "Size:";
+
+        [ObservableProperty]
+        private string textureInfoColorSpace = "Color Space:";
+
+        [ObservableProperty]
+        private string textureInfoFormat = "Format:";
+
+        [ObservableProperty]
+        private string mipmapInfoText = "";
+
+        [ObservableProperty]
+        private bool isMipmapSliderVisible;
+
+        // Connection status
+        [ObservableProperty]
+        private string connectionStatusText = "Disconnected";
+
+        // Model viewer info
+        [ObservableProperty]
+        private string modelInfoName = "Model Name:";
+
+        [ObservableProperty]
+        private string modelInfoTriangles = "Triangles:";
+
+        [ObservableProperty]
+        private string modelInfoVertices = "Vertices:";
+
+        [ObservableProperty]
+        private string modelInfoUVChannels = "UV Channels:";
+
+        [ObservableProperty]
+        private string modelCurrentLodText = "Current LOD: FBX";
+
+        [ObservableProperty]
+        private bool isModelCurrentLodVisible;
+
+        [ObservableProperty]
+        private string lodValueText = "LOD0";
+
+        [ObservableProperty]
+        private string lodInfoText = "";
+
+        [ObservableProperty]
+        private double lodSliderMaximum = 3;
+
+        [ObservableProperty]
+        private double lodSliderValue;
+
+        [ObservableProperty]
+        private bool isLodSliderEnabled;
+
+        [ObservableProperty]
+        private bool isShowingFbxSource = true;
+
+        // Preview source radio buttons
+        [ObservableProperty]
+        private bool isPreviewSourceOriginalEnabled;
+
+        [ObservableProperty]
+        private bool isPreviewSourceKtxEnabled;
+
+        [ObservableProperty]
+        private bool isPreviewSourceOriginalChecked;
+
+        [ObservableProperty]
+        private bool isPreviewSourceKtxChecked;
+
+        // Texture viewer toggle buttons
+        [ObservableProperty]
+        private bool isFilterEnabled = true;
+
+        [ObservableProperty]
+        private bool isTilingEnabled;
+
+        // Model viewer checkboxes
+        [ObservableProperty]
+        private bool isShowPivotChecked;
+
+        [ObservableProperty]
+        private bool isShowWireframeChecked;
+
+        [ObservableProperty]
+        private bool isShowHumanChecked = true;
+
+        // Channel filter buttons
+        [ObservableProperty]
+        private bool isRChannelChecked;
+
+        [ObservableProperty]
+        private bool isGChannelChecked;
+
+        [ObservableProperty]
+        private bool isBChannelChecked;
+
+        [ObservableProperty]
+        private bool isAChannelChecked;
+
+        [ObservableProperty]
+        private bool isNormalChannelChecked;
+
+        // Viewer toggle button
+        [ObservableProperty]
+        private string toggleViewButtonContent = "►";
+
+        // Right panel viewer type
+        [ObservableProperty]
+        private ViewerType activeViewerType = ViewerType.Texture;
+
+        // Panel visibility
+        [ObservableProperty]
+        private bool isORMPanelVisible;
+
+        [ObservableProperty]
+        private bool isConversionSettingsVisible;
+
+        [ObservableProperty]
+        private bool isLodControlsVisible;
+
+        [ObservableProperty]
         private IReadOnlyDictionary<int, string> folderPaths = new Dictionary<int, string>();
 
         [ObservableProperty]
         private string? currentProjectName;
+
+        [ObservableProperty]
+        private ServerAssetViewModel? selectedServerAsset;
+
+        // Histogram statistics
+        [ObservableProperty]
+        private string histogramMin = "0";
+
+        [ObservableProperty]
+        private string histogramMax = "255";
+
+        [ObservableProperty]
+        private string histogramMean = "127.5";
+
+        [ObservableProperty]
+        private string histogramMedian = "128";
+
+        [ObservableProperty]
+        private string histogramStdDev = "45.2";
+
+        [ObservableProperty]
+        private string histogramPixels = "0";
+
+        [ObservableProperty]
+        private PlotModel? histogramPlotModel;
+
+        [ObservableProperty]
+        private bool isHistogramCorrectionEnabled;
+
+        [ObservableProperty]
+        private bool isHistogramCorrectionChecked = true;
+
+        [ObservableProperty]
+        private string histogramCorrectionToolTip = "Histogram preprocessing compensation (denormalization)";
 
         public MainViewModel(
             IPlayCanvasService playCanvasService,
@@ -673,30 +909,20 @@ namespace AssetProcessor.ViewModels {
         /// Uses batch update mode to suppress individual PropertyChanged notifications.
         /// </summary>
         public void RecalculateIndices() {
-            logger.Info($"[RecalculateIndices] Starting: {Textures.Count} textures, {Models.Count} models, {Materials.Count} materials");
-
-            // Update indices without triggering individual PropertyChanged events
-            // by using direct field access where possible
             int index = 1;
-            logger.Info("[RecalculateIndices] Processing textures...");
             foreach (TextureResource texture in Textures) {
                 texture.SetIndexSilent(index++);
             }
-            logger.Info("[RecalculateIndices] Textures done");
 
             index = 1;
-            logger.Info("[RecalculateIndices] Processing models...");
             foreach (ModelResource model in Models) {
                 model.SetIndexSilent(index++);
             }
-            logger.Info("[RecalculateIndices] Models done");
 
             index = 1;
-            logger.Info("[RecalculateIndices] Processing materials...");
             foreach (MaterialResource material in Materials) {
                 material.SetIndexSilent(index++);
             }
-            logger.Info("[RecalculateIndices] Materials done, completed");
         }
 
         /// <summary>
@@ -847,36 +1073,26 @@ namespace AssetProcessor.ViewModels {
         /// Uses silent setter to avoid triggering PropertyChanged during batch operation.
         /// </summary>
         public void SyncMaterialMasterMappings() {
-            logger.Info($"[SyncMaterialMasterMappings] Starting. Materials count: {Materials?.Count ?? 0}, Config exists: {masterMaterialsViewModel.Config != null}");
-
             if (Materials == null || Materials.Count == 0) {
-                logger.Warn("[SyncMaterialMasterMappings] No materials to sync!");
                 return;
             }
 
             int syncedCount = 0;
-            int processedCount = 0;
-            logger.Info("[SyncMaterialMasterMappings] Starting foreach loop...");
 
             foreach (var material in Materials) {
-                processedCount++;
-
-                // Unsubscribe first to avoid triggering save during initial sync
                 material.PropertyChanged -= Material_PropertyChanged;
-
-                // Apply EXPLICIT mapping from config to material (not default!)
-                // Use silent setter to avoid triggering PropertyChanged
-                var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
-                if (!string.IsNullOrEmpty(masterName)) {
-                    material.SetMasterMaterialNameSilent(masterName);
-                    syncedCount++;
+                try {
+                    var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
+                    if (!string.IsNullOrEmpty(masterName)) {
+                        material.SetMasterMaterialNameSilent(masterName);
+                        syncedCount++;
+                    }
+                } finally {
+                    material.PropertyChanged += Material_PropertyChanged;
                 }
-
-                // Now subscribe to future changes
-                material.PropertyChanged += Material_PropertyChanged;
             }
 
-            logger.Info($"[SyncMaterialMasterMappings] Loop done. Processed {processedCount}, synced {syncedCount}");
+            logger.Info($"SyncMaterialMasterMappings: synced {syncedCount}/{Materials.Count} materials");
         }
 
         /// <summary>
@@ -894,40 +1110,5 @@ namespace AssetProcessor.ViewModels {
             // Update the mapping in config
             masterMaterialsViewModel.SetMasterForMaterial(material.ID, material.MasterMaterialName);
         }
-    }
-
-    public sealed class TextureProcessingCompletedEventArgs : EventArgs {
-        public TextureProcessingCompletedEventArgs(TextureProcessingResult result) {
-            Result = result;
-        }
-
-        public TextureProcessingResult Result { get; }
-    }
-
-    public sealed class TexturePreviewLoadedEventArgs : EventArgs {
-        public TexturePreviewLoadedEventArgs(TextureResource texture, TexturePreviewResult preview) {
-            Texture = texture;
-            Preview = preview;
-        }
-
-        public TextureResource Texture { get; }
-
-        public TexturePreviewResult Preview { get; }
-    }
-
-    public sealed class ProjectSelectionChangedEventArgs : EventArgs {
-        public ProjectSelectionChangedEventArgs(KeyValuePair<string, string> project) {
-            SelectedProject = project;
-        }
-
-        public KeyValuePair<string, string> SelectedProject { get; }
-    }
-
-    public sealed class BranchSelectionChangedEventArgs : EventArgs {
-        public BranchSelectionChangedEventArgs(Branch branch) {
-            SelectedBranch = branch;
-        }
-
-        public Branch SelectedBranch { get; }
     }
 }

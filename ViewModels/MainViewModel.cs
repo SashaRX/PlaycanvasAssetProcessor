@@ -1081,14 +1081,15 @@ namespace AssetProcessor.ViewModels {
 
             foreach (var material in Materials) {
                 material.PropertyChanged -= Material_PropertyChanged;
-
-                var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
-                if (!string.IsNullOrEmpty(masterName)) {
-                    material.SetMasterMaterialNameSilent(masterName);
-                    syncedCount++;
+                try {
+                    var masterName = masterMaterialsViewModel.GetExplicitMasterNameForMaterial(material.ID);
+                    if (!string.IsNullOrEmpty(masterName)) {
+                        material.SetMasterMaterialNameSilent(masterName);
+                        syncedCount++;
+                    }
+                } finally {
+                    material.PropertyChanged += Material_PropertyChanged;
                 }
-
-                material.PropertyChanged += Material_PropertyChanged;
             }
 
             logger.Info($"SyncMaterialMasterMappings: synced {syncedCount}/{Materials.Count} materials");

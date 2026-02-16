@@ -14,29 +14,31 @@ namespace AssetProcessor {
                 return;
             }
 
-            if (sender is ToggleButton button) {
-                string? channel = button.Tag?.ToString();
-                if (button.IsChecked == true) {
-                    // Снять все остальные кнопки (including NormalButton)
-                    isUpdatingChannelButtons = true;
-                    try {
-                        viewModel.IsRChannelChecked = channel == "R";
-                        viewModel.IsGChannelChecked = channel == "G";
-                        viewModel.IsBChannelChecked = channel == "B";
-                        viewModel.IsAChannelChecked = channel == "A";
-                        viewModel.IsNormalChannelChecked = channel == "Normal";
-                    } finally {
-                        isUpdatingChannelButtons = false;
-                    }
+            if (sender is not ToggleButton button) return;
 
-                    // Применить фильтр
-                    if (!string.IsNullOrEmpty(channel)) {
-                        await FilterChannelAsync(channel);
-                    }
-                } else {
-                    // Сбрасываем фильтр, если кнопка была снята
-                    HandleChannelMaskCleared();
+            string? channel = button.Tag?.ToString();
+
+            if (button.IsChecked == true) {
+                // Set flag to prevent re-entrancy from TwoWay binding updates
+                isUpdatingChannelButtons = true;
+                try {
+                    // Снять все остальные кнопки (including NormalButton)
+                    viewModel.IsRChannelChecked = channel == "R";
+                    viewModel.IsGChannelChecked = channel == "G";
+                    viewModel.IsBChannelChecked = channel == "B";
+                    viewModel.IsAChannelChecked = channel == "A";
+                    viewModel.IsNormalChannelChecked = channel == "Normal";
+                } finally {
+                    isUpdatingChannelButtons = false;
                 }
+
+                // Применить фильтр
+                if (!string.IsNullOrEmpty(channel)) {
+                    await FilterChannelAsync(channel);
+                }
+            } else {
+                // Сбрасываем фильтр, если кнопка была снята
+                HandleChannelMaskCleared();
             }
         }
 

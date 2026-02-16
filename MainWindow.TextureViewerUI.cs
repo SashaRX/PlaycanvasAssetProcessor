@@ -184,10 +184,17 @@ namespace AssetProcessor {
             }
 
             if (sender is System.Windows.Controls.RadioButton rb) {
-                if (rb.Content is string content && content == "KTX2") {
-                    SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
-                } else {
-                    SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
+                // Set flag before calling SetPreviewSourceMode to prevent re-entrancy
+                // from binding updates triggering Checked on the other RadioButton
+                texturePreviewService.IsUpdatingPreviewSourceControls = true;
+                try {
+                    if (rb.Content is string content && content == "KTX2") {
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: true);
+                    } else {
+                        SetPreviewSourceMode(TexturePreviewSourceMode.Source, initiatedByUser: true);
+                    }
+                } finally {
+                    texturePreviewService.IsUpdatingPreviewSourceControls = false;
                 }
             }
         }

@@ -1105,7 +1105,7 @@
                                           Margin="0,0,6,0" />
                                 <Slider Minimum="0"
                                        Maximum="{Binding LodSliderMaximum}"
-                                       Value="{Binding LodSliderValue}"
+                                       Value="{Binding LodSliderValue, Mode=OneWay}"
                                        IsEnabled="{Binding IsLodSliderEnabled}"
                                        TickFrequency="1"
                                        IsSnapToTickEnabled="True"

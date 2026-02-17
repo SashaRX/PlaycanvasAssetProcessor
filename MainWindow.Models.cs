@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -22,15 +23,29 @@ namespace AssetProcessor {
     /// - ResetViewport (viewport cleanup)
     /// </summary>
     public partial class MainWindow {
+        private CancellationTokenSource? _modelLoadCts;
+        private const int ModelSelectionDebounceMs = 150;
+
         private async void ModelsDataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) {
+            // Cancel any pending model load from previous selection
+            _modelLoadCts?.Cancel();
+            _modelLoadCts?.Dispose();
+            _modelLoadCts = new CancellationTokenSource();
+            var ct = _modelLoadCts.Token;
+
             await UiAsyncHelper.ExecuteAsync(async () => {
+                // Debounce: wait before starting heavy model loading
+                await Task.Delay(ModelSelectionDebounceMs, ct);
+
                 if (ModelsDataGrid.SelectedItem is ModelResource selectedModel) {
                     if (!string.IsNullOrEmpty(selectedModel.Path)) {
                         if (selectedModel.Status == "Downloaded") {
-                            await TryLoadGlbLodAsync(selectedModel.Path);
+                            await TryLoadGlbLodAsync(selectedModel.Path, ct);
+
+                            ct.ThrowIfCancellationRequested();
 
                             if (!_isGlbViewerActive) {
-                                await LoadModelAsync(selectedModel.Path);
+                                await LoadModelAsync(selectedModel.Path, ct);
                             }
                         }
                     }
@@ -130,7 +145,7 @@ namespace AssetProcessor {
             return renderTarget;
         }
 
-        private async Task LoadModelAsync(string path) {
+        private async Task LoadModelAsync(string path, CancellationToken ct = default) {
             try {
                 // Clear viewport on UI thread
                 List<ModelVisual3D> modelsToRemove = [.. viewPort3d.Children.OfType<ModelVisual3D>()];
@@ -144,6 +159,7 @@ namespace AssetProcessor {
 
                 // Load model on background thread
                 var loadResult = await Task.Run(() => {
+                    ct.ThrowIfCancellationRequested();
                     AssimpContext importer = new();
                     Scene scene = importer.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs | PostProcessSteps.GenerateSmoothNormals);
 
@@ -152,7 +168,7 @@ namespace AssetProcessor {
                     }
 
                     return (Scene: scene, Error: (string?)null);
-                });
+                }, ct);
 
                 if (loadResult.Scene == null) {
                     MessageBox.Show($"Error loading model: {loadResult.Error}");
@@ -160,6 +176,8 @@ namespace AssetProcessor {
                 }
 
                 var scene = loadResult.Scene;
+
+                ct.ThrowIfCancellationRequested();
 
                 // Build geometry on UI thread (MeshBuilder requires UI thread)
                 Model3DGroup modelGroup = new();

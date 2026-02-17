@@ -127,6 +127,12 @@ namespace AssetProcessor.TextureConversion.Settings {
         // Histogram Analysis
         public HistogramSettings? HistogramAnalysis { get; set; } = null;
 
+        // XUASTC LDR Parameters
+        public XuastcBlockSize XuastcBlockSize { get; set; } = XuastcBlockSize.Block6x6;
+        public int XuastcDctQuality { get; set; } = 75;
+        public XuastcSupercompressionProfile XuastcSupercompression { get; set; } = XuastcSupercompressionProfile.Zstd;
+        public bool XuastcSrgb { get; set; } = false;
+
         /// <summary>
         /// Создает CompressionSettings из настроек с применением глобальных настроек
         /// </summary>
@@ -167,7 +173,11 @@ namespace AssetProcessor.TextureConversion.Settings {
                 NormalizeVectors = NormalizeVectors,
                 KeepRGBLayout = KeepRGBLayout,
                 RemoveTemporaryMipmaps = RemoveTemporaryMipmaps,
-                HistogramAnalysis = HistogramAnalysis
+                HistogramAnalysis = HistogramAnalysis,
+                XuastcBlockSize = XuastcBlockSize,
+                XuastcDctQuality = XuastcDctQuality,
+                XuastcSupercompression = XuastcSupercompression,
+                XuastcSrgb = XuastcSrgb
             };
         }
 
@@ -201,7 +211,11 @@ namespace AssetProcessor.TextureConversion.Settings {
                 NormalizeVectors = settings.NormalizeVectors,
                 KeepRGBLayout = settings.KeepRGBLayout,
                 RemoveTemporaryMipmaps = settings.RemoveTemporaryMipmaps,
-                HistogramAnalysis = settings.HistogramAnalysis
+                HistogramAnalysis = settings.HistogramAnalysis,
+                XuastcBlockSize = settings.XuastcBlockSize,
+                XuastcDctQuality = settings.XuastcDctQuality,
+                XuastcSupercompression = settings.XuastcSupercompression,
+                XuastcSrgb = settings.XuastcSrgb
             };
         }
     }
@@ -214,6 +228,13 @@ namespace AssetProcessor.TextureConversion.Settings {
         /// Путь к ktx исполняемому файлу (KTX-Software)
         /// </summary>
         public string KtxExecutablePath { get; set; } = "ktx";
+
+        /// <summary>
+        /// Путь к basisu исполняемому файлу (basis_universal).
+        /// Требуется для XUASTC LDR кодирования.
+        /// По умолчанию "basisu" (должен быть в PATH).
+        /// </summary>
+        public string BasisuExecutablePath { get; set; } = "basisu";
 
         /// <summary>
         /// Выходная директория по умолчанию

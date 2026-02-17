@@ -194,6 +194,41 @@ namespace AssetProcessor.TextureConversion.Core {
         /// </summary>
         public HistogramSettings? HistogramAnalysis { get; set; } = null;
 
+        // ============================================
+        // XUASTC LDR PARAMETERS
+        // ============================================
+
+        /// <summary>
+        /// Размер блока ASTC для XUASTC LDR (по умолчанию 6x6).
+        /// Определяет bpp в GPU памяти: 4x4=8bpp, 6x6=3.56bpp, 8x6=2.67bpp, 12x12=0.89bpp.
+        /// Используется только когда CompressionFormat = XUASTC_LDR.
+        /// </summary>
+        public XuastcBlockSize XuastcBlockSize { get; set; } = XuastcBlockSize.Block6x6;
+
+        /// <summary>
+        /// Качество DCT-трансформа для XUASTC LDR (1-100, по умолчанию 75).
+        /// Выше = лучше качество, больше размер файла.
+        /// Рекомендуется: 50-85 для albedo/ORM, 75-95 для normal maps.
+        /// Используется только когда CompressionFormat = XUASTC_LDR.
+        /// </summary>
+        public int XuastcDctQuality { get; set; } = 75;
+
+        /// <summary>
+        /// Профиль суперкомпрессии XUASTC LDR (по умолчанию Zstd).
+        /// Zstd = быстрый декод (рекомендуется для стриминга).
+        /// Arithmetic = максимальное сжатие, медленный декод.
+        /// Hybrid = Zstd для DCT, Arithmetic для метаданных.
+        /// Используется только когда CompressionFormat = XUASTC_LDR.
+        /// </summary>
+        public XuastcSupercompressionProfile XuastcSupercompression { get; set; } = XuastcSupercompressionProfile.Zstd;
+
+        /// <summary>
+        /// Трактовать текстуру как sRGB при кодировании XUASTC LDR.
+        /// true для albedo/emissive, false для normal/roughness/metallic/AO.
+        /// Используется только когда CompressionFormat = XUASTC_LDR.
+        /// </summary>
+        public bool XuastcSrgb { get; set; } = false;
+
         /// <summary>
         /// Создает настройки по умолчанию для ETC1S
         /// </summary>
@@ -265,6 +300,65 @@ namespace AssetProcessor.TextureConversion.Core {
                 KTX2Supercompression = KTX2SupercompressionType.Zstandard,
                 UseETC1SRDO = true,
                 ColorSpace = ColorSpace.Auto
+            };
+        }
+
+        /// <summary>
+        /// Создает настройки по умолчанию для XUASTC LDR с блоком 6x6.
+        /// Хороший баланс качества и размера для albedo/ORM текстур.
+        /// </summary>
+        public static CompressionSettings CreateXuastcLdr6x6Default() {
+            return new CompressionSettings {
+                CompressionFormat = CompressionFormat.XUASTC_LDR,
+                OutputFormat = OutputFormat.Basis,
+                GenerateMipmaps = true,
+                UseCustomMipmaps = true,
+                UseMultithreading = true,
+                ColorSpace = ColorSpace.Auto,
+                XuastcBlockSize = XuastcBlockSize.Block6x6,
+                XuastcDctQuality = 75,
+                XuastcSupercompression = XuastcSupercompressionProfile.Zstd,
+                XuastcSrgb = false
+            };
+        }
+
+        /// <summary>
+        /// Создает настройки для XUASTC LDR с блоком 4x4.
+        /// Максимальное качество, прямой транскод в BC7.
+        /// Рекомендуется для normal maps и текстур с высокими требованиями к качеству.
+        /// </summary>
+        public static CompressionSettings CreateXuastcLdr4x4Default() {
+            return new CompressionSettings {
+                CompressionFormat = CompressionFormat.XUASTC_LDR,
+                OutputFormat = OutputFormat.Basis,
+                GenerateMipmaps = true,
+                UseCustomMipmaps = true,
+                UseMultithreading = true,
+                ColorSpace = ColorSpace.Auto,
+                XuastcBlockSize = XuastcBlockSize.Block4x4,
+                XuastcDctQuality = 85,
+                XuastcSupercompression = XuastcSupercompressionProfile.Zstd,
+                XuastcSrgb = false
+            };
+        }
+
+        /// <summary>
+        /// Создает настройки для XUASTC LDR с блоком 8x6.
+        /// Агрессивное сжатие для экономии трафика.
+        /// Рекомендуется для текстур с умеренными требованиями к качеству.
+        /// </summary>
+        public static CompressionSettings CreateXuastcLdr8x6Default() {
+            return new CompressionSettings {
+                CompressionFormat = CompressionFormat.XUASTC_LDR,
+                OutputFormat = OutputFormat.Basis,
+                GenerateMipmaps = true,
+                UseCustomMipmaps = true,
+                UseMultithreading = true,
+                ColorSpace = ColorSpace.Auto,
+                XuastcBlockSize = XuastcBlockSize.Block8x6,
+                XuastcDctQuality = 75,
+                XuastcSupercompression = XuastcSupercompressionProfile.Zstd,
+                XuastcSrgb = false
             };
         }
     }

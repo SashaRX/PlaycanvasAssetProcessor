@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -189,11 +190,12 @@ namespace AssetProcessor {
 
         #region LOD Loading
 
-        private async Task TryLoadGlbLodAsync(string fbxPath) {
+        private async Task TryLoadGlbLodAsync(string fbxPath, CancellationToken ct = default) {
             try {
                 _currentFbxPath = fbxPath;
 
                 var initResult = await Task.Run(() => {
+                    ct.ThrowIfCancellationRequested();
                     var lodInfos = GlbLodHelper.FindGlbLodFiles(fbxPath);
 
                     if (lodInfos.Count == 0) {
@@ -208,7 +210,7 @@ namespace AssetProcessor {
                     var lodFilePaths = GlbLodHelper.GetLodFilePaths(fbxPath);
 
                     return (LodInfos: lodInfos, LodFilePaths: lodFilePaths, GltfPackPath: gltfPackPath);
-                });
+                }, ct);
 
                 _currentLodInfos = initResult.LodInfos;
 
@@ -216,6 +218,8 @@ namespace AssetProcessor {
                     HideGlbLodUI();
                     return;
                 }
+
+                ct.ThrowIfCancellationRequested();
 
                 ShowGlbLodUI();
                 UpdateLodSliderLimits();
@@ -234,6 +238,7 @@ namespace AssetProcessor {
                     var quantInfos = new Dictionary<LodLevel, GlbQuantizationAnalyzer.UVQuantizationInfo>();
 
                     foreach (var kvp in initResult.LodFilePaths!) {
+                        ct.ThrowIfCancellationRequested();
                         var lodLevel = kvp.Key;
                         var glbPath = kvp.Value;
 
@@ -249,9 +254,10 @@ namespace AssetProcessor {
                         }
                     }
 
+                    ct.ThrowIfCancellationRequested();
                     var textureBytes = LoadAlbedoTextureBytes(fbxPath);
                     return (LodData: lodData, QuantInfos: quantInfos, TextureBytes: textureBytes);
-                });
+                }, ct);
 
                 _lodGlbData = loadResult.LodData;
                 _lodQuantizationInfos = loadResult.QuantInfos;
@@ -260,6 +266,8 @@ namespace AssetProcessor {
                     HideGlbLodUI();
                     return;
                 }
+
+                ct.ThrowIfCancellationRequested();
 
                 _cachedAlbedoBrush = loadResult.TextureBytes != null
                     ? CreateBrushFromBytes(loadResult.TextureBytes)
@@ -275,6 +283,8 @@ namespace AssetProcessor {
                 _isGlbViewerActive = true;
                 SelectLod(LodLevel.LOD0);
 
+            } catch (OperationCanceledException) {
+                LodLogger.Info("GLB LOD loading cancelled");
             } catch (Exception ex) {
                 LodLogger.Error(ex, "Failed to load GLB LOD files");
                 Dispatcher.Invoke(() => { HideGlbLodUI(); });

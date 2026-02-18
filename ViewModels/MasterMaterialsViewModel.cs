@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using AssetProcessor.MasterMaterials.Models;
 using AssetProcessor.Services;
 using CommunityToolkit.Mvvm.ComponentModel;

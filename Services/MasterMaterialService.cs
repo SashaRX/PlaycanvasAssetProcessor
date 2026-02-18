@@ -492,6 +492,18 @@ public partial class MasterMaterialService : IMasterMaterialService
             }
         }
 
+        // Include all standalone library chunks so they upload independently of masters
+        var libraryFolder = Path.Combine(materialsFolder, "_library");
+        if (Directory.Exists(libraryFolder))
+        {
+            foreach (var libChunk in Directory.GetFiles(libraryFolder, "*.mjs"))
+            {
+                ct.ThrowIfCancellationRequested();
+                generatedFiles.Add(libChunk);
+                Logger.Info($"Added library chunk to upload list: {libChunk}");
+            }
+        }
+
         return generatedFiles;
     }
 

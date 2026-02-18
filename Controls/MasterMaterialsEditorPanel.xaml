@@ -35,6 +35,9 @@
                             Padding="6,2" Margin="0,0,4,0" ToolTip="Add new master material"/>
                     <Button Content="Save" Command="{Binding MasterMaterialsViewModel.SaveConfigCommand}"
                             Padding="6,2" Background="#FF4CAF50" Foreground="White" ToolTip="Save all changes"/>
+                    <Button x:Name="UploadMastersButton" Content="Upload ↑"
+                            Padding="6,2" Margin="4,0,0,0" Background="#FF2196F3" Foreground="White"
+                            ToolTip="Upload master materials and chunks to B2 CDN (independent of models/textures)"/>
                 </StackPanel>
             </Border>
 

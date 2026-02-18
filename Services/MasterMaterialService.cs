@@ -416,6 +416,85 @@ public partial class MasterMaterialService : IMasterMaterialService
         await SaveMasterAsync(projectFolderPath, master, ct);
     }
 
+    /// <summary>
+    /// Saves a standalone chunk to the library folder (not tied to any master).
+    /// {materials}/_library/{chunkId}.mjs
+    /// </summary>
+    public async Task SaveChunkToLibraryAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default)
+    {
+        var libraryFolder = Path.Combine(GetMaterialsFolderPath(projectFolderPath), "_library");
+        Directory.CreateDirectory(libraryFolder);
+        var filePath = Path.Combine(libraryFolder, $"{chunk.Id}.mjs");
+        var content = GenerateMjsContent(chunk);
+        await File.WriteAllTextAsync(filePath, content, ct);
+        Logger.Info($"Saved chunk '{chunk.Id}' to library: {filePath}");
+    }
+
+    /// <summary>
+    /// Loads all standalone chunks from the library folder.
+    /// </summary>
+    public async Task<IEnumerable<ShaderChunk>> LoadChunkLibraryAsync(string projectFolderPath, CancellationToken ct = default)
+    {
+        var libraryFolder = Path.Combine(GetMaterialsFolderPath(projectFolderPath), "_library");
+        if (!Directory.Exists(libraryFolder))
+            return [];
+
+        var chunks = new List<ShaderChunk>();
+        foreach (var file in Directory.GetFiles(libraryFolder, "*.mjs"))
+        {
+            ct.ThrowIfCancellationRequested();
+            var chunkId = Path.GetFileNameWithoutExtension(file);
+            try
+            {
+                var content = await File.ReadAllTextAsync(file, ct);
+                var chunk = ParseMjsChunk(content, chunkId);
+                if (chunk != null)
+                {
+                    chunk.IsBuiltIn = false;
+                    chunks.Add(chunk);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, $"Error loading library chunk: {file}");
+            }
+        }
+        Logger.Info($"Loaded {chunks.Count} chunks from library");
+        return chunks;
+    }
+
+    /// <summary>
+    /// Generates consolidated chunk bundles for all custom masters that have chunks.
+    /// Saves them to {materials}/{masterName}_chunks.mjs. Returns list of generated paths.
+    /// </summary>
+    public async Task<List<string>> GenerateMasterBundlesAsync(string projectFolderPath, MasterMaterialsConfig config, CancellationToken ct = default)
+    {
+        var generatedFiles = new List<string>();
+        var materialsFolder = GetMaterialsFolderPath(projectFolderPath);
+
+        // Save all custom master JSONs and generate chunk bundles
+        foreach (var master in GetAllMasters(config).Where(m => !m.IsBuiltIn))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // Ensure _master.json is up to date
+            await SaveMasterAsync(projectFolderPath, master, ct);
+            generatedFiles.Add(GetMasterFilePath(projectFolderPath, master.Name));
+
+            // Generate consolidated chunk bundle if master has custom chunks
+            if (master.Chunks.Count > 0)
+            {
+                var bundle = await GenerateConsolidatedChunksAsync(projectFolderPath, master, ct);
+                var bundlePath = Path.Combine(materialsFolder, $"{master.Name}_chunks.mjs");
+                await File.WriteAllTextAsync(bundlePath, bundle, ct);
+                generatedFiles.Add(bundlePath);
+                Logger.Info($"Generated chunk bundle: {bundlePath}");
+            }
+        }
+
+        return generatedFiles;
+    }
+
     // Legacy interface implementation (keeping for compatibility)
     public string GetChunksFolderPath(string projectFolderPath)
     {

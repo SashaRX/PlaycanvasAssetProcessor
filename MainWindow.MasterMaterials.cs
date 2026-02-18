@@ -4,8 +4,10 @@ using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using NLog;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -39,6 +41,7 @@ namespace AssetProcessor {
             masterMaterialsEditorPanel.MasterMaterialsDataGrid.MouseDoubleClick += MasterMaterialsDataGrid_MouseDoubleClick;
             masterMaterialsEditorPanel.ChunkEditorSaveButton.Click += ChunkEditorSaveButton_Click;
             masterMaterialsEditorPanel.ChunkEditorNewButton.Click += ChunkEditorNewButton_Click;
+            masterMaterialsEditorPanel.UploadMastersButton.Click += UploadMastersButton_Click;
         }
 
         /// <summary>
@@ -323,6 +326,9 @@ namespace AssetProcessor {
             // Update in ViewModel
             viewModel.MasterMaterialsViewModel.UpdateChunk(_currentEditingChunk);
 
+            // Persist chunk to library so it survives restarts
+            _ = viewModel.MasterMaterialsViewModel.SaveChunkToLibraryAsync(_currentEditingChunk);
+
             // Update original values
             _originalGlslCode = masterMaterialsEditorPanel.GlslCodeEditor.Text;
             _originalWgslCode = masterMaterialsEditorPanel.WgslCodeEditor.Text;
@@ -339,6 +345,30 @@ namespace AssetProcessor {
         /// </summary>
         private void ChunkEditorSaveButton_Click(object sender, RoutedEventArgs e) {
             SaveCurrentChunk();
+        }
+
+        /// <summary>
+        /// Handler for Upload Masters button click — uploads all custom master JSONs and chunk bundles to B2 CDN.
+        /// </summary>
+        private async void UploadMastersButton_Click(object sender, RoutedEventArgs e) {
+            if (string.IsNullOrEmpty(viewModel.MasterMaterialsViewModel.ProjectFolderPath)) {
+                MessageBox.Show("No project selected. Load a project first.",
+                    "Upload Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!ValidateB2Credentials()) return;
+
+            var files = await viewModel.MasterMaterialsViewModel.CollectMasterUploadFilesAsync(CancellationToken.None);
+            if (files.Count == 0) {
+                MessageBox.Show("No custom master materials or chunks to upload.\n\nAdd custom master materials or chunks first.",
+                    "Upload", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var serverPath = viewModel.MasterMaterialsViewModel.GetServerFolderPath();
+            logger.Info($"Uploading {files.Count} master material files");
+            await PerformB2UploadAsync(files, serverPath);
         }
 
         /// <summary>

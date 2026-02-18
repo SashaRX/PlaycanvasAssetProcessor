@@ -86,6 +86,10 @@ public partial class MasterMaterialService : IMasterMaterialService
             Name = "standard",
             Description = "PlayCanvas StandardMaterial - full PBR with lighting, reflections, all material properties",
             BlendType = "opaque",
+            Cull = "1",
+            TwoSidedLighting = false,
+            DepthWrite = true,
+            DepthTest = true,
             IsBuiltIn = true
             // No chunks - standard uses engine defaults
         }

@@ -243,39 +243,35 @@ namespace AssetProcessor {
 
         private async Task CheckProjectState() {
             try {
-                if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
-                }
+                bool hasProjectFolder = !string.IsNullOrEmpty(ProjectFolderPath);
+                bool hasProjectName = !string.IsNullOrEmpty(ProjectName);
+                bool assetsListExists = hasProjectFolder
+                    && File.Exists(Path.Combine(ProjectFolderPath!, "assets_list.json"));
 
-                string assetsListPath = Path.Combine(ProjectFolderPath!, "assets_list.json");
-
-                if (!File.Exists(assetsListPath)) {
+                if (!assetsListExists) {
                     logService.LogInfo("Project not downloaded yet — assets_list.json not found");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
+                } else {
+                    logService.LogInfo("Loading local assets...");
+                    await LoadAssetsFromJsonFileAsync();
+
+                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath!);
                 }
 
-                logService.LogInfo("Loading local assets...");
-                await LoadAssetsFromJsonFileAsync();
-
-                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
-                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                }
-
-                bool hasUpdates = await CheckForUpdates();
-                bool hasMissingFiles = HasMissingFiles();
+                bool hasUpdates = assetsListExists && await CheckForUpdates();
+                bool hasMissingFiles = assetsListExists && HasMissingFiles();
                 var stateResult = connectionWorkflowCoordinator.EvaluateProjectState(
-                    hasProjectFolder: !string.IsNullOrEmpty(ProjectFolderPath),
-                    hasProjectName: !string.IsNullOrEmpty(ProjectName),
-                    assetsListExists: true,
+                    hasProjectFolder,
+                    hasProjectName,
+                    assetsListExists,
                     hasUpdates,
                     hasMissingFiles);
 
                 if (stateResult.State == ConnectionState.NeedsDownload) {
-                    string reason = hasUpdates && hasMissingFiles
+                    string reason = stateResult.HasUpdates && stateResult.HasMissingFiles
                         ? "updates available and missing files"
-                        : hasUpdates ? "updates available" : "missing files";
+                        : stateResult.HasUpdates
+                            ? "updates available"
+                            : "missing files or project is not downloaded";
                     logService.LogInfo($"CheckProjectState: {reason}");
                 } else {
                     logService.LogInfo("Project is up to date");

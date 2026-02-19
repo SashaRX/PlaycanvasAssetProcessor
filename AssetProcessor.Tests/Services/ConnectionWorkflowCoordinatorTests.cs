@@ -52,6 +52,38 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.True(result.HasMissingFiles);
     }
 
+
+    [Fact]
+    public void EvaluateProjectState_ReturnsUpToDate_WhenProjectReadyAndNoUpdates() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = sut.EvaluateProjectState(
+            hasProjectFolder: true,
+            hasProjectName: true,
+            assetsListExists: true,
+            hasUpdates: false,
+            hasMissingFiles: false);
+
+        Assert.Equal(ConnectionState.UpToDate, result.State);
+        Assert.False(result.HasUpdates);
+        Assert.False(result.HasMissingFiles);
+    }
+
+    [Fact]
+    public void EvaluateProjectState_ReturnsNeedsDownload_WhenProjectReadyAndHasUpdates() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = sut.EvaluateProjectState(
+            hasProjectFolder: true,
+            hasProjectName: true,
+            assetsListExists: true,
+            hasUpdates: true,
+            hasMissingFiles: false);
+
+        Assert.Equal(ConnectionState.NeedsDownload, result.State);
+        Assert.True(result.HasUpdates);
+    }
+
     [Fact]
     public void EvaluateSmartLoadState_ReturnsDisconnected_WhenSelectionMissing() {
         var sut = new ConnectionWorkflowCoordinator();

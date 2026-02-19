@@ -2,6 +2,9 @@ using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using AssetProcessor.TextureViewer;
 using Xunit;
 
 namespace AssetProcessor.Tests.Services;
@@ -50,4 +53,44 @@ public class PreviewWorkflowCoordinatorTests {
         Assert.True(result.Loaded);
         Assert.False(result.ShouldExtractHistogram);
     }
+
+
+    [Fact]
+    public async Task ExtractOrmHistogramAsync_InvokesCallback_WhenMipmapsAvailable() {
+        var sut = new PreviewWorkflowCoordinator();
+        var callbackCalled = false;
+
+        var bitmap = new WriteableBitmap(2, 2, 96, 96, PixelFormats.Bgra32, null);
+
+        await sut.ExtractOrmHistogramAsync(
+            ormPath: "orm.ktx2",
+            ormName: "orm",
+            loadKtx2MipmapsAsync: (_, _) => Task.FromResult(new List<KtxMipLevel> {
+                new() { Level = 0, Width = 2, Height = 2, Bitmap = bitmap }
+            }),
+            onHistogramBitmapReady: bmp => callbackCalled = bmp == bitmap,
+            cancellationToken: CancellationToken.None,
+            startupDelay: TimeSpan.Zero,
+            extractionTimeout: TimeSpan.FromSeconds(1));
+
+        Assert.True(callbackCalled);
+    }
+
+    [Fact]
+    public async Task ExtractOrmHistogramAsync_SkipsCallback_WhenPathEmpty() {
+        var sut = new PreviewWorkflowCoordinator();
+        var callbackCalled = false;
+
+        await sut.ExtractOrmHistogramAsync(
+            ormPath: null,
+            ormName: "orm",
+            loadKtx2MipmapsAsync: (_, _) => Task.FromResult(new List<KtxMipLevel>()),
+            onHistogramBitmapReady: _ => callbackCalled = true,
+            cancellationToken: CancellationToken.None,
+            startupDelay: TimeSpan.Zero,
+            extractionTimeout: TimeSpan.FromSeconds(1));
+
+        Assert.False(callbackCalled);
+    }
+
 }

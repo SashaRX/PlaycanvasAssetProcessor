@@ -145,45 +145,24 @@ namespace AssetProcessor {
             string ormName = ormTexture.Name ?? "unknown";
             logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
 
-            _ = Task.Run(async () => {
-                try {
-                    await Task.Delay(200, cancellationToken).ConfigureAwait(false);
-
-                    if (string.IsNullOrEmpty(ormPath)) {
-                        logger.Warn($"[LoadORMPreviewAsync] ORM path is empty for: {ormName}");
-                        return;
-                    }
-
-                    logger.Info($"[LoadORMPreviewAsync] Extracting mipmaps from: {ormPath}");
-
-                    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-                    var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
-                    logger.Info($"[LoadORMPreviewAsync] Extracted {mipmaps.Count} mipmaps for: {ormName}");
-
-                    if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
-                        var mip0Bitmap = mipmaps[0].Bitmap;
-                        logger.Info($"[LoadORMPreviewAsync] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight} for: {ormName}");
-
-                        _ = Dispatcher.BeginInvoke(new Action(() => {
-                            if (!cancellationToken.IsCancellationRequested) {
-                                texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
-                                UpdateHistogram(mip0Bitmap);
-                                logger.Info($"[LoadORMPreviewAsync] Histogram updated for ORM: {ormName}");
-                            } else {
-                                logger.Info($"[LoadORMPreviewAsync] Cancelled before histogram update: {ormName}");
-                            }
-                        }));
-                    } else {
-                        logger.Warn($"[LoadORMPreviewAsync] No mipmaps or cancelled for: {ormName}");
-                    }
-                } catch (OperationCanceledException) {
-                    logger.Info($"[LoadORMPreviewAsync] Histogram extraction cancelled/timeout for: {ormName}");
-                } catch (Exception ex) {
-                    logger.Warn(ex, $"[LoadORMPreviewAsync] Failed to extract bitmap for histogram: {ormName}");
-                }
-            });
+            _ = previewWorkflowCoordinator.ExtractOrmHistogramAsync(
+                ormPath,
+                ormName,
+                texturePreviewService.LoadKtx2MipmapsAsync,
+                mip0Bitmap => {
+                    _ = Dispatcher.BeginInvoke(new Action(() => {
+                        if (!cancellationToken.IsCancellationRequested) {
+                            texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
+                            UpdateHistogram(mip0Bitmap);
+                            logger.Info($"[LoadORMPreviewAsync] Histogram updated for ORM: {ormName}");
+                        } else {
+                            logger.Info($"[LoadORMPreviewAsync] Cancelled before histogram update: {ormName}");
+                        }
+                    }));
+                },
+                cancellationToken,
+                message => logger.Info(message),
+                message => logger.Warn(message));
         }
 
         #endregion

@@ -184,13 +184,6 @@ namespace AssetProcessor {
         }
 
         /// <summary>
-        /// Извлекает относительный путь из полного CDN URL
-        /// </summary>
-        private string? ExtractRelativePathFromUrl(string url) {
-            return assetWorkflowCoordinator.ExtractRelativePathFromUrl(url);
-        }
-
-        /// <summary>
         /// Обработчик события обновления списка файлов на сервере - верифицирует статусы ресурсов
         /// </summary>
         private void OnServerAssetsRefreshed(HashSet<string> serverPaths) {
@@ -215,36 +208,9 @@ namespace AssetProcessor {
         /// </summary>
         private void ResetAllUploadStatuses() {
             int reset = 0;
-
-            foreach (var texture in viewModel.Textures) {
-                if (!string.IsNullOrEmpty(texture.UploadStatus)) {
-                    texture.UploadStatus = null;
-                    texture.UploadedHash = null;
-                    texture.RemoteUrl = null;
-                    texture.LastUploadedAt = null;
-                    reset++;
-                }
-            }
-
-            foreach (var material in viewModel.Materials) {
-                if (!string.IsNullOrEmpty(material.UploadStatus)) {
-                    material.UploadStatus = null;
-                    material.UploadedHash = null;
-                    material.RemoteUrl = null;
-                    material.LastUploadedAt = null;
-                    reset++;
-                }
-            }
-
-            foreach (var model in viewModel.Models) {
-                if (!string.IsNullOrEmpty(model.UploadStatus)) {
-                    model.UploadStatus = null;
-                    model.UploadedHash = null;
-                    model.RemoteUrl = null;
-                    model.LastUploadedAt = null;
-                    reset++;
-                }
-            }
+            reset += assetWorkflowCoordinator.ResetAllUploadStatuses(viewModel.Textures);
+            reset += assetWorkflowCoordinator.ResetAllUploadStatuses(viewModel.Materials);
+            reset += assetWorkflowCoordinator.ResetAllUploadStatuses(viewModel.Models);
 
             if (reset > 0) {
                 logger.Info($"Server empty - reset {reset} upload statuses");

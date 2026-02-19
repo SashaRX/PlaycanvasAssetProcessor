@@ -103,6 +103,22 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         };
     }
 
+
+    public int ResetAllUploadStatuses(IEnumerable<BaseResource> resources) {
+        int resetCount = 0;
+
+        foreach (var resource in resources) {
+            if (string.IsNullOrEmpty(resource.UploadStatus)) {
+                continue;
+            }
+
+            ResetUploadStatus(resource);
+            resetCount++;
+        }
+
+        return resetCount;
+    }
+
     public ResourceNavigationResult ResolveNavigationTarget(
         string fileName,
         IEnumerable<TextureResource> textures,

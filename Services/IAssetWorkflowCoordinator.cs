@@ -12,6 +12,7 @@ public interface IAssetWorkflowCoordinator {
     string? ExtractRelativePathFromUrl(string? url);
     int ResetStatusesForDeletedPaths(IEnumerable<string> deletedPaths, IEnumerable<BaseResource> resources);
     int VerifyStatusesAgainstServerPaths(HashSet<string> serverPaths, IEnumerable<BaseResource> resources);
+    int ResetAllUploadStatuses(IEnumerable<BaseResource> resources);
     ResourceNavigationResult ResolveNavigationTarget(
         string fileName,
         IEnumerable<TextureResource> textures,

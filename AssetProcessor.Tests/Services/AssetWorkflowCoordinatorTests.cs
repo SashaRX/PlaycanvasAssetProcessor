@@ -52,6 +52,25 @@ public class AssetWorkflowCoordinatorTests {
         Assert.Same(groupedTexture, result.OrmGroupTexture);
     }
 
+
+    [Fact]
+    public void ResetAllUploadStatuses_ResetsOnlyResourcesWithStatus() {
+        var sut = new AssetWorkflowCoordinator();
+        var uploaded = new TextureResource { UploadStatus = "Uploaded", UploadedHash = "abc", RemoteUrl = "assets/a.ktx2" };
+        var notUploaded = new TextureResource { UploadStatus = null, UploadedHash = "keep", RemoteUrl = "assets/b.ktx2" };
+
+        var reset = sut.ResetAllUploadStatuses([uploaded, notUploaded]);
+
+        Assert.Equal(1, reset);
+        Assert.Null(uploaded.UploadStatus);
+        Assert.Null(uploaded.UploadedHash);
+        Assert.Null(uploaded.RemoteUrl);
+        Assert.Null(uploaded.LastUploadedAt);
+        Assert.Null(notUploaded.UploadStatus);
+        Assert.Equal("keep", notUploaded.UploadedHash);
+        Assert.Equal("assets/b.ktx2", notUploaded.RemoteUrl);
+    }
+
     [Fact]
     public async Task DeleteServerAssetAsync_ReturnsCredentialsError_WhenAppKeyMissing() {
         var sut = new AssetWorkflowCoordinator();

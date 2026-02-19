@@ -66,6 +66,47 @@ public sealed class PreviewWorkflowCoordinator : IPreviewWorkflowCoordinator {
     }
 
 
+
+    public async Task<PreviewTextureLoadResult> LoadTexturePreviewAsync(
+        TexturePreviewSourceMode currentPreviewSourceMode,
+        bool isUsingD3D11Renderer,
+        Func<CancellationToken, Task<bool>> tryLoadKtx2ToD3D11Async,
+        Func<CancellationToken, Task<bool>> tryLoadKtx2PreviewAsync,
+        Func<bool, CancellationToken, Task> loadSourcePreviewAsync,
+        CancellationToken cancellationToken,
+        Action<string>? logInfo = null) {
+
+        bool ktxLoaded;
+        bool shouldLoadSourcePreview = false;
+        bool loadSourceToViewer = true;
+
+        if (isUsingD3D11Renderer) {
+            logInfo?.Invoke("[LoadTexturePreviewAsync] D3D11 mode: trying native KTX2 load");
+            ktxLoaded = await tryLoadKtx2ToD3D11Async(cancellationToken);
+            if (ktxLoaded) {
+                shouldLoadSourcePreview = true;
+                loadSourceToViewer = currentPreviewSourceMode == TexturePreviewSourceMode.Source;
+            } else {
+                shouldLoadSourcePreview = true;
+                loadSourceToViewer = true;
+            }
+
+            await loadSourcePreviewAsync(loadSourceToViewer, cancellationToken);
+        } else {
+            var ktxTask = tryLoadKtx2PreviewAsync(cancellationToken);
+            shouldLoadSourcePreview = true;
+            loadSourceToViewer = true;
+            await loadSourcePreviewAsync(loadSourceToViewer, cancellationToken);
+            ktxLoaded = await ktxTask;
+        }
+
+        return new PreviewTextureLoadResult {
+            KtxLoaded = ktxLoaded,
+            ShouldLoadSourcePreview = shouldLoadSourcePreview,
+            LoadSourceToViewer = loadSourceToViewer
+        };
+    }
+
     public async Task ExtractOrmHistogramAsync(
         string? ormPath,
         string ormName,

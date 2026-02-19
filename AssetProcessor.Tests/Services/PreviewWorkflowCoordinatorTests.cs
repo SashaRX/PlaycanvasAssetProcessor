@@ -55,6 +55,58 @@ public class PreviewWorkflowCoordinatorTests {
     }
 
 
+
+    [Fact]
+    public async Task LoadTexturePreviewAsync_D3D11Mode_LoadsSourceAndKeepsKtxFlag() {
+        var sut = new PreviewWorkflowCoordinator();
+        var sourceCalls = 0;
+
+        var result = await sut.LoadTexturePreviewAsync(
+            TexturePreviewSourceMode.Source,
+            isUsingD3D11Renderer: true,
+            tryLoadKtx2ToD3D11Async: _ => Task.FromResult(true),
+            tryLoadKtx2PreviewAsync: _ => Task.FromResult(false),
+            loadSourcePreviewAsync: (loadToViewer, _) => {
+                sourceCalls++;
+                Assert.True(loadToViewer);
+                return Task.CompletedTask;
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.True(result.KtxLoaded);
+        Assert.True(result.ShouldLoadSourcePreview);
+        Assert.True(result.LoadSourceToViewer);
+        Assert.Equal(1, sourceCalls);
+    }
+
+    [Fact]
+    public async Task LoadTexturePreviewAsync_WpfMode_StartsKtxAndLoadsSource() {
+        var sut = new PreviewWorkflowCoordinator();
+        var ktxCallCount = 0;
+        var sourceCalls = 0;
+
+        var result = await sut.LoadTexturePreviewAsync(
+            TexturePreviewSourceMode.Ktx2,
+            isUsingD3D11Renderer: false,
+            tryLoadKtx2ToD3D11Async: _ => Task.FromResult(false),
+            tryLoadKtx2PreviewAsync: _ => {
+                ktxCallCount++;
+                return Task.FromResult(true);
+            },
+            loadSourcePreviewAsync: (loadToViewer, _) => {
+                sourceCalls++;
+                Assert.True(loadToViewer);
+                return Task.CompletedTask;
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.True(result.KtxLoaded);
+        Assert.True(result.ShouldLoadSourcePreview);
+        Assert.True(result.LoadSourceToViewer);
+        Assert.Equal(1, ktxCallCount);
+        Assert.Equal(1, sourceCalls);
+    }
+
     [Fact]
     public async Task ExtractOrmHistogramAsync_InvokesCallback_WhenMipmapsAvailable() {
         var sut = new PreviewWorkflowCoordinator();

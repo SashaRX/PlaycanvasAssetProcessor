@@ -22,6 +22,16 @@ public interface IPreviewWorkflowCoordinator {
         Action<string>? logInfo = null);
 
 
+
+    Task<PreviewTextureLoadResult> LoadTexturePreviewAsync(
+        TexturePreviewSourceMode currentPreviewSourceMode,
+        bool isUsingD3D11Renderer,
+        Func<CancellationToken, Task<bool>> tryLoadKtx2ToD3D11Async,
+        Func<CancellationToken, Task<bool>> tryLoadKtx2PreviewAsync,
+        Func<bool, CancellationToken, Task> loadSourcePreviewAsync,
+        CancellationToken cancellationToken,
+        Action<string>? logInfo = null);
+
     Task ExtractOrmHistogramAsync(
         string? ormPath,
         string ormName,

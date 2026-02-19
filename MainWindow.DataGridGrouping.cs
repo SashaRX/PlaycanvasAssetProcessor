@@ -38,19 +38,9 @@ namespace AssetProcessor {
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
             var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            if (view == null || !view.CanGroup) return;
+            if (view == null) return;
 
-            if (Settings.AppSettings.Default.GroupTexturesByType) {
-                using (view.DeferRefresh()) {
-                    view.GroupDescriptions.Clear();
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
-                }
-            } else {
-                if (view.GroupDescriptions.Count > 0) {
-                    view.GroupDescriptions.Clear();
-                }
-            }
+            previewWorkflowCoordinator.ApplyTextureGrouping(view, Settings.AppSettings.Default.GroupTexturesByType);
         }
 
         /// <summary>

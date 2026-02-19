@@ -123,17 +123,11 @@ namespace AssetProcessor {
                 // Re-scan file statuses to detect deleted files
                 RescanFileStatuses();
 
-                bool hasUpdates = await CheckForUpdates();
-                bool hasMissingFiles = HasMissingFiles();
+                var nextState = await connectionWorkflowCoordinator.DetermineRefreshStateAsync(CheckForUpdates, HasMissingFiles);
 
-                if (hasUpdates || hasMissingFiles) {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    string message = hasUpdates && hasMissingFiles
-                        ? "Updates available and missing files found! Click Download to get them."
-                        : hasUpdates
-                            ? "Updates available! Click Download to get them."
-                            : $"Missing files found! Click Download to get them.";
-                    MessageBox.Show(message, "Download Required", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (nextState == ConnectionState.NeedsDownload) {
+                    UpdateConnectionButton(nextState);
+                    MessageBox.Show("Updates available or missing files found! Click Download to get them.", "Download Required", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
                     MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -167,15 +161,11 @@ namespace AssetProcessor {
 
                     await Download(null, null);
 
-                    bool stillHasUpdates = await CheckForUpdates();
-                    bool stillHasMissingFiles = HasMissingFiles();
-
-                    if (stillHasUpdates || stillHasMissingFiles) {
-                        UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    } else {
+                    var postDownloadState = await connectionWorkflowCoordinator.DeterminePostDownloadStateAsync(CheckForUpdates, HasMissingFiles);
+                    if (postDownloadState == ConnectionState.UpToDate) {
                         logService.LogInfo("Download complete, project is up to date");
-                        UpdateConnectionButton(ConnectionState.UpToDate);
                     }
+                    UpdateConnectionButton(postDownloadState);
                 } else {
                     logger.Warn("DownloadFromServer: cancellationTokenSource is null");
                 }

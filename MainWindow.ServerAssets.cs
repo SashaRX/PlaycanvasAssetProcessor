@@ -99,95 +99,29 @@ namespace AssetProcessor {
         #region Resource Navigation
 
         private void OnNavigateToResourceRequested(object? sender, string fileName) {
-            string baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+            var navigation = assetWorkflowCoordinator.ResolveNavigationTarget(fileName, viewModel.Textures, viewModel.Models, viewModel.Materials);
 
-            // Strip ORM suffix patterns for better matching (_og, _ogm, _ogmh)
-            string baseNameWithoutSuffix = baseName;
-            bool isOrmFile = false;
-            if (baseName.EndsWith("_og", StringComparison.OrdinalIgnoreCase)) {
-                baseNameWithoutSuffix = baseName[..^3];
-                isOrmFile = true;
-            } else if (baseName.EndsWith("_ogm", StringComparison.OrdinalIgnoreCase)) {
-                baseNameWithoutSuffix = baseName[..^4];
-                isOrmFile = true;
-            } else if (baseName.EndsWith("_ogmh", StringComparison.OrdinalIgnoreCase)) {
-                baseNameWithoutSuffix = baseName[..^5];
-                isOrmFile = true;
-            }
-
-            // Try textures (including ORM textures)
-            var texture = viewModel.Textures.FirstOrDefault(t => {
-                // Direct name match (most common case - check first)
-                if (t.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true)
-                    return true;
-                // Path ends with filename
-                if (t.Path != null && t.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
-                    return true;
-                // For ORM textures, try additional matching
-                if (t is ORMTextureResource orm) {
-                    // Match against SettingsKey
-                    if (!string.IsNullOrEmpty(orm.SettingsKey)) {
-                        var settingsKeyBase = orm.SettingsKey.StartsWith("orm_", StringComparison.OrdinalIgnoreCase)
-                            ? orm.SettingsKey[4..]
-                            : orm.SettingsKey;
-                        if (baseName.Equals(orm.SettingsKey, StringComparison.OrdinalIgnoreCase) ||
-                            baseName.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
-                            baseNameWithoutSuffix.Equals(settingsKeyBase, StringComparison.OrdinalIgnoreCase) ||
-                            settingsKeyBase.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase))
-                            return true;
-                    }
-                    // Match file name from Path property (packed ORM)
-                    if (!string.IsNullOrEmpty(orm.Path)) {
-                        var ormPathBaseName = System.IO.Path.GetFileNameWithoutExtension(orm.Path);
-                        if (baseName.Equals(ormPathBaseName, StringComparison.OrdinalIgnoreCase))
-                            return true;
-                    }
-                    // Match ORM texture name patterns
-                    var cleanName = t.Name?.Replace("[ORM Texture - Not Packed]", "").Trim();
-                    if (!string.IsNullOrEmpty(cleanName)) {
-                        if (cleanName.Equals(baseName, StringComparison.OrdinalIgnoreCase) ||
-                            cleanName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) ||
-                            baseNameWithoutSuffix.Contains(cleanName, StringComparison.OrdinalIgnoreCase) ||
-                            cleanName.Contains(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase))
-                            return true;
-                    }
-                    // Match against source texture names
-                    if (orm.AOSource?.Name != null && baseNameWithoutSuffix.Contains(orm.AOSource.Name.Replace("_ao", "").Replace("_AO", ""), StringComparison.OrdinalIgnoreCase))
-                        return true;
-                    if (orm.GlossSource?.Name != null && baseNameWithoutSuffix.Contains(orm.GlossSource.Name.Replace("_gloss", "").Replace("_Gloss", "").Replace("_roughness", "").Replace("_Roughness", ""), StringComparison.OrdinalIgnoreCase))
-                        return true;
-                }
-                return false;
-            });
-            if (texture != null) {
+            if (navigation.Texture != null) {
                 tabControl.SelectedItem = TexturesTabItem;
-                TexturesDataGrid.SelectedItem = texture;
+                TexturesDataGrid.SelectedItem = navigation.Texture;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                    TexturesDataGrid.ScrollIntoView(texture);
+                    TexturesDataGrid.ScrollIntoView(navigation.Texture);
                 });
                 return;
             }
 
-            // For ORM files, highlight the ORM group header and show ORM panel
-            if (isOrmFile) {
+            if (navigation.IsOrmFile) {
                 tabControl.SelectedItem = TexturesTabItem;
                 TexturesDataGrid.SelectedItems.Clear();
 
-                // Ищем текстуру по GroupName = baseNameWithoutSuffix (например "oldMailBox")
-                var textureInGroup = viewModel.Textures.FirstOrDefault(t =>
-                    !string.IsNullOrEmpty(t.GroupName) &&
-                    t.GroupName.Equals(baseNameWithoutSuffix, StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrEmpty(t.SubGroupName));
-
+                var textureInGroup = navigation.OrmGroupTexture;
                 if (textureInGroup != null) {
                     SelectedORMSubGroupName = textureInGroup.SubGroupName;
 
-                    // Скролл к текстуре в группе
                     Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
                         TexturesDataGrid.ScrollIntoView(textureInGroup);
                     });
 
-                    // Показываем ORM панель если есть ParentORMTexture
                     if (textureInGroup.ParentORMTexture != null) {
                         var ormTexture = textureInGroup.ParentORMTexture;
 
@@ -218,30 +152,22 @@ namespace AssetProcessor {
                 return;
             }
 
-            // Try models
-            var model = viewModel.Models.FirstOrDefault(m =>
-                m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
-                (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
-            if (model != null) {
-                logger.Debug($"[Navigation] Found model: {model.Name}");
+            if (navigation.Model != null) {
+                logger.Debug($"[Navigation] Found model: {navigation.Model.Name}");
                 tabControl.SelectedItem = ModelsTabItem;
-                ModelsDataGrid.SelectedItem = model;
+                ModelsDataGrid.SelectedItem = navigation.Model;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                    ModelsDataGrid.ScrollIntoView(model);
+                    ModelsDataGrid.ScrollIntoView(navigation.Model);
                 });
                 return;
             }
 
-            // Try materials
-            var material = viewModel.Materials.FirstOrDefault(m =>
-                m.Name?.Equals(baseName, StringComparison.OrdinalIgnoreCase) == true ||
-                (m.Path != null && m.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase)));
-            if (material != null) {
-                logger.Debug($"[Navigation] Found material: {material.Name}");
+            if (navigation.Material != null) {
+                logger.Debug($"[Navigation] Found material: {navigation.Material.Name}");
                 tabControl.SelectedItem = MaterialsTabItem;
-                MaterialsDataGrid.SelectedItem = material;
+                MaterialsDataGrid.SelectedItem = navigation.Material;
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, () => {
-                    MaterialsDataGrid.ScrollIntoView(material);
+                    MaterialsDataGrid.ScrollIntoView(navigation.Material);
                 });
                 return;
             }
@@ -259,72 +185,19 @@ namespace AssetProcessor {
         private void OnServerFilesDeleted(List<string> deletedPaths) {
             if (deletedPaths == null || deletedPaths.Count == 0) return;
 
-            // Нормализуем пути для сравнения
-            var normalizedPaths = deletedPaths
-                .Select(p => p.Replace('\\', '/').ToLowerInvariant())
-                .ToHashSet();
+            int resetCount = 0;
+            resetCount += assetWorkflowCoordinator.ResetStatusesForDeletedPaths(deletedPaths, viewModel.Textures);
+            resetCount += assetWorkflowCoordinator.ResetStatusesForDeletedPaths(deletedPaths, viewModel.Materials);
+            resetCount += assetWorkflowCoordinator.ResetStatusesForDeletedPaths(deletedPaths, viewModel.Models);
 
-            // Сбрасываем статусы текстур
-            foreach (var texture in viewModel.Textures) {
-                if (!string.IsNullOrEmpty(texture.RemoteUrl)) {
-                    // Извлекаем относительный путь из RemoteUrl (убираем базовый CDN URL)
-                    var remotePath = ExtractRelativePathFromUrl(texture.RemoteUrl);
-                    if (remotePath != null && normalizedPaths.Contains(remotePath.ToLowerInvariant())) {
-                        texture.UploadStatus = null;
-                        texture.UploadedHash = null;
-                        texture.RemoteUrl = null;
-                        texture.LastUploadedAt = null;
-                    }
-                }
-            }
-
-            // Сбрасываем статусы материалов
-            foreach (var material in viewModel.Materials) {
-                if (!string.IsNullOrEmpty(material.RemoteUrl)) {
-                    var remotePath = ExtractRelativePathFromUrl(material.RemoteUrl);
-                    if (remotePath != null && normalizedPaths.Contains(remotePath.ToLowerInvariant())) {
-                        material.UploadStatus = null;
-                        material.UploadedHash = null;
-                        material.RemoteUrl = null;
-                        material.LastUploadedAt = null;
-                    }
-                }
-            }
-
-            // Сбрасываем статусы моделей
-            foreach (var model in viewModel.Models) {
-                if (!string.IsNullOrEmpty(model.RemoteUrl)) {
-                    var remotePath = ExtractRelativePathFromUrl(model.RemoteUrl);
-                    if (remotePath != null && normalizedPaths.Contains(remotePath.ToLowerInvariant())) {
-                        model.UploadStatus = null;
-                        model.UploadedHash = null;
-                        model.RemoteUrl = null;
-                        model.LastUploadedAt = null;
-                    }
-                }
-            }
-
-            logger.Info($"Reset upload status for resources matching {deletedPaths.Count} deleted server paths");
+            logger.Info($"Reset upload status for resources matching {deletedPaths.Count} deleted server paths. Reset: {resetCount}");
         }
 
         /// <summary>
         /// Извлекает относительный путь из полного CDN URL
         /// </summary>
         private string? ExtractRelativePathFromUrl(string url) {
-            if (string.IsNullOrEmpty(url)) return null;
-
-            // CDN URL обычно имеет формат: https://cdn.example.com/bucket/path/to/file.ext
-            // или просто путь: content/path/to/file.ext
-            try {
-                if (Uri.TryCreate(url, UriKind.Absolute, out var uri)) {
-                    // Убираем начальный слэш из пути
-                    return uri.AbsolutePath.TrimStart('/');
-                }
-                // Если это уже относительный путь
-                return url.Replace('\\', '/').TrimStart('/');
-            } catch {
-                return url.Replace('\\', '/').TrimStart('/');
-            }
+            return assetWorkflowCoordinator.ExtractRelativePathFromUrl(url);
         }
 
         /// <summary>
@@ -337,61 +210,13 @@ namespace AssetProcessor {
                 return;
             }
 
-            int verified = 0;
-            int notFound = 0;
+            int resetCount = 0;
+            resetCount += assetWorkflowCoordinator.VerifyStatusesAgainstServerPaths(serverPaths, viewModel.Textures);
+            resetCount += assetWorkflowCoordinator.VerifyStatusesAgainstServerPaths(serverPaths, viewModel.Materials);
+            resetCount += assetWorkflowCoordinator.VerifyStatusesAgainstServerPaths(serverPaths, viewModel.Models);
 
-            // Проверяем текстуры
-            foreach (var texture in viewModel.Textures) {
-                if (texture.UploadStatus == "Uploaded" && !string.IsNullOrEmpty(texture.RemoteUrl)) {
-                    var remotePath = ExtractRelativePathFromUrl(texture.RemoteUrl);
-                    if (remotePath != null && serverPaths.Contains(remotePath)) {
-                        verified++;
-                    } else {
-                        texture.UploadStatus = null;
-                        texture.UploadedHash = null;
-                        texture.RemoteUrl = null;
-                        texture.LastUploadedAt = null;
-                        notFound++;
-                    }
-                }
-            }
-
-            // Проверяем материалы
-            foreach (var material in viewModel.Materials) {
-                if (material.UploadStatus == "Uploaded" && !string.IsNullOrEmpty(material.RemoteUrl)) {
-                    var remotePath = ExtractRelativePathFromUrl(material.RemoteUrl);
-                    if (remotePath != null && serverPaths.Contains(remotePath)) {
-                        verified++;
-                    } else {
-                        material.UploadStatus = null;
-                        material.UploadedHash = null;
-                        material.RemoteUrl = null;
-                        material.LastUploadedAt = null;
-                        notFound++;
-                    }
-                }
-            }
-
-            // Проверяем модели
-            foreach (var model in viewModel.Models) {
-                if (model.UploadStatus == "Uploaded" && !string.IsNullOrEmpty(model.RemoteUrl)) {
-                    var remotePath = ExtractRelativePathFromUrl(model.RemoteUrl);
-                    if (remotePath != null && serverPaths.Contains(remotePath)) {
-                        verified++;
-                    } else {
-                        model.UploadStatus = null;
-                        model.UploadedHash = null;
-                        model.RemoteUrl = null;
-                        model.LastUploadedAt = null;
-                        notFound++;
-                    }
-                }
-            }
-
-            if (notFound > 0) {
-                logger.Info($"Server status verification: {verified} verified, {notFound} not found (status reset)");
-            } else if (verified > 0) {
-                logger.Info($"Server status verification: {verified} files verified");
+            if (resetCount > 0) {
+                logger.Info($"Server status verification reset {resetCount} stale statuses");
             }
         }
 

@@ -114,6 +114,11 @@ namespace AssetProcessor {
             services.AddSingleton<IAssetLoadCoordinator, AssetLoadCoordinator>();
             services.AddSingleton<IProjectFileWatcherService, ProjectFileWatcherService>();
 
+            services.AddSingleton<IConnectionWorkflowCoordinator, ConnectionWorkflowCoordinator>();
+            services.AddSingleton<IAssetWorkflowCoordinator, AssetWorkflowCoordinator>();
+            services.AddSingleton<IPreviewWorkflowCoordinator, PreviewWorkflowCoordinator>();
+            services.AddSingleton<IUploadWorkflowCoordinator, UploadWorkflowCoordinator>();
+
             services.AddSingleton<TextureSelectionViewModel>(sp => {
                 var logService = sp.GetRequiredService<ILogService>();
                 return new TextureSelectionViewModel(logService);

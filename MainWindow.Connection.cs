@@ -507,7 +507,7 @@ namespace AssetProcessor {
                 }
 
                 // Initialize Master Materials context BEFORE loading assets
-                await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath!);
 
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
@@ -523,9 +523,9 @@ namespace AssetProcessor {
                     }
 
                     var checkResult = await projectConnectionService.CheckForUpdatesAsync(
-                        ProjectFolderPath,
-                        selectedProjectId,
-                        selectedBranchId,
+                        ProjectFolderPath!,
+                        selectedProjectId!,
+                        selectedBranchId!,
                         apiKey,
                         CancellationToken.None);
 

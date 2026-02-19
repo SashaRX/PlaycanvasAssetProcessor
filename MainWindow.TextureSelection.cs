@@ -102,7 +102,7 @@ namespace AssetProcessor {
                 logService.LogInfo);
 
             if (ormPreviewResult.ShouldExtractHistogram) {
-                _ = StartOrmHistogramExtraction(ormTexture.Path, ormTexture.Name ?? "unknown", ct);
+                StartOrmHistogramExtraction(ormTexture, ct);
             }
 
             if (!ormPreviewResult.Loaded) {

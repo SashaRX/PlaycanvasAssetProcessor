@@ -78,29 +78,34 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
             BucketId = bucketId
         };
 
-        using var b2Service = createB2Service();
+        var b2Service = createB2Service();
+        try {
+            var authorized = await b2Service.AuthorizeAsync(settings);
+            if (!authorized) {
+                var message = $"Failed to authorize B2 client for deleting: {asset.RemotePath}";
+                onError?.Invoke(message);
+                return new ServerAssetDeleteResult { Success = false, ErrorMessage = message };
+            }
 
-        var authorized = await b2Service.AuthorizeAsync(settings);
-        if (!authorized) {
-            var message = $"Failed to authorize B2 client for deleting: {asset.RemotePath}";
-            onError?.Invoke(message);
-            return new ServerAssetDeleteResult { Success = false, ErrorMessage = message };
+            var deleted = await b2Service.DeleteFileAsync(asset.RemotePath);
+            if (!deleted) {
+                var message = $"Failed to delete: {asset.RemotePath}";
+                onError?.Invoke(message);
+                return new ServerAssetDeleteResult { Success = false, ErrorMessage = message };
+            }
+
+            onInfo?.Invoke($"Deleted: {asset.RemotePath}");
+            await refreshServerAssetsAsync();
+
+            return new ServerAssetDeleteResult {
+                Success = true,
+                RefreshedAfterDelete = true
+            };
+        } finally {
+            if (b2Service is IDisposable disposable) {
+                disposable.Dispose();
+            }
         }
-
-        var deleted = await b2Service.DeleteFileAsync(asset.RemotePath);
-        if (!deleted) {
-            var message = $"Failed to delete: {asset.RemotePath}";
-            onError?.Invoke(message);
-            return new ServerAssetDeleteResult { Success = false, ErrorMessage = message };
-        }
-
-        onInfo?.Invoke($"Deleted: {asset.RemotePath}");
-        await refreshServerAssetsAsync();
-
-        return new ServerAssetDeleteResult {
-            Success = true,
-            RefreshedAfterDelete = true
-        };
     }
 
 

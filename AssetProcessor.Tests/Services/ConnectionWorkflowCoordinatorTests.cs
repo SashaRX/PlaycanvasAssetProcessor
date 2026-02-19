@@ -36,4 +36,47 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.Equal(ConnectionState.UpToDate, result.State);
         Assert.Equal("Project is up to date!", result.Message);
     }
+
+    [Fact]
+    public void EvaluateProjectState_ReturnsNeedsDownload_WhenAssetsListMissing() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = sut.EvaluateProjectState(
+            hasProjectFolder: true,
+            hasProjectName: true,
+            assetsListExists: false,
+            hasUpdates: false,
+            hasMissingFiles: false);
+
+        Assert.Equal(ConnectionState.NeedsDownload, result.State);
+        Assert.True(result.HasMissingFiles);
+    }
+
+    [Fact]
+    public void EvaluateSmartLoadState_ReturnsDisconnected_WhenSelectionMissing() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = sut.EvaluateSmartLoadState(
+            hasSelection: false,
+            hasProjectPath: true,
+            assetsLoaded: true,
+            updatesCheckSucceeded: true,
+            hasUpdates: false);
+
+        Assert.Equal(ConnectionState.Disconnected, result);
+    }
+
+    [Fact]
+    public void EvaluateSmartLoadState_ReturnsUpToDate_WhenAssetsLoadedAndNoUpdates() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = sut.EvaluateSmartLoadState(
+            hasSelection: true,
+            hasProjectPath: true,
+            assetsLoaded: true,
+            updatesCheckSucceeded: true,
+            hasUpdates: false);
+
+        Assert.Equal(ConnectionState.UpToDate, result);
+    }
 }

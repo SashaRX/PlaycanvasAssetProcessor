@@ -18,6 +18,26 @@ public sealed class ConnectionWorkflowCoordinator : IConnectionWorkflowCoordinat
         return BuildResult(hasUpdates, missingFiles);
     }
 
+    public ConnectionWorkflowResult EvaluateProjectState(bool hasProjectFolder, bool hasProjectName, bool assetsListExists, bool hasUpdates, bool hasMissingFiles) {
+        if (!hasProjectFolder || !hasProjectName || !assetsListExists) {
+            return BuildResult(hasUpdates: false, hasMissingFiles: true);
+        }
+
+        return BuildResult(hasUpdates, hasMissingFiles);
+    }
+
+    public ConnectionState EvaluateSmartLoadState(bool hasSelection, bool hasProjectPath, bool assetsLoaded, bool updatesCheckSucceeded, bool hasUpdates) {
+        if (!hasSelection) {
+            return ConnectionState.Disconnected;
+        }
+
+        if (!hasProjectPath || !assetsLoaded || !updatesCheckSucceeded) {
+            return ConnectionState.NeedsDownload;
+        }
+
+        return hasUpdates ? ConnectionState.NeedsDownload : ConnectionState.UpToDate;
+    }
+
     private static ConnectionWorkflowResult BuildResult(bool hasUpdates, bool hasMissingFiles) {
         return new ConnectionWorkflowResult {
             HasUpdates = hasUpdates,

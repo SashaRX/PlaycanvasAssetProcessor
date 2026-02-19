@@ -1,6 +1,8 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using Xunit;
+using AssetProcessor.Upload;
+using System.Collections.Generic;
 
 namespace AssetProcessor.Tests.Services;
 
@@ -48,5 +50,81 @@ public class AssetWorkflowCoordinatorTests {
 
         Assert.True(result.IsOrmFile);
         Assert.Same(groupedTexture, result.OrmGroupTexture);
+    }
+
+    [Fact]
+    public async Task DeleteServerAssetAsync_ReturnsCredentialsError_WhenAppKeyMissing() {
+        var sut = new AssetWorkflowCoordinator();
+        var asset = new AssetProcessor.ViewModels.ServerAssetViewModel { RemotePath = "project/textures/a.ktx2" };
+
+        var result = await sut.DeleteServerAssetAsync(
+            asset,
+            keyId: "id",
+            bucketName: "bucket",
+            bucketId: "bucket-id",
+            getApplicationKey: () => null,
+            createB2Service: () => new FakeB2UploadService(),
+            refreshServerAssetsAsync: () => Task.CompletedTask);
+
+        Assert.False(result.Success);
+        Assert.True(result.RequiresValidCredentials);
+    }
+
+    [Fact]
+    public async Task DeleteServerAssetAsync_DeletesAndRefreshes_WhenRequestSucceeds() {
+        var sut = new AssetWorkflowCoordinator();
+        var asset = new AssetProcessor.ViewModels.ServerAssetViewModel { RemotePath = "project/textures/a.ktx2" };
+        var fakeB2 = new FakeB2UploadService { AuthorizeResult = true, DeleteResult = true };
+        var refreshed = false;
+
+        var result = await sut.DeleteServerAssetAsync(
+            asset,
+            keyId: "id",
+            bucketName: "bucket",
+            bucketId: "bucket-id",
+            getApplicationKey: () => "secret",
+            createB2Service: () => fakeB2,
+            refreshServerAssetsAsync: () => {
+                refreshed = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.True(result.Success);
+        Assert.True(result.RefreshedAfterDelete);
+        Assert.True(refreshed);
+        Assert.Equal("project/textures/a.ktx2", fakeB2.DeletedRemotePath);
+    }
+
+
+    private sealed class FakeB2UploadService : IB2UploadService, IDisposable {
+        public bool AuthorizeResult { get; set; }
+        public bool DeleteResult { get; set; }
+        public string? DeletedRemotePath { get; private set; }
+
+        public B2UploadSettings? Settings { get; private set; }
+        public bool IsAuthorized => AuthorizeResult;
+
+        public Task<bool> AuthorizeAsync(B2UploadSettings settings, CancellationToken cancellationToken = default) {
+            Settings = settings;
+            return Task.FromResult(AuthorizeResult);
+        }
+
+        public Task<bool> DeleteFileAsync(string remotePath, CancellationToken cancellationToken = default) {
+            DeletedRemotePath = remotePath;
+            return Task.FromResult(DeleteResult);
+        }
+
+        public void Dispose() { }
+
+        public Task<B2UploadResult> UploadFileAsync(string localPath, string remotePath, string? contentType = null, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+        public Task<B2BatchUploadResult> UploadBatchAsync(IEnumerable<(string LocalPath, string RemotePath)> files, IProgress<B2UploadProgress>? progress = null, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+        public Task<B2BatchUploadResult> UploadDirectoryAsync(string localDirectory, string remotePrefix, string searchPattern = "*", bool recursive = true, IProgress<B2UploadProgress>? progress = null, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+        public Task<bool> FileExistsAsync(string remotePath, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<B2FileInfo?> GetFileInfoAsync(string remotePath, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<(int deleted, int failed)> DeleteFolderAsync(string folderPath, IProgress<(int current, int total, string fileName)>? progress = null, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<B2FileInfo>> ListFilesAsync(string prefix, int maxCount = 1000, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

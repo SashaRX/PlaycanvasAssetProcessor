@@ -3,6 +3,9 @@ using AssetProcessor.Services.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using AssetProcessor.Upload;
+using AssetProcessor.ViewModels;
 
 namespace AssetProcessor.Services;
 
@@ -43,6 +46,61 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         }
 
         return resetCount;
+    }
+
+
+    public async Task<ServerAssetDeleteResult> DeleteServerAssetAsync(
+        ServerAssetViewModel asset,
+        string keyId,
+        string bucketName,
+        string bucketId,
+        Func<string?> getApplicationKey,
+        Func<IB2UploadService> createB2Service,
+        Func<Task> refreshServerAssetsAsync,
+        Action<string>? onInfo = null,
+        Action<string>? onError = null) {
+
+        var appKey = getApplicationKey();
+        if (string.IsNullOrWhiteSpace(appKey)) {
+            const string message = "Failed to decrypt B2 application key.";
+            onError?.Invoke(message);
+            return new ServerAssetDeleteResult {
+                Success = false,
+                RequiresValidCredentials = true,
+                ErrorMessage = message
+            };
+        }
+
+        var settings = new B2UploadSettings {
+            KeyId = keyId,
+            ApplicationKey = appKey,
+            BucketName = bucketName,
+            BucketId = bucketId
+        };
+
+        using var b2Service = createB2Service();
+
+        var authorized = await b2Service.AuthorizeAsync(settings);
+        if (!authorized) {
+            var message = $"Failed to authorize B2 client for deleting: {asset.RemotePath}";
+            onError?.Invoke(message);
+            return new ServerAssetDeleteResult { Success = false, ErrorMessage = message };
+        }
+
+        var deleted = await b2Service.DeleteFileAsync(asset.RemotePath);
+        if (!deleted) {
+            var message = $"Failed to delete: {asset.RemotePath}";
+            onError?.Invoke(message);
+            return new ServerAssetDeleteResult { Success = false, ErrorMessage = message };
+        }
+
+        onInfo?.Invoke($"Deleted: {asset.RemotePath}");
+        await refreshServerAssetsAsync();
+
+        return new ServerAssetDeleteResult {
+            Success = true,
+            RefreshedAfterDelete = true
+        };
     }
 
     public ResourceNavigationResult ResolveNavigationTarget(

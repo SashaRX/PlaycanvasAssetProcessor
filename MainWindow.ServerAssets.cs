@@ -55,39 +55,29 @@ namespace AssetProcessor {
         private async void DeleteServerFileButton_Click(object sender, RoutedEventArgs e) {
             if (viewModel.SelectedServerAsset == null) return;
 
-            var result = MessageBox.Show(
-                $"Are you sure you want to delete '{viewModel.SelectedServerAsset.FileName}' from the server?\n\nThis action cannot be undone.",
+            var selectedAsset = viewModel.SelectedServerAsset;
+            var confirmation = MessageBox.Show(
+                $"Are you sure you want to delete '{selectedAsset.FileName}' from the server?\n\nThis action cannot be undone.",
                 "Confirm Delete",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes) return;
+            if (confirmation != MessageBoxResult.Yes) return;
 
             try {
-                using var b2Service = new Upload.B2UploadService();
+                var deleteResult = await assetWorkflowCoordinator.DeleteServerAssetAsync(
+                    selectedAsset,
+                    AppSettings.Default.B2KeyId,
+                    AppSettings.Default.B2BucketName,
+                    AppSettings.Default.B2BucketId,
+                    getApplicationKey: () => AppSettings.Default.TryGetDecryptedB2ApplicationKey(out var key) ? key : null,
+                    createB2Service: () => new Upload.B2UploadService(),
+                    refreshServerAssetsAsync: () => ServerAssetsPanel.RefreshServerAssetsAsync(),
+                    onInfo: logService.LogInfo,
+                    onError: logService.LogError);
 
-                if (!AppSettings.Default.TryGetDecryptedB2ApplicationKey(out var appKey) || string.IsNullOrEmpty(appKey)) {
-                    logService.LogError("Failed to decrypt B2 application key.");
-                    return;
-                }
-
-                var settings = new Upload.B2UploadSettings {
-                    KeyId = AppSettings.Default.B2KeyId,
-                    ApplicationKey = appKey,
-                    BucketName = AppSettings.Default.B2BucketName,
-                    BucketId = AppSettings.Default.B2BucketId
-                };
-
-                await b2Service.AuthorizeAsync(settings);
-                var success = await b2Service.DeleteFileAsync(viewModel.SelectedServerAsset.RemotePath);
-
-                if (success) {
-                    logService.LogInfo($"Deleted: {viewModel.SelectedServerAsset.RemotePath}");
+                if (deleteResult.Success) {
                     UpdateServerFileInfo(null);
-                    // Refresh the server assets panel
-                    await ServerAssetsPanel.RefreshServerAssetsAsync();
-                } else {
-                    logService.LogError($"Failed to delete: {viewModel.SelectedServerAsset.RemotePath}");
                 }
             } catch (Exception ex) {
                 logService.LogError($"Error deleting file: {ex.Message}");

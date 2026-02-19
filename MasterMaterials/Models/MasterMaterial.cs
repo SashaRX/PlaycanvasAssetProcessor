@@ -22,6 +22,34 @@ public class MasterMaterial
     public string BlendType { get; set; } = "opaque";
 
     /// <summary>
+    /// Cull mode: "0"=none, "1"=back (default), "2"=front
+    /// </summary>
+    [JsonPropertyName("cull")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Cull { get; set; }
+
+    /// <summary>
+    /// Two-sided lighting
+    /// </summary>
+    [JsonPropertyName("twoSidedLighting")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? TwoSidedLighting { get; set; }
+
+    /// <summary>
+    /// Write to depth buffer
+    /// </summary>
+    [JsonPropertyName("depthWrite")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? DepthWrite { get; set; }
+
+    /// <summary>
+    /// Test against depth buffer
+    /// </summary>
+    [JsonPropertyName("depthTest")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? DepthTest { get; set; }
+
+    /// <summary>
     /// Chunk overrides: key = chunk name to replace, value = path to .mjs file (relative to materials folder)
     /// Example: { "diffusePS": "pbr_opaque/chunks/diffusePS.mjs" }
     /// </summary>
@@ -94,6 +122,10 @@ public class MasterMaterial
         {
             Name = Name,
             BlendType = BlendType,
+            Cull = Cull,
+            TwoSidedLighting = TwoSidedLighting,
+            DepthWrite = DepthWrite,
+            DepthTest = DepthTest,
             Chunks = new Dictionary<string, string>(Chunks),
             DefaultParams = DefaultParams != null
                 ? new Dictionary<string, object>(DefaultParams)

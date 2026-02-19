@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using AssetProcessor.MasterMaterials.Models;
 using AssetProcessor.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -190,6 +191,14 @@ public partial class MasterMaterialsViewModel : ObservableObject
                         Chunks.Add(loadedChunk);
                     }
                 }
+            }
+
+            // Load standalone chunks from library (survive restarts without being tied to a master)
+            var libraryChunks = await _masterMaterialService.LoadChunkLibraryAsync(_projectFolderPath, ct);
+            foreach (var chunk in libraryChunks)
+            {
+                if (!Chunks.Any(c => c.Id == chunk.Id))
+                    Chunks.Add(chunk);
             }
 
             HasUnsavedChanges = false;
@@ -518,6 +527,43 @@ public partial class MasterMaterialsViewModel : ObservableObject
         }
 
         HasUnsavedChanges = true;
+    }
+
+    /// <summary>
+    /// Saves a standalone chunk to the library on disk so it survives restarts.
+    /// Called automatically when the user saves a chunk in the editor.
+    /// </summary>
+    public async Task SaveChunkToLibraryAsync(ShaderChunk chunk)
+    {
+        if (string.IsNullOrEmpty(_projectFolderPath) || chunk.IsBuiltIn) return;
+        try
+        {
+            await _masterMaterialService.SaveChunkToLibraryAsync(_projectFolderPath, chunk);
+            Logger.Info($"Chunk '{chunk.Id}' saved to library");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, $"Failed to save chunk '{chunk.Id}' to library");
+        }
+    }
+
+    /// <summary>
+    /// Collects all custom master JSON paths and chunk bundle paths for upload.
+    /// Generates bundles on the fly for masters that have custom chunks.
+    /// </summary>
+    public async Task<List<string>> CollectMasterUploadFilesAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(_projectFolderPath) || _config == null) return [];
+        return await _masterMaterialService.GenerateMasterBundlesAsync(_projectFolderPath, _config, ct);
+    }
+
+    /// <summary>
+    /// Gets {project}/server/ — used by the upload pipeline for B2 remote path resolution.
+    /// </summary>
+    public string? GetServerFolderPath()
+    {
+        if (string.IsNullOrEmpty(_projectFolderPath)) return null;
+        return Path.Combine(_projectFolderPath, "server");
     }
 
     /// <summary>

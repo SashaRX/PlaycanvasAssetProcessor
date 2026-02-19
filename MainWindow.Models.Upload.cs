@@ -122,13 +122,19 @@ namespace AssetProcessor {
 
                 Dispatcher.Invoke(() => { viewModel.ProgressValue = 100; });
 
+                var errorDetails = result.Errors.Count > 0
+                    ? "\n\nErrors:\n" + string.Join("\n", result.Errors.Take(5).Select(e => $"  • {e}"))
+                      + (result.Errors.Count > 5 ? $"\n  ...and {result.Errors.Count - 5} more (see log)" : "")
+                    : "";
+
                 MessageBox.Show(
                     $"Upload completed!\n\n" +
                     $"Uploaded: {result.SuccessCount + mappingUploaded}\n" +
                     $"Skipped (already exists): {result.SkippedCount}\n" +
                     $"Failed: {result.FailedCount}\n" +
                     (mappingUploaded > 0 ? "mapping.json: uploaded\n" : "") +
-                    $"Duration: {result.Duration.TotalSeconds:F1}s",
+                    $"Duration: {result.Duration.TotalSeconds:F1}s" +
+                    errorDetails,
                     "Upload Result", MessageBoxButton.OK,
                     result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
 

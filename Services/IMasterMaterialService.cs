@@ -87,6 +87,23 @@ public interface IMasterMaterialService
     Task RemoveChunkFromMasterAsync(string projectFolderPath, MasterMaterial master, string chunkName, CancellationToken ct = default);
 
     /// <summary>
+    /// Saves a standalone chunk to the library folder (independent of any master).
+    /// Library path: {materials}/_library/{chunkId}.mjs
+    /// </summary>
+    Task SaveChunkToLibraryAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default);
+
+    /// <summary>
+    /// Loads all standalone chunks from the library folder.
+    /// </summary>
+    Task<IEnumerable<ShaderChunk>> LoadChunkLibraryAsync(string projectFolderPath, CancellationToken ct = default);
+
+    /// <summary>
+    /// Generates consolidated chunk bundles for all masters that have custom chunks.
+    /// Saves them to {materials}/{masterName}_chunks.mjs. Returns list of generated file paths.
+    /// </summary>
+    Task<List<string>> GenerateMasterBundlesAsync(string projectFolderPath, MasterMaterialsConfig config, CancellationToken ct = default);
+
+    /// <summary>
     /// Gets the materials folder path: {project}/server/assets/content/materials/
     /// </summary>
     string GetMaterialsFolderPath(string projectFolderPath);

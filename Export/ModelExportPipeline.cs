@@ -1147,9 +1147,11 @@ public class ModelExportPipeline {
     }
 
     /// <summary>
-    /// Генерирует consolidated chunks файлы для master materials, используемых материалами
+    /// Генерирует master material JSON файлы и consolidated chunks .mjs для всех мастеров,
+    /// используемых переданными материалами. Оба типа файлов добавляются в список для загрузки на CDN.
+    /// Master JSON содержит render-state и описание кастомных чанков — нужен рантайму для создания материала.
     /// </summary>
-    /// <returns>Список путей к сгенерированным chunks файлам</returns>
+    /// <returns>Список путей к сгенерированным файлам (master JSONs + chunks MJS)</returns>
     private async Task<List<string>> GenerateChunksFilesAsync(
         List<MaterialResource> materials,
         string exportPath,
@@ -1162,54 +1164,68 @@ public class ModelExportPipeline {
             return generatedFiles;
         }
 
-        // Собираем уникальные master names с chunks
-        var masterNamesWithChunks = new HashSet<string>();
+        // Собираем все уникальные master names использованных материалов
+        var usedMasterNames = new HashSet<string>();
         foreach (var material in materials) {
             var masterName = material.MasterMaterialName;
             if (string.IsNullOrEmpty(masterName)) {
-                // Используем DefaultMasterMaterial из options если задан
-                if (!string.IsNullOrEmpty(options.DefaultMasterMaterial)) {
-                    masterName = options.DefaultMasterMaterial;
-                } else {
-                    // Fallback to blendType
-                    masterName = material.BlendType switch {
+                masterName = !string.IsNullOrEmpty(options.DefaultMasterMaterial)
+                    ? options.DefaultMasterMaterial
+                    : material.BlendType switch {
                         "0" or "NONE" => "pbr_opaque",
                         "1" or "NORMAL" => "pbr_alpha",
                         "2" or "ADDITIVE" => "pbr_additive",
                         "3" or "PREMULTIPLIED" => "pbr_premul",
                         _ => "pbr_opaque"
                     };
-                }
             }
-
-            var master = options.MasterMaterialsConfig.Masters
-                .FirstOrDefault(m => m.Name == masterName);
-            if (master != null && master.Chunks.Count > 0) {
-                masterNamesWithChunks.Add(masterName);
-            }
+            usedMasterNames.Add(masterName);
         }
 
-        if (masterNamesWithChunks.Count == 0) {
+        if (usedMasterNames.Count == 0) {
             return generatedFiles;
         }
 
-        // Создаём папку chunks
-        var chunksDir = Path.Combine(exportPath, "chunks");
-        Directory.CreateDirectory(chunksDir);
-
-        // Генерируем consolidated MJS для каждого master
         var masterMaterialService = new Services.MasterMaterialService();
-        foreach (var masterName in masterNamesWithChunks) {
+        var allMasters = masterMaterialService.GetAllMasters(options.MasterMaterialsConfig);
+        var chunksDir = Path.Combine(exportPath, "chunks");
+
+        var masterJsonSerializerOptions = new System.Text.Json.JsonSerializerOptions {
+            WriteIndented = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
+
+        foreach (var masterName in usedMasterNames) {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var master = options.MasterMaterialsConfig.Masters.First(m => m.Name == masterName);
-            var consolidatedMjs = await masterMaterialService.GenerateConsolidatedChunksAsync(
-                options.ProjectFolderPath, master, cancellationToken);
+            var master = allMasters.FirstOrDefault(m => m.Name == masterName);
+            if (master == null) {
+                Logger.Warn($"Master material '{masterName}' not found, skipping");
+                continue;
+            }
 
-            var outputPath = Path.Combine(chunksDir, $"{masterName}_chunks.mjs");
-            await File.WriteAllTextAsync(outputPath, consolidatedMjs, cancellationToken);
-            generatedFiles.Add(outputPath);
-            Logger.Info($"Generated chunks file: {outputPath}");
+            // Гарантируем наличие _master.json на диске (в т.ч. для built-in мастеров)
+            // и добавляем его в список для загрузки на CDN.
+            // Рантайм читает этот файл чтобы получить render-state и список кастомных чанков.
+            var masterJsonPath = masterMaterialService.GetMasterFilePath(options.ProjectFolderPath, masterName);
+            if (!File.Exists(masterJsonPath)) {
+                Directory.CreateDirectory(Path.GetDirectoryName(masterJsonPath)!);
+                var json = System.Text.Json.JsonSerializer.Serialize(master, masterJsonSerializerOptions);
+                await File.WriteAllTextAsync(masterJsonPath, json, cancellationToken);
+                Logger.Info($"Generated master material JSON: {masterJsonPath}");
+            }
+            generatedFiles.Add(masterJsonPath);
+
+            // Если у мастера есть кастомные чанки — генерируем consolidated .mjs для рантайма
+            if (master.Chunks.Count > 0) {
+                Directory.CreateDirectory(chunksDir);
+                var consolidatedMjs = await masterMaterialService.GenerateConsolidatedChunksAsync(
+                    options.ProjectFolderPath, master, cancellationToken);
+                var outputPath = Path.Combine(chunksDir, $"{masterName}_chunks.mjs");
+                await File.WriteAllTextAsync(outputPath, consolidatedMjs, cancellationToken);
+                generatedFiles.Add(outputPath);
+                Logger.Info($"Generated chunks file: {outputPath}");
+            }
         }
 
         return generatedFiles;

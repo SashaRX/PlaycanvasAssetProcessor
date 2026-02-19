@@ -519,6 +519,18 @@ public class MainViewModelTests {
         public string GetChunkFilePath(string projectFolderPath, string masterName, string chunkName) => string.Empty;
         public string GetChunkServerPath(string masterName, string chunkName) => string.Empty;
 
+        public Task SaveChunkToLibraryAsync(string projectFolderPath, ShaderChunk chunk, CancellationToken ct = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<IEnumerable<ShaderChunk>> LoadChunkLibraryAsync(string projectFolderPath, CancellationToken ct = default) {
+            return Task.FromResult(Enumerable.Empty<ShaderChunk>());
+        }
+
+        public Task<List<string>> GenerateMasterBundlesAsync(string projectFolderPath, MasterMaterialsConfig config, CancellationToken ct = default) {
+            return Task.FromResult(new List<string>());
+        }
+
         // Legacy methods (deprecated)
         [Obsolete]
         public string GetChunksFolderPath(string projectFolderPath) => string.Empty;

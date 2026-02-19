@@ -8,7 +8,7 @@ public class AssetWorkflowCoordinatorTests {
     [Fact]
     public void ResetStatusesForDeletedPaths_ResetsMatchingResource() {
         var sut = new AssetWorkflowCoordinator();
-        var texture = new TextureResource { RemoteUrl = "https://cdn/site/project/textures/a.ktx2", UploadStatus = "Uploaded", UploadedHash = "x" };
+        var texture = new TextureResource { RemoteUrl = "https://cdn/project/textures/a.ktx2", UploadStatus = "Uploaded", UploadedHash = "x" };
 
         var reset = sut.ResetStatusesForDeletedPaths(["project/textures/a.ktx2"], [texture]);
 

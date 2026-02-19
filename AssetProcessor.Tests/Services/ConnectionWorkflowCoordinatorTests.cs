@@ -1,5 +1,6 @@
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Services;
+using Xunit;
 
 namespace AssetProcessor.Tests.Services;
 

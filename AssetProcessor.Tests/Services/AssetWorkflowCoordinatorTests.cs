@@ -1,5 +1,6 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
+using Xunit;
 
 namespace AssetProcessor.Tests.Services;
 

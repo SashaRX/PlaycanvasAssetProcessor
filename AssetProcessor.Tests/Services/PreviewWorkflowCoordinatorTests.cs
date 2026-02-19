@@ -2,6 +2,7 @@ using AssetProcessor.Resources;
 using AssetProcessor.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
+using Xunit;
 
 namespace AssetProcessor.Tests.Services;
 

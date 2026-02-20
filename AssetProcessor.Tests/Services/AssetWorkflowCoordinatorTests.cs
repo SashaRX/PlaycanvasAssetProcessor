@@ -47,6 +47,36 @@ public class AssetWorkflowCoordinatorTests {
         Assert.Null(model.UploadStatus);
     }
 
+
+    [Fact]
+    public void SyncDeletedPaths_ReturnsNoOp_WhenDeletedPathsEmpty() {
+        var sut = new AssetWorkflowCoordinator();
+
+        var result = sut.SyncDeletedPaths([], [new TextureResource { UploadStatus = "Uploaded" }]);
+
+        Assert.False(result.HasDeletedPaths);
+        Assert.Equal(0, result.DeletedPathCount);
+        Assert.Equal(0, result.ResetCount);
+    }
+
+    [Fact]
+    public void SyncDeletedPaths_ResetsAcrossCollections_WhenDeletedPathsProvided() {
+        var sut = new AssetWorkflowCoordinator();
+        var texture = new TextureResource { RemoteUrl = "https://cdn/project/textures/a.ktx2", UploadStatus = "Uploaded" };
+        var model = new ModelResource { RemoteUrl = "https://cdn/project/models/a.glb", UploadStatus = "Uploaded" };
+
+        var result = sut.SyncDeletedPaths(
+            ["project/textures/a.ktx2", "project/models/a.glb"],
+            [texture],
+            [model]);
+
+        Assert.True(result.HasDeletedPaths);
+        Assert.Equal(2, result.DeletedPathCount);
+        Assert.Equal(2, result.ResetCount);
+        Assert.Null(texture.UploadStatus);
+        Assert.Null(model.UploadStatus);
+    }
+
     [Fact]
     public void VerifyStatusesAgainstServerCollections_SumsAcrossCollections() {
         var sut = new AssetWorkflowCoordinator();

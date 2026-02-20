@@ -173,15 +173,16 @@ namespace AssetProcessor {
         /// Обработчик события удаления файлов с сервера - сбрасывает статусы ресурсов
         /// </summary>
         private void OnServerFilesDeleted(List<string> deletedPaths) {
-            if (deletedPaths == null || deletedPaths.Count == 0) return;
-
-            int resetCount = assetWorkflowCoordinator.ResetStatusesForDeletedCollections(
+            var syncResult = assetWorkflowCoordinator.SyncDeletedPaths(
                 deletedPaths,
                 viewModel.Textures,
                 viewModel.Materials,
                 viewModel.Models);
+            if (!syncResult.HasDeletedPaths) {
+                return;
+            }
 
-            logger.Info($"Reset upload status for resources matching {deletedPaths.Count} deleted server paths. Reset: {resetCount}");
+            logger.Info($"Reset upload status for resources matching {syncResult.DeletedPathCount} deleted server paths. Reset: {syncResult.ResetCount}");
         }
 
         /// <summary>

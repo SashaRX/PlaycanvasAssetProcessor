@@ -36,6 +36,23 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         return resourceCollections.Sum(resources => ResetStatusesForDeletedPaths(deletedPaths, resources));
     }
 
+    public DeletedPathsSyncResult SyncDeletedPaths(IEnumerable<string>? deletedPaths, params IEnumerable<BaseResource>[] resourceCollections) {
+        if (deletedPaths == null) {
+            return new DeletedPathsSyncResult { HasDeletedPaths = false, DeletedPathCount = 0, ResetCount = 0 };
+        }
+
+        var paths = deletedPaths as ICollection<string> ?? deletedPaths.ToList();
+        if (paths.Count == 0) {
+            return new DeletedPathsSyncResult { HasDeletedPaths = false, DeletedPathCount = 0, ResetCount = 0 };
+        }
+
+        return new DeletedPathsSyncResult {
+            HasDeletedPaths = true,
+            DeletedPathCount = paths.Count,
+            ResetCount = ResetStatusesForDeletedCollections(paths, resourceCollections)
+        };
+    }
+
     public int VerifyStatusesAgainstServerPaths(HashSet<string> serverPaths, IEnumerable<BaseResource> resources) {
         int resetCount = 0;
 

@@ -32,6 +32,10 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         return ResetStatusesByPathSet(normalizedPaths, resources);
     }
 
+    public int ResetStatusesForDeletedCollections(IEnumerable<string> deletedPaths, params IEnumerable<BaseResource>[] resourceCollections) {
+        return resourceCollections.Sum(resources => ResetStatusesForDeletedPaths(deletedPaths, resources));
+    }
+
     public int VerifyStatusesAgainstServerPaths(HashSet<string> serverPaths, IEnumerable<BaseResource> resources) {
         int resetCount = 0;
 
@@ -48,6 +52,10 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         return resetCount;
     }
 
+
+    public int VerifyStatusesAgainstServerCollections(HashSet<string> serverPaths, params IEnumerable<BaseResource>[] resourceCollections) {
+        return resourceCollections.Sum(resources => VerifyStatusesAgainstServerPaths(serverPaths, resources));
+    }
 
     public async Task<ServerAssetDeleteResult> DeleteServerAssetAsync(
         ServerAssetViewModel asset,

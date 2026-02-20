@@ -11,7 +11,9 @@ namespace AssetProcessor.Services;
 public interface IAssetWorkflowCoordinator {
     string? ExtractRelativePathFromUrl(string? url);
     int ResetStatusesForDeletedPaths(IEnumerable<string> deletedPaths, IEnumerable<BaseResource> resources);
+    int ResetStatusesForDeletedCollections(IEnumerable<string> deletedPaths, params IEnumerable<BaseResource>[] resourceCollections);
     int VerifyStatusesAgainstServerPaths(HashSet<string> serverPaths, IEnumerable<BaseResource> resources);
+    int VerifyStatusesAgainstServerCollections(HashSet<string> serverPaths, params IEnumerable<BaseResource>[] resourceCollections);
     int ResetAllUploadStatuses(IEnumerable<BaseResource> resources);
     ResourceNavigationResult ResolveNavigationTarget(
         string fileName,

@@ -175,10 +175,11 @@ namespace AssetProcessor {
         private void OnServerFilesDeleted(List<string> deletedPaths) {
             if (deletedPaths == null || deletedPaths.Count == 0) return;
 
-            int resetCount = 0;
-            resetCount += assetWorkflowCoordinator.ResetStatusesForDeletedPaths(deletedPaths, viewModel.Textures);
-            resetCount += assetWorkflowCoordinator.ResetStatusesForDeletedPaths(deletedPaths, viewModel.Materials);
-            resetCount += assetWorkflowCoordinator.ResetStatusesForDeletedPaths(deletedPaths, viewModel.Models);
+            int resetCount = assetWorkflowCoordinator.ResetStatusesForDeletedCollections(
+                deletedPaths,
+                viewModel.Textures,
+                viewModel.Materials,
+                viewModel.Models);
 
             logger.Info($"Reset upload status for resources matching {deletedPaths.Count} deleted server paths. Reset: {resetCount}");
         }
@@ -193,10 +194,11 @@ namespace AssetProcessor {
                 return;
             }
 
-            int resetCount = 0;
-            resetCount += assetWorkflowCoordinator.VerifyStatusesAgainstServerPaths(serverPaths, viewModel.Textures);
-            resetCount += assetWorkflowCoordinator.VerifyStatusesAgainstServerPaths(serverPaths, viewModel.Materials);
-            resetCount += assetWorkflowCoordinator.VerifyStatusesAgainstServerPaths(serverPaths, viewModel.Models);
+            int resetCount = assetWorkflowCoordinator.VerifyStatusesAgainstServerCollections(
+                serverPaths,
+                viewModel.Textures,
+                viewModel.Materials,
+                viewModel.Models);
 
             if (resetCount > 0) {
                 logger.Info($"Server status verification reset {resetCount} stale statuses");

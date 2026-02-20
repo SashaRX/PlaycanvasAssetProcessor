@@ -30,6 +30,39 @@ public class AssetWorkflowCoordinatorTests {
         Assert.Null(model.UploadStatus);
     }
 
+
+    [Fact]
+    public void ResetStatusesForDeletedCollections_SumsAcrossCollections() {
+        var sut = new AssetWorkflowCoordinator();
+        var texture = new TextureResource { RemoteUrl = "https://cdn/project/textures/a.ktx2", UploadStatus = "Uploaded" };
+        var model = new ModelResource { RemoteUrl = "https://cdn/project/models/a.glb", UploadStatus = "Uploaded" };
+
+        var reset = sut.ResetStatusesForDeletedCollections(
+            ["project/textures/a.ktx2", "project/models/a.glb"],
+            [texture],
+            [model]);
+
+        Assert.Equal(2, reset);
+        Assert.Null(texture.UploadStatus);
+        Assert.Null(model.UploadStatus);
+    }
+
+    [Fact]
+    public void VerifyStatusesAgainstServerCollections_SumsAcrossCollections() {
+        var sut = new AssetWorkflowCoordinator();
+        var texture = new TextureResource { RemoteUrl = "content/textures/a.ktx2", UploadStatus = "Uploaded" };
+        var model = new ModelResource { RemoteUrl = "content/models/a.glb", UploadStatus = "Uploaded" };
+
+        var reset = sut.VerifyStatusesAgainstServerCollections(
+            ["content/textures/a.ktx2"],
+            [texture],
+            [model]);
+
+        Assert.Equal(1, reset);
+        Assert.Equal("Uploaded", texture.UploadStatus);
+        Assert.Null(model.UploadStatus);
+    }
+
     [Fact]
     public void ResolveNavigationTarget_ReturnsTexture_WhenNameMatches() {
         var sut = new AssetWorkflowCoordinator();

@@ -209,10 +209,10 @@ namespace AssetProcessor {
         /// Сбрасывает все upload статусы (когда сервер пустой)
         /// </summary>
         private void ResetAllUploadStatuses() {
-            int reset = 0;
-            reset += assetWorkflowCoordinator.ResetAllUploadStatuses(viewModel.Textures);
-            reset += assetWorkflowCoordinator.ResetAllUploadStatuses(viewModel.Materials);
-            reset += assetWorkflowCoordinator.ResetAllUploadStatuses(viewModel.Models);
+            int reset = assetWorkflowCoordinator.ResetAllUploadStatusesCollections(
+                viewModel.Textures,
+                viewModel.Materials,
+                viewModel.Models);
 
             if (reset > 0) {
                 logger.Info($"Server empty - reset {reset} upload statuses");

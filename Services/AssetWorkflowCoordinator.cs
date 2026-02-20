@@ -132,6 +132,10 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         return resetCount;
     }
 
+    public int ResetAllUploadStatusesCollections(params IEnumerable<BaseResource>[] resourceCollections) {
+        return resourceCollections.Sum(ResetAllUploadStatuses);
+    }
+
     public ResourceNavigationResult ResolveNavigationTarget(
         string fileName,
         IEnumerable<TextureResource> textures,

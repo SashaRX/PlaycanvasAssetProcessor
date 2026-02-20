@@ -63,6 +63,22 @@ public class AssetWorkflowCoordinatorTests {
         Assert.Null(model.UploadStatus);
     }
 
+
+    [Fact]
+    public void ResetAllUploadStatusesCollections_SumsAcrossCollections() {
+        var sut = new AssetWorkflowCoordinator();
+        var texture = new TextureResource { UploadStatus = "Uploaded", RemoteUrl = "assets/a.ktx2" };
+        var material = new MaterialResource { UploadStatus = "Uploaded", RemoteUrl = "assets/mat.json" };
+        var model = new ModelResource { UploadStatus = null, RemoteUrl = "assets/model.glb" };
+
+        var reset = sut.ResetAllUploadStatusesCollections([texture], [material], [model]);
+
+        Assert.Equal(2, reset);
+        Assert.Null(texture.UploadStatus);
+        Assert.Null(material.UploadStatus);
+        Assert.Null(model.UploadStatus);
+    }
+
     [Fact]
     public void ResolveNavigationTarget_ReturnsTexture_WhenNameMatches() {
         var sut = new AssetWorkflowCoordinator();

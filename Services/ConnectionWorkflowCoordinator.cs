@@ -41,12 +41,19 @@ public sealed class ConnectionWorkflowCoordinator : IConnectionWorkflowCoordinat
     }
 
 
-    public string? ResolveSelectedProjectId(IReadOnlyCollection<KeyValuePair<string, string>> projects, string? preferredProjectId) {
-        if (!string.IsNullOrEmpty(preferredProjectId) && projects.Any(p => p.Key == preferredProjectId)) {
-            return preferredProjectId;
+    public ConnectionProjectSelectionResult SelectProject(IReadOnlyCollection<KeyValuePair<string, string>> projects, string? preferredProjectId) {
+        if (projects.Count == 0) {
+            return new ConnectionProjectSelectionResult { HasProjects = false, SelectedProjectId = null };
         }
 
-        return projects.FirstOrDefault().Key;
+        if (!string.IsNullOrEmpty(preferredProjectId) && projects.Any(p => p.Key == preferredProjectId)) {
+            return new ConnectionProjectSelectionResult { HasProjects = true, SelectedProjectId = preferredProjectId };
+        }
+
+        return new ConnectionProjectSelectionResult {
+            HasProjects = true,
+            SelectedProjectId = projects.First().Key
+        };
     }
 
     private static ConnectionWorkflowResult BuildResult(bool hasUpdates, bool hasMissingFiles) {

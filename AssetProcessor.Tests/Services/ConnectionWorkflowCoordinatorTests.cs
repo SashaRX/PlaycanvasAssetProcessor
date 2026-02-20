@@ -113,28 +113,41 @@ public class ConnectionWorkflowCoordinatorTests {
     }
 
     [Fact]
-    public void ResolveSelectedProjectId_ReturnsPreferred_WhenExistsInList() {
+    public void SelectProject_ReturnsPreferred_WhenExistsInList() {
         var sut = new ConnectionWorkflowCoordinator();
         var projects = new List<KeyValuePair<string, string>> {
             new("p1", "Project 1"),
             new("p2", "Project 2")
         };
 
-        var selected = sut.ResolveSelectedProjectId(projects, "p2");
+        var result = sut.SelectProject(projects, "p2");
 
-        Assert.Equal("p2", selected);
+        Assert.True(result.HasProjects);
+        Assert.Equal("p2", result.SelectedProjectId);
     }
 
     [Fact]
-    public void ResolveSelectedProjectId_ReturnsFirst_WhenPreferredMissing() {
+    public void SelectProject_ReturnsEmpty_WhenProjectsMissing() {
+        var sut = new ConnectionWorkflowCoordinator();
+        var projects = new List<KeyValuePair<string, string>>();
+
+        var result = sut.SelectProject(projects, "p2");
+
+        Assert.False(result.HasProjects);
+        Assert.Null(result.SelectedProjectId);
+    }
+
+    [Fact]
+    public void SelectProject_ReturnsFirst_WhenPreferredMissing() {
         var sut = new ConnectionWorkflowCoordinator();
         var projects = new List<KeyValuePair<string, string>> {
             new("p1", "Project 1"),
             new("p2", "Project 2")
         };
 
-        var selected = sut.ResolveSelectedProjectId(projects, "unknown");
+        var result = sut.SelectProject(projects, "unknown");
 
-        Assert.Equal("p1", selected);
+        Assert.True(result.HasProjects);
+        Assert.Equal("p1", result.SelectedProjectId);
     }
 }

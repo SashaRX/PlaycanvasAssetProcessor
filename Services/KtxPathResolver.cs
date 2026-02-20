@@ -58,6 +58,18 @@ internal static class KtxPathResolver {
             }
         }
 
+        // Search in server/assets/content (model export pipeline output)
+        if (!string.IsNullOrWhiteSpace(projectFolderPath)) {
+            string sanitizedProject = PathSanitizer.SanitizePath(projectFolderPath);
+            if (!string.IsNullOrEmpty(sanitizedProject)) {
+                string serverContentPath = Path.Combine(sanitizedProject, "server", "assets", "content");
+                string? serverMatch = TryFindKtx2InDirectory(serverContentPath, baseName, normalizedBaseName, SearchOption.AllDirectories, logService);
+                if (!string.IsNullOrEmpty(serverMatch)) {
+                    return serverMatch;
+                }
+            }
+        }
+
         return null;
     }
 

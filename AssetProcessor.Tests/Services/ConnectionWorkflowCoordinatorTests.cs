@@ -151,7 +151,6 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.True(result.HasProjects);
         Assert.Equal("p1", result.SelectedProjectId);
     }
-}
 
     [Fact]
     public void BuildProjectsBinding_ReturnsProjectsAndSelection() {
@@ -201,3 +200,4 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.False(result.HasProjects);
         Assert.Equal("u1", result.UserId);
     }
+}

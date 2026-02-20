@@ -216,6 +216,18 @@ public sealed class UploadWorkflowCoordinator : IUploadWorkflowCoordinator {
         }
     }
 
+
+    public void ApplyAllUploadStatuses(
+        UploadStatusUpdates updates,
+        IEnumerable<ModelResource> models,
+        IEnumerable<MaterialResource> materials,
+        IEnumerable<TextureResource> textures) {
+
+        ApplyUploadStatuses(updates.Models, models);
+        ApplyUploadStatuses(updates.Materials, materials);
+        ApplyUploadStatuses(updates.Textures, textures);
+    }
+
     private static Dictionary<string, (int ResourceId, string ResourceType)> BuildPathToResourceIndex(Export.MappingData mapping) {
         var index = new Dictionary<string, (int ResourceId, string ResourceType)>(StringComparer.OrdinalIgnoreCase);
 

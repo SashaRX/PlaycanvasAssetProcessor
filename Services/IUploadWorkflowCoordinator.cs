@@ -37,4 +37,10 @@ public interface IUploadWorkflowCoordinator {
 
     void ApplyUploadStatuses<T>(Dictionary<int, (string CdnUrl, string Hash)> uploadedItems, IEnumerable<T> resources)
         where T : BaseResource;
+
+    void ApplyAllUploadStatuses(
+        UploadStatusUpdates updates,
+        IEnumerable<ModelResource> models,
+        IEnumerable<MaterialResource> materials,
+        IEnumerable<TextureResource> textures);
 }

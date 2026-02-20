@@ -87,6 +87,26 @@ public class UploadWorkflowCoordinatorTests {
         Assert.Contains("...and 1 more", message);
     }
 
+
+    [Fact]
+    public void ApplyAllUploadStatuses_UpdatesAllResourceCollections() {
+        var sut = new UploadWorkflowCoordinator();
+        var models = new List<ModelResource> { new() { ID = 1, Name = "m" } };
+        var materials = new List<MaterialResource> { new() { ID = 2, Name = "mat" } };
+        var textures = new List<TextureResource> { new() { ID = 3, Name = "tex" } };
+
+        var updates = new UploadStatusUpdates();
+        updates.Models[1] = ("https://cdn/m.glb", "h1");
+        updates.Materials[2] = ("https://cdn/mat.json", "h2");
+        updates.Textures[3] = ("https://cdn/tex.ktx2", "h3");
+
+        sut.ApplyAllUploadStatuses(updates, models, materials, textures);
+
+        Assert.Equal("Uploaded", models[0].UploadStatus);
+        Assert.Equal("Uploaded", materials[0].UploadStatus);
+        Assert.Equal("Uploaded", textures[0].UploadStatus);
+    }
+
     [Fact]
     public void ApplyUploadStatuses_UpdatesMatchingResources() {
         var sut = new UploadWorkflowCoordinator();

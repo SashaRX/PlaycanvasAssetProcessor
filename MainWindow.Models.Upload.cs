@@ -135,9 +135,11 @@ namespace AssetProcessor {
                         onError: (ex, message) => logger.Error(ex, message));
 
                     Dispatcher.Invoke(() => {
-                        uploadWorkflowCoordinator.ApplyUploadStatuses(statusUpdates.Models, viewModel.Models);
-                        uploadWorkflowCoordinator.ApplyUploadStatuses(statusUpdates.Materials, viewModel.Materials);
-                        uploadWorkflowCoordinator.ApplyUploadStatuses(statusUpdates.Textures, viewModel.Textures);
+                        uploadWorkflowCoordinator.ApplyAllUploadStatuses(
+                            statusUpdates,
+                            viewModel.Models,
+                            viewModel.Materials,
+                            viewModel.Textures);
                     });
                 }
 

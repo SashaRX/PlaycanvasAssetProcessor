@@ -5,6 +5,27 @@ using Xunit;
 namespace AssetProcessor.Tests.Services;
 
 public class UploadWorkflowCoordinatorTests {
+
+    [Fact]
+    public void ValidateB2Configuration_ReturnsInvalid_WhenRequiredValuesMissing() {
+        var sut = new UploadWorkflowCoordinator();
+
+        var result = sut.ValidateB2Configuration(keyId: null, bucketName: "bucket");
+
+        Assert.False(result.IsValid);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void ValidateB2Configuration_ReturnsValid_WhenRequiredValuesProvided() {
+        var sut = new UploadWorkflowCoordinator();
+
+        var result = sut.ValidateB2Configuration(keyId: "id", bucketName: "bucket");
+
+        Assert.True(result.IsValid);
+        Assert.Null(result.ErrorMessage);
+    }
+
     [Fact]
     public void CollectConvertedTextures_ReturnsOnlyExistingKtx2Files() {
         var sut = new UploadWorkflowCoordinator();

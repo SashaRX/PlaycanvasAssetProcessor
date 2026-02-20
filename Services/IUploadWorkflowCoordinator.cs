@@ -1,5 +1,6 @@
 using AssetProcessor.Data;
 using AssetProcessor.Resources;
+using AssetProcessor.Services.Models;
 using AssetProcessor.Upload;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 namespace AssetProcessor.Services;
 
 public interface IUploadWorkflowCoordinator {
+    UploadValidationResult ValidateB2Configuration(string? keyId, string? bucketName);
     List<(TextureResource Texture, string Ktx2Path)> CollectConvertedTextures(IEnumerable<TextureResource> textures);
 
     List<(string LocalPath, string RemotePath)> BuildUploadFilePairs(

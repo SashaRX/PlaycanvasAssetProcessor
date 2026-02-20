@@ -1,5 +1,6 @@
 using AssetProcessor.Data;
 using AssetProcessor.Resources;
+using AssetProcessor.Services.Models;
 using AssetProcessor.Upload;
 using Newtonsoft.Json;
 using System;
@@ -11,6 +12,18 @@ using System.Threading.Tasks;
 namespace AssetProcessor.Services;
 
 public sealed class UploadWorkflowCoordinator : IUploadWorkflowCoordinator {
+
+    public UploadValidationResult ValidateB2Configuration(string? keyId, string? bucketName) {
+        if (string.IsNullOrWhiteSpace(keyId) || string.IsNullOrWhiteSpace(bucketName)) {
+            return new UploadValidationResult {
+                IsValid = false,
+                ErrorMessage = "Backblaze B2 credentials not configured. Go to Settings -> CDN/Upload to configure."
+            };
+        }
+
+        return new UploadValidationResult { IsValid = true };
+    }
+
     public List<(TextureResource Texture, string Ktx2Path)> CollectConvertedTextures(IEnumerable<TextureResource> textures) {
         return textures
             .Where(t => !string.IsNullOrEmpty(t.Path))

@@ -64,15 +64,18 @@ namespace AssetProcessor {
         /// <summary>
         /// Validates that B2 credentials are configured.
         /// </summary>
-        private static bool ValidateB2Credentials() {
-            if (string.IsNullOrEmpty(AppSettings.Default.B2KeyId) ||
-                string.IsNullOrEmpty(AppSettings.Default.B2BucketName)) {
-                MessageBox.Show(
-                    "Backblaze B2 credentials not configured. Go to Settings -> CDN/Upload to configure.",
-                    "Upload Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
+        private bool ValidateB2Credentials() {
+            var validation = uploadWorkflowCoordinator.ValidateB2Configuration(
+                AppSettings.Default.B2KeyId,
+                AppSettings.Default.B2BucketName);
+            if (validation.IsValid) {
+                return true;
             }
-            return true;
+
+            MessageBox.Show(
+                validation.ErrorMessage ?? "Backblaze B2 credentials are invalid.",
+                "Upload Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
         }
 
         /// <summary>

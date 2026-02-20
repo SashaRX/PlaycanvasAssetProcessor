@@ -1,5 +1,6 @@
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Services;
+using System.Collections.Generic;
 using Xunit;
 
 namespace AssetProcessor.Tests.Services;
@@ -51,7 +52,6 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.Equal(ConnectionState.NeedsDownload, result.State);
         Assert.True(result.HasMissingFiles);
     }
-
 
     [Fact]
     public void EvaluateProjectState_ReturnsUpToDate_WhenProjectReadyAndNoUpdates() {
@@ -110,5 +110,31 @@ public class ConnectionWorkflowCoordinatorTests {
             hasUpdates: false);
 
         Assert.Equal(ConnectionState.UpToDate, result);
+    }
+
+    [Fact]
+    public void ResolveSelectedProjectId_ReturnsPreferred_WhenExistsInList() {
+        var sut = new ConnectionWorkflowCoordinator();
+        var projects = new List<KeyValuePair<string, string>> {
+            new("p1", "Project 1"),
+            new("p2", "Project 2")
+        };
+
+        var selected = sut.ResolveSelectedProjectId(projects, "p2");
+
+        Assert.Equal("p2", selected);
+    }
+
+    [Fact]
+    public void ResolveSelectedProjectId_ReturnsFirst_WhenPreferredMissing() {
+        var sut = new ConnectionWorkflowCoordinator();
+        var projects = new List<KeyValuePair<string, string>> {
+            new("p1", "Project 1"),
+            new("p2", "Project 2")
+        };
+
+        var selected = sut.ResolveSelectedProjectId(projects, "unknown");
+
+        Assert.Equal("p1", selected);
     }
 }

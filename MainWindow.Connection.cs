@@ -218,13 +218,9 @@ namespace AssetProcessor {
 
                 projectSelectionService.SetProjectInitializationInProgress(true);
                 try {
-                    if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                        viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
-                    } else if (viewModel.Projects.Count > 0) {
-                        viewModel.SelectedProjectId = viewModel.Projects[0].Key;
-                    } else {
-                        viewModel.SelectedProjectId = null;
-                    }
+                    viewModel.SelectedProjectId = connectionWorkflowCoordinator.ResolveSelectedProjectId(
+                        projectsResult.Projects,
+                        projectsResult.SelectedProjectId);
                 } finally {
                     projectSelectionService.SetProjectInitializationInProgress(false);
                 }
@@ -587,18 +583,14 @@ namespace AssetProcessor {
                         viewModel.Projects.Add(project);
                     }
 
-                    projectSelectionService.SetProjectInitializationInProgress(true);
-                    try {
-                        if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                            viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
-                        } else if (viewModel.Projects.Count > 0) {
-                            viewModel.SelectedProjectId = viewModel.Projects[0].Key;
-                        } else {
-                            viewModel.SelectedProjectId = null;
-                        }
-                    } finally {
-                        projectSelectionService.SetProjectInitializationInProgress(false);
-                    }
+                projectSelectionService.SetProjectInitializationInProgress(true);
+                try {
+                    viewModel.SelectedProjectId = connectionWorkflowCoordinator.ResolveSelectedProjectId(
+                        projectsResult.Projects,
+                        projectsResult.SelectedProjectId);
+                } finally {
+                    projectSelectionService.SetProjectInitializationInProgress(false);
+                }
 
                     if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
                         await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);

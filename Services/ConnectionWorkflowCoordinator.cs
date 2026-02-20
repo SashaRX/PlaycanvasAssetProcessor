@@ -1,6 +1,8 @@
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Services.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AssetProcessor.Services;
@@ -36,6 +38,15 @@ public sealed class ConnectionWorkflowCoordinator : IConnectionWorkflowCoordinat
         }
 
         return hasUpdates ? ConnectionState.NeedsDownload : ConnectionState.UpToDate;
+    }
+
+
+    public string? ResolveSelectedProjectId(IReadOnlyCollection<KeyValuePair<string, string>> projects, string? preferredProjectId) {
+        if (!string.IsNullOrEmpty(preferredProjectId) && projects.Any(p => p.Key == preferredProjectId)) {
+            return preferredProjectId;
+        }
+
+        return projects.FirstOrDefault().Key;
     }
 
     private static ConnectionWorkflowResult BuildResult(bool hasUpdates, bool hasMissingFiles) {

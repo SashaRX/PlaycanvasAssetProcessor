@@ -188,34 +188,21 @@ namespace AssetProcessor {
         /// Обработчик события обновления списка файлов на сервере - верифицирует статусы ресурсов
         /// </summary>
         private void OnServerAssetsRefreshed(HashSet<string> serverPaths) {
-            if (serverPaths == null || serverPaths.Count == 0) {
-                // Сервер пустой - сбрасываем все upload статусы
-                ResetAllUploadStatuses();
-                return;
-            }
-
-            int resetCount = assetWorkflowCoordinator.VerifyStatusesAgainstServerCollections(
+            var syncResult = assetWorkflowCoordinator.SyncStatusesWithServer(
                 serverPaths,
                 viewModel.Textures,
                 viewModel.Materials,
                 viewModel.Models);
 
-            if (resetCount > 0) {
-                logger.Info($"Server status verification reset {resetCount} stale statuses");
+            if (syncResult.ServerWasEmpty) {
+                if (syncResult.ResetCount > 0) {
+                    logger.Info($"Server empty - reset {syncResult.ResetCount} upload statuses");
+                }
+                return;
             }
-        }
 
-        /// <summary>
-        /// Сбрасывает все upload статусы (когда сервер пустой)
-        /// </summary>
-        private void ResetAllUploadStatuses() {
-            int reset = assetWorkflowCoordinator.ResetAllUploadStatusesCollections(
-                viewModel.Textures,
-                viewModel.Materials,
-                viewModel.Models);
-
-            if (reset > 0) {
-                logger.Info($"Server empty - reset {reset} upload statuses");
+            if (syncResult.ResetCount > 0) {
+                logger.Info($"Server status verification reset {syncResult.ResetCount} stale statuses");
             }
         }
 

@@ -120,6 +120,33 @@ public class AssetWorkflowCoordinatorTests {
         Assert.Equal("assets/b.ktx2", notUploaded.RemoteUrl);
     }
 
+
+    [Fact]
+    public void SyncStatusesWithServer_ReturnsResetAll_WhenServerEmpty() {
+        var sut = new AssetWorkflowCoordinator();
+        var texture = new TextureResource { UploadStatus = "Uploaded", RemoteUrl = "assets/a.ktx2" };
+
+        var result = sut.SyncStatusesWithServer(null, [texture]);
+
+        Assert.True(result.ServerWasEmpty);
+        Assert.Equal(1, result.ResetCount);
+        Assert.Null(texture.UploadStatus);
+    }
+
+    [Fact]
+    public void SyncStatusesWithServer_VerifiesStatuses_WhenServerHasPaths() {
+        var sut = new AssetWorkflowCoordinator();
+        var texture = new TextureResource { UploadStatus = "Uploaded", RemoteUrl = "content/textures/a.ktx2" };
+        var model = new ModelResource { UploadStatus = "Uploaded", RemoteUrl = "content/models/a.glb" };
+
+        var result = sut.SyncStatusesWithServer(["content/textures/a.ktx2"], [texture], [model]);
+
+        Assert.False(result.ServerWasEmpty);
+        Assert.Equal(1, result.ResetCount);
+        Assert.Equal("Uploaded", texture.UploadStatus);
+        Assert.Null(model.UploadStatus);
+    }
+
     [Fact]
     public async Task DeleteServerAssetAsync_ReturnsCredentialsError_WhenAppKeyMissing() {
         var sut = new AssetWorkflowCoordinator();

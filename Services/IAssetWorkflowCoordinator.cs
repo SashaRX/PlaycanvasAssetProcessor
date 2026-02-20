@@ -16,6 +16,7 @@ public interface IAssetWorkflowCoordinator {
     int VerifyStatusesAgainstServerCollections(HashSet<string> serverPaths, params IEnumerable<BaseResource>[] resourceCollections);
     int ResetAllUploadStatuses(IEnumerable<BaseResource> resources);
     int ResetAllUploadStatusesCollections(params IEnumerable<BaseResource>[] resourceCollections);
+    ServerStatusSyncResult SyncStatusesWithServer(HashSet<string>? serverPaths, params IEnumerable<BaseResource>[] resourceCollections);
     ResourceNavigationResult ResolveNavigationTarget(
         string fileName,
         IEnumerable<TextureResource> textures,

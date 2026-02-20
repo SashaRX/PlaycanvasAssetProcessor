@@ -136,6 +136,20 @@ public sealed class AssetWorkflowCoordinator : IAssetWorkflowCoordinator {
         return resourceCollections.Sum(ResetAllUploadStatuses);
     }
 
+    public ServerStatusSyncResult SyncStatusesWithServer(HashSet<string>? serverPaths, params IEnumerable<BaseResource>[] resourceCollections) {
+        if (serverPaths == null || serverPaths.Count == 0) {
+            return new ServerStatusSyncResult {
+                ServerWasEmpty = true,
+                ResetCount = ResetAllUploadStatusesCollections(resourceCollections)
+            };
+        }
+
+        return new ServerStatusSyncResult {
+            ServerWasEmpty = false,
+            ResetCount = VerifyStatusesAgainstServerCollections(serverPaths, resourceCollections)
+        };
+    }
+
     public ResourceNavigationResult ResolveNavigationTarget(
         string fileName,
         IEnumerable<TextureResource> textures,
